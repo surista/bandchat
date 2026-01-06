@@ -9,6 +9,7 @@ import workspaceRoutes from './routes/workspaces.js';
 import channelRoutes from './routes/channels.js';
 import messageRoutes from './routes/messages.js';
 import { setupSocketHandlers } from './socket/handlers.js';
+import { apiLimiter } from './middleware/rateLimit.js';
 
 dotenv.config();
 
@@ -34,6 +35,9 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+
+// Rate limiting
+app.use('/api', apiLimiter);
 
 // Make io accessible to routes
 app.set('io', io);
