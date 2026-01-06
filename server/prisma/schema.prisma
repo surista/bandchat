@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  password    String
+  displayName String
+  avatarUrl   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspaces     WorkspaceMember[]
+  messages       Message[]
+  channelMembers ChannelMember[]
+}
+
+model Workspace {
+  id         String   @id @default(uuid())
+  name       String
+  inviteCode String   @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  members  WorkspaceMember[]
+  channels Channel[]
+}
+
+model WorkspaceMember {
+  userId      String
+  workspaceId String
+  role        Role     @default(MEMBER)
+  joinedAt    DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@id([userId, workspaceId])
+}
+
+model Channel {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  isPrivate   Boolean  @default(false)
+  workspaceId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  members   ChannelMember[]
+  messages  Message[]
+
+  @@unique([workspaceId, name])
+}
+
+model ChannelMember {
+  userId    String
+  channelId String
+  muted     Boolean  @default(false)
+  lastRead  DateTime @default(now())
+  joinedAt  DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@id([userId, channelId])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  content   String
+  authorId  String
+  channelId String
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  channel     Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  parent      Message?     @relation("Threads", fields: [parentId], references: [id], onDelete: SetNull)
+  replies     Message[]    @relation("Threads")
+  attachments Attachment[]
+
+  @@index([channelId, createdAt])
+  @@index([parentId])
+}
+
+model Attachment {
+  id        String         @id @default(uuid())
+  messageId String
+  type      AttachmentType
+  url       String
+  filename  String
+  size      Int?
+  createdAt DateTime       @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum AttachmentType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+  LINK
+}

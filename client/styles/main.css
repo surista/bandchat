@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Message content styling */
+.message-content a {
+  @apply text-blue-400 hover:underline;
+}
+
+.message-content code {
+  @apply bg-gray-700 px-1 py-0.5 rounded text-sm font-mono;
+}
+
+.message-content pre {
+  @apply bg-gray-800 p-3 rounded overflow-x-auto my-2;
+}
+
+.message-content pre code {
+  @apply bg-transparent p-0;
+}
+
+/* Mention styling */
+.mention {
+  @apply bg-yellow-500/20 text-yellow-300 px-1 rounded;
+}
+
+/* Typing indicator */
+@keyframes typing-dot {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-4px);
+  }
+}
+
+.typing-dot {
+  animation: typing-dot 1.4s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Sidebar channel hover */
+.channel-item {
+  @apply flex items-center gap-2 px-4 py-1 rounded cursor-pointer text-gray-300;
+  @apply hover:bg-slack-hover transition-colors;
+}
+
+.channel-item.active {
+  @apply bg-slack-active text-white;
+}
+
+/* Input focus styling */
+input:focus, textarea:focus {
+  @apply outline-none ring-2 ring-slack-active;
+}
+
+/* Button styles */
+.btn {
+  @apply px-4 py-2 rounded font-medium transition-colors;
+}
+
+.btn-primary {
+  @apply bg-slack-green text-white hover:bg-green-600;
+}
+
+.btn-secondary {
+  @apply bg-gray-600 text-white hover:bg-gray-500;
+}
+
+.btn-danger {
+  @apply bg-slack-red text-white hover:bg-red-600;
+}
