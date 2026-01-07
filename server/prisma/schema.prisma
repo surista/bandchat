@@ -45,8 +45,25 @@ model Workspace {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  members  WorkspaceMember[]
-  channels Channel[]
+  members       WorkspaceMember[]
+  channels      Channel[]
+  channelGroups ChannelGroup[]
+}
+
+model ChannelGroup {
+  id          String   @id @default(uuid())
+  name        String
+  position    Int      @default(0)
+  isCollapsed Boolean  @default(false)
+  workspaceId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  channels  Channel[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, position])
 }
 
 model WorkspaceMember {
@@ -67,14 +84,18 @@ model Channel {
   description String?
   isPrivate   Boolean  @default(false)
   workspaceId String
+  groupId     String?
+  position    Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  group     ChannelGroup?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
   members   ChannelMember[]
   messages  Message[]
 
   @@unique([workspaceId, name])
+  @@index([groupId, position])
 }
 
 model ChannelMember {

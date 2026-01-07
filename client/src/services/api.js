@@ -240,6 +240,44 @@ class ApiService {
     });
   }
 
+  // Channel Groups
+  async getChannelGroups(workspaceId) {
+    return this.request(`/channel-groups/workspace/${workspaceId}`);
+  }
+
+  async createChannelGroup(workspaceId, name) {
+    return this.request(`/channel-groups/workspace/${workspaceId}`, {
+      method: 'POST',
+      body: JSON.stringify({ name })
+    });
+  }
+
+  async updateChannelGroup(groupId, data) {
+    return this.request(`/channel-groups/${groupId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteChannelGroup(groupId) {
+    return this.request(`/channel-groups/${groupId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async moveChannelToGroup(groupId, channelId, position) {
+    return this.request(`/channel-groups/${groupId}/channels/${channelId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ position })
+    });
+  }
+
+  async removeChannelFromGroup(channelId) {
+    return this.request(`/channel-groups/channels/${channelId}`, {
+      method: 'DELETE'
+    });
+  }
+
   // Messages
   async getMessages(channelId, cursor = null, limit = 50) {
     const params = new URLSearchParams({ limit });

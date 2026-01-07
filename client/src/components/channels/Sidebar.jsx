@@ -1,31 +1,93 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 function Sidebar({
   workspace,
   channels,
+  channelGroups,
   selectedChannel,
   onSelectChannel,
   onCreateChannel,
+  onCreateGroup,
   onShowInvite,
   onLogout,
   user
 }) {
   const navigate = useNavigate();
   const [showCreateChannel, setShowCreateChannel] = useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
+  const [newGroupName, setNewGroupName] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState('');
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState({});
+
+  // Organize channels by group
+  const { groupedChannels, ungroupedChannels } = useMemo(() => {
+    const grouped = {};
+    const ungrouped = [];
+
+    channels.forEach(channel => {
+      if (channel.groupId) {
+        if (!grouped[channel.groupId]) {
+          grouped[channel.groupId] = [];
+        }
+        grouped[channel.groupId].push(channel);
+      } else {
+        ungrouped.push(channel);
+      }
+    });
+
+    return { groupedChannels: grouped, ungroupedChannels: ungrouped };
+  }, [channels]);
 
   const handleCreateChannel = (e) => {
     e.preventDefault();
     if (newChannelName.trim()) {
-      onCreateChannel(newChannelName, isPrivate);
+      onCreateChannel(newChannelName, isPrivate, selectedGroupId || null);
       setShowCreateChannel(false);
       setNewChannelName('');
       setIsPrivate(false);
+      setSelectedGroupId('');
     }
   };
+
+  const handleCreateGroup = (e) => {
+    e.preventDefault();
+    if (newGroupName.trim()) {
+      onCreateGroup(newGroupName);
+      setShowCreateGroup(false);
+      setNewGroupName('');
+    }
+  };
+
+  const toggleGroupCollapse = (groupId) => {
+    setCollapsedGroups(prev => ({
+      ...prev,
+      [groupId]: !prev[groupId]
+    }));
+  };
+
+  const renderChannel = (channel) => (
+    <button
+      key={channel.id}
+      onClick={() => onSelectChannel(channel)}
+      className={`channel-item w-full ${
+        selectedChannel?.id === channel.id ? 'active' : ''
+      }`}
+    >
+      <span className="text-gray-400">
+        {channel.isPrivate ? '🔒' : '#'}
+      </span>
+      <span className="flex-1 truncate">{channel.name}</span>
+      {channel.unreadCount > 0 && (
+        <span className="bg-slack-red text-white text-xs px-1.5 py-0.5 rounded-full">
+          {channel.unreadCount}
+        </span>
+      )}
+    </button>
+  );
 
   return (
     <div className="w-64 bg-slack-sidebar flex flex-col text-gray-300">
@@ -47,36 +109,60 @@ function Sidebar({
           <span className="text-sm font-medium uppercase tracking-wide text-gray-400">
             Channels
           </span>
-          <button
-            onClick={() => setShowCreateChannel(true)}
-            className="text-gray-400 hover:text-white transition-colors text-lg"
-            title="Create channel"
-          >
-            +
-          </button>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setShowCreateGroup(true)}
+              className="text-gray-400 hover:text-white transition-colors text-xs px-1"
+              title="Create group"
+            >
+              📁
+            </button>
+            <button
+              onClick={() => setShowCreateChannel(true)}
+              className="text-gray-400 hover:text-white transition-colors text-lg"
+              title="Create channel"
+            >
+              +
+            </button>
+          </div>
         </div>
 
-        <div className="space-y-0.5">
-          {channels.map((channel) => (
+        {/* Channel Groups */}
+        {channelGroups.map((group) => (
+          <div key={group.id} className="mb-2">
             <button
-              key={channel.id}
-              onClick={() => onSelectChannel(channel)}
-              className={`channel-item w-full ${
-                selectedChannel?.id === channel.id ? 'active' : ''
-              }`}
+              onClick={() => toggleGroupCollapse(group.id)}
+              className="w-full px-4 py-1 flex items-center gap-1 text-gray-400 hover:text-white transition-colors text-sm"
             >
-              <span className="text-gray-400">
-                {channel.isPrivate ? '🔒' : '#'}
+              <span className={`transform transition-transform ${collapsedGroups[group.id] ? '' : 'rotate-90'}`}>
+                ▶
               </span>
-              <span className="flex-1 truncate">{channel.name}</span>
-              {channel.unreadCount > 0 && (
-                <span className="bg-slack-red text-white text-xs px-1.5 py-0.5 rounded-full">
-                  {channel.unreadCount}
-                </span>
-              )}
+              <span className="font-medium uppercase tracking-wide truncate">
+                {group.name}
+              </span>
+              <span className="text-xs text-gray-500 ml-auto">
+                {groupedChannels[group.id]?.length || 0}
+              </span>
             </button>
-          ))}
-        </div>
+            {!collapsedGroups[group.id] && (
+              <div className="space-y-0.5 ml-2">
+                {groupedChannels[group.id]?.map(renderChannel)}
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* Ungrouped Channels */}
+        {ungroupedChannels.length > 0 && (
+          <div className="space-y-0.5">
+            {channelGroups.length > 0 && (
+              <div className="px-4 py-1 text-xs text-gray-500 uppercase tracking-wide">
+                Other Channels
+              </div>
+            )}
+            {ungroupedChannels.map(renderChannel)}
+          </div>
+        )}
 
         {/* Members Section */}
         <div className="mt-6 px-4 mb-2 flex items-center justify-between">
@@ -182,6 +268,25 @@ function Sidebar({
                   />
                 </div>
               </div>
+              {channelGroups.length > 0 && (
+                <div className="mb-4">
+                  <label className="block text-gray-700 font-medium mb-2">
+                    Group (optional)
+                  </label>
+                  <select
+                    value={selectedGroupId}
+                    onChange={(e) => setSelectedGroupId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                  >
+                    <option value="">No group</option>
+                    {channelGroups.map((group) => (
+                      <option key={group.id} value={group.id}>
+                        {group.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="mb-4">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -203,6 +308,48 @@ function Sidebar({
                     setShowCreateChannel(false);
                     setNewChannelName('');
                     setIsPrivate(false);
+                    setSelectedGroupId('');
+                  }}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Create
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create Group Modal */}
+      {showCreateGroup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">
+              Create a Channel Group
+            </h3>
+            <form onSubmit={handleCreateGroup}>
+              <div className="mb-4">
+                <label className="block text-gray-700 font-medium mb-2">
+                  Group Name
+                </label>
+                <input
+                  type="text"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                  placeholder="e.g., Projects, Rehearsals, Admin"
+                  required
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateGroup(false);
+                    setNewGroupName('');
                   }}
                   className="btn btn-secondary"
                 >
