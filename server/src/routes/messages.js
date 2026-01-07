@@ -1,6 +1,7 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticate, isChannelMember } from '../middleware/auth.js';
+import { sendPushToUser } from './push.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -196,6 +197,16 @@ router.post('/channel/:channelId', authenticate, isChannelMember, async (req, re
           channelId: req.params.channelId,
           message,
           mentionedBy: req.user
+        });
+
+        // Send push notification
+        sendPushToUser(m.userId, {
+          title: `${req.user.displayName} mentioned you`,
+          body: content.length > 100 ? content.substring(0, 100) + '...' : content,
+          tag: `mention-${message.id}`,
+          url: `/workspace/${channel.workspaceId}?channel=${req.params.channelId}`,
+          channelId: req.params.channelId,
+          workspaceId: channel.workspaceId
         });
       });
     }

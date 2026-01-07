@@ -4,7 +4,15 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
+import { pushService } from './services/push';
 import '../styles/main.css';
+
+// Initialize service worker for PWA and push notifications
+pushService.init().then((registered) => {
+  if (registered) {
+    console.log('Push notifications ready');
+  }
+});
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

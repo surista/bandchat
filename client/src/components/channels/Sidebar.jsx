@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { pushService } from '../../services/push';
 
 function Sidebar({
   workspace,
@@ -16,6 +17,32 @@ function Sidebar({
   const [newChannelName, setNewChannelName] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+
+  useEffect(() => {
+    // Check if notifications are already enabled
+    pushService.isSubscribed().then(setNotificationsEnabled);
+  }, []);
+
+  const toggleNotifications = async () => {
+    setNotificationsLoading(true);
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      if (notificationsEnabled) {
+        await pushService.unsubscribe(accessToken);
+        setNotificationsEnabled(false);
+      } else {
+        await pushService.subscribe(accessToken);
+        setNotificationsEnabled(true);
+      }
+    } catch (error) {
+      console.error('Notification toggle error:', error);
+      alert(error.message || 'Failed to toggle notifications');
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
 
   const handleCreateChannel = (e) => {
     e.preventDefault();
@@ -132,6 +159,18 @@ function Sidebar({
 
         {showUserMenu && (
           <div className="absolute bottom-full left-0 right-0 mb-1 mx-2 bg-gray-800 rounded-lg shadow-xl border border-gray-700 overflow-hidden">
+            <button
+              onClick={toggleNotifications}
+              disabled={notificationsLoading}
+              className="w-full px-4 py-2 text-left hover:bg-gray-700 transition-colors flex items-center justify-between"
+            >
+              <span>Notifications</span>
+              <span className={`text-xs px-2 py-0.5 rounded ${
+                notificationsEnabled ? 'bg-green-600' : 'bg-gray-600'
+              }`}>
+                {notificationsLoading ? '...' : notificationsEnabled ? 'ON' : 'OFF'}
+              </span>
+            </button>
             <button
               onClick={() => {
                 setShowUserMenu(false);
