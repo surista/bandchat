@@ -2,13 +2,12 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { PrismaClient } from '@prisma/client';
 import { Resend } from 'resend';
 import { authenticate } from '../middleware/auth.js';
 import { authLimiter } from '../middleware/rateLimit.js';
+import prisma from '../lib/prisma.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 // Send verification email
@@ -34,8 +33,8 @@ const sendVerificationEmail = async (email, token) => {
   });
 };
 
-// Generate tokens
-const generateTokens = (userId) => {
+// Generate tokens and store refresh token in database
+const generateTokens = async (userId) => {
   const accessToken = jwt.sign(
     { userId },
     process.env.JWT_SECRET,
@@ -47,6 +46,16 @@ const generateTokens = (userId) => {
     process.env.JWT_REFRESH_SECRET,
     { expiresIn: '30d' }
   );
+
+  // Store refresh token in database
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+  await prisma.refreshToken.create({
+    data: {
+      token: refreshToken,
+      userId,
+      expiresAt
+    }
+  });
 
   return { accessToken, refreshToken };
 };
@@ -97,7 +106,7 @@ router.post('/signup', authLimiter, async (req, res) => {
     // Send verification email (non-blocking)
     sendVerificationEmail(email.toLowerCase(), verificationToken).catch(console.error);
 
-    const tokens = generateTokens(user.id);
+    const tokens = await generateTokens(user.id);
 
     res.status(201).json({
       user,
@@ -198,7 +207,7 @@ router.post('/login', authLimiter, async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const tokens = generateTokens(user.id);
+    const tokens = await generateTokens(user.id);
 
     res.json({
       user: {
@@ -224,10 +233,26 @@ router.post('/refresh', async (req, res) => {
       return res.status(400).json({ error: 'Refresh token required' });
     }
 
+    // Verify JWT signature
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
     if (decoded.type !== 'refresh') {
       return res.status(401).json({ error: 'Invalid refresh token' });
+    }
+
+    // Check if token exists in database (not revoked)
+    const storedToken = await prisma.refreshToken.findUnique({
+      where: { token: refreshToken }
+    });
+
+    if (!storedToken) {
+      return res.status(401).json({ error: 'Refresh token has been revoked' });
+    }
+
+    if (storedToken.expiresAt < new Date()) {
+      // Clean up expired token
+      await prisma.refreshToken.delete({ where: { id: storedToken.id } });
+      return res.status(401).json({ error: 'Refresh token has expired' });
     }
 
     const user = await prisma.user.findUnique({
@@ -244,7 +269,11 @@ router.post('/refresh', async (req, res) => {
       return res.status(401).json({ error: 'User not found' });
     }
 
-    const tokens = generateTokens(user.id);
+    // Delete old refresh token (rotation)
+    await prisma.refreshToken.delete({ where: { id: storedToken.id } });
+
+    // Generate new tokens
+    const tokens = await generateTokens(user.id);
 
     res.json({
       user,
@@ -310,6 +339,38 @@ router.put('/me', authenticate, async (req, res) => {
     res.json(user);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+// Logout - revoke refresh token
+router.post('/logout', async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (refreshToken) {
+      // Delete the refresh token from database
+      await prisma.refreshToken.deleteMany({
+        where: { token: refreshToken }
+      });
+    }
+
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    // Still return success even if token deletion fails
+    res.json({ message: 'Logged out successfully' });
+  }
+});
+
+// Logout all sessions - revoke all refresh tokens for user
+router.post('/logout-all', authenticate, async (req, res) => {
+  try {
+    await prisma.refreshToken.deleteMany({
+      where: { userId: req.user.id }
+    });
+
+    res.json({ message: 'Logged out of all sessions' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to logout' });
   }
 });
 

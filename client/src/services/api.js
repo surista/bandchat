@@ -104,7 +104,19 @@ class ApiService {
     return data;
   }
 
-  logout() {
+  async logout() {
+    // Revoke refresh token on server
+    if (this.refreshToken) {
+      try {
+        await fetch(`${API_URL}/auth/logout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken: this.refreshToken })
+        });
+      } catch {
+        // Ignore errors - still clear local tokens
+      }
+    }
     this.clearTokens();
   }
 
