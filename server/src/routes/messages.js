@@ -1,10 +1,10 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticate, isChannelMember } from '../middleware/auth.js';
+import { messageLimiter } from '../middleware/rateLimit.js';
+import prisma from '../lib/prisma.js';
 import { sendPushToUser } from './push.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Get messages for a channel (paginated)
 router.get('/channel/:channelId', authenticate, isChannelMember, async (req, res) => {
@@ -103,7 +103,7 @@ router.get('/:messageId/replies', authenticate, async (req, res) => {
 });
 
 // Create a message
-router.post('/channel/:channelId', authenticate, isChannelMember, async (req, res) => {
+router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember, async (req, res) => {
   try {
     const { content, parentId, attachments } = req.body;
 

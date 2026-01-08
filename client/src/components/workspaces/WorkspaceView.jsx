@@ -14,6 +14,7 @@ function WorkspaceView() {
   const { socket, joinWorkspace } = useSocket();
   const [workspace, setWorkspace] = useState(null);
   const [channels, setChannels] = useState([]);
+  const [channelGroups, setChannelGroups] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [selectedThread, setSelectedThread] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -29,26 +30,36 @@ function WorkspaceView() {
 
       socket.on('channel:created', handleChannelCreated);
       socket.on('channel:deleted', handleChannelDeleted);
+      socket.on('channel:moved', handleChannelMoved);
       socket.on('member:joined', handleMemberJoined);
       socket.on('member:removed', handleMemberRemoved);
+      socket.on('channelGroup:created', handleGroupCreated);
+      socket.on('channelGroup:updated', handleGroupUpdated);
+      socket.on('channelGroup:deleted', handleGroupDeleted);
 
       return () => {
         socket.off('channel:created', handleChannelCreated);
         socket.off('channel:deleted', handleChannelDeleted);
+        socket.off('channel:moved', handleChannelMoved);
         socket.off('member:joined', handleMemberJoined);
         socket.off('member:removed', handleMemberRemoved);
+        socket.off('channelGroup:created', handleGroupCreated);
+        socket.off('channelGroup:updated', handleGroupUpdated);
+        socket.off('channelGroup:deleted', handleGroupDeleted);
       };
     }
   }, [socket, workspaceId]);
 
   const loadWorkspace = async () => {
     try {
-      const [workspaceData, channelsData] = await Promise.all([
+      const [workspaceData, channelsData, groupsData] = await Promise.all([
         api.getWorkspace(workspaceId),
-        api.getChannels(workspaceId)
+        api.getChannels(workspaceId),
+        api.getChannelGroups(workspaceId)
       ]);
       setWorkspace(workspaceData);
       setChannels(channelsData);
+      setChannelGroups(groupsData);
 
       // Select first channel by default
       if (channelsData.length > 0 && !selectedChannel) {
@@ -75,6 +86,32 @@ function WorkspaceView() {
     }
   };
 
+  const handleChannelMoved = ({ channelId, groupId, position }) => {
+    setChannels(prev =>
+      prev.map(c =>
+        c.id === channelId ? { ...c, groupId, position } : c
+      )
+    );
+  };
+
+  const handleGroupCreated = (group) => {
+    setChannelGroups(prev => [...prev, group]);
+  };
+
+  const handleGroupUpdated = (group) => {
+    setChannelGroups(prev =>
+      prev.map(g => (g.id === group.id ? group : g))
+    );
+  };
+
+  const handleGroupDeleted = ({ groupId }) => {
+    setChannelGroups(prev => prev.filter(g => g.id !== groupId));
+    // Channels in this group will have groupId set to null by the backend
+    setChannels(prev =>
+      prev.map(c => (c.groupId === groupId ? { ...c, groupId: null } : c))
+    );
+  };
+
   const handleMemberJoined = ({ user: newUser }) => {
     setWorkspace(prev => ({
       ...prev,
@@ -93,13 +130,22 @@ function WorkspaceView() {
     }));
   };
 
-  const handleCreateChannel = async (name, isPrivate) => {
+  const handleCreateChannel = async (name, isPrivate, groupId = null) => {
     try {
-      const channel = await api.createChannel(workspaceId, { name, isPrivate });
+      const channel = await api.createChannel(workspaceId, { name, isPrivate, groupId });
       // Channel will be added via socket event
       setSelectedChannel(channel);
     } catch (err) {
       console.error('Failed to create channel:', err);
+    }
+  };
+
+  const handleCreateGroup = async (name) => {
+    try {
+      await api.createChannelGroup(workspaceId, name);
+      // Group will be added via socket event
+    } catch (err) {
+      console.error('Failed to create group:', err);
     }
   };
 
@@ -129,12 +175,14 @@ function WorkspaceView() {
       <Sidebar
         workspace={workspace}
         channels={channels}
+        channelGroups={channelGroups}
         selectedChannel={selectedChannel}
         onSelectChannel={(channel) => {
           setSelectedChannel(channel);
           setSelectedThread(null);
         }}
         onCreateChannel={handleCreateChannel}
+        onCreateGroup={handleCreateGroup}
         onShowInvite={() => setShowInvite(true)}
         onLogout={logout}
         user={user}

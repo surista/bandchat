@@ -104,7 +104,19 @@ class ApiService {
     return data;
   }
 
-  logout() {
+  async logout() {
+    // Revoke refresh token on server
+    if (this.refreshToken) {
+      try {
+        await fetch(`${API_URL}/auth/logout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken: this.refreshToken })
+        });
+      } catch {
+        // Ignore errors - still clear local tokens
+      }
+    }
     this.clearTokens();
   }
 
@@ -225,6 +237,44 @@ class ApiService {
   async markChannelRead(channelId) {
     return this.request(`/channels/${channelId}/read`, {
       method: 'POST'
+    });
+  }
+
+  // Channel Groups
+  async getChannelGroups(workspaceId) {
+    return this.request(`/channel-groups/workspace/${workspaceId}`);
+  }
+
+  async createChannelGroup(workspaceId, name) {
+    return this.request(`/channel-groups/workspace/${workspaceId}`, {
+      method: 'POST',
+      body: JSON.stringify({ name })
+    });
+  }
+
+  async updateChannelGroup(groupId, data) {
+    return this.request(`/channel-groups/${groupId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteChannelGroup(groupId) {
+    return this.request(`/channel-groups/${groupId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async moveChannelToGroup(groupId, channelId, position) {
+    return this.request(`/channel-groups/${groupId}/channels/${channelId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ position })
+    });
+  }
+
+  async removeChannelFromGroup(channelId) {
+    return this.request(`/channel-groups/channels/${channelId}`, {
+      method: 'DELETE'
     });
   }
 

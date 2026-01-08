@@ -1,9 +1,8 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticate, isWorkspaceMember, isChannelMember } from '../middleware/auth.js';
+import prisma from '../lib/prisma.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Get channels for a workspace
 router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
@@ -27,9 +26,15 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
         members: {
           where: { userId: req.user.id },
           select: { muted: true, lastRead: true }
+        },
+        group: {
+          select: {
+            id: true,
+            name: true
+          }
         }
       },
-      orderBy: { name: 'asc' }
+      orderBy: [{ position: 'asc' }, { name: 'asc' }]
     });
 
     // Get unread counts
@@ -48,6 +53,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 
         return {
           ...channel,
+          groupId: channel.group?.id || null,
           muted: userMembership?.muted || false,
           unreadCount,
           members: undefined
@@ -65,7 +71,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 // Create channel
 router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
-    const { name, description, isPrivate, memberIds } = req.body;
+    const { name, description, isPrivate, memberIds, groupId } = req.body;
 
     if (!name || name.trim().length === 0) {
       return res.status(400).json({ error: 'Channel name is required' });
@@ -109,6 +115,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
         description,
         isPrivate: isPrivate || false,
         workspaceId: req.params.workspaceId,
+        groupId: groupId || null,
         members: {
           create: membersToAdd.map(userId => ({ userId }))
         }
@@ -123,6 +130,12 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
                 avatarUrl: true
               }
             }
+          }
+        },
+        group: {
+          select: {
+            id: true,
+            name: true
           }
         },
         _count: {
