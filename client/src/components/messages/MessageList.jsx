@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { format, isToday, isYesterday } from 'date-fns';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 function MessageList({
   messages,
@@ -49,6 +51,25 @@ function MessageList({
   const handleCancelEdit = () => {
     setEditingId(null);
     setEditContent('');
+  };
+
+  const handleDownload = async (url, filename) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      console.error('Download failed:', err);
+      // Fallback: open in new tab
+      window.open(url, '_blank');
+    }
   };
 
   const renderContent = (content) => {
@@ -239,12 +260,31 @@ function MessageList({
                   {message.attachments.map((att) => (
                     <div key={att.id}>
                       {att.type === 'IMAGE' && (
-                        <img
-                          src={att.url}
-                          alt={att.filename}
-                          className="max-w-md max-h-80 rounded"
-                          loading="lazy"
-                        />
+                        <div className="relative inline-block group/img">
+                          <img
+                            src={att.url}
+                            alt={att.filename}
+                            className="max-w-md max-h-80 rounded cursor-pointer"
+                            loading="lazy"
+                            onClick={() => window.open(att.url, '_blank')}
+                          />
+                          <div className="absolute bottom-2 right-2 opacity-0 group-hover/img:opacity-100 transition-opacity flex gap-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDownload(att.url, att.filename);
+                              }}
+                              className="bg-gray-900/80 text-white px-2 py-1 rounded text-xs hover:bg-gray-900 flex items-center gap-1"
+                              title="Download"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                              </svg>
+                              Download
+                            </button>
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1">{att.filename}</div>
+                        </div>
                       )}
                       {att.type === 'VIDEO' && (
                         <video src={att.url} controls className="max-w-md rounded" />

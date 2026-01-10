@@ -107,8 +107,12 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
   try {
     const { content, parentId, attachments } = req.body;
 
-    if (!content || content.trim().length === 0) {
-      return res.status(400).json({ error: 'Message content is required' });
+    // Allow messages with either content or attachments (or both)
+    const hasContent = content && content.trim().length > 0;
+    const hasAttachments = attachments && attachments.length > 0;
+
+    if (!hasContent && !hasAttachments) {
+      return res.status(400).json({ error: 'Message content or attachments required' });
     }
 
     // If this is a reply, verify parent message exists and is in same channel
@@ -129,11 +133,11 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
 
     const message = await prisma.message.create({
       data: {
-        content: content.trim(),
+        content: hasContent ? content.trim() : '',
         authorId: req.user.id,
         channelId: req.params.channelId,
         parentId,
-        ...(attachments && attachments.length > 0 && {
+        ...(hasAttachments && {
           attachments: {
             create: attachments.map(att => ({
               type: att.type,

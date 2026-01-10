@@ -315,6 +315,57 @@ class ApiService {
     if (authorId) params.append('authorId', authorId);
     return this.request(`/messages/search/${workspaceId}?${params}`);
   }
+
+  // File uploads
+  async uploadFile(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const url = `${API_URL}/uploads`;
+    const headers = {};
+
+    if (this.accessToken) {
+      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || 'Upload failed');
+    }
+
+    return response.json();
+  }
+
+  async uploadFiles(files) {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+
+    const url = `${API_URL}/uploads/multiple`;
+    const headers = {};
+
+    if (this.accessToken) {
+      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || 'Upload failed');
+    }
+
+    return response.json();
+  }
 }
 
 export const api = new ApiService();

@@ -1,8 +1,26 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { format } from 'date-fns';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+
+const handleDownload = async (url, filename) => {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+  } catch (err) {
+    console.error('Download failed:', err);
+    window.open(url, '_blank');
+  }
+};
 
 function ThreadView({ message, channelId, onClose }) {
   const { user } = useAuth();
@@ -153,6 +171,41 @@ function ThreadView({ message, channelId, onClose }) {
                   <div className="text-gray-200 text-sm break-words whitespace-pre-wrap">
                     {reply.content}
                   </div>
+                  {/* Attachments */}
+                  {reply.attachments?.length > 0 && (
+                    <div className="mt-2 space-y-2">
+                      {reply.attachments.map((att) => (
+                        <div key={att.id}>
+                          {att.type === 'IMAGE' && (
+                            <div className="relative inline-block group/img">
+                              <img
+                                src={att.url}
+                                alt={att.filename}
+                                className="max-w-sm max-h-60 rounded cursor-pointer"
+                                loading="lazy"
+                                onClick={() => window.open(att.url, '_blank')}
+                              />
+                              <div className="absolute bottom-2 right-2 opacity-0 group-hover/img:opacity-100 transition-opacity">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDownload(att.url, att.filename);
+                                  }}
+                                  className="bg-gray-900/80 text-white px-2 py-1 rounded text-xs hover:bg-gray-900 flex items-center gap-1"
+                                  title="Download"
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                  </svg>
+                                </button>
+                              </div>
+                              <div className="text-xs text-gray-400 mt-1">{att.filename}</div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

@@ -132,12 +132,28 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
     }, 100);
   };
 
-  const handleSendMessage = async (content) => {
+  const handleSendMessage = async (content, files = []) => {
     try {
-      await api.sendMessage(channel.id, content);
+      let attachments = null;
+
+      // Upload files if any
+      if (files.length > 0) {
+        const uploadPromises = files.map(file => api.uploadFile(file));
+        const uploadedFiles = await Promise.all(uploadPromises);
+        attachments = uploadedFiles.map(file => ({
+          type: file.type,
+          url: file.url,
+          filename: file.filename,
+          size: file.size
+        }));
+      }
+
+      // Send message with attachments
+      await api.sendMessage(channel.id, content || '', null, attachments);
       // Message will be added via socket event
     } catch (err) {
       console.error('Failed to send message:', err);
+      throw err; // Re-throw to show error in MessageInput
     }
   };
 
