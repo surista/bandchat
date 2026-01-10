@@ -54,18 +54,17 @@ const upload = multer({
 // Helper to upload buffer to Cloudinary
 const uploadToCloudinary = (buffer, originalname) => {
   return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: 'bandchat',
-        resource_type: 'image',
-        public_id: `${Date.now()}-${originalname.replace(/\.[^/.]+$/, '')}`
-      },
-      (error, result) => {
-        if (error) reject(error);
-        else resolve(result);
-      }
-    );
-    uploadStream.end(buffer);
+    // Convert buffer to base64 data URI
+    const base64 = buffer.toString('base64');
+    const dataUri = `data:image/png;base64,${base64}`;
+
+    cloudinary.uploader.upload(dataUri, {
+      folder: 'bandchat',
+      resource_type: 'image',
+      public_id: `${Date.now()}-${originalname.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9-_]/g, '_')}`
+    })
+    .then(result => resolve(result))
+    .catch(error => reject(error));
   });
 };
 
