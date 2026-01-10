@@ -3,7 +3,14 @@
     "allow": [
       "Bash(npm install)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(tree:*)",
+      "Bash(git fetch:*)",
+      "Bash(git push)",
+      "Bash(railway --version:*)",
+      "Bash(dir \"C:\\\\Users\\\\suris\\\\Documents\\\\slack\" /B /AD)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma migrate dev:*)"
     ]
   }
 }

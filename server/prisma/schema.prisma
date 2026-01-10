@@ -84,6 +84,7 @@ model Channel {
   name        String
   description String?
   isPrivate   Boolean  @default(false)
+  isDirect    Boolean  @default(false)
   workspaceId String
   groupId     String?
   position    Int      @default(0)
@@ -97,6 +98,7 @@ model Channel {
 
   @@unique([workspaceId, name])
   @@index([groupId, position])
+  @@index([workspaceId, isDirect])
 }
 
 model ChannelMember {

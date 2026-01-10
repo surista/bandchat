@@ -4,12 +4,13 @@ import prisma from '../lib/prisma.js';
 
 const router = express.Router();
 
-// Get channels for a workspace
+// Get channels for a workspace (excludes DMs)
 router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
     const channels = await prisma.channel.findMany({
       where: {
         workspaceId: req.params.workspaceId,
+        isDirect: false,
         OR: [
           { isPrivate: false },
           {
@@ -369,6 +370,181 @@ router.post('/:channelId/read', authenticate, isChannelMember, async (req, res) 
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to mark as read' });
+  }
+});
+
+// Get DMs for a workspace
+router.get('/workspace/:workspaceId/dms', authenticate, isWorkspaceMember, async (req, res) => {
+  try {
+    const dms = await prisma.channel.findMany({
+      where: {
+        workspaceId: req.params.workspaceId,
+        isDirect: true,
+        members: {
+          some: { userId: req.user.id }
+        }
+      },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                displayName: true,
+                avatarUrl: true
+              }
+            }
+          }
+        },
+        messages: {
+          take: 1,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            content: true,
+            createdAt: true
+          }
+        },
+        _count: {
+          select: { messages: true }
+        }
+      },
+      orderBy: { updatedAt: 'desc' }
+    });
+
+    // Add unread counts and format for frontend
+    const dmsWithUnread = await Promise.all(
+      dms.map(async (dm) => {
+        const userMembership = await prisma.channelMember.findUnique({
+          where: {
+            userId_channelId: {
+              userId: req.user.id,
+              channelId: dm.id
+            }
+          }
+        });
+        const lastRead = userMembership?.lastRead || new Date(0);
+
+        const unreadCount = await prisma.message.count({
+          where: {
+            channelId: dm.id,
+            createdAt: { gt: lastRead },
+            authorId: { not: req.user.id }
+          }
+        });
+
+        // Get the other user(s) in the DM
+        const otherMembers = dm.members.filter(m => m.user.id !== req.user.id);
+
+        return {
+          ...dm,
+          otherMembers: otherMembers.map(m => m.user),
+          lastMessage: dm.messages[0] || null,
+          unreadCount,
+          messages: undefined
+        };
+      })
+    );
+
+    res.json(dmsWithUnread);
+  } catch (error) {
+    console.error('Get DMs error:', error);
+    res.status(500).json({ error: 'Failed to get DMs' });
+  }
+});
+
+// Create or get existing DM
+router.post('/workspace/:workspaceId/dm', authenticate, isWorkspaceMember, async (req, res) => {
+  try {
+    const { userIds } = req.body;
+
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({ error: 'userIds array is required' });
+    }
+
+    // Include the current user
+    const allUserIds = [...new Set([req.user.id, ...userIds])].sort();
+
+    // Verify all users are in the workspace
+    const validMembers = await prisma.workspaceMember.findMany({
+      where: {
+        workspaceId: req.params.workspaceId,
+        userId: { in: allUserIds }
+      }
+    });
+
+    if (validMembers.length !== allUserIds.length) {
+      return res.status(400).json({ error: 'One or more users are not in this workspace' });
+    }
+
+    // Generate a unique name for the DM based on sorted user IDs
+    const dmName = `dm-${allUserIds.join('-')}`;
+
+    // Check if DM already exists
+    let dm = await prisma.channel.findFirst({
+      where: {
+        workspaceId: req.params.workspaceId,
+        isDirect: true,
+        name: dmName
+      },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                displayName: true,
+                avatarUrl: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!dm) {
+      // Create new DM
+      dm = await prisma.channel.create({
+        data: {
+          name: dmName,
+          isDirect: true,
+          isPrivate: true,
+          workspaceId: req.params.workspaceId,
+          members: {
+            create: allUserIds.map(userId => ({ userId }))
+          }
+        },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  displayName: true,
+                  avatarUrl: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Notify all members about the new DM
+      const io = req.app.get('io');
+      allUserIds.forEach(userId => {
+        io.to(`user:${userId}`).emit('dm:created', dm);
+      });
+    }
+
+    // Get other members for display
+    const otherMembers = dm.members.filter(m => m.user.id !== req.user.id);
+
+    res.json({
+      ...dm,
+      otherMembers: otherMembers.map(m => m.user)
+    });
+  } catch (error) {
+    console.error('Create DM error:', error);
+    res.status(500).json({ error: 'Failed to create DM' });
   }
 });
 

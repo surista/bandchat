@@ -25,6 +25,7 @@ function WorkspaceView() {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [directMessages, setDirectMessages] = useState([]);
 
   useEffect(() => {
     loadWorkspace();
@@ -42,6 +43,7 @@ function WorkspaceView() {
       socket.on('channelGroup:created', handleGroupCreated);
       socket.on('channelGroup:updated', handleGroupUpdated);
       socket.on('channelGroup:deleted', handleGroupDeleted);
+      socket.on('dm:created', handleDMCreated);
 
       return () => {
         socket.off('channel:created', handleChannelCreated);
@@ -52,20 +54,23 @@ function WorkspaceView() {
         socket.off('channelGroup:created', handleGroupCreated);
         socket.off('channelGroup:updated', handleGroupUpdated);
         socket.off('channelGroup:deleted', handleGroupDeleted);
+        socket.off('dm:created', handleDMCreated);
       };
     }
   }, [socket, workspaceId]);
 
   const loadWorkspace = async () => {
     try {
-      const [workspaceData, channelsData, groupsData] = await Promise.all([
+      const [workspaceData, channelsData, groupsData, dmsData] = await Promise.all([
         api.getWorkspace(workspaceId),
         api.getChannels(workspaceId),
-        api.getChannelGroups(workspaceId)
+        api.getChannelGroups(workspaceId),
+        api.getDMs(workspaceId)
       ]);
       setWorkspace(workspaceData);
       setChannels(channelsData);
       setChannelGroups(groupsData);
+      setDirectMessages(dmsData);
 
       // Select first channel by default
       if (channelsData.length > 0 && !selectedChannel) {
@@ -116,6 +121,32 @@ function WorkspaceView() {
     setChannels(prev =>
       prev.map(c => (c.groupId === groupId ? { ...c, groupId: null } : c))
     );
+  };
+
+  const handleDMCreated = (dm) => {
+    setDirectMessages(prev => {
+      // Don't add if already exists
+      if (prev.some(d => d.id === dm.id)) return prev;
+      return [{ ...dm, unreadCount: 0 }, ...prev];
+    });
+  };
+
+  const handleStartDM = async (userId) => {
+    try {
+      const dm = await api.createOrGetDM(workspaceId, [userId]);
+      // Check if DM already exists in state
+      const existingDM = directMessages.find(d => d.id === dm.id);
+      if (!existingDM) {
+        setDirectMessages(prev => [{ ...dm, unreadCount: 0 }, ...prev]);
+      }
+      // Select the DM channel
+      setSelectedChannel(dm);
+      setSelectedThread(null);
+      setSidebarOpen(false);
+      setMobileTab('home');
+    } catch (err) {
+      console.error('Failed to start DM:', err);
+    }
   };
 
   const handleMemberJoined = ({ user: newUser }) => {
@@ -228,6 +259,8 @@ function WorkspaceView() {
         user={user}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        directMessages={directMessages}
+        onStartDM={handleStartDM}
       />
 
       {/* Main Content */}
@@ -246,7 +279,11 @@ function WorkspaceView() {
             </svg>
           </button>
           <span className="text-white font-medium truncate flex-1">
-            {selectedChannel ? `# ${selectedChannel.name}` : workspace.name}
+            {selectedChannel
+              ? selectedChannel.isDirect
+                ? selectedChannel.otherMembers?.map(m => m.displayName).join(', ') || 'Direct Message'
+                : `# ${selectedChannel.name}`
+              : workspace.name}
           </span>
           <button
             onClick={() => setShowSearch(true)}
@@ -384,7 +421,7 @@ function WorkspaceView() {
         </div>
       )}
 
-      {/* DMs Panel (Coming Soon) */}
+      {/* DMs Panel */}
       {mobileTab === 'dms' && (
         <div className="fixed inset-0 bg-gray-900 z-40 flex flex-col md:hidden">
           <div className="flex items-center gap-3 p-3 border-b border-gray-700">
@@ -398,13 +435,55 @@ function WorkspaceView() {
             </button>
             <span className="text-white font-medium">Direct Messages</span>
           </div>
-          <div className="flex-1 flex items-center justify-center text-gray-400">
-            <div className="text-center">
-              <svg className="w-16 h-16 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-              <p>Direct messages coming soon!</p>
-            </div>
+          <div className="flex-1 overflow-y-auto">
+            {directMessages.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center text-gray-400 h-full">
+                <div className="text-center">
+                  <svg className="w-16 h-16 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  <p>No direct messages yet</p>
+                  <p className="text-sm mt-2">Click on a member to start a conversation</p>
+                </div>
+              </div>
+            ) : (
+              <div className="p-2 space-y-1">
+                {directMessages.map((dm) => {
+                  const displayName = dm.otherMembers?.length > 0
+                    ? dm.otherMembers.map(m => m.displayName).join(', ')
+                    : 'Unknown';
+                  const initial = dm.otherMembers?.[0]?.displayName?.charAt(0).toUpperCase() || '?';
+
+                  return (
+                    <button
+                      key={dm.id}
+                      onClick={() => {
+                        setSelectedChannel(dm);
+                        setMobileTab('home');
+                      }}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-white font-medium">
+                        {initial}
+                      </div>
+                      <div className="flex-1 text-left">
+                        <div className="text-white font-medium">{displayName}</div>
+                        {dm.lastMessage && (
+                          <div className="text-gray-400 text-sm truncate">
+                            {dm.lastMessage.content}
+                          </div>
+                        )}
+                      </div>
+                      {dm.unreadCount > 0 && (
+                        <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                          {dm.unreadCount}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

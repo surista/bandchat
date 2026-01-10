@@ -240,6 +240,18 @@ class ApiService {
     });
   }
 
+  // Direct Messages
+  async getDMs(workspaceId) {
+    return this.request(`/channels/workspace/${workspaceId}/dms`);
+  }
+
+  async createOrGetDM(workspaceId, userIds) {
+    return this.request(`/channels/workspace/${workspaceId}/dm`, {
+      method: 'POST',
+      body: JSON.stringify({ userIds })
+    });
+  }
+
   // Channel Groups
   async getChannelGroups(workspaceId) {
     return this.request(`/channel-groups/workspace/${workspaceId}`);

@@ -189,14 +189,27 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
     <div className="flex-1 flex flex-col bg-gray-800">
       {/* Channel Header */}
       <div className="h-14 border-b border-gray-700 px-4 flex items-center">
-        <span className="text-gray-400 mr-2">
-          {channel.isPrivate ? '🔒' : '#'}
-        </span>
-        <h2 className="text-white font-semibold">{channel.name}</h2>
-        {channel.description && (
-          <span className="ml-4 text-gray-400 text-sm truncate">
-            {channel.description}
-          </span>
+        {channel.isDirect ? (
+          <>
+            <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white font-medium mr-2">
+              {channel.otherMembers?.[0]?.displayName?.charAt(0).toUpperCase() || '?'}
+            </div>
+            <h2 className="text-white font-semibold">
+              {channel.otherMembers?.map(m => m.displayName).join(', ') || 'Direct Message'}
+            </h2>
+          </>
+        ) : (
+          <>
+            <span className="text-gray-400 mr-2">
+              {channel.isPrivate ? '🔒' : '#'}
+            </span>
+            <h2 className="text-white font-semibold">{channel.name}</h2>
+            {channel.description && (
+              <span className="ml-4 text-gray-400 text-sm truncate">
+                {channel.description}
+              </span>
+            )}
+          </>
         )}
       </div>
 
@@ -247,7 +260,10 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
 
       {/* Message Input */}
       <MessageInput
-        channelName={channel.name}
+        channelName={channel.isDirect
+          ? channel.otherMembers?.map(m => m.displayName).join(', ') || 'Direct Message'
+          : channel.name
+        }
         onSend={handleSendMessage}
         onTyping={handleTyping}
       />

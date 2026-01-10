@@ -14,7 +14,9 @@ function Sidebar({
   onLogout,
   user,
   isOpen,
-  onClose
+  onClose,
+  directMessages = [],
+  onStartDM
 }) {
   const navigate = useNavigate();
   const [showCreateChannel, setShowCreateChannel] = useState(false);
@@ -198,6 +200,47 @@ function Sidebar({
           </div>
         )}
 
+        {/* Direct Messages Section */}
+        <div className="mt-6 px-4 mb-2 flex items-center justify-between">
+          <span className="text-sm font-medium uppercase tracking-wide text-gray-400">
+            Direct Messages
+          </span>
+        </div>
+
+        <div className="space-y-0.5">
+          {directMessages.map((dm) => {
+            const displayName = dm.otherMembers?.length > 0
+              ? dm.otherMembers.map(m => m.displayName).join(', ')
+              : 'Unknown';
+            const initial = dm.otherMembers?.[0]?.displayName?.charAt(0).toUpperCase() || '?';
+
+            return (
+              <button
+                key={dm.id}
+                onClick={() => onSelectChannel(dm)}
+                className={`channel-item w-full ${
+                  selectedChannel?.id === dm.id ? 'active' : ''
+                }`}
+              >
+                <div className="w-5 h-5 rounded bg-gray-600 flex items-center justify-center text-xs text-white flex-shrink-0">
+                  {initial}
+                </div>
+                <span className="flex-1 truncate">{displayName}</span>
+                {dm.unreadCount > 0 && (
+                  <span className="bg-slack-red text-white text-xs px-1.5 py-0.5 rounded-full">
+                    {dm.unreadCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+          {directMessages.length === 0 && (
+            <div className="px-4 py-1 text-gray-500 text-sm italic">
+              Click a member to start a DM
+            </div>
+          )}
+        </div>
+
         {/* Members Section */}
         <div className="mt-6 px-4 mb-2 flex items-center justify-between">
           <span className="text-sm font-medium uppercase tracking-wide text-gray-400">
@@ -214,19 +257,23 @@ function Sidebar({
 
         <div className="space-y-0.5">
           {workspace.members?.slice(0, 10).map((member) => (
-            <div
+            <button
               key={member.user.id}
-              className="flex items-center gap-2 px-4 py-1 text-gray-300"
+              onClick={() => member.user.id !== user?.id && onStartDM?.(member.user.id)}
+              className={`flex items-center gap-2 px-4 py-1 text-gray-300 w-full text-left ${
+                member.user.id !== user?.id ? 'hover:bg-slack-hover cursor-pointer' : ''
+              }`}
+              disabled={member.user.id === user?.id}
             >
               <div className="w-2 h-2 rounded-full bg-green-500" />
-              <span className="truncate">
+              <span className="truncate flex-1">
                 {member.user.displayName}
                 {member.user.id === user?.id && ' (you)'}
               </span>
               {member.role === 'ADMIN' && (
                 <span className="text-xs text-gray-500">admin</span>
               )}
-            </div>
+            </button>
           ))}
           {workspace.members?.length > 10 && (
             <div className="px-4 py-1 text-gray-500 text-sm">
