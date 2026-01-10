@@ -1,33 +1,14 @@
 import express from 'express';
 import multer from 'multer';
-import { v2 as cloudinary } from 'cloudinary';
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Check if Cloudinary is configured
-const isCloudinaryConfigured = () => {
-  return process.env.CLOUDINARY_URL || (
-    process.env.CLOUDINARY_CLOUD_NAME &&
-    process.env.CLOUDINARY_API_KEY &&
-    process.env.CLOUDINARY_API_SECRET
-  );
-};
+// Cloudinary cloud name for unsigned uploads
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || 'drlkgdvlk';
+const CLOUDINARY_UPLOAD_PRESET = process.env.CLOUDINARY_UPLOAD_PRESET || 'bandchat';
 
-// Configure Cloudinary if credentials exist
-if (process.env.CLOUDINARY_URL) {
-  // CLOUDINARY_URL is automatically read by the SDK
-  console.log('Cloudinary configured via CLOUDINARY_URL');
-} else if (process.env.CLOUDINARY_CLOUD_NAME) {
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
-  });
-  console.log('Cloudinary configured via individual variables');
-} else {
-  console.warn('Cloudinary not configured - missing environment variables');
-}
+console.log(`Cloudinary configured for unsigned uploads to cloud: ${CLOUDINARY_CLOUD_NAME}`);
 
 // Use memory storage for Cloudinary uploads
 const storage = multer.memoryStorage();
@@ -51,33 +32,35 @@ const upload = multer({
   }
 });
 
-// Helper to upload buffer to Cloudinary
-const uploadToCloudinary = (buffer, originalname) => {
-  return new Promise((resolve, reject) => {
-    // Convert buffer to base64 data URI
-    const base64 = buffer.toString('base64');
-    const dataUri = `data:image/png;base64,${base64}`;
+// Helper to upload buffer to Cloudinary using unsigned upload
+const uploadToCloudinary = async (buffer, originalname) => {
+  const base64 = buffer.toString('base64');
+  const dataUri = `data:image/png;base64,${base64}`;
 
-    cloudinary.uploader.upload(dataUri, {
-      folder: 'bandchat',
-      resource_type: 'image',
-      public_id: `${Date.now()}-${originalname.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9-_]/g, '_')}`
-    })
-    .then(result => resolve(result))
-    .catch(error => reject(error));
-  });
+  const formData = new FormData();
+  formData.append('file', dataUri);
+  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+  formData.append('folder', 'bandchat');
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+    {
+      method: 'POST',
+      body: formData
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || 'Upload failed');
+  }
+
+  return response.json();
 };
 
 // Upload single image
 router.post('/', authenticate, upload.single('file'), async (req, res) => {
   try {
-    // Check if Cloudinary is configured
-    if (!isCloudinaryConfigured()) {
-      console.error('Upload failed: Cloudinary not configured');
-      return res.status(500).json({
-        error: 'Image uploads not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.'
-      });
-    }
 
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
