@@ -5,12 +5,24 @@ import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
+// Check if Cloudinary is configured
+const isCloudinaryConfigured = () => {
+  return process.env.CLOUDINARY_CLOUD_NAME &&
+         process.env.CLOUDINARY_API_KEY &&
+         process.env.CLOUDINARY_API_SECRET;
+};
+
+// Configure Cloudinary if credentials exist
+if (isCloudinaryConfigured()) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+  });
+  console.log('Cloudinary configured successfully');
+} else {
+  console.warn('Cloudinary not configured - missing environment variables');
+}
 
 // Use memory storage for Cloudinary uploads
 const storage = multer.memoryStorage();
@@ -55,6 +67,14 @@ const uploadToCloudinary = (buffer, originalname) => {
 // Upload single image
 router.post('/', authenticate, upload.single('file'), async (req, res) => {
   try {
+    // Check if Cloudinary is configured
+    if (!isCloudinaryConfigured()) {
+      console.error('Upload failed: Cloudinary not configured');
+      return res.status(500).json({
+        error: 'Image uploads not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.'
+      });
+    }
+
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
@@ -70,7 +90,7 @@ router.post('/', authenticate, upload.single('file'), async (req, res) => {
     });
   } catch (error) {
     console.error('Upload error:', error);
-    res.status(500).json({ error: 'Failed to upload file' });
+    res.status(500).json({ error: error.message || 'Failed to upload file' });
   }
 });
 
