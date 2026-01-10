@@ -3,8 +3,6 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 import authRoutes from './routes/auth.js';
 import workspaceRoutes from './routes/workspaces.js';
@@ -15,9 +13,6 @@ import pushRoutes from './routes/push.js';
 import uploadRoutes from './routes/uploads.js';
 import { setupSocketHandlers } from './socket/handlers.js';
 import { apiLimiter } from './middleware/rateLimit.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -43,9 +38,6 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
-
-// Serve uploaded files statically
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Rate limiting
 app.use('/api', apiLimiter);

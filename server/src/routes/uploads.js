@@ -1,33 +1,19 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
+import { v2 as cloudinary } from 'cloudinary';
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Configure multer storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    // Generate unique filename with original extension
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, uniqueSuffix + ext);
-  }
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
 });
+
+// Use memory storage for Cloudinary uploads
+const storage = multer.memoryStorage();
 
 // File filter for images only
 const fileFilter = (req, file, cb) => {
@@ -48,30 +34,36 @@ const upload = multer({
   }
 });
 
-// Helper to get base URL from request
-const getBaseUrl = (req) => {
-  if (process.env.SERVER_URL) {
-    return process.env.SERVER_URL;
-  }
-  // Use x-forwarded headers for proxied requests (Railway, Heroku, etc.)
-  const protocol = req.get('x-forwarded-proto') || req.protocol || 'http';
-  const host = req.get('x-forwarded-host') || req.get('host');
-  return `${protocol}://${host}`;
+// Helper to upload buffer to Cloudinary
+const uploadToCloudinary = (buffer, originalname) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'bandchat',
+        resource_type: 'image',
+        public_id: `${Date.now()}-${originalname.replace(/\.[^/.]+$/, '')}`
+      },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    );
+    uploadStream.end(buffer);
+  });
 };
 
 // Upload single image
-router.post('/', authenticate, upload.single('file'), (req, res) => {
+router.post('/', authenticate, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Build the URL for the uploaded file
-    const baseUrl = getBaseUrl(req);
-    const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
+    // Upload to Cloudinary
+    const result = await uploadToCloudinary(req.file.buffer, req.file.originalname);
 
     res.json({
-      url: fileUrl,
+      url: result.secure_url,
       filename: req.file.originalname,
       size: req.file.size,
       type: 'IMAGE'
@@ -83,17 +75,22 @@ router.post('/', authenticate, upload.single('file'), (req, res) => {
 });
 
 // Upload multiple images (up to 5)
-router.post('/multiple', authenticate, upload.array('files', 5), (req, res) => {
+router.post('/multiple', authenticate, upload.array('files', 5), async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: 'No files uploaded' });
     }
 
-    const baseUrl = getBaseUrl(req);
-    const files = req.files.map(file => ({
-      url: `${baseUrl}/uploads/${file.filename}`,
-      filename: file.originalname,
-      size: file.size,
+    // Upload all files to Cloudinary
+    const uploadPromises = req.files.map(file =>
+      uploadToCloudinary(file.buffer, file.originalname)
+    );
+    const results = await Promise.all(uploadPromises);
+
+    const files = results.map((result, index) => ({
+      url: result.secure_url,
+      filename: req.files[index].originalname,
+      size: req.files[index].size,
       type: 'IMAGE'
     }));
 
@@ -102,21 +99,6 @@ router.post('/multiple', authenticate, upload.array('files', 5), (req, res) => {
     console.error('Upload error:', error);
     res.status(500).json({ error: 'Failed to upload files' });
   }
-});
-
-// Download file with proper headers
-router.get('/download/:filename', authenticate, (req, res) => {
-  const filename = req.params.filename;
-  const filePath = path.join(uploadsDir, filename);
-
-  // Check if file exists
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: 'File not found' });
-  }
-
-  // Set download headers
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-  res.sendFile(filePath);
 });
 
 // Error handling middleware for multer
