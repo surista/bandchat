@@ -337,18 +337,42 @@ function WorkspaceView() {
                 {workspace.inviteCode}
               </code>
             </div>
+            {workspace.inviteCodeExpiresAt && (
+              <p className="text-sm text-gray-500 mb-2 text-center">
+                Expires: {new Date(workspace.inviteCodeExpiresAt).toLocaleString()}
+              </p>
+            )}
             <p className="text-sm text-gray-500 mb-4">
               Or share this link:<br />
               <code className="text-xs break-all">
                 {window.location.origin}/join/{workspace.inviteCode}
               </code>
             </p>
-            <button
-              onClick={() => setShowInvite(false)}
-              className="w-full btn btn-primary"
-            >
-              Done
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  try {
+                    const result = await api.regenerateInviteCode(workspace.id);
+                    setWorkspace(prev => ({
+                      ...prev,
+                      inviteCode: result.inviteCode,
+                      inviteCodeExpiresAt: result.expiresAt
+                    }));
+                  } catch (err) {
+                    console.error('Failed to regenerate code:', err);
+                  }
+                }}
+                className="flex-1 btn btn-secondary"
+              >
+                Regenerate Code
+              </button>
+              <button
+                onClick={() => setShowInvite(false)}
+                className="flex-1 btn btn-primary"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}

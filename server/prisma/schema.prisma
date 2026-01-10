@@ -40,11 +40,12 @@ model RefreshToken {
 }
 
 model Workspace {
-  id         String   @id @default(uuid())
-  name       String
-  inviteCode String   @unique
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                  String    @id @default(uuid())
+  name                String
+  inviteCode          String    @unique
+  inviteCodeExpiresAt DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   members       WorkspaceMember[]
   channels      Channel[]

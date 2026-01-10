@@ -10,6 +10,11 @@ const generateInviteCode = () => {
   return uuidv4().split('-')[0].toUpperCase();
 };
 
+// Get expiration date 24 hours from now
+const getInviteExpiration = () => {
+  return new Date(Date.now() + 24 * 60 * 60 * 1000);
+};
+
 // Get all workspaces for current user
 router.get('/', authenticate, async (req, res) => {
   try {
@@ -49,6 +54,7 @@ router.post('/', authenticate, async (req, res) => {
       data: {
         name: name.trim(),
         inviteCode: generateInviteCode(),
+        inviteCodeExpiresAt: getInviteExpiration(),
         members: {
           create: {
             userId: req.user.id,
@@ -176,6 +182,11 @@ router.post('/join/:inviteCode', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Invalid invite code' });
     }
 
+    // Check if invite code has expired
+    if (workspace.inviteCodeExpiresAt && new Date() > workspace.inviteCodeExpiresAt) {
+      return res.status(400).json({ error: 'Invite code has expired' });
+    }
+
     // Check if already a member
     const existingMember = await prisma.workspaceMember.findUnique({
       where: {
@@ -254,10 +265,16 @@ router.post('/:workspaceId/invite-code', authenticate, isWorkspaceAdmin, async (
   try {
     const workspace = await prisma.workspace.update({
       where: { id: req.params.workspaceId },
-      data: { inviteCode: generateInviteCode() }
+      data: {
+        inviteCode: generateInviteCode(),
+        inviteCodeExpiresAt: getInviteExpiration()
+      }
     });
 
-    res.json({ inviteCode: workspace.inviteCode });
+    res.json({
+      inviteCode: workspace.inviteCode,
+      expiresAt: workspace.inviteCodeExpiresAt
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to regenerate invite code' });
   }
