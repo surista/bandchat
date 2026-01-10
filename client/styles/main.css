@@ -107,3 +107,18 @@ input:focus, textarea:focus {
 .btn-danger {
   @apply bg-slack-red text-white hover:bg-red-600;
 }
+
+/* Safe area for iOS devices */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Mobile nav active indicator animation */
+@keyframes nav-indicator {
+  from {
+    transform: translateX(-50%) scaleX(0);
+  }
+  to {
+    transform: translateX(-50%) scaleX(1);
+  }
+}
