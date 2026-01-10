@@ -48,6 +48,17 @@ const upload = multer({
   }
 });
 
+// Helper to get base URL from request
+const getBaseUrl = (req) => {
+  if (process.env.SERVER_URL) {
+    return process.env.SERVER_URL;
+  }
+  // Use x-forwarded headers for proxied requests (Railway, Heroku, etc.)
+  const protocol = req.get('x-forwarded-proto') || req.protocol || 'http';
+  const host = req.get('x-forwarded-host') || req.get('host');
+  return `${protocol}://${host}`;
+};
+
 // Upload single image
 router.post('/', authenticate, upload.single('file'), (req, res) => {
   try {
@@ -56,7 +67,7 @@ router.post('/', authenticate, upload.single('file'), (req, res) => {
     }
 
     // Build the URL for the uploaded file
-    const baseUrl = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 3001}`;
+    const baseUrl = getBaseUrl(req);
     const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
 
     res.json({
@@ -78,7 +89,7 @@ router.post('/multiple', authenticate, upload.array('files', 5), (req, res) => {
       return res.status(400).json({ error: 'No files uploaded' });
     }
 
-    const baseUrl = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 3001}`;
+    const baseUrl = getBaseUrl(req);
     const files = req.files.map(file => ({
       url: `${baseUrl}/uploads/${file.filename}`,
       filename: file.originalname,
