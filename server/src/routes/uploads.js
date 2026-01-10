@@ -7,19 +7,24 @@ const router = express.Router();
 
 // Check if Cloudinary is configured
 const isCloudinaryConfigured = () => {
-  return process.env.CLOUDINARY_CLOUD_NAME &&
-         process.env.CLOUDINARY_API_KEY &&
-         process.env.CLOUDINARY_API_SECRET;
+  return process.env.CLOUDINARY_URL || (
+    process.env.CLOUDINARY_CLOUD_NAME &&
+    process.env.CLOUDINARY_API_KEY &&
+    process.env.CLOUDINARY_API_SECRET
+  );
 };
 
 // Configure Cloudinary if credentials exist
-if (isCloudinaryConfigured()) {
+if (process.env.CLOUDINARY_URL) {
+  // CLOUDINARY_URL is automatically read by the SDK
+  console.log('Cloudinary configured via CLOUDINARY_URL');
+} else if (process.env.CLOUDINARY_CLOUD_NAME) {
   cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET
   });
-  console.log('Cloudinary configured successfully');
+  console.log('Cloudinary configured via individual variables');
 } else {
   console.warn('Cloudinary not configured - missing environment variables');
 }
