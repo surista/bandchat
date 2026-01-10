@@ -49,6 +49,45 @@ function MessageInput({ channelName, onSend, onTyping }) {
     textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
   };
 
+  // Handle paste event for images
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    const imageFiles = [];
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) {
+          // Check file size
+          if (file.size > MAX_FILE_SIZE) {
+            setError(`Pasted image exceeds 10MB limit`);
+            continue;
+          }
+          imageFiles.push(file);
+        }
+      }
+    }
+
+    if (imageFiles.length > 0) {
+      e.preventDefault(); // Prevent default paste behavior for images
+      setSelectedFiles(prev => [...prev, ...imageFiles]);
+
+      // Create previews
+      imageFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setPreviews(prev => [...prev, {
+            name: file.name || `pasted-image-${Date.now()}.png`,
+            url: e.target.result,
+            size: file.size
+          }]);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files);
     setError('');
@@ -153,6 +192,7 @@ function MessageInput({ channelName, onSend, onTyping }) {
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           onInput={handleInput}
+          onPaste={handlePaste}
           placeholder={`Message #${channelName}`}
           className="w-full bg-transparent text-white px-4 py-3 resize-none outline-none placeholder-gray-400"
           rows={1}
