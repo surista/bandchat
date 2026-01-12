@@ -6,6 +6,20 @@ import { sendPushToUser } from './push.js';
 
 const router = express.Router();
 
+// Reusable include for reactions
+const reactionsInclude = {
+  reactions: {
+    include: {
+      user: {
+        select: {
+          id: true,
+          displayName: true
+        }
+      }
+    }
+  }
+};
+
 // Get messages for a channel (paginated)
 router.get('/channel/:channelId', authenticate, isChannelMember, async (req, res) => {
   try {
@@ -32,6 +46,7 @@ router.get('/channel/:channelId', authenticate, isChannelMember, async (req, res
           }
         },
         attachments: true,
+        ...reactionsInclude,
         _count: {
           select: { replies: true }
         }
@@ -92,7 +107,8 @@ router.get('/:messageId/replies', authenticate, async (req, res) => {
             avatarUrl: true
           }
         },
-        attachments: true
+        attachments: true,
+        ...reactionsInclude
       }
     });
 
@@ -157,6 +173,7 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
           }
         },
         attachments: true,
+        ...reactionsInclude,
         _count: {
           select: { replies: true }
         }
@@ -251,6 +268,7 @@ router.put('/:messageId', authenticate, async (req, res) => {
           }
         },
         attachments: true,
+        ...reactionsInclude,
         _count: {
           select: { replies: true }
         }
@@ -382,6 +400,144 @@ router.get('/search/:workspaceId', authenticate, async (req, res) => {
     res.json(messages);
   } catch (error) {
     res.status(500).json({ error: 'Search failed' });
+  }
+});
+
+// Add a reaction to a message
+router.post('/:messageId/reactions', authenticate, async (req, res) => {
+  try {
+    const { emoji } = req.body;
+
+    if (!emoji || typeof emoji !== 'string') {
+      return res.status(400).json({ error: 'Emoji is required' });
+    }
+
+    // Get the message and verify access
+    const message = await prisma.message.findUnique({
+      where: { id: req.params.messageId },
+      include: { channel: true }
+    });
+
+    if (!message) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+
+    // Verify user has access to the channel
+    const channel = message.channel;
+    if (channel.isPrivate) {
+      const membership = await prisma.channelMember.findUnique({
+        where: {
+          userId_channelId: {
+            userId: req.user.id,
+            channelId: channel.id
+          }
+        }
+      });
+
+      if (!membership) {
+        return res.status(403).json({ error: 'Not a member of this channel' });
+      }
+    } else {
+      // For public channels, verify workspace membership
+      const workspaceMember = await prisma.workspaceMember.findUnique({
+        where: {
+          userId_workspaceId: {
+            userId: req.user.id,
+            workspaceId: channel.workspaceId
+          }
+        }
+      });
+
+      if (!workspaceMember) {
+        return res.status(403).json({ error: 'Not a member of this workspace' });
+      }
+    }
+
+    // Create or find existing reaction (upsert)
+    const reaction = await prisma.reaction.upsert({
+      where: {
+        userId_messageId_emoji: {
+          userId: req.user.id,
+          messageId: req.params.messageId,
+          emoji
+        }
+      },
+      update: {},
+      create: {
+        emoji,
+        userId: req.user.id,
+        messageId: req.params.messageId
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            displayName: true
+          }
+        }
+      }
+    });
+
+    // Broadcast reaction via socket
+    const io = req.app.get('io');
+    io.to(`channel:${channel.id}`).emit('reaction:added', {
+      messageId: req.params.messageId,
+      reaction
+    });
+
+    res.status(201).json(reaction);
+  } catch (error) {
+    console.error('Add reaction error:', error);
+    res.status(500).json({ error: 'Failed to add reaction' });
+  }
+});
+
+// Remove a reaction from a message
+router.delete('/:messageId/reactions/:emoji', authenticate, async (req, res) => {
+  try {
+    const emoji = decodeURIComponent(req.params.emoji);
+
+    // Get the message to find the channel for socket broadcast
+    const message = await prisma.message.findUnique({
+      where: { id: req.params.messageId },
+      select: { channelId: true }
+    });
+
+    if (!message) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+
+    // Find and delete the user's reaction
+    const reaction = await prisma.reaction.findUnique({
+      where: {
+        userId_messageId_emoji: {
+          userId: req.user.id,
+          messageId: req.params.messageId,
+          emoji
+        }
+      }
+    });
+
+    if (!reaction) {
+      return res.status(404).json({ error: 'Reaction not found' });
+    }
+
+    await prisma.reaction.delete({
+      where: { id: reaction.id }
+    });
+
+    // Broadcast removal via socket
+    const io = req.app.get('io');
+    io.to(`channel:${message.channelId}`).emit('reaction:removed', {
+      messageId: req.params.messageId,
+      emoji,
+      userId: req.user.id
+    });
+
+    res.json({ message: 'Reaction removed' });
+  } catch (error) {
+    console.error('Remove reaction error:', error);
+    res.status(500).json({ error: 'Failed to remove reaction' });
   }
 });
 

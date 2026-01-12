@@ -328,6 +328,20 @@ class ApiService {
     return this.request(`/messages/search/${workspaceId}?${params}`);
   }
 
+  // Reactions
+  async addReaction(messageId, emoji) {
+    return this.request(`/messages/${messageId}/reactions`, {
+      method: 'POST',
+      body: JSON.stringify({ emoji })
+    });
+  }
+
+  async removeReaction(messageId, emoji) {
+    return this.request(`/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`, {
+      method: 'DELETE'
+    });
+  }
+
   // File uploads
   async uploadFile(file) {
     const formData = new FormData();

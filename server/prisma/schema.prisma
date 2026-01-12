@@ -24,6 +24,7 @@ model User {
   channelMembers    ChannelMember[]
   pushSubscriptions PushSubscription[]
   refreshTokens     RefreshToken[]
+  reactions         Reaction[]
 }
 
 model RefreshToken {
@@ -129,6 +130,7 @@ model Message {
   parent      Message?     @relation("Threads", fields: [parentId], references: [id], onDelete: SetNull)
   replies     Message[]    @relation("Threads")
   attachments Attachment[]
+  reactions   Reaction[]
 
   @@index([channelId, createdAt])
   @@index([parentId])
@@ -169,4 +171,18 @@ model PushSubscription {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model Reaction {
+  id        String   @id @default(uuid())
+  emoji     String
+  userId    String
+  messageId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, messageId, emoji])
+  @@index([messageId])
 }

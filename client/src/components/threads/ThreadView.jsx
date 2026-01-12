@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import ReactionDisplay from '../messages/ReactionDisplay';
+import ReactionPicker from '../messages/ReactionPicker';
 
 const handleDownload = async (url, filename) => {
   try {
@@ -29,6 +31,8 @@ function ThreadView({ message, channelId, onClose }) {
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
+  const [parentReactions, setParentReactions] = useState(message.reactions || []);
+  const [reactionPickerMessageId, setReactionPickerMessageId] = useState(null);
   const repliesEndRef = useRef(null);
 
   useEffect(() => {
@@ -40,11 +44,15 @@ function ThreadView({ message, channelId, onClose }) {
       socket.on('message:reply', handleNewReply);
       socket.on('message:updated', handleUpdatedReply);
       socket.on('message:deleted', handleDeletedReply);
+      socket.on('reaction:added', handleReactionAdded);
+      socket.on('reaction:removed', handleReactionRemoved);
 
       return () => {
         socket.off('message:reply', handleNewReply);
         socket.off('message:updated', handleUpdatedReply);
         socket.off('message:deleted', handleDeletedReply);
+        socket.off('reaction:added', handleReactionAdded);
+        socket.off('reaction:removed', handleReactionRemoved);
       };
     }
   }, [socket, message.id]);
@@ -78,6 +86,80 @@ function ThreadView({ message, channelId, onClose }) {
   const handleDeletedReply = ({ messageId, parentId }) => {
     if (parentId === message.id) {
       setReplies(prev => prev.filter(r => r.id !== messageId));
+    }
+  };
+
+  const handleReactionAdded = ({ messageId, reaction }) => {
+    if (messageId === message.id) {
+      // Parent message reaction
+      setParentReactions(prev => {
+        const exists = prev.some(r => r.id === reaction.id);
+        if (!exists) {
+          return [...prev, reaction];
+        }
+        return prev;
+      });
+    } else {
+      // Reply reaction
+      setReplies(prev =>
+        prev.map(r => {
+          if (r.id === messageId) {
+            const reactions = r.reactions || [];
+            const exists = reactions.some(rx => rx.id === reaction.id);
+            if (!exists) {
+              return { ...r, reactions: [...reactions, reaction] };
+            }
+          }
+          return r;
+        })
+      );
+    }
+  };
+
+  const handleReactionRemoved = ({ messageId, emoji, userId }) => {
+    if (messageId === message.id) {
+      // Parent message reaction
+      setParentReactions(prev =>
+        prev.filter(r => !(r.emoji === emoji && r.user.id === userId))
+      );
+    } else {
+      // Reply reaction
+      setReplies(prev =>
+        prev.map(r => {
+          if (r.id === messageId) {
+            const reactions = (r.reactions || []).filter(
+              rx => !(rx.emoji === emoji && rx.user.id === userId)
+            );
+            return { ...r, reactions };
+          }
+          return r;
+        })
+      );
+    }
+  };
+
+  const handleAddReaction = async (messageId, emoji) => {
+    try {
+      await api.addReaction(messageId, emoji);
+    } catch (err) {
+      console.error('Failed to add reaction:', err);
+    }
+    setReactionPickerMessageId(null);
+  };
+
+  const handleRemoveReaction = async (messageId, emoji) => {
+    try {
+      await api.removeReaction(messageId, emoji);
+    } catch (err) {
+      console.error('Failed to remove reaction:', err);
+    }
+  };
+
+  const handleToggleReaction = (messageId, emoji, hasReacted) => {
+    if (hasReacted) {
+      handleRemoveReaction(messageId, emoji);
+    } else {
+      handleAddReaction(messageId, emoji);
     }
   };
 
@@ -118,7 +200,7 @@ function ThreadView({ message, channelId, onClose }) {
       </div>
 
       {/* Original Message */}
-      <div className="p-4 border-b border-gray-700">
+      <div className="p-4 border-b border-gray-700 group relative">
         <div className="flex gap-3">
           <div className="w-9 h-9 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white font-medium">
             {message.author.displayName.charAt(0).toUpperCase()}
@@ -135,10 +217,35 @@ function ThreadView({ message, channelId, onClose }) {
             <div className="text-gray-200 break-words whitespace-pre-wrap">
               {message.content}
             </div>
+            <ReactionDisplay
+              reactions={parentReactions}
+              currentUserId={user.id}
+              onToggleReaction={(emoji, hasReacted) => handleToggleReaction(message.id, emoji, hasReacted)}
+            />
           </div>
         </div>
         <div className="mt-2 text-xs text-gray-400">
           {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
+        </div>
+        {/* Reaction button for parent message */}
+        <div className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity">
+          {reactionPickerMessageId === message.id && (
+            <div className="absolute right-0 bottom-full mb-1 z-10">
+              <ReactionPicker
+                onSelect={(emoji) => handleAddReaction(message.id, emoji)}
+                onClose={() => setReactionPickerMessageId(null)}
+              />
+            </div>
+          )}
+          <button
+            onClick={() => setReactionPickerMessageId(
+              reactionPickerMessageId === message.id ? null : message.id
+            )}
+            className="p-1.5 bg-gray-700 hover:bg-gray-600 rounded border border-gray-600 text-gray-300 hover:text-white"
+            title="Add reaction"
+          >
+            😀
+          </button>
         </div>
       </div>
 
@@ -155,7 +262,7 @@ function ThreadView({ message, channelId, onClose }) {
         ) : (
           <div className="p-4 space-y-4">
             {replies.map((reply) => (
-              <div key={reply.id} className="flex gap-3">
+              <div key={reply.id} className="flex gap-3 group relative">
                 <div className="w-8 h-8 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white text-sm font-medium">
                   {reply.author.displayName.charAt(0).toUpperCase()}
                 </div>
@@ -206,6 +313,32 @@ function ThreadView({ message, channelId, onClose }) {
                       ))}
                     </div>
                   )}
+                  {/* Reactions */}
+                  <ReactionDisplay
+                    reactions={reply.reactions}
+                    currentUserId={user.id}
+                    onToggleReaction={(emoji, hasReacted) => handleToggleReaction(reply.id, emoji, hasReacted)}
+                  />
+                </div>
+                {/* Reaction button for reply */}
+                <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {reactionPickerMessageId === reply.id && (
+                    <div className="absolute right-0 bottom-full mb-1 z-10">
+                      <ReactionPicker
+                        onSelect={(emoji) => handleAddReaction(reply.id, emoji)}
+                        onClose={() => setReactionPickerMessageId(null)}
+                      />
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setReactionPickerMessageId(
+                      reactionPickerMessageId === reply.id ? null : reply.id
+                    )}
+                    className="p-1 bg-gray-700 hover:bg-gray-600 rounded border border-gray-600 text-gray-300 hover:text-white text-sm"
+                    title="Add reaction"
+                  >
+                    😀
+                  </button>
                 </div>
               </div>
             ))}

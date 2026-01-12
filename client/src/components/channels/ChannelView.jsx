@@ -33,6 +33,8 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
       socket.on('message:reply', handleNewReply);
       socket.on('typing:start', handleTypingStart);
       socket.on('typing:stop', handleTypingStop);
+      socket.on('reaction:added', handleReactionAdded);
+      socket.on('reaction:removed', handleReactionRemoved);
 
       return () => {
         socket.off('message:new', handleNewMessage);
@@ -41,6 +43,8 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
         socket.off('message:reply', handleNewReply);
         socket.off('typing:start', handleTypingStart);
         socket.off('typing:stop', handleTypingStop);
+        socket.off('reaction:added', handleReactionAdded);
+        socket.off('reaction:removed', handleReactionRemoved);
       };
     }
   }, [socket, channel.id]);
@@ -126,6 +130,36 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
     }
   };
 
+  const handleReactionAdded = ({ messageId, reaction }) => {
+    setMessages(prev =>
+      prev.map(m => {
+        if (m.id === messageId) {
+          const reactions = m.reactions || [];
+          // Check if this exact reaction already exists
+          const exists = reactions.some(r => r.id === reaction.id);
+          if (!exists) {
+            return { ...m, reactions: [...reactions, reaction] };
+          }
+        }
+        return m;
+      })
+    );
+  };
+
+  const handleReactionRemoved = ({ messageId, emoji, userId }) => {
+    setMessages(prev =>
+      prev.map(m => {
+        if (m.id === messageId) {
+          const reactions = (m.reactions || []).filter(
+            r => !(r.emoji === emoji && r.user.id === userId)
+          );
+          return { ...m, reactions };
+        }
+        return m;
+      })
+    );
+  };
+
   const scrollToBottom = () => {
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -185,6 +219,22 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
     }
   };
 
+  const handleAddReaction = async (messageId, emoji) => {
+    try {
+      await api.addReaction(messageId, emoji);
+    } catch (err) {
+      console.error('Failed to add reaction:', err);
+    }
+  };
+
+  const handleRemoveReaction = async (messageId, emoji) => {
+    try {
+      await api.removeReaction(messageId, emoji);
+    } catch (err) {
+      console.error('Failed to remove reaction:', err);
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col bg-gray-800">
       {/* Channel Header */}
@@ -237,6 +287,8 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
               onOpenThread={onOpenThread}
               onEditMessage={handleEditMessage}
               onDeleteMessage={handleDeleteMessage}
+              onAddReaction={handleAddReaction}
+              onRemoveReaction={handleRemoveReaction}
             />
             <div ref={messagesEndRef} />
           </>

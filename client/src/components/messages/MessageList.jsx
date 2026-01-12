@@ -1,18 +1,21 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { format, isToday, isYesterday } from 'date-fns';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+import ReactionDisplay from './ReactionDisplay';
+import ReactionPicker from './ReactionPicker';
 
 function MessageList({
   messages,
   currentUser,
   onOpenThread,
   onEditMessage,
-  onDeleteMessage
+  onDeleteMessage,
+  onAddReaction,
+  onRemoveReaction
 }) {
   const [editingId, setEditingId] = useState(null);
   const [editContent, setEditContent] = useState('');
   const [menuOpenId, setMenuOpenId] = useState(null);
+  const [reactionPickerMessageId, setReactionPickerMessageId] = useState(null);
 
   const formatMessageTime = (date) => {
     const d = new Date(date);
@@ -51,6 +54,19 @@ function MessageList({
   const handleCancelEdit = () => {
     setEditingId(null);
     setEditContent('');
+  };
+
+  const handleToggleReaction = (messageId, emoji, hasReacted) => {
+    if (hasReacted) {
+      onRemoveReaction(messageId, emoji);
+    } else {
+      onAddReaction(messageId, emoji);
+    }
+  };
+
+  const handleReactionSelect = (messageId, emoji) => {
+    onAddReaction(messageId, emoji);
+    setReactionPickerMessageId(null);
   };
 
   const handleDownload = async (url, filename) => {
@@ -304,6 +320,13 @@ function MessageList({
                 </div>
               )}
 
+              {/* Reactions */}
+              <ReactionDisplay
+                reactions={message.reactions}
+                currentUserId={currentUser.id}
+                onToggleReaction={(emoji, hasReacted) => handleToggleReaction(message.id, emoji, hasReacted)}
+              />
+
               {/* Thread indicator */}
               {message._count?.replies > 0 && (
                 <button
@@ -318,7 +341,24 @@ function MessageList({
 
             {/* Actions */}
             <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              {reactionPickerMessageId === message.id && (
+                <div className="absolute right-0 bottom-full mb-1 z-10">
+                  <ReactionPicker
+                    onSelect={(emoji) => handleReactionSelect(message.id, emoji)}
+                    onClose={() => setReactionPickerMessageId(null)}
+                  />
+                </div>
+              )}
               <div className="flex items-center gap-1 bg-gray-700 rounded border border-gray-600">
+                <button
+                  onClick={() => setReactionPickerMessageId(
+                    reactionPickerMessageId === message.id ? null : message.id
+                  )}
+                  className="p-1.5 hover:bg-gray-600 rounded text-gray-300 hover:text-white"
+                  title="Add reaction"
+                >
+                  😀
+                </button>
                 <button
                   onClick={() => onOpenThread(message)}
                   className="p-1.5 hover:bg-gray-600 rounded text-gray-300 hover:text-white"

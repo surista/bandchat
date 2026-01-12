@@ -4,11 +4,13 @@ import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Cloudinary cloud name for unsigned uploads
-const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || 'drlkgdvlk';
-const CLOUDINARY_UPLOAD_PRESET = process.env.CLOUDINARY_UPLOAD_PRESET || 'bandchat';
+// Cloudinary cloud name for unsigned uploads - environment variables required
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_UPLOAD_PRESET = process.env.CLOUDINARY_UPLOAD_PRESET;
 
-console.log(`Cloudinary configured for unsigned uploads to cloud: ${CLOUDINARY_CLOUD_NAME}`);
+if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
+  console.warn('Warning: CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET must be set for file uploads to work');
+}
 
 // Use memory storage for Cloudinary uploads
 const storage = multer.memoryStorage();
