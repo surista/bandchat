@@ -331,6 +331,9 @@ function Sidebar({
             </button>
           </div>
         )}
+        <div className="text-center text-xs text-gray-500 mt-1">
+          v1.0.0
+        </div>
       </div>
 
       {/* Create Channel Modal */}
