@@ -10,7 +10,10 @@
       "Bash(railway --version:*)",
       "Bash(dir \"C:\\\\Users\\\\suris\\\\Documents\\\\slack\" /B /AD)",
       "Bash(npm install:*)",
-      "Bash(npx prisma migrate dev:*)"
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(xargs:*)",
+      "Bash(cd:*)",
+      "Bash(git push:*)"
     ]
   }
 }
