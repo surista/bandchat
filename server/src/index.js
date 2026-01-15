@@ -11,6 +11,9 @@ import channelGroupRoutes from './routes/channelGroups.js';
 import messageRoutes from './routes/messages.js';
 import pushRoutes from './routes/push.js';
 import uploadRoutes from './routes/uploads.js';
+import songRoutes from './routes/songs.js';
+import setlistRoutes from './routes/setlists.js';
+import gigRoutes from './routes/gigs.js';
 import { setupSocketHandlers } from './socket/handlers.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 
@@ -53,6 +56,9 @@ app.use('/api/channel-groups', channelGroupRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/uploads', uploadRoutes);
+app.use('/api/songs', songRoutes);
+app.use('/api/setlists', setlistRoutes);
+app.use('/api/gigs', gigRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

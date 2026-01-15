@@ -408,6 +408,130 @@ class ApiService {
 
     return response.json();
   }
+
+  // Songs
+  async getSongs(workspaceId) {
+    return this.request(`/songs/workspace/${workspaceId}`);
+  }
+
+  async createSong(workspaceId, data) {
+    return this.request(`/songs/workspace/${workspaceId}`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async getSong(songId) {
+    return this.request(`/songs/${songId}`);
+  }
+
+  async updateSong(songId, data) {
+    return this.request(`/songs/${songId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteSong(songId) {
+    return this.request(`/songs/${songId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Setlists
+  async getSetlists(workspaceId) {
+    return this.request(`/setlists/workspace/${workspaceId}`);
+  }
+
+  async createSetlist(workspaceId, data) {
+    return this.request(`/setlists/workspace/${workspaceId}`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async getSetlist(setlistId) {
+    return this.request(`/setlists/${setlistId}`);
+  }
+
+  async updateSetlist(setlistId, data) {
+    return this.request(`/setlists/${setlistId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteSetlist(setlistId) {
+    return this.request(`/setlists/${setlistId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async addSongToSetlist(setlistId, songId) {
+    return this.request(`/setlists/${setlistId}/songs`, {
+      method: 'POST',
+      body: JSON.stringify({ songId })
+    });
+  }
+
+  async reorderSetlistSongs(setlistId, songIds) {
+    return this.request(`/setlists/${setlistId}/reorder`, {
+      method: 'PUT',
+      body: JSON.stringify({ songIds })
+    });
+  }
+
+  async removeSongFromSetlist(setlistId, songId) {
+    return this.request(`/setlists/${setlistId}/songs/${songId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Gigs
+  async getGigs(workspaceId, filters = {}) {
+    const params = new URLSearchParams();
+    if (filters.type) params.append('type', filters.type);
+    if (filters.status) params.append('status', filters.status);
+    if (filters.from) params.append('from', filters.from);
+    if (filters.to) params.append('to', filters.to);
+    const query = params.toString();
+    return this.request(`/gigs/workspace/${workspaceId}${query ? `?${query}` : ''}`);
+  }
+
+  async createGig(workspaceId, data) {
+    return this.request(`/gigs/workspace/${workspaceId}`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async getGig(gigId) {
+    return this.request(`/gigs/${gigId}`);
+  }
+
+  async updateGig(gigId, data) {
+    return this.request(`/gigs/${gigId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteGig(gigId) {
+    return this.request(`/gigs/${gigId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async completeGig(gigId, songIds = []) {
+    return this.request(`/gigs/${gigId}/complete`, {
+      method: 'PUT',
+      body: JSON.stringify({ songIds })
+    });
+  }
+
+  async getGigStats(workspaceId) {
+    return this.request(`/gigs/workspace/${workspaceId}/stats`);
+  }
 }
 
 export const api = new ApiService();

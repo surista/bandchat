@@ -18,7 +18,9 @@ function Sidebar({
   isOpen,
   onClose,
   directMessages = [],
-  onStartDM
+  onStartDM,
+  activeBandView,
+  onSelectBandView
 }) {
   const navigate = useNavigate();
   const { updateUser } = useAuth();
@@ -248,6 +250,43 @@ function Sidebar({
               Click a member to start a DM
             </div>
           )}
+        </div>
+
+        {/* Band Section */}
+        <div className="mt-6 px-4 mb-2">
+          <span className="text-sm font-medium uppercase tracking-wide text-gray-400">
+            Band
+          </span>
+        </div>
+        <div className="space-y-0.5">
+          <button
+            onClick={() => onSelectBandView?.('songs')}
+            className={`channel-item w-full ${activeBandView === 'songs' ? 'active' : ''}`}
+          >
+            <span className="text-gray-400">🎵</span>
+            <span className="flex-1 truncate">Songs</span>
+          </button>
+          <button
+            onClick={() => onSelectBandView?.('setlists')}
+            className={`channel-item w-full ${activeBandView === 'setlists' ? 'active' : ''}`}
+          >
+            <span className="text-gray-400">📋</span>
+            <span className="flex-1 truncate">Setlists</span>
+          </button>
+          <button
+            onClick={() => onSelectBandView?.('calendar')}
+            className={`channel-item w-full ${activeBandView === 'calendar' ? 'active' : ''}`}
+          >
+            <span className="text-gray-400">📅</span>
+            <span className="flex-1 truncate">Calendar</span>
+          </button>
+          <button
+            onClick={() => onSelectBandView?.('stats')}
+            className={`channel-item w-full ${activeBandView === 'stats' ? 'active' : ''}`}
+          >
+            <span className="text-gray-400">📊</span>
+            <span className="flex-1 truncate">Stats</span>
+          </button>
         </div>
 
         {/* Members Section */}

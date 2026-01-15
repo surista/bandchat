@@ -7,6 +7,10 @@ import Sidebar from '../channels/Sidebar';
 import ChannelView from '../channels/ChannelView';
 import ThreadView from '../threads/ThreadView';
 import MobileNav from '../navigation/MobileNav';
+import SongList from '../band/SongList';
+import SetlistList from '../band/SetlistList';
+import GigCalendar from '../band/GigCalendar';
+import GigStats from '../band/GigStats';
 
 function WorkspaceView() {
   const { workspaceId } = useParams();
@@ -26,6 +30,7 @@ function WorkspaceView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [directMessages, setDirectMessages] = useState([]);
+  const [activeBandView, setActiveBandView] = useState(null);
 
   useEffect(() => {
     loadWorkspace();
@@ -194,6 +199,13 @@ function WorkspaceView() {
     );
   };
 
+  const handleSelectBandView = (view) => {
+    setActiveBandView(view);
+    setSelectedChannel(null);
+    setSelectedThread(null);
+    setSidebarOpen(false);
+  };
+
   const handleMobileTabChange = (tab) => {
     setMobileTab(tab);
     if (tab === 'home') {
@@ -250,6 +262,7 @@ function WorkspaceView() {
         onSelectChannel={(channel) => {
           setSelectedChannel(channel);
           setSelectedThread(null);
+          setActiveBandView(null);
           setSidebarOpen(false);
         }}
         onCreateChannel={handleCreateChannel}
@@ -261,6 +274,8 @@ function WorkspaceView() {
         onClose={() => setSidebarOpen(false)}
         directMessages={directMessages}
         onStartDM={handleStartDM}
+        activeBandView={activeBandView}
+        onSelectBandView={handleSelectBandView}
       />
 
       {/* Main Content */}
@@ -279,7 +294,11 @@ function WorkspaceView() {
             </svg>
           </button>
           <span className="text-white font-medium truncate flex-1">
-            {selectedChannel
+            {activeBandView === 'songs' ? '🎵 Songs' :
+             activeBandView === 'setlists' ? '📋 Setlists' :
+             activeBandView === 'calendar' ? '📅 Calendar' :
+             activeBandView === 'stats' ? '📊 Stats' :
+             selectedChannel
               ? selectedChannel.isDirect
                 ? selectedChannel.otherMembers?.map(m => m.displayName).join(', ') || 'Direct Message'
                 : `# ${selectedChannel.name}`
@@ -297,9 +316,17 @@ function WorkspaceView() {
 
         {/* Content area */}
         <div className="flex-1 flex">
-          {/* Channel View */}
+          {/* Channel View or Band View */}
           <div className={`flex-1 flex flex-col ${selectedThread ? 'hidden md:flex' : ''}`}>
-            {selectedChannel ? (
+            {activeBandView === 'songs' ? (
+              <SongList workspaceId={workspaceId} />
+            ) : activeBandView === 'setlists' ? (
+              <SetlistList workspaceId={workspaceId} />
+            ) : activeBandView === 'calendar' ? (
+              <GigCalendar workspaceId={workspaceId} />
+            ) : activeBandView === 'stats' ? (
+              <GigStats workspaceId={workspaceId} />
+            ) : selectedChannel ? (
               <ChannelView
                 channel={selectedChannel}
                 workspace={workspace}
