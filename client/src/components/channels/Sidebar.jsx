@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { pushService } from '../../services/push';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 
 function Sidebar({
@@ -24,6 +25,7 @@ function Sidebar({
 }) {
   const navigate = useNavigate();
   const { updateUser } = useAuth();
+  const { currentTheme, setTheme, themes } = useTheme();
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
@@ -568,6 +570,16 @@ function Sidebar({
               >
                 Profile
               </button>
+              <button
+                onClick={() => setSettingsTab('theme')}
+                className={`px-4 py-2 font-medium ${
+                  settingsTab === 'theme'
+                    ? 'text-slack-purple border-b-2 border-slack-purple'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Theme
+              </button>
               {workspace.members?.find(m => m.user.id === user?.id)?.role === 'ADMIN' && (
                 <button
                   onClick={() => setSettingsTab('members')}
@@ -686,6 +698,47 @@ function Sidebar({
                     </button>
                   </div>
                 </form>
+              )}
+
+              {/* Theme Tab */}
+              {settingsTab === 'theme' && (
+                <div>
+                  <p className="text-gray-600 mb-4">Choose a theme for your sidebar</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {Object.entries(themes).map(([id, theme]) => (
+                      <button
+                        key={id}
+                        onClick={() => setTheme(id)}
+                        className={`p-3 rounded-lg border-2 transition-all ${
+                          currentTheme === id
+                            ? 'border-blue-500 ring-2 ring-blue-200'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex gap-1 mb-2">
+                          <div
+                            className="w-4 h-4 rounded"
+                            style={{ backgroundColor: theme.sidebar }}
+                          />
+                          <div
+                            className="w-4 h-4 rounded"
+                            style={{ backgroundColor: theme.sidebarActive }}
+                          />
+                          <div
+                            className="w-4 h-4 rounded"
+                            style={{ backgroundColor: theme.primary }}
+                          />
+                        </div>
+                        <div className="text-xs font-medium text-gray-700">
+                          {theme.name}
+                        </div>
+                        {currentTheme === id && (
+                          <div className="text-xs text-blue-500 mt-1">Active</div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               )}
 
               {/* Members Tab (Admin only) */}

@@ -8,16 +8,16 @@ export default {
     extend: {
       colors: {
         slack: {
-          purple: '#4A154B',
+          purple: 'var(--color-accent)',
           'purple-dark': '#3D1140',
-          'purple-light': '#611f69',
-          green: '#2BAC76',
+          'purple-light': 'var(--color-accent-hover)',
+          green: 'var(--color-primary)',
           yellow: '#ECB22E',
           red: '#E01E5A',
           blue: '#36C5F0',
-          sidebar: '#3F0E40',
-          hover: '#350d36',
-          active: '#1164A3',
+          sidebar: 'var(--color-sidebar)',
+          hover: 'var(--color-sidebar-hover)',
+          active: 'var(--color-sidebar-active)',
         }
       }
     },

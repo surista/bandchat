@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-sidebar: #3F0E40;
+  --color-sidebar-hover: #350d36;
+  --color-sidebar-active: #1164A3;
+  --color-accent: #4A154B;
+  --color-accent-hover: #611f69;
+  --color-primary: #2BAC76;
+}
+
 * {
   box-sizing: border-box;
 }
