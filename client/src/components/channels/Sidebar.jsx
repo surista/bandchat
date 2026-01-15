@@ -40,6 +40,7 @@ function Sidebar({
   const [editAvatarUrl, setEditAvatarUrl] = useState('');
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsError, setSettingsError] = useState('');
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   useEffect(() => {
     // Check if notifications are already enabled
@@ -109,6 +110,27 @@ function Sidebar({
       ...prev,
       [groupId]: !prev[groupId]
     }));
+  };
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      setSettingsError('File size must be less than 10MB');
+      return;
+    }
+
+    setAvatarUploading(true);
+    setSettingsError('');
+    try {
+      const result = await api.uploadFile(file);
+      setEditAvatarUrl(result.url);
+    } catch (err) {
+      setSettingsError(err.message || 'Failed to upload avatar');
+    } finally {
+      setAvatarUploading(false);
+    }
   };
 
   const renderChannel = (channel) => (
@@ -602,18 +624,50 @@ function Sidebar({
                   </div>
                   <div className="mb-4">
                     <label className="block text-gray-700 font-medium mb-2">
-                      Avatar URL
+                      Avatar
                     </label>
-                    <input
-                      type="url"
-                      value={editAvatarUrl}
-                      onChange={(e) => setEditAvatarUrl(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
-                      placeholder="https://example.com/avatar.jpg"
-                    />
-                    <p className="text-sm text-gray-500 mt-1">
-                      Leave empty to use initials
-                    </p>
+                    <div className="flex items-start gap-4">
+                      {/* Avatar Preview */}
+                      <div className="flex-shrink-0">
+                        {editAvatarUrl ? (
+                          <img
+                            src={editAvatarUrl}
+                            alt="Avatar preview"
+                            className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded-full bg-slack-purple flex items-center justify-center text-white text-2xl font-medium">
+                            {editDisplayName?.charAt(0).toUpperCase() || '?'}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <label className="block">
+                          <span className="btn btn-secondary cursor-pointer inline-block">
+                            {avatarUploading ? 'Uploading...' : 'Upload Photo'}
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleAvatarUpload}
+                            disabled={avatarUploading}
+                            className="hidden"
+                          />
+                        </label>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Max 10MB. JPG, PNG, GIF, WebP.
+                        </p>
+                        {editAvatarUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setEditAvatarUrl('')}
+                            className="text-xs text-red-500 hover:text-red-700 mt-1"
+                          >
+                            Remove avatar
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                   <div className="flex gap-2 justify-end">
                     <button
