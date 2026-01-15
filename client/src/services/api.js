@@ -131,6 +131,22 @@ class ApiService {
     });
   }
 
+  async googleAuth(credential) {
+    const data = await this.request('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ credential })
+    });
+    this.setTokens(data.accessToken, data.refreshToken);
+    return data;
+  }
+
+  async linkGoogle(credential) {
+    return this.request('/auth/link-google', {
+      method: 'POST',
+      body: JSON.stringify({ credential })
+    });
+  }
+
   // Workspaces
   async getWorkspaces() {
     return this.request('/workspaces');

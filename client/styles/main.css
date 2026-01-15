@@ -78,7 +78,7 @@ body {
 
 /* Sidebar channel hover */
 .channel-item {
-  @apply flex items-center gap-2 px-4 py-1 rounded cursor-pointer text-gray-300;
+  @apply flex items-center gap-2 px-4 py-1 rounded cursor-pointer text-gray-300 text-left;
   @apply hover:bg-slack-hover transition-colors;
 }
 
@@ -121,4 +121,13 @@ input:focus, textarea:focus {
   to {
     transform: translateX(-50%) scaleX(1);
   }
+}
+
+/* Google Sign-In button container */
+.google-signin-container {
+  @apply flex justify-center w-full;
+}
+
+.google-signin-container > div {
+  @apply w-full;
 }

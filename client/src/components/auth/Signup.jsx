@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import GoogleSignInButton from './GoogleSignInButton';
 
 function Signup() {
-  const { signup } = useAuth();
+  const { signup, googleLogin } = useAuth();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,6 +37,27 @@ function Signup() {
     }
   };
 
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError('');
+    setLoading(true);
+
+    try {
+      await googleLogin(credentialResponse.credential);
+    } catch (err) {
+      if (err.message === 'email_exists_local') {
+        setError('An account with this email exists. Please sign in with your password.');
+      } else {
+        setError(err.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError('Google sign-up failed. Please try again.');
+  };
+
   return (
     <div className="min-h-screen bg-slack-purple flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -50,6 +72,23 @@ function Signup() {
               {error}
             </div>
           )}
+
+          <div className="mb-6">
+            <GoogleSignInButton
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              text="signup_with"
+            />
+          </div>
+
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">Or sign up with email</span>
+            </div>
+          </div>
 
           <div className="mb-4">
             <label htmlFor="displayName" className="block text-gray-700 font-medium mb-2">

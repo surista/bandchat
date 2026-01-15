@@ -40,6 +40,12 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const googleLogin = async (credential) => {
+    const data = await api.googleAuth(credential);
+    setUser(data.user);
+    return data;
+  };
+
   const updateUser = (userData) => {
     setUser(prev => ({ ...prev, ...userData }));
   };
@@ -49,6 +55,7 @@ export function AuthProvider({ children }) {
     loading,
     signup,
     login,
+    googleLogin,
     logout,
     updateUser,
     isAuthenticated: !!user

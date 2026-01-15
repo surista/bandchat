@@ -3,12 +3,14 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { Resend } from 'resend';
+import { OAuth2Client } from 'google-auth-library';
 import { authenticate } from '../middleware/auth.js';
 import { authLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 
 const router = express.Router();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+const googleClient = process.env.GOOGLE_CLIENT_ID ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID) : null;
 
 // Send verification email
 const sendVerificationEmail = async (email, token) => {
@@ -201,6 +203,10 @@ router.post('/login', authLimiter, async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    if (!user.password) {
+      return res.status(400).json({ error: 'This account uses Google Sign-In. Please sign in with Google.' });
+    }
+
     const validPassword = await bcrypt.compare(password, user.password);
 
     if (!validPassword) {
@@ -221,6 +227,170 @@ router.post('/login', authLimiter, async (req, res) => {
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Google Sign-In / Sign-Up
+router.post('/google', authLimiter, async (req, res) => {
+  try {
+    if (!googleClient) {
+      return res.status(500).json({ error: 'Google authentication is not configured' });
+    }
+
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({ error: 'Google credential required' });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture, email_verified } = payload;
+
+    // Check if user exists by googleId
+    let user = await prisma.user.findUnique({
+      where: { googleId }
+    });
+
+    if (user) {
+      // Existing Google user - just sign in
+      const tokens = await generateTokens(user.id);
+      return res.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          displayName: user.displayName,
+          avatarUrl: user.avatarUrl
+        },
+        ...tokens,
+        isNewUser: false
+      });
+    }
+
+    // Check if email already exists (registered with password)
+    const existingUserByEmail = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() }
+    });
+
+    if (existingUserByEmail) {
+      if (existingUserByEmail.authProvider === 'local') {
+        return res.status(409).json({
+          error: 'email_exists_local',
+          message: 'An account with this email already exists. Please sign in with your password to link your Google account.'
+        });
+      }
+    }
+
+    // Create new user via Google
+    user = await prisma.user.create({
+      data: {
+        email: email.toLowerCase(),
+        displayName: name,
+        avatarUrl: picture,
+        googleId,
+        authProvider: 'google',
+        emailVerified: email_verified || true,
+        password: null
+      },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        avatarUrl: true,
+        createdAt: true
+      }
+    });
+
+    const tokens = await generateTokens(user.id);
+
+    res.status(201).json({
+      user,
+      ...tokens,
+      isNewUser: true,
+      message: 'Account created successfully with Google.'
+    });
+
+  } catch (error) {
+    console.error('Google auth error:', error);
+    if (error.message?.includes('Token used too late') ||
+        error.message?.includes('Invalid token')) {
+      return res.status(401).json({ error: 'Invalid or expired Google token' });
+    }
+    res.status(500).json({ error: 'Google authentication failed' });
+  }
+});
+
+// Link Google account to existing local account
+router.post('/link-google', authenticate, async (req, res) => {
+  try {
+    if (!googleClient) {
+      return res.status(500).json({ error: 'Google authentication is not configured' });
+    }
+
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({ error: 'Google credential required' });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { sub: googleId, email } = payload;
+
+    // Verify the Google email matches the logged-in user's email
+    const currentUser = await prisma.user.findUnique({
+      where: { id: req.user.id }
+    });
+
+    if (currentUser.email.toLowerCase() !== email.toLowerCase()) {
+      return res.status(400).json({
+        error: 'Google account email does not match your account email'
+      });
+    }
+
+    // Check if this googleId is already linked to another account
+    const existingGoogleUser = await prisma.user.findUnique({
+      where: { googleId }
+    });
+
+    if (existingGoogleUser && existingGoogleUser.id !== req.user.id) {
+      return res.status(409).json({
+        error: 'This Google account is already linked to another user'
+      });
+    }
+
+    // Link the Google account
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        googleId,
+        authProvider: 'both',
+        emailVerified: true
+      },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        avatarUrl: true
+      }
+    });
+
+    res.json({
+      user: updatedUser,
+      message: 'Google account linked successfully'
+    });
+
+  } catch (error) {
+    console.error('Link Google error:', error);
+    res.status(500).json({ error: 'Failed to link Google account' });
   }
 });
 
