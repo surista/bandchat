@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { pushService } from '../../services/push';
+import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 
 function Sidebar({
   workspace,
@@ -19,6 +21,7 @@ function Sidebar({
   onStartDM
 }) {
   const navigate = useNavigate();
+  const { updateUser } = useAuth();
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
@@ -29,6 +32,12 @@ function Sidebar({
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState({});
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsTab, setSettingsTab] = useState('profile');
+  const [editDisplayName, setEditDisplayName] = useState('');
+  const [editAvatarUrl, setEditAvatarUrl] = useState('');
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsError, setSettingsError] = useState('');
 
   useEffect(() => {
     // Check if notifications are already enabled
@@ -314,6 +323,18 @@ function Sidebar({
             <button
               onClick={() => {
                 setShowUserMenu(false);
+                setEditDisplayName(user?.displayName || '');
+                setEditAvatarUrl(user?.avatarUrl || '');
+                setSettingsError('');
+                setShowSettings(true);
+              }}
+              className="w-full px-4 py-2 text-left hover:bg-gray-700 transition-colors"
+            >
+              Settings
+            </button>
+            <button
+              onClick={() => {
+                setShowUserMenu(false);
                 navigate('/');
               }}
               className="w-full px-4 py-2 text-left hover:bg-gray-700 transition-colors"
@@ -456,6 +477,170 @@ function Sidebar({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg w-full max-w-lg max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-xl font-bold text-gray-900">Settings</h3>
+              <button
+                onClick={() => setShowSettings(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b">
+              <button
+                onClick={() => setSettingsTab('profile')}
+                className={`px-4 py-2 font-medium ${
+                  settingsTab === 'profile'
+                    ? 'text-slack-purple border-b-2 border-slack-purple'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Profile
+              </button>
+              {workspace.members?.find(m => m.user.id === user?.id)?.role === 'ADMIN' && (
+                <button
+                  onClick={() => setSettingsTab('members')}
+                  className={`px-4 py-2 font-medium ${
+                    settingsTab === 'members'
+                      ? 'text-slack-purple border-b-2 border-slack-purple'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  Members
+                </button>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {settingsError && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">
+                  {settingsError}
+                </div>
+              )}
+
+              {/* Profile Tab */}
+              {settingsTab === 'profile' && (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setSettingsLoading(true);
+                    setSettingsError('');
+                    try {
+                      const updated = await api.updateProfile({
+                        displayName: editDisplayName,
+                        avatarUrl: editAvatarUrl || null
+                      });
+                      updateUser(updated);
+                      setShowSettings(false);
+                    } catch (err) {
+                      setSettingsError(err.message);
+                    } finally {
+                      setSettingsLoading(false);
+                    }
+                  }}
+                >
+                  <div className="mb-4">
+                    <label className="block text-gray-700 font-medium mb-2">
+                      Display Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editDisplayName}
+                      onChange={(e) => setEditDisplayName(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                      required
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-gray-700 font-medium mb-2">
+                      Avatar URL
+                    </label>
+                    <input
+                      type="url"
+                      value={editAvatarUrl}
+                      onChange={(e) => setEditAvatarUrl(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                      placeholder="https://example.com/avatar.jpg"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Leave empty to use initials
+                    </p>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setShowSettings(false)}
+                      className="btn btn-secondary"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={settingsLoading}
+                      className="btn btn-primary"
+                    >
+                      {settingsLoading ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Members Tab (Admin only) */}
+              {settingsTab === 'members' && (
+                <div className="space-y-2">
+                  {workspace.members?.map((member) => (
+                    <div
+                      key={member.user.id}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-slack-purple flex items-center justify-center text-white font-medium">
+                          {member.user.displayName?.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            {member.user.displayName}
+                            {member.user.id === user?.id && (
+                              <span className="text-gray-500 ml-1">(you)</span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500">{member.user.email}</div>
+                        </div>
+                      </div>
+                      <select
+                        value={member.role}
+                        onChange={async (e) => {
+                          try {
+                            await api.updateMemberRole(
+                              workspace.id,
+                              member.user.id,
+                              e.target.value
+                            );
+                            window.location.reload();
+                          } catch (err) {
+                            alert(err.message);
+                          }
+                        }}
+                        className="px-2 py-1 border border-gray-300 rounded text-gray-900"
+                      >
+                        <option value="MEMBER">Member</option>
+                        <option value="ADMIN">Admin</option>
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
