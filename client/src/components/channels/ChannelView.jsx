@@ -83,7 +83,22 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
 
   const handleNewMessage = (message) => {
     if (message.channelId === channel.id) {
-      setMessages(prev => [...prev, message]);
+      setMessages(prev => {
+        // Check if this is confirming an optimistic message we sent
+        const optimisticIndex = prev.findIndex(
+          m => m.pending && m.author.id === message.author.id && m.content === message.content
+        );
+
+        if (optimisticIndex !== -1) {
+          // Replace optimistic message with real one
+          const updated = [...prev];
+          updated[optimisticIndex] = message;
+          return updated;
+        }
+
+        // New message from someone else (or no matching optimistic)
+        return [...prev, message];
+      });
       scrollToBottom();
 
       // Mark as read if it's not our message
@@ -167,6 +182,29 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
   };
 
   const handleSendMessage = async (content, files = []) => {
+    // Create optimistic message immediately for instant feedback
+    const optimisticMessage = {
+      id: `temp-${Date.now()}`,
+      content: content || '',
+      channelId: channel.id,
+      author: {
+        id: user.id,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl
+      },
+      attachments: [],
+      reactions: [],
+      createdAt: new Date().toISOString(),
+      pending: true,
+      _count: { replies: 0 }
+    };
+
+    // Add optimistic message to UI immediately (only for text messages without files)
+    if (files.length === 0 && content) {
+      setMessages(prev => [...prev, optimisticMessage]);
+      scrollToBottom();
+    }
+
     try {
       let attachments = null;
 
@@ -184,8 +222,10 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
 
       // Send message with attachments
       await api.sendMessage(channel.id, content || '', null, attachments);
-      // Message will be added via socket event
+      // Real message will replace optimistic one via socket event
     } catch (err) {
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
       console.error('Failed to send message:', err);
       throw err; // Re-throw to show error in MessageInput
     }

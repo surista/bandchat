@@ -201,7 +201,7 @@ function MessageList({
 
           {/* Message */}
           <div
-            className="group flex gap-3 py-2 hover:bg-gray-700/30 rounded px-2 -mx-2 relative"
+            className={`group flex gap-3 py-2 hover:bg-gray-700/30 rounded px-2 -mx-2 relative ${message.pending ? 'opacity-60' : ''}`}
             onMouseLeave={() => setMenuOpenId(null)}
           >
             {/* Avatar */}
@@ -226,7 +226,10 @@ function MessageList({
                 <span className="text-xs text-gray-400">
                   {formatMessageTime(message.createdAt)}
                 </span>
-                {message.updatedAt !== message.createdAt && (
+                {message.pending && (
+                  <span className="text-xs text-gray-500">(sending...)</span>
+                )}
+                {!message.pending && message.updatedAt !== message.createdAt && (
                   <span className="text-xs text-gray-500">(edited)</span>
                 )}
               </div>
