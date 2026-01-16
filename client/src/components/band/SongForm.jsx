@@ -1,11 +1,22 @@
 import { useState } from 'react';
 
 function SongForm({ song, onSave, onClose }) {
+  // Parse existing key into root and mode
+  const parseKey = (key) => {
+    if (!key) return { root: '', isMinor: false };
+    const isMinor = key.endsWith('m');
+    const root = isMinor ? key.slice(0, -1) : key;
+    return { root, isMinor };
+  };
+
+  const { root: initialRoot, isMinor: initialIsMinor } = parseKey(song?.key);
+
   const [formData, setFormData] = useState({
     title: song?.title || '',
     artist: song?.artist || '',
     duration: song?.duration || '',
-    key: song?.key || '',
+    keyRoot: initialRoot,
+    keyIsMinor: initialIsMinor,
     bpm: song?.bpm || '',
     notes: song?.notes || '',
     youtubeUrl: song?.youtubeUrl || '',
@@ -20,11 +31,16 @@ function SongForm({ song, onSave, onClose }) {
     setError('');
 
     try {
+      // Combine key root and mode
+      const key = formData.keyRoot
+        ? formData.keyRoot + (formData.keyIsMinor ? 'm' : '')
+        : null;
+
       await onSave({
         title: formData.title,
         artist: formData.artist || null,
         duration: formData.duration ? parseInt(formData.duration) : null,
-        key: formData.key || null,
+        key,
         bpm: formData.bpm ? parseInt(formData.bpm) : null,
         notes: formData.notes || null,
         youtubeUrl: formData.youtubeUrl || null,
@@ -41,10 +57,9 @@ function SongForm({ song, onSave, onClose }) {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Musical keys
-  const musicalKeys = [
-    'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B',
-    'Am', 'A#m', 'Bbm', 'Bm', 'Cm', 'C#m', 'Dbm', 'Dm', 'D#m', 'Ebm', 'Em', 'Fm', 'F#m', 'Gbm', 'Gm', 'G#m', 'Abm'
+  // Musical key roots (no minor suffix)
+  const keyRoots = [
+    'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B'
   ];
 
   return (
@@ -91,16 +106,29 @@ function SongForm({ song, onSave, onClose }) {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-gray-700 font-medium mb-1">Key</label>
-                  <select
-                    value={formData.key}
-                    onChange={(e) => handleChange('key', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
-                  >
-                    <option value="">Select</option>
-                    {musicalKeys.map(k => (
-                      <option key={k} value={k}>{k}</option>
-                    ))}
-                  </select>
+                  <div className="flex gap-2">
+                    <select
+                      value={formData.keyRoot}
+                      onChange={(e) => handleChange('keyRoot', e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded text-gray-900"
+                    >
+                      <option value="">-</option>
+                      {keyRoots.map(k => (
+                        <option key={k} value={k}>{k}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => handleChange('keyIsMinor', !formData.keyIsMinor)}
+                      className={`px-3 py-2 rounded font-medium text-sm transition-colors ${
+                        formData.keyIsMinor
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      {formData.keyIsMinor ? 'min' : 'Maj'}
+                    </button>
+                  </div>
                 </div>
 
                 <div>
