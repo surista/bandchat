@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import api from '../../services/api';
 
 function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
-  const [setlistSongs, setSetlistSongs] = useState(setlist.songs || []);
+  const [setlistItems, setSetlistItems] = useState(setlist.songs || []);
   const [searchQuery, setSearchQuery] = useState('');
   const [draggedItem, setDraggedItem] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const availableSongs = allSongs.filter(
-    song => !setlistSongs.some(ss => ss.songId === song.id)
+    song => !setlistItems.some(item => item.songId === song.id)
   );
 
   const filteredAvailable = availableSongs.filter(song => {
@@ -20,16 +20,25 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
   const handleAddSong = async (songId) => {
     try {
       const result = await api.addSongToSetlist(setlist.id, songId);
-      setSetlistSongs(prev => [...prev, result]);
+      setSetlistItems(prev => [...prev, result]);
     } catch (err) {
       alert(err.message);
     }
   };
 
-  const handleRemoveSong = async (songId) => {
+  const handleAddMC = async () => {
     try {
-      await api.removeSongFromSetlist(setlist.id, songId);
-      setSetlistSongs(prev => prev.filter(ss => ss.songId !== songId));
+      const result = await api.addMCToSetlist(setlist.id, 60, 'MC');
+      setSetlistItems(prev => [...prev, result]);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleRemoveItem = async (item) => {
+    try {
+      await api.removeSetlistItem(setlist.id, item.id);
+      setSetlistItems(prev => prev.filter(i => i.id !== item.id));
     } catch (err) {
       alert(err.message);
     }
@@ -44,11 +53,11 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
     e.preventDefault();
     if (draggedItem === null || draggedItem === index) return;
 
-    const newList = [...setlistSongs];
+    const newList = [...setlistItems];
     const draggedSong = newList[draggedItem];
     newList.splice(draggedItem, 1);
     newList.splice(index, 0, draggedSong);
-    setSetlistSongs(newList);
+    setSetlistItems(newList);
     setDraggedItem(index);
   };
 
@@ -57,8 +66,8 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
     setDraggedItem(null);
     setSaving(true);
     try {
-      const songIds = setlistSongs.map(ss => ss.songId);
-      await api.reorderSetlistSongs(setlist.id, songIds);
+      const itemIds = setlistItems.map(item => item.id);
+      await api.reorderSetlistItems(setlist.id, itemIds);
     } catch (err) {
       alert('Failed to save order: ' + err.message);
     } finally {
@@ -68,18 +77,18 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
 
   const moveItem = async (index, direction) => {
     const newIndex = index + direction;
-    if (newIndex < 0 || newIndex >= setlistSongs.length) return;
+    if (newIndex < 0 || newIndex >= setlistItems.length) return;
 
-    const newList = [...setlistSongs];
+    const newList = [...setlistItems];
     const item = newList[index];
     newList.splice(index, 1);
     newList.splice(newIndex, 0, item);
-    setSetlistSongs(newList);
+    setSetlistItems(newList);
 
     setSaving(true);
     try {
-      const songIds = newList.map(ss => ss.songId);
-      await api.reorderSetlistSongs(setlist.id, songIds);
+      const itemIds = newList.map(i => i.id);
+      await api.reorderSetlistItems(setlist.id, itemIds);
     } catch (err) {
       alert('Failed to save order');
     } finally {
@@ -87,9 +96,27 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
     }
   };
 
-  const totalDuration = setlistSongs.reduce((acc, ss) => acc + (ss.song?.duration || 0), 0);
+  // Calculate total duration including MC sections
+  const getItemDuration = (item) => {
+    if (item.type === 'MC') {
+      return item.duration || 60;
+    }
+    return item.song?.duration || 0;
+  };
+
+  const totalDuration = setlistItems.reduce((acc, item) => acc + getItemDuration(item), 0);
   const durationMins = Math.floor(totalDuration / 60);
   const durationSecs = totalDuration % 60;
+
+  const songCount = setlistItems.filter(i => i.type !== 'MC').length;
+  const mcCount = setlistItems.filter(i => i.type === 'MC').length;
+
+  const formatDuration = (seconds) => {
+    if (!seconds) return '';
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${String(secs).padStart(2, '0')}`;
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -109,35 +136,46 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
             )}
           </div>
           <div className="text-right text-sm">
-            <div className="text-white font-medium">{setlistSongs.length} songs</div>
+            <div className="text-white font-medium">
+              {songCount} song{songCount !== 1 ? 's' : ''}
+              {mcCount > 0 && ` + ${mcCount} MC`}
+            </div>
             <div className="text-gray-400">{durationMins}:{String(durationSecs).padStart(2, '0')}</div>
           </div>
         </div>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Setlist Songs */}
+        {/* Setlist Items */}
         <div className="flex-1 flex flex-col border-r border-gray-700">
-          <div className="p-3 bg-gray-800 text-sm text-gray-400 uppercase tracking-wide">
-            Setlist Order {saving && '(saving...)'}
+          <div className="p-3 bg-gray-800 text-sm text-gray-400 uppercase tracking-wide flex items-center justify-between">
+            <span>Setlist Order {saving && '(saving...)'}</span>
+            <button
+              onClick={handleAddMC}
+              className="px-2 py-1 bg-yellow-600 hover:bg-yellow-500 text-white text-xs rounded font-medium"
+            >
+              + MC Break
+            </button>
           </div>
           <div className="flex-1 overflow-y-auto">
-            {setlistSongs.length === 0 ? (
+            {setlistItems.length === 0 ? (
               <div className="text-center text-gray-500 py-12">
                 Add songs from the right panel
               </div>
             ) : (
               <div className="divide-y divide-gray-700">
-                {setlistSongs.map((ss, index) => (
+                {setlistItems.map((item, index) => (
                   <div
-                    key={ss.id}
+                    key={item.id}
                     draggable
                     onDragStart={(e) => handleDragStart(e, index)}
                     onDragOver={(e) => handleDragOver(e, index)}
                     onDragEnd={handleDragEnd}
-                    className={`flex items-center gap-3 p-3 bg-gray-900 hover:bg-gray-800 cursor-move ${
-                      draggedItem === index ? 'opacity-50' : ''
-                    }`}
+                    className={`flex items-center gap-3 p-3 cursor-move ${
+                      item.type === 'MC'
+                        ? 'bg-yellow-900/30 hover:bg-yellow-900/50'
+                        : 'bg-gray-900 hover:bg-gray-800'
+                    } ${draggedItem === index ? 'opacity-50' : ''}`}
                   >
                     <div className="flex flex-col gap-0.5">
                       <button
@@ -149,27 +187,47 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
                       </button>
                       <button
                         onClick={() => moveItem(index, 1)}
-                        disabled={index === setlistSongs.length - 1}
+                        disabled={index === setlistItems.length - 1}
                         className="text-gray-500 hover:text-white disabled:opacity-30 text-xs"
                       >
                         ▼
                       </button>
                     </div>
                     <span className="text-gray-500 w-6 text-right">{index + 1}.</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-white truncate">{ss.song?.title}</div>
-                      {ss.song?.artist && (
-                        <div className="text-gray-400 text-sm truncate">{ss.song.artist}</div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-400">
-                      {ss.song?.key && <span className="px-1.5 py-0.5 bg-purple-900/50 rounded">{ss.song.key}</span>}
-                      {ss.song?.duration && (
-                        <span>{Math.floor(ss.song.duration / 60)}:{String(ss.song.duration % 60).padStart(2, '0')}</span>
-                      )}
-                    </div>
+
+                    {item.type === 'MC' ? (
+                      <>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-yellow-400 truncate font-medium">
+                            🎤 {item.label || 'MC'}
+                          </div>
+                          <div className="text-yellow-600 text-sm">Talk / Banter</div>
+                        </div>
+                        <div className="text-xs text-yellow-400">
+                          {formatDuration(item.duration || 60)}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-white truncate">{item.song?.title}</div>
+                          {item.song?.artist && (
+                            <div className="text-gray-400 text-sm truncate">{item.song.artist}</div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-400">
+                          {item.song?.key && (
+                            <span className="px-1.5 py-0.5 bg-purple-900/50 rounded">{item.song.key}</span>
+                          )}
+                          {item.song?.duration && (
+                            <span>{formatDuration(item.song.duration)}</span>
+                          )}
+                        </div>
+                      </>
+                    )}
+
                     <button
-                      onClick={() => handleRemoveSong(ss.songId)}
+                      onClick={() => handleRemoveItem(item)}
                       className="text-gray-500 hover:text-red-400 p-1"
                     >
                       ✕

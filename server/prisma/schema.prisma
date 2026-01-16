@@ -240,16 +240,24 @@ model Setlist {
 }
 
 model SetlistSong {
-  id        String @id @default(uuid())
+  id        String          @id @default(uuid())
   setlistId String
-  songId    String
+  songId    String?
   position  Int
+  type      SetlistItemType @default(SONG)
+  duration  Int?            // For MC/break items (in seconds)
+  label     String?         // Optional label for MC sections
 
   setlist Setlist @relation(fields: [setlistId], references: [id], onDelete: Cascade)
-  song    Song    @relation(fields: [songId], references: [id], onDelete: Cascade)
+  song    Song?   @relation(fields: [songId], references: [id], onDelete: Cascade)
 
   @@unique([setlistId, songId])
   @@index([setlistId, position])
+}
+
+enum SetlistItemType {
+  SONG
+  MC
 }
 
 model Gig {

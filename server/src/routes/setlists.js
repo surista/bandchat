@@ -185,7 +185,8 @@ router.post('/:setlistId/songs', authenticate, async (req, res) => {
       data: {
         setlistId: req.params.setlistId,
         songId,
-        position: newPosition
+        position: newPosition,
+        type: 'SONG'
       },
       include: {
         song: true
@@ -212,23 +213,60 @@ router.post('/:setlistId/songs', authenticate, async (req, res) => {
   }
 });
 
-// Reorder songs in a setlist
+// Add an MC break to a setlist
+router.post('/:setlistId/mc', authenticate, async (req, res) => {
+  try {
+    const { duration = 60, label = 'MC' } = req.body;
+
+    // Get current max position
+    const maxPosition = await prisma.setlistSong.aggregate({
+      where: { setlistId: req.params.setlistId },
+      _max: { position: true }
+    });
+
+    const newPosition = (maxPosition._max.position ?? -1) + 1;
+
+    const setlistItem = await prisma.setlistSong.create({
+      data: {
+        setlistId: req.params.setlistId,
+        position: newPosition,
+        type: 'MC',
+        duration,
+        label
+      }
+    });
+
+    const setlist = await prisma.setlist.findUnique({
+      where: { id: req.params.setlistId }
+    });
+
+    const io = req.app.get('io');
+    io.to(`workspace:${setlist.workspaceId}`).emit('setlist:itemAdded', {
+      setlistId: req.params.setlistId,
+      setlistItem
+    });
+
+    res.status(201).json(setlistItem);
+  } catch (error) {
+    console.error('Add MC to setlist error:', error);
+    res.status(500).json({ error: 'Failed to add MC section' });
+  }
+});
+
+// Reorder items in a setlist
 router.put('/:setlistId/reorder', authenticate, async (req, res) => {
   try {
-    const { songIds } = req.body;
+    const { itemIds } = req.body;
 
-    if (!songIds || !Array.isArray(songIds)) {
-      return res.status(400).json({ error: 'songIds array is required' });
+    if (!itemIds || !Array.isArray(itemIds)) {
+      return res.status(400).json({ error: 'itemIds array is required' });
     }
 
     // Update positions in a transaction
     await prisma.$transaction(
-      songIds.map((songId, index) =>
-        prisma.setlistSong.updateMany({
-          where: {
-            setlistId: req.params.setlistId,
-            songId
-          },
+      itemIds.map((itemId, index) =>
+        prisma.setlistSong.update({
+          where: { id: itemId },
           data: { position: index }
         })
       )
@@ -254,7 +292,7 @@ router.put('/:setlistId/reorder', authenticate, async (req, res) => {
   }
 });
 
-// Remove a song from a setlist
+// Remove a song from a setlist (legacy - by songId)
 router.delete('/:setlistId/songs/:songId', authenticate, async (req, res) => {
   try {
     const setlist = await prisma.setlist.findUnique({
@@ -282,6 +320,34 @@ router.delete('/:setlistId/songs/:songId', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Remove song from setlist error:', error);
     res.status(500).json({ error: 'Failed to remove song from setlist' });
+  }
+});
+
+// Remove an item from a setlist (by item ID - works for songs and MC)
+router.delete('/:setlistId/items/:itemId', authenticate, async (req, res) => {
+  try {
+    const setlist = await prisma.setlist.findUnique({
+      where: { id: req.params.setlistId }
+    });
+
+    if (!setlist) {
+      return res.status(404).json({ error: 'Setlist not found' });
+    }
+
+    await prisma.setlistSong.delete({
+      where: { id: req.params.itemId }
+    });
+
+    const io = req.app.get('io');
+    io.to(`workspace:${setlist.workspaceId}`).emit('setlist:itemRemoved', {
+      setlistId: req.params.setlistId,
+      itemId: req.params.itemId
+    });
+
+    res.json({ message: 'Item removed from setlist' });
+  } catch (error) {
+    console.error('Remove item from setlist error:', error);
+    res.status(500).json({ error: 'Failed to remove item from setlist' });
   }
 });
 

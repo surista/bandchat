@@ -9,12 +9,33 @@ function SongForm({ song, onSave, onClose }) {
     return { root, isMinor };
   };
 
+  // Convert seconds to mm:ss format
+  const secondsToTime = (seconds) => {
+    if (!seconds) return '';
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${String(secs).padStart(2, '0')}`;
+  };
+
+  // Convert mm:ss to seconds
+  const timeToSeconds = (timeStr) => {
+    if (!timeStr) return null;
+    const parts = timeStr.split(':');
+    if (parts.length === 2) {
+      const mins = parseInt(parts[0]) || 0;
+      const secs = parseInt(parts[1]) || 0;
+      return mins * 60 + secs;
+    }
+    // If just a number, treat as seconds
+    return parseInt(timeStr) || null;
+  };
+
   const { root: initialRoot, isMinor: initialIsMinor } = parseKey(song?.key);
 
   const [formData, setFormData] = useState({
     title: song?.title || '',
     artist: song?.artist || '',
-    duration: song?.duration || '',
+    durationStr: secondsToTime(song?.duration),
     keyRoot: initialRoot,
     keyIsMinor: initialIsMinor,
     bpm: song?.bpm || '',
@@ -39,7 +60,7 @@ function SongForm({ song, onSave, onClose }) {
       await onSave({
         title: formData.title,
         artist: formData.artist || null,
-        duration: formData.duration ? parseInt(formData.duration) : null,
+        duration: timeToSeconds(formData.durationStr),
         key,
         bpm: formData.bpm ? parseInt(formData.bpm) : null,
         notes: formData.notes || null,
@@ -145,14 +166,13 @@ function SongForm({ song, onSave, onClose }) {
                 </div>
 
                 <div>
-                  <label className="block text-gray-700 font-medium mb-1">Duration (sec)</label>
+                  <label className="block text-gray-700 font-medium mb-1">Duration</label>
                   <input
-                    type="number"
-                    value={formData.duration}
-                    onChange={(e) => handleChange('duration', e.target.value)}
+                    type="text"
+                    value={formData.durationStr}
+                    onChange={(e) => handleChange('durationStr', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
-                    placeholder="180"
-                    min="0"
+                    placeholder="3:30"
                   />
                 </div>
               </div>

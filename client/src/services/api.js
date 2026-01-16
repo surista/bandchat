@@ -474,15 +474,28 @@ class ApiService {
     });
   }
 
-  async reorderSetlistSongs(setlistId, songIds) {
+  async reorderSetlistItems(setlistId, itemIds) {
     return this.request(`/setlists/${setlistId}/reorder`, {
       method: 'PUT',
-      body: JSON.stringify({ songIds })
+      body: JSON.stringify({ itemIds })
     });
   }
 
   async removeSongFromSetlist(setlistId, songId) {
     return this.request(`/setlists/${setlistId}/songs/${songId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async addMCToSetlist(setlistId, duration = 60, label = 'MC') {
+    return this.request(`/setlists/${setlistId}/mc`, {
+      method: 'POST',
+      body: JSON.stringify({ duration, label })
+    });
+  }
+
+  async removeSetlistItem(setlistId, itemId) {
+    return this.request(`/setlists/${setlistId}/items/${itemId}`, {
       method: 'DELETE'
     });
   }
