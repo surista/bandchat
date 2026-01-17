@@ -51,6 +51,17 @@ function Sidebar({
     pushService.isSubscribed().then(setNotificationsEnabled);
   }, []);
 
+  // ESC key to close settings modal
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape' && showSettings) {
+        setShowSettings(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [showSettings]);
+
   const toggleNotifications = async () => {
     setNotificationsLoading(true);
     try {
@@ -591,7 +602,7 @@ function Sidebar({
       {/* Settings Modal */}
       {showSettings && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg w-full max-w-lg max-h-[80vh] flex flex-col">
+          <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="text-xl font-bold text-gray-900">Settings</h3>
               <button

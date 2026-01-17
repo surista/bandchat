@@ -1,8 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 function Footer({ theme = 'dark' }) {
   const [showAbout, setShowAbout] = useState(false);
   const [showWhatsNew, setShowWhatsNew] = useState(false);
+
+  // ESC key to close modals
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        if (showAbout) setShowAbout(false);
+        if (showWhatsNew) setShowWhatsNew(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [showAbout, showWhatsNew]);
 
   const textColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
   const hoverColor = theme === 'dark' ? 'hover:text-gray-200' : 'hover:text-gray-700';
@@ -55,7 +67,7 @@ function Footer({ theme = 'dark' }) {
       {/* About Modal */}
       {showAbout && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg w-full max-w-md max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-gray-900">About BandChat</h3>
@@ -136,7 +148,7 @@ function Footer({ theme = 'dark' }) {
       {/* What's New Modal */}
       {showWhatsNew && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg w-full max-w-md max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold text-gray-900">What's New</h3>
