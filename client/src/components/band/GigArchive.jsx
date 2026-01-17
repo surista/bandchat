@@ -11,7 +11,7 @@ function GigArchive({ workspaceId }) {
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaCaption, setMediaCaption] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [filter, setFilter] = useState('all'); // 'all', 'with-gig', 'no-gig'
+  const [filter, setFilter] = useState('all'); // 'all', 'past', 'upcoming'
 
   useEffect(() => {
     loadData();
@@ -33,36 +33,111 @@ function GigArchive({ workspaceId }) {
     }
   };
 
-  // Build archive entries from setlists with associated gig info
+  // Try to parse venue and date from setlist name (e.g., "Ruby Room - 21 May 2024")
+  const parseSetlistName = (name) => {
+    // Common patterns: "Venue - Date", "Venue, Date", "Date - Venue"
+    const patterns = [
+      // "Ruby Room - 21 May 2024" or "The Den - 1 Dec 2024"
+      /^(.+?)\s*[-–]\s*(\d{1,2}\s+\w+\s+\d{4})$/i,
+      // "Dickens, 14 July 2024"
+      /^(.+?)\s*,\s*(\d{1,2}\s+\w+\s+\d{4})$/i,
+      // "28 Feb - Gamuso" (date first)
+      /^(\d{1,2}\s+\w+(?:\s+\d{4})?)\s*[-–]\s*(.+)$/i,
+      // "Ruby Room 28 Feb 2025"
+      /^(.+?)\s+(\d{1,2}\s+\w+\s+\d{4})$/i,
+    ];
+
+    for (const pattern of patterns) {
+      const match = name.match(pattern);
+      if (match) {
+        let venue, dateStr;
+        // Check if first group looks like a date
+        if (/^\d{1,2}\s+\w+/.test(match[1])) {
+          dateStr = match[1];
+          venue = match[2];
+        } else {
+          venue = match[1];
+          dateStr = match[2];
+        }
+
+        // Try to parse the date
+        const parsedDate = parseDate(dateStr);
+        if (parsedDate) {
+          return { venue: venue.trim(), date: parsedDate, title: name };
+        }
+      }
+    }
+
+    return { venue: null, date: null, title: name };
+  };
+
+  // Parse date string like "21 May 2024" or "28 Feb"
+  const parseDate = (dateStr) => {
+    const months = {
+      jan: 0, january: 0,
+      feb: 1, february: 1,
+      mar: 2, march: 2,
+      apr: 3, april: 3,
+      may: 4,
+      jun: 5, june: 5,
+      jul: 6, july: 6,
+      aug: 7, august: 7,
+      sep: 8, september: 8,
+      oct: 9, october: 9,
+      nov: 10, november: 10,
+      dec: 11, december: 11
+    };
+
+    const match = dateStr.match(/(\d{1,2})\s+(\w+)(?:\s+(\d{4}))?/i);
+    if (match) {
+      const day = parseInt(match[1]);
+      const monthStr = match[2].toLowerCase();
+      const year = match[3] ? parseInt(match[3]) : new Date().getFullYear();
+      const month = months[monthStr];
+
+      if (month !== undefined && day >= 1 && day <= 31) {
+        return new Date(year, month, day);
+      }
+    }
+    return null;
+  };
+
+  // Build archive entries - each setlist becomes a gig entry
   const archiveEntries = setlists.map(setlist => {
-    // Find gigs that use this setlist (either legacy single or multi-set)
-    const associatedGigs = gigs.filter(g =>
+    // Find formal gig that uses this setlist
+    const associatedGig = gigs.find(g =>
       g.setlistId === setlist.id ||
       (g.setlists && g.setlists.some(gs => gs.setlistId === setlist.id))
-    ).sort((a, b) => new Date(b.date) - new Date(a.date));
+    );
 
-    // Get the most recent gig for display
-    const primaryGig = associatedGigs[0];
+    // If no formal gig, try to parse setlist name for gig info
+    const parsed = parseSetlistName(setlist.name);
 
     return {
       setlist,
-      gig: primaryGig,
-      allGigs: associatedGigs,
-      hasGig: associatedGigs.length > 0
+      gig: associatedGig,
+      // Use formal gig info if available, otherwise use parsed info
+      title: associatedGig?.title || parsed.title,
+      venue: associatedGig?.venue || parsed.venue,
+      date: associatedGig ? new Date(associatedGig.date) : parsed.date,
+      status: associatedGig?.status || (parsed.date && parsed.date < new Date() ? 'COMPLETED' : 'SCHEDULED'),
+      hasFormalGig: !!associatedGig
     };
-  }).sort((a, b) => {
-    // Sort: gigs with dates first (by date desc), then setlists without gigs (by creation date desc)
-    if (a.hasGig && b.hasGig) {
-      return new Date(b.gig.date) - new Date(a.gig.date);
-    }
-    if (a.hasGig) return -1;
-    if (b.hasGig) return 1;
-    return new Date(b.setlist.createdAt) - new Date(a.setlist.createdAt);
-  });
+  }).filter(entry => entry.date || entry.hasFormalGig) // Only show entries with a date or formal gig
+    .sort((a, b) => {
+      // Sort by date descending
+      if (a.date && b.date) {
+        return b.date - a.date;
+      }
+      if (a.date) return -1;
+      if (b.date) return 1;
+      return 0;
+    });
 
+  const now = new Date();
   const filteredEntries = archiveEntries.filter(entry => {
-    if (filter === 'with-gig') return entry.hasGig;
-    if (filter === 'no-gig') return !entry.hasGig;
+    if (filter === 'past') return entry.date && entry.date < now;
+    if (filter === 'upcoming') return entry.date && entry.date >= now;
     return true;
   });
 
@@ -156,14 +231,17 @@ function GigArchive({ workspaceId }) {
     return <div className="flex items-center justify-center h-64 text-gray-400">Loading archive...</div>;
   }
 
+  const pastCount = archiveEntries.filter(e => e.date && e.date < now).length;
+  const upcomingCount = archiveEntries.filter(e => e.date && e.date >= now).length;
+
   return (
     <div className="h-full flex flex-col bg-gray-800">
       {/* Header */}
       <div className="flex-shrink-0 p-4 border-b border-gray-700">
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h2 className="text-xl font-bold text-white">Setlist Archive</h2>
-            <p className="text-gray-400 text-sm mt-1">Your setlists, gig history, and memories</p>
+            <h2 className="text-xl font-bold text-white">Gig Archive</h2>
+            <p className="text-gray-400 text-sm mt-1">Photos, videos, and memories from your gigs</p>
           </div>
         </div>
         {/* Filter tabs */}
@@ -172,19 +250,19 @@ function GigArchive({ workspaceId }) {
             onClick={() => setFilter('all')}
             className={`px-3 py-1 rounded text-sm ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
           >
-            All Setlists ({archiveEntries.length})
+            All ({archiveEntries.length})
           </button>
           <button
-            onClick={() => setFilter('with-gig')}
-            className={`px-3 py-1 rounded text-sm ${filter === 'with-gig' ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+            onClick={() => setFilter('past')}
+            className={`px-3 py-1 rounded text-sm ${filter === 'past' ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
           >
-            With Gigs ({archiveEntries.filter(e => e.hasGig).length})
+            Past ({pastCount})
           </button>
           <button
-            onClick={() => setFilter('no-gig')}
-            className={`px-3 py-1 rounded text-sm ${filter === 'no-gig' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+            onClick={() => setFilter('upcoming')}
+            className={`px-3 py-1 rounded text-sm ${filter === 'upcoming' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
           >
-            Unscheduled ({archiveEntries.filter(e => !e.hasGig).length})
+            Upcoming ({upcomingCount})
           </button>
         </div>
       </div>
@@ -198,69 +276,61 @@ function GigArchive({ workspaceId }) {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
-        {setlists.length === 0 ? (
+        {archiveEntries.length === 0 ? (
           <div className="text-center py-12 text-gray-400">
-            <div className="text-6xl mb-4">📋</div>
-            <p className="text-lg mb-2">No setlists yet</p>
-            <p className="text-sm">Create a setlist in Set Lists to start building your archive!</p>
+            <div className="text-6xl mb-4">📸</div>
+            <p className="text-lg mb-2">No gigs yet</p>
+            <p className="text-sm">Create setlists with dates in the name (e.g., "Venue - 21 May 2024") or schedule gigs in Calendar</p>
           </div>
         ) : filteredEntries.length === 0 ? (
           <div className="text-center py-12 text-gray-400">
-            <p>No {filter === 'with-gig' ? 'setlists with gigs' : filter === 'no-gig' ? 'unscheduled setlists' : 'setlists'} found</p>
+            <p>No {filter === 'past' ? 'past' : 'upcoming'} gigs found</p>
           </div>
         ) : (
           <div className="space-y-6">
-            {filteredEntries.map(({ setlist, gig, allGigs, hasGig }) => {
+            {filteredEntries.map((entry) => {
+              const { setlist, gig, title, venue, date, status, hasFormalGig } = entry;
               const { songCount, totalDuration } = getSetlistStats(setlist);
+              const isPast = date && date < now;
 
               return (
                 <div key={setlist.id} className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden">
-                  {/* Setlist Header */}
+                  {/* Gig Header */}
                   <div className="p-4 border-b border-gray-700">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="text-lg font-medium text-white">{setlist.name}</h3>
-                          {hasGig ? (
-                            gig.status === 'COMPLETED' ? (
-                              <span className="px-2 py-0.5 bg-green-600/20 text-green-400 text-xs rounded">Played</span>
-                            ) : new Date(gig.date) < new Date() ? (
-                              <span className="px-2 py-0.5 bg-yellow-600/20 text-yellow-400 text-xs rounded">Pending Review</span>
-                            ) : (
-                              <span className="px-2 py-0.5 bg-purple-600/20 text-purple-400 text-xs rounded">Scheduled</span>
-                            )
+                          <h3 className="text-lg font-medium text-white">{title}</h3>
+                          {isPast ? (
+                            <span className="px-2 py-0.5 bg-green-600/20 text-green-400 text-xs rounded">Completed</span>
                           ) : (
-                            <span className="px-2 py-0.5 bg-gray-600/30 text-gray-400 text-xs rounded">Not Scheduled</span>
+                            <span className="px-2 py-0.5 bg-purple-600/20 text-purple-400 text-xs rounded">Upcoming</span>
                           )}
-                          {allGigs.length > 1 && (
-                            <span className="px-2 py-0.5 bg-indigo-600/30 text-indigo-300 text-xs rounded font-medium">
-                              {allGigs.length} gigs
-                            </span>
+                          {!hasFormalGig && (
+                            <span className="px-2 py-0.5 bg-gray-600/30 text-gray-400 text-xs rounded">From Setlist</span>
                           )}
                         </div>
 
                         {/* Gig Info */}
-                        {hasGig ? (
-                          <div className="text-gray-400 text-sm">
-                            <span className="text-white font-medium">{gig.title}</span>
-                            {' • '}
-                            {new Date(gig.date).toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric'
-                            })}
-                            {gig.venue && ` • ${gig.venue}`}
-                          </div>
-                        ) : (
-                          <div className="text-gray-500 text-sm italic">
-                            No gig scheduled for this setlist
-                          </div>
-                        )}
+                        <div className="text-gray-400 text-sm">
+                          {date && (
+                            <>
+                              {date.toLocaleDateString('en-US', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })}
+                            </>
+                          )}
+                          {venue && ` • ${venue}`}
+                        </div>
 
                         {/* Setlist Stats */}
                         <div className="mt-2 p-2 bg-gray-800 rounded flex items-center gap-4 text-sm">
                           <span className="text-gray-400">📋</span>
+                          <span className="text-white font-medium">{setlist.name}</span>
+                          <span className="text-gray-500">•</span>
                           <span className="text-gray-400">{songCount} songs</span>
                           {totalDuration > 0 && (
                             <>
@@ -268,24 +338,14 @@ function GigArchive({ workspaceId }) {
                               <span className="text-gray-400">{formatDuration(totalDuration)}</span>
                             </>
                           )}
-                          {setlist.description && (
-                            <>
-                              <span className="text-gray-500">•</span>
-                              <span className="text-gray-500 truncate">{setlist.description}</span>
-                            </>
-                          )}
                         </div>
 
-                        {/* Show other gigs if multiple */}
-                        {allGigs.length > 1 && (
-                          <div className="mt-2 text-xs text-gray-500">
-                            Also used in: {allGigs.slice(1, 4).map(g => g.title).join(', ')}
-                            {allGigs.length > 4 && ` and ${allGigs.length - 4} more`}
-                          </div>
+                        {setlist.description && (
+                          <p className="mt-2 text-sm text-gray-500 italic">{setlist.description}</p>
                         )}
                       </div>
 
-                      {hasGig && (
+                      {hasFormalGig && gig && (
                         <button
                           onClick={() => {
                             setSelectedGig(gig);
@@ -299,8 +359,8 @@ function GigArchive({ workspaceId }) {
                     </div>
                   </div>
 
-                  {/* Media Grid - only for gigs */}
-                  {hasGig && (
+                  {/* Media Grid - only for formal gigs */}
+                  {hasFormalGig && gig && (
                     <div className="p-4">
                       {gig.media?.length > 0 ? (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -370,11 +430,12 @@ function GigArchive({ workspaceId }) {
                     </div>
                   )}
 
-                  {/* For setlists without gigs, show a simple call-to-action */}
-                  {!hasGig && (
+                  {/* For setlists without formal gigs, show placeholder */}
+                  {!hasFormalGig && (
                     <div className="p-4">
                       <div className="text-center py-6 text-gray-500 bg-gray-800/30 rounded-lg">
-                        <p className="text-sm">Schedule this setlist for a gig to add photos and videos</p>
+                        <div className="text-2xl mb-2">📸</div>
+                        <p className="text-sm">Create a gig in Calendar and link this setlist to add media</p>
                       </div>
                     </div>
                   )}
