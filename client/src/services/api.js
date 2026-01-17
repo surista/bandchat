@@ -553,6 +553,17 @@ class ApiService {
     });
   }
 
+  async getSetlistPerformers(setlistId) {
+    return this.request(`/setlists/${setlistId}/performers`);
+  }
+
+  async updateSetlistPerformers(setlistId, bandMemberIds) {
+    return this.request(`/setlists/${setlistId}/performers`, {
+      method: 'PUT',
+      body: JSON.stringify({ bandMemberIds })
+    });
+  }
+
   // Gigs
   async getGigs(workspaceId, filters = {}) {
     const params = new URLSearchParams();

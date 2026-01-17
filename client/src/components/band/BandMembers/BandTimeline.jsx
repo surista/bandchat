@@ -27,12 +27,16 @@ function BandTimeline({ members }) {
     let minYear = currentYear;
     let maxYear = currentYear;
 
-    // Find year range
+    // Find year range from all stints
     members.forEach((m) => {
-      const startYear = new Date(m.startDate).getFullYear();
-      const endYear = m.endDate ? new Date(m.endDate).getFullYear() : currentYear;
-      minYear = Math.min(minYear, startYear);
-      maxYear = Math.max(maxYear, endYear);
+      if (m.stints && m.stints.length > 0) {
+        m.stints.forEach((stint) => {
+          const startYear = new Date(stint.startDate).getFullYear();
+          const endYear = stint.endDate ? new Date(stint.endDate).getFullYear() : currentYear;
+          minYear = Math.min(minYear, startYear);
+          maxYear = Math.max(maxYear, endYear);
+        });
+      }
     });
 
     // Add padding
@@ -45,16 +49,14 @@ function BandTimeline({ members }) {
       years.push(y);
     }
 
-    // Group members by instrument for ordering
-    const instrumentOrder = ['Vocals', 'Lead Guitar', 'Rhythm Guitar', 'Guitar', 'Bass', 'Drums', 'Keyboard', 'Piano', 'Other'];
-    const sortedMembers = [...members].sort((a, b) => {
-      const aIdx = instrumentOrder.indexOf(a.instrument);
-      const bIdx = instrumentOrder.indexOf(b.instrument);
-      const aOrder = aIdx === -1 ? 99 : aIdx;
-      const bOrder = bIdx === -1 ? 99 : bIdx;
-      if (aOrder !== bOrder) return aOrder - bOrder;
-      return new Date(a.startDate) - new Date(b.startDate);
-    });
+    // Sort members by their earliest stint start date
+    const sortedMembers = [...members]
+      .filter(m => m.stints && m.stints.length > 0)
+      .sort((a, b) => {
+        const aMin = Math.min(...a.stints.map(s => new Date(s.startDate).getTime()));
+        const bMin = Math.min(...b.stints.map(s => new Date(s.startDate).getTime()));
+        return aMin - bMin;
+      });
 
     return {
       minYear,
@@ -70,7 +72,7 @@ function BandTimeline({ members }) {
     return <div className="text-gray-500 text-center py-4">No timeline data</div>;
   }
 
-  const { minYear, yearRange, years, members: sortedMembers, currentYear } = timelineData;
+  const { minYear, years, members: sortedMembers, currentYear } = timelineData;
 
   // Dimensions
   const rowHeight = 32;
@@ -118,12 +120,8 @@ function BandTimeline({ members }) {
         {/* Member rows */}
         <g transform={`translate(0, 28)`}>
           {sortedMembers.map((member, i) => {
-            const startYear = new Date(member.startDate).getFullYear();
-            const endYear = member.endDate ? new Date(member.endDate).getFullYear() : currentYear;
-            const startX = (startYear - minYear) * yearWidth;
-            const width = (endYear - startYear + 1) * yearWidth - 4;
-            const color = getInstrumentColor(member.instrument);
-            const isCurrent = !member.endDate;
+            // Check if member has any current stint
+            const isCurrent = member.stints.some(s => !s.endDate);
 
             return (
               <g key={member.id} transform={`translate(0, ${i * rowHeight})`}>
@@ -147,30 +145,43 @@ function BandTimeline({ members }) {
                   {member.name.length > 14 ? member.name.slice(0, 12) + '...' : member.name}
                 </text>
 
-                {/* Timeline bar */}
+                {/* Timeline bars - one per stint */}
                 <g transform={`translate(${labelWidth}, 0)`}>
-                  <rect
-                    x={startX + 2}
-                    y={6}
-                    width={Math.max(width, 8)}
-                    height={rowHeight - 12}
-                    fill={color}
-                    rx={3}
-                    opacity={isCurrent ? 1 : 0.6}
-                  />
-                  {/* Instrument label on bar if wide enough */}
-                  {width > 50 && (
-                    <text
-                      x={startX + width / 2}
-                      y={rowHeight / 2 + 3}
-                      fill="white"
-                      fontSize="10"
-                      textAnchor="middle"
-                      opacity={0.9}
-                    >
-                      {member.instrument.length > 10 ? member.instrument.slice(0, 8) + '...' : member.instrument}
-                    </text>
-                  )}
+                  {member.stints.map((stint, stintIdx) => {
+                    const startYear = new Date(stint.startDate).getFullYear();
+                    const endYear = stint.endDate ? new Date(stint.endDate).getFullYear() : currentYear;
+                    const startX = (startYear - minYear) * yearWidth;
+                    const width = (endYear - startYear + 1) * yearWidth - 4;
+                    const color = getInstrumentColor(stint.instrument);
+                    const isOngoing = !stint.endDate;
+
+                    return (
+                      <g key={stint.id || stintIdx}>
+                        <rect
+                          x={startX + 2}
+                          y={6}
+                          width={Math.max(width, 8)}
+                          height={rowHeight - 12}
+                          fill={color}
+                          rx={3}
+                          opacity={isOngoing ? 1 : 0.6}
+                        />
+                        {/* Instrument label on bar if wide enough */}
+                        {width > 50 && (
+                          <text
+                            x={startX + width / 2}
+                            y={rowHeight / 2 + 3}
+                            fill="white"
+                            fontSize="10"
+                            textAnchor="middle"
+                            opacity={0.9}
+                          >
+                            {stint.instrument.length > 10 ? stint.instrument.slice(0, 8) + '...' : stint.instrument}
+                          </text>
+                        )}
+                      </g>
+                    );
+                  })}
                 </g>
               </g>
             );

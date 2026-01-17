@@ -1008,7 +1008,12 @@ function Sidebar({
                                 Current Members ({bandMembers.current.length})
                               </h5>
                               <div className="space-y-2">
-                                {bandMembers.current.map((member) => (
+                                {bandMembers.current.map((member) => {
+                                  const instruments = member.stints?.map(s => s.instrument).filter((v, i, a) => a.indexOf(v) === i) || [];
+                                  const earliestYear = member.stints?.length > 0
+                                    ? Math.min(...member.stints.map(s => new Date(s.startDate).getFullYear()))
+                                    : null;
+                                  return (
                                   <div
                                     key={member.id}
                                     className="flex items-center justify-between p-3 bg-[var(--color-modal-card)] rounded-lg"
@@ -1016,7 +1021,7 @@ function Sidebar({
                                     <div>
                                       <div className="font-medium text-white">{member.name}</div>
                                       <div className="text-sm text-gray-400">
-                                        {member.instrument} • Since {new Date(member.startDate).getFullYear()}
+                                        {instruments.join(', ')} {earliestYear && `• Since ${earliestYear}`}
                                       </div>
                                     </div>
                                     <div className="flex gap-2">
@@ -1037,7 +1042,8 @@ function Sidebar({
                                       </button>
                                     </div>
                                   </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
@@ -1049,7 +1055,16 @@ function Sidebar({
                                 Former Members ({bandMembers.former.length})
                               </h5>
                               <div className="space-y-2">
-                                {bandMembers.former.map((member) => (
+                                {bandMembers.former.map((member) => {
+                                  const instruments = member.stints?.map(s => s.instrument).filter((v, i, a) => a.indexOf(v) === i) || [];
+                                  const years = member.stints?.length > 0 ? (() => {
+                                    const starts = member.stints.map(s => new Date(s.startDate).getFullYear());
+                                    const ends = member.stints.filter(s => s.endDate).map(s => new Date(s.endDate).getFullYear());
+                                    const minYear = Math.min(...starts);
+                                    const maxYear = ends.length > 0 ? Math.max(...ends) : minYear;
+                                    return minYear === maxYear ? `${minYear}` : `${minYear}–${maxYear}`;
+                                  })() : '';
+                                  return (
                                   <div
                                     key={member.id}
                                     className="flex items-center justify-between p-3 bg-[var(--color-modal-card)] rounded-lg opacity-75"
@@ -1057,7 +1072,7 @@ function Sidebar({
                                     <div>
                                       <div className="font-medium text-white">{member.name}</div>
                                       <div className="text-sm text-gray-400">
-                                        {member.instrument} • {new Date(member.startDate).getFullYear()}–{new Date(member.endDate).getFullYear()}
+                                        {instruments.join(', ')} {years && `• ${years}`}
                                       </div>
                                     </div>
                                     <div className="flex gap-2">
@@ -1078,7 +1093,8 @@ function Sidebar({
                                       </button>
                                     </div>
                                   </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             </div>
                           )}

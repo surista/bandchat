@@ -20,6 +20,13 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
           },
           orderBy: { position: 'asc' }
         },
+        performers: {
+          include: {
+            bandMember: {
+              include: { stints: { orderBy: { startDate: 'asc' } } }
+            }
+          }
+        },
         _count: {
           select: { gigs: true }
         }
@@ -30,7 +37,13 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
       ]
     });
 
-    res.json(setlists);
+    // Transform performers to just the bandMember objects
+    const transformed = setlists.map(s => ({
+      ...s,
+      performers: s.performers.map(p => p.bandMember)
+    }));
+
+    res.json(transformed);
   } catch (error) {
     console.error('Get setlists error:', error);
     res.status(500).json({ error: 'Failed to get setlists' });
@@ -95,6 +108,13 @@ router.get('/:setlistId', authenticate, async (req, res) => {
           },
           orderBy: { position: 'asc' }
         },
+        performers: {
+          include: {
+            bandMember: {
+              include: { stints: { orderBy: { startDate: 'asc' } } }
+            }
+          }
+        },
         gigs: {
           select: { id: true, title: true, date: true, status: true },
           orderBy: { date: 'desc' }
@@ -106,7 +126,11 @@ router.get('/:setlistId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Setlist not found' });
     }
 
-    res.json(setlist);
+    // Transform performers
+    res.json({
+      ...setlist,
+      performers: setlist.performers.map(p => p.bandMember)
+    });
   } catch (error) {
     console.error('Get setlist error:', error);
     res.status(500).json({ error: 'Failed to get setlist' });
@@ -638,6 +662,80 @@ router.delete('/:setlistId/items/:itemId', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Remove item from setlist error:', error);
     res.status(500).json({ error: 'Failed to remove item from setlist' });
+  }
+});
+
+// Get performers for a setlist
+router.get('/:setlistId/performers', authenticate, async (req, res) => {
+  try {
+    const performers = await prisma.setlistPerformer.findMany({
+      where: { setlistId: req.params.setlistId },
+      include: {
+        bandMember: {
+          include: { stints: { orderBy: { startDate: 'asc' } } }
+        }
+      }
+    });
+
+    res.json(performers.map(p => p.bandMember));
+  } catch (error) {
+    console.error('Get setlist performers error:', error);
+    res.status(500).json({ error: 'Failed to get performers' });
+  }
+});
+
+// Set performers for a setlist (replaces all)
+router.put('/:setlistId/performers', authenticate, async (req, res) => {
+  try {
+    const { bandMemberIds } = req.body;
+
+    if (!Array.isArray(bandMemberIds)) {
+      return res.status(400).json({ error: 'bandMemberIds must be an array' });
+    }
+
+    const setlist = await prisma.setlist.findUnique({
+      where: { id: req.params.setlistId }
+    });
+
+    if (!setlist) {
+      return res.status(404).json({ error: 'Setlist not found' });
+    }
+
+    // Delete existing performers and create new ones
+    await prisma.$transaction([
+      prisma.setlistPerformer.deleteMany({
+        where: { setlistId: req.params.setlistId }
+      }),
+      ...bandMemberIds.map(bandMemberId =>
+        prisma.setlistPerformer.create({
+          data: {
+            setlistId: req.params.setlistId,
+            bandMemberId
+          }
+        })
+      )
+    ]);
+
+    // Fetch updated performers
+    const performers = await prisma.setlistPerformer.findMany({
+      where: { setlistId: req.params.setlistId },
+      include: {
+        bandMember: {
+          include: { stints: { orderBy: { startDate: 'asc' } } }
+        }
+      }
+    });
+
+    const io = req.app.get('io');
+    io.to(`workspace:${setlist.workspaceId}`).emit('setlist:performersUpdated', {
+      setlistId: req.params.setlistId,
+      performers: performers.map(p => p.bandMember)
+    });
+
+    res.json(performers.map(p => p.bandMember));
+  } catch (error) {
+    console.error('Update setlist performers error:', error);
+    res.status(500).json({ error: 'Failed to update performers' });
   }
 });
 

@@ -49,6 +49,36 @@ function BandMembersList({ workspaceId }) {
     return colors[instrument] || 'bg-gray-500';
   };
 
+  // Get the primary instrument (most recent stint without end date, or most recent stint)
+  const getPrimaryInstrument = (member) => {
+    if (!member.stints || member.stints.length === 0) return 'Unknown';
+    const currentStint = member.stints.find(s => !s.endDate);
+    if (currentStint) return currentStint.instrument;
+    // Return the most recent stint
+    const sorted = [...member.stints].sort((a, b) =>
+      new Date(b.startDate) - new Date(a.startDate)
+    );
+    return sorted[0]?.instrument || 'Unknown';
+  };
+
+  // Get all unique instruments for a member
+  const getInstruments = (member) => {
+    if (!member.stints || member.stints.length === 0) return [];
+    return [...new Set(member.stints.map(s => s.instrument))];
+  };
+
+  // Get year range spanning all stints
+  const getMemberYearRange = (member) => {
+    if (!member.stints || member.stints.length === 0) return '';
+    const starts = member.stints.map(s => new Date(s.startDate).getFullYear());
+    const ends = member.stints.map(s => s.endDate ? new Date(s.endDate).getFullYear() : null);
+    const minStart = Math.min(...starts);
+    const hasOngoing = ends.includes(null);
+    if (hasOngoing) return `${minStart}–present`;
+    const maxEnd = Math.max(...ends.filter(e => e !== null));
+    return minStart === maxEnd ? `${minStart}` : `${minStart}–${maxEnd}`;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64 text-gray-400">
@@ -85,6 +115,57 @@ function BandMembersList({ workspaceId }) {
     );
   }
 
+  const MemberCard = ({ member, isCurrent }) => {
+    const primaryInstrument = getPrimaryInstrument(member);
+    const instruments = getInstruments(member);
+    const yearRange = getMemberYearRange(member);
+
+    return (
+      <div
+        className={`bg-gray-900 rounded-lg p-4 border border-gray-700 ${!isCurrent ? 'opacity-75' : ''}`}
+      >
+        <div className="flex items-start gap-3">
+          <div className={`w-10 h-10 rounded-full ${getInstrumentColor(primaryInstrument)} flex items-center justify-center text-white font-bold text-lg ${!isCurrent ? 'opacity-60' : ''}`}>
+            {member.name.charAt(0)}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-medium text-white truncate">{member.name}</h4>
+            {/* Show all instruments */}
+            <div className="flex flex-wrap gap-1 mt-1">
+              {instruments.map((inst, idx) => (
+                <span key={idx} className="text-gray-400 text-sm">
+                  {inst}{idx < instruments.length - 1 ? ',' : ''}
+                </span>
+              ))}
+            </div>
+            <p className="text-gray-500 text-xs mt-1">{yearRange}</p>
+          </div>
+        </div>
+
+        {/* Show stint details if multiple */}
+        {member.stints && member.stints.length > 1 && (
+          <div className="mt-3 pt-3 border-t border-gray-700 space-y-1">
+            {member.stints.map((stint, idx) => (
+              <div key={stint.id || idx} className="flex items-center gap-2 text-xs">
+                <div className={`w-2 h-2 rounded-full ${getInstrumentColor(stint.instrument)}`} />
+                <span className="text-gray-400">{stint.instrument}</span>
+                <span className="text-gray-500">
+                  {formatYearRange(stint.startDate, stint.endDate)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {member.notes && (
+          <p className="text-gray-500 text-sm mt-3 pt-3 border-t border-gray-700">
+            {member.notes}
+          </p>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="h-full flex flex-col bg-gray-800">
       {/* Header */}
@@ -115,28 +196,7 @@ function BandMembersList({ workspaceId }) {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {members.current.map((member) => (
-                <div
-                  key={member.id}
-                  className="bg-gray-900 rounded-lg p-4 border border-gray-700"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 rounded-full ${getInstrumentColor(member.instrument)} flex items-center justify-center text-white font-bold text-lg`}>
-                      {member.name.charAt(0)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-white truncate">{member.name}</h4>
-                      <p className="text-gray-400 text-sm">{member.instrument}</p>
-                      <p className="text-gray-500 text-xs mt-1">
-                        {formatYearRange(member.startDate, member.endDate)}
-                      </p>
-                    </div>
-                  </div>
-                  {member.notes && (
-                    <p className="text-gray-500 text-sm mt-3 pt-3 border-t border-gray-700">
-                      {member.notes}
-                    </p>
-                  )}
-                </div>
+                <MemberCard key={member.id} member={member} isCurrent={true} />
               ))}
             </div>
           </div>
@@ -150,28 +210,7 @@ function BandMembersList({ workspaceId }) {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {members.former.map((member) => (
-                <div
-                  key={member.id}
-                  className="bg-gray-900 rounded-lg p-4 border border-gray-700 opacity-75"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 rounded-full ${getInstrumentColor(member.instrument)} flex items-center justify-center text-white font-bold text-lg opacity-60`}>
-                      {member.name.charAt(0)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-white truncate">{member.name}</h4>
-                      <p className="text-gray-400 text-sm">{member.instrument}</p>
-                      <p className="text-gray-500 text-xs mt-1">
-                        {formatYearRange(member.startDate, member.endDate)}
-                      </p>
-                    </div>
-                  </div>
-                  {member.notes && (
-                    <p className="text-gray-500 text-sm mt-3 pt-3 border-t border-gray-700">
-                      {member.notes}
-                    </p>
-                  )}
-                </div>
+                <MemberCard key={member.id} member={member} isCurrent={false} />
               ))}
             </div>
           </div>

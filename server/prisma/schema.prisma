@@ -235,11 +235,12 @@ model Setlist {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy   User          @relation(fields: [createdById], references: [id])
+  workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy   User                @relation(fields: [createdById], references: [id])
   songs       SetlistSong[]
-  gigs        Gig[]         // Legacy single-setlist relation
-  gigSetlists GigSetlist[]  // Multi-set support
+  gigs        Gig[]               // Legacy single-setlist relation
+  gigSetlists GigSetlist[]        // Multi-set support
+  performers  SetlistPerformer[]  // Band members who performed this setlist
 
   @@unique([workspaceId, name])
   @@index([workspaceId])
@@ -350,16 +351,40 @@ enum GigStatus {
 model BandMember {
   id          String    @id @default(uuid())
   name        String
-  instrument  String
-  startDate   DateTime
-  endDate     DateTime?
   imageUrl    String?
   notes       String?
   workspaceId String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace    Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  stints       InstrumentStint[]
+  performances SetlistPerformer[]
 
   @@index([workspaceId])
+}
+
+model InstrumentStint {
+  id           String    @id @default(uuid())
+  bandMemberId String
+  instrument   String
+  startDate    DateTime
+  endDate      DateTime?
+  createdAt    DateTime  @default(now())
+
+  bandMember BandMember @relation(fields: [bandMemberId], references: [id], onDelete: Cascade)
+
+  @@index([bandMemberId])
+}
+
+model SetlistPerformer {
+  id           String @id @default(uuid())
+  setlistId    String
+  bandMemberId String
+
+  setlist    Setlist    @relation(fields: [setlistId], references: [id], onDelete: Cascade)
+  bandMember BandMember @relation(fields: [bandMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([setlistId, bandMemberId])
+  @@index([setlistId])
 }

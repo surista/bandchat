@@ -9,20 +9,22 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
   try {
     const members = await prisma.bandMember.findMany({
       where: { workspaceId: req.params.workspaceId },
-      orderBy: [
-        { endDate: 'asc' }, // Current members (null endDate) first
-        { startDate: 'asc' }
-      ]
+      include: {
+        stints: {
+          orderBy: { startDate: 'asc' }
+        }
+      },
+      orderBy: { name: 'asc' }
     });
 
-    // Sort: current members first (endDate is null), then former members
-    const currentMembers = members.filter(m => !m.endDate);
-    const formerMembers = members.filter(m => m.endDate);
+    // A member is "current" if they have at least one stint with no endDate
+    const currentMembers = members.filter(m => m.stints.some(s => !s.endDate));
+    const formerMembers = members.filter(m => m.stints.length > 0 && m.stints.every(s => s.endDate));
 
     res.json({
       current: currentMembers,
       former: formerMembers,
-      all: [...currentMembers, ...formerMembers]
+      all: members
     });
   } catch (error) {
     console.error('Get band members error:', error);
@@ -33,21 +35,41 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 // Create a band member (admin only)
 router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => {
   try {
-    const { name, instrument, startDate, endDate, imageUrl, notes } = req.body;
+    const { name, imageUrl, notes, stints } = req.body;
 
-    if (!name || !instrument || !startDate) {
-      return res.status(400).json({ error: 'Name, instrument, and start date are required' });
+    if (!name) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+
+    if (!stints || stints.length === 0) {
+      return res.status(400).json({ error: 'At least one instrument stint is required' });
+    }
+
+    // Validate stints
+    for (const stint of stints) {
+      if (!stint.instrument || !stint.startDate) {
+        return res.status(400).json({ error: 'Each stint requires instrument and start date' });
+      }
     }
 
     const member = await prisma.bandMember.create({
       data: {
         name,
-        instrument,
-        startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
         imageUrl,
         notes,
-        workspaceId: req.params.workspaceId
+        workspaceId: req.params.workspaceId,
+        stints: {
+          create: stints.map(s => ({
+            instrument: s.instrument,
+            startDate: new Date(s.startDate),
+            endDate: s.endDate ? new Date(s.endDate) : null
+          }))
+        }
+      },
+      include: {
+        stints: {
+          orderBy: { startDate: 'asc' }
+        }
       }
     });
 
@@ -66,7 +88,12 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (re
 router.get('/:memberId', authenticate, async (req, res) => {
   try {
     const member = await prisma.bandMember.findUnique({
-      where: { id: req.params.memberId }
+      where: { id: req.params.memberId },
+      include: {
+        stints: {
+          orderBy: { startDate: 'asc' }
+        }
+      }
     });
 
     if (!member) {
@@ -83,11 +110,12 @@ router.get('/:memberId', authenticate, async (req, res) => {
 // Update a band member (admin only)
 router.put('/:memberId', authenticate, async (req, res) => {
   try {
-    const { name, instrument, startDate, endDate, imageUrl, notes } = req.body;
+    const { name, imageUrl, notes, stints } = req.body;
 
     // Get the member to find its workspace
     const existing = await prisma.bandMember.findUnique({
-      where: { id: req.params.memberId }
+      where: { id: req.params.memberId },
+      include: { stints: true }
     });
 
     if (!existing) {
@@ -108,15 +136,60 @@ router.put('/:memberId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
-    const member = await prisma.bandMember.update({
+    // Build update operations
+    const updateData = {
+      ...(name && { name }),
+      ...(imageUrl !== undefined && { imageUrl }),
+      ...(notes !== undefined && { notes })
+    };
+
+    // If stints are provided, replace all stints
+    if (stints !== undefined) {
+      if (!stints || stints.length === 0) {
+        return res.status(400).json({ error: 'At least one instrument stint is required' });
+      }
+
+      // Validate stints
+      for (const stint of stints) {
+        if (!stint.instrument || !stint.startDate) {
+          return res.status(400).json({ error: 'Each stint requires instrument and start date' });
+        }
+      }
+
+      // Delete existing stints and create new ones in a transaction
+      await prisma.$transaction([
+        prisma.instrumentStint.deleteMany({
+          where: { bandMemberId: req.params.memberId }
+        }),
+        prisma.bandMember.update({
+          where: { id: req.params.memberId },
+          data: {
+            ...updateData,
+            stints: {
+              create: stints.map(s => ({
+                instrument: s.instrument,
+                startDate: new Date(s.startDate),
+                endDate: s.endDate ? new Date(s.endDate) : null
+              }))
+            }
+          }
+        })
+      ]);
+    } else {
+      // Just update basic info
+      await prisma.bandMember.update({
+        where: { id: req.params.memberId },
+        data: updateData
+      });
+    }
+
+    // Fetch updated member with stints
+    const member = await prisma.bandMember.findUnique({
       where: { id: req.params.memberId },
-      data: {
-        ...(name && { name }),
-        ...(instrument && { instrument }),
-        ...(startDate && { startDate: new Date(startDate) }),
-        ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
-        ...(imageUrl !== undefined && { imageUrl }),
-        ...(notes !== undefined && { notes })
+      include: {
+        stints: {
+          orderBy: { startDate: 'asc' }
+        }
       }
     });
 

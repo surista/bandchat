@@ -1,15 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 
 function GigArchive({ workspaceId }) {
   const [setlists, setSetlists] = useState([]);
   const [gigs, setGigs] = useState([]);
+  const [bandMembers, setBandMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedGig, setSelectedGig] = useState(null);
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [showAddMedia, setShowAddMedia] = useState(false);
   const [showAddGig, setShowAddGig] = useState(false);
+  const [showEditPerformers, setShowEditPerformers] = useState(false);
+  const [selectedPerformerIds, setSelectedPerformerIds] = useState([]);
   const [newGigTitle, setNewGigTitle] = useState('');
   const [newGigDate, setNewGigDate] = useState('');
   const [newGigVenue, setNewGigVenue] = useState('');
@@ -17,6 +20,10 @@ function GigArchive({ workspaceId }) {
   const [mediaCaption, setMediaCaption] = useState('');
   const [uploading, setUploading] = useState(false);
   const [filter, setFilter] = useState('all'); // 'all', 'past', 'upcoming'
+  const [lightboxImage, setLightboxImage] = useState(null); // For image lightbox
+  const [showEditDetails, setShowEditDetails] = useState(false);
+  const [editFee, setEditFee] = useState('');
+  const [editNotes, setEditNotes] = useState('');
 
   useEffect(() => {
     loadData();
@@ -25,12 +32,14 @@ function GigArchive({ workspaceId }) {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [setlistsData, gigsData] = await Promise.all([
+      const [setlistsData, gigsData, membersData] = await Promise.all([
         api.getSetlists(workspaceId),
-        api.getGigs(workspaceId)
+        api.getGigs(workspaceId),
+        api.getBandMembers(workspaceId)
       ]);
       setSetlists(setlistsData);
       setGigs(gigsData);
+      setBandMembers(membersData.all || []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -228,6 +237,79 @@ function GigArchive({ workspaceId }) {
     }
   };
 
+  const handleOpenEditPerformers = (entry) => {
+    if (!entry.setlist) return;
+    const currentPerformerIds = entry.setlist.performers?.map(p => p.id) || [];
+    setSelectedPerformerIds(currentPerformerIds);
+    setShowEditPerformers(true);
+  };
+
+  const handleSavePerformers = async () => {
+    if (!selectedEntry?.setlist) return;
+    setUploading(true);
+    try {
+      await api.updateSetlistPerformers(selectedEntry.setlist.id, selectedPerformerIds);
+      await loadData();
+      setShowEditPerformers(false);
+      // Update selectedEntry with new performers
+      const updatedSetlist = setlists.find(s => s.id === selectedEntry.setlist.id);
+      if (updatedSetlist) {
+        setSelectedEntry(prev => ({
+          ...prev,
+          setlist: { ...prev.setlist, performers: updatedSetlist.performers }
+        }));
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const togglePerformer = (memberId) => {
+    setSelectedPerformerIds(prev =>
+      prev.includes(memberId)
+        ? prev.filter(id => id !== memberId)
+        : [...prev, memberId]
+    );
+  };
+
+  // Open edit details modal
+  const handleOpenEditDetails = async (entry) => {
+    const gig = await ensureGigExists(entry);
+    if (gig) {
+      setEditFee(gig.pay?.toString() || '');
+      setEditNotes(gig.notes || '');
+      setSelectedGig(gig);
+      setShowEditDetails(true);
+    }
+  };
+
+  // Save gig details (fee and notes)
+  const handleSaveDetails = async () => {
+    if (!selectedGig) return;
+    setUploading(true);
+    try {
+      await api.updateGig(selectedGig.id, {
+        pay: editFee ? parseFloat(editFee) : null,
+        notes: editNotes || null
+      });
+      await loadData();
+      setShowEditDetails(false);
+      // Update selectedEntry with new data
+      if (selectedEntry?.gig?.id === selectedGig.id) {
+        setSelectedEntry(prev => ({
+          ...prev,
+          gig: { ...prev.gig, pay: editFee ? parseFloat(editFee) : null, notes: editNotes || null }
+        }));
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   // Create a gig from a setlist-derived entry (so we can add media)
   const ensureGigExists = async (entry) => {
     if (entry.hasFormalGig && entry.gig) {
@@ -293,11 +375,52 @@ function GigArchive({ workspaceId }) {
     return match ? `https://www.youtube.com/embed/${match[1]}` : null;
   };
 
+  // Extract YouTube video ID from URL
+  const getYouTubeVideoId = (url) => {
+    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+    return match ? match[1] : null;
+  };
+
+  // Get YouTube thumbnail URL from video URL
+  const getYouTubeThumbnail = (url) => {
+    const videoId = getYouTubeVideoId(url);
+    return videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null;
+  };
+
+  // Close lightbox on ESC key
+  const handleLightboxKeyDown = useCallback((e) => {
+    if (e.key === 'Escape') {
+      setLightboxImage(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (lightboxImage) {
+      document.addEventListener('keydown', handleLightboxKeyDown);
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.removeEventListener('keydown', handleLightboxKeyDown);
+        document.body.style.overflow = '';
+      };
+    }
+  }, [lightboxImage, handleLightboxKeyDown]);
+
   const formatDuration = (seconds) => {
     if (!seconds) return '';
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Format total duration as Xh Xm
+  const formatTotalDuration = (seconds) => {
+    if (!seconds) return '';
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
+    return `${mins}m`;
   };
 
   const getSetlistStats = (setlist) => {
@@ -408,18 +531,23 @@ function GigArchive({ workspaceId }) {
                   </div>
 
                   {/* Stats badges */}
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
                     <span className="px-2 py-0.5 bg-green-600/20 text-green-400 text-xs rounded">
                       {songCount} songs
                     </span>
                     {totalDuration > 0 && (
                       <span className="px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded">
-                        {formatDuration(totalDuration)}
+                        {formatTotalDuration(totalDuration)}
                       </span>
                     )}
                     {gig?.media?.length > 0 && (
                       <span className="px-2 py-0.5 bg-blue-600/20 text-blue-400 text-xs rounded">
                         {gig.media.length} media
+                      </span>
+                    )}
+                    {setlist?.performers?.length > 0 && (
+                      <span className="px-2 py-0.5 bg-purple-600/20 text-purple-400 text-xs rounded">
+                        👥 {setlist.performers.length}
                       </span>
                     )}
                   </div>
@@ -444,11 +572,26 @@ function GigArchive({ workspaceId }) {
                   {gig?.media?.length > 0 && (
                     <div className="flex gap-1 mt-3 pt-3 border-t border-gray-700">
                       {gig.media.slice(0, 4).map((item) => (
-                        <div key={item.id} className="w-10 h-10 rounded overflow-hidden bg-gray-800 flex-shrink-0">
+                        <div key={item.id} className="w-10 h-10 rounded overflow-hidden bg-gray-800 flex-shrink-0 relative">
                           {item.type === 'image' ? (
                             <img src={item.url} alt="" className="w-full h-full object-cover" />
                           ) : item.type === 'youtube' ? (
-                            <div className="w-full h-full flex items-center justify-center text-red-500">▶</div>
+                            <div className="relative w-full h-full">
+                              <img
+                                src={getYouTubeThumbnail(item.url)}
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-4 h-4 bg-red-600 rounded-sm flex items-center justify-center">
+                                  <span className="text-white text-[8px]">▶</span>
+                                </div>
+                              </div>
+                            </div>
+                          ) : item.type === 'video' ? (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-700">
+                              <span className="text-blue-400 text-xs">▶</span>
+                            </div>
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-gray-500">🔗</div>
                           )}
@@ -501,7 +644,7 @@ function GigArchive({ workspaceId }) {
             {/* Content */}
             <div className="overflow-y-auto max-h-[calc(90vh-180px)]">
               {/* Stats Row */}
-              <div className="flex items-center gap-4 px-6 py-3 bg-gray-800/50 border-b border-gray-700">
+              <div className="flex items-center gap-4 px-6 py-3 bg-gray-800/50 border-b border-gray-700 flex-wrap">
                 {(() => {
                   const { songCount, totalDuration } = getSetlistStats(selectedEntry.setlist);
                   return (
@@ -511,12 +654,17 @@ function GigArchive({ workspaceId }) {
                       </span>
                       {totalDuration > 0 && (
                         <span className="px-3 py-1 bg-blue-600/20 text-blue-400 text-sm rounded-full">
-                          {formatDuration(totalDuration)}
+                          {formatTotalDuration(totalDuration)}
                         </span>
                       )}
                       {selectedEntry.gig?.media?.length > 0 && (
                         <span className="px-3 py-1 bg-purple-600/20 text-purple-400 text-sm rounded-full">
                           {selectedEntry.gig.media.length} photos/videos
+                        </span>
+                      )}
+                      {selectedEntry.gig?.pay > 0 && (
+                        <span className="px-3 py-1 bg-yellow-600/20 text-yellow-400 text-sm rounded-full">
+                          ${selectedEntry.gig.pay.toLocaleString()}
                         </span>
                       )}
                     </>
@@ -525,6 +673,78 @@ function GigArchive({ workspaceId }) {
               </div>
 
               <div className="p-6 space-y-6">
+                {/* Fee & Notes Section */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-white font-semibold flex items-center gap-2">
+                      <span className="text-xl">📝</span> Details
+                    </h3>
+                    <button
+                      onClick={() => handleOpenEditDetails(selectedEntry)}
+                      className="text-sm text-blue-400 hover:text-blue-300"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                  <div className="bg-gray-800 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400">Fee</span>
+                      <span className="text-white font-medium">
+                        {selectedEntry.gig?.pay ? `$${selectedEntry.gig.pay.toLocaleString()}` : '—'}
+                      </span>
+                    </div>
+                    {selectedEntry.gig?.notes && (
+                      <div>
+                        <span className="text-gray-400 text-sm">Notes</span>
+                        <p className="text-white mt-1">{selectedEntry.gig.notes}</p>
+                      </div>
+                    )}
+                    {!selectedEntry.gig?.pay && !selectedEntry.gig?.notes && (
+                      <p className="text-gray-500 text-sm">No fee or notes added yet</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Performers */}
+                {selectedEntry.setlist && (
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-white font-semibold flex items-center gap-2">
+                        <span className="text-xl">👥</span> Who Played
+                      </h3>
+                      <button
+                        onClick={() => handleOpenEditPerformers(selectedEntry)}
+                        className="text-sm text-blue-400 hover:text-blue-300"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                    {selectedEntry.setlist.performers?.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedEntry.setlist.performers.map(member => {
+                          const instruments = member.stints?.map(s => s.instrument).filter((v, i, a) => a.indexOf(v) === i) || [];
+                          return (
+                          <div
+                            key={member.id}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 rounded-full"
+                          >
+                            <span className="text-white text-sm">{member.name}</span>
+                            <span className="text-gray-400 text-xs">({instruments.join(', ') || 'Unknown'})</span>
+                          </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleOpenEditPerformers(selectedEntry)}
+                        className="w-full py-3 border-2 border-dashed border-gray-600 rounded-lg text-gray-400 hover:text-white hover:border-gray-500 transition-colors text-sm"
+                      >
+                        + Tag band members who played this gig
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 {/* Setlist */}
                 {selectedEntry.setlist && (
                   <div>
@@ -562,53 +782,77 @@ function GigArchive({ workspaceId }) {
                     <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
                       <span className="text-xl">📸</span> Photos & Videos
                     </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {selectedEntry.gig.media.map((item) => (
-                        <div key={item.id} className="relative group rounded-lg overflow-hidden bg-gray-800">
-                          {item.type === 'image' ? (
-                            <a href={item.url} target="_blank" rel="noopener noreferrer">
-                              <img
+                        <div key={item.id} className="relative group">
+                          {/* Thumbnail container with aspect ratio */}
+                          <div className="relative rounded-lg overflow-hidden bg-gray-800 aspect-video">
+                            {item.type === 'image' ? (
+                              <button
+                                onClick={() => setLightboxImage({ url: item.url, caption: item.caption })}
+                                className="w-full h-full block cursor-zoom-in"
+                              >
+                                <img
+                                  src={item.url}
+                                  alt={item.caption || 'Gig photo'}
+                                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                                />
+                              </button>
+                            ) : item.type === 'youtube' ? (
+                              <a
+                                href={item.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full h-full block relative"
+                              >
+                                <img
+                                  src={getYouTubeThumbnail(item.url)}
+                                  alt={item.caption || 'YouTube video'}
+                                  className="w-full h-full object-cover"
+                                />
+                                {/* YouTube play button overlay */}
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors">
+                                  <div className="w-12 h-9 bg-red-600 rounded-lg flex items-center justify-center shadow-lg">
+                                    <svg className="w-5 h-5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M8 5v14l11-7z" />
+                                    </svg>
+                                  </div>
+                                </div>
+                              </a>
+                            ) : item.type === 'video' ? (
+                              <video
                                 src={item.url}
-                                alt={item.caption || 'Gig photo'}
-                                className="w-full h-40 object-cover hover:scale-105 transition-transform"
+                                className="w-full h-full object-cover"
+                                controls
                               />
-                            </a>
-                          ) : item.type === 'youtube' ? (
-                            <iframe
-                              src={getYouTubeEmbedUrl(item.url)}
-                              className="w-full h-40"
-                              allowFullScreen
-                            />
-                          ) : item.type === 'video' ? (
-                            <video
-                              src={item.url}
-                              className="w-full h-40 object-cover"
-                              controls
-                            />
-                          ) : (
-                            <a
-                              href={item.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center justify-center w-full h-40 bg-gray-800 hover:bg-gray-700"
+                            ) : (
+                              <a
+                                href={item.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center w-full h-full bg-gray-800 hover:bg-gray-700 transition-colors"
+                              >
+                                <span className="text-4xl">🔗</span>
+                              </a>
+                            )}
+                            {/* Delete button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                handleDeleteMedia(selectedEntry.gig.id, item.id);
+                              }}
+                              className="absolute top-2 right-2 w-7 h-7 bg-red-600 hover:bg-red-700 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-sm flex items-center justify-center shadow-lg"
                             >
-                              <span className="text-4xl">🔗</span>
-                            </a>
-                          )}
-                          {item.caption && (
-                            <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-2">
-                              {item.caption}
-                            </div>
-                          )}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteMedia(selectedEntry.gig.id, item.id);
-                            }}
-                            className="absolute top-2 right-2 w-6 h-6 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-xs flex items-center justify-center"
-                          >
-                            ×
-                          </button>
+                              ×
+                            </button>
+                          </div>
+                          {/* Caption below thumbnail */}
+                          <div className="mt-2 px-1">
+                            <p className="text-gray-300 text-sm truncate">
+                              {item.caption || (item.type === 'youtube' ? 'YouTube Video' : item.type === 'video' ? 'Video' : item.type === 'link' ? 'Link' : '')}
+                            </p>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -792,6 +1036,179 @@ function GigArchive({ workspaceId }) {
                 </button>
               </form>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Performers Modal */}
+      {showEditPerformers && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]">
+          <div className="bg-gray-800 rounded-lg w-full max-w-md border border-gray-700">
+            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+              <h3 className="text-lg font-medium text-white">Who Played This Gig?</h3>
+              <button
+                onClick={() => setShowEditPerformers(false)}
+                className="text-gray-400 hover:text-white text-2xl"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-4">
+              {bandMembers.length === 0 ? (
+                <div className="text-center py-6 text-gray-400">
+                  <p className="mb-2">No band members found.</p>
+                  <p className="text-sm">Add band members in Settings first.</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {bandMembers.map(member => {
+                    const instruments = member.stints?.map(s => s.instrument).filter((v, i, a) => a.indexOf(v) === i) || [];
+                    const isFormer = member.stints?.length > 0 && member.stints.every(s => s.endDate);
+                    return (
+                    <label
+                      key={member.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                        selectedPerformerIds.includes(member.id)
+                          ? 'bg-purple-600/20 border border-purple-500'
+                          : 'bg-gray-900 border border-gray-700 hover:border-gray-600'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedPerformerIds.includes(member.id)}
+                        onChange={() => togglePerformer(member.id)}
+                        className="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-500 focus:ring-purple-500"
+                      />
+                      <div className="flex-1">
+                        <div className="text-white font-medium">{member.name}</div>
+                        <div className="text-gray-400 text-sm">{instruments.join(', ') || 'Unknown'}</div>
+                      </div>
+                      {isFormer && (
+                        <span className="text-xs text-gray-500 bg-gray-700 px-2 py-0.5 rounded">Former</span>
+                      )}
+                    </label>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="flex gap-2 justify-end mt-4 pt-4 border-t border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => setShowEditPerformers(false)}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSavePerformers}
+                  disabled={uploading}
+                  className="btn bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  {uploading ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Details Modal */}
+      {showEditDetails && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]">
+          <div className="bg-gray-800 rounded-lg w-full max-w-md border border-gray-700">
+            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+              <h3 className="text-lg font-medium text-white">Edit Gig Details</h3>
+              <button
+                onClick={() => setShowEditDetails(false)}
+                className="text-gray-400 hover:text-white text-2xl"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">
+                  Fee ($)
+                </label>
+                <input
+                  type="number"
+                  value={editFee}
+                  onChange={(e) => setEditFee(e.target.value)}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">
+                  Notes
+                </label>
+                <textarea
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  placeholder="Add notes about the gig..."
+                  rows={4}
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white resize-none"
+                />
+              </div>
+              <div className="flex gap-2 justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditDetails(false)}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveDetails}
+                  disabled={uploading}
+                  className="btn bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {uploading ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Lightbox Modal */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 bg-black/90 flex items-center justify-center z-[70]"
+          onClick={() => setLightboxImage(null)}
+        >
+          {/* Close button */}
+          <button
+            onClick={() => setLightboxImage(null)}
+            className="absolute top-4 right-4 w-10 h-10 bg-gray-800 hover:bg-gray-700 text-white rounded-full flex items-center justify-center text-2xl transition-colors z-10"
+            aria-label="Close lightbox"
+          >
+            ×
+          </button>
+
+          {/* ESC hint */}
+          <div className="absolute top-4 left-4 text-gray-500 text-sm">
+            Press ESC to close
+          </div>
+
+          {/* Image container */}
+          <div
+            className="relative max-w-[90vw] max-h-[90vh] flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={lightboxImage.url}
+              alt={lightboxImage.caption || 'Gig photo'}
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+            />
+            {/* Caption below image */}
+            {lightboxImage.caption && (
+              <div className="mt-4 text-white text-center text-lg max-w-2xl">
+                {lightboxImage.caption}
+              </div>
+            )}
           </div>
         </div>
       )}
