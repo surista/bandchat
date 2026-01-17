@@ -25,7 +25,9 @@
       "Bash(Artist\", tab-separated\n- Show import results: created, skipped \\(duplicates\\), errors\n- Skip existing songs instead of failing\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "WebSearch",
       "WebFetch(domain:bandchat.vercel.app)",
-      "Bash(npx prisma migrate:*)"
+      "Bash(npx prisma migrate:*)",
+      "Bash(npx eslint:*)",
+      "Bash(node:*)"
     ]
   }
 }

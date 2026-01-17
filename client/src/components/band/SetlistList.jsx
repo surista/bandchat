@@ -533,9 +533,10 @@ function SetlistList({ workspaceId }) {
                         }
                       }}
                       className="btn btn-primary"
-                  >
-                    Edit Setlist
-                  </button>
+                    >
+                      Edit Setlist
+                    </button>
+                  )}
                 </div>
               </div>
             )}
