@@ -461,9 +461,17 @@ function Sidebar({
           onClick={() => setShowUserMenu(!showUserMenu)}
           className="flex items-center gap-2 w-full hover:bg-slack-hover rounded p-2 transition-colors"
         >
-          <div className="w-8 h-8 rounded bg-slack-green flex items-center justify-center text-white font-medium">
-            {user?.displayName?.charAt(0).toUpperCase()}
-          </div>
+          {user?.avatarUrl ? (
+            <img
+              src={user.avatarUrl}
+              alt={user.displayName}
+              className="w-8 h-8 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded bg-slack-green flex items-center justify-center text-white font-medium">
+              {user?.displayName?.charAt(0).toUpperCase()}
+            </div>
+          )}
           <span className="flex-1 text-left truncate text-white">
             {user?.displayName}
           </span>
