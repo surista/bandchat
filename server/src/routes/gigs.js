@@ -70,67 +70,78 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, async (req, res) => {
   try {
     const workspaceId = req.params.workspaceId;
+    const now = new Date();
 
-    // Total gigs completed
-    const totalGigs = await prisma.gig.count({
-      where: { workspaceId, status: 'COMPLETED', type: 'GIG' }
-    });
-
-    // Total rehearsals
-    const totalRehearsals = await prisma.gig.count({
-      where: { workspaceId, status: 'COMPLETED', type: 'REHEARSAL' }
-    });
-
-    // Total revenue
-    const revenue = await prisma.gig.aggregate({
-      where: { workspaceId, status: 'COMPLETED', pay: { not: null } },
-      _sum: { pay: true }
-    });
-
-    // Most played songs
-    const mostPlayed = await prisma.gigSong.groupBy({
-      by: ['songId'],
+    // Get all setlists with performedAt dates (these are past gigs)
+    const performedSetlists = await prisma.setlist.findMany({
       where: {
-        gig: { workspaceId, status: 'COMPLETED' }
+        workspaceId,
+        performedAt: { not: null, lte: now }
       },
-      _count: { songId: true },
-      orderBy: { _count: { songId: 'desc' } },
-      take: 10
+      include: {
+        songs: {
+          where: { type: 'SONG', songId: { not: null } },
+          select: { songId: true }
+        }
+      }
     });
 
-    // Get song details for most played
-    const songIds = mostPlayed.map(s => s.songId);
+    // Total gigs = setlists with performedAt in the past
+    const totalGigs = performedSetlists.length;
+
+    // Count song plays from setlists
+    const songPlayCounts = {};
+    for (const setlist of performedSetlists) {
+      for (const item of setlist.songs) {
+        if (item.songId) {
+          songPlayCounts[item.songId] = (songPlayCounts[item.songId] || 0) + 1;
+        }
+      }
+    }
+
+    // Most played songs (top 10)
+    const sortedSongIds = Object.entries(songPlayCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+
+    const songIds = sortedSongIds.map(([id]) => id);
     const songs = await prisma.song.findMany({
       where: { id: { in: songIds } },
       select: { id: true, title: true, artist: true }
     });
 
-    const mostPlayedWithDetails = mostPlayed.map(mp => ({
-      ...songs.find(s => s.id === mp.songId),
-      playCount: mp._count.songId
+    const mostPlayedWithDetails = sortedSongIds.map(([songId, count]) => ({
+      ...songs.find(s => s.id === songId),
+      playCount: count
     }));
 
-    // Songs never played
-    const playedSongIds = await prisma.gigSong.findMany({
-      where: { gig: { workspaceId } },
-      select: { songId: true },
-      distinct: ['songId']
-    });
-
+    // Songs never played (not in any performed setlist)
+    const playedSongIds = Object.keys(songPlayCounts);
     const neverPlayed = await prisma.song.count({
       where: {
         workspaceId,
-        id: { notIn: playedSongIds.map(s => s.songId) }
+        id: { notIn: playedSongIds }
       }
     });
 
-    // Upcoming gigs
+    // Upcoming gigs from calendar (keep this from Gig model)
     const upcomingGigs = await prisma.gig.count({
       where: {
         workspaceId,
         status: 'SCHEDULED',
-        date: { gte: new Date() }
+        date: { gte: now }
       }
+    });
+
+    // Total rehearsals (keep from Gig model)
+    const totalRehearsals = await prisma.gig.count({
+      where: { workspaceId, status: 'COMPLETED', type: 'REHEARSAL' }
+    });
+
+    // Total revenue (keep from Gig model)
+    const revenue = await prisma.gig.aggregate({
+      where: { workspaceId, status: 'COMPLETED', pay: { not: null } },
+      _sum: { pay: true }
     });
 
     res.json({
