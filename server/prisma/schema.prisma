@@ -223,14 +223,16 @@ model Song {
 }
 
 model Setlist {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   name          String
   description   String?
-  useShortNames Boolean  @default(false)
+  useShortNames Boolean   @default(false)
+  performedAt   DateTime? // Date the setlist was performed
+  venue         String?   // Venue name for the performance
   workspaceId   String
   createdById   String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdBy   User          @relation(fields: [createdById], references: [id])
@@ -240,6 +242,7 @@ model Setlist {
 
   @@unique([workspaceId, name])
   @@index([workspaceId])
+  @@index([workspaceId, performedAt])
 }
 
 model SetlistSong {

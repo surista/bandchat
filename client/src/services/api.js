@@ -485,17 +485,17 @@ class ApiService {
     });
   }
 
-  async importSetlist(workspaceId, name, songs, useShortNames = false) {
+  async importSetlist(workspaceId, name, songs, { useShortNames = false, performedAt = null, venue = null } = {}) {
     return this.request(`/setlists/workspace/${workspaceId}/import`, {
       method: 'POST',
-      body: JSON.stringify({ name, songs, useShortNames })
+      body: JSON.stringify({ name, songs, useShortNames, performedAt, venue })
     });
   }
 
-  async importMultiSetlist(workspaceId, baseName, sets, gigId = null) {
+  async importMultiSetlist(workspaceId, baseName, sets, { gigId = null, performedAt = null, venue = null } = {}) {
     return this.request(`/setlists/workspace/${workspaceId}/import-multiset`, {
       method: 'POST',
-      body: JSON.stringify({ baseName, sets, gigId })
+      body: JSON.stringify({ baseName, sets, gigId, performedAt, venue })
     });
   }
 

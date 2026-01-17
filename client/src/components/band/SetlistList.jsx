@@ -12,10 +12,14 @@ function SetlistList({ workspaceId }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newSetlistName, setNewSetlistName] = useState('');
   const [newSetlistDesc, setNewSetlistDesc] = useState('');
+  const [newSetlistDate, setNewSetlistDate] = useState('');
+  const [newSetlistVenue, setNewSetlistVenue] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importName, setImportName] = useState('');
   const [importText, setImportText] = useState('');
+  const [importDate, setImportDate] = useState('');
+  const [importVenue, setImportVenue] = useState('');
   const [importLoading, setImportLoading] = useState(false);
   const [importResults, setImportResults] = useState(null);
   const [viewingSetlist, setViewingSetlist] = useState(null);
@@ -46,12 +50,16 @@ function SetlistList({ workspaceId }) {
     try {
       const created = await api.createSetlist(workspaceId, {
         name: newSetlistName,
-        description: newSetlistDesc || null
+        description: newSetlistDesc || null,
+        performedAt: newSetlistDate || null,
+        venue: newSetlistVenue || null
       });
       setSetlists(prev => [created, ...prev]);
       setShowCreateModal(false);
       setNewSetlistName('');
       setNewSetlistDesc('');
+      setNewSetlistDate('');
+      setNewSetlistVenue('');
       setEditingSetlist(created);
       setShowBuilder(true);
     } catch (err) {
@@ -159,7 +167,10 @@ function SetlistList({ workspaceId }) {
       const isMultiSet = sets.length > 1;
 
       if (isMultiSet) {
-        const result = await api.importMultiSetlist(workspaceId, importName, sets);
+        const result = await api.importMultiSetlist(workspaceId, importName, sets, {
+          performedAt: importDate || null,
+          venue: importVenue || null
+        });
         setImportResults({ ...result.results, isMultiSet: true });
 
         // Add the created setlist (now returns single setlist with SET_BREAK markers)
@@ -169,13 +180,18 @@ function SetlistList({ workspaceId }) {
           setShowImportModal(false);
           setImportName('');
           setImportText('');
+          setImportDate('');
+          setImportVenue('');
           setImportResults(null);
           setEditingSetlist(result.setlist);
           setShowBuilder(true);
         }
       } else {
         // Single set import
-        const result = await api.importSetlist(workspaceId, importName, sets[0].songs);
+        const result = await api.importSetlist(workspaceId, importName, sets[0].songs, {
+          performedAt: importDate || null,
+          venue: importVenue || null
+        });
         setImportResults(result.results);
         setSetlists(prev => [result.setlist, ...prev]);
 
@@ -183,6 +199,8 @@ function SetlistList({ workspaceId }) {
           setShowImportModal(false);
           setImportName('');
           setImportText('');
+          setImportDate('');
+          setImportVenue('');
           setImportResults(null);
           setEditingSetlist(result.setlist);
           setShowBuilder(true);
@@ -271,6 +289,13 @@ function SetlistList({ workspaceId }) {
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1 min-w-0">
                     <h3 className="text-white font-medium truncate">{setlist.name}</h3>
+                    {(setlist.performedAt || setlist.venue) && (
+                      <p className="text-gray-500 text-xs truncate">
+                        {setlist.performedAt && new Date(setlist.performedAt).toLocaleDateString()}
+                        {setlist.performedAt && setlist.venue && ' · '}
+                        {setlist.venue}
+                      </p>
+                    )}
                     {setlist.description && (
                       <p className="text-gray-400 text-sm truncate">{setlist.description}</p>
                     )}
@@ -395,6 +420,27 @@ function SetlistList({ workspaceId }) {
                   placeholder="Optional description"
                 />
               </div>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-gray-700 font-medium mb-1">Date Performed</label>
+                  <input
+                    type="date"
+                    value={newSetlistDate}
+                    onChange={(e) => setNewSetlistDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 font-medium mb-1">Venue</label>
+                  <input
+                    type="text"
+                    value={newSetlistVenue}
+                    onChange={(e) => setNewSetlistVenue(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                    placeholder="e.g., The Blue Note"
+                  />
+                </div>
+              </div>
               <div className="flex gap-2 justify-end">
                 <button
                   type="button"
@@ -402,6 +448,8 @@ function SetlistList({ workspaceId }) {
                     setShowCreateModal(false);
                     setNewSetlistName('');
                     setNewSetlistDesc('');
+                    setNewSetlistDate('');
+                    setNewSetlistVenue('');
                   }}
                   className="btn btn-secondary"
                 >
@@ -456,6 +504,27 @@ function SetlistList({ workspaceId }) {
                     Use "Set 1", "Set 2" markers for multi-set gigs. Songs matched to your library.
                   </p>
                 </div>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-1">Date Performed</label>
+                    <input
+                      type="date"
+                      value={importDate}
+                      onChange={(e) => setImportDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-1">Venue</label>
+                    <input
+                      type="text"
+                      value={importVenue}
+                      onChange={(e) => setImportVenue(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                      placeholder="e.g., The Blue Note"
+                    />
+                  </div>
+                </div>
                 <div className="flex gap-2 justify-end">
                   <button
                     type="button"
@@ -463,6 +532,8 @@ function SetlistList({ workspaceId }) {
                       setShowImportModal(false);
                       setImportName('');
                       setImportText('');
+                      setImportDate('');
+                      setImportVenue('');
                     }}
                     className="btn btn-secondary"
                     disabled={importLoading}
@@ -553,6 +624,8 @@ function SetlistList({ workspaceId }) {
                       setShowImportModal(false);
                       setImportName('');
                       setImportText('');
+                      setImportDate('');
+                      setImportVenue('');
                       setImportResults(null);
                     }}
                     className="btn btn-secondary"
@@ -564,6 +637,8 @@ function SetlistList({ workspaceId }) {
                       setShowImportModal(false);
                       setImportName('');
                       setImportText('');
+                      setImportDate('');
+                      setImportVenue('');
                       setImportResults(null);
                       const newSetlist = setlists[0];
                       if (newSetlist) {
@@ -595,6 +670,13 @@ function SetlistList({ workspaceId }) {
             <div className="p-4 border-b border-gray-700 flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-bold text-white">{viewingSetlist.name}</h3>
+                {(viewingSetlist.performedAt || viewingSetlist.venue) && (
+                  <p className="text-gray-500 text-sm">
+                    {viewingSetlist.performedAt && new Date(viewingSetlist.performedAt).toLocaleDateString()}
+                    {viewingSetlist.performedAt && viewingSetlist.venue && ' · '}
+                    {viewingSetlist.venue}
+                  </p>
+                )}
                 {viewingSetlist.description && (
                   <p className="text-gray-400 text-sm">{viewingSetlist.description}</p>
                 )}

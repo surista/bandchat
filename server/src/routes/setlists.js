@@ -37,7 +37,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 // Create a setlist
 router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
-    const { name, description, useShortNames } = req.body;
+    const { name, description, useShortNames, performedAt, venue } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
@@ -48,6 +48,8 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
         name,
         description,
         useShortNames: useShortNames || false,
+        performedAt: performedAt ? new Date(performedAt) : null,
+        venue: venue || null,
         workspaceId: req.params.workspaceId,
         createdById: req.user.id
       },
@@ -328,7 +330,7 @@ router.delete('/:setlistId/songs/:songId', authenticate, async (req, res) => {
 // Bulk import a setlist from text
 router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceMember, async (req, res) => {
   try {
-    const { name, songs, useShortNames } = req.body;
+    const { name, songs, useShortNames, performedAt, venue } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Setlist name is required' });
@@ -414,6 +416,8 @@ router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceMember, a
       data: {
         name,
         useShortNames: useShortNames || false,
+        performedAt: performedAt ? new Date(performedAt) : null,
+        venue: venue || null,
         workspaceId: req.params.workspaceId,
         createdById: req.user.id,
         songs: {
@@ -455,7 +459,7 @@ router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceMember, a
 // Creates ONE setlist with SET_BREAK markers between sets
 router.post('/workspace/:workspaceId/import-multiset', authenticate, isWorkspaceMember, async (req, res) => {
   try {
-    const { baseName, sets, gigId } = req.body;
+    const { baseName, sets, gigId, performedAt, venue } = req.body;
 
     // sets is an array of { setNumber, songs: [{ title, artist }] }
     if (!sets || !Array.isArray(sets) || sets.length === 0) {
@@ -563,6 +567,8 @@ router.post('/workspace/:workspaceId/import-multiset', authenticate, isWorkspace
     const setlist = await prisma.setlist.create({
       data: {
         name: baseName,
+        performedAt: performedAt ? new Date(performedAt) : null,
+        venue: venue || null,
         workspaceId: req.params.workspaceId,
         createdById: req.user.id,
         songs: {
