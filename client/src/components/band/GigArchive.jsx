@@ -376,13 +376,13 @@ function GigArchive({ workspaceId }) {
             {filteredEntries.map((entry) => {
               const { setlist, gig, title, venue, date, hasFormalGig } = entry;
               const { songCount, totalDuration } = getSetlistStats(setlist);
-              const songs = setlist.songs?.filter(s => s.type === 'SONG' || !s.type) || [];
+              const songs = setlist?.songs?.filter(s => s.type === 'SONG' || !s.type) || [];
               const displaySongs = songs.slice(0, 3);
               const remainingSongs = songs.length - 3;
 
               return (
                 <div
-                  key={setlist.id}
+                  key={entry.id}
                   onClick={() => setSelectedEntry(entry)}
                   className="bg-gray-900 rounded-lg border border-gray-700 p-4 hover:border-gray-500 hover:bg-gray-850 transition-colors cursor-pointer"
                 >
