@@ -287,156 +287,101 @@ function GigArchive({ workspaceId }) {
             <p>No {filter === 'past' ? 'past' : 'upcoming'} gigs found</p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredEntries.map((entry) => {
-              const { setlist, gig, title, venue, date, status, hasFormalGig } = entry;
+              const { setlist, gig, title, venue, date, hasFormalGig } = entry;
               const { songCount, totalDuration } = getSetlistStats(setlist);
-              const isPast = date && date < now;
+              const songs = setlist.songs?.filter(s => s.type === 'SONG' || !s.type) || [];
+              const displaySongs = songs.slice(0, 3);
+              const remainingSongs = songs.length - 3;
 
               return (
-                <div key={setlist.id} className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden">
-                  {/* Gig Header */}
-                  <div className="p-4 border-b border-gray-700">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="text-lg font-medium text-white">{title}</h3>
-                          {isPast ? (
-                            <span className="px-2 py-0.5 bg-green-600/20 text-green-400 text-xs rounded">Completed</span>
-                          ) : (
-                            <span className="px-2 py-0.5 bg-purple-600/20 text-purple-400 text-xs rounded">Upcoming</span>
-                          )}
-                          {!hasFormalGig && (
-                            <span className="px-2 py-0.5 bg-gray-600/30 text-gray-400 text-xs rounded">From Setlist</span>
-                          )}
-                        </div>
-
-                        {/* Gig Info */}
-                        <div className="text-gray-400 text-sm">
-                          {date && (
-                            <>
-                              {date.toLocaleDateString('en-US', {
-                                weekday: 'long',
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
-                              })}
-                            </>
-                          )}
-                          {venue && ` • ${venue}`}
-                        </div>
-
-                        {/* Setlist Stats */}
-                        <div className="mt-2 p-2 bg-gray-800 rounded flex items-center gap-4 text-sm">
-                          <span className="text-gray-400">📋</span>
-                          <span className="text-white font-medium">{setlist.name}</span>
-                          <span className="text-gray-500">•</span>
-                          <span className="text-gray-400">{songCount} songs</span>
-                          {totalDuration > 0 && (
-                            <>
-                              <span className="text-gray-500">•</span>
-                              <span className="text-gray-400">{formatDuration(totalDuration)}</span>
-                            </>
-                          )}
-                        </div>
-
-                        {setlist.description && (
-                          <p className="mt-2 text-sm text-gray-500 italic">{setlist.description}</p>
-                        )}
-                      </div>
-
+                <div
+                  key={setlist.id}
+                  className="bg-gray-900 rounded-lg border border-gray-700 p-4 hover:border-gray-600 transition-colors"
+                >
+                  {/* Header with title and date */}
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-white font-medium truncate">{venue || title}</h3>
+                      {date && (
+                        <p className="text-gray-400 text-sm">
+                          {date.toLocaleDateString('en-US', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 ml-2">
                       {hasFormalGig && gig && (
                         <button
                           onClick={() => {
                             setSelectedGig(gig);
                             setShowAddMedia(true);
                           }}
-                          className="btn btn-primary text-sm flex-shrink-0"
+                          className="p-1.5 text-gray-400 hover:text-blue-400 transition-colors"
+                          title="Add media"
                         >
-                          + Add Media
+                          📸
                         </button>
                       )}
                     </div>
                   </div>
 
-                  {/* Media Grid - only for formal gigs */}
-                  {hasFormalGig && gig && (
-                    <div className="p-4">
-                      {gig.media?.length > 0 ? (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                          {gig.media.map((item) => (
-                            <div key={item.id} className="relative group">
-                              {item.type === 'image' ? (
-                                <a href={item.url} target="_blank" rel="noopener noreferrer">
-                                  <img
-                                    src={item.url}
-                                    alt={item.caption || 'Gig photo'}
-                                    className="w-full h-32 object-cover rounded-lg"
-                                  />
-                                </a>
-                              ) : item.type === 'youtube' ? (
-                                <div className="relative">
-                                  <iframe
-                                    src={getYouTubeEmbedUrl(item.url)}
-                                    className="w-full h-32 rounded-lg"
-                                    allowFullScreen
-                                  />
-                                </div>
-                              ) : item.type === 'video' ? (
-                                <video
-                                  src={item.url}
-                                  className="w-full h-32 object-cover rounded-lg"
-                                  controls
-                                />
-                              ) : (
-                                <a
-                                  href={item.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center justify-center w-full h-32 bg-gray-800 rounded-lg hover:bg-gray-700"
-                                >
-                                  <span className="text-4xl">🔗</span>
-                                </a>
-                              )}
-                              {item.caption && (
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1 rounded-b-lg truncate">
-                                  {item.caption}
-                                </div>
-                              )}
-                              <button
-                                onClick={() => handleDeleteMedia(gig.id, item.id)}
-                                className="absolute top-1 right-1 w-6 h-6 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-xs"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8 text-gray-500 bg-gray-800/50 rounded-lg border border-dashed border-gray-700">
-                          <div className="text-3xl mb-2">📸</div>
-                          <p>No media yet</p>
-                          <button
-                            onClick={() => {
-                              setSelectedGig(gig);
-                              setShowAddMedia(true);
-                            }}
-                            className="text-blue-400 hover:underline text-sm mt-1"
-                          >
-                            Add photos, videos, or YouTube links
-                          </button>
-                        </div>
+                  {/* Stats badges */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="px-2 py-0.5 bg-green-600/20 text-green-400 text-xs rounded">
+                      {songCount} songs
+                    </span>
+                    {totalDuration > 0 && (
+                      <span className="px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded">
+                        {formatDuration(totalDuration)}
+                      </span>
+                    )}
+                    {gig?.media?.length > 0 && (
+                      <span className="px-2 py-0.5 bg-blue-600/20 text-blue-400 text-xs rounded">
+                        {gig.media.length} media
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Song preview */}
+                  {displaySongs.length > 0 && (
+                    <div className="text-sm text-gray-400">
+                      <ol className="list-decimal list-inside space-y-0.5">
+                        {displaySongs.map((item, idx) => (
+                          <li key={item.id || idx} className="truncate">
+                            {item.song?.title || item.label || 'Unknown'}
+                          </li>
+                        ))}
+                      </ol>
+                      {remainingSongs > 0 && (
+                        <p className="text-gray-500 text-xs mt-1">+{remainingSongs} more...</p>
                       )}
                     </div>
                   )}
 
-                  {/* For setlists without formal gigs, show placeholder */}
-                  {!hasFormalGig && (
-                    <div className="p-4">
-                      <div className="text-center py-6 text-gray-500 bg-gray-800/30 rounded-lg">
-                        <div className="text-2xl mb-2">📸</div>
-                        <p className="text-sm">Create a gig in Calendar and link this setlist to add media</p>
-                      </div>
+                  {/* Media thumbnails if any */}
+                  {gig?.media?.length > 0 && (
+                    <div className="flex gap-1 mt-3 pt-3 border-t border-gray-700">
+                      {gig.media.slice(0, 4).map((item) => (
+                        <div key={item.id} className="w-10 h-10 rounded overflow-hidden bg-gray-800 flex-shrink-0">
+                          {item.type === 'image' ? (
+                            <img src={item.url} alt="" className="w-full h-full object-cover" />
+                          ) : item.type === 'youtube' ? (
+                            <div className="w-full h-full flex items-center justify-center text-red-500">▶</div>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-500">🔗</div>
+                          )}
+                        </div>
+                      ))}
+                      {gig.media.length > 4 && (
+                        <div className="w-10 h-10 rounded bg-gray-800 flex items-center justify-center text-gray-500 text-xs">
+                          +{gig.media.length - 4}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
