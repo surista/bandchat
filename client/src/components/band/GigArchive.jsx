@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 
 function GigArchive({ workspaceId }) {
+  const [setlists, setSetlists] = useState([]);
   const [gigs, setGigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -10,21 +11,21 @@ function GigArchive({ workspaceId }) {
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaCaption, setMediaCaption] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [filter, setFilter] = useState('all'); // 'all', 'completed', 'upcoming'
+  const [filter, setFilter] = useState('all'); // 'all', 'with-gig', 'no-gig'
 
   useEffect(() => {
-    loadGigs();
+    loadData();
   }, [workspaceId]);
 
-  const loadGigs = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const data = await api.getGigs(workspaceId);
-      // Filter to gigs with setlists attached (single or multi-set), sorted by date descending
-      const gigsWithSetlists = data
-        .filter(g => g.setlist || (g.setlists && g.setlists.length > 0))
-        .sort((a, b) => new Date(b.date) - new Date(a.date));
-      setGigs(gigsWithSetlists);
+      const [setlistsData, gigsData] = await Promise.all([
+        api.getSetlists(workspaceId),
+        api.getGigs(workspaceId)
+      ]);
+      setSetlists(setlistsData);
+      setGigs(gigsData);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -32,9 +33,36 @@ function GigArchive({ workspaceId }) {
     }
   };
 
-  const filteredGigs = gigs.filter(gig => {
-    if (filter === 'completed') return gig.status === 'COMPLETED';
-    if (filter === 'upcoming') return gig.status === 'SCHEDULED';
+  // Build archive entries from setlists with associated gig info
+  const archiveEntries = setlists.map(setlist => {
+    // Find gigs that use this setlist (either legacy single or multi-set)
+    const associatedGigs = gigs.filter(g =>
+      g.setlistId === setlist.id ||
+      (g.setlists && g.setlists.some(gs => gs.setlistId === setlist.id))
+    ).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Get the most recent gig for display
+    const primaryGig = associatedGigs[0];
+
+    return {
+      setlist,
+      gig: primaryGig,
+      allGigs: associatedGigs,
+      hasGig: associatedGigs.length > 0
+    };
+  }).sort((a, b) => {
+    // Sort: gigs with dates first (by date desc), then setlists without gigs (by creation date desc)
+    if (a.hasGig && b.hasGig) {
+      return new Date(b.gig.date) - new Date(a.gig.date);
+    }
+    if (a.hasGig) return -1;
+    if (b.hasGig) return 1;
+    return new Date(b.setlist.createdAt) - new Date(a.setlist.createdAt);
+  });
+
+  const filteredEntries = archiveEntries.filter(entry => {
+    if (filter === 'with-gig') return entry.hasGig;
+    if (filter === 'no-gig') return !entry.hasGig;
     return true;
   });
 
@@ -55,7 +83,7 @@ function GigArchive({ workspaceId }) {
         url: result.url,
         caption: mediaCaption || file.name
       });
-      await loadGigs();
+      await loadData();
       setShowAddMedia(false);
       setMediaCaption('');
     } catch (err) {
@@ -83,7 +111,7 @@ function GigArchive({ workspaceId }) {
         url: mediaUrl,
         caption: mediaCaption
       });
-      await loadGigs();
+      await loadData();
       setShowAddMedia(false);
       setMediaUrl('');
       setMediaCaption('');
@@ -98,7 +126,7 @@ function GigArchive({ workspaceId }) {
     if (!confirm('Delete this media?')) return;
     try {
       await api.deleteGigMedia(gigId, mediaId);
-      await loadGigs();
+      await loadData();
     } catch (err) {
       setError(err.message);
     }
@@ -124,33 +152,6 @@ function GigArchive({ workspaceId }) {
     return { songCount, totalDuration };
   };
 
-  // Get all setlists for a gig (handles both legacy single and new multi-set)
-  const getGigSetlists = (gig) => {
-    if (gig.setlists && gig.setlists.length > 0) {
-      // Multi-set gig - sort by set number
-      return gig.setlists
-        .sort((a, b) => a.setNumber - b.setNumber)
-        .map(gs => ({ ...gs.setlist, setNumber: gs.setNumber }));
-    } else if (gig.setlist) {
-      // Legacy single setlist
-      return [{ ...gig.setlist, setNumber: 1 }];
-    }
-    return [];
-  };
-
-  // Get combined stats for all setlists
-  const getGigTotalStats = (gig) => {
-    const setlists = getGigSetlists(gig);
-    let totalSongs = 0;
-    let totalDuration = 0;
-    setlists.forEach(sl => {
-      const stats = getSetlistStats(sl);
-      totalSongs += stats.songCount;
-      totalDuration += stats.totalDuration;
-    });
-    return { songCount: totalSongs, totalDuration, setCount: setlists.length };
-  };
-
   if (loading) {
     return <div className="flex items-center justify-center h-64 text-gray-400">Loading archive...</div>;
   }
@@ -161,8 +162,8 @@ function GigArchive({ workspaceId }) {
       <div className="flex-shrink-0 p-4 border-b border-gray-700">
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h2 className="text-xl font-bold text-white">Gig Archive</h2>
-            <p className="text-gray-400 text-sm mt-1">Photos, videos, and memories from your gigs</p>
+            <h2 className="text-xl font-bold text-white">Setlist Archive</h2>
+            <p className="text-gray-400 text-sm mt-1">Your setlists, gig history, and memories</p>
           </div>
         </div>
         {/* Filter tabs */}
@@ -171,19 +172,19 @@ function GigArchive({ workspaceId }) {
             onClick={() => setFilter('all')}
             className={`px-3 py-1 rounded text-sm ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
           >
-            All ({gigs.length})
+            All Setlists ({archiveEntries.length})
           </button>
           <button
-            onClick={() => setFilter('completed')}
-            className={`px-3 py-1 rounded text-sm ${filter === 'completed' ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+            onClick={() => setFilter('with-gig')}
+            className={`px-3 py-1 rounded text-sm ${filter === 'with-gig' ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
           >
-            Completed ({gigs.filter(g => g.status === 'COMPLETED').length})
+            With Gigs ({archiveEntries.filter(e => e.hasGig).length})
           </button>
           <button
-            onClick={() => setFilter('upcoming')}
-            className={`px-3 py-1 rounded text-sm ${filter === 'upcoming' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+            onClick={() => setFilter('no-gig')}
+            className={`px-3 py-1 rounded text-sm ${filter === 'no-gig' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
           >
-            Upcoming ({gigs.filter(g => g.status === 'SCHEDULED').length})
+            Unscheduled ({archiveEntries.filter(e => !e.hasGig).length})
           </button>
         </div>
       </div>
@@ -197,200 +198,186 @@ function GigArchive({ workspaceId }) {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
-        {gigs.length === 0 ? (
+        {setlists.length === 0 ? (
           <div className="text-center py-12 text-gray-400">
-            <div className="text-6xl mb-4">📸</div>
-            <p className="text-lg mb-2">No gigs with setlists yet</p>
-            <p className="text-sm">Create a gig in Calendar and attach a setlist to start your archive!</p>
+            <div className="text-6xl mb-4">📋</div>
+            <p className="text-lg mb-2">No setlists yet</p>
+            <p className="text-sm">Create a setlist in Set Lists to start building your archive!</p>
           </div>
-        ) : filteredGigs.length === 0 ? (
+        ) : filteredEntries.length === 0 ? (
           <div className="text-center py-12 text-gray-400">
-            <p>No {filter} gigs found</p>
+            <p>No {filter === 'with-gig' ? 'setlists with gigs' : filter === 'no-gig' ? 'unscheduled setlists' : 'setlists'} found</p>
           </div>
         ) : (
           <div className="space-y-6">
-            {filteredGigs.map((gig) => {
-              const gigSetlists = getGigSetlists(gig);
-              const { songCount, totalDuration, setCount } = getGigTotalStats(gig);
-              const isMultiSet = setCount > 1;
-              const isUpcoming = gig.status === 'SCHEDULED';
-              const isPast = new Date(gig.date) < new Date();
+            {filteredEntries.map(({ setlist, gig, allGigs, hasGig }) => {
+              const { songCount, totalDuration } = getSetlistStats(setlist);
 
               return (
-                <div key={gig.id} className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden">
-                  {/* Gig Header */}
+                <div key={setlist.id} className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden">
+                  {/* Setlist Header */}
                   <div className="p-4 border-b border-gray-700">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="text-lg font-medium text-white">{gig.title}</h3>
-                          {isMultiSet && (
+                          <h3 className="text-lg font-medium text-white">{setlist.name}</h3>
+                          {hasGig ? (
+                            gig.status === 'COMPLETED' ? (
+                              <span className="px-2 py-0.5 bg-green-600/20 text-green-400 text-xs rounded">Played</span>
+                            ) : new Date(gig.date) < new Date() ? (
+                              <span className="px-2 py-0.5 bg-yellow-600/20 text-yellow-400 text-xs rounded">Pending Review</span>
+                            ) : (
+                              <span className="px-2 py-0.5 bg-purple-600/20 text-purple-400 text-xs rounded">Scheduled</span>
+                            )
+                          ) : (
+                            <span className="px-2 py-0.5 bg-gray-600/30 text-gray-400 text-xs rounded">Not Scheduled</span>
+                          )}
+                          {allGigs.length > 1 && (
                             <span className="px-2 py-0.5 bg-indigo-600/30 text-indigo-300 text-xs rounded font-medium">
-                              {setCount} Sets
+                              {allGigs.length} gigs
                             </span>
                           )}
-                          {gig.status === 'COMPLETED' ? (
-                            <span className="px-2 py-0.5 bg-green-600/20 text-green-400 text-xs rounded">Completed</span>
-                          ) : isPast ? (
-                            <span className="px-2 py-0.5 bg-yellow-600/20 text-yellow-400 text-xs rounded">Pending Review</span>
-                          ) : (
-                            <span className="px-2 py-0.5 bg-purple-600/20 text-purple-400 text-xs rounded">Upcoming</span>
+                        </div>
+
+                        {/* Gig Info */}
+                        {hasGig ? (
+                          <div className="text-gray-400 text-sm">
+                            <span className="text-white font-medium">{gig.title}</span>
+                            {' • '}
+                            {new Date(gig.date).toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })}
+                            {gig.venue && ` • ${gig.venue}`}
+                          </div>
+                        ) : (
+                          <div className="text-gray-500 text-sm italic">
+                            No gig scheduled for this setlist
+                          </div>
+                        )}
+
+                        {/* Setlist Stats */}
+                        <div className="mt-2 p-2 bg-gray-800 rounded flex items-center gap-4 text-sm">
+                          <span className="text-gray-400">📋</span>
+                          <span className="text-gray-400">{songCount} songs</span>
+                          {totalDuration > 0 && (
+                            <>
+                              <span className="text-gray-500">•</span>
+                              <span className="text-gray-400">{formatDuration(totalDuration)}</span>
+                            </>
+                          )}
+                          {setlist.description && (
+                            <>
+                              <span className="text-gray-500">•</span>
+                              <span className="text-gray-500 truncate">{setlist.description}</span>
+                            </>
                           )}
                         </div>
-                        <div className="text-gray-400 text-sm">
-                          {new Date(gig.date).toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                          {gig.venue && ` • ${gig.venue}`}
-                        </div>
-                        {/* Multi-Set Display */}
-                        {isMultiSet ? (
-                          <div className="mt-3 space-y-2">
-                            {/* Total Summary */}
-                            <div className="flex items-center gap-3 text-sm text-gray-400 mb-2">
-                              <span>📋 {songCount} total songs</span>
-                              {totalDuration > 0 && (
-                                <>
-                                  <span className="text-gray-600">•</span>
-                                  <span>{formatDuration(totalDuration)} total</span>
-                                </>
-                              )}
-                            </div>
-                            {/* Individual Sets */}
-                            <div className="grid gap-2">
-                              {gigSetlists.map((setlist, idx) => {
-                                const setStats = getSetlistStats(setlist);
-                                const setColors = [
-                                  'from-blue-600/20 to-blue-800/10 border-blue-600/30',
-                                  'from-purple-600/20 to-purple-800/10 border-purple-600/30',
-                                  'from-green-600/20 to-green-800/10 border-green-600/30',
-                                  'from-orange-600/20 to-orange-800/10 border-orange-600/30',
-                                ];
-                                const colorClass = setColors[idx % setColors.length];
 
-                                return (
-                                  <div
-                                    key={setlist.id}
-                                    className={`p-3 rounded-lg border bg-gradient-to-r ${colorClass}`}
-                                  >
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-3">
-                                        <span className="text-white font-bold text-lg">
-                                          {setlist.setNumber}
-                                        </span>
-                                        <div>
-                                          <div className="text-white font-medium text-sm">{setlist.name}</div>
-                                          <div className="text-gray-400 text-xs">
-                                            {setStats.songCount} songs
-                                            {setStats.totalDuration > 0 && ` • ${formatDuration(setStats.totalDuration)}`}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        ) : gigSetlists.length > 0 && (
-                          /* Single Setlist Display */
-                          <div className="mt-2 p-2 bg-gray-800 rounded flex items-center gap-4 text-sm">
-                            <span className="text-gray-400">📋</span>
-                            <span className="text-white font-medium">{gigSetlists[0].name}</span>
-                            <span className="text-gray-500">•</span>
-                            <span className="text-gray-400">{songCount} songs</span>
-                            {totalDuration > 0 && (
-                              <>
-                                <span className="text-gray-500">•</span>
-                                <span className="text-gray-400">{formatDuration(totalDuration)}</span>
-                              </>
-                            )}
+                        {/* Show other gigs if multiple */}
+                        {allGigs.length > 1 && (
+                          <div className="mt-2 text-xs text-gray-500">
+                            Also used in: {allGigs.slice(1, 4).map(g => g.title).join(', ')}
+                            {allGigs.length > 4 && ` and ${allGigs.length - 4} more`}
                           </div>
                         )}
                       </div>
-                      <button
-                        onClick={() => {
-                          setSelectedGig(gig);
-                          setShowAddMedia(true);
-                        }}
-                        className="btn btn-primary text-sm flex-shrink-0"
-                      >
-                        + Add Media
-                      </button>
-                    </div>
-                  </div>
 
-                  {/* Media Grid */}
-                  <div className="p-4">
-                    {gig.media?.length > 0 ? (
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                        {gig.media.map((item) => (
-                          <div key={item.id} className="relative group">
-                            {item.type === 'image' ? (
-                              <a href={item.url} target="_blank" rel="noopener noreferrer">
-                                <img
-                                  src={item.url}
-                                  alt={item.caption || 'Gig photo'}
-                                  className="w-full h-32 object-cover rounded-lg"
-                                />
-                              </a>
-                            ) : item.type === 'youtube' ? (
-                              <div className="relative">
-                                <iframe
-                                  src={getYouTubeEmbedUrl(item.url)}
-                                  className="w-full h-32 rounded-lg"
-                                  allowFullScreen
-                                />
-                              </div>
-                            ) : item.type === 'video' ? (
-                              <video
-                                src={item.url}
-                                className="w-full h-32 object-cover rounded-lg"
-                                controls
-                              />
-                            ) : (
-                              <a
-                                href={item.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center justify-center w-full h-32 bg-gray-800 rounded-lg hover:bg-gray-700"
-                              >
-                                <span className="text-4xl">🔗</span>
-                              </a>
-                            )}
-                            {item.caption && (
-                              <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1 rounded-b-lg truncate">
-                                {item.caption}
-                              </div>
-                            )}
-                            <button
-                              onClick={() => handleDeleteMedia(gig.id, item.id)}
-                              className="absolute top-1 right-1 w-6 h-6 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-xs"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-gray-500 bg-gray-800/50 rounded-lg border border-dashed border-gray-700">
-                        <div className="text-3xl mb-2">📸</div>
-                        <p>No media yet</p>
+                      {hasGig && (
                         <button
                           onClick={() => {
                             setSelectedGig(gig);
                             setShowAddMedia(true);
                           }}
-                          className="text-blue-400 hover:underline text-sm mt-1"
+                          className="btn btn-primary text-sm flex-shrink-0"
                         >
-                          Add photos, videos, or YouTube links
+                          + Add Media
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
+
+                  {/* Media Grid - only for gigs */}
+                  {hasGig && (
+                    <div className="p-4">
+                      {gig.media?.length > 0 ? (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                          {gig.media.map((item) => (
+                            <div key={item.id} className="relative group">
+                              {item.type === 'image' ? (
+                                <a href={item.url} target="_blank" rel="noopener noreferrer">
+                                  <img
+                                    src={item.url}
+                                    alt={item.caption || 'Gig photo'}
+                                    className="w-full h-32 object-cover rounded-lg"
+                                  />
+                                </a>
+                              ) : item.type === 'youtube' ? (
+                                <div className="relative">
+                                  <iframe
+                                    src={getYouTubeEmbedUrl(item.url)}
+                                    className="w-full h-32 rounded-lg"
+                                    allowFullScreen
+                                  />
+                                </div>
+                              ) : item.type === 'video' ? (
+                                <video
+                                  src={item.url}
+                                  className="w-full h-32 object-cover rounded-lg"
+                                  controls
+                                />
+                              ) : (
+                                <a
+                                  href={item.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center justify-center w-full h-32 bg-gray-800 rounded-lg hover:bg-gray-700"
+                                >
+                                  <span className="text-4xl">🔗</span>
+                                </a>
+                              )}
+                              {item.caption && (
+                                <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1 rounded-b-lg truncate">
+                                  {item.caption}
+                                </div>
+                              )}
+                              <button
+                                onClick={() => handleDeleteMedia(gig.id, item.id)}
+                                className="absolute top-1 right-1 w-6 h-6 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-500 bg-gray-800/50 rounded-lg border border-dashed border-gray-700">
+                          <div className="text-3xl mb-2">📸</div>
+                          <p>No media yet</p>
+                          <button
+                            onClick={() => {
+                              setSelectedGig(gig);
+                              setShowAddMedia(true);
+                            }}
+                            className="text-blue-400 hover:underline text-sm mt-1"
+                          >
+                            Add photos, videos, or YouTube links
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* For setlists without gigs, show a simple call-to-action */}
+                  {!hasGig && (
+                    <div className="p-4">
+                      <div className="text-center py-6 text-gray-500 bg-gray-800/30 rounded-lg">
+                        <p className="text-sm">Schedule this setlist for a gig to add photos and videos</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
