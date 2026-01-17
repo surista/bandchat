@@ -21,7 +21,9 @@ function Sidebar({
   directMessages = [],
   onStartDM,
   activeBandView,
-  onSelectBandView
+  onSelectBandView,
+  width = 256,
+  onResizeStart
 }) {
   const navigate = useNavigate();
   const { updateUser } = useAuth();
@@ -156,12 +158,23 @@ function Sidebar({
   );
 
   return (
-    <div className={`
-      w-64 h-full bg-slack-sidebar flex flex-col text-gray-300
-      fixed md:relative inset-y-0 left-0 z-50
-      transform transition-transform duration-200 ease-in-out
-      ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-    `}>
+    <div
+      className={`
+        h-full bg-slack-sidebar flex flex-col text-gray-300
+        fixed md:relative inset-y-0 left-0 z-50
+        transform transition-transform duration-200 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}
+      style={{ width: `${width}px` }}
+    >
+      {/* Resize handle */}
+      <div
+        className="hidden md:block absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500/50 transition-colors z-10"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          onResizeStart?.();
+        }}
+      />
       {/* Workspace Header */}
       <div className="p-4 border-b border-white/10">
         <button
@@ -356,7 +369,7 @@ function Sidebar({
       </div>
 
       {/* User Section */}
-      <div className="relative border-t border-white/10 p-3">
+      <div className="flex-shrink-0 relative border-t border-white/10 p-3">
         <button
           onClick={() => setShowUserMenu(!showUserMenu)}
           className="flex items-center gap-2 w-full hover:bg-slack-hover rounded p-2 transition-colors"
@@ -406,7 +419,7 @@ function Sidebar({
       </div>
 
       {/* Footer */}
-      <div className="border-t border-white/10 px-4 py-2">
+      <div className="flex-shrink-0 border-t border-white/10 px-4 py-2">
         <div className="flex items-center justify-between text-xs text-gray-500">
           <span>v{__APP_VERSION__}</span>
           <div className="flex items-center gap-3">

@@ -276,7 +276,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-800">
+    <div className="flex-1 flex flex-col bg-gray-800 min-h-0">
       {/* Channel Header */}
       <div className="h-14 border-b border-gray-700 px-4 flex items-center">
         {channel.isDirect ? (

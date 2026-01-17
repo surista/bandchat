@@ -31,6 +31,11 @@ function WorkspaceView() {
   const [searchResults, setSearchResults] = useState([]);
   const [directMessages, setDirectMessages] = useState([]);
   const [activeBandView, setActiveBandView] = useState(null);
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem('sidebarWidth');
+    return saved ? parseInt(saved, 10) : 256;
+  });
+  const [isResizing, setIsResizing] = useState(false);
 
   useEffect(() => {
     loadWorkspace();
@@ -63,6 +68,36 @@ function WorkspaceView() {
       };
     }
   }, [socket, workspaceId]);
+
+  // Sidebar resize handling
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing) return;
+      const newWidth = Math.min(Math.max(180, e.clientX), 400);
+      setSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      if (isResizing) {
+        setIsResizing(false);
+        localStorage.setItem('sidebarWidth', sidebarWidth.toString());
+      }
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing, sidebarWidth]);
 
   const loadWorkspace = async () => {
     try {
@@ -276,10 +311,12 @@ function WorkspaceView() {
         onStartDM={handleStartDM}
         activeBandView={activeBandView}
         onSelectBandView={handleSelectBandView}
+        width={sidebarWidth}
+        onResizeStart={() => setIsResizing(true)}
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col pb-16 md:pb-0">
+      <div className="flex-1 flex flex-col pb-16 md:pb-0 min-h-0">
         {/* Mobile Header */}
         <div className="md:hidden flex items-center gap-3 p-3 border-b border-gray-700 bg-gray-900">
           <button
@@ -315,9 +352,9 @@ function WorkspaceView() {
         </div>
 
         {/* Content area */}
-        <div className="flex-1 flex">
+        <div className="flex-1 flex min-h-0">
           {/* Channel View or Band View */}
-          <div className={`flex-1 flex flex-col ${selectedThread ? 'hidden md:flex' : ''}`}>
+          <div className={`flex-1 flex flex-col min-h-0 ${selectedThread ? 'hidden md:flex' : ''}`}>
             {activeBandView === 'songs' ? (
               <SongList workspaceId={workspaceId} />
             ) : activeBandView === 'setlists' ? (
