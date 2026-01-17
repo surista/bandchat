@@ -281,8 +281,22 @@ model Gig {
   createdBy   User      @relation(fields: [createdById], references: [id])
   setlist     Setlist?  @relation(fields: [setlistId], references: [id], onDelete: SetNull)
   songsPlayed GigSong[]
+  media       GigMedia[]
 
   @@index([workspaceId, date])
+}
+
+model GigMedia {
+  id        String   @id @default(uuid())
+  gigId     String
+  type      String   // 'image', 'video', 'youtube', 'link'
+  url       String
+  caption   String?
+  createdAt DateTime @default(now())
+
+  gig       Gig      @relation(fields: [gigId], references: [id], onDelete: Cascade)
+
+  @@index([gigId])
 }
 
 model GigSong {

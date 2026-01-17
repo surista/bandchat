@@ -31,6 +31,9 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
         setlist: {
           select: { id: true, name: true }
         },
+        media: {
+          orderBy: { createdAt: 'desc' }
+        },
         _count: {
           select: { songsPlayed: true }
         }
@@ -313,6 +316,78 @@ router.delete('/:gigId', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Delete gig error:', error);
     res.status(500).json({ error: 'Failed to delete gig' });
+  }
+});
+
+// Add media to a gig
+router.post('/:gigId/media', authenticate, async (req, res) => {
+  try {
+    const { type, url, caption } = req.body;
+
+    if (!type || !url) {
+      return res.status(400).json({ error: 'Type and URL are required' });
+    }
+
+    // Verify gig exists and user has access
+    const gig = await prisma.gig.findUnique({
+      where: { id: req.params.gigId },
+      include: { workspace: { include: { members: true } } }
+    });
+
+    if (!gig) {
+      return res.status(404).json({ error: 'Gig not found' });
+    }
+
+    const isMember = gig.workspace.members.some(m => m.userId === req.user.id);
+    if (!isMember) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    const media = await prisma.gigMedia.create({
+      data: {
+        gigId: req.params.gigId,
+        type,
+        url,
+        caption
+      }
+    });
+
+    res.status(201).json(media);
+  } catch (error) {
+    console.error('Add gig media error:', error);
+    res.status(500).json({ error: 'Failed to add media' });
+  }
+});
+
+// Delete media from a gig
+router.delete('/:gigId/media/:mediaId', authenticate, async (req, res) => {
+  try {
+    const media = await prisma.gigMedia.findUnique({
+      where: { id: req.params.mediaId },
+      include: {
+        gig: {
+          include: { workspace: { include: { members: true } } }
+        }
+      }
+    });
+
+    if (!media) {
+      return res.status(404).json({ error: 'Media not found' });
+    }
+
+    const isMember = media.gig.workspace.members.some(m => m.userId === req.user.id);
+    if (!isMember) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    await prisma.gigMedia.delete({
+      where: { id: req.params.mediaId }
+    });
+
+    res.json({ message: 'Media deleted' });
+  } catch (error) {
+    console.error('Delete gig media error:', error);
+    res.status(500).json({ error: 'Failed to delete media' });
   }
 });
 

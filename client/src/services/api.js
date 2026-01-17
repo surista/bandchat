@@ -556,6 +556,20 @@ class ApiService {
   async getGigStats(workspaceId) {
     return this.request(`/gigs/workspace/${workspaceId}/stats`);
   }
+
+  // Gig Archive / Media
+  async addGigMedia(gigId, data) {
+    return this.request(`/gigs/${gigId}/media`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteGigMedia(gigId, mediaId) {
+    return this.request(`/gigs/${gigId}/media/${mediaId}`, {
+      method: 'DELETE'
+    });
+  }
 }
 
 export const api = new ApiService();
