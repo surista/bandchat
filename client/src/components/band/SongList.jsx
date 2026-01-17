@@ -145,7 +145,8 @@ function SongList({ workspaceId, onSelectSong }) {
     .filter(song => {
       const query = searchQuery.toLowerCase();
       return song.title.toLowerCase().includes(query) ||
-        (song.artist && song.artist.toLowerCase().includes(query));
+        (song.artist && song.artist.toLowerCase().includes(query)) ||
+        (song.shortName && song.shortName.toLowerCase().includes(query));
     })
     .sort((a, b) => {
       if (sortBy === 'title') return a.title.localeCompare(b.title);
@@ -277,6 +278,9 @@ function SongList({ workspaceId, onSelectSong }) {
                     <h3 className="text-white font-medium truncate">{song.title}</h3>
                     {song.artist && (
                       <p className="text-gray-400 text-sm truncate">{song.artist}</p>
+                    )}
+                    {song.shortName && (
+                      <p className="text-gray-500 text-xs truncate">aka "{song.shortName}"</p>
                     )}
                   </div>
                   <div className="flex gap-1 ml-2">

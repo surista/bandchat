@@ -348,7 +348,7 @@ router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceMember, a
       notFound: []
     };
 
-    // Match songs by title (and optionally artist)
+    // Match songs by title, shortName, or partial match
     const matchedSongIds = [];
     for (const songInput of songs) {
       const title = songInput.title?.toLowerCase().trim();
@@ -356,22 +356,39 @@ router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceMember, a
 
       if (!title) continue;
 
-      // Find matching song - prefer exact title+artist match, fall back to title only
+      // Find matching song - priority order:
+      // 1. Exact title+artist match
+      // 2. Exact title match
+      // 3. Exact shortName match
+      // 4. Partial title match
       let match = workspaceSongs.find(s => {
         const sTitle = s.title.toLowerCase().trim();
         const sArtist = s.artist?.toLowerCase().trim();
-
         if (artist && sArtist) {
           return sTitle === title && sArtist === artist;
         }
-        return sTitle === title;
+        return false;
       });
+
+      if (!match) {
+        match = workspaceSongs.find(s => s.title.toLowerCase().trim() === title);
+      }
+
+      // Try shortName match
+      if (!match) {
+        match = workspaceSongs.find(s => {
+          const sShortName = s.shortName?.toLowerCase().trim();
+          return sShortName && sShortName === title;
+        });
+      }
 
       // Try partial match if no exact match
       if (!match) {
         match = workspaceSongs.find(s => {
           const sTitle = s.title.toLowerCase().trim();
-          return sTitle.includes(title) || title.includes(sTitle);
+          const sShortName = s.shortName?.toLowerCase().trim();
+          return sTitle.includes(title) || title.includes(sTitle) ||
+                 (sShortName && (sShortName.includes(title) || title.includes(sShortName)));
         });
       }
 
@@ -470,7 +487,7 @@ router.post('/workspace/:workspaceId/import-multiset', authenticate, isWorkspace
         notFound: []
       };
 
-      // Match songs by title
+      // Match songs by title, shortName, or partial match
       const matchedSongIds = [];
       for (const songInput of songs) {
         const title = songInput.title?.toLowerCase().trim();
@@ -478,21 +495,35 @@ router.post('/workspace/:workspaceId/import-multiset', authenticate, isWorkspace
 
         if (!title) continue;
 
+        // Priority: exact title+artist > exact title > exact shortName > partial match
         let match = workspaceSongs.find(s => {
           const sTitle = s.title.toLowerCase().trim();
           const sArtist = s.artist?.toLowerCase().trim();
-
           if (artist && sArtist) {
             return sTitle === title && sArtist === artist;
           }
-          return sTitle === title;
+          return false;
         });
+
+        if (!match) {
+          match = workspaceSongs.find(s => s.title.toLowerCase().trim() === title);
+        }
+
+        // Try shortName match
+        if (!match) {
+          match = workspaceSongs.find(s => {
+            const sShortName = s.shortName?.toLowerCase().trim();
+            return sShortName && sShortName === title;
+          });
+        }
 
         // Try partial match
         if (!match) {
           match = workspaceSongs.find(s => {
             const sTitle = s.title.toLowerCase().trim();
-            return sTitle.includes(title) || title.includes(sTitle);
+            const sShortName = s.shortName?.toLowerCase().trim();
+            return sTitle.includes(title) || title.includes(sTitle) ||
+                   (sShortName && (sShortName.includes(title) || title.includes(sShortName)));
           });
         }
 
