@@ -24,6 +24,7 @@ function GigArchive({ workspaceId }) {
   const [showEditDetails, setShowEditDetails] = useState(false);
   const [editFee, setEditFee] = useState('');
   const [editNotes, setEditNotes] = useState('');
+  const [editDate, setEditDate] = useState('');
 
   useEffect(() => {
     loadData();
@@ -280,17 +281,19 @@ function GigArchive({ workspaceId }) {
     if (gig) {
       setEditFee(gig.pay?.toString() || '');
       setEditNotes(gig.notes || '');
+      setEditDate(gig.date ? new Date(gig.date).toISOString().split('T')[0] : '');
       setSelectedGig(gig);
       setShowEditDetails(true);
     }
   };
 
-  // Save gig details (fee and notes)
+  // Save gig details (date, fee and notes)
   const handleSaveDetails = async () => {
     if (!selectedGig) return;
     setUploading(true);
     try {
       await api.updateGig(selectedGig.id, {
+        date: editDate || undefined,
         pay: editFee ? parseFloat(editFee) : null,
         notes: editNotes || null
       });
@@ -300,7 +303,7 @@ function GigArchive({ workspaceId }) {
       if (selectedEntry?.gig?.id === selectedGig.id) {
         setSelectedEntry(prev => ({
           ...prev,
-          gig: { ...prev.gig, pay: editFee ? parseFloat(editFee) : null, notes: editNotes || null }
+          gig: { ...prev.gig, date: editDate, pay: editFee ? parseFloat(editFee) : null, notes: editNotes || null }
         }));
       }
     } catch (err) {
@@ -1147,6 +1150,17 @@ function GigArchive({ workspaceId }) {
               </button>
             </div>
             <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white"
+                />
+              </div>
               <div>
                 <label className="block text-gray-300 text-sm font-medium mb-2">
                   Fee (¥)
