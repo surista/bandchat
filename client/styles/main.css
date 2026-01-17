@@ -9,6 +9,10 @@
   --color-accent: #4A154B;
   --color-accent-hover: #611f69;
   --color-primary: #2BAC76;
+  --color-primary-hover: #239964;
+  --color-modal-bg: #1f1f23;
+  --color-modal-card: #2a2a30;
+  --color-modal-border: #3f3f46;
 }
 
 * {
@@ -102,19 +106,70 @@ input:focus, textarea:focus {
 
 /* Button styles */
 .btn {
-  @apply px-4 py-2 rounded font-medium transition-colors;
+  @apply px-4 py-2 rounded-lg font-medium transition-all duration-200;
 }
 
 .btn-primary {
-  @apply bg-green-600 text-white hover:bg-green-700;
+  background-color: var(--color-primary);
+  @apply text-white shadow-sm;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-hover);
+  @apply shadow-md;
 }
 
 .btn-secondary {
-  @apply bg-gray-600 text-white hover:bg-gray-500;
+  background-color: var(--color-modal-border);
+  @apply text-white;
+}
+
+.btn-secondary:hover {
+  @apply bg-gray-500;
 }
 
 .btn-danger {
-  @apply bg-slack-red text-white hover:bg-red-600;
+  @apply bg-red-600 text-white hover:bg-red-700;
+}
+
+/* Modal styles */
+.modal-backdrop {
+  @apply fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50;
+}
+
+.modal-content {
+  background-color: var(--color-modal-bg);
+  border: 1px solid var(--color-modal-border);
+  @apply rounded-xl shadow-2xl w-full;
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--color-modal-border);
+  @apply flex items-center justify-between p-4;
+}
+
+.modal-header h3 {
+  @apply text-xl font-bold text-white;
+}
+
+.modal-body {
+  @apply p-4 text-gray-200;
+}
+
+.modal-input {
+  background-color: var(--color-modal-card);
+  border: 1px solid var(--color-modal-border);
+  @apply w-full px-3 py-2 rounded-lg text-white placeholder-gray-400;
+}
+
+.modal-input:focus {
+  border-color: var(--color-primary);
+  @apply outline-none ring-1;
+  --tw-ring-color: var(--color-primary);
+}
+
+.modal-label {
+  @apply block text-gray-300 font-medium mb-2;
 }
 
 /* Safe area for iOS devices */

@@ -9,6 +9,10 @@ const themes = {
     accent: '#4A154B',
     accentHover: '#611f69',
     primary: '#2BAC76',
+    primaryHover: '#239964',
+    modalBg: '#1f1f23',
+    modalCard: '#2a2a30',
+    modalBorder: '#3f3f46',
   },
   midnight: {
     name: 'Midnight',
@@ -18,6 +22,10 @@ const themes = {
     accent: '#1a1d21',
     accentHover: '#27292d',
     primary: '#36C5F0',
+    primaryHover: '#2ba8cc',
+    modalBg: '#0f1114',
+    modalCard: '#1a1d21',
+    modalBorder: '#27292d',
   },
   ocean: {
     name: 'Ocean',
@@ -27,6 +35,10 @@ const themes = {
     accent: '#0d3b66',
     accentHover: '#145088',
     primary: '#36C5F0',
+    primaryHover: '#2ba8cc',
+    modalBg: '#0a2540',
+    modalCard: '#0d3b66',
+    modalBorder: '#145088',
   },
   forest: {
     name: 'Forest',
@@ -36,6 +48,10 @@ const themes = {
     accent: '#1B4332',
     accentHover: '#2D6A4F',
     primary: '#52B788',
+    primaryHover: '#40916C',
+    modalBg: '#14312a',
+    modalCard: '#1B4332',
+    modalBorder: '#2D6A4F',
   },
   sunset: {
     name: 'Sunset',
@@ -45,6 +61,10 @@ const themes = {
     accent: '#5C2018',
     accentHover: '#7B2D1E',
     primary: '#F48C06',
+    primaryHover: '#dc7a05',
+    modalBg: '#2d1810',
+    modalCard: '#3d2018',
+    modalBorder: '#5C2018',
   },
   lavender: {
     name: 'Lavender',
@@ -53,7 +73,11 @@ const themes = {
     sidebarActive: '#9381FF',
     accent: '#4A4063',
     accentHover: '#5E5377',
-    primary: '#B8B8FF',
+    primary: '#9381FF',
+    primaryHover: '#7a68e6',
+    modalBg: '#2a2540',
+    modalCard: '#3a3455',
+    modalBorder: '#4A4063',
   },
   cherry: {
     name: 'Cherry',
@@ -62,7 +86,11 @@ const themes = {
     sidebarActive: '#FF4D6D',
     accent: '#590D22',
     accentHover: '#800F2F',
-    primary: '#FF758F',
+    primary: '#FF4D6D',
+    primaryHover: '#e6445f',
+    modalBg: '#2d0a15',
+    modalCard: '#3d0d1c',
+    modalBorder: '#590D22',
   },
   slate: {
     name: 'Slate',
@@ -71,7 +99,11 @@ const themes = {
     sidebarActive: '#0EA5E9',
     accent: '#334155',
     accentHover: '#475569',
-    primary: '#38BDF8',
+    primary: '#0EA5E9',
+    primaryHover: '#0c8dcc',
+    modalBg: '#1e293b',
+    modalCard: '#2a3a4d',
+    modalBorder: '#334155',
   },
   coffee: {
     name: 'Coffee',
@@ -81,6 +113,10 @@ const themes = {
     accent: '#3E2723',
     accentHover: '#4E342E',
     primary: '#A1887F',
+    primaryHover: '#8D6E63',
+    modalBg: '#1f1510',
+    modalCard: '#2e1f1a',
+    modalBorder: '#3E2723',
   },
   arctic: {
     name: 'Arctic',
@@ -89,7 +125,11 @@ const themes = {
     sidebarActive: '#4DA8DA',
     accent: '#1E3A5F',
     accentHover: '#2E5077',
-    primary: '#89CFF0',
+    primary: '#4DA8DA',
+    primaryHover: '#3d96c4',
+    modalBg: '#152a45',
+    modalCard: '#1E3A5F',
+    modalBorder: '#2E5077',
   },
   ember: {
     name: 'Ember',
@@ -99,6 +139,10 @@ const themes = {
     accent: '#2D1B0E',
     accentHover: '#442915',
     primary: '#E67E22',
+    primaryHover: '#d35400',
+    modalBg: '#1a1008',
+    modalCard: '#2D1B0E',
+    modalBorder: '#442915',
   },
   noir: {
     name: 'Noir',
@@ -107,7 +151,11 @@ const themes = {
     sidebarActive: '#404040',
     accent: '#0D0D0D',
     accentHover: '#1A1A1A',
-    primary: '#FFFFFF',
+    primary: '#e5e5e5',
+    primaryHover: '#cccccc',
+    modalBg: '#0a0a0a',
+    modalCard: '#141414',
+    modalBorder: '#262626',
   },
 };
 
@@ -128,6 +176,10 @@ export function ThemeProvider({ children }) {
     root.style.setProperty('--color-accent', theme.accent);
     root.style.setProperty('--color-accent-hover', theme.accentHover);
     root.style.setProperty('--color-primary', theme.primary);
+    root.style.setProperty('--color-primary-hover', theme.primaryHover);
+    root.style.setProperty('--color-modal-bg', theme.modalBg);
+    root.style.setProperty('--color-modal-card', theme.modalCard);
+    root.style.setProperty('--color-modal-border', theme.modalBorder);
 
     localStorage.setItem('bandchat-theme', currentTheme);
   }, [currentTheme]);
