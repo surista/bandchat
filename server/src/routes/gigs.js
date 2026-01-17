@@ -29,7 +29,12 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
           select: { id: true, displayName: true }
         },
         setlist: {
-          select: { id: true, name: true }
+          include: {
+            songs: {
+              include: { song: true },
+              orderBy: { position: 'asc' }
+            }
+          }
         },
         media: {
           orderBy: { createdAt: 'desc' }
@@ -250,7 +255,31 @@ router.put('/:gigId', authenticate, async (req, res) => {
 // Mark gig as complete with songs played
 router.put('/:gigId/complete', authenticate, async (req, res) => {
   try {
-    const { songIds } = req.body;
+    let { songIds } = req.body;
+
+    // Get the gig with its setlist
+    const existingGig = await prisma.gig.findUnique({
+      where: { id: req.params.gigId },
+      include: {
+        setlist: {
+          include: {
+            songs: {
+              where: { type: 'SONG' }, // Only actual songs, not MC sections
+              select: { songId: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!existingGig) {
+      return res.status(404).json({ error: 'Gig not found' });
+    }
+
+    // If no songIds provided but gig has a setlist, use setlist songs
+    if ((!songIds || songIds.length === 0) && existingGig.setlist?.songs?.length > 0) {
+      songIds = existingGig.setlist.songs.map(s => s.songId).filter(Boolean);
+    }
 
     // Update status to completed
     const gig = await prisma.gig.update({
@@ -258,7 +287,7 @@ router.put('/:gigId/complete', authenticate, async (req, res) => {
       data: { status: 'COMPLETED' }
     });
 
-    // Record songs played if provided
+    // Record songs played
     if (songIds && songIds.length > 0) {
       await prisma.gigSong.createMany({
         data: songIds.map(songId => ({

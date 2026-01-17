@@ -8,9 +8,9 @@ function GigArchive({ workspaceId }) {
   const [selectedGig, setSelectedGig] = useState(null);
   const [showAddMedia, setShowAddMedia] = useState(false);
   const [mediaUrl, setMediaUrl] = useState('');
-  const [mediaType, setMediaType] = useState('image');
   const [mediaCaption, setMediaCaption] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [filter, setFilter] = useState('all'); // 'all', 'completed', 'upcoming'
 
   useEffect(() => {
     loadGigs();
@@ -20,15 +20,23 @@ function GigArchive({ workspaceId }) {
     try {
       setLoading(true);
       const data = await api.getGigs(workspaceId);
-      // Filter to completed gigs only
-      const completedGigs = data.filter(g => g.status === 'COMPLETED');
-      setGigs(completedGigs);
+      // Filter to gigs with setlists attached, sorted by date descending
+      const gigsWithSetlists = data
+        .filter(g => g.setlist)
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+      setGigs(gigsWithSetlists);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
+
+  const filteredGigs = gigs.filter(gig => {
+    if (filter === 'completed') return gig.status === 'COMPLETED';
+    if (filter === 'upcoming') return gig.status === 'SCHEDULED';
+    return true;
+  });
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -63,10 +71,11 @@ function GigArchive({ workspaceId }) {
 
     setUploading(true);
     try {
-      // Detect media type from URL
-      let type = mediaType;
+      let type = 'link';
       if (mediaUrl.includes('youtube.com') || mediaUrl.includes('youtu.be')) {
         type = 'youtube';
+      } else if (mediaUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+        type = 'image';
       }
 
       await api.addGigMedia(selectedGig.id, {
@@ -100,6 +109,21 @@ function GigArchive({ workspaceId }) {
     return match ? `https://www.youtube.com/embed/${match[1]}` : null;
   };
 
+  const formatDuration = (seconds) => {
+    if (!seconds) return '';
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getSetlistStats = (setlist) => {
+    if (!setlist?.songs) return { songCount: 0, totalDuration: 0 };
+    const songs = setlist.songs.filter(s => s.type === 'SONG' || !s.type);
+    const songCount = songs.length;
+    const totalDuration = songs.reduce((sum, s) => sum + (s.song?.duration || s.duration || 0), 0);
+    return { songCount, totalDuration };
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-64 text-gray-400">Loading archive...</div>;
   }
@@ -108,8 +132,33 @@ function GigArchive({ workspaceId }) {
     <div className="h-full flex flex-col bg-gray-800">
       {/* Header */}
       <div className="flex-shrink-0 p-4 border-b border-gray-700">
-        <h2 className="text-xl font-bold text-white">Gig Archive</h2>
-        <p className="text-gray-400 text-sm mt-1">Photos, videos, and memories from your gigs</p>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h2 className="text-xl font-bold text-white">Gig Archive</h2>
+            <p className="text-gray-400 text-sm mt-1">Photos, videos, and memories from your gigs</p>
+          </div>
+        </div>
+        {/* Filter tabs */}
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-3 py-1 rounded text-sm ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+          >
+            All ({gigs.length})
+          </button>
+          <button
+            onClick={() => setFilter('completed')}
+            className={`px-3 py-1 rounded text-sm ${filter === 'completed' ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+          >
+            Completed ({gigs.filter(g => g.status === 'COMPLETED').length})
+          </button>
+          <button
+            onClick={() => setFilter('upcoming')}
+            className={`px-3 py-1 rounded text-sm ${filter === 'upcoming' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+          >
+            Upcoming ({gigs.filter(g => g.status === 'SCHEDULED').length})
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -124,109 +173,144 @@ function GigArchive({ workspaceId }) {
         {gigs.length === 0 ? (
           <div className="text-center py-12 text-gray-400">
             <div className="text-6xl mb-4">📸</div>
-            <p className="text-lg mb-2">No completed gigs yet</p>
-            <p className="text-sm">Complete a gig to start building your archive!</p>
+            <p className="text-lg mb-2">No gigs with setlists yet</p>
+            <p className="text-sm">Create a gig in Calendar and attach a setlist to start your archive!</p>
+          </div>
+        ) : filteredGigs.length === 0 ? (
+          <div className="text-center py-12 text-gray-400">
+            <p>No {filter} gigs found</p>
           </div>
         ) : (
           <div className="space-y-6">
-            {gigs.map((gig) => (
-              <div key={gig.id} className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden">
-                {/* Gig Header */}
-                <div className="p-4 border-b border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-medium text-white">{gig.title}</h3>
-                      <div className="text-gray-400 text-sm">
-                        {new Date(gig.date).toLocaleDateString('en-US', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                        {gig.venue && ` • ${gig.venue}`}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setSelectedGig(gig);
-                        setShowAddMedia(true);
-                      }}
-                      className="btn btn-primary text-sm"
-                    >
-                      + Add Media
-                    </button>
-                  </div>
-                </div>
+            {filteredGigs.map((gig) => {
+              const { songCount, totalDuration } = getSetlistStats(gig.setlist);
+              const isUpcoming = gig.status === 'SCHEDULED';
+              const isPast = new Date(gig.date) < new Date();
 
-                {/* Media Grid */}
-                <div className="p-4">
-                  {gig.media?.length > 0 ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {gig.media.map((item) => (
-                        <div key={item.id} className="relative group">
-                          {item.type === 'image' ? (
-                            <a href={item.url} target="_blank" rel="noopener noreferrer">
-                              <img
-                                src={item.url}
-                                alt={item.caption || 'Gig photo'}
-                                className="w-full h-32 object-cover rounded-lg"
-                              />
-                            </a>
-                          ) : item.type === 'youtube' ? (
-                            <div className="relative">
-                              <iframe
-                                src={getYouTubeEmbedUrl(item.url)}
-                                className="w-full h-32 rounded-lg"
-                                allowFullScreen
-                              />
-                            </div>
-                          ) : item.type === 'video' ? (
-                            <video
-                              src={item.url}
-                              className="w-full h-32 object-cover rounded-lg"
-                              controls
-                            />
+              return (
+                <div key={gig.id} className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden">
+                  {/* Gig Header */}
+                  <div className="p-4 border-b border-gray-700">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-lg font-medium text-white">{gig.title}</h3>
+                          {gig.status === 'COMPLETED' ? (
+                            <span className="px-2 py-0.5 bg-green-600/20 text-green-400 text-xs rounded">Completed</span>
+                          ) : isPast ? (
+                            <span className="px-2 py-0.5 bg-yellow-600/20 text-yellow-400 text-xs rounded">Pending Review</span>
                           ) : (
-                            <a
-                              href={item.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center justify-center w-full h-32 bg-gray-800 rounded-lg hover:bg-gray-700"
-                            >
-                              <span className="text-4xl">🔗</span>
-                            </a>
+                            <span className="px-2 py-0.5 bg-purple-600/20 text-purple-400 text-xs rounded">Upcoming</span>
                           )}
-                          {item.caption && (
-                            <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1 rounded-b-lg truncate">
-                              {item.caption}
-                            </div>
-                          )}
-                          <button
-                            onClick={() => handleDeleteMedia(gig.id, item.id)}
-                            className="absolute top-1 right-1 w-6 h-6 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-xs"
-                          >
-                            ×
-                          </button>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <p>No media yet</p>
+                        <div className="text-gray-400 text-sm">
+                          {new Date(gig.date).toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                          {gig.venue && ` • ${gig.venue}`}
+                        </div>
+                        {/* Setlist Info */}
+                        {gig.setlist && (
+                          <div className="mt-2 p-2 bg-gray-800 rounded flex items-center gap-4 text-sm">
+                            <span className="text-gray-400">📋</span>
+                            <span className="text-white font-medium">{gig.setlist.name}</span>
+                            <span className="text-gray-500">•</span>
+                            <span className="text-gray-400">{songCount} songs</span>
+                            {totalDuration > 0 && (
+                              <>
+                                <span className="text-gray-500">•</span>
+                                <span className="text-gray-400">{formatDuration(totalDuration)}</span>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
                       <button
                         onClick={() => {
                           setSelectedGig(gig);
                           setShowAddMedia(true);
                         }}
-                        className="text-blue-400 hover:underline text-sm mt-1"
+                        className="btn btn-primary text-sm flex-shrink-0"
                       >
-                        Add photos, videos, or links
+                        + Add Media
                       </button>
                     </div>
-                  )}
+                  </div>
+
+                  {/* Media Grid */}
+                  <div className="p-4">
+                    {gig.media?.length > 0 ? (
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {gig.media.map((item) => (
+                          <div key={item.id} className="relative group">
+                            {item.type === 'image' ? (
+                              <a href={item.url} target="_blank" rel="noopener noreferrer">
+                                <img
+                                  src={item.url}
+                                  alt={item.caption || 'Gig photo'}
+                                  className="w-full h-32 object-cover rounded-lg"
+                                />
+                              </a>
+                            ) : item.type === 'youtube' ? (
+                              <div className="relative">
+                                <iframe
+                                  src={getYouTubeEmbedUrl(item.url)}
+                                  className="w-full h-32 rounded-lg"
+                                  allowFullScreen
+                                />
+                              </div>
+                            ) : item.type === 'video' ? (
+                              <video
+                                src={item.url}
+                                className="w-full h-32 object-cover rounded-lg"
+                                controls
+                              />
+                            ) : (
+                              <a
+                                href={item.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center w-full h-32 bg-gray-800 rounded-lg hover:bg-gray-700"
+                              >
+                                <span className="text-4xl">🔗</span>
+                              </a>
+                            )}
+                            {item.caption && (
+                              <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-1 rounded-b-lg truncate">
+                                {item.caption}
+                              </div>
+                            )}
+                            <button
+                              onClick={() => handleDeleteMedia(gig.id, item.id)}
+                              className="absolute top-1 right-1 w-6 h-6 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500 bg-gray-800/50 rounded-lg border border-dashed border-gray-700">
+                        <div className="text-3xl mb-2">📸</div>
+                        <p>No media yet</p>
+                        <button
+                          onClick={() => {
+                            setSelectedGig(gig);
+                            setShowAddMedia(true);
+                          }}
+                          className="text-blue-400 hover:underline text-sm mt-1"
+                        >
+                          Add photos, videos, or YouTube links
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
