@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { pushService } from '../../services/push';
 import { useAuth } from '../../context/AuthContext';
@@ -475,8 +476,8 @@ function Sidebar({
         </div>
       </div>
 
-      {/* Create Channel Modal */}
-      {showCreateChannel && (
+      {/* Create Channel Modal - Portal to body to escape sidebar transform */}
+      {showCreateChannel && createPortal(
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h3 className="text-xl font-bold text-gray-900 mb-4">
@@ -555,11 +556,12 @@ function Sidebar({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Create Group Modal */}
-      {showCreateGroup && (
+      {/* Create Group Modal - Portal to body to escape sidebar transform */}
+      {showCreateGroup && createPortal(
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h3 className="text-xl font-bold text-gray-900 mb-4">
@@ -596,11 +598,12 @@ function Sidebar({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Settings Modal */}
-      {showSettings && (
+      {/* Settings Modal - Portal to body to escape sidebar transform */}
+      {showSettings && createPortal(
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-4 border-b">
@@ -971,7 +974,8 @@ function Sidebar({
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
