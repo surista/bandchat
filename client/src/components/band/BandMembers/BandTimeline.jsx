@@ -13,6 +13,7 @@ function BandTimeline({ members }) {
       'Piano': '#f97316',
       'Saxophone': '#ca8a04', // yellow
       'Trumpet': '#eab308',
+      'Harmonica': '#0891b2', // cyan
       'Violin': '#ec4899', // pink
       'Percussion': '#22c55e', // green lighter
       'DJ': '#06b6d4', // cyan

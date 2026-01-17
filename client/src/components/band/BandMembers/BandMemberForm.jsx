@@ -11,6 +11,7 @@ const INSTRUMENTS = [
   'Piano',
   'Saxophone',
   'Trumpet',
+  'Harmonica',
   'Violin',
   'Percussion',
   'DJ',

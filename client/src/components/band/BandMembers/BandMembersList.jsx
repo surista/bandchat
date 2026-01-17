@@ -42,6 +42,7 @@ function BandMembersList({ workspaceId }) {
       'Piano': 'bg-orange-500',
       'Saxophone': 'bg-yellow-600',
       'Trumpet': 'bg-yellow-500',
+      'Harmonica': 'bg-cyan-600',
       'Violin': 'bg-pink-500',
       'Percussion': 'bg-green-500',
       'DJ': 'bg-cyan-500',
