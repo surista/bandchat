@@ -30,6 +30,27 @@ function GigArchive({ workspaceId }) {
     loadData();
   }, [workspaceId]);
 
+  // Close modal on ESC key
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        if (lightboxImage) {
+          setLightboxImage(null);
+        } else if (showEditDetails) {
+          setShowEditDetails(false);
+        } else if (showEditPerformers) {
+          setShowEditPerformers(false);
+        } else if (showAddMedia) {
+          setShowAddMedia(false);
+        } else if (selectedEntry) {
+          setSelectedEntry(null);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [lightboxImage, showEditDetails, showEditPerformers, showAddMedia, selectedEntry]);
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -607,17 +628,42 @@ function GigArchive({ workspaceId }) {
                         {formatTotalDuration(totalDuration)}
                       </span>
                     )}
-                    {gig?.media?.length > 0 && (
-                      <span className="px-2 py-0.5 bg-blue-600/20 text-blue-400 text-xs rounded">
-                        {gig.media.length} media
-                      </span>
-                    )}
-                    {setlist?.performers?.length > 0 && (
-                      <span className="px-2 py-0.5 bg-purple-600/20 text-purple-400 text-xs rounded">
-                        👥 {setlist.performers.length}
+                    {gig?.pay > 0 && (
+                      <span className="px-2 py-0.5 bg-yellow-600/20 text-yellow-400 text-xs rounded">
+                        ¥{gig.pay.toLocaleString()}
                       </span>
                     )}
                   </div>
+
+                  {/* Performer avatars */}
+                  {setlist?.performers?.length > 0 && (
+                    <div className="flex items-center gap-1 mb-3">
+                      <div className="flex -space-x-2">
+                        {setlist.performers.slice(0, 6).map((member) => (
+                          member.imageUrl ? (
+                            <img
+                              key={member.id}
+                              src={member.imageUrl}
+                              alt={member.name}
+                              title={member.name}
+                              className="w-7 h-7 rounded-full object-cover border-2 border-gray-900"
+                            />
+                          ) : (
+                            <div
+                              key={member.id}
+                              title={member.name}
+                              className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-white text-xs font-medium border-2 border-gray-900"
+                            >
+                              {member.name?.charAt(0).toUpperCase()}
+                            </div>
+                          )
+                        ))}
+                      </div>
+                      {setlist.performers.length > 6 && (
+                        <span className="text-gray-500 text-xs ml-1">+{setlist.performers.length - 6}</span>
+                      )}
+                    </div>
+                  )}
 
                   {/* Song preview */}
                   {displaySongs.length > 0 && (
@@ -680,8 +726,14 @@ function GigArchive({ workspaceId }) {
 
       {/* Gig Detail Modal */}
       {selectedEntry && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-          <div className="bg-gray-900 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden border border-gray-700 shadow-2xl">
+        <div
+          className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50"
+          onClick={() => setSelectedEntry(null)}
+        >
+          <div
+            className="bg-gray-900 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden border border-gray-700 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
             <div className="relative bg-gradient-to-r from-purple-900/50 to-blue-900/50 p-6">
               <button
