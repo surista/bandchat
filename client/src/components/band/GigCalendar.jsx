@@ -316,7 +316,7 @@ function GigCalendar({ workspaceId }) {
 
                       {gig.pay && (
                         <p className="text-green-400 text-sm mt-1">
-                          💰 ${gig.pay}
+                          💰 ¥{gig.pay}
                         </p>
                       )}
 

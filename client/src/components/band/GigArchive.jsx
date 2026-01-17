@@ -664,7 +664,7 @@ function GigArchive({ workspaceId }) {
                       )}
                       {selectedEntry.gig?.pay > 0 && (
                         <span className="px-3 py-1 bg-yellow-600/20 text-yellow-400 text-sm rounded-full">
-                          ${selectedEntry.gig.pay.toLocaleString()}
+                          ¥{selectedEntry.gig.pay.toLocaleString()}
                         </span>
                       )}
                     </>
@@ -690,7 +690,7 @@ function GigArchive({ workspaceId }) {
                     <div className="flex items-center justify-between">
                       <span className="text-gray-400">Fee</span>
                       <span className="text-white font-medium">
-                        {selectedEntry.gig?.pay ? `$${selectedEntry.gig.pay.toLocaleString()}` : '—'}
+                        {selectedEntry.gig?.pay ? `¥${selectedEntry.gig.pay.toLocaleString()}` : '—'}
                       </span>
                     </div>
                     {selectedEntry.gig?.notes && (
@@ -1128,7 +1128,7 @@ function GigArchive({ workspaceId }) {
             <div className="p-4 space-y-4">
               <div>
                 <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Fee ($)
+                  Fee (¥)
                 </label>
                 <input
                   type="number"

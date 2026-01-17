@@ -80,7 +80,7 @@ function GigStats({ workspaceId }) {
           </div>
           <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
             <div className="text-3xl font-bold text-yellow-400">
-              ${stats.totalRevenue?.toLocaleString() || 0}
+              ¥{stats.totalRevenue?.toLocaleString() || 0}
             </div>
             <div className="text-gray-400 text-sm">Total Revenue</div>
           </div>
