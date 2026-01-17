@@ -86,13 +86,76 @@ function BandTimeline({ members }) {
   const { minYear, years, members: sortedMembers, currentYear } = timelineData;
 
   // Dimensions
-  const rowHeight = 32;
-  const labelWidth = 120;
+  const rowHeight = 36;
+  const avatarSize = 22;
+  const labelWidth = 140;
   const yearWidth = 60;
   const chartWidth = years.length * yearWidth;
   const chartHeight = sortedMembers.length * rowHeight + 40; // +40 for year labels
   const svgWidth = labelWidth + chartWidth + 20;
   const svgHeight = chartHeight + 20;
+
+  // Avatar component for timeline
+  const TimelineAvatar = ({ member, x, y }) => {
+    const primaryInstrument = member.stints?.[0]?.instruments?.[0] || member.stints?.[0]?.instrument || 'Unknown';
+    const color = getInstrumentColor(primaryInstrument);
+    const isCurrent = member.stints.some(s => !s.endDate);
+
+    if (member.imageUrl) {
+      return (
+        <g>
+          {/* Circular clip path */}
+          <defs>
+            <clipPath id={`avatar-clip-${member.id}`}>
+              <circle cx={x + avatarSize / 2} cy={y + avatarSize / 2} r={avatarSize / 2} />
+            </clipPath>
+          </defs>
+          {/* Ring/border */}
+          <circle
+            cx={x + avatarSize / 2}
+            cy={y + avatarSize / 2}
+            r={avatarSize / 2 + 1}
+            fill="none"
+            stroke={isCurrent ? '#10b981' : '#4b5563'}
+            strokeWidth="1.5"
+          />
+          {/* Avatar image */}
+          <image
+            href={member.imageUrl}
+            x={x}
+            y={y}
+            width={avatarSize}
+            height={avatarSize}
+            clipPath={`url(#avatar-clip-${member.id})`}
+            preserveAspectRatio="xMidYMid slice"
+          />
+        </g>
+      );
+    }
+
+    // Fallback to initial letter circle
+    return (
+      <g>
+        <circle
+          cx={x + avatarSize / 2}
+          cy={y + avatarSize / 2}
+          r={avatarSize / 2}
+          fill={color}
+          opacity={isCurrent ? 1 : 0.6}
+        />
+        <text
+          x={x + avatarSize / 2}
+          y={y + avatarSize / 2 + 4}
+          fill="white"
+          fontSize="10"
+          fontWeight="bold"
+          textAnchor="middle"
+        >
+          {member.name.charAt(0)}
+        </text>
+      </g>
+    );
+  };
 
   return (
     <div className="overflow-x-auto">
@@ -145,15 +208,22 @@ function BandTimeline({ members }) {
                   fill={i % 2 === 0 ? '#1f2937' : '#111827'}
                 />
 
+                {/* Member avatar */}
+                <TimelineAvatar
+                  member={member}
+                  x={4}
+                  y={(rowHeight - avatarSize) / 2}
+                />
+
                 {/* Member name */}
                 <text
-                  x={5}
+                  x={avatarSize + 10}
                   y={rowHeight / 2 + 4}
                   fill={isCurrent ? '#ffffff' : '#9ca3af'}
                   fontSize="12"
                   fontWeight={isCurrent ? '500' : '400'}
                 >
-                  {member.name.length > (member.isGuest ? 11 : 14) ? member.name.slice(0, member.isGuest ? 9 : 12) + '...' : member.name}
+                  {member.name.length > (member.isGuest ? 9 : 11) ? member.name.slice(0, member.isGuest ? 7 : 9) + '...' : member.name}
                   {member.isGuest && (
                     <tspan fill="#a855f7" fontSize="10"> (G)</tspan>
                   )}

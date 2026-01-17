@@ -125,6 +125,46 @@ function BandMembersList({ workspaceId }) {
     );
   }
 
+  const MemberAvatar = ({ member, size = 'md', isCurrent = true }) => {
+    const primaryInstrument = getPrimaryInstrument(member);
+    const sizeClasses = {
+      sm: 'w-6 h-6 text-xs',
+      md: 'w-10 h-10 text-lg',
+      lg: 'w-14 h-14 text-xl',
+    };
+    const ringClasses = {
+      sm: 'ring-1 ring-offset-1',
+      md: 'ring-2 ring-offset-2',
+      lg: 'ring-2 ring-offset-2',
+    };
+
+    if (member.imageUrl) {
+      return (
+        <div className={`relative ${sizeClasses[size]} flex-shrink-0`}>
+          <img
+            src={member.imageUrl}
+            alt={member.name}
+            className={`${sizeClasses[size]} rounded-full object-cover ${ringClasses[size]} ring-offset-gray-900 ${isCurrent ? 'ring-emerald-500/50' : 'ring-gray-600/50'} transition-all duration-200 hover:ring-emerald-400 hover:scale-105`}
+          />
+          {/* Instrument indicator dot */}
+          <div
+            className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-gray-900 ${getInstrumentColor(primaryInstrument)}`}
+            title={primaryInstrument}
+          />
+        </div>
+      );
+    }
+
+    // Fallback to initial letter
+    return (
+      <div
+        className={`${sizeClasses[size]} rounded-full ${getInstrumentColor(primaryInstrument)} flex items-center justify-center text-white font-bold flex-shrink-0 transition-all duration-200 hover:scale-105 hover:brightness-110 ${!isCurrent ? 'opacity-60' : ''}`}
+      >
+        {member.name.charAt(0)}
+      </div>
+    );
+  };
+
   const MemberCard = ({ member, isCurrent }) => {
     const primaryInstrument = getPrimaryInstrument(member);
     const instruments = getInstruments(member);
@@ -132,12 +172,10 @@ function BandMembersList({ workspaceId }) {
 
     return (
       <div
-        className={`bg-gray-900 rounded-lg p-4 border border-gray-700 ${!isCurrent ? 'opacity-75' : ''}`}
+        className={`bg-gray-900 rounded-lg p-4 border border-gray-700 transition-all duration-200 hover:border-gray-600 hover:bg-gray-900/80 ${!isCurrent ? 'opacity-75 hover:opacity-90' : ''}`}
       >
         <div className="flex items-start gap-3">
-          <div className={`w-10 h-10 rounded-full ${getInstrumentColor(primaryInstrument)} flex items-center justify-center text-white font-bold text-lg ${!isCurrent ? 'opacity-60' : ''}`}>
-            {member.name.charAt(0)}
-          </div>
+          <MemberAvatar member={member} size="md" isCurrent={isCurrent} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h4 className="font-medium text-white truncate">{member.name}</h4>
