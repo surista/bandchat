@@ -313,6 +313,24 @@ function GigArchive({ workspaceId }) {
     }
   };
 
+  // Delete gig
+  const handleDeleteGig = async () => {
+    if (!selectedGig) return;
+    if (!confirm('Are you sure you want to delete this gig? This cannot be undone.')) return;
+
+    setUploading(true);
+    try {
+      await api.deleteGig(selectedGig.id);
+      await loadData();
+      setShowEditDetails(false);
+      setSelectedEntry(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   // Create a gig from a setlist-derived entry (so we can add media)
   const ensureGigExists = async (entry) => {
     if (entry.hasFormalGig && entry.gig) {
@@ -1192,21 +1210,31 @@ function GigArchive({ workspaceId }) {
                   className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white resize-none"
                 />
               </div>
-              <div className="flex gap-2 justify-end pt-2">
+              <div className="flex gap-2 justify-between pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowEditDetails(false)}
-                  className="btn btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveDetails}
+                  onClick={handleDeleteGig}
                   disabled={uploading}
-                  className="btn bg-green-600 hover:bg-green-700 text-white"
+                  className="btn bg-red-600 hover:bg-red-700 text-white"
                 >
-                  {uploading ? 'Saving...' : 'Save'}
+                  Delete Gig
                 </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditDetails(false)}
+                    className="btn btn-secondary"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveDetails}
+                    disabled={uploading}
+                    className="btn bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {uploading ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
