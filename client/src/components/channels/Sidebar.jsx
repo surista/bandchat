@@ -157,7 +157,7 @@ function Sidebar({
 
   return (
     <div className={`
-      w-64 bg-slack-sidebar flex flex-col text-gray-300
+      w-64 h-full bg-slack-sidebar flex flex-col text-gray-300
       fixed md:relative inset-y-0 left-0 z-50
       transform transition-transform duration-200 ease-in-out
       ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
