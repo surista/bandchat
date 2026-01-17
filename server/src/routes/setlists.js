@@ -452,6 +452,7 @@ router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceMember, a
 });
 
 // Bulk import multiple sets from text with "Set 1", "Set 2" markers
+// Creates ONE setlist with SET_BREAK markers between sets
 router.post('/workspace/:workspaceId/import-multiset', authenticate, isWorkspaceMember, async (req, res) => {
   try {
     const { baseName, sets, gigId } = req.body;
@@ -470,16 +471,27 @@ router.post('/workspace/:workspaceId/import-multiset', authenticate, isWorkspace
       where: { workspaceId: req.params.workspaceId }
     });
 
-    const createdSetlists = [];
     const allResults = {
       sets: [],
       totalMatched: 0,
       totalNotFound: 0
     };
 
-    for (const setData of sets) {
+    // Build all items for the single setlist
+    const setlistItems = [];
+    let position = 0;
+
+    for (let i = 0; i < sets.length; i++) {
+      const setData = sets[i];
       const { setNumber, songs } = setData;
-      const setName = sets.length === 1 ? baseName : `${baseName} - Set ${setNumber}`;
+
+      // Add SET_BREAK marker at the start of each set (including first)
+      setlistItems.push({
+        songId: null,
+        position: position++,
+        type: 'SET_BREAK',
+        label: `Set ${setNumber}`
+      });
 
       const results = {
         setNumber,
@@ -488,7 +500,6 @@ router.post('/workspace/:workspaceId/import-multiset', authenticate, isWorkspace
       };
 
       // Match songs by title, shortName, or partial match
-      const matchedSongIds = [];
       for (const songInput of songs) {
         const title = songInput.title?.toLowerCase().trim();
         const artist = songInput.artist?.toLowerCase().trim();
@@ -528,8 +539,14 @@ router.post('/workspace/:workspaceId/import-multiset', authenticate, isWorkspace
         }
 
         if (match) {
-          if (!matchedSongIds.includes(match.id)) {
-            matchedSongIds.push(match.id);
+          // Check if this song is already in the setlist (avoid duplicates within set)
+          const alreadyAdded = setlistItems.some(item => item.songId === match.id);
+          if (!alreadyAdded) {
+            setlistItems.push({
+              songId: match.id,
+              position: position++,
+              type: 'SONG'
+            });
             results.matched.push({ input: songInput, song: match });
           }
         } else {
@@ -539,53 +556,41 @@ router.post('/workspace/:workspaceId/import-multiset', authenticate, isWorkspace
 
       allResults.totalMatched += results.matched.length;
       allResults.totalNotFound += results.notFound.length;
-
-      if (matchedSongIds.length > 0) {
-        // Create the setlist
-        const setlist = await prisma.setlist.create({
-          data: {
-            name: setName,
-            workspaceId: req.params.workspaceId,
-            createdById: req.user.id,
-            songs: {
-              create: matchedSongIds.map((songId, index) => ({
-                songId,
-                position: index,
-                type: 'SONG'
-              }))
-            }
-          },
-          include: {
-            createdBy: { select: { id: true, displayName: true } },
-            songs: { include: { song: true }, orderBy: { position: 'asc' } }
-          }
-        });
-
-        createdSetlists.push({ setNumber, setlist });
-
-        // If gigId provided, link setlist to gig
-        if (gigId) {
-          await prisma.gigSetlist.create({
-            data: {
-              gigId,
-              setlistId: setlist.id,
-              setNumber
-            }
-          });
-        }
-      }
-
-      results.setlistCreated = matchedSongIds.length > 0;
       allResults.sets.push(results);
     }
 
-    const io = req.app.get('io');
-    for (const { setlist } of createdSetlists) {
-      io.to(`workspace:${req.params.workspaceId}`).emit('setlist:created', setlist);
+    // Create the single setlist with all items
+    const setlist = await prisma.setlist.create({
+      data: {
+        name: baseName,
+        workspaceId: req.params.workspaceId,
+        createdById: req.user.id,
+        songs: {
+          create: setlistItems
+        }
+      },
+      include: {
+        createdBy: { select: { id: true, displayName: true } },
+        songs: { include: { song: true }, orderBy: { position: 'asc' } }
+      }
+    });
+
+    // If gigId provided, link setlist to gig
+    if (gigId) {
+      await prisma.gigSetlist.create({
+        data: {
+          gigId,
+          setlistId: setlist.id,
+          setNumber: 1
+        }
+      });
     }
 
+    const io = req.app.get('io');
+    io.to(`workspace:${req.params.workspaceId}`).emit('setlist:created', setlist);
+
     res.status(201).json({
-      setlists: createdSetlists,
+      setlist,
       results: allResults
     });
   } catch (error) {
@@ -593,7 +598,7 @@ router.post('/workspace/:workspaceId/import-multiset', authenticate, isWorkspace
     if (error.code === 'P2002') {
       return res.status(400).json({ error: 'A setlist with this name already exists' });
     }
-    res.status(500).json({ error: 'Failed to import setlists' });
+    res.status(500).json({ error: 'Failed to import setlist' });
   }
 });
 

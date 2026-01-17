@@ -161,16 +161,16 @@ function SetlistList({ workspaceId }) {
         const result = await api.importMultiSetlist(workspaceId, importName, sets);
         setImportResults({ ...result.results, isMultiSet: true });
 
-        // Add all created setlists
-        for (const { setlist } of result.setlists) {
-          setSetlists(prev => [setlist, ...prev]);
-        }
+        // Add the created setlist (now returns single setlist with SET_BREAK markers)
+        setSetlists(prev => [result.setlist, ...prev]);
 
         if (result.results.totalNotFound === 0) {
           setShowImportModal(false);
           setImportName('');
           setImportText('');
           setImportResults(null);
+          setEditingSetlist(result.setlist);
+          setShowBuilder(true);
         }
       } else {
         // Single set import
@@ -195,7 +195,11 @@ function SetlistList({ workspaceId }) {
   };
 
   const calculateDuration = (setlistSongs) => {
-    const totalSeconds = setlistSongs.reduce((acc, ss) => acc + (ss.song?.duration || 0), 0);
+    const totalSeconds = setlistSongs.reduce((acc, ss) => {
+      if (ss.type === 'SET_BREAK') return acc;
+      if (ss.type === 'MC') return acc + (ss.duration || 60);
+      return acc + (ss.song?.duration || 0);
+    }, 0);
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
     return `${mins}:${String(secs).padStart(2, '0')}`;
@@ -291,9 +295,22 @@ function SetlistList({ workspaceId }) {
                 </div>
 
                 <div className="flex flex-wrap gap-2 text-xs mb-3">
-                  <span className="px-2 py-1 bg-blue-900/50 text-blue-300 rounded">
-                    {setlist.songs?.length || 0} songs
-                  </span>
+                  {(() => {
+                    const actualSongs = setlist.songs?.filter(s => s.type !== 'SET_BREAK' && s.type !== 'MC') || [];
+                    const setBreaks = setlist.songs?.filter(s => s.type === 'SET_BREAK') || [];
+                    return (
+                      <>
+                        <span className="px-2 py-1 bg-blue-900/50 text-blue-300 rounded">
+                          {actualSongs.length} songs
+                        </span>
+                        {setBreaks.length > 1 && (
+                          <span className="px-2 py-1 bg-purple-900/50 text-purple-300 rounded">
+                            {setBreaks.length} sets
+                          </span>
+                        )}
+                      </>
+                    );
+                  })()}
                   {setlist.songs?.length > 0 && (
                     <span className="px-2 py-1 bg-gray-700 text-gray-300 rounded">
                       {calculateDuration(setlist.songs)}
@@ -303,16 +320,33 @@ function SetlistList({ workspaceId }) {
 
                 {/* Song Preview */}
                 <div className="space-y-1">
-                  {setlist.songs?.slice(0, 3).map((ss, idx) => (
-                    <div key={ss.id} className="text-sm text-gray-400 truncate">
-                      {idx + 1}. {ss.song?.title}
-                    </div>
-                  ))}
-                  {setlist.songs?.length > 3 && (
-                    <div className="text-sm text-gray-500">
-                      +{setlist.songs.length - 3} more...
-                    </div>
-                  )}
+                  {(() => {
+                    const previewItems = setlist.songs?.filter(s => s.type !== 'MC') || [];
+                    let songNum = 0;
+                    return previewItems.slice(0, 4).map((ss) => {
+                      if (ss.type === 'SET_BREAK') {
+                        return (
+                          <div key={ss.id} className="text-sm text-blue-400 font-medium truncate">
+                            📋 {ss.label || 'Set Break'}
+                          </div>
+                        );
+                      }
+                      songNum++;
+                      return (
+                        <div key={ss.id} className="text-sm text-gray-400 truncate">
+                          {songNum}. {ss.song?.title}
+                        </div>
+                      );
+                    });
+                  })()}
+                  {(() => {
+                    const actualSongs = setlist.songs?.filter(s => s.type !== 'SET_BREAK' && s.type !== 'MC') || [];
+                    return actualSongs.length > 3 && (
+                      <div className="text-sm text-gray-500">
+                        +{actualSongs.length - 3} more...
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {setlist._count?.gigs > 0 && (
@@ -370,7 +404,7 @@ function SetlistList({ workspaceId }) {
                 <button
                   type="submit"
                   disabled={createLoading}
-                  className="btn btn-primary"
+                  className="btn bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-300 disabled:text-gray-500"
                 >
                   {createLoading ? 'Creating...' : 'Create'}
                 </button>
@@ -432,7 +466,7 @@ function SetlistList({ workspaceId }) {
                   <button
                     type="submit"
                     disabled={importLoading || !importName.trim() || !importText.trim()}
-                    className="btn btn-primary"
+                    className="btn bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-300 disabled:text-gray-500"
                   >
                     {importLoading ? 'Importing...' : 'Import'}
                   </button>
@@ -446,7 +480,7 @@ function SetlistList({ workspaceId }) {
                     <>
                       <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
                         <h4 className="font-medium text-green-800 mb-2">
-                          {importResults.sets?.length || 0} sets created • {importResults.totalMatched} songs matched
+                          Setlist created with {importResults.sets?.length || 0} sets • {importResults.totalMatched} songs matched
                         </h4>
                         <div className="space-y-2 max-h-40 overflow-y-auto">
                           {importResults.sets?.map((setResult, i) => (
@@ -519,24 +553,22 @@ function SetlistList({ workspaceId }) {
                   >
                     Close
                   </button>
-                  {!importResults.isMultiSet && (
-                    <button
-                      onClick={() => {
-                        setShowImportModal(false);
-                        setImportName('');
-                        setImportText('');
-                        setImportResults(null);
-                        const newSetlist = setlists[0];
-                        if (newSetlist) {
-                          setEditingSetlist(newSetlist);
-                          setShowBuilder(true);
-                        }
-                      }}
-                      className="btn btn-primary"
-                    >
-                      Edit Setlist
-                    </button>
-                  )}
+                  <button
+                    onClick={() => {
+                      setShowImportModal(false);
+                      setImportName('');
+                      setImportText('');
+                      setImportResults(null);
+                      const newSetlist = setlists[0];
+                      if (newSetlist) {
+                        setEditingSetlist(newSetlist);
+                        setShowBuilder(true);
+                      }
+                    }}
+                    className="btn bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    Edit Setlist
+                  </button>
                 </div>
               </div>
             )}

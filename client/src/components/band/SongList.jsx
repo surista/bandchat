@@ -441,7 +441,7 @@ Sweet Child O' Mine - Guns N' Roses"
                     <button
                       onClick={handleBulkImport}
                       disabled={bulkImporting || !bulkText.trim()}
-                      className="btn btn-primary"
+                      className="btn bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-300 disabled:text-gray-500"
                     >
                       {bulkImporting ? 'Importing...' : 'Import Songs'}
                     </button>
@@ -513,7 +513,7 @@ Sweet Child O' Mine - Guns N' Roses"
                     </button>
                     <button
                       onClick={() => setShowBulkImport(false)}
-                      className="btn btn-primary"
+                      className="btn bg-green-600 hover:bg-green-700 text-white"
                     >
                       Done
                     </button>

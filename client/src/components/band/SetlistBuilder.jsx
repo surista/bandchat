@@ -114,8 +114,11 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
     return song?.title || '';
   };
 
-  // Calculate total duration including MC sections
+  // Calculate total duration including MC sections (SET_BREAK has no duration)
   const getItemDuration = (item) => {
+    if (item.type === 'SET_BREAK') {
+      return 0;
+    }
     if (item.type === 'MC') {
       return item.duration || 60;
     }
@@ -126,8 +129,9 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
   const durationMins = Math.floor(totalDuration / 60);
   const durationSecs = totalDuration % 60;
 
-  const songCount = setlistItems.filter(i => i.type !== 'MC').length;
+  const songCount = setlistItems.filter(i => i.type !== 'MC' && i.type !== 'SET_BREAK').length;
   const mcCount = setlistItems.filter(i => i.type === 'MC').length;
+  const setCount = setlistItems.filter(i => i.type === 'SET_BREAK').length;
 
   const formatDuration = (seconds) => {
     if (!seconds) return '';
@@ -203,7 +207,9 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
                     onDragOver={(e) => handleDragOver(e, index)}
                     onDragEnd={handleDragEnd}
                     className={`flex items-center gap-3 p-3 cursor-move ${
-                      item.type === 'MC'
+                      item.type === 'SET_BREAK'
+                        ? 'bg-blue-900/40 hover:bg-blue-900/60 border-l-4 border-blue-500'
+                        : item.type === 'MC'
                         ? 'bg-yellow-900/30 hover:bg-yellow-900/50'
                         : 'bg-gray-900 hover:bg-gray-800'
                     } ${draggedItem === index ? 'opacity-50' : ''}`}
@@ -226,7 +232,15 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
                     </div>
                     <span className="text-gray-500 w-6 text-right">{index + 1}.</span>
 
-                    {item.type === 'MC' ? (
+                    {item.type === 'SET_BREAK' ? (
+                      <>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-blue-400 truncate font-bold text-lg">
+                            📋 {item.label || 'Set Break'}
+                          </div>
+                        </div>
+                      </>
+                    ) : item.type === 'MC' ? (
                       <>
                         <div className="flex-1 min-w-0">
                           <div className="text-yellow-400 truncate font-medium">

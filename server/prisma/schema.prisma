@@ -261,6 +261,7 @@ model SetlistSong {
 enum SetlistItemType {
   SONG
   MC
+  SET_BREAK
 }
 
 model Gig {

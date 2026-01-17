@@ -307,7 +307,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
               <button
                 type="submit"
                 disabled={loading}
-                className="btn btn-primary"
+                className="btn bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-300 disabled:text-gray-500"
               >
                 {loading ? 'Saving...' : gig ? 'Update' : 'Create'}
               </button>
