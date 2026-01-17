@@ -7,6 +7,7 @@ function GigArchive({ workspaceId }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedGig, setSelectedGig] = useState(null);
+  const [selectedEntry, setSelectedEntry] = useState(null);
   const [showAddMedia, setShowAddMedia] = useState(false);
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaCaption, setMediaCaption] = useState('');
@@ -298,7 +299,8 @@ function GigArchive({ workspaceId }) {
               return (
                 <div
                   key={setlist.id}
-                  className="bg-gray-900 rounded-lg border border-gray-700 p-4 hover:border-gray-600 transition-colors"
+                  onClick={() => setSelectedEntry(entry)}
+                  className="bg-gray-900 rounded-lg border border-gray-700 p-4 hover:border-gray-500 hover:bg-gray-850 transition-colors cursor-pointer"
                 >
                   {/* Header with title and date */}
                   <div className="flex items-start justify-between mb-2">
@@ -314,20 +316,9 @@ function GigArchive({ workspaceId }) {
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-1 ml-2">
-                      {hasFormalGig && gig && (
-                        <button
-                          onClick={() => {
-                            setSelectedGig(gig);
-                            setShowAddMedia(true);
-                          }}
-                          className="p-1.5 text-gray-400 hover:text-blue-400 transition-colors"
-                          title="Add media"
-                        >
-                          📸
-                        </button>
-                      )}
-                    </div>
+                    {gig?.media?.length > 0 && (
+                      <span className="text-blue-400 text-sm">📸 {gig.media.length}</span>
+                    )}
                   </div>
 
                   {/* Stats badges */}
@@ -391,12 +382,182 @@ function GigArchive({ workspaceId }) {
         )}
       </div>
 
+      {/* Gig Detail Modal */}
+      {selectedEntry && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-900 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden border border-gray-700 shadow-2xl">
+            {/* Header */}
+            <div className="relative bg-gradient-to-r from-purple-900/50 to-blue-900/50 p-6">
+              <button
+                onClick={() => setSelectedEntry(null)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl"
+              >
+                &times;
+              </button>
+              <h2 className="text-2xl font-bold text-white mb-1">
+                {selectedEntry.venue || selectedEntry.title}
+              </h2>
+              {selectedEntry.date && (
+                <p className="text-purple-200 text-lg">
+                  {selectedEntry.date.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+                </p>
+              )}
+              {selectedEntry.gig?.notes && (
+                <p className="text-gray-300 mt-2 text-sm">{selectedEntry.gig.notes}</p>
+              )}
+            </div>
+
+            {/* Content */}
+            <div className="overflow-y-auto max-h-[calc(90vh-180px)]">
+              {/* Stats Row */}
+              <div className="flex items-center gap-4 px-6 py-3 bg-gray-800/50 border-b border-gray-700">
+                {(() => {
+                  const { songCount, totalDuration } = getSetlistStats(selectedEntry.setlist);
+                  return (
+                    <>
+                      <span className="px-3 py-1 bg-green-600/20 text-green-400 text-sm rounded-full">
+                        {songCount} songs
+                      </span>
+                      {totalDuration > 0 && (
+                        <span className="px-3 py-1 bg-blue-600/20 text-blue-400 text-sm rounded-full">
+                          {formatDuration(totalDuration)}
+                        </span>
+                      )}
+                      {selectedEntry.gig?.media?.length > 0 && (
+                        <span className="px-3 py-1 bg-purple-600/20 text-purple-400 text-sm rounded-full">
+                          {selectedEntry.gig.media.length} photos/videos
+                        </span>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Setlist */}
+                <div>
+                  <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                    <span className="text-xl">📋</span> Setlist
+                  </h3>
+                  <div className="bg-gray-800 rounded-lg p-4">
+                    {selectedEntry.setlist.songs?.filter(s => s.type === 'SONG' || !s.type).length > 0 ? (
+                      <ol className="space-y-1">
+                        {selectedEntry.setlist.songs
+                          .filter(s => s.type === 'SONG' || !s.type)
+                          .map((item, idx) => (
+                            <li key={item.id || idx} className="flex items-center gap-3 py-1">
+                              <span className="text-gray-500 text-sm w-6 text-right">{idx + 1}.</span>
+                              <span className="text-white">{item.song?.title || item.label || 'Unknown'}</span>
+                              {item.song?.artist && (
+                                <span className="text-gray-500">— {item.song.artist}</span>
+                              )}
+                              {item.song?.duration && (
+                                <span className="text-gray-600 text-sm ml-auto">{formatDuration(item.song.duration)}</span>
+                              )}
+                            </li>
+                          ))}
+                      </ol>
+                    ) : (
+                      <p className="text-gray-500 text-center py-4">No songs in setlist</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Media Gallery */}
+                {selectedEntry.gig?.media?.length > 0 && (
+                  <div>
+                    <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                      <span className="text-xl">📸</span> Photos & Videos
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {selectedEntry.gig.media.map((item) => (
+                        <div key={item.id} className="relative group rounded-lg overflow-hidden bg-gray-800">
+                          {item.type === 'image' ? (
+                            <a href={item.url} target="_blank" rel="noopener noreferrer">
+                              <img
+                                src={item.url}
+                                alt={item.caption || 'Gig photo'}
+                                className="w-full h-40 object-cover hover:scale-105 transition-transform"
+                              />
+                            </a>
+                          ) : item.type === 'youtube' ? (
+                            <iframe
+                              src={getYouTubeEmbedUrl(item.url)}
+                              className="w-full h-40"
+                              allowFullScreen
+                            />
+                          ) : item.type === 'video' ? (
+                            <video
+                              src={item.url}
+                              className="w-full h-40 object-cover"
+                              controls
+                            />
+                          ) : (
+                            <a
+                              href={item.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-center w-full h-40 bg-gray-800 hover:bg-gray-700"
+                            >
+                              <span className="text-4xl">🔗</span>
+                            </a>
+                          )}
+                          {item.caption && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-2">
+                              {item.caption}
+                            </div>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteMedia(selectedEntry.gig.id, item.id);
+                            }}
+                            className="absolute top-2 right-2 w-6 h-6 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-xs flex items-center justify-center"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Add Media Button */}
+                {selectedEntry.hasFormalGig && selectedEntry.gig && (
+                  <button
+                    onClick={() => {
+                      setSelectedGig(selectedEntry.gig);
+                      setShowAddMedia(true);
+                    }}
+                    className="w-full py-3 border-2 border-dashed border-gray-600 rounded-lg text-gray-400 hover:text-white hover:border-gray-500 transition-colors"
+                  >
+                    + Add Photos, Videos, or Links
+                  </button>
+                )}
+
+                {/* No formal gig message */}
+                {!selectedEntry.hasFormalGig && (
+                  <div className="text-center py-4 text-gray-500 bg-gray-800/50 rounded-lg">
+                    <p className="text-sm">Create a gig in Calendar and link this setlist to add media</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add Media Modal */}
       {showAddMedia && selectedGig && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]">
           <div className="bg-gray-800 rounded-lg w-full max-w-md border border-gray-700">
             <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-white">Add Media to {selectedGig.title}</h3>
+              <h3 className="text-lg font-medium text-white">Add Media</h3>
               <button
                 onClick={() => {
                   setShowAddMedia(false);
