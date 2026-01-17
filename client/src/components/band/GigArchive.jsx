@@ -249,17 +249,15 @@ function GigArchive({ workspaceId }) {
     if (!selectedEntry?.setlist) return;
     setUploading(true);
     try {
-      await api.updateSetlistPerformers(selectedEntry.setlist.id, selectedPerformerIds);
-      await loadData();
+      const updatedPerformers = await api.updateSetlistPerformers(selectedEntry.setlist.id, selectedPerformerIds);
+      // Update selectedEntry immediately with the API response
+      setSelectedEntry(prev => ({
+        ...prev,
+        setlist: { ...prev.setlist, performers: updatedPerformers }
+      }));
       setShowEditPerformers(false);
-      // Update selectedEntry with new performers
-      const updatedSetlist = setlists.find(s => s.id === selectedEntry.setlist.id);
-      if (updatedSetlist) {
-        setSelectedEntry(prev => ({
-          ...prev,
-          setlist: { ...prev.setlist, performers: updatedSetlist.performers }
-        }));
-      }
+      // Also refresh the full data in background
+      loadData();
     } catch (err) {
       setError(err.message);
     } finally {
