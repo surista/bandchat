@@ -182,7 +182,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Setlist Items */}
-        <div className="flex-1 flex flex-col border-r border-gray-700">
+        <div className="flex-1 flex flex-col border-r border-gray-700 max-w-2xl">
           <div className="p-3 bg-gray-800 text-sm text-gray-400 uppercase tracking-wide flex items-center justify-between">
             <span>Setlist Order {saving && '(saving...)'}</span>
             <button
