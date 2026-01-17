@@ -40,8 +40,7 @@ function BandTimeline({ members }) {
       }
     });
 
-    // Add padding
-    minYear -= 1;
+    // Add padding to end only (start at first member's year)
     maxYear = Math.max(maxYear, currentYear) + 1;
 
     const yearRange = maxYear - minYear;
