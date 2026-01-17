@@ -106,7 +106,7 @@ input:focus, textarea:focus {
 }
 
 .btn-primary {
-  @apply bg-slack-green text-white hover:bg-green-600;
+  @apply bg-green-600 text-white hover:bg-green-700;
 }
 
 .btn-secondary {

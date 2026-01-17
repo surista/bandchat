@@ -82,7 +82,7 @@ function Sidebar({
     }
   };
 
-  // Organize channels by group
+  // Organize channels by group and sort alphabetically
   const { groupedChannels, ungroupedChannels } = useMemo(() => {
     const grouped = {};
     const ungrouped = [];
@@ -97,6 +97,14 @@ function Sidebar({
         ungrouped.push(channel);
       }
     });
+
+    // Sort channels alphabetically within each group
+    Object.keys(grouped).forEach(groupId => {
+      grouped[groupId].sort((a, b) => a.name.localeCompare(b.name));
+    });
+
+    // Sort ungrouped channels alphabetically
+    ungrouped.sort((a, b) => a.name.localeCompare(b.name));
 
     return { groupedChannels: grouped, ungroupedChannels: ungrouped };
   }, [channels]);
