@@ -10,32 +10,45 @@ function Footer({ theme = 'dark' }) {
   return (
     <>
       <footer className={`py-4 px-6 ${textColor}`}>
-        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-sm">
-          <div className="flex items-center gap-1">
-            <span>BandChat v{__APP_VERSION__}</span>
-            <span className="hidden sm:inline">·</span>
-            <span className="hidden sm:inline">© {new Date().getFullYear()}</span>
+        <div className="max-w-4xl mx-auto flex flex-col items-center gap-2 text-sm">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 w-full">
+            <div className="flex items-center gap-1">
+              <span>BandChat v{__APP_VERSION__}</span>
+              <span className="hidden sm:inline">·</span>
+              <span className="hidden sm:inline">© {new Date().getFullYear()}</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setShowAbout(true)}
+                className={`${hoverColor} transition-colors`}
+              >
+                About
+              </button>
+              <button
+                onClick={() => setShowWhatsNew(true)}
+                className={`${hoverColor} transition-colors`}
+              >
+                What's New
+              </button>
+              <a
+                href="https://github.com/anthropics/claude-code/issues"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${hoverColor} transition-colors`}
+              >
+                Feedback
+              </a>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setShowAbout(true)}
-              className={`${hoverColor} transition-colors`}
-            >
-              About
-            </button>
-            <button
-              onClick={() => setShowWhatsNew(true)}
-              className={`${hoverColor} transition-colors`}
-            >
-              What's New
-            </button>
+          <div className="text-xs opacity-75">
+            Song metadata powered by{' '}
             <a
-              href="https://github.com/anthropics/claude-code/issues"
+              href="https://getsongbpm.com"
               target="_blank"
-              rel="noopener noreferrer"
-              className={`${hoverColor} transition-colors`}
+              rel="noopener"
+              className={`${hoverColor} underline`}
             >
-              Feedback
+              GetSongBPM.com
             </a>
           </div>
         </div>
