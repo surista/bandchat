@@ -1006,7 +1006,13 @@ function Sidebar({
                             const currentRegular = bandMembers.current.filter(m => !m.isGuest);
                             const formerRegular = bandMembers.former.filter(m => !m.isGuest);
                             const guests = bandMembers.all.filter(m => m.isGuest);
-                            const hasMembers = currentRegular.length > 0 || formerRegular.length > 0 || guests.length > 0;
+                            // Find incomplete members (no stints, not guests) - these are orphaned records
+                            const currentIds = new Set(bandMembers.current.map(m => m.id));
+                            const formerIds = new Set(bandMembers.former.map(m => m.id));
+                            const incomplete = bandMembers.all.filter(m =>
+                              !m.isGuest && !currentIds.has(m.id) && !formerIds.has(m.id)
+                            );
+                            const hasMembers = currentRegular.length > 0 || formerRegular.length > 0 || guests.length > 0 || incomplete.length > 0;
 
                             return (
                               <>
@@ -1148,6 +1154,46 @@ function Sidebar({
                                         </div>
                                         );
                                       })}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Incomplete/Orphaned Members (no stints defined) */}
+                                {incomplete.length > 0 && (
+                                  <div>
+                                    <h5 className="text-sm font-medium text-red-400 uppercase tracking-wide mb-2">
+                                      Incomplete Members ({incomplete.length})
+                                    </h5>
+                                    <p className="text-xs text-gray-500 mb-2">These members have no instruments/dates. Edit or delete them.</p>
+                                    <div className="space-y-2">
+                                      {incomplete.map((member) => (
+                                        <div
+                                          key={member.id}
+                                          className="flex items-center justify-between p-3 bg-red-900/20 border border-red-800/30 rounded-lg"
+                                        >
+                                          <div>
+                                            <div className="font-medium text-white">{member.name}</div>
+                                            <div className="text-sm text-red-300">No instruments defined</div>
+                                          </div>
+                                          <div className="flex gap-2">
+                                            <button
+                                              onClick={() => {
+                                                setEditingBandMember(member);
+                                                setShowBandMemberForm(true);
+                                              }}
+                                              className="text-blue-400 hover:text-blue-300 text-sm"
+                                            >
+                                              Edit
+                                            </button>
+                                            <button
+                                              onClick={() => handleDeleteBandMember(member.id)}
+                                              className="text-red-400 hover:text-red-300 text-sm"
+                                            >
+                                              Delete
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))}
                                     </div>
                                   </div>
                                 )}
