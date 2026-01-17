@@ -438,6 +438,13 @@ class ApiService {
     });
   }
 
+  async bulkImportSongs(workspaceId, songs) {
+    return this.request(`/songs/workspace/${workspaceId}/bulk`, {
+      method: 'POST',
+      body: JSON.stringify({ songs })
+    });
+  }
+
   // Setlists
   async getSetlists(workspaceId) {
     return this.request(`/setlists/workspace/${workspaceId}`);

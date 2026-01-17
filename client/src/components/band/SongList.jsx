@@ -10,6 +10,10 @@ function SongList({ workspaceId, onSelectSong }) {
   const [editingSong, setEditingSong] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('title');
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [bulkText, setBulkText] = useState('');
+  const [bulkImporting, setBulkImporting] = useState(false);
+  const [bulkResults, setBulkResults] = useState(null);
 
   useEffect(() => {
     loadSongs();
@@ -53,6 +57,53 @@ function SongList({ workspaceId, onSelectSong }) {
     }
   };
 
+  const parseBulkText = (text) => {
+    const lines = text.split('\n').filter(line => line.trim());
+    return lines.map(line => {
+      // Try different separators: " - ", " | ", tab, or just the title
+      let title, artist;
+
+      if (line.includes(' - ')) {
+        [title, artist] = line.split(' - ').map(s => s.trim());
+      } else if (line.includes(' | ')) {
+        [title, artist] = line.split(' | ').map(s => s.trim());
+      } else if (line.includes('\t')) {
+        [title, artist] = line.split('\t').map(s => s.trim());
+      } else {
+        title = line.trim();
+        artist = null;
+      }
+
+      return { title, artist };
+    }).filter(song => song.title);
+  };
+
+  const handleBulkImport = async () => {
+    const songsToImport = parseBulkText(bulkText);
+
+    if (songsToImport.length === 0) {
+      alert('No valid songs found. Enter one song per line in format: "Title - Artist"');
+      return;
+    }
+
+    setBulkImporting(true);
+    setBulkResults(null);
+
+    try {
+      const results = await api.bulkImportSongs(workspaceId, songsToImport);
+      setBulkResults(results);
+
+      // Add created songs to the list
+      if (results.created.length > 0) {
+        setSongs(prev => [...prev, ...results.created]);
+      }
+    } catch (err) {
+      alert('Import failed: ' + err.message);
+    } finally {
+      setBulkImporting(false);
+    }
+  };
+
   const filteredSongs = songs
     .filter(song => {
       const query = searchQuery.toLowerCase();
@@ -76,15 +127,27 @@ function SongList({ workspaceId, onSelectSong }) {
       <div className="flex-shrink-0 p-4 border-b border-gray-700">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-white">Songs</h2>
-          <button
-            onClick={() => {
-              setEditingSong(null);
-              setShowForm(true);
-            }}
-            className="btn btn-primary"
-          >
-            + Add Song
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setBulkText('');
+                setBulkResults(null);
+                setShowBulkImport(true);
+              }}
+              className="btn btn-secondary"
+            >
+              Bulk Import
+            </button>
+            <button
+              onClick={() => {
+                setEditingSong(null);
+                setShowForm(true);
+              }}
+              className="btn btn-primary"
+            >
+              + Add Song
+            </button>
+          </div>
         </div>
         <div className="flex gap-3">
           <input
@@ -218,6 +281,128 @@ function SongList({ workspaceId, onSelectSong }) {
             setEditingSong(null);
           }}
         />
+      )}
+
+      {/* Bulk Import Modal */}
+      {showBulkImport && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                Bulk Import Songs
+              </h3>
+
+              {!bulkResults ? (
+                <>
+                  <p className="text-gray-600 mb-4">
+                    Paste your song list below. One song per line in any of these formats:
+                  </p>
+                  <ul className="text-sm text-gray-500 mb-4 space-y-1">
+                    <li>• <code className="bg-gray-100 px-1 rounded">Song Title - Artist Name</code></li>
+                    <li>• <code className="bg-gray-100 px-1 rounded">Song Title | Artist Name</code></li>
+                    <li>• <code className="bg-gray-100 px-1 rounded">Song Title</code> (no artist)</li>
+                  </ul>
+
+                  <textarea
+                    value={bulkText}
+                    onChange={(e) => setBulkText(e.target.value)}
+                    placeholder="Enter songs here...
+
+Example:
+Bohemian Rhapsody - Queen
+Hotel California - Eagles
+Sweet Child O' Mine - Guns N' Roses"
+                    className="w-full h-64 px-3 py-2 border border-gray-300 rounded text-gray-900 font-mono text-sm"
+                    disabled={bulkImporting}
+                  />
+
+                  <div className="text-sm text-gray-500 mt-2">
+                    {parseBulkText(bulkText).length} songs detected
+                  </div>
+
+                  <div className="flex gap-2 justify-end mt-6">
+                    <button
+                      type="button"
+                      onClick={() => setShowBulkImport(false)}
+                      className="btn btn-secondary"
+                      disabled={bulkImporting}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleBulkImport}
+                      disabled={bulkImporting || !bulkText.trim()}
+                      className="btn btn-primary"
+                    >
+                      {bulkImporting ? 'Importing...' : 'Import Songs'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-4">
+                    {bulkResults.created.length > 0 && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <h4 className="font-medium text-green-800 mb-2">
+                          {bulkResults.created.length} songs imported successfully
+                        </h4>
+                        <ul className="text-sm text-green-700 max-h-32 overflow-y-auto">
+                          {bulkResults.created.map((song, i) => (
+                            <li key={i}>{song.title}{song.artist && ` - ${song.artist}`}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {bulkResults.skipped.length > 0 && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <h4 className="font-medium text-yellow-800 mb-2">
+                          {bulkResults.skipped.length} songs skipped (already exist)
+                        </h4>
+                        <ul className="text-sm text-yellow-700 max-h-32 overflow-y-auto">
+                          {bulkResults.skipped.map((song, i) => (
+                            <li key={i}>{song.title}{song.artist && ` - ${song.artist}`}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {bulkResults.errors.length > 0 && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <h4 className="font-medium text-red-800 mb-2">
+                          {bulkResults.errors.length} errors
+                        </h4>
+                        <ul className="text-sm text-red-700 max-h-32 overflow-y-auto">
+                          {bulkResults.errors.map((err, i) => (
+                            <li key={i}>{err.song?.title || 'Unknown'}: {err.error}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 justify-end mt-6">
+                    <button
+                      onClick={() => {
+                        setBulkText('');
+                        setBulkResults(null);
+                      }}
+                      className="btn btn-secondary"
+                    >
+                      Import More
+                    </button>
+                    <button
+                      onClick={() => setShowBulkImport(false)}
+                      className="btn btn-primary"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

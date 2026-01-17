@@ -143,6 +143,75 @@ router.put('/:songId', authenticate, async (req, res) => {
   }
 });
 
+// Bulk import songs
+router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, async (req, res) => {
+  try {
+    const { songs } = req.body;
+
+    if (!songs || !Array.isArray(songs) || songs.length === 0) {
+      return res.status(400).json({ error: 'Songs array is required' });
+    }
+
+    if (songs.length > 200) {
+      return res.status(400).json({ error: 'Maximum 200 songs per import' });
+    }
+
+    const results = {
+      created: [],
+      skipped: [],
+      errors: []
+    };
+
+    for (const songData of songs) {
+      if (!songData.title || !songData.title.trim()) {
+        results.errors.push({ song: songData, error: 'Title is required' });
+        continue;
+      }
+
+      try {
+        const song = await prisma.song.create({
+          data: {
+            title: songData.title.trim(),
+            artist: songData.artist?.trim() || null,
+            workspaceId: req.params.workspaceId,
+            createdById: req.user.id
+          },
+          include: {
+            createdBy: {
+              select: { id: true, displayName: true }
+            }
+          }
+        });
+        results.created.push(song);
+      } catch (error) {
+        if (error.code === 'P2002') {
+          results.skipped.push({
+            title: songData.title,
+            artist: songData.artist,
+            reason: 'Already exists'
+          });
+        } else {
+          results.errors.push({
+            song: songData,
+            error: 'Failed to create'
+          });
+        }
+      }
+    }
+
+    // Broadcast all created songs
+    if (results.created.length > 0) {
+      const io = req.app.get('io');
+      io.to(`workspace:${req.params.workspaceId}`).emit('songs:bulkCreated', results.created);
+    }
+
+    res.status(201).json(results);
+  } catch (error) {
+    console.error('Bulk import error:', error);
+    res.status(500).json({ error: 'Failed to import songs' });
+  }
+});
+
 // Delete a song
 router.delete('/:songId', authenticate, async (req, res) => {
   try {
