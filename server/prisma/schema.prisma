@@ -362,7 +362,6 @@ model BandMember {
   stints       InstrumentStint[]
   performances SetlistPerformer[]
 
-  @@unique([workspaceId, name])
   @@index([workspaceId])
 }
 
