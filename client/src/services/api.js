@@ -438,11 +438,15 @@ class ApiService {
     });
   }
 
-  async bulkImportSongs(workspaceId, songs) {
+  async bulkImportSongs(workspaceId, songs, fetchSpotifyMetadata = true) {
     return this.request(`/songs/workspace/${workspaceId}/bulk`, {
       method: 'POST',
-      body: JSON.stringify({ songs })
+      body: JSON.stringify({ songs, fetchSpotifyMetadata })
     });
+  }
+
+  async getSpotifyStatus() {
+    return this.request('/songs/spotify-status');
   }
 
   // Setlists

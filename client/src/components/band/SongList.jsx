@@ -14,6 +14,8 @@ function SongList({ workspaceId, onSelectSong }) {
   const [bulkText, setBulkText] = useState('');
   const [bulkImporting, setBulkImporting] = useState(false);
   const [bulkResults, setBulkResults] = useState(null);
+  const [spotifyConfigured, setSpotifyConfigured] = useState(false);
+  const [fetchSpotify, setFetchSpotify] = useState(true);
 
   useEffect(() => {
     loadSongs();
@@ -90,7 +92,7 @@ function SongList({ workspaceId, onSelectSong }) {
     setBulkResults(null);
 
     try {
-      const results = await api.bulkImportSongs(workspaceId, songsToImport);
+      const results = await api.bulkImportSongs(workspaceId, songsToImport, fetchSpotify);
       setBulkResults(results);
 
       // Add created songs to the list
@@ -129,10 +131,19 @@ function SongList({ workspaceId, onSelectSong }) {
           <h2 className="text-xl font-bold text-white">Songs</h2>
           <div className="flex gap-2">
             <button
-              onClick={() => {
+              onClick={async () => {
                 setBulkText('');
                 setBulkResults(null);
                 setShowBulkImport(true);
+                // Check if Spotify is configured
+                try {
+                  const status = await api.getSpotifyStatus();
+                  setSpotifyConfigured(status.configured);
+                  setFetchSpotify(status.configured);
+                } catch {
+                  setSpotifyConfigured(false);
+                  setFetchSpotify(false);
+                }
               }}
               className="btn btn-secondary"
             >
@@ -316,9 +327,32 @@ Sweet Child O' Mine - Guns N' Roses"
                     disabled={bulkImporting}
                   />
 
-                  <div className="text-sm text-gray-500 mt-2">
-                    {parseBulkText(bulkText).length} songs detected
+                  <div className="flex items-center justify-between mt-3">
+                    <div className="text-sm text-gray-500">
+                      {parseBulkText(bulkText).length} songs detected
+                    </div>
+
+                    {spotifyConfigured && (
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={fetchSpotify}
+                          onChange={(e) => setFetchSpotify(e.target.checked)}
+                          disabled={bulkImporting}
+                          className="w-4 h-4 rounded"
+                        />
+                        <span className="text-sm text-gray-700">
+                          <span className="text-green-600">●</span> Auto-fill from Spotify (BPM, key, duration)
+                        </span>
+                      </label>
+                    )}
                   </div>
+
+                  {bulkImporting && fetchSpotify && (
+                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
+                      Fetching metadata from Spotify... This may take a moment.
+                    </div>
+                  )}
 
                   <div className="flex gap-2 justify-end mt-6">
                     <button
@@ -345,10 +379,18 @@ Sweet Child O' Mine - Guns N' Roses"
                       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                         <h4 className="font-medium text-green-800 mb-2">
                           {bulkResults.created.length} songs imported successfully
+                          {bulkResults.spotifyMatches > 0 && (
+                            <span className="font-normal text-green-600 ml-2">
+                              ({bulkResults.spotifyMatches} with Spotify metadata)
+                            </span>
+                          )}
                         </h4>
                         <ul className="text-sm text-green-700 max-h-32 overflow-y-auto">
                           {bulkResults.created.map((song, i) => (
-                            <li key={i}>{song.title}{song.artist && ` - ${song.artist}`}</li>
+                            <li key={i} className="flex items-center gap-2">
+                              <span>{song.title}{song.artist && ` - ${song.artist}`}</span>
+                              {song.spotifyUrl && <span className="text-green-500" title="Spotify data found">●</span>}
+                            </li>
                           ))}
                         </ul>
                       </div>

@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { isWorkspaceMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
+import spotifyService from '../services/spotify.js';
 
 const router = express.Router();
 
@@ -143,10 +144,15 @@ router.put('/:songId', authenticate, async (req, res) => {
   }
 });
 
+// Check if Spotify is configured
+router.get('/spotify-status', authenticate, async (req, res) => {
+  res.json({ configured: spotifyService.isConfigured() });
+});
+
 // Bulk import songs
 router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, async (req, res) => {
   try {
-    const { songs } = req.body;
+    const { songs, fetchSpotifyMetadata = true } = req.body;
 
     if (!songs || !Array.isArray(songs) || songs.length === 0) {
       return res.status(400).json({ error: 'Songs array is required' });
@@ -156,10 +162,13 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
       return res.status(400).json({ error: 'Maximum 200 songs per import' });
     }
 
+    const useSpotify = fetchSpotifyMetadata && spotifyService.isConfigured();
+
     const results = {
       created: [],
       skipped: [],
-      errors: []
+      errors: [],
+      spotifyMatches: 0
     };
 
     for (const songData of songs) {
@@ -169,10 +178,30 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
       }
 
       try {
+        const title = songData.title.trim();
+        const artist = songData.artist?.trim() || null;
+
+        // Fetch Spotify metadata if enabled
+        let spotifyData = null;
+        if (useSpotify) {
+          try {
+            spotifyData = await spotifyService.getTrackMetadata(title, artist);
+            if (spotifyData) {
+              results.spotifyMatches++;
+            }
+          } catch (spotifyError) {
+            console.error('Spotify lookup failed for:', title, spotifyError.message);
+          }
+        }
+
         const song = await prisma.song.create({
           data: {
-            title: songData.title.trim(),
-            artist: songData.artist?.trim() || null,
+            title,
+            artist: spotifyData?.artist || artist,
+            duration: spotifyData?.duration || null,
+            bpm: spotifyData?.bpm || null,
+            key: spotifyData?.key || null,
+            spotifyUrl: spotifyData?.spotifyUrl || null,
             workspaceId: req.params.workspaceId,
             createdById: req.user.id
           },
