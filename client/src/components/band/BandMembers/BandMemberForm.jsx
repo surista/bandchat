@@ -22,6 +22,7 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
   const [isGuest, setIsGuest] = useState(false);
+  const [guestInstruments, setGuestInstruments] = useState([]);
   const [stints, setStints] = useState([{ instruments: [], startDate: '', endDate: '' }]);
 
   useEffect(() => {
@@ -30,6 +31,11 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
       setNotes(member.notes || '');
       setIsGuest(member.isGuest || false);
       if (member.stints && member.stints.length > 0) {
+        // For guests, extract instruments from first stint
+        const allInstruments = member.stints.flatMap(s =>
+          s.instruments || (s.instrument ? [s.instrument] : [])
+        );
+        setGuestInstruments([...new Set(allInstruments)]);
         setStints(member.stints.map(s => ({
           id: s.id,
           // Handle both old (instrument) and new (instruments) format
@@ -38,12 +44,14 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
           endDate: s.endDate ? new Date(s.endDate).toISOString().split('T')[0] : ''
         })));
       } else {
+        setGuestInstruments([]);
         setStints([{ instruments: [], startDate: '', endDate: '' }]);
       }
     } else {
       setName('');
       setNotes('');
       setIsGuest(false);
+      setGuestInstruments([]);
       setStints([{ instruments: [], startDate: '', endDate: '' }]);
     }
   }, [member]);
@@ -64,6 +72,14 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
     }));
   };
 
+  const toggleGuestInstrument = (instrument) => {
+    setGuestInstruments(prev =>
+      prev.includes(instrument)
+        ? prev.filter(inst => inst !== instrument)
+        : [...prev, instrument]
+    );
+  };
+
   const addStint = () => {
     setStints(prev => [...prev, { instruments: [], startDate: '', endDate: '' }]);
   };
@@ -81,14 +97,19 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
     if (!name) return;
     const validStints = stints.filter(s => s.instruments.length > 0 && s.startDate);
 
-    // Guests don't need stints, regular members do
+    // Guests don't need dates but should have instruments, regular members need full stints
     if (!isGuest && validStints.length === 0) return;
+
+    // For guests, create a single stint with today's date if they have instruments
+    const guestStints = guestInstruments.length > 0
+      ? [{ instruments: guestInstruments, startDate: new Date().toISOString().split('T')[0], endDate: null }]
+      : [];
 
     onSave({
       name,
       notes: notes || null,
       isGuest,
-      stints: isGuest ? [] : validStints.map(s => ({
+      stints: isGuest ? guestStints : validStints.map(s => ({
         instruments: s.instruments,
         startDate: s.startDate,
         endDate: s.endDate || null
@@ -96,7 +117,7 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
     });
   };
 
-  // Guests only need a name, regular members need stints too
+  // Guests only need a name (instruments optional), regular members need stints
   const isValid = name && (isGuest || stints.some(s => s.instruments.length > 0 && s.startDate));
 
   return (
@@ -127,6 +148,36 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
           <span className="text-gray-500 text-xs">(session/touring musician)</span>
         </label>
       </div>
+
+      {/* Instruments picker for guests (no dates needed) */}
+      {isGuest && (
+        <div>
+          <label className="block text-gray-300 text-sm font-medium mb-2">
+            Instruments
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {INSTRUMENTS.map(inst => (
+              <button
+                key={inst}
+                type="button"
+                onClick={() => toggleGuestInstrument(inst)}
+                className={`px-2 py-1 text-xs rounded transition-colors ${
+                  guestInstruments.includes(inst)
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                {inst}
+              </button>
+            ))}
+          </div>
+          {guestInstruments.length > 0 && (
+            <div className="mt-2 text-sm text-purple-400">
+              Selected: {guestInstruments.join(', ')}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Only show stints section for non-guest members */}
       {!isGuest && (

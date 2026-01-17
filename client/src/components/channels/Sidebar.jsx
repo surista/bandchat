@@ -1001,120 +1001,166 @@ function Sidebar({
                         <div className="text-center py-8 text-gray-400">Loading...</div>
                       ) : (
                         <div className="space-y-4">
-                          {/* Current Members */}
-                          {bandMembers.current.length > 0 && (
-                            <div>
-                              <h5 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-2">
-                                Current Members ({bandMembers.current.length})
-                              </h5>
-                              <div className="space-y-2">
-                                {bandMembers.current.map((member) => {
-                                  const instruments = [...new Set(member.stints?.flatMap(s => s.instruments || (s.instrument ? [s.instrument] : [])) || [])];
-                                  const earliestYear = member.stints?.length > 0
-                                    ? Math.min(...member.stints.map(s => new Date(s.startDate).getFullYear()))
-                                    : null;
-                                  return (
-                                  <div
-                                    key={member.id}
-                                    className="flex items-center justify-between p-3 bg-[var(--color-modal-card)] rounded-lg"
-                                  >
-                                    <div>
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-medium text-white">{member.name}</span>
-                                        {member.isGuest && (
-                                          <span className="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-300 rounded">Guest</span>
-                                        )}
-                                      </div>
-                                      <div className="text-sm text-gray-400">
-                                        {instruments.length > 0 ? instruments.join(', ') : (member.isGuest ? 'Guest musician' : 'Unknown')} {earliestYear && `• Since ${earliestYear}`}
-                                      </div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <button
-                                        onClick={() => {
-                                          setEditingBandMember(member);
-                                          setShowBandMemberForm(true);
-                                        }}
-                                        className="text-blue-400 hover:text-blue-300 text-sm"
-                                      >
-                                        Edit
-                                      </button>
-                                      <button
-                                        onClick={() => handleDeleteBandMember(member.id)}
-                                        className="text-red-400 hover:text-red-300 text-sm"
-                                      >
-                                        Delete
-                                      </button>
+                          {(() => {
+                            // Separate guests from regular members
+                            const currentRegular = bandMembers.current.filter(m => !m.isGuest);
+                            const formerRegular = bandMembers.former.filter(m => !m.isGuest);
+                            const guests = bandMembers.all.filter(m => m.isGuest);
+                            const hasMembers = currentRegular.length > 0 || formerRegular.length > 0 || guests.length > 0;
+
+                            return (
+                              <>
+                                {/* Current Members */}
+                                {currentRegular.length > 0 && (
+                                  <div>
+                                    <h5 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-2">
+                                      Current Members ({currentRegular.length})
+                                    </h5>
+                                    <div className="space-y-2">
+                                      {currentRegular.map((member) => {
+                                        const instruments = [...new Set(member.stints?.flatMap(s => s.instruments || (s.instrument ? [s.instrument] : [])) || [])];
+                                        const earliestYear = member.stints?.length > 0
+                                          ? Math.min(...member.stints.map(s => new Date(s.startDate).getFullYear()))
+                                          : null;
+                                        return (
+                                        <div
+                                          key={member.id}
+                                          className="flex items-center justify-between p-3 bg-[var(--color-modal-card)] rounded-lg"
+                                        >
+                                          <div>
+                                            <div className="font-medium text-white">{member.name}</div>
+                                            <div className="text-sm text-gray-400">
+                                              {instruments.length > 0 ? instruments.join(', ') : 'Unknown'} {earliestYear && `• Since ${earliestYear}`}
+                                            </div>
+                                          </div>
+                                          <div className="flex gap-2">
+                                            <button
+                                              onClick={() => {
+                                                setEditingBandMember(member);
+                                                setShowBandMemberForm(true);
+                                              }}
+                                              className="text-blue-400 hover:text-blue-300 text-sm"
+                                            >
+                                              Edit
+                                            </button>
+                                            <button
+                                              onClick={() => handleDeleteBandMember(member.id)}
+                                              className="text-red-400 hover:text-red-300 text-sm"
+                                            >
+                                              Delete
+                                            </button>
+                                          </div>
+                                        </div>
+                                        );
+                                      })}
                                     </div>
                                   </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
+                                )}
 
-                          {/* Former Members */}
-                          {bandMembers.former.length > 0 && (
-                            <div>
-                              <h5 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-2">
-                                Former Members ({bandMembers.former.length})
-                              </h5>
-                              <div className="space-y-2">
-                                {bandMembers.former.map((member) => {
-                                  const instruments = [...new Set(member.stints?.flatMap(s => s.instruments || (s.instrument ? [s.instrument] : [])) || [])];
-                                  const years = member.stints?.length > 0 ? (() => {
-                                    const starts = member.stints.map(s => new Date(s.startDate).getFullYear());
-                                    const ends = member.stints.filter(s => s.endDate).map(s => new Date(s.endDate).getFullYear());
-                                    const minYear = Math.min(...starts);
-                                    const maxYear = ends.length > 0 ? Math.max(...ends) : minYear;
-                                    return minYear === maxYear ? `${minYear}` : `${minYear}–${maxYear}`;
-                                  })() : '';
-                                  return (
-                                  <div
-                                    key={member.id}
-                                    className="flex items-center justify-between p-3 bg-[var(--color-modal-card)] rounded-lg opacity-75"
-                                  >
-                                    <div>
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-medium text-white">{member.name}</span>
-                                        {member.isGuest && (
-                                          <span className="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-300 rounded">Guest</span>
-                                        )}
-                                      </div>
-                                      <div className="text-sm text-gray-400">
-                                        {instruments.length > 0 ? instruments.join(', ') : (member.isGuest ? 'Guest musician' : 'Unknown')} {years && `• ${years}`}
-                                      </div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <button
-                                        onClick={() => {
-                                          setEditingBandMember(member);
-                                          setShowBandMemberForm(true);
-                                        }}
-                                        className="text-blue-400 hover:text-blue-300 text-sm"
-                                      >
-                                        Edit
-                                      </button>
-                                      <button
-                                        onClick={() => handleDeleteBandMember(member.id)}
-                                        className="text-red-400 hover:text-red-300 text-sm"
-                                      >
-                                        Delete
-                                      </button>
+                                {/* Former Members */}
+                                {formerRegular.length > 0 && (
+                                  <div>
+                                    <h5 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-2">
+                                      Former Members ({formerRegular.length})
+                                    </h5>
+                                    <div className="space-y-2">
+                                      {formerRegular.map((member) => {
+                                        const instruments = [...new Set(member.stints?.flatMap(s => s.instruments || (s.instrument ? [s.instrument] : [])) || [])];
+                                        const years = member.stints?.length > 0 ? (() => {
+                                          const starts = member.stints.map(s => new Date(s.startDate).getFullYear());
+                                          const ends = member.stints.filter(s => s.endDate).map(s => new Date(s.endDate).getFullYear());
+                                          const minYear = Math.min(...starts);
+                                          const maxYear = ends.length > 0 ? Math.max(...ends) : minYear;
+                                          return minYear === maxYear ? `${minYear}` : `${minYear}–${maxYear}`;
+                                        })() : '';
+                                        return (
+                                        <div
+                                          key={member.id}
+                                          className="flex items-center justify-between p-3 bg-[var(--color-modal-card)] rounded-lg opacity-75"
+                                        >
+                                          <div>
+                                            <div className="font-medium text-white">{member.name}</div>
+                                            <div className="text-sm text-gray-400">
+                                              {instruments.length > 0 ? instruments.join(', ') : 'Unknown'} {years && `• ${years}`}
+                                            </div>
+                                          </div>
+                                          <div className="flex gap-2">
+                                            <button
+                                              onClick={() => {
+                                                setEditingBandMember(member);
+                                                setShowBandMemberForm(true);
+                                              }}
+                                              className="text-blue-400 hover:text-blue-300 text-sm"
+                                            >
+                                              Edit
+                                            </button>
+                                            <button
+                                              onClick={() => handleDeleteBandMember(member.id)}
+                                              className="text-red-400 hover:text-red-300 text-sm"
+                                            >
+                                              Delete
+                                            </button>
+                                          </div>
+                                        </div>
+                                        );
+                                      })}
                                     </div>
                                   </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
+                                )}
 
-                          {bandMembers.current.length === 0 && bandMembers.former.length === 0 && (
-                            <div className="text-center py-8 text-gray-400">
-                              <p className="mb-2">No band members added yet</p>
-                              <p className="text-sm">Add members to see them on the Band Members timeline</p>
-                            </div>
-                          )}
+                                {/* Guest Musicians */}
+                                {guests.length > 0 && (
+                                  <div>
+                                    <h5 className="text-sm font-medium text-purple-400 uppercase tracking-wide mb-2">
+                                      Guest Musicians ({guests.length})
+                                    </h5>
+                                    <div className="space-y-2">
+                                      {guests.map((member) => {
+                                        const instruments = [...new Set(member.stints?.flatMap(s => s.instruments || (s.instrument ? [s.instrument] : [])) || [])];
+                                        return (
+                                        <div
+                                          key={member.id}
+                                          className="flex items-center justify-between p-3 bg-purple-900/20 border border-purple-800/30 rounded-lg"
+                                        >
+                                          <div>
+                                            <div className="font-medium text-white">{member.name}</div>
+                                            <div className="text-sm text-purple-300">
+                                              {instruments.length > 0 ? instruments.join(', ') : 'Guest musician'}
+                                            </div>
+                                          </div>
+                                          <div className="flex gap-2">
+                                            <button
+                                              onClick={() => {
+                                                setEditingBandMember(member);
+                                                setShowBandMemberForm(true);
+                                              }}
+                                              className="text-blue-400 hover:text-blue-300 text-sm"
+                                            >
+                                              Edit
+                                            </button>
+                                            <button
+                                              onClick={() => handleDeleteBandMember(member.id)}
+                                              className="text-red-400 hover:text-red-300 text-sm"
+                                            >
+                                              Delete
+                                            </button>
+                                          </div>
+                                        </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {!hasMembers && (
+                                  <div className="text-center py-8 text-gray-400">
+                                    <p className="mb-2">No band members added yet</p>
+                                    <p className="text-sm">Add members to see them on the Band Members timeline</p>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                       )}
                     </div>
