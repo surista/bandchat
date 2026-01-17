@@ -47,7 +47,7 @@ function Sidebar({
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsError, setSettingsError] = useState('');
   const [avatarUploading, setAvatarUploading] = useState(false);
-  const [bandMembers, setBandMembers] = useState({ current: [], former: [] });
+  const [bandMembers, setBandMembers] = useState({ current: [], former: [], all: [] });
   const [bandMembersLoading, setBandMembersLoading] = useState(false);
   const [editingBandMember, setEditingBandMember] = useState(null);
   const [showBandMemberForm, setShowBandMemberForm] = useState(false);
