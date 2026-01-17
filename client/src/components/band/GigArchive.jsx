@@ -1065,7 +1065,17 @@ function GigArchive({ workspaceId }) {
                 </div>
               ) : (
                 <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {bandMembers.map(member => {
+                  {[...bandMembers]
+                    .sort((a, b) => {
+                      // Current members first (have a stint without endDate)
+                      const aIsCurrent = a.stints?.some(s => !s.endDate) || false;
+                      const bIsCurrent = b.stints?.some(s => !s.endDate) || false;
+                      if (aIsCurrent && !bIsCurrent) return -1;
+                      if (!aIsCurrent && bIsCurrent) return 1;
+                      // Then sort by name
+                      return a.name.localeCompare(b.name);
+                    })
+                    .map(member => {
                     const instruments = [...new Set(member.stints?.flatMap(s => s.instruments || (s.instrument ? [s.instrument] : [])) || [])];
                     const isFormer = member.stints?.length > 0 && member.stints.every(s => s.endDate);
                     return (
