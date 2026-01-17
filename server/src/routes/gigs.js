@@ -238,10 +238,16 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
       }
     }
 
-    // Most played artist
+    // Most played artist - need to fetch ALL played songs for accurate count
+    const allPlayedSongIds = Object.keys(songPlayCounts);
+    const allPlayedSongs = allPlayedSongIds.length > 0 ? await prisma.song.findMany({
+      where: { id: { in: allPlayedSongIds } },
+      select: { id: true, artist: true }
+    }) : [];
+
     const artistCounts = {};
     for (const [songId, count] of Object.entries(songPlayCounts)) {
-      const song = songs.find(s => s.id === songId);
+      const song = allPlayedSongs.find(s => s.id === songId);
       if (song?.artist) {
         artistCounts[song.artist] = (artistCounts[song.artist] || 0) + count;
       }
