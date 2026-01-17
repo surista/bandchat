@@ -31,9 +31,7 @@ function Footer({ theme = 'dark' }) {
                 What's New
               </button>
               <a
-                href="https://github.com/anthropics/claude-code/issues"
-                target="_blank"
-                rel="noopener noreferrer"
+                href="mailto:surista@gmail.com?subject=BandChat Feedback"
                 className={`${hoverColor} transition-colors`}
               >
                 Feedback
