@@ -32,6 +32,7 @@ function WorkspaceView() {
   const [searchResults, setSearchResults] = useState([]);
   const [directMessages, setDirectMessages] = useState([]);
   const [activeBandView, setActiveBandView] = useState(null);
+  const [bandViewKey, setBandViewKey] = useState(0);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem('sidebarWidth');
     return saved ? parseInt(saved, 10) : 256;
@@ -237,6 +238,7 @@ function WorkspaceView() {
 
   const handleSelectBandView = (view) => {
     setActiveBandView(view);
+    setBandViewKey(prev => prev + 1); // Force remount to reset state
     setSelectedChannel(null);
     setSelectedThread(null);
     setSidebarOpen(false);
@@ -358,9 +360,9 @@ function WorkspaceView() {
           {/* Channel View or Band View */}
           <div className={`flex-1 flex flex-col min-h-0 ${selectedThread ? 'hidden md:flex' : ''}`}>
             {activeBandView === 'songs' ? (
-              <SongList workspaceId={workspaceId} />
+              <SongList key={bandViewKey} workspaceId={workspaceId} />
             ) : activeBandView === 'setlists' ? (
-              <SetlistList workspaceId={workspaceId} />
+              <SetlistList key={bandViewKey} workspaceId={workspaceId} />
             ) : activeBandView === 'calendar' ? (
               <GigCalendar workspaceId={workspaceId} />
             ) : activeBandView === 'stats' ? (

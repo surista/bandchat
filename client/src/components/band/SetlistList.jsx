@@ -31,7 +31,27 @@ function SetlistList({ workspaceId }) {
 
   useEffect(() => {
     loadData();
+    // Reset builder when navigating to this component
+    setShowBuilder(false);
+    setEditingSetlist(null);
   }, [workspaceId]);
+
+  // ESC key to close modals
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') {
+        if (editingDetails) setEditingDetails(null);
+        else if (viewingSetlist) setViewingSetlist(null);
+        else if (showImportModal) {
+          setShowImportModal(false);
+          setImportResults(null);
+        }
+        else if (showCreateModal) setShowCreateModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [editingDetails, viewingSetlist, showImportModal, showCreateModal]);
 
   const loadData = async () => {
     try {
