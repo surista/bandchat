@@ -5,6 +5,8 @@ function GigStats({ workspaceId }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [popup, setPopup] = useState(null); // { type: 'busiest' | 'venue' | 'setlist', data: ... }
+  const [setlistDetail, setSetlistDetail] = useState(null);
 
   useEffect(() => {
     loadStats();
@@ -39,6 +41,19 @@ function GigStats({ workspaceId }) {
       day: 'numeric',
       year: 'numeric'
     });
+  };
+
+  const loadSetlistDetail = async (setlistId) => {
+    try {
+      const setlist = await api.getSetlist(setlistId);
+      setSetlistDetail(setlist);
+    } catch (err) {
+      console.error('Failed to load setlist:', err);
+    }
+  };
+
+  const handleSetlistClick = (setlist) => {
+    loadSetlistDetail(setlist.id);
   };
 
   if (loading) {
@@ -111,8 +126,11 @@ function GigStats({ workspaceId }) {
 
         {/* Fun Stats Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          {/* Busiest Stretch */}
-          <div className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 rounded-lg p-4 border border-purple-700/50">
+          {/* Busiest Stretch - Clickable */}
+          <div
+            className={`bg-gradient-to-br from-purple-900/50 to-blue-900/50 rounded-lg p-4 border border-purple-700/50 ${stats.busiestStretch ? 'cursor-pointer hover:border-purple-500 transition-colors' : ''}`}
+            onClick={() => stats.busiestStretch && setPopup({ type: 'busiest', data: stats.busiestStretch })}
+          >
             <div className="flex items-center gap-2 mb-2">
               <span className="text-2xl">🔥</span>
               <h3 className="font-medium text-white">Busiest Stretch</h3>
@@ -132,7 +150,10 @@ function GigStats({ workspaceId }) {
           </div>
 
           {/* Longest Setlist */}
-          <div className="bg-gradient-to-br from-green-900/50 to-teal-900/50 rounded-lg p-4 border border-green-700/50">
+          <div
+            className={`bg-gradient-to-br from-green-900/50 to-teal-900/50 rounded-lg p-4 border border-green-700/50 ${stats.longestSetlist?.id ? 'cursor-pointer hover:border-green-500 transition-colors' : ''}`}
+            onClick={() => stats.longestSetlist?.id && handleSetlistClick(stats.longestSetlist)}
+          >
             <div className="flex items-center gap-2 mb-2">
               <span className="text-2xl">📋</span>
               <h3 className="font-medium text-white">Longest Setlist</h3>
@@ -209,35 +230,80 @@ function GigStats({ workspaceId }) {
             )}
           </div>
 
-          {/* Most Time Spent on Song */}
+          {/* Middle Column - Fun Stats */}
           <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
             <div className="flex items-center gap-2 mb-4">
-              <span className="text-lg">⏱️</span>
-              <h3 className="text-lg font-medium text-white">Most Time on Song</h3>
+              <span className="text-lg">🎯</span>
+              <h3 className="text-lg font-medium text-white">Fun Facts</h3>
             </div>
-            {stats.mostTimeSong ? (
-              <div className="p-3 bg-gray-900 rounded">
-                <div className="text-white font-medium">{stats.mostTimeSong.title}</div>
-                {stats.mostTimeSong.artist && (
-                  <div className="text-gray-400 text-sm">{stats.mostTimeSong.artist}</div>
-                )}
-                <div className="mt-2 flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-blue-400">
+            <div className="space-y-3">
+              {/* Most Time on Song */}
+              {stats.mostTimeSong && (
+                <div className="p-3 bg-gray-900 rounded">
+                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Most Time on One Song</div>
+                  <div className="text-white font-medium text-sm">{stats.mostTimeSong.title}</div>
+                  <div className="text-blue-400 font-bold">
                     {formatDuration(stats.mostTimeSong.totalTime)}
-                  </span>
-                  <span className="text-gray-500 text-sm">
-                    from {stats.mostTimeSong.playCount} plays
-                  </span>
+                    <span className="text-gray-500 text-xs font-normal ml-1">({stats.mostTimeSong.playCount} plays)</span>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="text-gray-500 text-center py-4 text-sm">
-                No songs played yet
-              </div>
-            )}
+              )}
+
+              {/* Most Played Artist */}
+              {stats.mostPlayedArtist && (
+                <div className="p-3 bg-gray-900 rounded">
+                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Most Played Artist</div>
+                  <div className="text-white font-medium text-sm">{stats.mostPlayedArtist.name}</div>
+                  <div className="text-purple-400 font-bold">
+                    {stats.mostPlayedArtist.playCount} song plays
+                  </div>
+                </div>
+              )}
+
+              {/* Longest Gap */}
+              {stats.longestGap && (
+                <div className="p-3 bg-gray-900 rounded">
+                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Longest Break</div>
+                  <div className="text-orange-400 font-bold">{stats.longestGap.days} days</div>
+                  <div className="text-gray-400 text-xs">
+                    {formatDate(stats.longestGap.startDate)} → {formatDate(stats.longestGap.endDate)}
+                  </div>
+                </div>
+              )}
+
+              {/* Shortest Setlist */}
+              {stats.shortestSetlist && stats.longestSetlist && stats.shortestSetlist.songCount !== stats.longestSetlist.songCount && (
+                <div
+                  className="p-3 bg-gray-900 rounded cursor-pointer hover:bg-gray-800 transition-colors"
+                  onClick={() => handleSetlistClick(stats.shortestSetlist)}
+                >
+                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Shortest Setlist</div>
+                  <div className="text-white font-medium text-sm truncate">{stats.shortestSetlist.name}</div>
+                  <div className="text-teal-400 font-bold">{stats.shortestSetlist.songCount} songs</div>
+                </div>
+              )}
+
+              {/* Average Pay */}
+              {stats.averagePay && (
+                <div className="p-3 bg-gray-900 rounded">
+                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Average Gig Pay</div>
+                  <div className="text-yellow-400 font-bold">¥{stats.averagePay.toLocaleString()}</div>
+                </div>
+              )}
+
+              {/* Days Since Last Gig */}
+              {stats.daysSinceLastGig !== null && stats.daysSinceLastGig > 0 && (
+                <div className="p-3 bg-gray-900 rounded">
+                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Days Since Last Gig</div>
+                  <div className={`font-bold ${stats.daysSinceLastGig > 30 ? 'text-red-400' : stats.daysSinceLastGig > 14 ? 'text-orange-400' : 'text-green-400'}`}>
+                    {stats.daysSinceLastGig} days
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Top Venues */}
+          {/* Top Venues - Clickable */}
           <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-lg">🏟️</span>
@@ -248,7 +314,8 @@ function GigStats({ workspaceId }) {
                 {stats.topVenues.slice(0, 8).map((item, index) => (
                   <div
                     key={item.venue}
-                    className="flex items-center gap-2 p-2 bg-gray-900 rounded"
+                    className="flex items-center gap-2 p-2 bg-gray-900 rounded cursor-pointer hover:bg-gray-800 transition-colors"
+                    onClick={() => setPopup({ type: 'venue', data: item })}
                   >
                     <span className={`w-5 text-center text-sm ${
                       index === 0 ? 'text-yellow-400' : 'text-gray-500'
@@ -270,6 +337,118 @@ function GigStats({ workspaceId }) {
           </div>
         </div>
       </div>
+
+      {/* Popup for Busiest Stretch */}
+      {popup?.type === 'busiest' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setPopup(null)}>
+          <div className="bg-gray-800 rounded-lg w-full max-w-md border border-gray-700" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+              <h3 className="text-lg font-medium text-white flex items-center gap-2">
+                <span>🔥</span> Busiest Stretch
+              </h3>
+              <button onClick={() => setPopup(null)} className="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div className="p-4">
+              <div className="text-purple-300 font-bold text-lg mb-2">
+                {popup.data.gigs} gigs in {popup.data.days} days
+              </div>
+              <div className="text-gray-400 text-sm mb-4">
+                {formatDate(popup.data.startDate)} – {formatDate(popup.data.endDate)}
+              </div>
+              <div className="space-y-2">
+                {popup.data.setlists?.map(setlist => (
+                  <div
+                    key={setlist.id}
+                    className="p-3 bg-gray-900 rounded cursor-pointer hover:bg-gray-700 transition-colors"
+                    onClick={() => handleSetlistClick(setlist)}
+                  >
+                    <div className="text-white font-medium">{setlist.name}</div>
+                    <div className="text-gray-400 text-sm">
+                      {formatDate(setlist.performedAt)} {setlist.venue && `• ${setlist.venue}`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Popup for Venue */}
+      {popup?.type === 'venue' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setPopup(null)}>
+          <div className="bg-gray-800 rounded-lg w-full max-w-md border border-gray-700" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+              <h3 className="text-lg font-medium text-white flex items-center gap-2">
+                <span>🏟️</span> {popup.data.venue}
+              </h3>
+              <button onClick={() => setPopup(null)} className="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div className="p-4">
+              <div className="text-green-400 font-bold text-lg mb-4">
+                {popup.data.count} {popup.data.count === 1 ? 'gig' : 'gigs'} at this venue
+              </div>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {popup.data.setlists?.map(setlist => (
+                  <div
+                    key={setlist.id}
+                    className="p-3 bg-gray-900 rounded cursor-pointer hover:bg-gray-700 transition-colors"
+                    onClick={() => handleSetlistClick(setlist)}
+                  >
+                    <div className="text-white font-medium">{setlist.name}</div>
+                    <div className="text-gray-400 text-sm">{formatDate(setlist.performedAt)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Popup for Setlist Detail */}
+      {setlistDetail && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setSetlistDetail(null)}>
+          <div className="bg-gray-800 rounded-lg w-full max-w-lg border border-gray-700 max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
+              <div>
+                <h3 className="text-lg font-medium text-white">{setlistDetail.name}</h3>
+                <div className="text-gray-400 text-sm">
+                  {setlistDetail.performedAt && formatDate(setlistDetail.performedAt)}
+                  {setlistDetail.venue && ` • ${setlistDetail.venue}`}
+                </div>
+              </div>
+              <button onClick={() => setSetlistDetail(null)} className="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1">
+              {setlistDetail.songs?.length > 0 ? (
+                <div className="space-y-1">
+                  {setlistDetail.songs
+                    .sort((a, b) => a.position - b.position)
+                    .map((item, index) => (
+                      <div key={item.id} className="flex items-center gap-2 p-2 bg-gray-900 rounded">
+                        <span className="text-gray-500 text-sm w-6 text-right">{index + 1}.</span>
+                        {item.type === 'SONG' && item.song ? (
+                          <div className="flex-1 min-w-0">
+                            <div className="text-white text-sm truncate">{item.song.title}</div>
+                            {item.song.artist && (
+                              <div className="text-gray-400 text-xs truncate">{item.song.artist}</div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-gray-400 text-sm italic">
+                            {item.type === 'MC' ? `MC${item.label ? `: ${item.label}` : ''}` : 'Set Break'}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <div className="text-gray-500 text-center py-4">No songs in this setlist</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

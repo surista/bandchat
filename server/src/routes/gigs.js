@@ -157,18 +157,16 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
       playCount: songPlayCounts[mostTimeSongEntry[0]]
     } : null;
 
-    // Most common venues (top 5)
-    const topVenues = Object.entries(venueCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([venue, count]) => ({ venue, count }));
+    // Most common venues (top 5) - will be enhanced with setlist details below
 
-    // Busiest stretch - find max gigs in a 7-day window
+    // Busiest stretch - find max gigs in a 14-day window
     let busiestStretch = null;
+    let busiestSetlists = [];
     if (performedSetlists.length >= 2) {
       let maxGigsInWindow = 0;
       let busiestStart = null;
       let busiestEnd = null;
+      let busiestWindowSetlists = [];
 
       for (let i = 0; i < performedSetlists.length; i++) {
         const windowStart = new Date(performedSetlists[i].performedAt);
@@ -177,12 +175,19 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
 
         let gigsInWindow = 0;
         let lastGigInWindow = performedSetlists[i].performedAt;
+        let windowSetlists = [];
 
         for (let j = i; j < performedSetlists.length; j++) {
           const gigDate = new Date(performedSetlists[j].performedAt);
           if (gigDate <= windowEnd) {
             gigsInWindow++;
             lastGigInWindow = performedSetlists[j].performedAt;
+            windowSetlists.push({
+              id: performedSetlists[j].id,
+              name: performedSetlists[j].name,
+              venue: performedSetlists[j].venue,
+              performedAt: performedSetlists[j].performedAt
+            });
           } else {
             break;
           }
@@ -192,6 +197,7 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
           maxGigsInWindow = gigsInWindow;
           busiestStart = windowStart;
           busiestEnd = new Date(lastGigInWindow);
+          busiestWindowSetlists = windowSetlists;
         }
       }
 
@@ -201,7 +207,8 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
           gigs: maxGigsInWindow,
           days,
           startDate: busiestStart,
-          endDate: busiestEnd
+          endDate: busiestEnd,
+          setlists: busiestWindowSetlists
         };
       }
     }
@@ -209,6 +216,74 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
     // First and last gig dates
     const firstGig = performedSetlists.length > 0 ? performedSetlists[0].performedAt : null;
     const lastGig = performedSetlists.length > 0 ? performedSetlists[performedSetlists.length - 1].performedAt : null;
+
+    // Longest gap between gigs
+    let longestGap = null;
+    if (performedSetlists.length >= 2) {
+      let maxGapDays = 0;
+      let gapStart = null;
+      let gapEnd = null;
+      for (let i = 1; i < performedSetlists.length; i++) {
+        const prev = new Date(performedSetlists[i - 1].performedAt);
+        const curr = new Date(performedSetlists[i].performedAt);
+        const gapDays = Math.round((curr - prev) / (1000 * 60 * 60 * 24));
+        if (gapDays > maxGapDays) {
+          maxGapDays = gapDays;
+          gapStart = prev;
+          gapEnd = curr;
+        }
+      }
+      if (maxGapDays > 0) {
+        longestGap = { days: maxGapDays, startDate: gapStart, endDate: gapEnd };
+      }
+    }
+
+    // Most played artist
+    const artistCounts = {};
+    for (const [songId, count] of Object.entries(songPlayCounts)) {
+      const song = songs.find(s => s.id === songId);
+      if (song?.artist) {
+        artistCounts[song.artist] = (artistCounts[song.artist] || 0) + count;
+      }
+    }
+    const topArtistEntry = Object.entries(artistCounts).sort((a, b) => b[1] - a[1])[0];
+    const mostPlayedArtist = topArtistEntry ? { name: topArtistEntry[0], playCount: topArtistEntry[1] } : null;
+
+    // Shortest setlist (with at least 1 song)
+    let shortestSetlist = null;
+    for (const setlist of performedSetlists) {
+      const songCount = setlist.songs.length;
+      if (songCount > 0 && (!shortestSetlist || songCount < shortestSetlist.songCount)) {
+        shortestSetlist = { name: setlist.name, songCount, id: setlist.id, venue: setlist.venue, performedAt: setlist.performedAt };
+      }
+    }
+
+    // Average pay (only gigs with pay)
+    const gigsWithPay = await prisma.gig.findMany({
+      where: { workspaceId, pay: { not: null, gt: 0 } },
+      select: { pay: true }
+    });
+    const averagePay = gigsWithPay.length > 0
+      ? Math.round(gigsWithPay.reduce((sum, g) => sum + g.pay, 0) / gigsWithPay.length)
+      : null;
+
+    // Days since last gig
+    const daysSinceLastGig = lastGig ? Math.round((now - new Date(lastGig)) / (1000 * 60 * 60 * 24)) : null;
+
+    // Top venues with setlist details
+    const venueSetlists = {};
+    for (const setlist of performedSetlists) {
+      if (setlist.venue) {
+        if (!venueSetlists[setlist.venue]) {
+          venueSetlists[setlist.venue] = [];
+        }
+        venueSetlists[setlist.venue].push({
+          id: setlist.id,
+          name: setlist.name,
+          performedAt: setlist.performedAt
+        });
+      }
+    }
 
     // Songs never played
     const playedSongIds = Object.keys(songPlayCounts);
@@ -243,6 +318,12 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
     const totalHours = Math.floor(totalTimeSeconds / 3600);
     const totalMinutes = Math.floor((totalTimeSeconds % 3600) / 60);
 
+    // Build topVenues with setlist details
+    const topVenues = Object.entries(venueCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([venue, count]) => ({ venue, count, setlists: venueSetlists[venue] || [] }));
+
     res.json({
       totalGigs,
       totalRehearsals,
@@ -250,7 +331,7 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
       mostPlayedSongs: mostPlayedWithDetails,
       songsNeverPlayed: neverPlayed,
       upcomingGigs,
-      // New fun stats
+      // Fun stats
       totalTimeGigged: {
         hours: totalHours,
         minutes: totalMinutes,
@@ -263,7 +344,13 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
       lastGig,
       uniqueSongsPlayed: Object.keys(songPlayCounts).length,
       averageSongsPerGig: totalGigs > 0 ? Math.round(totalSongsPlayed / totalGigs) : 0,
-      longestSetlist: longestSetlistCount > 0 ? { name: longestSetlistName, songCount: longestSetlistCount } : null
+      longestSetlist: longestSetlistCount > 0 ? { name: longestSetlistName, songCount: longestSetlistCount, id: performedSetlists.find(s => s.name === longestSetlistName)?.id } : null,
+      // Additional fun stats
+      longestGap,
+      mostPlayedArtist,
+      shortestSetlist,
+      averagePay,
+      daysSinceLastGig
     });
   } catch (error) {
     console.error('Get stats error:', error);
