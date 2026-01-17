@@ -386,18 +386,6 @@ function Sidebar({
             <button
               onClick={() => {
                 setShowUserMenu(false);
-                setEditDisplayName(user?.displayName || '');
-                setEditAvatarUrl(user?.avatarUrl || '');
-                setSettingsError('');
-                setShowSettings(true);
-              }}
-              className="w-full px-4 py-2 text-left hover:bg-gray-700 transition-colors"
-            >
-              Settings
-            </button>
-            <button
-              onClick={() => {
-                setShowUserMenu(false);
                 navigate('/');
               }}
               className="w-full px-4 py-2 text-left hover:bg-gray-700 transition-colors"
@@ -415,8 +403,44 @@ function Sidebar({
             </button>
           </div>
         )}
-        <div className="text-center text-xs text-gray-500 mt-1">
-          v{__APP_VERSION__}
+      </div>
+
+      {/* Footer */}
+      <div className="border-t border-white/10 px-4 py-2">
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <span>v{__APP_VERSION__}</span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                setSettingsTab('about');
+                setShowSettings(true);
+              }}
+              className="hover:text-gray-300 transition-colors"
+            >
+              About
+            </button>
+            <button
+              onClick={() => {
+                setSettingsTab('whatsnew');
+                setShowSettings(true);
+              }}
+              className="hover:text-gray-300 transition-colors"
+            >
+              What's New
+            </button>
+            <button
+              onClick={() => {
+                setEditDisplayName(user?.displayName || '');
+                setEditAvatarUrl(user?.avatarUrl || '');
+                setSettingsError('');
+                setSettingsTab('profile');
+                setShowSettings(true);
+              }}
+              className="hover:text-gray-300 transition-colors"
+            >
+              Settings
+            </button>
+          </div>
         </div>
       </div>
 
@@ -559,10 +583,10 @@ function Sidebar({
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b">
+            <div className="flex border-b overflow-x-auto">
               <button
                 onClick={() => setSettingsTab('profile')}
-                className={`px-4 py-2 font-medium ${
+                className={`px-4 py-2 font-medium whitespace-nowrap ${
                   settingsTab === 'profile'
                     ? 'text-slack-purple border-b-2 border-slack-purple'
                     : 'text-gray-500 hover:text-gray-700'
@@ -572,7 +596,7 @@ function Sidebar({
               </button>
               <button
                 onClick={() => setSettingsTab('theme')}
-                className={`px-4 py-2 font-medium ${
+                className={`px-4 py-2 font-medium whitespace-nowrap ${
                   settingsTab === 'theme'
                     ? 'text-slack-purple border-b-2 border-slack-purple'
                     : 'text-gray-500 hover:text-gray-700'
@@ -583,7 +607,7 @@ function Sidebar({
               {workspace.members?.find(m => m.user.id === user?.id)?.role === 'ADMIN' && (
                 <button
                   onClick={() => setSettingsTab('members')}
-                  className={`px-4 py-2 font-medium ${
+                  className={`px-4 py-2 font-medium whitespace-nowrap ${
                     settingsTab === 'members'
                       ? 'text-slack-purple border-b-2 border-slack-purple'
                       : 'text-gray-500 hover:text-gray-700'
@@ -592,6 +616,26 @@ function Sidebar({
                   Members
                 </button>
               )}
+              <button
+                onClick={() => setSettingsTab('whatsnew')}
+                className={`px-4 py-2 font-medium whitespace-nowrap ${
+                  settingsTab === 'whatsnew'
+                    ? 'text-slack-purple border-b-2 border-slack-purple'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                What's New
+              </button>
+              <button
+                onClick={() => setSettingsTab('about')}
+                className={`px-4 py-2 font-medium whitespace-nowrap ${
+                  settingsTab === 'about'
+                    ? 'text-slack-purple border-b-2 border-slack-purple'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                About
+              </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4">
@@ -784,6 +828,114 @@ function Sidebar({
                       </select>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* What's New Tab */}
+              {settingsTab === 'whatsnew' && (
+                <div className="space-y-4">
+                  <div className="border-b border-gray-200 pb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">NEW</span>
+                      <span className="text-sm text-gray-500">v1.01.22</span>
+                    </div>
+                    <h4 className="font-medium text-gray-900 mb-1">Bulk Song Import with Metadata</h4>
+                    <p className="text-sm text-gray-600">
+                      Import multiple songs at once! Paste a list of songs and we'll automatically fetch BPM, key, and duration.
+                    </p>
+                  </div>
+                  <div className="border-b border-gray-200 pb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm text-gray-500">v1.01.20</span>
+                    </div>
+                    <h4 className="font-medium text-gray-900 mb-1">MC Sections in Setlists</h4>
+                    <p className="text-sm text-gray-600">
+                      Add talking/banter breaks between songs in your setlists with customizable durations.
+                    </p>
+                  </div>
+                  <div className="border-b border-gray-200 pb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm text-gray-500">v1.01.18</span>
+                    </div>
+                    <h4 className="font-medium text-gray-900 mb-1">12 New Themes</h4>
+                    <p className="text-sm text-gray-600">
+                      Customize your sidebar with 12 beautiful color themes including Aubergine, Ocean, Forest, and more.
+                    </p>
+                  </div>
+                  <div className="pb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm text-gray-500">v1.01.15</span>
+                    </div>
+                    <h4 className="font-medium text-gray-900 mb-1">Band Features</h4>
+                    <p className="text-sm text-gray-600">
+                      Songs, Setlists, Calendar, and Stats - everything you need to organize your band.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* About Tab */}
+              {settingsTab === 'about' && (
+                <div className="space-y-6">
+                  <div className="text-center py-4">
+                    <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-purple-600 to-purple-800 rounded-xl flex items-center justify-center">
+                      <span className="text-3xl">🎸</span>
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900">BandChat</h3>
+                    <p className="text-gray-500">v{__APP_VERSION__}</p>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-gray-700 text-sm leading-relaxed">
+                      BandChat is a communication and organization app built specifically for bands.
+                      Chat with your bandmates, manage your song library, create setlists, and track your gigs - all in one place.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="font-medium text-gray-900">Features</h4>
+                    <ul className="text-sm text-gray-600 space-y-2">
+                      <li className="flex items-center gap-2">
+                        <span className="text-green-500">✓</span>
+                        Real-time messaging with threads and reactions
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-green-500">✓</span>
+                        Song database with BPM, key, and duration
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-green-500">✓</span>
+                        Drag-and-drop setlist builder
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-green-500">✓</span>
+                        Gig calendar and statistics
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <span className="text-green-500">✓</span>
+                        File sharing and image uploads
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="border-t border-gray-200 pt-4">
+                    <h4 className="font-medium text-gray-900 mb-2">Credits</h4>
+                    <p className="text-sm text-gray-600">
+                      Song metadata (BPM, key) provided by{' '}
+                      <a
+                        href="https://getsongbpm.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-purple-600 hover:text-purple-700 underline"
+                      >
+                        GetSongBPM.com
+                      </a>
+                    </p>
+                  </div>
+
+                  <div className="text-center text-xs text-gray-400 pt-4">
+                    Made with ♥ for musicians everywhere
+                  </div>
                 </div>
               )}
             </div>

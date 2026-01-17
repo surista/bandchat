@@ -2,7 +2,7 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { isWorkspaceMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
-import spotifyService from '../services/spotify.js';
+import songBPMService from '../services/songbpm.js';
 
 const router = express.Router();
 
@@ -144,9 +144,9 @@ router.put('/:songId', authenticate, async (req, res) => {
   }
 });
 
-// Check if Spotify is configured
-router.get('/spotify-status', authenticate, async (req, res) => {
-  res.json({ configured: spotifyService.isConfigured() });
+// Check if metadata service is configured
+router.get('/metadata-status', authenticate, async (req, res) => {
+  res.json({ configured: songBPMService.isConfigured() });
 });
 
 // Bulk import songs
@@ -162,13 +162,13 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
       return res.status(400).json({ error: 'Maximum 200 songs per import' });
     }
 
-    const useSpotify = fetchSpotifyMetadata && spotifyService.isConfigured();
+    const useMetadataService = fetchSpotifyMetadata && songBPMService.isConfigured();
 
     const results = {
       created: [],
       skipped: [],
       errors: [],
-      spotifyMatches: 0
+      metadataMatches: 0
     };
 
     for (const songData of songs) {
@@ -181,27 +181,26 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
         const title = songData.title.trim();
         const artist = songData.artist?.trim() || null;
 
-        // Fetch Spotify metadata if enabled
-        let spotifyData = null;
-        if (useSpotify) {
+        // Fetch metadata from GetSongBPM if enabled
+        let metadata = null;
+        if (useMetadataService) {
           try {
-            spotifyData = await spotifyService.getTrackMetadata(title, artist);
-            if (spotifyData) {
-              results.spotifyMatches++;
+            metadata = await songBPMService.getTrackMetadata(title, artist);
+            if (metadata && (metadata.bpm || metadata.key)) {
+              results.metadataMatches++;
             }
-          } catch (spotifyError) {
-            console.error('Spotify lookup failed for:', title, spotifyError.message);
+          } catch (metadataError) {
+            console.error('Metadata lookup failed for:', title, metadataError.message);
           }
         }
 
         const song = await prisma.song.create({
           data: {
             title,
-            artist: spotifyData?.artist || artist,
-            duration: spotifyData?.duration || null,
-            bpm: spotifyData?.bpm || null,
-            key: spotifyData?.key || null,
-            spotifyUrl: spotifyData?.spotifyUrl || null,
+            artist: metadata?.artist || artist,
+            duration: metadata?.duration || null,
+            bpm: metadata?.bpm || null,
+            key: metadata?.key || null,
             workspaceId: req.params.workspaceId,
             createdById: req.user.id
           },

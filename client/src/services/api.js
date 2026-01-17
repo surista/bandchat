@@ -445,8 +445,8 @@ class ApiService {
     });
   }
 
-  async getSpotifyStatus() {
-    return this.request('/songs/spotify-status');
+  async getMetadataStatus() {
+    return this.request('/songs/metadata-status');
   }
 
   // Setlists
