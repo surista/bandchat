@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import Footer from '../common/Footer';
 
 function WorkspaceList() {
   const { user, logout } = useAuth();
@@ -68,7 +69,7 @@ function WorkspaceList() {
   }
 
   return (
-    <div className="min-h-screen bg-slack-purple">
+    <div className="min-h-screen bg-slack-purple flex flex-col">
       <header className="bg-slack-purple-dark p-4 flex justify-between items-center">
         <h1 className="text-white text-xl font-bold">BandChat</h1>
         <div className="flex items-center gap-4">
@@ -82,7 +83,7 @@ function WorkspaceList() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto p-8">
+      <main className="flex-1 max-w-2xl mx-auto p-8 w-full">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-bold text-white">Your Workspaces</h2>
           <div className="flex gap-2">
@@ -217,6 +218,7 @@ function WorkspaceList() {
           </div>
         )}
       </main>
+      <Footer theme="dark" />
     </div>
   );
 }

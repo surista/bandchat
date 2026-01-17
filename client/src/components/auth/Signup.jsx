@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import GoogleSignInButton from './GoogleSignInButton';
+import Footer from '../common/Footer';
 
 function Signup() {
   const { signup, googleLogin } = useAuth();
@@ -59,14 +60,15 @@ function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-slack-purple flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">BandChat</h1>
-          <p className="text-gray-300">Create your account</p>
-        </div>
+    <div className="min-h-screen bg-slack-purple flex flex-col">
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-white mb-2">BandChat</h1>
+            <p className="text-gray-300">Create your account</p>
+          </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg p-8 shadow-xl">
+          <form onSubmit={handleSubmit} className="bg-white rounded-lg p-8 shadow-xl">
           {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
               {error}
@@ -165,7 +167,9 @@ function Signup() {
             </Link>
           </p>
         </form>
+        </div>
       </div>
+      <Footer theme="dark" />
     </div>
   );
 }
