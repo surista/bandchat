@@ -12,6 +12,7 @@ import SetlistList from '../band/SetlistList';
 import GigCalendar from '../band/GigCalendar';
 import GigStats from '../band/GigStats';
 import GigArchive from '../band/GigArchive';
+import BandMembersList from '../band/BandMembers/BandMembersList';
 
 function WorkspaceView() {
   const { workspaceId } = useParams();
@@ -339,6 +340,7 @@ function WorkspaceView() {
              activeBandView === 'calendar' ? '📅 Calendar' :
              activeBandView === 'stats' ? '📊 Stats' :
              activeBandView === 'archive' ? '📸 Gig Archive' :
+             activeBandView === 'members' ? '👥 Members' :
              selectedChannel
               ? selectedChannel.isDirect
                 ? selectedChannel.otherMembers?.map(m => m.displayName).join(', ') || 'Direct Message'
@@ -369,6 +371,8 @@ function WorkspaceView() {
               <GigStats workspaceId={workspaceId} />
             ) : activeBandView === 'archive' ? (
               <GigArchive workspaceId={workspaceId} />
+            ) : activeBandView === 'members' ? (
+              <BandMembersList key={bandViewKey} workspaceId={workspaceId} />
             ) : selectedChannel ? (
               <ChannelView
                 channel={selectedChannel}

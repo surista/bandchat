@@ -59,6 +59,7 @@ model Workspace {
   songs         Song[]
   setlists      Setlist[]
   gigs          Gig[]
+  bandMembers   BandMember[]
 }
 
 model ChannelGroup {
@@ -344,4 +345,21 @@ enum GigStatus {
   SCHEDULED
   COMPLETED
   CANCELLED
+}
+
+model BandMember {
+  id          String    @id @default(uuid())
+  name        String
+  instrument  String
+  startDate   DateTime
+  endDate     DateTime?
+  imageUrl    String?
+  notes       String?
+  workspaceId String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
 }

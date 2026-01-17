@@ -115,17 +115,19 @@ function GigArchive({ workspaceId }) {
       (g.setlists && g.setlists.some(gs => gs.setlistId === setlist.id))
     );
 
-    // If no formal gig, try to parse setlist name for gig info
+    // Use setlist's performedAt/venue fields first, then fall back to parsing name
     const parsed = parseSetlistName(setlist.name);
+    const setlistDate = setlist.performedAt ? new Date(setlist.performedAt) : parsed.date;
+    const setlistVenue = setlist.venue || parsed.venue;
 
     return {
       id: `setlist-${setlist.id}`,
       setlist,
       gig: associatedGig,
       title: associatedGig?.title || parsed.title,
-      venue: associatedGig?.venue || parsed.venue,
-      date: associatedGig ? new Date(associatedGig.date) : parsed.date,
-      status: associatedGig?.status || (parsed.date && parsed.date < new Date() ? 'COMPLETED' : 'SCHEDULED'),
+      venue: associatedGig?.venue || setlistVenue,
+      date: associatedGig ? new Date(associatedGig.date) : setlistDate,
+      status: associatedGig?.status || (setlistDate && setlistDate < new Date() ? 'COMPLETED' : 'SCHEDULED'),
       hasFormalGig: !!associatedGig
     };
   }).filter(entry => entry.date || entry.hasFormalGig);

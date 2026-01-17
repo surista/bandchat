@@ -612,6 +612,31 @@ class ApiService {
       method: 'DELETE'
     });
   }
+
+  // Band Members
+  async getBandMembers(workspaceId) {
+    return this.request(`/band-members/workspace/${workspaceId}`);
+  }
+
+  async createBandMember(workspaceId, data) {
+    return this.request(`/band-members/workspace/${workspaceId}`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async updateBandMember(memberId, data) {
+    return this.request(`/band-members/${memberId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteBandMember(memberId) {
+    return this.request(`/band-members/${memberId}`, {
+      method: 'DELETE'
+    });
+  }
 }
 
 export const api = new ApiService();

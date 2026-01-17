@@ -14,6 +14,7 @@ import uploadRoutes from './routes/uploads.js';
 import songRoutes from './routes/songs.js';
 import setlistRoutes from './routes/setlists.js';
 import gigRoutes from './routes/gigs.js';
+import bandMemberRoutes from './routes/bandMembers.js';
 import { setupSocketHandlers } from './socket/handlers.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 
@@ -59,6 +60,7 @@ app.use('/api/uploads', uploadRoutes);
 app.use('/api/songs', songRoutes);
 app.use('/api/setlists', setlistRoutes);
 app.use('/api/gigs', gigRoutes);
+app.use('/api/band-members', bandMemberRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

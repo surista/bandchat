@@ -5,6 +5,7 @@ import { pushService } from '../../services/push';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
+import BandMemberForm from '../band/BandMembers/BandMemberForm';
 
 function Sidebar({
   workspace,
@@ -46,6 +47,10 @@ function Sidebar({
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsError, setSettingsError] = useState('');
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [bandMembers, setBandMembers] = useState({ current: [], former: [] });
+  const [bandMembersLoading, setBandMembersLoading] = useState(false);
+  const [editingBandMember, setEditingBandMember] = useState(null);
+  const [showBandMemberForm, setShowBandMemberForm] = useState(false);
 
   useEffect(() => {
     // Check if notifications are already enabled
@@ -62,6 +67,54 @@ function Sidebar({
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [showSettings]);
+
+  // Load band members when bandmembers tab is selected
+  useEffect(() => {
+    if (settingsTab === 'bandmembers' && workspace?.id) {
+      loadBandMembers();
+    }
+  }, [settingsTab, workspace?.id]);
+
+  const loadBandMembers = async () => {
+    setBandMembersLoading(true);
+    try {
+      const data = await api.getBandMembers(workspace.id);
+      setBandMembers(data);
+    } catch (err) {
+      setSettingsError(err.message);
+    } finally {
+      setBandMembersLoading(false);
+    }
+  };
+
+  const handleSaveBandMember = async (data) => {
+    setSettingsLoading(true);
+    setSettingsError('');
+    try {
+      if (editingBandMember) {
+        await api.updateBandMember(editingBandMember.id, data);
+      } else {
+        await api.createBandMember(workspace.id, data);
+      }
+      await loadBandMembers();
+      setShowBandMemberForm(false);
+      setEditingBandMember(null);
+    } catch (err) {
+      setSettingsError(err.message);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const handleDeleteBandMember = async (memberId) => {
+    if (!confirm('Delete this band member?')) return;
+    try {
+      await api.deleteBandMember(memberId);
+      await loadBandMembers();
+    } catch (err) {
+      setSettingsError(err.message);
+    }
+  };
 
   const toggleNotifications = async () => {
     setNotificationsLoading(true);
@@ -350,6 +403,13 @@ function Sidebar({
           >
             <span className="text-gray-400">📸</span>
             <span className="flex-1 truncate">Gig Archive</span>
+          </button>
+          <button
+            onClick={() => onSelectBandView?.('members')}
+            className={`channel-item w-full ${activeBandView === 'members' ? 'active' : ''}`}
+          >
+            <span className="text-gray-400">👥</span>
+            <span className="flex-1 truncate">Members</span>
           </button>
         </div>
 
@@ -665,16 +725,28 @@ function Sidebar({
                 Theme
               </button>
               {workspace.members?.find(m => m.user.id === user?.id)?.role === 'ADMIN' && (
-                <button
-                  onClick={() => setSettingsTab('members')}
-                  className={`px-4 py-3 font-medium whitespace-nowrap transition-colors ${
-                    settingsTab === 'members'
-                      ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                      : 'text-gray-400 hover:text-gray-200'
-                  }`}
-                >
-                  Members
-                </button>
+                <>
+                  <button
+                    onClick={() => setSettingsTab('members')}
+                    className={`px-4 py-3 font-medium whitespace-nowrap transition-colors ${
+                      settingsTab === 'members'
+                        ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
+                        : 'text-gray-400 hover:text-gray-200'
+                    }`}
+                  >
+                    Members
+                  </button>
+                  <button
+                    onClick={() => setSettingsTab('bandmembers')}
+                    className={`px-4 py-3 font-medium whitespace-nowrap transition-colors ${
+                      settingsTab === 'bandmembers'
+                        ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
+                        : 'text-gray-400 hover:text-gray-200'
+                    }`}
+                  >
+                    Band Members
+                  </button>
+                </>
               )}
               <button
                 onClick={() => setSettingsTab('whatsnew')}
@@ -884,6 +956,135 @@ function Sidebar({
                       </select>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Band Members Tab (Admin only) */}
+              {settingsTab === 'bandmembers' && (
+                <div>
+                  {showBandMemberForm ? (
+                    <div>
+                      <h4 className="text-lg font-medium text-white mb-4">
+                        {editingBandMember ? 'Edit Band Member' : 'Add Band Member'}
+                      </h4>
+                      <BandMemberForm
+                        member={editingBandMember}
+                        onSave={handleSaveBandMember}
+                        onCancel={() => {
+                          setShowBandMemberForm(false);
+                          setEditingBandMember(null);
+                        }}
+                        loading={settingsLoading}
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-gray-400">Manage band member history for the timeline</p>
+                        <button
+                          onClick={() => setShowBandMemberForm(true)}
+                          className="btn bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          + Add Member
+                        </button>
+                      </div>
+
+                      {bandMembersLoading ? (
+                        <div className="text-center py-8 text-gray-400">Loading...</div>
+                      ) : (
+                        <div className="space-y-4">
+                          {/* Current Members */}
+                          {bandMembers.current.length > 0 && (
+                            <div>
+                              <h5 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-2">
+                                Current Members ({bandMembers.current.length})
+                              </h5>
+                              <div className="space-y-2">
+                                {bandMembers.current.map((member) => (
+                                  <div
+                                    key={member.id}
+                                    className="flex items-center justify-between p-3 bg-[var(--color-modal-card)] rounded-lg"
+                                  >
+                                    <div>
+                                      <div className="font-medium text-white">{member.name}</div>
+                                      <div className="text-sm text-gray-400">
+                                        {member.instrument} • Since {new Date(member.startDate).getFullYear()}
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => {
+                                          setEditingBandMember(member);
+                                          setShowBandMemberForm(true);
+                                        }}
+                                        className="text-blue-400 hover:text-blue-300 text-sm"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteBandMember(member.id)}
+                                        className="text-red-400 hover:text-red-300 text-sm"
+                                      >
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Former Members */}
+                          {bandMembers.former.length > 0 && (
+                            <div>
+                              <h5 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-2">
+                                Former Members ({bandMembers.former.length})
+                              </h5>
+                              <div className="space-y-2">
+                                {bandMembers.former.map((member) => (
+                                  <div
+                                    key={member.id}
+                                    className="flex items-center justify-between p-3 bg-[var(--color-modal-card)] rounded-lg opacity-75"
+                                  >
+                                    <div>
+                                      <div className="font-medium text-white">{member.name}</div>
+                                      <div className="text-sm text-gray-400">
+                                        {member.instrument} • {new Date(member.startDate).getFullYear()}–{new Date(member.endDate).getFullYear()}
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => {
+                                          setEditingBandMember(member);
+                                          setShowBandMemberForm(true);
+                                        }}
+                                        className="text-blue-400 hover:text-blue-300 text-sm"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteBandMember(member.id)}
+                                        className="text-red-400 hover:text-red-300 text-sm"
+                                      >
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {bandMembers.current.length === 0 && bandMembers.former.length === 0 && (
+                            <div className="text-center py-8 text-gray-400">
+                              <p className="mb-2">No band members added yet</p>
+                              <p className="text-sm">Add members to see them on the Band Members timeline</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
