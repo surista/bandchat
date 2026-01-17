@@ -172,30 +172,40 @@ function GigArchive({ workspaceId }) {
     return true;
   });
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file || !selectedGig) return;
+  const [uploadProgress, setUploadProgress] = useState('');
 
-    if (file.size > 50 * 1024 * 1024) {
-      setError('File size must be less than 50MB');
+  const handleFileUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0 || !selectedGig) return;
+
+    // Check file sizes
+    const oversizedFiles = files.filter(f => f.size > 50 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+      setError(`${oversizedFiles.length} file(s) exceed 50MB limit`);
       return;
     }
 
     setUploading(true);
     try {
-      const result = await api.uploadFile(file);
-      await api.addGigMedia(selectedGig.id, {
-        type: file.type.startsWith('video') ? 'video' : 'image',
-        url: result.url,
-        caption: mediaCaption || file.name
-      });
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setUploadProgress(`Uploading ${i + 1} of ${files.length}...`);
+        const result = await api.uploadFile(file);
+        await api.addGigMedia(selectedGig.id, {
+          type: file.type.startsWith('video') ? 'video' : 'image',
+          url: result.url,
+          caption: file.name
+        });
+      }
       await loadData();
       setShowAddMedia(false);
       setMediaCaption('');
+      setUploadProgress('');
     } catch (err) {
       setError(err.message);
     } finally {
       setUploading(false);
+      setUploadProgress('');
     }
   };
 
@@ -1000,24 +1010,25 @@ function GigArchive({ workspaceId }) {
               </button>
             </div>
             <div className="p-4 space-y-4">
-              {/* Upload File */}
+              {/* Upload Files */}
               <div>
                 <label className="block text-gray-300 text-sm font-medium mb-2">
-                  Upload Image or Video
+                  Upload Images or Videos
                 </label>
                 <label className="block">
                   <span className="btn btn-secondary w-full cursor-pointer text-center">
-                    {uploading ? 'Uploading...' : 'Choose File'}
+                    {uploadProgress || (uploading ? 'Uploading...' : 'Choose Files')}
                   </span>
                   <input
                     type="file"
                     accept="image/*,video/*"
+                    multiple
                     onChange={handleFileUpload}
                     disabled={uploading}
                     className="hidden"
                   />
                 </label>
-                <p className="text-gray-500 text-xs mt-1">Max 50MB. Images and videos supported.</p>
+                <p className="text-gray-500 text-xs mt-1">Max 50MB per file. Select multiple files at once.</p>
               </div>
 
               <div className="relative">
