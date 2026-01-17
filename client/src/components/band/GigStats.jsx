@@ -23,10 +23,13 @@ function GigStats({ workspaceId }) {
   };
 
   const formatDuration = (seconds) => {
-    if (!seconds) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    if (!seconds) return '0m';
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
+    return `${mins}m`;
   };
 
   const formatDate = (dateStr) => {
@@ -167,99 +170,105 @@ function GigStats({ workspaceId }) {
           </div>
         </div>
 
-        {/* Most Played Songs */}
-        <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 mb-6">
-          <h3 className="text-lg font-medium text-white mb-4">Most Played Songs</h3>
-          {stats.mostPlayedSongs?.length > 0 ? (
-            <div className="space-y-2">
-              {stats.mostPlayedSongs.map((song, index) => (
-                <div
-                  key={song.id}
-                  className="flex items-center gap-3 p-2 bg-gray-900 rounded"
-                >
-                  <span className={`w-6 text-right font-bold ${
-                    index === 0 ? 'text-yellow-400' :
-                    index === 1 ? 'text-gray-300' :
-                    index === 2 ? 'text-orange-400' :
-                    'text-gray-500'
-                  }`}>
-                    #{index + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-white truncate">{song.title}</div>
-                    {song.artist && (
-                      <div className="text-gray-400 text-sm truncate">{song.artist}</div>
-                    )}
+        {/* Three Column Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Most Played Songs */}
+          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <h3 className="text-lg font-medium text-white mb-4">Most Played Songs</h3>
+            {stats.mostPlayedSongs?.length > 0 ? (
+              <div className="space-y-2">
+                {stats.mostPlayedSongs.slice(0, 10).map((song, index) => (
+                  <div
+                    key={song.id}
+                    className="flex items-center gap-2 p-2 bg-gray-900 rounded"
+                  >
+                    <span className={`w-5 text-right text-sm font-bold ${
+                      index === 0 ? 'text-yellow-400' :
+                      index === 1 ? 'text-gray-300' :
+                      index === 2 ? 'text-orange-400' :
+                      'text-gray-500'
+                    }`}>
+                      #{index + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-white text-sm truncate">{song.title}</div>
+                      {song.artist && (
+                        <div className="text-gray-400 text-xs truncate">{song.artist}</div>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <div className="text-green-400 text-sm font-medium">{song.playCount}x</div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-green-400 font-medium">{song.playCount}x</div>
-                    {song.totalTime > 0 && (
-                      <div className="text-gray-500 text-xs">{formatDuration(song.totalTime)} total</div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-gray-500 text-center py-4">
-              No songs played yet. Add dates to your setlists to track plays!
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-gray-500 text-center py-4 text-sm">
+                No songs played yet
+              </div>
+            )}
+          </div>
 
-        {/* Most Time Spent on Song */}
-        {stats.mostTimeSong && (
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xl">⏱️</span>
-              <h3 className="text-lg font-medium text-white">Most Time Spent on One Song</h3>
+          {/* Most Time Spent on Song */}
+          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-lg">⏱️</span>
+              <h3 className="text-lg font-medium text-white">Most Time on Song</h3>
             </div>
-            <div className="flex items-center gap-4 p-3 bg-gray-900 rounded">
-              <div className="flex-1">
+            {stats.mostTimeSong ? (
+              <div className="p-3 bg-gray-900 rounded">
                 <div className="text-white font-medium">{stats.mostTimeSong.title}</div>
                 {stats.mostTimeSong.artist && (
                   <div className="text-gray-400 text-sm">{stats.mostTimeSong.artist}</div>
                 )}
-              </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-blue-400">
-                  {Math.floor(stats.mostTimeSong.totalTime / 60)}:{(stats.mostTimeSong.totalTime % 60).toString().padStart(2, '0')}
-                </div>
-                <div className="text-gray-500 text-sm">
-                  from {stats.mostTimeSong.playCount} plays
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Top Venues */}
-        {stats.topVenues?.length > 0 && (
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xl">🏟️</span>
-              <h3 className="text-lg font-medium text-white">Most Common Venues</h3>
-            </div>
-            <div className="space-y-2">
-              {stats.topVenues.map((item, index) => (
-                <div
-                  key={item.venue}
-                  className="flex items-center gap-3 p-2 bg-gray-900 rounded"
-                >
-                  <span className={`w-6 text-center ${
-                    index === 0 ? 'text-yellow-400' : 'text-gray-500'
-                  }`}>
-                    {index === 0 ? '🏆' : `#${index + 1}`}
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-blue-400">
+                    {formatDuration(stats.mostTimeSong.totalTime)}
                   </span>
-                  <div className="flex-1 text-white truncate">{item.venue}</div>
-                  <div className="text-green-400 font-medium">
-                    {item.count} {item.count === 1 ? 'gig' : 'gigs'}
-                  </div>
+                  <span className="text-gray-500 text-sm">
+                    from {stats.mostTimeSong.playCount} plays
+                  </span>
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div className="text-gray-500 text-center py-4 text-sm">
+                No songs played yet
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Top Venues */}
+          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-lg">🏟️</span>
+              <h3 className="text-lg font-medium text-white">Top Venues</h3>
+            </div>
+            {stats.topVenues?.length > 0 ? (
+              <div className="space-y-2">
+                {stats.topVenues.slice(0, 8).map((item, index) => (
+                  <div
+                    key={item.venue}
+                    className="flex items-center gap-2 p-2 bg-gray-900 rounded"
+                  >
+                    <span className={`w-5 text-center text-sm ${
+                      index === 0 ? 'text-yellow-400' : 'text-gray-500'
+                    }`}>
+                      {index === 0 ? '🏆' : `#${index + 1}`}
+                    </span>
+                    <div className="flex-1 text-white text-sm truncate">{item.venue}</div>
+                    <div className="text-green-400 text-sm font-medium">
+                      {item.count} {item.count === 1 ? 'gig' : 'gigs'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-gray-500 text-center py-4 text-sm">
+                No venues recorded yet
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
