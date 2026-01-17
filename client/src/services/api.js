@@ -438,10 +438,17 @@ class ApiService {
     });
   }
 
-  async bulkImportSongs(workspaceId, songs, fetchSpotifyMetadata = true) {
+  async bulkImportSongs(workspaceId, songs, fetchMetadata = true) {
     return this.request(`/songs/workspace/${workspaceId}/bulk`, {
       method: 'POST',
-      body: JSON.stringify({ songs, fetchSpotifyMetadata })
+      body: JSON.stringify({ songs, fetchMetadata })
+    });
+  }
+
+  async enrichSongs(workspaceId, songIds = null) {
+    return this.request(`/songs/workspace/${workspaceId}/enrich`, {
+      method: 'POST',
+      body: JSON.stringify({ songIds })
     });
   }
 

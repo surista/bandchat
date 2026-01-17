@@ -16,6 +16,8 @@ function SongList({ workspaceId, onSelectSong }) {
   const [bulkResults, setBulkResults] = useState(null);
   const [metadataConfigured, setMetadataConfigured] = useState(false);
   const [fetchMetadata, setFetchMetadata] = useState(true);
+  const [enriching, setEnriching] = useState(false);
+  const [enrichResults, setEnrichResults] = useState(null);
 
   useEffect(() => {
     loadSongs();
@@ -106,6 +108,39 @@ function SongList({ workspaceId, onSelectSong }) {
     }
   };
 
+  const handleEnrichSongs = async () => {
+    // Count songs with missing data
+    const songsNeedingData = songs.filter(s =>
+      !s.bpm || !s.key || !s.duration || !s.youtubeUrl || !s.spotifyUrl
+    );
+
+    if (songsNeedingData.length === 0) {
+      alert('All songs already have complete metadata!');
+      return;
+    }
+
+    if (!confirm(`Fetch missing metadata for ${songsNeedingData.length} songs? This may take a while.`)) {
+      return;
+    }
+
+    setEnriching(true);
+    setEnrichResults(null);
+
+    try {
+      const results = await api.enrichSongs(workspaceId);
+      setEnrichResults(results);
+
+      // Reload songs to get updated data
+      if (results.updated > 0) {
+        await loadSongs();
+      }
+    } catch (err) {
+      alert('Enrich failed: ' + err.message);
+    } finally {
+      setEnriching(false);
+    }
+  };
+
   const filteredSongs = songs
     .filter(song => {
       const query = searchQuery.toLowerCase();
@@ -152,6 +187,14 @@ function SongList({ workspaceId, onSelectSong }) {
               Bulk Import
             </button>
             <button
+              onClick={handleEnrichSongs}
+              disabled={enriching || songs.length === 0}
+              className="btn btn-secondary"
+              title="Fetch missing BPM, key, duration, and links for existing songs"
+            >
+              {enriching ? 'Fetching...' : 'Fetch Missing Data'}
+            </button>
+            <button
               onClick={() => {
                 setEditingSong(null);
                 setShowForm(true);
@@ -187,6 +230,34 @@ function SongList({ workspaceId, onSelectSong }) {
         {error && (
           <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded mb-4">
             {error}
+          </div>
+        )}
+
+        {enrichResults && (
+          <div className="bg-blue-900/50 border border-blue-500 text-blue-200 px-4 py-3 rounded mb-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <strong>Metadata fetch complete:</strong> Updated {enrichResults.updated} of {enrichResults.processed} songs
+                {enrichResults.details.length > 0 && (
+                  <ul className="mt-2 text-sm max-h-32 overflow-y-auto">
+                    {enrichResults.details.slice(0, 10).map((d, i) => (
+                      <li key={i}>
+                        {d.title}: {d.fieldsUpdated.join(', ')}
+                      </li>
+                    ))}
+                    {enrichResults.details.length > 10 && (
+                      <li className="text-blue-400">...and {enrichResults.details.length - 10} more</li>
+                    )}
+                  </ul>
+                )}
+              </div>
+              <button
+                onClick={() => setEnrichResults(null)}
+                className="text-blue-400 hover:text-blue-200"
+              >
+                &times;
+              </button>
+            </div>
           </div>
         )}
 
@@ -334,25 +405,23 @@ Sweet Child O' Mine - Guns N' Roses"
                       {parseBulkText(bulkText).length} songs detected
                     </div>
 
-                    {metadataConfigured && (
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={fetchMetadata}
-                          onChange={(e) => setFetchMetadata(e.target.checked)}
-                          disabled={bulkImporting}
-                          className="w-4 h-4 rounded"
-                        />
-                        <span className="text-sm text-gray-700">
-                          <span className="text-green-600">●</span> Auto-fill BPM &amp; Key
-                        </span>
-                      </label>
-                    )}
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={fetchMetadata}
+                        onChange={(e) => setFetchMetadata(e.target.checked)}
+                        disabled={bulkImporting}
+                        className="w-4 h-4 rounded"
+                      />
+                      <span className="text-sm text-gray-700">
+                        <span className="text-green-600">●</span> Auto-fill metadata (BPM, key, duration, links)
+                      </span>
+                    </label>
                   </div>
 
                   {bulkImporting && fetchMetadata && (
                     <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
-                      Fetching BPM and key data... This may take a moment.
+                      Fetching metadata (BPM, key, duration, YouTube, Spotify)... This may take a moment.
                     </div>
                   )}
 
@@ -383,7 +452,7 @@ Sweet Child O' Mine - Guns N' Roses"
                           {bulkResults.created.length} songs imported successfully
                           {bulkResults.metadataMatches > 0 && (
                             <span className="font-normal text-green-600 ml-2">
-                              ({bulkResults.metadataMatches} with BPM/key data)
+                              ({bulkResults.metadataMatches} with metadata)
                             </span>
                           )}
                         </h4>
@@ -391,7 +460,10 @@ Sweet Child O' Mine - Guns N' Roses"
                           {bulkResults.created.map((song, i) => (
                             <li key={i} className="flex items-center gap-2">
                               <span>{song.title}{song.artist && ` - ${song.artist}`}</span>
-                              {(song.bpm || song.key) && <span className="text-green-500" title="BPM/key found">●</span>}
+                              {song.bpm && <span className="text-xs bg-green-200 px-1 rounded">BPM</span>}
+                              {song.key && <span className="text-xs bg-green-200 px-1 rounded">Key</span>}
+                              {song.duration && <span className="text-xs bg-green-200 px-1 rounded">Dur</span>}
+                              {song.youtubeUrl && <span className="text-xs bg-red-200 px-1 rounded">YT</span>}
                             </li>
                           ))}
                         </ul>
