@@ -1,0 +1,18 @@
+{
+  "name": "BandChat",
+  "short_name": "BandChat",
+  "description": "Chat app for bands",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#4A154B",
+  "theme_color": "#4A154B",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

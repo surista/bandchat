@@ -13,7 +13,18 @@
       "Bash(npx prisma migrate dev:*)",
       "Bash(xargs:*)",
       "Bash(cd:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npx prisma db push:*)",
+      "Bash(npm run bump:patch:*)",
+      "Bash(npm run build:*)",
+      "Bash(node scripts/bump-version.js:*)",
+      "Bash(git reset:*)",
+      "Bash(set \"DATABASE_URL=postgresql://postgres:UeQeHHwrZKseIMWzXNBXbgcOcXDpUxns@yamabiko.proxy.rlwy.net:36879/railway\")",
+      "Bash(cmd /c \"set DATABASE_URL=postgresql://postgres:UeQeHHwrZKseIMWzXNBXbgcOcXDpUxns@yamabiko.proxy.rlwy.net:36879/railway && npx prisma db push\")",
+      "Bash(cmd /c \"set DATABASE_URL=postgresql://postgres:UeQeHHwrZKseIMWzXNBXbgcOcXDpUxns@yamabiko.proxy.rlwy.net:36879/railway&& npx prisma db push\")",
+      "Bash(Artist\", tab-separated\n- Show import results: created, skipped \\(duplicates\\), errors\n- Skip existing songs instead of failing\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "WebSearch",
+      "WebFetch(domain:bandchat.vercel.app)"
     ]
   }
 }
