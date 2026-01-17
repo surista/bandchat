@@ -436,7 +436,7 @@ function WorkspaceView() {
               </button>
               <button
                 onClick={() => setShowInvite(false)}
-                className="flex-1 btn btn-primary"
+                className="flex-1 btn bg-green-600 hover:bg-green-700 text-white"
               >
                 Done
               </button>

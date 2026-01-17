@@ -95,7 +95,7 @@ function WorkspaceList() {
             </button>
             <button
               onClick={() => setShowCreate(true)}
-              className="btn btn-primary"
+              className="btn bg-green-600 hover:bg-green-700 text-white"
             >
               Create Workspace
             </button>
@@ -169,7 +169,7 @@ function WorkspaceList() {
                   >
                     Cancel
                   </button>
-                  <button type="submit" className="btn btn-primary">
+                  <button type="submit" className="btn bg-green-600 hover:bg-green-700 text-white">
                     Create
                   </button>
                 </div>
@@ -209,7 +209,7 @@ function WorkspaceList() {
                   >
                     Cancel
                   </button>
-                  <button type="submit" className="btn btn-primary">
+                  <button type="submit" className="btn bg-green-600 hover:bg-green-700 text-white">
                     Join
                   </button>
                 </div>

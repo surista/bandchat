@@ -113,14 +113,16 @@ router.get('/:setlistId', authenticate, async (req, res) => {
 // Update a setlist
 router.put('/:setlistId', authenticate, async (req, res) => {
   try {
-    const { name, description, useShortNames } = req.body;
+    const { name, description, useShortNames, performedAt, venue } = req.body;
 
     const setlist = await prisma.setlist.update({
       where: { id: req.params.setlistId },
       data: {
         ...(name && { name }),
         ...(description !== undefined && { description }),
-        ...(useShortNames !== undefined && { useShortNames })
+        ...(useShortNames !== undefined && { useShortNames }),
+        ...(performedAt !== undefined && { performedAt: performedAt ? new Date(performedAt) : null }),
+        ...(venue !== undefined && { venue })
       },
       include: {
         createdBy: {

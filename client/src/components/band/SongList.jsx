@@ -200,7 +200,7 @@ function SongList({ workspaceId, onSelectSong }) {
                 setEditingSong(null);
                 setShowForm(true);
               }}
-              className="btn btn-primary"
+              className="btn bg-green-600 hover:bg-green-700 text-white"
             >
               + Add Song
             </button>

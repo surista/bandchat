@@ -23,6 +23,11 @@ function SetlistList({ workspaceId }) {
   const [importLoading, setImportLoading] = useState(false);
   const [importResults, setImportResults] = useState(null);
   const [viewingSetlist, setViewingSetlist] = useState(null);
+  const [editingDetails, setEditingDetails] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editVenue, setEditVenue] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -81,6 +86,34 @@ function SetlistList({ workspaceId }) {
 
   const handleSetlistUpdated = (updatedSetlist) => {
     setSetlists(prev => prev.map(s => s.id === updatedSetlist.id ? updatedSetlist : s));
+  };
+
+  const openEditDetails = (setlist) => {
+    setEditingDetails(setlist);
+    setEditName(setlist.name);
+    setEditDate(setlist.performedAt ? new Date(setlist.performedAt).toISOString().split('T')[0] : '');
+    setEditVenue(setlist.venue || '');
+  };
+
+  const handleSaveDetails = async (e) => {
+    e.preventDefault();
+    setEditLoading(true);
+    try {
+      const updated = await api.updateSetlist(editingDetails.id, {
+        name: editName,
+        performedAt: editDate || null,
+        venue: editVenue || null
+      });
+      setSetlists(prev => prev.map(s => s.id === updated.id ? updated : s));
+      if (viewingSetlist?.id === updated.id) {
+        setViewingSetlist(updated);
+      }
+      setEditingDetails(null);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setEditLoading(false);
+    }
   };
 
   const parseSongLine = (line) => {
@@ -258,7 +291,7 @@ function SetlistList({ workspaceId }) {
             </button>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="btn btn-primary"
+              className="btn bg-green-600 hover:bg-green-700 text-white"
             >
               + New Setlist
             </button>
@@ -683,6 +716,12 @@ function SetlistList({ workspaceId }) {
               </div>
               <div className="flex items-center gap-2">
                 <button
+                  onClick={() => openEditDetails(viewingSetlist)}
+                  className="btn btn-secondary text-sm"
+                >
+                  Edit Details
+                </button>
+                <button
                   onClick={() => {
                     setEditingSetlist(viewingSetlist);
                     setShowBuilder(true);
@@ -690,7 +729,7 @@ function SetlistList({ workspaceId }) {
                   }}
                   className="btn btn-secondary text-sm"
                 >
-                  Edit
+                  Edit Songs
                 </button>
                 <button
                   onClick={() => setViewingSetlist(null)}
@@ -777,6 +816,66 @@ function SetlistList({ workspaceId }) {
                 })()}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Details Modal */}
+      {editingDetails && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Edit Setlist Details</h3>
+            <form onSubmit={handleSaveDetails}>
+              <div className="mb-4">
+                <label className="block text-gray-700 font-medium mb-1">
+                  Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-gray-700 font-medium mb-1">Date Performed</label>
+                  <input
+                    type="date"
+                    value={editDate}
+                    onChange={(e) => setEditDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 font-medium mb-1">Venue</label>
+                  <input
+                    type="text"
+                    value={editVenue}
+                    onChange={(e) => setEditVenue(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                    placeholder="e.g., The Blue Note"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setEditingDetails(null)}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editLoading || !editName.trim()}
+                  className="btn bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-300 disabled:text-gray-500"
+                >
+                  {editLoading ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
