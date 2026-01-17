@@ -18,6 +18,7 @@ function SetlistList({ workspaceId }) {
   const [importText, setImportText] = useState('');
   const [importLoading, setImportLoading] = useState(false);
   const [importResults, setImportResults] = useState(null);
+  const [viewingSetlist, setViewingSetlist] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -264,7 +265,8 @@ function SetlistList({ workspaceId }) {
             {setlists.map(setlist => (
               <div
                 key={setlist.id}
-                className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors border border-gray-700"
+                onClick={() => setViewingSetlist(setlist)}
+                className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors border border-gray-700 cursor-pointer"
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1 min-w-0">
@@ -275,7 +277,8 @@ function SetlistList({ workspaceId }) {
                   </div>
                   <div className="flex gap-1 ml-2">
                     <button
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setEditingSetlist(setlist);
                         setShowBuilder(true);
                       }}
@@ -285,7 +288,10 @@ function SetlistList({ workspaceId }) {
                       ✏️
                     </button>
                     <button
-                      onClick={() => handleDeleteSetlist(setlist.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteSetlist(setlist.id);
+                      }}
                       className="p-1 text-gray-400 hover:text-red-400"
                       title="Delete"
                     >
@@ -572,6 +578,123 @@ function SetlistList({ workspaceId }) {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* View Setlist Modal */}
+      {viewingSetlist && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+          onClick={() => setViewingSetlist(null)}
+        >
+          <div
+            className="bg-gray-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden border border-gray-700 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-white">{viewingSetlist.name}</h3>
+                {viewingSetlist.description && (
+                  <p className="text-gray-400 text-sm">{viewingSetlist.description}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setEditingSetlist(viewingSetlist);
+                    setShowBuilder(true);
+                    setViewingSetlist(null);
+                  }}
+                  className="btn btn-secondary text-sm"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => setViewingSetlist(null)}
+                  className="text-gray-400 hover:text-white text-2xl leading-none"
+                >
+                  &times;
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {/* Stats */}
+              <div className="flex flex-wrap gap-2 text-xs mb-4">
+                {(() => {
+                  const actualSongs = viewingSetlist.songs?.filter(s => s.type !== 'SET_BREAK' && s.type !== 'MC') || [];
+                  const setBreaks = viewingSetlist.songs?.filter(s => s.type === 'SET_BREAK') || [];
+                  return (
+                    <>
+                      <span className="px-2 py-1 bg-blue-900/50 text-blue-300 rounded">
+                        {actualSongs.length} songs
+                      </span>
+                      {setBreaks.length > 1 && (
+                        <span className="px-2 py-1 bg-purple-900/50 text-purple-300 rounded">
+                          {setBreaks.length} sets
+                        </span>
+                      )}
+                      <span className="px-2 py-1 bg-gray-700 text-gray-300 rounded">
+                        {calculateDuration(viewingSetlist.songs || [])}
+                      </span>
+                    </>
+                  );
+                })()}
+              </div>
+
+              {/* Song List */}
+              <div className="space-y-1">
+                {(() => {
+                  let songNum = 0;
+                  return viewingSetlist.songs?.map((item) => {
+                    if (item.type === 'SET_BREAK') {
+                      songNum = 0; // Reset numbering for each set
+                      return (
+                        <div key={item.id} className="py-2 mt-3 first:mt-0 border-b border-blue-500/30">
+                          <span className="text-blue-400 font-bold">📋 {item.label || 'Set Break'}</span>
+                        </div>
+                      );
+                    }
+                    if (item.type === 'MC') {
+                      return (
+                        <div key={item.id} className="flex items-center gap-3 py-2 text-yellow-400">
+                          <span className="w-8 text-right text-gray-500">•</span>
+                          <span>🎤 {item.label || 'MC'}</span>
+                          <span className="text-yellow-600 text-sm ml-auto">
+                            {item.duration ? `${Math.floor(item.duration / 60)}:${String(item.duration % 60).padStart(2, '0')}` : '1:00'}
+                          </span>
+                        </div>
+                      );
+                    }
+                    songNum++;
+                    const song = item.song;
+                    return (
+                      <div key={item.id} className="flex items-center gap-3 py-2 hover:bg-gray-700/50 rounded px-2 -mx-2">
+                        <span className="w-8 text-right text-gray-500">{songNum}.</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-white truncate">{song?.title || 'Unknown'}</div>
+                          {song?.artist && (
+                            <div className="text-gray-400 text-sm truncate">{song.artist}</div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-400">
+                          {song?.key && (
+                            <span className="px-1.5 py-0.5 bg-purple-900/50 rounded">{song.key}</span>
+                          )}
+                          {song?.bpm && (
+                            <span className="px-1.5 py-0.5 bg-orange-900/50 rounded">{song.bpm}</span>
+                          )}
+                          {song?.duration && (
+                            <span>{Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
           </div>
         </div>
       )}
