@@ -524,33 +524,35 @@ function GigArchive({ workspaceId }) {
 
               <div className="p-6 space-y-6">
                 {/* Setlist */}
-                <div>
-                  <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
-                    <span className="text-xl">📋</span> Setlist
-                  </h3>
-                  <div className="bg-gray-800 rounded-lg p-4">
-                    {selectedEntry.setlist.songs?.filter(s => s.type === 'SONG' || !s.type).length > 0 ? (
-                      <ol className="space-y-1">
-                        {selectedEntry.setlist.songs
-                          .filter(s => s.type === 'SONG' || !s.type)
-                          .map((item, idx) => (
-                            <li key={item.id || idx} className="flex items-center gap-3 py-1">
-                              <span className="text-gray-500 text-sm w-6 text-right">{idx + 1}.</span>
-                              <span className="text-white">{item.song?.title || item.label || 'Unknown'}</span>
-                              {item.song?.artist && (
-                                <span className="text-gray-500">— {item.song.artist}</span>
-                              )}
-                              {item.song?.duration && (
-                                <span className="text-gray-600 text-sm ml-auto">{formatDuration(item.song.duration)}</span>
-                              )}
-                            </li>
-                          ))}
-                      </ol>
-                    ) : (
-                      <p className="text-gray-500 text-center py-4">No songs in setlist</p>
-                    )}
+                {selectedEntry.setlist && (
+                  <div>
+                    <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                      <span className="text-xl">📋</span> Setlist
+                    </h3>
+                    <div className="bg-gray-800 rounded-lg p-4">
+                      {selectedEntry.setlist.songs?.filter(s => s.type === 'SONG' || !s.type).length > 0 ? (
+                        <ol className="space-y-1">
+                          {selectedEntry.setlist.songs
+                            .filter(s => s.type === 'SONG' || !s.type)
+                            .map((item, idx) => (
+                              <li key={item.id || idx} className="flex items-center gap-3 py-1">
+                                <span className="text-gray-500 text-sm w-6 text-right">{idx + 1}.</span>
+                                <span className="text-white">{item.song?.title || item.label || 'Unknown'}</span>
+                                {item.song?.artist && (
+                                  <span className="text-gray-500">— {item.song.artist}</span>
+                                )}
+                                {item.song?.duration && (
+                                  <span className="text-gray-600 text-sm ml-auto">{formatDuration(item.song.duration)}</span>
+                                )}
+                              </li>
+                            ))}
+                        </ol>
+                      ) : (
+                        <p className="text-gray-500 text-center py-4">No songs in setlist</p>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Media Gallery */}
                 {selectedEntry.gig?.media?.length > 0 && (
