@@ -283,11 +283,19 @@ function GigStats({ workspaceId }) {
                 </div>
               )}
 
-              {/* Average Pay */}
-              {stats.averagePay && (
-                <div className="p-3 bg-gray-900 rounded">
-                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Average Gig Pay</div>
-                  <div className="text-yellow-400 font-bold">¥{stats.averagePay.toLocaleString()}</div>
+              {/* Most Songs in Shortest Time */}
+              {stats.mostSongsShortestTime && (
+                <div
+                  className="p-3 bg-gray-900 rounded cursor-pointer hover:bg-gray-800 transition-colors"
+                  onClick={() => setPopup({ type: 'songdensity', data: stats.mostSongsShortestTime })}
+                >
+                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Song Density Record</div>
+                  <div className="text-white font-medium text-sm">
+                    {stats.mostSongsShortestTime.totalSongs} songs in {stats.mostSongsShortestTime.days} day{stats.mostSongsShortestTime.days !== 1 ? 's' : ''}
+                  </div>
+                  <div className="text-cyan-400 font-bold">
+                    {stats.mostSongsShortestTime.songsPerDay.toFixed(1)} songs/day
+                  </div>
                 </div>
               )}
 
@@ -397,6 +405,46 @@ function GigStats({ workspaceId }) {
                   >
                     <div className="text-white font-medium">{setlist.name}</div>
                     <div className="text-gray-400 text-sm">{formatDate(setlist.performedAt)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Popup for Song Density */}
+      {popup?.type === 'songdensity' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setPopup(null)}>
+          <div className="bg-gray-800 rounded-lg w-full max-w-md border border-gray-700" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+              <h3 className="text-lg font-medium text-white flex items-center gap-2">
+                <span>⚡</span> Song Density Record
+              </h3>
+              <button onClick={() => setPopup(null)} className="text-gray-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            <div className="p-4">
+              <div className="text-cyan-300 font-bold text-lg mb-2">
+                {popup.data.totalSongs} songs in {popup.data.days} day{popup.data.days !== 1 ? 's' : ''}
+              </div>
+              <div className="text-gray-400 text-sm mb-4">
+                {formatDate(popup.data.startDate)} – {formatDate(popup.data.endDate)}
+                <span className="text-cyan-400 ml-2">({popup.data.songsPerDay.toFixed(1)} songs/day)</span>
+              </div>
+              <div className="space-y-2">
+                {popup.data.setlists?.map(setlist => (
+                  <div
+                    key={setlist.id}
+                    className="p-3 bg-gray-900 rounded cursor-pointer hover:bg-gray-700 transition-colors"
+                    onClick={() => handleSetlistClick(setlist)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="text-white font-medium">{setlist.name}</div>
+                      <div className="text-cyan-400 font-medium">{setlist.songCount} songs</div>
+                    </div>
+                    <div className="text-gray-400 text-sm">
+                      {formatDate(setlist.performedAt)} {setlist.venue && `• ${setlist.venue}`}
+                    </div>
                   </div>
                 ))}
               </div>

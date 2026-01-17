@@ -264,14 +264,52 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
       }
     }
 
-    // Average pay (only gigs with pay)
-    const gigsWithPay = await prisma.gig.findMany({
-      where: { workspaceId, pay: { not: null, gt: 0 } },
-      select: { pay: true }
-    });
-    const averagePay = gigsWithPay.length > 0
-      ? Math.round(gigsWithPay.reduce((sum, g) => sum + g.pay, 0) / gigsWithPay.length)
-      : null;
+    // Most songs in shortest time (highest song density)
+    let mostSongsShortestTime = null;
+    if (performedSetlists.length >= 2) {
+      let bestDensity = 0;
+
+      // Look at all possible consecutive gig stretches (2+ gigs)
+      for (let i = 0; i < performedSetlists.length; i++) {
+        let totalSongs = performedSetlists[i].songs.length;
+        const windowSetlists = [{
+          id: performedSetlists[i].id,
+          name: performedSetlists[i].name,
+          venue: performedSetlists[i].venue,
+          performedAt: performedSetlists[i].performedAt,
+          songCount: performedSetlists[i].songs.length
+        }];
+
+        for (let j = i + 1; j < performedSetlists.length; j++) {
+          totalSongs += performedSetlists[j].songs.length;
+          windowSetlists.push({
+            id: performedSetlists[j].id,
+            name: performedSetlists[j].name,
+            venue: performedSetlists[j].venue,
+            performedAt: performedSetlists[j].performedAt,
+            songCount: performedSetlists[j].songs.length
+          });
+
+          const startDate = new Date(performedSetlists[i].performedAt);
+          const endDate = new Date(performedSetlists[j].performedAt);
+          const days = Math.max(1, Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1);
+          const density = totalSongs / days;
+
+          // Only consider stretches within 14 days and with meaningful song density
+          if (days <= 14 && density > bestDensity && totalSongs >= 10) {
+            bestDensity = density;
+            mostSongsShortestTime = {
+              totalSongs,
+              days,
+              songsPerDay: Math.round(density * 10) / 10,
+              startDate,
+              endDate,
+              setlists: [...windowSetlists]
+            };
+          }
+        }
+      }
+    }
 
     // Days since last gig
     const daysSinceLastGig = lastGig ? Math.round((now - new Date(lastGig)) / (1000 * 60 * 60 * 24)) : null;
@@ -355,7 +393,7 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
       longestGap,
       mostPlayedArtist,
       shortestSetlist,
-      averagePay,
+      mostSongsShortestTime,
       daysSinceLastGig
     });
   } catch (error) {
