@@ -14,5 +14,10 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <!-- Backlink for GetSongBPM API (visible to crawlers, hidden by CSS once app loads) -->
+    <footer id="static-footer" style="position:fixed;bottom:0;width:100%;text-align:center;padding:10px;background:#4A154B;color:#9CA3AF;font-size:12px;">
+      Song metadata powered by <a href="https://getsongbpm.com" style="color:#C4B5FD;">GetSongBPM.com</a>
+    </footer>
+    <style>#root:not(:empty) ~ #static-footer { display: none; }</style>
   </body>
 </html>
