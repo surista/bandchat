@@ -691,6 +691,14 @@ function GigArchive({ workspaceId }) {
                   </div>
                   <div className="bg-gray-800 rounded-lg p-4 space-y-3">
                     <div className="flex items-center justify-between">
+                      <span className="text-gray-400">Date</span>
+                      <span className="text-white font-medium">
+                        {selectedEntry.gig?.date
+                          ? new Date(selectedEntry.gig.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ /g, '-')
+                          : '—'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
                       <span className="text-gray-400">Fee</span>
                       <span className="text-white font-medium">
                         {selectedEntry.gig?.pay ? `¥${selectedEntry.gig.pay.toLocaleString()}` : '—'}
@@ -701,9 +709,6 @@ function GigArchive({ workspaceId }) {
                         <span className="text-gray-400 text-sm">Notes</span>
                         <p className="text-white mt-1">{selectedEntry.gig.notes}</p>
                       </div>
-                    )}
-                    {!selectedEntry.gig?.pay && !selectedEntry.gig?.notes && (
-                      <p className="text-gray-500 text-sm">No fee or notes added yet</p>
                     )}
                   </div>
                 </div>
