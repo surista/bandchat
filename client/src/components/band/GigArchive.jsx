@@ -9,6 +9,10 @@ function GigArchive({ workspaceId }) {
   const [selectedGig, setSelectedGig] = useState(null);
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [showAddMedia, setShowAddMedia] = useState(false);
+  const [showAddGig, setShowAddGig] = useState(false);
+  const [newGigTitle, setNewGigTitle] = useState('');
+  const [newGigDate, setNewGigDate] = useState('');
+  const [newGigVenue, setNewGigVenue] = useState('');
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaCaption, setMediaCaption] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -103,8 +107,8 @@ function GigArchive({ workspaceId }) {
     return null;
   };
 
-  // Build archive entries - each setlist becomes a gig entry
-  const archiveEntries = setlists.map(setlist => {
+  // Build archive entries from setlists AND standalone gigs
+  const setlistEntries = setlists.map(setlist => {
     // Find formal gig that uses this setlist
     const associatedGig = gigs.find(g =>
       g.setlistId === setlist.id ||
@@ -115,21 +119,35 @@ function GigArchive({ workspaceId }) {
     const parsed = parseSetlistName(setlist.name);
 
     return {
+      id: `setlist-${setlist.id}`,
       setlist,
       gig: associatedGig,
-      // Use formal gig info if available, otherwise use parsed info
       title: associatedGig?.title || parsed.title,
       venue: associatedGig?.venue || parsed.venue,
       date: associatedGig ? new Date(associatedGig.date) : parsed.date,
       status: associatedGig?.status || (parsed.date && parsed.date < new Date() ? 'COMPLETED' : 'SCHEDULED'),
       hasFormalGig: !!associatedGig
     };
-  }).filter(entry => entry.date || entry.hasFormalGig) // Only show entries with a date or formal gig
+  }).filter(entry => entry.date || entry.hasFormalGig);
+
+  // Add standalone gigs (gigs without setlists)
+  const setlistGigIds = new Set(setlistEntries.filter(e => e.gig).map(e => e.gig.id));
+  const standaloneGigs = gigs
+    .filter(g => !setlistGigIds.has(g.id) && !g.setlistId && (!g.setlists || g.setlists.length === 0))
+    .map(gig => ({
+      id: `gig-${gig.id}`,
+      setlist: null,
+      gig,
+      title: gig.title,
+      venue: gig.venue,
+      date: new Date(gig.date),
+      status: gig.status,
+      hasFormalGig: true
+    }));
+
+  const archiveEntries = [...setlistEntries, ...standaloneGigs]
     .sort((a, b) => {
-      // Sort by date descending
-      if (a.date && b.date) {
-        return b.date - a.date;
-      }
+      if (a.date && b.date) return b.date - a.date;
       if (a.date) return -1;
       if (b.date) return 1;
       return 0;
@@ -208,6 +226,66 @@ function GigArchive({ workspaceId }) {
     }
   };
 
+  // Create a gig from a setlist-derived entry (so we can add media)
+  const ensureGigExists = async (entry) => {
+    if (entry.hasFormalGig && entry.gig) {
+      return entry.gig;
+    }
+
+    // Create a gig linked to this setlist
+    try {
+      const gigData = {
+        title: entry.title,
+        date: entry.date?.toISOString() || new Date().toISOString(),
+        venue: entry.venue || null,
+        type: 'GIG',
+        status: entry.date && entry.date < new Date() ? 'COMPLETED' : 'SCHEDULED',
+        setlistId: entry.setlist.id
+      };
+      const newGig = await api.createGig(workspaceId, gigData);
+      await loadData();
+      return newGig;
+    } catch (err) {
+      setError(err.message);
+      return null;
+    }
+  };
+
+  // Handle adding media - ensure gig exists first
+  const handleOpenAddMedia = async (entry) => {
+    const gig = await ensureGigExists(entry);
+    if (gig) {
+      setSelectedGig(gig);
+      setShowAddMedia(true);
+    }
+  };
+
+  // Create a new standalone gig
+  const handleCreateGig = async (e) => {
+    e.preventDefault();
+    if (!newGigTitle || !newGigDate) return;
+
+    setUploading(true);
+    try {
+      await api.createGig(workspaceId, {
+        title: newGigTitle,
+        date: new Date(newGigDate).toISOString(),
+        venue: newGigVenue || null,
+        type: 'GIG',
+        status: new Date(newGigDate) < new Date() ? 'COMPLETED' : 'SCHEDULED'
+      });
+      await loadData();
+      setShowAddGig(false);
+      setNewGigTitle('');
+      setNewGigDate('');
+      setNewGigVenue('');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const getYouTubeEmbedUrl = (url) => {
     const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
     return match ? `https://www.youtube.com/embed/${match[1]}` : null;
@@ -244,6 +322,12 @@ function GigArchive({ workspaceId }) {
             <h2 className="text-xl font-bold text-white">Gig Archive</h2>
             <p className="text-gray-400 text-sm mt-1">Photos, videos, and memories from your gigs</p>
           </div>
+          <button
+            onClick={() => setShowAddGig(true)}
+            className="btn btn-primary"
+          >
+            + Add Gig
+          </button>
         </div>
         {/* Filter tabs */}
         <div className="flex gap-2 mt-3">
@@ -527,27 +611,97 @@ function GigArchive({ workspaceId }) {
                   </div>
                 )}
 
-                {/* Add Media Button */}
-                {selectedEntry.hasFormalGig && selectedEntry.gig && (
-                  <button
-                    onClick={() => {
-                      setSelectedGig(selectedEntry.gig);
-                      setShowAddMedia(true);
-                    }}
-                    className="w-full py-3 border-2 border-dashed border-gray-600 rounded-lg text-gray-400 hover:text-white hover:border-gray-500 transition-colors"
-                  >
-                    + Add Photos, Videos, or Links
-                  </button>
-                )}
-
-                {/* No formal gig message */}
-                {!selectedEntry.hasFormalGig && (
-                  <div className="text-center py-4 text-gray-500 bg-gray-800/50 rounded-lg">
-                    <p className="text-sm">Create a gig in Calendar and link this setlist to add media</p>
-                  </div>
-                )}
+                {/* Add Media Button - works for any entry */}
+                <button
+                  onClick={() => handleOpenAddMedia(selectedEntry)}
+                  className="w-full py-3 border-2 border-dashed border-gray-600 rounded-lg text-gray-400 hover:text-white hover:border-gray-500 transition-colors"
+                >
+                  + Add Photos, Videos, or Links
+                </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Gig Modal */}
+      {showAddGig && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-800 rounded-lg w-full max-w-md border border-gray-700">
+            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+              <h3 className="text-lg font-medium text-white">Add Past Gig</h3>
+              <button
+                onClick={() => {
+                  setShowAddGig(false);
+                  setNewGigTitle('');
+                  setNewGigDate('');
+                  setNewGigVenue('');
+                }}
+                className="text-gray-400 hover:text-white text-2xl"
+              >
+                &times;
+              </button>
+            </div>
+            <form onSubmit={handleCreateGig} className="p-4 space-y-4">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">
+                  Gig Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newGigTitle}
+                  onChange={(e) => setNewGigTitle(e.target.value)}
+                  placeholder="e.g., Ruby Room Show"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">
+                  Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={newGigDate}
+                  onChange={(e) => setNewGigDate(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">
+                  Venue
+                </label>
+                <input
+                  type="text"
+                  value={newGigVenue}
+                  onChange={(e) => setNewGigVenue(e.target.value)}
+                  placeholder="e.g., The Den"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white"
+                />
+              </div>
+              <div className="flex gap-2 justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddGig(false);
+                    setNewGigTitle('');
+                    setNewGigDate('');
+                    setNewGigVenue('');
+                  }}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploading || !newGigTitle || !newGigDate}
+                  className="btn btn-primary"
+                >
+                  {uploading ? 'Adding...' : 'Add Gig'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
