@@ -74,30 +74,78 @@ function SetlistList({ workspaceId }) {
     setSetlists(prev => prev.map(s => s.id === updatedSetlist.id ? updatedSetlist : s));
   };
 
+  const parseSongLine = (line) => {
+    let title, artist;
+    if (line.includes(' - ')) {
+      [title, artist] = line.split(' - ').map(s => s.trim());
+    } else if (line.includes(' | ')) {
+      [title, artist] = line.split(' | ').map(s => s.trim());
+    } else if (line.includes('\t')) {
+      [title, artist] = line.split('\t').map(s => s.trim());
+    } else {
+      // Remove leading numbers like "1. " or "1) "
+      title = line.replace(/^\d+[\.\)]\s*/, '').trim();
+      artist = null;
+    }
+    return { title, artist };
+  };
+
   const parseImportText = (text) => {
     const lines = text.split('\n').filter(line => line.trim());
-    return lines.map(line => {
-      let title, artist;
-      if (line.includes(' - ')) {
-        [title, artist] = line.split(' - ').map(s => s.trim());
-      } else if (line.includes(' | ')) {
-        [title, artist] = line.split(' | ').map(s => s.trim());
-      } else if (line.includes('\t')) {
-        [title, artist] = line.split('\t').map(s => s.trim());
+
+    // Detect set markers (e.g., "Set 1", "SET 1:", "--- Set 1 ---", "First Set", etc.)
+    const setMarkerRegex = /^[-=]*\s*(set\s*(\d+)|first\s+set|second\s+set|third\s+set|encore)[\s:]*[-=]*$/i;
+    const sets = [];
+    let currentSet = { setNumber: 1, songs: [] };
+
+    for (const line of lines) {
+      const markerMatch = line.match(setMarkerRegex);
+      if (markerMatch) {
+        // Save current set if it has songs
+        if (currentSet.songs.length > 0) {
+          sets.push(currentSet);
+        }
+
+        // Determine set number
+        let setNumber;
+        const numMatch = markerMatch[2];
+        if (numMatch) {
+          setNumber = parseInt(numMatch);
+        } else if (/first/i.test(line)) {
+          setNumber = 1;
+        } else if (/second/i.test(line)) {
+          setNumber = 2;
+        } else if (/third/i.test(line)) {
+          setNumber = 3;
+        } else if (/encore/i.test(line)) {
+          setNumber = sets.length + 2; // Encore is usually after all sets
+        } else {
+          setNumber = sets.length + 1;
+        }
+
+        currentSet = { setNumber, songs: [] };
       } else {
-        // Remove leading numbers like "1. " or "1) "
-        title = line.replace(/^\d+[\.\)]\s*/, '').trim();
-        artist = null;
+        const song = parseSongLine(line);
+        if (song.title) {
+          currentSet.songs.push(song);
+        }
       }
-      return { title, artist };
-    }).filter(song => song.title);
+    }
+
+    // Add final set
+    if (currentSet.songs.length > 0) {
+      sets.push(currentSet);
+    }
+
+    return sets;
   };
 
   const handleImportSetlist = async (e) => {
     e.preventDefault();
-    const songsToImport = parseImportText(importText);
+    const sets = parseImportText(importText);
+    const totalSongs = sets.reduce((sum, s) => sum + s.songs.length, 0);
 
-    if (songsToImport.length === 0) {
+    if (totalSongs === 0) {
       alert('No songs found. Enter one song per line.');
       return;
     }
@@ -106,18 +154,38 @@ function SetlistList({ workspaceId }) {
     setImportResults(null);
 
     try {
-      const result = await api.importSetlist(workspaceId, importName, songsToImport);
-      setImportResults(result.results);
-      setSetlists(prev => [result.setlist, ...prev]);
+      // Check if it's a multi-set import
+      const isMultiSet = sets.length > 1;
 
-      if (result.results.notFound.length === 0) {
-        // All songs matched, close modal
-        setShowImportModal(false);
-        setImportName('');
-        setImportText('');
-        setImportResults(null);
-        setEditingSetlist(result.setlist);
-        setShowBuilder(true);
+      if (isMultiSet) {
+        const result = await api.importMultiSetlist(workspaceId, importName, sets);
+        setImportResults({ ...result.results, isMultiSet: true });
+
+        // Add all created setlists
+        for (const { setlist } of result.setlists) {
+          setSetlists(prev => [setlist, ...prev]);
+        }
+
+        if (result.results.totalNotFound === 0) {
+          setShowImportModal(false);
+          setImportName('');
+          setImportText('');
+          setImportResults(null);
+        }
+      } else {
+        // Single set import
+        const result = await api.importSetlist(workspaceId, importName, sets[0].songs);
+        setImportResults(result.results);
+        setSetlists(prev => [result.setlist, ...prev]);
+
+        if (result.results.notFound.length === 0) {
+          setShowImportModal(false);
+          setImportName('');
+          setImportText('');
+          setImportResults(null);
+          setEditingSetlist(result.setlist);
+          setShowBuilder(true);
+        }
       }
     } catch (err) {
       alert(err.message);
@@ -340,12 +408,12 @@ function SetlistList({ workspaceId }) {
                   <textarea
                     value={importText}
                     onChange={(e) => setImportText(e.target.value)}
-                    placeholder={"Song Title - Artist\nAnother Song - Artist\nOr just song titles..."}
+                    placeholder={"Set 1\nSong Title - Artist\nAnother Song\n\nSet 2\nMore Songs...\n\n(Or just songs without set markers)"}
                     className="w-full h-48 px-3 py-2 border border-gray-300 rounded text-gray-900 font-mono text-sm"
                     required
                   />
                   <p className="text-gray-500 text-xs mt-1">
-                    Songs will be matched to your existing song library. Use "Title - Artist" format for best matching.
+                    Use "Set 1", "Set 2" markers for multi-set gigs. Songs matched to your library.
                   </p>
                 </div>
                 <div className="flex gap-2 justify-end">
@@ -373,33 +441,69 @@ function SetlistList({ workspaceId }) {
             ) : (
               <div>
                 <div className="mb-4">
-                  {importResults.matched.length > 0 && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
-                      <h4 className="font-medium text-green-800 mb-2">
-                        {importResults.matched.length} songs matched
-                      </h4>
-                      <ul className="text-sm text-green-700 max-h-32 overflow-y-auto">
-                        {importResults.matched.map((m, i) => (
-                          <li key={i}>{m.song.title}{m.song.artist && ` - ${m.song.artist}`}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                  {importResults.isMultiSet ? (
+                    // Multi-set results
+                    <>
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
+                        <h4 className="font-medium text-green-800 mb-2">
+                          {importResults.sets?.length || 0} sets created • {importResults.totalMatched} songs matched
+                        </h4>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {importResults.sets?.map((setResult, i) => (
+                            <div key={i} className="text-sm">
+                              <span className="font-medium text-green-700">Set {setResult.setNumber}:</span>
+                              <span className="text-green-600 ml-2">{setResult.matched.length} songs</span>
+                              {setResult.notFound.length > 0 && (
+                                <span className="text-yellow-600 ml-2">({setResult.notFound.length} not found)</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
 
-                  {importResults.notFound.length > 0 && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                      <h4 className="font-medium text-yellow-800 mb-2">
-                        {importResults.notFound.length} songs not found
-                      </h4>
-                      <p className="text-sm text-yellow-700 mb-2">
-                        These songs are not in your library. Add them to Songs first, then add to the setlist manually.
-                      </p>
-                      <ul className="text-sm text-yellow-700 max-h-32 overflow-y-auto">
-                        {importResults.notFound.map((s, i) => (
-                          <li key={i}>{s.title}{s.artist && ` - ${s.artist}`}</li>
-                        ))}
-                      </ul>
-                    </div>
+                      {importResults.totalNotFound > 0 && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                          <h4 className="font-medium text-yellow-800 mb-2">
+                            {importResults.totalNotFound} songs not found
+                          </h4>
+                          <p className="text-sm text-yellow-700">
+                            Add missing songs to your library first.
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    // Single set results
+                    <>
+                      {importResults.matched?.length > 0 && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
+                          <h4 className="font-medium text-green-800 mb-2">
+                            {importResults.matched.length} songs matched
+                          </h4>
+                          <ul className="text-sm text-green-700 max-h-32 overflow-y-auto">
+                            {importResults.matched.map((m, i) => (
+                              <li key={i}>{m.song.title}{m.song.artist && ` - ${m.song.artist}`}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {importResults.notFound?.length > 0 && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                          <h4 className="font-medium text-yellow-800 mb-2">
+                            {importResults.notFound.length} songs not found
+                          </h4>
+                          <p className="text-sm text-yellow-700 mb-2">
+                            These songs are not in your library.
+                          </p>
+                          <ul className="text-sm text-yellow-700 max-h-32 overflow-y-auto">
+                            {importResults.notFound.map((s, i) => (
+                              <li key={i}>{s.title}{s.artist && ` - ${s.artist}`}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -415,20 +519,20 @@ function SetlistList({ workspaceId }) {
                   >
                     Close
                   </button>
-                  <button
-                    onClick={() => {
-                      setShowImportModal(false);
-                      setImportName('');
-                      setImportText('');
-                      setImportResults(null);
-                      // Find the setlist we just created and open builder
-                      const newSetlist = setlists[0];
-                      if (newSetlist) {
-                        setEditingSetlist(newSetlist);
-                        setShowBuilder(true);
-                      }
-                    }}
-                    className="btn btn-primary"
+                  {!importResults.isMultiSet && (
+                    <button
+                      onClick={() => {
+                        setShowImportModal(false);
+                        setImportName('');
+                        setImportText('');
+                        setImportResults(null);
+                        const newSetlist = setlists[0];
+                        if (newSetlist) {
+                          setEditingSetlist(newSetlist);
+                          setShowBuilder(true);
+                        }
+                      }}
+                      className="btn btn-primary"
                   >
                     Edit Setlist
                   </button>

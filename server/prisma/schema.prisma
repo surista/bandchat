@@ -232,10 +232,11 @@ model Setlist {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy User          @relation(fields: [createdById], references: [id])
-  songs     SetlistSong[]
-  gigs      Gig[]
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy   User          @relation(fields: [createdById], references: [id])
+  songs       SetlistSong[]
+  gigs        Gig[]         // Legacy single-setlist relation
+  gigSetlists GigSetlist[]  // Multi-set support
 
   @@unique([workspaceId, name])
   @@index([workspaceId])
@@ -273,19 +274,35 @@ model Gig {
   notes       String?
   pay         Float?
   status      GigStatus @default(SCHEDULED)
-  setlistId   String?
+  setlistId   String?   // Legacy single setlist - kept for backward compatibility
   workspaceId String
   createdById String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy   User      @relation(fields: [createdById], references: [id])
-  setlist     Setlist?  @relation(fields: [setlistId], references: [id], onDelete: SetNull)
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy   User         @relation(fields: [createdById], references: [id])
+  setlist     Setlist?     @relation(fields: [setlistId], references: [id], onDelete: SetNull)
+  setlists    GigSetlist[] // Multi-set support
   songsPlayed GigSong[]
   media       GigMedia[]
 
   @@index([workspaceId, date])
+}
+
+model GigSetlist {
+  id        String   @id @default(uuid())
+  gigId     String
+  setlistId String
+  setNumber Int      // 1, 2, 3, etc.
+  createdAt DateTime @default(now())
+
+  gig     Gig     @relation(fields: [gigId], references: [id], onDelete: Cascade)
+  setlist Setlist @relation(fields: [setlistId], references: [id], onDelete: Cascade)
+
+  @@unique([gigId, setNumber])
+  @@unique([gigId, setlistId])
+  @@index([gigId])
 }
 
 model GigMedia {

@@ -434,6 +434,138 @@ router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceMember, a
   }
 });
 
+// Bulk import multiple sets from text with "Set 1", "Set 2" markers
+router.post('/workspace/:workspaceId/import-multiset', authenticate, isWorkspaceMember, async (req, res) => {
+  try {
+    const { baseName, sets, gigId } = req.body;
+
+    // sets is an array of { setNumber, songs: [{ title, artist }] }
+    if (!sets || !Array.isArray(sets) || sets.length === 0) {
+      return res.status(400).json({ error: 'Sets array is required' });
+    }
+
+    if (!baseName) {
+      return res.status(400).json({ error: 'Base name is required' });
+    }
+
+    // Get all songs in the workspace for matching
+    const workspaceSongs = await prisma.song.findMany({
+      where: { workspaceId: req.params.workspaceId }
+    });
+
+    const createdSetlists = [];
+    const allResults = {
+      sets: [],
+      totalMatched: 0,
+      totalNotFound: 0
+    };
+
+    for (const setData of sets) {
+      const { setNumber, songs } = setData;
+      const setName = sets.length === 1 ? baseName : `${baseName} - Set ${setNumber}`;
+
+      const results = {
+        setNumber,
+        matched: [],
+        notFound: []
+      };
+
+      // Match songs by title
+      const matchedSongIds = [];
+      for (const songInput of songs) {
+        const title = songInput.title?.toLowerCase().trim();
+        const artist = songInput.artist?.toLowerCase().trim();
+
+        if (!title) continue;
+
+        let match = workspaceSongs.find(s => {
+          const sTitle = s.title.toLowerCase().trim();
+          const sArtist = s.artist?.toLowerCase().trim();
+
+          if (artist && sArtist) {
+            return sTitle === title && sArtist === artist;
+          }
+          return sTitle === title;
+        });
+
+        // Try partial match
+        if (!match) {
+          match = workspaceSongs.find(s => {
+            const sTitle = s.title.toLowerCase().trim();
+            return sTitle.includes(title) || title.includes(sTitle);
+          });
+        }
+
+        if (match) {
+          if (!matchedSongIds.includes(match.id)) {
+            matchedSongIds.push(match.id);
+            results.matched.push({ input: songInput, song: match });
+          }
+        } else {
+          results.notFound.push(songInput);
+        }
+      }
+
+      allResults.totalMatched += results.matched.length;
+      allResults.totalNotFound += results.notFound.length;
+
+      if (matchedSongIds.length > 0) {
+        // Create the setlist
+        const setlist = await prisma.setlist.create({
+          data: {
+            name: setName,
+            workspaceId: req.params.workspaceId,
+            createdById: req.user.id,
+            songs: {
+              create: matchedSongIds.map((songId, index) => ({
+                songId,
+                position: index,
+                type: 'SONG'
+              }))
+            }
+          },
+          include: {
+            createdBy: { select: { id: true, displayName: true } },
+            songs: { include: { song: true }, orderBy: { position: 'asc' } }
+          }
+        });
+
+        createdSetlists.push({ setNumber, setlist });
+
+        // If gigId provided, link setlist to gig
+        if (gigId) {
+          await prisma.gigSetlist.create({
+            data: {
+              gigId,
+              setlistId: setlist.id,
+              setNumber
+            }
+          });
+        }
+      }
+
+      results.setlistCreated = matchedSongIds.length > 0;
+      allResults.sets.push(results);
+    }
+
+    const io = req.app.get('io');
+    for (const { setlist } of createdSetlists) {
+      io.to(`workspace:${req.params.workspaceId}`).emit('setlist:created', setlist);
+    }
+
+    res.status(201).json({
+      setlists: createdSetlists,
+      results: allResults
+    });
+  } catch (error) {
+    console.error('Import multi-set error:', error);
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'A setlist with this name already exists' });
+    }
+    res.status(500).json({ error: 'Failed to import setlists' });
+  }
+});
+
 // Remove an item from a setlist (by item ID - works for songs and MC)
 router.delete('/:setlistId/items/:itemId', authenticate, async (req, res) => {
   try {

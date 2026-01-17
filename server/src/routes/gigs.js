@@ -36,6 +36,19 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
             }
           }
         },
+        setlists: {
+          include: {
+            setlist: {
+              include: {
+                songs: {
+                  include: { song: true },
+                  orderBy: { position: 'asc' }
+                }
+              }
+            }
+          },
+          orderBy: { setNumber: 'asc' }
+        },
         media: {
           orderBy: { createdAt: 'desc' }
         },
@@ -137,12 +150,13 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
 // Create a gig
 router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
-    const { title, type, date, endDate, venue, address, notes, pay, setlistId } = req.body;
+    const { title, type, date, endDate, venue, address, notes, pay, setlistId, setlistIds } = req.body;
 
     if (!title || !date) {
       return res.status(400).json({ error: 'Title and date are required' });
     }
 
+    // Create gig with optional multi-set support
     const gig = await prisma.gig.create({
       data: {
         title,
@@ -153,9 +167,18 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
         address,
         notes,
         pay,
-        setlistId,
+        setlistId: setlistIds && setlistIds.length > 0 ? null : setlistId, // Don't use legacy setlistId if using multi-set
         workspaceId: req.params.workspaceId,
-        createdById: req.user.id
+        createdById: req.user.id,
+        // Create GigSetlist entries if setlistIds provided
+        ...(setlistIds && setlistIds.length > 0 && {
+          setlists: {
+            create: setlistIds.filter(id => id).map((id, index) => ({
+              setlistId: id,
+              setNumber: index + 1
+            }))
+          }
+        })
       },
       include: {
         createdBy: {
@@ -163,6 +186,14 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
         },
         setlist: {
           select: { id: true, name: true }
+        },
+        setlists: {
+          include: {
+            setlist: {
+              select: { id: true, name: true }
+            }
+          },
+          orderBy: { setNumber: 'asc' }
         }
       }
     });
@@ -194,6 +225,19 @@ router.get('/:gigId', authenticate, async (req, res) => {
             }
           }
         },
+        setlists: {
+          include: {
+            setlist: {
+              include: {
+                songs: {
+                  include: { song: true },
+                  orderBy: { position: 'asc' }
+                }
+              }
+            }
+          },
+          orderBy: { setNumber: 'asc' }
+        },
         songsPlayed: {
           include: {
             song: true
@@ -216,7 +260,26 @@ router.get('/:gigId', authenticate, async (req, res) => {
 // Update a gig
 router.put('/:gigId', authenticate, async (req, res) => {
   try {
-    const { title, type, date, endDate, venue, address, notes, pay, status, setlistId } = req.body;
+    const { title, type, date, endDate, venue, address, notes, pay, status, setlistId, setlistIds } = req.body;
+
+    // If setlistIds provided, handle multi-set update
+    if (setlistIds !== undefined) {
+      // Delete existing GigSetlist entries
+      await prisma.gigSetlist.deleteMany({
+        where: { gigId: req.params.gigId }
+      });
+
+      // Create new ones if there are setlistIds
+      if (setlistIds && setlistIds.length > 0) {
+        await prisma.gigSetlist.createMany({
+          data: setlistIds.filter(id => id).map((id, index) => ({
+            gigId: req.params.gigId,
+            setlistId: id,
+            setNumber: index + 1
+          }))
+        });
+      }
+    }
 
     const gig = await prisma.gig.update({
       where: { id: req.params.gigId },
@@ -230,7 +293,10 @@ router.put('/:gigId', authenticate, async (req, res) => {
         ...(notes !== undefined && { notes }),
         ...(pay !== undefined && { pay }),
         ...(status && { status }),
-        ...(setlistId !== undefined && { setlistId })
+        // Clear legacy setlistId if using multi-set, otherwise update it
+        ...(setlistIds !== undefined
+          ? { setlistId: null }
+          : setlistId !== undefined && { setlistId })
       },
       include: {
         createdBy: {
@@ -238,6 +304,14 @@ router.put('/:gigId', authenticate, async (req, res) => {
         },
         setlist: {
           select: { id: true, name: true }
+        },
+        setlists: {
+          include: {
+            setlist: {
+              select: { id: true, name: true }
+            }
+          },
+          orderBy: { setNumber: 'asc' }
         }
       }
     });
@@ -417,6 +491,152 @@ router.delete('/:gigId/media/:mediaId', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Delete gig media error:', error);
     res.status(500).json({ error: 'Failed to delete media' });
+  }
+});
+
+// Add a setlist to a gig (multi-set support)
+router.post('/:gigId/setlists', authenticate, async (req, res) => {
+  try {
+    const { setlistId, setNumber } = req.body;
+
+    if (!setlistId) {
+      return res.status(400).json({ error: 'setlistId is required' });
+    }
+
+    const gig = await prisma.gig.findUnique({
+      where: { id: req.params.gigId },
+      include: {
+        workspace: { include: { members: true } },
+        setlists: true
+      }
+    });
+
+    if (!gig) {
+      return res.status(404).json({ error: 'Gig not found' });
+    }
+
+    const isMember = gig.workspace.members.some(m => m.userId === req.user.id);
+    if (!isMember) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    // Determine set number if not provided
+    const actualSetNumber = setNumber || (gig.setlists.length + 1);
+
+    const gigSetlist = await prisma.gigSetlist.create({
+      data: {
+        gigId: req.params.gigId,
+        setlistId,
+        setNumber: actualSetNumber
+      },
+      include: {
+        setlist: {
+          include: {
+            songs: {
+              include: { song: true },
+              orderBy: { position: 'asc' }
+            }
+          }
+        }
+      }
+    });
+
+    const io = req.app.get('io');
+    io.to(`workspace:${gig.workspaceId}`).emit('gig:setlistAdded', {
+      gigId: req.params.gigId,
+      gigSetlist
+    });
+
+    res.status(201).json(gigSetlist);
+  } catch (error) {
+    console.error('Add gig setlist error:', error);
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'Setlist already added to this gig or set number taken' });
+    }
+    res.status(500).json({ error: 'Failed to add setlist to gig' });
+  }
+});
+
+// Remove a setlist from a gig
+router.delete('/:gigId/setlists/:gigSetlistId', authenticate, async (req, res) => {
+  try {
+    const gigSetlist = await prisma.gigSetlist.findUnique({
+      where: { id: req.params.gigSetlistId },
+      include: {
+        gig: {
+          include: { workspace: { include: { members: true } } }
+        }
+      }
+    });
+
+    if (!gigSetlist) {
+      return res.status(404).json({ error: 'Gig setlist not found' });
+    }
+
+    const isMember = gigSetlist.gig.workspace.members.some(m => m.userId === req.user.id);
+    if (!isMember) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    await prisma.gigSetlist.delete({
+      where: { id: req.params.gigSetlistId }
+    });
+
+    const io = req.app.get('io');
+    io.to(`workspace:${gigSetlist.gig.workspaceId}`).emit('gig:setlistRemoved', {
+      gigId: req.params.gigId,
+      gigSetlistId: req.params.gigSetlistId
+    });
+
+    res.json({ message: 'Setlist removed from gig' });
+  } catch (error) {
+    console.error('Remove gig setlist error:', error);
+    res.status(500).json({ error: 'Failed to remove setlist from gig' });
+  }
+});
+
+// Reorder setlists in a gig
+router.put('/:gigId/setlists/reorder', authenticate, async (req, res) => {
+  try {
+    const { gigSetlistIds } = req.body;
+
+    if (!gigSetlistIds || !Array.isArray(gigSetlistIds)) {
+      return res.status(400).json({ error: 'gigSetlistIds array is required' });
+    }
+
+    // Update set numbers in a transaction
+    await prisma.$transaction(
+      gigSetlistIds.map((id, index) =>
+        prisma.gigSetlist.update({
+          where: { id },
+          data: { setNumber: index + 1 }
+        })
+      )
+    );
+
+    const gig = await prisma.gig.findUnique({
+      where: { id: req.params.gigId },
+      include: {
+        setlists: {
+          include: {
+            setlist: {
+              include: {
+                songs: {
+                  include: { song: true },
+                  orderBy: { position: 'asc' }
+                }
+              }
+            }
+          },
+          orderBy: { setNumber: 'asc' }
+        }
+      }
+    });
+
+    res.json(gig);
+  } catch (error) {
+    console.error('Reorder gig setlists error:', error);
+    res.status(500).json({ error: 'Failed to reorder setlists' });
   }
 });
 

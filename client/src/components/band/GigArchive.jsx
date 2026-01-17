@@ -20,9 +20,9 @@ function GigArchive({ workspaceId }) {
     try {
       setLoading(true);
       const data = await api.getGigs(workspaceId);
-      // Filter to gigs with setlists attached, sorted by date descending
+      // Filter to gigs with setlists attached (single or multi-set), sorted by date descending
       const gigsWithSetlists = data
-        .filter(g => g.setlist)
+        .filter(g => g.setlist || (g.setlists && g.setlists.length > 0))
         .sort((a, b) => new Date(b.date) - new Date(a.date));
       setGigs(gigsWithSetlists);
     } catch (err) {
@@ -124,6 +124,33 @@ function GigArchive({ workspaceId }) {
     return { songCount, totalDuration };
   };
 
+  // Get all setlists for a gig (handles both legacy single and new multi-set)
+  const getGigSetlists = (gig) => {
+    if (gig.setlists && gig.setlists.length > 0) {
+      // Multi-set gig - sort by set number
+      return gig.setlists
+        .sort((a, b) => a.setNumber - b.setNumber)
+        .map(gs => ({ ...gs.setlist, setNumber: gs.setNumber }));
+    } else if (gig.setlist) {
+      // Legacy single setlist
+      return [{ ...gig.setlist, setNumber: 1 }];
+    }
+    return [];
+  };
+
+  // Get combined stats for all setlists
+  const getGigTotalStats = (gig) => {
+    const setlists = getGigSetlists(gig);
+    let totalSongs = 0;
+    let totalDuration = 0;
+    setlists.forEach(sl => {
+      const stats = getSetlistStats(sl);
+      totalSongs += stats.songCount;
+      totalDuration += stats.totalDuration;
+    });
+    return { songCount: totalSongs, totalDuration, setCount: setlists.length };
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-64 text-gray-400">Loading archive...</div>;
   }
@@ -183,7 +210,9 @@ function GigArchive({ workspaceId }) {
         ) : (
           <div className="space-y-6">
             {filteredGigs.map((gig) => {
-              const { songCount, totalDuration } = getSetlistStats(gig.setlist);
+              const gigSetlists = getGigSetlists(gig);
+              const { songCount, totalDuration, setCount } = getGigTotalStats(gig);
+              const isMultiSet = setCount > 1;
               const isUpcoming = gig.status === 'SCHEDULED';
               const isPast = new Date(gig.date) < new Date();
 
@@ -195,6 +224,11 @@ function GigArchive({ workspaceId }) {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="text-lg font-medium text-white">{gig.title}</h3>
+                          {isMultiSet && (
+                            <span className="px-2 py-0.5 bg-indigo-600/30 text-indigo-300 text-xs rounded font-medium">
+                              {setCount} Sets
+                            </span>
+                          )}
                           {gig.status === 'COMPLETED' ? (
                             <span className="px-2 py-0.5 bg-green-600/20 text-green-400 text-xs rounded">Completed</span>
                           ) : isPast ? (
@@ -212,11 +246,60 @@ function GigArchive({ workspaceId }) {
                           })}
                           {gig.venue && ` • ${gig.venue}`}
                         </div>
-                        {/* Setlist Info */}
-                        {gig.setlist && (
+                        {/* Multi-Set Display */}
+                        {isMultiSet ? (
+                          <div className="mt-3 space-y-2">
+                            {/* Total Summary */}
+                            <div className="flex items-center gap-3 text-sm text-gray-400 mb-2">
+                              <span>📋 {songCount} total songs</span>
+                              {totalDuration > 0 && (
+                                <>
+                                  <span className="text-gray-600">•</span>
+                                  <span>{formatDuration(totalDuration)} total</span>
+                                </>
+                              )}
+                            </div>
+                            {/* Individual Sets */}
+                            <div className="grid gap-2">
+                              {gigSetlists.map((setlist, idx) => {
+                                const setStats = getSetlistStats(setlist);
+                                const setColors = [
+                                  'from-blue-600/20 to-blue-800/10 border-blue-600/30',
+                                  'from-purple-600/20 to-purple-800/10 border-purple-600/30',
+                                  'from-green-600/20 to-green-800/10 border-green-600/30',
+                                  'from-orange-600/20 to-orange-800/10 border-orange-600/30',
+                                ];
+                                const colorClass = setColors[idx % setColors.length];
+
+                                return (
+                                  <div
+                                    key={setlist.id}
+                                    className={`p-3 rounded-lg border bg-gradient-to-r ${colorClass}`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-white font-bold text-lg">
+                                          {setlist.setNumber}
+                                        </span>
+                                        <div>
+                                          <div className="text-white font-medium text-sm">{setlist.name}</div>
+                                          <div className="text-gray-400 text-xs">
+                                            {setStats.songCount} songs
+                                            {setStats.totalDuration > 0 && ` • ${formatDuration(setStats.totalDuration)}`}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ) : gigSetlists.length > 0 && (
+                          /* Single Setlist Display */
                           <div className="mt-2 p-2 bg-gray-800 rounded flex items-center gap-4 text-sm">
                             <span className="text-gray-400">📋</span>
-                            <span className="text-white font-medium">{gig.setlist.name}</span>
+                            <span className="text-white font-medium">{gigSetlists[0].name}</span>
                             <span className="text-gray-500">•</span>
                             <span className="text-gray-400">{songCount} songs</span>
                             {totalDuration > 0 && (

@@ -297,7 +297,18 @@ function GigCalendar({ workspaceId }) {
                         </p>
                       )}
 
-                      {gig.setlist && (
+                      {/* Multi-set display */}
+                      {gig.setlists && gig.setlists.length > 0 ? (
+                        <div className="text-gray-400 text-sm mt-1">
+                          <span className="text-indigo-400">🎵 {gig.setlists.length} Sets:</span>
+                          <span className="ml-2">
+                            {gig.setlists
+                              .sort((a, b) => a.setNumber - b.setNumber)
+                              .map(gs => gs.setlist?.name || `Set ${gs.setNumber}`)
+                              .join(' → ')}
+                          </span>
+                        </div>
+                      ) : gig.setlist && (
                         <p className="text-gray-400 text-sm mt-1">
                           🎵 Setlist: {gig.setlist.name}
                         </p>

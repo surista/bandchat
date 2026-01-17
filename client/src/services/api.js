@@ -492,6 +492,34 @@ class ApiService {
     });
   }
 
+  async importMultiSetlist(workspaceId, baseName, sets, gigId = null) {
+    return this.request(`/setlists/workspace/${workspaceId}/import-multiset`, {
+      method: 'POST',
+      body: JSON.stringify({ baseName, sets, gigId })
+    });
+  }
+
+  // Gig setlists (multi-set)
+  async addSetlistToGig(gigId, setlistId, setNumber = null) {
+    return this.request(`/gigs/${gigId}/setlists`, {
+      method: 'POST',
+      body: JSON.stringify({ setlistId, setNumber })
+    });
+  }
+
+  async removeSetlistFromGig(gigId, gigSetlistId) {
+    return this.request(`/gigs/${gigId}/setlists/${gigSetlistId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async reorderGigSetlists(gigId, gigSetlistIds) {
+    return this.request(`/gigs/${gigId}/setlists/reorder`, {
+      method: 'PUT',
+      body: JSON.stringify({ gigSetlistIds })
+    });
+  }
+
   async addSongToSetlist(setlistId, songId) {
     return this.request(`/setlists/${setlistId}/songs`, {
       method: 'POST',
