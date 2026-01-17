@@ -138,9 +138,11 @@ function SongList({ workspaceId, onSelectSong }) {
                 // Check if metadata service is configured
                 try {
                   const status = await api.getMetadataStatus();
+                  console.log('Metadata status:', status);
                   setMetadataConfigured(status.configured);
                   setFetchMetadata(status.configured);
-                } catch {
+                } catch (err) {
+                  console.error('Metadata status check failed:', err);
                   setMetadataConfigured(false);
                   setFetchMetadata(false);
                 }
