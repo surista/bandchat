@@ -21,26 +21,30 @@ const INSTRUMENTS = [
 function BandMemberForm({ member, onSave, onCancel, loading }) {
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
-  const [stints, setStints] = useState([{ instrument: '', startDate: '', endDate: '' }]);
+  const [isGuest, setIsGuest] = useState(false);
+  const [stints, setStints] = useState([{ instruments: [], startDate: '', endDate: '' }]);
 
   useEffect(() => {
     if (member) {
       setName(member.name || '');
       setNotes(member.notes || '');
+      setIsGuest(member.isGuest || false);
       if (member.stints && member.stints.length > 0) {
         setStints(member.stints.map(s => ({
           id: s.id,
-          instrument: s.instrument || '',
+          // Handle both old (instrument) and new (instruments) format
+          instruments: s.instruments || (s.instrument ? [s.instrument] : []),
           startDate: s.startDate ? new Date(s.startDate).toISOString().split('T')[0] : '',
           endDate: s.endDate ? new Date(s.endDate).toISOString().split('T')[0] : ''
         })));
       } else {
-        setStints([{ instrument: '', startDate: '', endDate: '' }]);
+        setStints([{ instruments: [], startDate: '', endDate: '' }]);
       }
     } else {
       setName('');
       setNotes('');
-      setStints([{ instrument: '', startDate: '', endDate: '' }]);
+      setIsGuest(false);
+      setStints([{ instruments: [], startDate: '', endDate: '' }]);
     }
   }, [member]);
 
@@ -50,8 +54,18 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
     ));
   };
 
+  const toggleInstrument = (index, instrument) => {
+    setStints(prev => prev.map((stint, i) => {
+      if (i !== index) return stint;
+      const instruments = stint.instruments.includes(instrument)
+        ? stint.instruments.filter(inst => inst !== instrument)
+        : [...stint.instruments, instrument];
+      return { ...stint, instruments };
+    }));
+  };
+
   const addStint = () => {
-    setStints(prev => [...prev, { instrument: '', startDate: '', endDate: '' }]);
+    setStints(prev => [...prev, { instruments: [], startDate: '', endDate: '' }]);
   };
 
   const removeStint = (index) => {
@@ -65,21 +79,22 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
 
     // Validate
     if (!name) return;
-    const validStints = stints.filter(s => s.instrument && s.startDate);
+    const validStints = stints.filter(s => s.instruments.length > 0 && s.startDate);
     if (validStints.length === 0) return;
 
     onSave({
       name,
       notes: notes || null,
+      isGuest,
       stints: validStints.map(s => ({
-        instrument: s.instrument,
+        instruments: s.instruments,
         startDate: s.startDate,
         endDate: s.endDate || null
       }))
     });
   };
 
-  const isValid = name && stints.some(s => s.instrument && s.startDate);
+  const isValid = name && stints.some(s => s.instruments.length > 0 && s.startDate);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -98,16 +113,29 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
       </div>
 
       <div>
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isGuest}
+            onChange={(e) => setIsGuest(e.target.checked)}
+            className="w-4 h-4 rounded border-gray-600 bg-gray-900 text-purple-600 focus:ring-purple-500"
+          />
+          <span className="text-gray-300 text-sm font-medium">Guest Member</span>
+          <span className="text-gray-500 text-xs">(session/touring musician)</span>
+        </label>
+      </div>
+
+      <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-gray-300 text-sm font-medium">
-            Instruments <span className="text-red-500">*</span>
+            Instrument Stints <span className="text-red-500">*</span>
           </label>
           <button
             type="button"
             onClick={addStint}
             className="text-sm text-blue-400 hover:text-blue-300"
           >
-            + Add Instrument
+            + Add Stint
           </button>
         </div>
 
@@ -116,17 +144,31 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
             <div key={index} className="p-3 bg-gray-900 border border-gray-700 rounded-lg">
               <div className="flex items-start gap-2">
                 <div className="flex-1 space-y-3">
-                  <select
-                    value={stint.instrument}
-                    onChange={(e) => handleStintChange(index, 'instrument', e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white text-sm"
-                    required
-                  >
-                    <option value="">Select instrument...</option>
-                    {INSTRUMENTS.map(inst => (
-                      <option key={inst} value={inst}>{inst}</option>
-                    ))}
-                  </select>
+                  {/* Instrument checkboxes */}
+                  <div>
+                    <label className="block text-gray-400 text-xs mb-2">Instruments (select all that apply)</label>
+                    <div className="flex flex-wrap gap-2">
+                      {INSTRUMENTS.map(inst => (
+                        <button
+                          key={inst}
+                          type="button"
+                          onClick={() => toggleInstrument(index, inst)}
+                          className={`px-2 py-1 text-xs rounded transition-colors ${
+                            stint.instruments.includes(inst)
+                              ? 'bg-green-600 text-white'
+                              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          }`}
+                        >
+                          {inst}
+                        </button>
+                      ))}
+                    </div>
+                    {stint.instruments.length > 0 && (
+                      <div className="mt-2 text-sm text-green-400">
+                        Selected: {stint.instruments.join(', ')}
+                      </div>
+                    )}
+                  </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
@@ -156,7 +198,7 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
                     type="button"
                     onClick={() => removeStint(index)}
                     className="text-red-400 hover:text-red-300 p-1"
-                    title="Remove"
+                    title="Remove stint"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

@@ -50,13 +50,24 @@ function BandTimeline({ members }) {
       years.push(y);
     }
 
-    // Sort members by their earliest stint start date
+    // Sort members: current first, then by join date, then alphabetical
     const sortedMembers = [...members]
       .filter(m => m.stints && m.stints.length > 0)
       .sort((a, b) => {
+        const aIsCurrent = a.stints.some(s => !s.endDate);
+        const bIsCurrent = b.stints.some(s => !s.endDate);
+
+        // Current members first
+        if (aIsCurrent && !bIsCurrent) return -1;
+        if (!aIsCurrent && bIsCurrent) return 1;
+
+        // Within same group, sort by earliest join date
         const aMin = Math.min(...a.stints.map(s => new Date(s.startDate).getTime()));
         const bMin = Math.min(...b.stints.map(s => new Date(s.startDate).getTime()));
-        return aMin - bMin;
+        if (aMin !== bMin) return aMin - bMin;
+
+        // If same join date, sort alphabetically
+        return a.name.localeCompare(b.name);
       });
 
     return {
@@ -143,7 +154,10 @@ function BandTimeline({ members }) {
                   fontSize="12"
                   fontWeight={isCurrent ? '500' : '400'}
                 >
-                  {member.name.length > 14 ? member.name.slice(0, 12) + '...' : member.name}
+                  {member.name.length > (member.isGuest ? 11 : 14) ? member.name.slice(0, member.isGuest ? 9 : 12) + '...' : member.name}
+                  {member.isGuest && (
+                    <tspan fill="#a855f7" fontSize="10"> (G)</tspan>
+                  )}
                 </text>
 
                 {/* Timeline bars - one per stint */}
@@ -153,8 +167,13 @@ function BandTimeline({ members }) {
                     const endYear = stint.endDate ? new Date(stint.endDate).getFullYear() : currentYear;
                     const startX = (startYear - minYear) * yearWidth;
                     const width = (endYear - startYear + 1) * yearWidth - 4;
-                    const color = getInstrumentColor(stint.instrument);
+                    const instruments = stint.instruments || (stint.instrument ? [stint.instrument] : []);
+                    const primaryInstrument = instruments[0] || 'Unknown';
+                    const color = getInstrumentColor(primaryInstrument);
                     const isOngoing = !stint.endDate;
+                    const instrumentLabel = instruments.length > 1
+                      ? `${primaryInstrument} +${instruments.length - 1}`
+                      : primaryInstrument;
 
                     return (
                       <g key={stint.id || stintIdx}>
@@ -177,7 +196,7 @@ function BandTimeline({ members }) {
                             textAnchor="middle"
                             opacity={0.9}
                           >
-                            {stint.instrument.length > 10 ? stint.instrument.slice(0, 8) + '...' : stint.instrument}
+                            {instrumentLabel.length > 12 ? instrumentLabel.slice(0, 10) + '...' : instrumentLabel}
                           </text>
                         )}
                       </g>

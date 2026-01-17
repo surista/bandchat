@@ -1009,7 +1009,7 @@ function Sidebar({
                               </h5>
                               <div className="space-y-2">
                                 {bandMembers.current.map((member) => {
-                                  const instruments = member.stints?.map(s => s.instrument).filter((v, i, a) => a.indexOf(v) === i) || [];
+                                  const instruments = [...new Set(member.stints?.flatMap(s => s.instruments || (s.instrument ? [s.instrument] : [])) || [])];
                                   const earliestYear = member.stints?.length > 0
                                     ? Math.min(...member.stints.map(s => new Date(s.startDate).getFullYear()))
                                     : null;
@@ -1019,7 +1019,12 @@ function Sidebar({
                                     className="flex items-center justify-between p-3 bg-[var(--color-modal-card)] rounded-lg"
                                   >
                                     <div>
-                                      <div className="font-medium text-white">{member.name}</div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium text-white">{member.name}</span>
+                                        {member.isGuest && (
+                                          <span className="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-300 rounded">Guest</span>
+                                        )}
+                                      </div>
                                       <div className="text-sm text-gray-400">
                                         {instruments.join(', ')} {earliestYear && `• Since ${earliestYear}`}
                                       </div>
@@ -1056,7 +1061,7 @@ function Sidebar({
                               </h5>
                               <div className="space-y-2">
                                 {bandMembers.former.map((member) => {
-                                  const instruments = member.stints?.map(s => s.instrument).filter((v, i, a) => a.indexOf(v) === i) || [];
+                                  const instruments = [...new Set(member.stints?.flatMap(s => s.instruments || (s.instrument ? [s.instrument] : [])) || [])];
                                   const years = member.stints?.length > 0 ? (() => {
                                     const starts = member.stints.map(s => new Date(s.startDate).getFullYear());
                                     const ends = member.stints.filter(s => s.endDate).map(s => new Date(s.endDate).getFullYear());
@@ -1070,7 +1075,12 @@ function Sidebar({
                                     className="flex items-center justify-between p-3 bg-[var(--color-modal-card)] rounded-lg opacity-75"
                                   >
                                     <div>
-                                      <div className="font-medium text-white">{member.name}</div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium text-white">{member.name}</span>
+                                        {member.isGuest && (
+                                          <span className="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-300 rounded">Guest</span>
+                                        )}
+                                      </div>
                                       <div className="text-sm text-gray-400">
                                         {instruments.join(', ')} {years && `• ${years}`}
                                       </div>

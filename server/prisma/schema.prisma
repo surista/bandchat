@@ -353,6 +353,7 @@ model BandMember {
   name        String
   imageUrl    String?
   notes       String?
+  isGuest     Boolean   @default(false)
   workspaceId String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -367,7 +368,7 @@ model BandMember {
 model InstrumentStint {
   id           String    @id @default(uuid())
   bandMemberId String
-  instrument   String
+  instruments  String[]
   startDate    DateTime
   endDate      DateTime?
   createdAt    DateTime  @default(now())

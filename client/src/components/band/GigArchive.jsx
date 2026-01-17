@@ -722,7 +722,7 @@ function GigArchive({ workspaceId }) {
                     {selectedEntry.setlist.performers?.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
                         {selectedEntry.setlist.performers.map(member => {
-                          const instruments = member.stints?.map(s => s.instrument).filter((v, i, a) => a.indexOf(v) === i) || [];
+                          const instruments = [...new Set(member.stints?.flatMap(s => s.instruments || (s.instrument ? [s.instrument] : [])) || [])];
                           return (
                           <div
                             key={member.id}
@@ -1062,7 +1062,7 @@ function GigArchive({ workspaceId }) {
               ) : (
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {bandMembers.map(member => {
-                    const instruments = member.stints?.map(s => s.instrument).filter((v, i, a) => a.indexOf(v) === i) || [];
+                    const instruments = [...new Set(member.stints?.flatMap(s => s.instruments || (s.instrument ? [s.instrument] : [])) || [])];
                     const isFormer = member.stints?.length > 0 && member.stints.every(s => s.endDate);
                     return (
                     <label

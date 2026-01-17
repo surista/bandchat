@@ -54,18 +54,25 @@ function BandMembersList({ workspaceId }) {
   const getPrimaryInstrument = (member) => {
     if (!member.stints || member.stints.length === 0) return 'Unknown';
     const currentStint = member.stints.find(s => !s.endDate);
-    if (currentStint) return currentStint.instrument;
+    if (currentStint) {
+      const instruments = currentStint.instruments || (currentStint.instrument ? [currentStint.instrument] : []);
+      return instruments[0] || 'Unknown';
+    }
     // Return the most recent stint
     const sorted = [...member.stints].sort((a, b) =>
       new Date(b.startDate) - new Date(a.startDate)
     );
-    return sorted[0]?.instrument || 'Unknown';
+    const instruments = sorted[0]?.instruments || (sorted[0]?.instrument ? [sorted[0].instrument] : []);
+    return instruments[0] || 'Unknown';
   };
 
   // Get all unique instruments for a member
   const getInstruments = (member) => {
     if (!member.stints || member.stints.length === 0) return [];
-    return [...new Set(member.stints.map(s => s.instrument))];
+    const allInstruments = member.stints.flatMap(s =>
+      s.instruments || (s.instrument ? [s.instrument] : [])
+    );
+    return [...new Set(allInstruments)];
   };
 
   // Get year range spanning all stints
@@ -130,7 +137,14 @@ function BandMembersList({ workspaceId }) {
             {member.name.charAt(0)}
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="font-medium text-white truncate">{member.name}</h4>
+            <div className="flex items-center gap-2">
+              <h4 className="font-medium text-white truncate">{member.name}</h4>
+              {member.isGuest && (
+                <span className="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-300 rounded">
+                  Guest
+                </span>
+              )}
+            </div>
             {/* Show all instruments */}
             <div className="flex flex-wrap gap-1 mt-1">
               {instruments.map((inst, idx) => (
@@ -146,15 +160,18 @@ function BandMembersList({ workspaceId }) {
         {/* Show stint details if multiple */}
         {member.stints && member.stints.length > 1 && (
           <div className="mt-3 pt-3 border-t border-gray-700 space-y-1">
-            {member.stints.map((stint, idx) => (
-              <div key={stint.id || idx} className="flex items-center gap-2 text-xs">
-                <div className={`w-2 h-2 rounded-full ${getInstrumentColor(stint.instrument)}`} />
-                <span className="text-gray-400">{stint.instrument}</span>
-                <span className="text-gray-500">
-                  {formatYearRange(stint.startDate, stint.endDate)}
-                </span>
-              </div>
-            ))}
+            {member.stints.map((stint, idx) => {
+              const stintInstruments = stint.instruments || (stint.instrument ? [stint.instrument] : []);
+              return (
+                <div key={stint.id || idx} className="flex items-center gap-2 text-xs">
+                  <div className={`w-2 h-2 rounded-full ${getInstrumentColor(stintInstruments[0])}`} />
+                  <span className="text-gray-400">{stintInstruments.join(', ')}</span>
+                  <span className="text-gray-500">
+                    {formatYearRange(stint.startDate, stint.endDate)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
 

@@ -35,7 +35,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 // Create a band member (admin only)
 router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => {
   try {
-    const { name, imageUrl, notes, stints } = req.body;
+    const { name, imageUrl, notes, isGuest, stints } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
@@ -47,8 +47,9 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (re
 
     // Validate stints
     for (const stint of stints) {
-      if (!stint.instrument || !stint.startDate) {
-        return res.status(400).json({ error: 'Each stint requires instrument and start date' });
+      const instruments = stint.instruments || (stint.instrument ? [stint.instrument] : []);
+      if (instruments.length === 0 || !stint.startDate) {
+        return res.status(400).json({ error: 'Each stint requires at least one instrument and start date' });
       }
     }
 
@@ -57,10 +58,11 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (re
         name,
         imageUrl,
         notes,
+        isGuest: isGuest || false,
         workspaceId: req.params.workspaceId,
         stints: {
           create: stints.map(s => ({
-            instrument: s.instrument,
+            instruments: s.instruments || (s.instrument ? [s.instrument] : []),
             startDate: new Date(s.startDate),
             endDate: s.endDate ? new Date(s.endDate) : null
           }))
@@ -110,7 +112,7 @@ router.get('/:memberId', authenticate, async (req, res) => {
 // Update a band member (admin only)
 router.put('/:memberId', authenticate, async (req, res) => {
   try {
-    const { name, imageUrl, notes, stints } = req.body;
+    const { name, imageUrl, notes, isGuest, stints } = req.body;
 
     // Get the member to find its workspace
     const existing = await prisma.bandMember.findUnique({
@@ -140,7 +142,8 @@ router.put('/:memberId', authenticate, async (req, res) => {
     const updateData = {
       ...(name && { name }),
       ...(imageUrl !== undefined && { imageUrl }),
-      ...(notes !== undefined && { notes })
+      ...(notes !== undefined && { notes }),
+      ...(isGuest !== undefined && { isGuest })
     };
 
     // If stints are provided, replace all stints
@@ -151,8 +154,9 @@ router.put('/:memberId', authenticate, async (req, res) => {
 
       // Validate stints
       for (const stint of stints) {
-        if (!stint.instrument || !stint.startDate) {
-          return res.status(400).json({ error: 'Each stint requires instrument and start date' });
+        const instruments = stint.instruments || (stint.instrument ? [stint.instrument] : []);
+        if (instruments.length === 0 || !stint.startDate) {
+          return res.status(400).json({ error: 'Each stint requires at least one instrument and start date' });
         }
       }
 
@@ -167,7 +171,7 @@ router.put('/:memberId', authenticate, async (req, res) => {
             ...updateData,
             stints: {
               create: stints.map(s => ({
-                instrument: s.instrument,
+                instruments: s.instruments || (s.instrument ? [s.instrument] : []),
                 startDate: new Date(s.startDate),
                 endDate: s.endDate ? new Date(s.endDate) : null
               }))
