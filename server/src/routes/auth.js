@@ -277,12 +277,31 @@ router.post('/google', authLimiter, async (req, res) => {
     });
 
     if (existingUserByEmail) {
-      if (existingUserByEmail.authProvider === 'local') {
-        return res.status(409).json({
-          error: 'email_exists_local',
-          message: 'An account with this email already exists. Please sign in with your password to link your Google account.'
-        });
-      }
+      // Link Google account to existing user and sign them in
+      const updatedUser = await prisma.user.update({
+        where: { id: existingUserByEmail.id },
+        data: {
+          googleId,
+          authProvider: existingUserByEmail.password ? 'both' : 'google',
+          emailVerified: true,
+          // Update avatar if they don't have one
+          ...(picture && !existingUserByEmail.avatarUrl && { avatarUrl: picture })
+        },
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          avatarUrl: true
+        }
+      });
+
+      const tokens = await generateTokens(updatedUser.id);
+      return res.json({
+        user: updatedUser,
+        ...tokens,
+        isNewUser: false,
+        message: 'Google account linked successfully'
+      });
     }
 
     // Create new user via Google
