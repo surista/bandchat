@@ -27,7 +27,8 @@
       "WebFetch(domain:bandchat.vercel.app)",
       "Bash(npx prisma migrate:*)",
       "Bash(npx eslint:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npm run db:push:*)"
     ]
   }
 }

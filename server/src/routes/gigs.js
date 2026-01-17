@@ -72,7 +72,7 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
     const workspaceId = req.params.workspaceId;
     const now = new Date();
 
-    // Get all setlists with performedAt dates (these are past gigs)
+    // Get all setlists with performedAt dates and full song details
     const performedSetlists = await prisma.setlist.findMany({
       where: {
         workspaceId,
@@ -81,20 +81,49 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
       include: {
         songs: {
           where: { type: 'SONG', songId: { not: null } },
-          select: { songId: true }
+          include: {
+            song: {
+              select: { id: true, title: true, artist: true, duration: true }
+            }
+          }
         }
-      }
+      },
+      orderBy: { performedAt: 'asc' }
     });
 
-    // Total gigs = setlists with performedAt in the past
     const totalGigs = performedSetlists.length;
 
-    // Count song plays from setlists
+    // Count song plays and calculate total time
     const songPlayCounts = {};
+    const songTotalTime = {};
+    let totalTimeSeconds = 0;
+    const venueCounts = {};
+    let totalSongsPlayed = 0;
+    let longestSetlistCount = 0;
+    let longestSetlistName = null;
+
     for (const setlist of performedSetlists) {
+      const songCount = setlist.songs.length;
+      totalSongsPlayed += songCount;
+
+      if (songCount > longestSetlistCount) {
+        longestSetlistCount = songCount;
+        longestSetlistName = setlist.name;
+      }
+
+      // Count venues
+      if (setlist.venue) {
+        venueCounts[setlist.venue] = (venueCounts[setlist.venue] || 0) + 1;
+      }
+
       for (const item of setlist.songs) {
-        if (item.songId) {
-          songPlayCounts[item.songId] = (songPlayCounts[item.songId] || 0) + 1;
+        if (item.song) {
+          const songId = item.song.id;
+          const duration = item.song.duration || 0;
+
+          songPlayCounts[songId] = (songPlayCounts[songId] || 0) + 1;
+          songTotalTime[songId] = (songTotalTime[songId] || 0) + duration;
+          totalTimeSeconds += duration;
         }
       }
     }
@@ -104,27 +133,93 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10);
 
-    const songIds = sortedSongIds.map(([id]) => id);
+    const allSongIds = [...new Set([
+      ...sortedSongIds.map(([id]) => id),
+      ...Object.entries(songTotalTime).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id]) => id)
+    ])];
+
     const songs = await prisma.song.findMany({
-      where: { id: { in: songIds } },
-      select: { id: true, title: true, artist: true }
+      where: { id: { in: allSongIds } },
+      select: { id: true, title: true, artist: true, duration: true }
     });
 
     const mostPlayedWithDetails = sortedSongIds.map(([songId, count]) => ({
       ...songs.find(s => s.id === songId),
-      playCount: count
+      playCount: count,
+      totalTime: songTotalTime[songId] || 0
     }));
 
-    // Songs never played (not in any performed setlist)
+    // Most time spent on a single song
+    const mostTimeSongEntry = Object.entries(songTotalTime).sort((a, b) => b[1] - a[1])[0];
+    const mostTimeSong = mostTimeSongEntry ? {
+      ...songs.find(s => s.id === mostTimeSongEntry[0]),
+      totalTime: mostTimeSongEntry[1],
+      playCount: songPlayCounts[mostTimeSongEntry[0]]
+    } : null;
+
+    // Most common venues (top 5)
+    const topVenues = Object.entries(venueCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([venue, count]) => ({ venue, count }));
+
+    // Busiest stretch - find max gigs in a 7-day window
+    let busiestStretch = null;
+    if (performedSetlists.length >= 2) {
+      let maxGigsInWindow = 0;
+      let busiestStart = null;
+      let busiestEnd = null;
+
+      for (let i = 0; i < performedSetlists.length; i++) {
+        const windowStart = new Date(performedSetlists[i].performedAt);
+        const windowEnd = new Date(windowStart);
+        windowEnd.setDate(windowEnd.getDate() + 14); // 2 week window
+
+        let gigsInWindow = 0;
+        let lastGigInWindow = performedSetlists[i].performedAt;
+
+        for (let j = i; j < performedSetlists.length; j++) {
+          const gigDate = new Date(performedSetlists[j].performedAt);
+          if (gigDate <= windowEnd) {
+            gigsInWindow++;
+            lastGigInWindow = performedSetlists[j].performedAt;
+          } else {
+            break;
+          }
+        }
+
+        if (gigsInWindow > maxGigsInWindow && gigsInWindow >= 2) {
+          maxGigsInWindow = gigsInWindow;
+          busiestStart = windowStart;
+          busiestEnd = new Date(lastGigInWindow);
+        }
+      }
+
+      if (maxGigsInWindow >= 2) {
+        const days = Math.round((busiestEnd - busiestStart) / (1000 * 60 * 60 * 24)) + 1;
+        busiestStretch = {
+          gigs: maxGigsInWindow,
+          days,
+          startDate: busiestStart,
+          endDate: busiestEnd
+        };
+      }
+    }
+
+    // First and last gig dates
+    const firstGig = performedSetlists.length > 0 ? performedSetlists[0].performedAt : null;
+    const lastGig = performedSetlists.length > 0 ? performedSetlists[performedSetlists.length - 1].performedAt : null;
+
+    // Songs never played
     const playedSongIds = Object.keys(songPlayCounts);
     const neverPlayed = await prisma.song.count({
       where: {
         workspaceId,
-        id: { notIn: playedSongIds }
+        id: { notIn: playedSongIds.length > 0 ? playedSongIds : ['none'] }
       }
     });
 
-    // Upcoming gigs from calendar (keep this from Gig model)
+    // Upcoming gigs from calendar
     const upcomingGigs = await prisma.gig.count({
       where: {
         workspaceId,
@@ -133,16 +228,20 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
       }
     });
 
-    // Total rehearsals (keep from Gig model)
+    // Total rehearsals
     const totalRehearsals = await prisma.gig.count({
       where: { workspaceId, status: 'COMPLETED', type: 'REHEARSAL' }
     });
 
-    // Total revenue (keep from Gig model)
+    // Total revenue
     const revenue = await prisma.gig.aggregate({
       where: { workspaceId, status: 'COMPLETED', pay: { not: null } },
       _sum: { pay: true }
     });
+
+    // Calculate total time in hours and minutes
+    const totalHours = Math.floor(totalTimeSeconds / 3600);
+    const totalMinutes = Math.floor((totalTimeSeconds % 3600) / 60);
 
     res.json({
       totalGigs,
@@ -150,7 +249,21 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
       totalRevenue: revenue._sum.pay || 0,
       mostPlayedSongs: mostPlayedWithDetails,
       songsNeverPlayed: neverPlayed,
-      upcomingGigs
+      upcomingGigs,
+      // New fun stats
+      totalTimeGigged: {
+        hours: totalHours,
+        minutes: totalMinutes,
+        totalSeconds: totalTimeSeconds
+      },
+      mostTimeSong,
+      topVenues,
+      busiestStretch,
+      firstGig,
+      lastGig,
+      uniqueSongsPlayed: Object.keys(songPlayCounts).length,
+      averageSongsPerGig: totalGigs > 0 ? Math.round(totalSongsPlayed / totalGigs) : 0,
+      longestSetlist: longestSetlistCount > 0 ? { name: longestSetlistName, songCount: longestSetlistCount } : null
     });
   } catch (error) {
     console.error('Get stats error:', error);
