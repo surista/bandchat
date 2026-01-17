@@ -72,6 +72,11 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
   }
 });
 
+// Check if metadata service is configured (must be before /:songId route)
+router.get('/metadata-status', authenticate, async (req, res) => {
+  res.json({ configured: songBPMService.isConfigured() });
+});
+
 // Get a single song
 router.get('/:songId', authenticate, async (req, res) => {
   try {
@@ -142,11 +147,6 @@ router.put('/:songId', authenticate, async (req, res) => {
     console.error('Update song error:', error);
     res.status(500).json({ error: 'Failed to update song' });
   }
-});
-
-// Check if metadata service is configured
-router.get('/metadata-status', authenticate, async (req, res) => {
-  res.json({ configured: songBPMService.isConfigured() });
 });
 
 // Bulk import songs
