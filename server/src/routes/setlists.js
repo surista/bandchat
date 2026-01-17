@@ -24,7 +24,10 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
           select: { gigs: true }
         }
       },
-      orderBy: { updatedAt: 'desc' }
+      orderBy: [
+        { performedAt: { sort: 'desc', nulls: 'last' } },
+        { updatedAt: 'desc' }
+      ]
     });
 
     res.json(setlists);
