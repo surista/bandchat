@@ -1033,10 +1033,19 @@ function Sidebar({
                                           key={member.id}
                                           className="flex items-center justify-between p-3 bg-[var(--color-modal-card)] rounded-lg"
                                         >
-                                          <div>
-                                            <div className="font-medium text-white">{member.name}</div>
-                                            <div className="text-sm text-gray-400">
-                                              {instruments.length > 0 ? instruments.join(', ') : 'Unknown'} {earliestYear && `• Since ${earliestYear}`}
+                                          <div className="flex items-center gap-3">
+                                            {member.imageUrl ? (
+                                              <img src={member.imageUrl} alt={member.name} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                                            ) : (
+                                              <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-white font-medium flex-shrink-0">
+                                                {member.name?.charAt(0).toUpperCase()}
+                                              </div>
+                                            )}
+                                            <div>
+                                              <div className="font-medium text-white">{member.name}</div>
+                                              <div className="text-sm text-gray-400">
+                                                {instruments.length > 0 ? instruments.join(', ') : 'Unknown'} {earliestYear && `• Since ${earliestYear}`}
+                                              </div>
                                             </div>
                                           </div>
                                           <div className="flex gap-2">
@@ -1084,10 +1093,19 @@ function Sidebar({
                                           key={member.id}
                                           className="flex items-center justify-between p-3 bg-[var(--color-modal-card)] rounded-lg opacity-75"
                                         >
-                                          <div>
-                                            <div className="font-medium text-white">{member.name}</div>
-                                            <div className="text-sm text-gray-400">
-                                              {instruments.length > 0 ? instruments.join(', ') : 'Unknown'} {years && `• ${years}`}
+                                          <div className="flex items-center gap-3">
+                                            {member.imageUrl ? (
+                                              <img src={member.imageUrl} alt={member.name} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                                            ) : (
+                                              <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-white font-medium flex-shrink-0">
+                                                {member.name?.charAt(0).toUpperCase()}
+                                              </div>
+                                            )}
+                                            <div>
+                                              <div className="font-medium text-white">{member.name}</div>
+                                              <div className="text-sm text-gray-400">
+                                                {instruments.length > 0 ? instruments.join(', ') : 'Unknown'} {years && `• ${years}`}
+                                              </div>
                                             </div>
                                           </div>
                                           <div className="flex gap-2">
@@ -1128,10 +1146,19 @@ function Sidebar({
                                           key={member.id}
                                           className="flex items-center justify-between p-3 bg-purple-900/20 border border-purple-800/30 rounded-lg"
                                         >
-                                          <div>
-                                            <div className="font-medium text-white">{member.name}</div>
-                                            <div className="text-sm text-purple-300">
-                                              {instruments.length > 0 ? instruments.join(', ') : 'Guest musician'}
+                                          <div className="flex items-center gap-3">
+                                            {member.imageUrl ? (
+                                              <img src={member.imageUrl} alt={member.name} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                                            ) : (
+                                              <div className="w-10 h-10 rounded-full bg-purple-700 flex items-center justify-center text-white font-medium flex-shrink-0">
+                                                {member.name?.charAt(0).toUpperCase()}
+                                              </div>
+                                            )}
+                                            <div>
+                                              <div className="font-medium text-white">{member.name}</div>
+                                              <div className="text-sm text-purple-300">
+                                                {instruments.length > 0 ? instruments.join(', ') : 'Guest musician'}
+                                              </div>
                                             </div>
                                           </div>
                                           <div className="flex gap-2">
@@ -1171,9 +1198,18 @@ function Sidebar({
                                           key={member.id}
                                           className="flex items-center justify-between p-3 bg-red-900/20 border border-red-800/30 rounded-lg"
                                         >
-                                          <div>
-                                            <div className="font-medium text-white">{member.name}</div>
-                                            <div className="text-sm text-red-300">No instruments defined</div>
+                                          <div className="flex items-center gap-3">
+                                            {member.imageUrl ? (
+                                              <img src={member.imageUrl} alt={member.name} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+                                            ) : (
+                                              <div className="w-10 h-10 rounded-full bg-red-700 flex items-center justify-center text-white font-medium flex-shrink-0">
+                                                {member.name?.charAt(0).toUpperCase()}
+                                              </div>
+                                            )}
+                                            <div>
+                                              <div className="font-medium text-white">{member.name}</div>
+                                              <div className="text-sm text-red-300">No instruments defined</div>
+                                            </div>
                                           </div>
                                           <div className="flex gap-2">
                                             <button

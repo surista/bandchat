@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import api from '../../../services/api';
 
 const INSTRUMENTS = [
   'Vocals',
@@ -21,6 +22,8 @@ const INSTRUMENTS = [
 function BandMemberForm({ member, onSave, onCancel, loading }) {
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [imageUploading, setImageUploading] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
   const [guestInstruments, setGuestInstruments] = useState([]);
   const [stints, setStints] = useState([{ instruments: [], startDate: '', endDate: '' }]);
@@ -29,6 +32,7 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
     if (member) {
       setName(member.name || '');
       setNotes(member.notes || '');
+      setImageUrl(member.imageUrl || '');
       setIsGuest(member.isGuest || false);
       if (member.stints && member.stints.length > 0) {
         // For guests, extract instruments from first stint
@@ -50,11 +54,32 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
     } else {
       setName('');
       setNotes('');
+      setImageUrl('');
       setIsGuest(false);
       setGuestInstruments([]);
       setStints([{ instruments: [], startDate: '', endDate: '' }]);
     }
   }, [member]);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size must be less than 10MB');
+      return;
+    }
+
+    setImageUploading(true);
+    try {
+      const result = await api.uploadFile(file);
+      setImageUrl(result.url);
+    } catch (err) {
+      alert(err.message || 'Failed to upload image');
+    } finally {
+      setImageUploading(false);
+    }
+  };
 
   const handleStintChange = (index, field, value) => {
     setStints(prev => prev.map((stint, i) =>
@@ -108,6 +133,7 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
     onSave({
       name,
       notes: notes || null,
+      imageUrl: imageUrl || null,
       isGuest,
       stints: isGuest ? guestStints : validStints.map(s => ({
         instruments: s.instruments,
@@ -134,6 +160,53 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
           className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white"
           required
         />
+      </div>
+
+      {/* Photo Upload */}
+      <div>
+        <label className="block text-gray-300 text-sm font-medium mb-2">
+          Photo
+        </label>
+        <div className="flex items-start gap-4">
+          {/* Photo Preview */}
+          <div className="flex-shrink-0">
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt={name || 'Member'}
+                className="w-16 h-16 rounded-full object-cover border-2 border-gray-600"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center text-gray-400 text-2xl font-medium border-2 border-gray-600">
+                {name?.charAt(0).toUpperCase() || '?'}
+              </div>
+            )}
+          </div>
+          <div className="flex-1">
+            <label className="block">
+              <span className="btn btn-secondary cursor-pointer inline-block text-sm">
+                {imageUploading ? 'Uploading...' : 'Upload Photo'}
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                disabled={imageUploading}
+                className="hidden"
+              />
+            </label>
+            <p className="text-xs text-gray-500 mt-1">Max 10MB. JPG, PNG, GIF.</p>
+            {imageUrl && (
+              <button
+                type="button"
+                onClick={() => setImageUrl('')}
+                className="text-xs text-red-400 hover:text-red-300 mt-1"
+              >
+                Remove photo
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       <div>

@@ -187,20 +187,34 @@ function GigArchive({ workspaceId }) {
 
     setUploading(true);
     try {
+      const newMediaItems = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         setUploadProgress(`Uploading ${i + 1} of ${files.length}...`);
         const result = await api.uploadFile(file);
-        await api.addGigMedia(selectedGig.id, {
+        const newMedia = await api.addGigMedia(selectedGig.id, {
           type: file.type.startsWith('video') ? 'video' : 'image',
           url: result.url,
           caption: file.name
         });
+        newMediaItems.push(newMedia);
       }
-      await loadData();
+      // Update selectedEntry immediately with new media
+      setSelectedEntry(prev => {
+        if (!prev?.gig) return prev;
+        return {
+          ...prev,
+          gig: {
+            ...prev.gig,
+            media: [...(prev.gig.media || []), ...newMediaItems]
+          }
+        };
+      });
       setShowAddMedia(false);
       setMediaCaption('');
       setUploadProgress('');
+      // Refresh data in background
+      loadData();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -222,15 +236,27 @@ function GigArchive({ workspaceId }) {
         type = 'image';
       }
 
-      await api.addGigMedia(selectedGig.id, {
+      const newMedia = await api.addGigMedia(selectedGig.id, {
         type,
         url: mediaUrl,
         caption: mediaCaption
       });
-      await loadData();
+      // Update selectedEntry immediately with new media
+      setSelectedEntry(prev => {
+        if (!prev?.gig) return prev;
+        return {
+          ...prev,
+          gig: {
+            ...prev.gig,
+            media: [...(prev.gig.media || []), newMedia]
+          }
+        };
+      });
       setShowAddMedia(false);
       setMediaUrl('');
       setMediaCaption('');
+      // Refresh data in background
+      loadData();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -242,7 +268,19 @@ function GigArchive({ workspaceId }) {
     if (!confirm('Delete this media?')) return;
     try {
       await api.deleteGigMedia(gigId, mediaId);
-      await loadData();
+      // Update selectedEntry immediately by removing the deleted media
+      setSelectedEntry(prev => {
+        if (!prev?.gig) return prev;
+        return {
+          ...prev,
+          gig: {
+            ...prev.gig,
+            media: (prev.gig.media || []).filter(m => m.id !== mediaId)
+          }
+        };
+      });
+      // Refresh data in background
+      loadData();
     } catch (err) {
       setError(err.message);
     }
@@ -762,6 +800,17 @@ function GigArchive({ workspaceId }) {
                             key={member.id}
                             className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 rounded-full"
                           >
+                            {member.imageUrl ? (
+                              <img
+                                src={member.imageUrl}
+                                alt={member.name}
+                                className="w-6 h-6 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs font-medium">
+                                {member.name?.charAt(0).toUpperCase()}
+                              </div>
+                            )}
                             <span className="text-white text-sm">{member.name}</span>
                             {member.isGuest ? (
                               <span className="text-purple-400 text-xs">(Guest)</span>
@@ -1099,12 +1148,33 @@ function GigArchive({ workspaceId }) {
                   <p className="text-sm">Add band members in Settings first.</p>
                 </div>
               ) : (
+                <>
+                {/* Quick-add current members button */}
+                {(() => {
+                  const currentMemberIds = bandMembers
+                    .filter(m => !m.isGuest && m.stints?.some(s => !s.endDate))
+                    .map(m => m.id);
+                  const allCurrentSelected = currentMemberIds.every(id => selectedPerformerIds.includes(id));
+                  return currentMemberIds.length > 0 && !allCurrentSelected ? (
+                    <button
+                      onClick={() => {
+                        setSelectedPerformerIds(prev => {
+                          const newIds = new Set([...prev, ...currentMemberIds]);
+                          return [...newIds];
+                        });
+                      }}
+                      className="w-full mb-3 py-2 px-3 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/50 rounded-lg text-purple-300 text-sm transition-colors"
+                    >
+                      + Add all current members ({currentMemberIds.length})
+                    </button>
+                  ) : null;
+                })()}
                 <div className="space-y-2 max-h-64 overflow-y-auto">
                   {[...bandMembers]
                     .sort((a, b) => {
-                      // Current members first (have a stint without endDate)
-                      const aIsCurrent = a.stints?.some(s => !s.endDate) || false;
-                      const bIsCurrent = b.stints?.some(s => !s.endDate) || false;
+                      // Current members first (non-guest with stint without endDate)
+                      const aIsCurrent = !a.isGuest && (a.stints?.some(s => !s.endDate) || false);
+                      const bIsCurrent = !b.isGuest && (b.stints?.some(s => !s.endDate) || false);
                       if (aIsCurrent && !bIsCurrent) return -1;
                       if (!aIsCurrent && bIsCurrent) return 1;
                       // Then sort by name
@@ -1128,7 +1198,18 @@ function GigArchive({ workspaceId }) {
                         onChange={() => togglePerformer(member.id)}
                         className="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-500 focus:ring-purple-500"
                       />
-                      <div className="flex-1">
+                      {member.imageUrl ? (
+                        <img
+                          src={member.imageUrl}
+                          alt={member.name}
+                          className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-white font-medium flex-shrink-0">
+                          {member.name?.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-white font-medium">{member.name}</span>
                           {member.isGuest && (
@@ -1146,6 +1227,7 @@ function GigArchive({ workspaceId }) {
                     );
                   })}
                 </div>
+                </>
               )}
               <div className="flex gap-2 justify-end mt-4 pt-4 border-t border-gray-700">
                 <button
