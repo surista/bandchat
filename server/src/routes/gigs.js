@@ -233,9 +233,9 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
       where: { workspaceId, status: 'COMPLETED', type: 'REHEARSAL' }
     });
 
-    // Total revenue
+    // Total revenue (all gigs with pay, regardless of status)
     const revenue = await prisma.gig.aggregate({
-      where: { workspaceId, status: 'COMPLETED', pay: { not: null } },
+      where: { workspaceId, pay: { not: null } },
       _sum: { pay: true }
     });
 
