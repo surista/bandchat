@@ -41,12 +41,14 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (re
       return res.status(400).json({ error: 'Name is required' });
     }
 
-    if (!stints || stints.length === 0) {
+    // Guests don't need stints, regular members do
+    if (!isGuest && (!stints || stints.length === 0)) {
       return res.status(400).json({ error: 'At least one instrument stint is required' });
     }
 
-    // Validate stints
-    for (const stint of stints) {
+    // Validate stints if provided
+    const validStints = stints || [];
+    for (const stint of validStints) {
       const instruments = stint.instruments || (stint.instrument ? [stint.instrument] : []);
       if (instruments.length === 0 || !stint.startDate) {
         return res.status(400).json({ error: 'Each stint requires at least one instrument and start date' });
@@ -60,13 +62,15 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (re
         notes,
         isGuest: isGuest || false,
         workspaceId: req.params.workspaceId,
-        stints: {
-          create: stints.map(s => ({
-            instruments: s.instruments || (s.instrument ? [s.instrument] : []),
-            startDate: new Date(s.startDate),
-            endDate: s.endDate ? new Date(s.endDate) : null
-          }))
-        }
+        ...(validStints.length > 0 && {
+          stints: {
+            create: validStints.map(s => ({
+              instruments: s.instruments || (s.instrument ? [s.instrument] : []),
+              startDate: new Date(s.startDate),
+              endDate: s.endDate ? new Date(s.endDate) : null
+            }))
+          }
+        })
       },
       include: {
         stints: {
@@ -146,14 +150,19 @@ router.put('/:memberId', authenticate, async (req, res) => {
       ...(isGuest !== undefined && { isGuest })
     };
 
+    // Determine if member is/will be a guest
+    const willBeGuest = isGuest !== undefined ? isGuest : existing.isGuest;
+
     // If stints are provided, replace all stints
     if (stints !== undefined) {
-      if (!stints || stints.length === 0) {
+      // Guests can have empty stints, regular members cannot
+      if (!willBeGuest && (!stints || stints.length === 0)) {
         return res.status(400).json({ error: 'At least one instrument stint is required' });
       }
 
-      // Validate stints
-      for (const stint of stints) {
+      // Validate stints if provided
+      const validStints = stints || [];
+      for (const stint of validStints) {
         const instruments = stint.instruments || (stint.instrument ? [stint.instrument] : []);
         if (instruments.length === 0 || !stint.startDate) {
           return res.status(400).json({ error: 'Each stint requires at least one instrument and start date' });
@@ -169,13 +178,15 @@ router.put('/:memberId', authenticate, async (req, res) => {
           where: { id: req.params.memberId },
           data: {
             ...updateData,
-            stints: {
-              create: stints.map(s => ({
-                instruments: s.instruments || (s.instrument ? [s.instrument] : []),
-                startDate: new Date(s.startDate),
-                endDate: s.endDate ? new Date(s.endDate) : null
-              }))
-            }
+            ...(validStints.length > 0 && {
+              stints: {
+                create: validStints.map(s => ({
+                  instruments: s.instruments || (s.instrument ? [s.instrument] : []),
+                  startDate: new Date(s.startDate),
+                  endDate: s.endDate ? new Date(s.endDate) : null
+                }))
+              }
+            })
           }
         })
       ]);

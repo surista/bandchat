@@ -80,13 +80,15 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
     // Validate
     if (!name) return;
     const validStints = stints.filter(s => s.instruments.length > 0 && s.startDate);
-    if (validStints.length === 0) return;
+
+    // Guests don't need stints, regular members do
+    if (!isGuest && validStints.length === 0) return;
 
     onSave({
       name,
       notes: notes || null,
       isGuest,
-      stints: validStints.map(s => ({
+      stints: isGuest ? [] : validStints.map(s => ({
         instruments: s.instruments,
         startDate: s.startDate,
         endDate: s.endDate || null
@@ -94,7 +96,8 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
     });
   };
 
-  const isValid = name && stints.some(s => s.instruments.length > 0 && s.startDate);
+  // Guests only need a name, regular members need stints too
+  const isValid = name && (isGuest || stints.some(s => s.instruments.length > 0 && s.startDate));
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -125,91 +128,94 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
         </label>
       </div>
 
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-gray-300 text-sm font-medium">
-            Instrument Stints <span className="text-red-500">*</span>
-          </label>
-          <button
-            type="button"
-            onClick={addStint}
-            className="text-sm text-blue-400 hover:text-blue-300"
-          >
-            + Add Stint
-          </button>
-        </div>
+      {/* Only show stints section for non-guest members */}
+      {!isGuest && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-gray-300 text-sm font-medium">
+              Instrument Stints <span className="text-red-500">*</span>
+            </label>
+            <button
+              type="button"
+              onClick={addStint}
+              className="text-sm text-blue-400 hover:text-blue-300"
+            >
+              + Add Stint
+            </button>
+          </div>
 
-        <div className="space-y-3">
-          {stints.map((stint, index) => (
-            <div key={index} className="p-3 bg-gray-900 border border-gray-700 rounded-lg">
-              <div className="flex items-start gap-2">
-                <div className="flex-1 space-y-3">
-                  {/* Instrument checkboxes */}
-                  <div>
-                    <label className="block text-gray-400 text-xs mb-2">Instruments (select all that apply)</label>
-                    <div className="flex flex-wrap gap-2">
-                      {INSTRUMENTS.map(inst => (
-                        <button
-                          key={inst}
-                          type="button"
-                          onClick={() => toggleInstrument(index, inst)}
-                          className={`px-2 py-1 text-xs rounded transition-colors ${
-                            stint.instruments.includes(inst)
-                              ? 'bg-green-600 text-white'
-                              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                          }`}
-                        >
-                          {inst}
-                        </button>
-                      ))}
-                    </div>
-                    {stint.instruments.length > 0 && (
-                      <div className="mt-2 text-sm text-green-400">
-                        Selected: {stint.instruments.join(', ')}
+          <div className="space-y-3">
+            {stints.map((stint, index) => (
+              <div key={index} className="p-3 bg-gray-900 border border-gray-700 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 space-y-3">
+                    {/* Instrument checkboxes */}
+                    <div>
+                      <label className="block text-gray-400 text-xs mb-2">Instruments (select all that apply)</label>
+                      <div className="flex flex-wrap gap-2">
+                        {INSTRUMENTS.map(inst => (
+                          <button
+                            key={inst}
+                            type="button"
+                            onClick={() => toggleInstrument(index, inst)}
+                            className={`px-2 py-1 text-xs rounded transition-colors ${
+                              stint.instruments.includes(inst)
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                            }`}
+                          >
+                            {inst}
+                          </button>
+                        ))}
                       </div>
-                    )}
+                      {stint.instruments.length > 0 && (
+                        <div className="mt-2 text-sm text-green-400">
+                          Selected: {stint.instruments.join(', ')}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-gray-400 text-xs mb-1">From</label>
+                        <input
+                          type="date"
+                          value={stint.startDate}
+                          onChange={(e) => handleStintChange(index, 'startDate', e.target.value)}
+                          className="w-full px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-gray-400 text-xs mb-1">To (empty = present)</label>
+                        <input
+                          type="date"
+                          value={stint.endDate}
+                          onChange={(e) => handleStintChange(index, 'endDate', e.target.value)}
+                          className="w-full px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-gray-400 text-xs mb-1">From</label>
-                      <input
-                        type="date"
-                        value={stint.startDate}
-                        onChange={(e) => handleStintChange(index, 'startDate', e.target.value)}
-                        className="w-full px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-gray-400 text-xs mb-1">To (empty = present)</label>
-                      <input
-                        type="date"
-                        value={stint.endDate}
-                        onChange={(e) => handleStintChange(index, 'endDate', e.target.value)}
-                        className="w-full px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm"
-                      />
-                    </div>
-                  </div>
+                  {stints.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeStint(index)}
+                      className="text-red-400 hover:text-red-300 p-1"
+                      title="Remove stint"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
-
-                {stints.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeStint(index)}
-                    className="text-red-400 hover:text-red-300 p-1"
-                    title="Remove stint"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div>
         <label className="block text-gray-300 text-sm font-medium mb-2">

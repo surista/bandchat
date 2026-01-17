@@ -1026,7 +1026,7 @@ function Sidebar({
                                         )}
                                       </div>
                                       <div className="text-sm text-gray-400">
-                                        {instruments.join(', ')} {earliestYear && `• Since ${earliestYear}`}
+                                        {instruments.length > 0 ? instruments.join(', ') : (member.isGuest ? 'Guest musician' : 'Unknown')} {earliestYear && `• Since ${earliestYear}`}
                                       </div>
                                     </div>
                                     <div className="flex gap-2">
@@ -1082,7 +1082,7 @@ function Sidebar({
                                         )}
                                       </div>
                                       <div className="text-sm text-gray-400">
-                                        {instruments.join(', ')} {years && `• ${years}`}
+                                        {instruments.length > 0 ? instruments.join(', ') : (member.isGuest ? 'Guest musician' : 'Unknown')} {years && `• ${years}`}
                                       </div>
                                     </div>
                                     <div className="flex gap-2">

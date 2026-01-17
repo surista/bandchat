@@ -729,7 +729,11 @@ function GigArchive({ workspaceId }) {
                             className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 rounded-full"
                           >
                             <span className="text-white text-sm">{member.name}</span>
-                            <span className="text-gray-400 text-xs">({instruments.join(', ') || 'Unknown'})</span>
+                            {member.isGuest ? (
+                              <span className="text-purple-400 text-xs">(Guest)</span>
+                            ) : (
+                              <span className="text-gray-400 text-xs">({instruments.join(', ') || 'Unknown'})</span>
+                            )}
                           </div>
                           );
                         })}
@@ -1080,8 +1084,15 @@ function GigArchive({ workspaceId }) {
                         className="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-500 focus:ring-purple-500"
                       />
                       <div className="flex-1">
-                        <div className="text-white font-medium">{member.name}</div>
-                        <div className="text-gray-400 text-sm">{instruments.join(', ') || 'Unknown'}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-medium">{member.name}</span>
+                          {member.isGuest && (
+                            <span className="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-300 rounded">Guest</span>
+                          )}
+                        </div>
+                        <div className="text-gray-400 text-sm">
+                          {instruments.length > 0 ? instruments.join(', ') : (member.isGuest ? 'Guest musician' : 'Unknown')}
+                        </div>
                       </div>
                       {isFormer && (
                         <span className="text-xs text-gray-500 bg-gray-700 px-2 py-0.5 rounded">Former</span>

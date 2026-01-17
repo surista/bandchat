@@ -52,18 +52,20 @@ function BandMembersList({ workspaceId }) {
 
   // Get the primary instrument (most recent stint without end date, or most recent stint)
   const getPrimaryInstrument = (member) => {
-    if (!member.stints || member.stints.length === 0) return 'Unknown';
+    if (!member.stints || member.stints.length === 0) {
+      return member.isGuest ? 'Guest' : 'Unknown';
+    }
     const currentStint = member.stints.find(s => !s.endDate);
     if (currentStint) {
       const instruments = currentStint.instruments || (currentStint.instrument ? [currentStint.instrument] : []);
-      return instruments[0] || 'Unknown';
+      return instruments[0] || (member.isGuest ? 'Guest' : 'Unknown');
     }
     // Return the most recent stint
     const sorted = [...member.stints].sort((a, b) =>
       new Date(b.startDate) - new Date(a.startDate)
     );
     const instruments = sorted[0]?.instruments || (sorted[0]?.instrument ? [sorted[0].instrument] : []);
-    return instruments[0] || 'Unknown';
+    return instruments[0] || (member.isGuest ? 'Guest' : 'Unknown');
   };
 
   // Get all unique instruments for a member
@@ -147,13 +149,19 @@ function BandMembersList({ workspaceId }) {
             </div>
             {/* Show all instruments */}
             <div className="flex flex-wrap gap-1 mt-1">
-              {instruments.map((inst, idx) => (
-                <span key={idx} className="text-gray-400 text-sm">
-                  {inst}{idx < instruments.length - 1 ? ',' : ''}
+              {instruments.length > 0 ? (
+                instruments.map((inst, idx) => (
+                  <span key={idx} className="text-gray-400 text-sm">
+                    {inst}{idx < instruments.length - 1 ? ',' : ''}
+                  </span>
+                ))
+              ) : (
+                <span className="text-gray-400 text-sm">
+                  {member.isGuest ? 'Guest musician' : 'Unknown'}
                 </span>
-              ))}
+              )}
             </div>
-            <p className="text-gray-500 text-xs mt-1">{yearRange}</p>
+            {yearRange && <p className="text-gray-500 text-xs mt-1">{yearRange}</p>}
           </div>
         </div>
 
