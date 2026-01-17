@@ -34,6 +34,7 @@ function SongForm({ song, onSave, onClose }) {
 
   const [formData, setFormData] = useState({
     title: song?.title || '',
+    shortName: song?.shortName || '',
     artist: song?.artist || '',
     durationStr: secondsToTime(song?.duration),
     keyRoot: initialRoot,
@@ -59,6 +60,7 @@ function SongForm({ song, onSave, onClose }) {
 
       await onSave({
         title: formData.title,
+        shortName: formData.shortName || null,
         artist: formData.artist || null,
         duration: timeToSeconds(formData.durationStr),
         key,
@@ -110,6 +112,17 @@ function SongForm({ song, onSave, onClose }) {
                   className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
                   placeholder="Song title"
                   required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-medium mb-1">Short Name</label>
+                <input
+                  type="text"
+                  value={formData.shortName}
+                  onChange={(e) => handleChange('shortName', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                  placeholder="Abbreviated name for setlists (optional)"
                 />
               </div>
 

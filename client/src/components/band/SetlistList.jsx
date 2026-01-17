@@ -13,6 +13,11 @@ function SetlistList({ workspaceId }) {
   const [newSetlistName, setNewSetlistName] = useState('');
   const [newSetlistDesc, setNewSetlistDesc] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importName, setImportName] = useState('');
+  const [importText, setImportText] = useState('');
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResults, setImportResults] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -69,6 +74,58 @@ function SetlistList({ workspaceId }) {
     setSetlists(prev => prev.map(s => s.id === updatedSetlist.id ? updatedSetlist : s));
   };
 
+  const parseImportText = (text) => {
+    const lines = text.split('\n').filter(line => line.trim());
+    return lines.map(line => {
+      let title, artist;
+      if (line.includes(' - ')) {
+        [title, artist] = line.split(' - ').map(s => s.trim());
+      } else if (line.includes(' | ')) {
+        [title, artist] = line.split(' | ').map(s => s.trim());
+      } else if (line.includes('\t')) {
+        [title, artist] = line.split('\t').map(s => s.trim());
+      } else {
+        // Remove leading numbers like "1. " or "1) "
+        title = line.replace(/^\d+[\.\)]\s*/, '').trim();
+        artist = null;
+      }
+      return { title, artist };
+    }).filter(song => song.title);
+  };
+
+  const handleImportSetlist = async (e) => {
+    e.preventDefault();
+    const songsToImport = parseImportText(importText);
+
+    if (songsToImport.length === 0) {
+      alert('No songs found. Enter one song per line.');
+      return;
+    }
+
+    setImportLoading(true);
+    setImportResults(null);
+
+    try {
+      const result = await api.importSetlist(workspaceId, importName, songsToImport);
+      setImportResults(result.results);
+      setSetlists(prev => [result.setlist, ...prev]);
+
+      if (result.results.notFound.length === 0) {
+        // All songs matched, close modal
+        setShowImportModal(false);
+        setImportName('');
+        setImportText('');
+        setImportResults(null);
+        setEditingSetlist(result.setlist);
+        setShowBuilder(true);
+      }
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   const calculateDuration = (setlistSongs) => {
     const totalSeconds = setlistSongs.reduce((acc, ss) => acc + (ss.song?.duration || 0), 0);
     const mins = Math.floor(totalSeconds / 60);
@@ -101,12 +158,20 @@ function SetlistList({ workspaceId }) {
       <div className="flex-shrink-0 p-4 border-b border-gray-700">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-white">Setlists</h2>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="btn btn-primary"
-          >
-            + New Setlist
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="btn btn-secondary"
+            >
+              Import Setlist
+            </button>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="btn btn-primary"
+            >
+              + New Setlist
+            </button>
+          </div>
         </div>
       </div>
 
@@ -243,6 +308,133 @@ function SetlistList({ workspaceId }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Import Setlist</h3>
+
+            {!importResults ? (
+              <form onSubmit={handleImportSetlist}>
+                <div className="mb-4">
+                  <label className="block text-gray-700 font-medium mb-1">
+                    Setlist Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={importName}
+                    onChange={(e) => setImportName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                    placeholder="e.g., Saturday Night Set"
+                    required
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-700 font-medium mb-1">
+                    Songs (one per line)
+                  </label>
+                  <textarea
+                    value={importText}
+                    onChange={(e) => setImportText(e.target.value)}
+                    placeholder={"Song Title - Artist\nAnother Song - Artist\nOr just song titles..."}
+                    className="w-full h-48 px-3 py-2 border border-gray-300 rounded text-gray-900 font-mono text-sm"
+                    required
+                  />
+                  <p className="text-gray-500 text-xs mt-1">
+                    Songs will be matched to your existing song library. Use "Title - Artist" format for best matching.
+                  </p>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowImportModal(false);
+                      setImportName('');
+                      setImportText('');
+                    }}
+                    className="btn btn-secondary"
+                    disabled={importLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={importLoading || !importName.trim() || !importText.trim()}
+                    className="btn btn-primary"
+                  >
+                    {importLoading ? 'Importing...' : 'Import'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div>
+                <div className="mb-4">
+                  {importResults.matched.length > 0 && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
+                      <h4 className="font-medium text-green-800 mb-2">
+                        {importResults.matched.length} songs matched
+                      </h4>
+                      <ul className="text-sm text-green-700 max-h-32 overflow-y-auto">
+                        {importResults.matched.map((m, i) => (
+                          <li key={i}>{m.song.title}{m.song.artist && ` - ${m.song.artist}`}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {importResults.notFound.length > 0 && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                      <h4 className="font-medium text-yellow-800 mb-2">
+                        {importResults.notFound.length} songs not found
+                      </h4>
+                      <p className="text-sm text-yellow-700 mb-2">
+                        These songs are not in your library. Add them to Songs first, then add to the setlist manually.
+                      </p>
+                      <ul className="text-sm text-yellow-700 max-h-32 overflow-y-auto">
+                        {importResults.notFound.map((s, i) => (
+                          <li key={i}>{s.title}{s.artist && ` - ${s.artist}`}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => {
+                      setShowImportModal(false);
+                      setImportName('');
+                      setImportText('');
+                      setImportResults(null);
+                    }}
+                    className="btn btn-secondary"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowImportModal(false);
+                      setImportName('');
+                      setImportText('');
+                      setImportResults(null);
+                      // Find the setlist we just created and open builder
+                      const newSetlist = setlists[0];
+                      if (newSetlist) {
+                        setEditingSetlist(newSetlist);
+                        setShowBuilder(true);
+                      }
+                    }}
+                    className="btn btn-primary"
+                  >
+                    Edit Setlist
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

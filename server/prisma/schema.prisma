@@ -200,6 +200,7 @@ model Reaction {
 model Song {
   id          String   @id @default(uuid())
   title       String
+  shortName   String?
   artist      String?
   duration    Int?
   key         String?
@@ -222,13 +223,14 @@ model Song {
 }
 
 model Setlist {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  workspaceId String
-  createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  useShortNames Boolean  @default(false)
+  workspaceId   String
+  createdById   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdBy User          @relation(fields: [createdById], references: [id])

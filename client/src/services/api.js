@@ -485,6 +485,13 @@ class ApiService {
     });
   }
 
+  async importSetlist(workspaceId, name, songs, useShortNames = false) {
+    return this.request(`/setlists/workspace/${workspaceId}/import`, {
+      method: 'POST',
+      body: JSON.stringify({ name, songs, useShortNames })
+    });
+  }
+
   async addSongToSetlist(setlistId, songId) {
     return this.request(`/setlists/${setlistId}/songs`, {
       method: 'POST',

@@ -37,7 +37,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 // Create a setlist
 router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, useShortNames } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
@@ -47,6 +47,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       data: {
         name,
         description,
+        useShortNames: useShortNames || false,
         workspaceId: req.params.workspaceId,
         createdById: req.user.id
       },
@@ -110,13 +111,14 @@ router.get('/:setlistId', authenticate, async (req, res) => {
 // Update a setlist
 router.put('/:setlistId', authenticate, async (req, res) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, useShortNames } = req.body;
 
     const setlist = await prisma.setlist.update({
       where: { id: req.params.setlistId },
       data: {
         ...(name && { name }),
-        ...(description !== undefined && { description })
+        ...(description !== undefined && { description }),
+        ...(useShortNames !== undefined && { useShortNames })
       },
       include: {
         createdBy: {
@@ -320,6 +322,115 @@ router.delete('/:setlistId/songs/:songId', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Remove song from setlist error:', error);
     res.status(500).json({ error: 'Failed to remove song from setlist' });
+  }
+});
+
+// Bulk import a setlist from text
+router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceMember, async (req, res) => {
+  try {
+    const { name, songs, useShortNames } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: 'Setlist name is required' });
+    }
+
+    if (!songs || !Array.isArray(songs) || songs.length === 0) {
+      return res.status(400).json({ error: 'Songs array is required' });
+    }
+
+    // Get all songs in the workspace for matching
+    const workspaceSongs = await prisma.song.findMany({
+      where: { workspaceId: req.params.workspaceId }
+    });
+
+    const results = {
+      matched: [],
+      notFound: []
+    };
+
+    // Match songs by title (and optionally artist)
+    const matchedSongIds = [];
+    for (const songInput of songs) {
+      const title = songInput.title?.toLowerCase().trim();
+      const artist = songInput.artist?.toLowerCase().trim();
+
+      if (!title) continue;
+
+      // Find matching song - prefer exact title+artist match, fall back to title only
+      let match = workspaceSongs.find(s => {
+        const sTitle = s.title.toLowerCase().trim();
+        const sArtist = s.artist?.toLowerCase().trim();
+
+        if (artist && sArtist) {
+          return sTitle === title && sArtist === artist;
+        }
+        return sTitle === title;
+      });
+
+      // Try partial match if no exact match
+      if (!match) {
+        match = workspaceSongs.find(s => {
+          const sTitle = s.title.toLowerCase().trim();
+          return sTitle.includes(title) || title.includes(sTitle);
+        });
+      }
+
+      if (match) {
+        if (!matchedSongIds.includes(match.id)) {
+          matchedSongIds.push(match.id);
+          results.matched.push({ input: songInput, song: match });
+        }
+      } else {
+        results.notFound.push(songInput);
+      }
+    }
+
+    if (matchedSongIds.length === 0) {
+      return res.status(400).json({
+        error: 'No matching songs found in your song library',
+        notFound: results.notFound
+      });
+    }
+
+    // Create the setlist
+    const setlist = await prisma.setlist.create({
+      data: {
+        name,
+        useShortNames: useShortNames || false,
+        workspaceId: req.params.workspaceId,
+        createdById: req.user.id,
+        songs: {
+          create: matchedSongIds.map((songId, index) => ({
+            songId,
+            position: index,
+            type: 'SONG'
+          }))
+        }
+      },
+      include: {
+        createdBy: {
+          select: { id: true, displayName: true }
+        },
+        songs: {
+          include: { song: true },
+          orderBy: { position: 'asc' }
+        }
+      }
+    });
+
+    const io = req.app.get('io');
+    io.to(`workspace:${req.params.workspaceId}`).emit('setlist:created', setlist);
+
+    res.status(201).json({
+      setlist,
+      results
+    });
+  } catch (error) {
+    console.error('Import setlist error:', error);
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'A setlist with this name already exists' });
+    }
+    res.status(500).json({ error: 'Failed to import setlist' });
   }
 });
 

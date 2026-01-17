@@ -6,6 +6,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [draggedItem, setDraggedItem] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [useShortNames, setUseShortNames] = useState(setlist.useShortNames || false);
 
   const availableSongs = allSongs.filter(
     song => !setlistItems.some(item => item.songId === song.id)
@@ -96,6 +97,23 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
     }
   };
 
+  const toggleShortNames = async () => {
+    const newValue = !useShortNames;
+    setUseShortNames(newValue);
+    try {
+      await api.updateSetlist(setlist.id, { useShortNames: newValue });
+    } catch (err) {
+      console.error('Failed to save preference:', err);
+    }
+  };
+
+  const getSongDisplayName = (song) => {
+    if (useShortNames && song?.shortName) {
+      return song.shortName;
+    }
+    return song?.title || '';
+  };
+
   // Calculate total duration including MC sections
   const getItemDuration = (item) => {
     if (item.type === 'MC') {
@@ -135,12 +153,25 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
               <p className="text-gray-400 text-sm">{setlist.description}</p>
             )}
           </div>
-          <div className="text-right text-sm">
-            <div className="text-white font-medium">
-              {songCount} song{songCount !== 1 ? 's' : ''}
-              {mcCount > 0 && ` + ${mcCount} MC`}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={toggleShortNames}
+              className={`px-3 py-1 rounded text-sm ${
+                useShortNames
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+              title="Toggle between full song titles and short names"
+            >
+              {useShortNames ? 'Short Names' : 'Full Titles'}
+            </button>
+            <div className="text-right text-sm">
+              <div className="text-white font-medium">
+                {songCount} song{songCount !== 1 ? 's' : ''}
+                {mcCount > 0 && ` + ${mcCount} MC`}
+              </div>
+              <div className="text-gray-400">{durationMins}:{String(durationSecs).padStart(2, '0')}</div>
             </div>
-            <div className="text-gray-400">{durationMins}:{String(durationSecs).padStart(2, '0')}</div>
           </div>
         </div>
       </div>
@@ -210,8 +241,8 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
                     ) : (
                       <>
                         <div className="flex-1 min-w-0">
-                          <div className="text-white truncate">{item.song?.title}</div>
-                          {item.song?.artist && (
+                          <div className="text-white truncate">{getSongDisplayName(item.song)}</div>
+                          {!useShortNames && item.song?.artist && (
                             <div className="text-gray-400 text-sm truncate">{item.song.artist}</div>
                           )}
                         </div>

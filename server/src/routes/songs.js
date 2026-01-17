@@ -35,7 +35,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 // Create a song
 router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
-    const { title, artist, duration, key, bpm, notes, youtubeUrl, spotifyUrl } = req.body;
+    const { title, shortName, artist, duration, key, bpm, notes, youtubeUrl, spotifyUrl } = req.body;
 
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
@@ -44,6 +44,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
     const song = await prisma.song.create({
       data: {
         title,
+        shortName,
         artist,
         duration,
         key,
@@ -245,12 +246,13 @@ router.get('/:songId', authenticate, async (req, res) => {
 // Update a song
 router.put('/:songId', authenticate, async (req, res) => {
   try {
-    const { title, artist, duration, key, bpm, notes, youtubeUrl, spotifyUrl } = req.body;
+    const { title, shortName, artist, duration, key, bpm, notes, youtubeUrl, spotifyUrl } = req.body;
 
     const song = await prisma.song.update({
       where: { id: req.params.songId },
       data: {
         ...(title && { title }),
+        ...(shortName !== undefined && { shortName }),
         ...(artist !== undefined && { artist }),
         ...(duration !== undefined && { duration }),
         ...(key !== undefined && { key }),
