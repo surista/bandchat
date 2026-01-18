@@ -23,19 +23,26 @@ class SongBPMService {
     }
 
     try {
-      // Build search query
-      let query = title;
+      // Build search query using the documented format
+      // For "both" type: lookup=song:TITLE artist:ARTIST
+      let lookup;
+      let type;
+
       if (artist) {
-        query = `${artist} ${title}`;
+        type = 'both';
+        lookup = `song:${title} artist:${artist}`;
+      } else {
+        type = 'song';
+        lookup = title;
       }
 
       const params = new URLSearchParams({
-        type: 'song',
-        lookup: query
+        type: type,
+        lookup: lookup
       });
 
       const url = `${this.baseUrl}/search/?${params}`;
-      console.log('GetSongBPM search:', query);
+      console.log('GetSongBPM search URL:', url);
 
       const response = await fetch(url, {
         headers: {
@@ -44,14 +51,21 @@ class SongBPMService {
         }
       });
 
+      const responseText = await response.text();
+
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('GetSongBPM search failed:', response.status, errorText);
+        console.error('GetSongBPM search failed:', response.status, responseText.slice(0, 500));
         return null;
       }
 
-      const data = await response.json();
-      console.log('GetSongBPM response:', JSON.stringify(data).slice(0, 200));
+      // Check if response is HTML (Cloudflare block) vs JSON
+      if (responseText.trim().startsWith('<')) {
+        console.error('GetSongBPM returned HTML instead of JSON - likely blocked');
+        return null;
+      }
+
+      const data = JSON.parse(responseText);
+      console.log('GetSongBPM response:', JSON.stringify(data).slice(0, 300));
 
       // Check if we got results
       if (!data.search || data.search.length === 0) {
