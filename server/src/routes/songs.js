@@ -128,7 +128,9 @@ router.post('/workspace/:workspaceId/enrich', authenticate, isWorkspaceMember, a
       // Fetch BPM and Key from GetSongBPM
       if ((needsBpm || needsKey) && songBPMService.isConfigured()) {
         try {
+          console.log(`Enriching "${song.title}" by "${song.artist}" - needsBpm:${needsBpm} needsKey:${needsKey}`);
           const bpmData = await songBPMService.getTrackMetadata(song.title, song.artist);
+          console.log(`BPM data for "${song.title}":`, bpmData);
           if (bpmData) {
             if (needsBpm && bpmData.bpm) {
               updates.bpm = bpmData.bpm;
@@ -142,6 +144,8 @@ router.post('/workspace/:workspaceId/enrich', authenticate, isWorkspaceMember, a
         } catch (err) {
           console.error('BPM lookup failed for:', song.title, err.message);
         }
+      } else if (needsBpm || needsKey) {
+        console.log(`Skipping BPM lookup for "${song.title}" - service configured: ${songBPMService.isConfigured()}`);
       }
 
       // Fetch duration from iTunes

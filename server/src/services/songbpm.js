@@ -4,6 +4,8 @@
 class SongBPMService {
   constructor() {
     this.baseUrl = 'https://api.getsongbpm.com';
+    // Log on startup whether API key is configured
+    console.log('SongBPM Service initialized - API key configured:', !!process.env.GETSONGBPM_API_KEY);
   }
 
   getApiKey() {
@@ -33,17 +35,23 @@ class SongBPMService {
         lookup: query
       });
 
-      const response = await fetch(`${this.baseUrl}/search/?${params}`);
+      const url = `${this.baseUrl}/search/?${params}`;
+      console.log('GetSongBPM search:', query);
+
+      const response = await fetch(url);
 
       if (!response.ok) {
-        console.error('GetSongBPM search failed:', response.status);
+        const errorText = await response.text();
+        console.error('GetSongBPM search failed:', response.status, errorText);
         return null;
       }
 
       const data = await response.json();
+      console.log('GetSongBPM response:', JSON.stringify(data).slice(0, 200));
 
       // Check if we got results
       if (!data.search || data.search.length === 0) {
+        console.log('GetSongBPM: No results for', query);
         return null;
       }
 
