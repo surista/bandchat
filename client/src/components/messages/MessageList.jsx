@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { format, isToday, isYesterday } from 'date-fns';
 import ReactionDisplay from './ReactionDisplay';
 import ReactionPicker from './ReactionPicker';
+import ConfirmDialog from '../common/ConfirmDialog';
 
 function MessageList({
   messages,
@@ -16,6 +17,8 @@ function MessageList({
   const [editContent, setEditContent] = useState('');
   const [menuOpenId, setMenuOpenId] = useState(null);
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState(null);
+  const [activeMessageId, setActiveMessageId] = useState(null); // For mobile tap-to-reveal actions
+  const [deleteMessageId, setDeleteMessageId] = useState(null); // For delete confirmation dialog
 
   const formatMessageTime = (date) => {
     const d = new Date(date);
@@ -185,6 +188,7 @@ function MessageList({
   }
 
   return (
+    <>
     <div className="px-4 py-2">
       {messages.map((message, index) => (
         <div key={message.id}>
@@ -201,8 +205,13 @@ function MessageList({
 
           {/* Message */}
           <div
-            className={`group flex gap-3 py-2 hover:bg-gray-700/30 rounded px-2 -mx-2 relative ${message.pending ? 'opacity-60' : ''}`}
+            className={`group flex gap-3 py-2 hover:bg-gray-700/30 rounded px-2 -mx-2 relative ${message.pending ? 'opacity-60' : ''} ${activeMessageId === message.id ? 'bg-gray-700/30' : ''}`}
             onMouseLeave={() => setMenuOpenId(null)}
+            onClick={(e) => {
+              // On mobile, tap to reveal actions (but not if clicking on buttons/links)
+              if (e.target.closest('button') || e.target.closest('a') || e.target.closest('textarea')) return;
+              setActiveMessageId(activeMessageId === message.id ? null : message.id);
+            }}
           >
             {/* Avatar */}
             <div className="w-9 h-9 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white font-medium">
@@ -287,16 +296,18 @@ function MessageList({
                             loading="lazy"
                             onClick={() => window.open(att.url, '_blank')}
                           />
-                          <div className="absolute bottom-2 right-2 opacity-0 group-hover/img:opacity-100 transition-opacity flex gap-1">
+                          {/* Download button - always visible on mobile, hover on desktop */}
+                          <div className="absolute bottom-2 right-2 opacity-100 sm:opacity-0 sm:group-hover/img:opacity-100 transition-opacity flex gap-1">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDownload(att.url, att.filename);
                               }}
-                              className="bg-gray-900/80 text-white px-2 py-1 rounded text-xs hover:bg-gray-900 flex items-center gap-1"
+                              className="bg-gray-900/80 text-white px-3 py-2 sm:px-2 sm:py-1 rounded text-sm sm:text-xs hover:bg-gray-900 flex items-center gap-1 min-h-[36px] sm:min-h-0"
                               title="Download"
+                              aria-label={`Download ${att.filename}`}
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                               </svg>
                               Download
@@ -342,8 +353,12 @@ function MessageList({
               )}
             </div>
 
-            {/* Actions */}
-            <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Actions - visible on hover (desktop) or tap (mobile) */}
+            <div className={`absolute right-2 top-2 transition-opacity ${
+              activeMessageId === message.id
+                ? 'opacity-100'
+                : 'opacity-0 group-hover:opacity-100'
+            }`}>
               {reactionPickerMessageId === message.id && (
                 <div className="absolute right-0 bottom-full mb-1 z-10">
                   <ReactionPicker
@@ -354,38 +369,50 @@ function MessageList({
               )}
               <div className="flex items-center gap-1 bg-gray-700 rounded border border-gray-600">
                 <button
-                  onClick={() => setReactionPickerMessageId(
-                    reactionPickerMessageId === message.id ? null : message.id
-                  )}
-                  className="p-1.5 hover:bg-gray-600 rounded text-gray-300 hover:text-white"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setReactionPickerMessageId(
+                      reactionPickerMessageId === message.id ? null : message.id
+                    );
+                  }}
+                  className="p-2 sm:p-1.5 hover:bg-gray-600 rounded text-gray-300 hover:text-white min-w-[36px] sm:min-w-0"
                   title="Add reaction"
+                  aria-label="Add reaction"
                 >
                   😀
                 </button>
                 <button
-                  onClick={() => onOpenThread(message)}
-                  className="p-1.5 hover:bg-gray-600 rounded text-gray-300 hover:text-white"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenThread(message);
+                  }}
+                  className="p-2 sm:p-1.5 hover:bg-gray-600 rounded text-gray-300 hover:text-white min-w-[36px] sm:min-w-0"
                   title="Reply in thread"
+                  aria-label="Reply in thread"
                 >
                   💬
                 </button>
                 {message.author.id === currentUser.id && (
                   <>
                     <button
-                      onClick={() => handleStartEdit(message)}
-                      className="p-1.5 hover:bg-gray-600 rounded text-gray-300 hover:text-white"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartEdit(message);
+                      }}
+                      className="p-2 sm:p-1.5 hover:bg-gray-600 rounded text-gray-300 hover:text-white min-w-[36px] sm:min-w-0"
                       title="Edit"
+                      aria-label="Edit message"
                     >
                       ✏️
                     </button>
                     <button
-                      onClick={() => {
-                        if (confirm('Delete this message?')) {
-                          onDeleteMessage(message.id);
-                        }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteMessageId(message.id);
                       }}
-                      className="p-1.5 hover:bg-gray-600 rounded text-gray-300 hover:text-red-400"
+                      className="p-2 sm:p-1.5 hover:bg-gray-600 rounded text-gray-300 hover:text-red-400 min-w-[36px] sm:min-w-0"
                       title="Delete"
+                      aria-label="Delete message"
                     >
                       🗑️
                     </button>
@@ -397,6 +424,21 @@ function MessageList({
         </div>
       ))}
     </div>
+
+    <ConfirmDialog
+      isOpen={deleteMessageId !== null}
+      title="Delete Message"
+      message="Are you sure you want to delete this message? This cannot be undone."
+      confirmText="Delete"
+      confirmVariant="danger"
+      onConfirm={() => {
+        onDeleteMessage(deleteMessageId);
+        setDeleteMessageId(null);
+        setActiveMessageId(null);
+      }}
+      onCancel={() => setDeleteMessageId(null)}
+    />
+    </>
   );
 }
 

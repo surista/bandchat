@@ -89,10 +89,17 @@ body {
   animation-delay: 0.4s;
 }
 
-/* Sidebar channel hover */
+/* Sidebar channel hover - increased tap targets for mobile */
 .channel-item {
-  @apply flex items-center gap-2 px-4 py-1 rounded cursor-pointer text-gray-300 text-left;
+  @apply flex items-center gap-2 px-4 py-2.5 sm:py-1 rounded cursor-pointer text-gray-300 text-left;
   @apply hover:bg-slack-hover transition-colors;
+  min-height: 44px; /* iOS recommended minimum touch target */
+}
+
+@media (min-width: 640px) {
+  .channel-item {
+    min-height: auto;
+  }
 }
 
 .channel-item.active {

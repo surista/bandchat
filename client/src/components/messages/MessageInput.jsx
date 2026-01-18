@@ -143,7 +143,7 @@ function MessageInput({ channelName, onSend, onTyping }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 border-t border-gray-700">
+    <form onSubmit={handleSubmit} className="p-4 border-t border-gray-700 safe-area-bottom">
       {/* Error message */}
       {error && (
         <div className="mb-2 text-red-400 text-sm bg-red-900/20 px-3 py-2 rounded">

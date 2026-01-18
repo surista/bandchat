@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday } from 'date-fns';
 import api from '../../services/api';
 import GigForm from './GigForm';
+import ConfirmDialog from '../common/ConfirmDialog';
+import Skeleton from '../common/Skeleton';
 
 function GigCalendar({ workspaceId }) {
   const [gigs, setGigs] = useState([]);
@@ -12,8 +14,10 @@ function GigCalendar({ workspaceId }) {
   const [showForm, setShowForm] = useState(false);
   const [editingGig, setEditingGig] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
-  const [view, setView] = useState('calendar'); // calendar or list
+  // Default to list view on mobile for better usability
+  const [view, setView] = useState(() => window.innerWidth < 768 ? 'list' : 'calendar');
   const [filterType, setFilterType] = useState('');
+  const [deleteGigId, setDeleteGigId] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -53,12 +57,13 @@ function GigCalendar({ workspaceId }) {
   };
 
   const handleDeleteGig = async (gigId) => {
-    if (!confirm('Delete this event?')) return;
     try {
       await api.deleteGig(gigId);
       setGigs(prev => prev.filter(g => g.id !== gigId));
+      setDeleteGigId(null);
     } catch (err) {
-      alert(err.message);
+      setError(err.message);
+      setDeleteGigId(null);
     }
   };
 
@@ -116,7 +121,22 @@ function GigCalendar({ workspaceId }) {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64 text-gray-400">Loading calendar...</div>;
+    return (
+      <div className="h-full flex flex-col p-4">
+        <div className="flex items-center justify-between mb-4">
+          <Skeleton className="h-8 w-32" />
+          <div className="flex gap-3">
+            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-10 w-28" />
+          </div>
+        </div>
+        <div className="space-y-4">
+          <Skeleton.ListItem />
+          <Skeleton.ListItem />
+          <Skeleton.ListItem />
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -343,7 +363,7 @@ function GigCalendar({ workspaceId }) {
                           </button>
                         )}
                         <button
-                          onClick={() => handleDeleteGig(gig.id)}
+                          onClick={() => setDeleteGigId(gig.id)}
                           className="text-sm text-red-400 hover:text-red-300"
                         >
                           Delete
@@ -372,6 +392,17 @@ function GigCalendar({ workspaceId }) {
           }}
         />
       )}
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={deleteGigId !== null}
+        title="Delete Event"
+        message="Are you sure you want to delete this event? This cannot be undone."
+        confirmText="Delete"
+        confirmVariant="danger"
+        onConfirm={() => handleDeleteGig(deleteGigId)}
+        onCancel={() => setDeleteGigId(null)}
+      />
     </div>
   );
 }

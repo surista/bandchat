@@ -269,15 +269,17 @@ function Sidebar({
           <div className="flex gap-1">
             <button
               onClick={() => setShowCreateGroup(true)}
-              className="text-gray-400 hover:text-white transition-colors text-xs px-1"
+              className="text-gray-400 hover:text-white transition-colors text-sm px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
               title="Create group"
+              aria-label="Create group"
             >
               📁
             </button>
             <button
               onClick={() => setShowCreateChannel(true)}
-              className="text-gray-400 hover:text-white transition-colors text-lg"
+              className="text-gray-400 hover:text-white transition-colors text-lg px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
               title="Create channel"
+              aria-label="Create channel"
             >
               +
             </button>
@@ -289,7 +291,9 @@ function Sidebar({
           <div key={group.id} className="mb-2">
             <button
               onClick={() => toggleGroupCollapse(group.id)}
-              className="w-full px-4 py-1 flex items-center gap-1 text-gray-400 hover:text-white transition-colors text-sm"
+              className="w-full px-4 py-2.5 sm:py-1 flex items-center gap-1 text-gray-400 hover:text-white transition-colors text-sm min-h-[44px] sm:min-h-0"
+              aria-expanded={!collapsedGroups[group.id]}
+              aria-label={`${group.name} channel group`}
             >
               <span className={`transform transition-transform ${collapsedGroups[group.id] ? '' : 'rotate-90'}`}>
                 ▶
@@ -420,8 +424,9 @@ function Sidebar({
           </span>
           <button
             onClick={onShowInvite}
-            className="text-gray-400 hover:text-white transition-colors text-lg"
+            className="text-gray-400 hover:text-white transition-colors text-lg px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
             title="Invite people"
+            aria-label="Invite people"
           >
             +
           </button>
@@ -432,10 +437,11 @@ function Sidebar({
             <button
               key={member.user.id}
               onClick={() => member.user.id !== user?.id && onStartDM?.(member.user.id)}
-              className={`flex items-center gap-2 px-4 py-1 text-gray-300 w-full text-left ${
+              className={`flex items-center gap-2 px-4 py-2.5 sm:py-1 text-gray-300 w-full text-left min-h-[44px] sm:min-h-0 ${
                 member.user.id !== user?.id ? 'hover:bg-slack-hover cursor-pointer' : ''
               }`}
               disabled={member.user.id === user?.id}
+              aria-label={`${member.user.displayName}${member.user.id === user?.id ? ' (you)' : ' - Start direct message'}`}
             >
               <div className="w-2 h-2 rounded-full bg-green-500" />
               <span className="truncate flex-1">

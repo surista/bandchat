@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import SongForm from './SongForm';
+import Skeleton from '../common/Skeleton';
 
 function SongList({ workspaceId, onSelectSong }) {
   const [songs, setSongs] = useState([]);
@@ -180,7 +181,22 @@ function SongList({ workspaceId, onSelectSong }) {
     });
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64 text-gray-400">Loading songs...</div>;
+    return (
+      <div className="h-full flex flex-col p-4">
+        <div className="flex items-center justify-between mb-4">
+          <Skeleton className="h-8 w-24" />
+          <div className="flex gap-3">
+            <Skeleton className="h-10 w-48" />
+            <Skeleton className="h-10 w-24" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          {[1, 2, 3, 4, 5].map(i => (
+            <Skeleton.Card key={i} />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (

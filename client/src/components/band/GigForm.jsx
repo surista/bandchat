@@ -86,15 +86,22 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">
-            {gig ? 'Edit Event' : 'New Event'}
-          </h3>
+    <div className="modal-backdrop">
+      <div className="modal-content max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="modal-header">
+          <h3>{gig ? 'Edit Event' : 'New Event'}</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-white text-2xl leading-none"
+            aria-label="Close"
+          >
+            &times;
+          </button>
+        </div>
 
+        <div className="modal-body">
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">
+            <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded-lg mb-4">
               {error}
             </div>
           )}
@@ -102,14 +109,14 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
           <form onSubmit={handleSubmit}>
             <div className="space-y-4">
               <div>
-                <label className="block text-gray-700 font-medium mb-1">
-                  Title <span className="text-red-500">*</span>
+                <label className="modal-label">
+                  Title <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => handleChange('title', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                  className="modal-input"
                   placeholder="e.g., Friday Night at The Venue"
                   required
                 />
@@ -117,11 +124,11 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-gray-700 font-medium mb-1">Type</label>
+                  <label className="modal-label">Type</label>
                   <select
                     value={formData.type}
                     onChange={(e) => handleChange('type', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                    className="modal-input"
                   >
                     <option value="GIG">Gig</option>
                     <option value="REHEARSAL">Rehearsal</option>
@@ -132,11 +139,11 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
 
                 {gig && (
                   <div>
-                    <label className="block text-gray-700 font-medium mb-1">Status</label>
+                    <label className="modal-label">Status</label>
                     <select
                       value={formData.status}
                       onChange={(e) => handleChange('status', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                      className="modal-input"
                     >
                       <option value="SCHEDULED">Scheduled</option>
                       <option value="COMPLETED">Completed</option>
@@ -148,46 +155,46 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-gray-700 font-medium mb-1">
-                    Start Date/Time <span className="text-red-500">*</span>
+                  <label className="modal-label">
+                    Start Date/Time <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="datetime-local"
                     value={formData.date}
                     onChange={(e) => handleChange('date', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                    className="modal-input"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-700 font-medium mb-1">End Date/Time</label>
+                  <label className="modal-label">End Date/Time</label>
                   <input
                     type="datetime-local"
                     value={formData.endDate}
                     onChange={(e) => handleChange('endDate', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                    className="modal-input"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-gray-700 font-medium mb-1">Venue</label>
+                <label className="modal-label">Venue</label>
                 <input
                   type="text"
                   value={formData.venue}
                   onChange={(e) => handleChange('venue', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                  className="modal-input"
                   placeholder="Venue name"
                 />
               </div>
 
               <div>
-                <label className="block text-gray-700 font-medium mb-1">Address</label>
+                <label className="modal-label">Address</label>
                 <input
                   type="text"
                   value={formData.address}
                   onChange={(e) => handleChange('address', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                  className="modal-input"
                   placeholder="Full address"
                 />
               </div>
@@ -195,7 +202,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
               {setlists.length > 0 && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="block text-gray-700 font-medium">Setlist(s)</label>
+                    <label className="modal-label mb-0">Setlist(s)</label>
                     <button
                       type="button"
                       onClick={() => {
@@ -207,7 +214,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
                       className={`text-xs px-2 py-1 rounded transition-colors ${
                         useMultiSet
                           ? 'bg-indigo-600 text-white'
-                          : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                          : 'bg-[var(--color-modal-border)] text-gray-300 hover:bg-gray-500'
                       }`}
                     >
                       {useMultiSet ? 'Multi-Set Mode' : 'Single Set'}
@@ -218,7 +225,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
                     <div className="space-y-2">
                       {selectedSets.map((setId, index) => (
                         <div key={index} className="flex items-center gap-2">
-                          <span className="w-8 h-8 flex items-center justify-center bg-indigo-100 text-indigo-700 rounded-full font-bold text-sm">
+                          <span className="w-8 h-8 flex items-center justify-center bg-indigo-600/30 text-indigo-300 rounded-full font-bold text-sm">
                             {index + 1}
                           </span>
                           <select
@@ -228,7 +235,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
                               newSets[index] = e.target.value;
                               setSelectedSets(newSets);
                             }}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded text-gray-900"
+                            className="modal-input flex-1"
                           >
                             <option value="">Select setlist...</option>
                             {setlists.map(s => (
@@ -239,7 +246,8 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
                             <button
                               type="button"
                               onClick={() => setSelectedSets(selectedSets.filter((_, i) => i !== index))}
-                              className="p-2 text-red-500 hover:text-red-700"
+                              className="p-2 text-red-400 hover:text-red-300 min-w-[36px] min-h-[36px]"
+                              aria-label="Remove set"
                             >
                               ×
                             </button>
@@ -249,7 +257,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
                       <button
                         type="button"
                         onClick={() => setSelectedSets([...selectedSets, ''])}
-                        className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                        className="text-indigo-400 hover:text-indigo-300 text-sm font-medium"
                       >
                         + Add Another Set
                       </button>
@@ -258,7 +266,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
                     <select
                       value={formData.setlistId}
                       onChange={(e) => handleChange('setlistId', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                      className="modal-input"
                     >
                       <option value="">No setlist</option>
                       {setlists.map(s => (
@@ -271,12 +279,12 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
 
               {formData.type === 'GIG' && (
                 <div>
-                  <label className="block text-gray-700 font-medium mb-1">Pay ($)</label>
+                  <label className="modal-label">Pay ($)</label>
                   <input
                     type="number"
                     value={formData.pay}
                     onChange={(e) => handleChange('pay', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                    className="modal-input"
                     placeholder="0.00"
                     min="0"
                     step="0.01"
@@ -285,11 +293,11 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
               )}
 
               <div>
-                <label className="block text-gray-700 font-medium mb-1">Notes</label>
+                <label className="modal-label">Notes</label>
                 <textarea
                   value={formData.notes}
                   onChange={(e) => handleChange('notes', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                  className="modal-input"
                   rows={3}
                   placeholder="Additional details..."
                 />
@@ -307,7 +315,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
               <button
                 type="submit"
                 disabled={loading}
-                className="btn bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-300 disabled:text-gray-500"
+                className="btn bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
               >
                 {loading ? 'Saving...' : gig ? 'Update' : 'Create'}
               </button>
