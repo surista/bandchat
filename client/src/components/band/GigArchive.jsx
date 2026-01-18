@@ -605,11 +605,11 @@ function GigArchive({ workspaceId }) {
                       <h3 className="text-white font-medium truncate">{venue || title}</h3>
                       {date && (
                         <p className="text-gray-400 text-sm">
-                          {date.toLocaleDateString('en-US', {
+                          {date.toLocaleDateString('en-GB', {
                             day: 'numeric',
                             month: 'short',
-                            year: 'numeric'
-                          })}
+                            year: '2-digit'
+                          }).replace(/ /g, '-')}
                         </p>
                       )}
                     </div>
@@ -747,12 +747,7 @@ function GigArchive({ workspaceId }) {
               </h2>
               {selectedEntry.date && (
                 <p className="text-purple-200 text-lg">
-                  {selectedEntry.date.toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
-                  })}
+                  {selectedEntry.date.toLocaleDateString('en-GB', { weekday: 'long' })}, {selectedEntry.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/ /g, '-')}
                 </p>
               )}
               {selectedEntry.gig?.notes && (
@@ -810,7 +805,7 @@ function GigArchive({ workspaceId }) {
                       <span className="text-gray-400">Date</span>
                       <span className="text-white font-medium">
                         {selectedEntry.date
-                          ? selectedEntry.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ /g, '-')
+                          ? selectedEntry.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/ /g, '-')
                           : '—'}
                       </span>
                     </div>
