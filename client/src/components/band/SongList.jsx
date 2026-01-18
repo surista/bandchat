@@ -371,10 +371,9 @@ function SongList({ workspaceId, onSelectSong }) {
                   </div>
                 )}
 
-                {song._count && (
+                {song._count && song._count.setlistSongs > 0 && (
                   <div className="mt-3 pt-3 border-t border-gray-700 text-xs text-gray-500">
-                    In {song._count.setlistSongs} setlist{song._count.setlistSongs !== 1 ? 's' : ''} •
-                    Played {song._count.gigSongs} time{song._count.gigSongs !== 1 ? 's' : ''}
+                    In {song._count.setlistSongs} setlist{song._count.setlistSongs !== 1 ? 's' : ''}
                   </div>
                 )}
               </div>
