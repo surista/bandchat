@@ -7,16 +7,31 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
   const [draggedItem, setDraggedItem] = useState(null);
   const [saving, setSaving] = useState(false);
   const [useShortNames, setUseShortNames] = useState(setlist.useShortNames || false);
+  const [songSortBy, setSongSortBy] = useState('title'); // title, artist, duration, setlists
 
   const availableSongs = allSongs.filter(
     song => !setlistItems.some(item => item.songId === song.id)
   );
 
-  const filteredAvailable = availableSongs.filter(song => {
-    const query = searchQuery.toLowerCase();
-    return song.title.toLowerCase().includes(query) ||
-      (song.artist && song.artist.toLowerCase().includes(query));
-  });
+  const filteredAvailable = availableSongs
+    .filter(song => {
+      const query = searchQuery.toLowerCase();
+      return song.title.toLowerCase().includes(query) ||
+        (song.artist && song.artist.toLowerCase().includes(query));
+    })
+    .sort((a, b) => {
+      switch (songSortBy) {
+        case 'artist':
+          return (a.artist || '').localeCompare(b.artist || '');
+        case 'duration':
+          return (b.duration || 0) - (a.duration || 0);
+        case 'setlists':
+          return (b._count?.setlistSongs || 0) - (a._count?.setlistSongs || 0);
+        case 'title':
+        default:
+          return a.title.localeCompare(b.title);
+      }
+    });
 
   const handleAddSong = async (songId) => {
     try {
@@ -37,8 +52,11 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
   };
 
   const handleAddSetBreak = async () => {
+    // Count existing set breaks to determine set number
+    const existingBreaks = setlistItems.filter(i => i.type === 'SET_BREAK').length;
+    const label = `Set ${existingBreaks + 1}`;
     try {
-      const result = await api.addSetBreakToSetlist(setlist.id, 'Set Break');
+      const result = await api.addSetBreakToSetlist(setlist.id, label);
       setSetlistItems(prev => [...prev, result]);
     } catch (err) {
       alert(err.message);
@@ -324,7 +342,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
 
         {/* Available Songs */}
         <div className="w-80 flex flex-col">
-          <div className="p-3 bg-gray-800">
+          <div className="p-3 bg-gray-800 space-y-2">
             <input
               type="text"
               placeholder="Search songs..."
@@ -332,6 +350,16 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 text-sm"
             />
+            <select
+              value={songSortBy}
+              onChange={(e) => setSongSortBy(e.target.value)}
+              className="w-full px-2 py-1.5 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+            >
+              <option value="title">Sort by Title</option>
+              <option value="artist">Sort by Artist</option>
+              <option value="duration">Sort by Duration</option>
+              <option value="setlists">Sort by Times Played</option>
+            </select>
           </div>
           <div className="flex-1 overflow-y-auto">
             {filteredAvailable.length === 0 ? (
@@ -344,7 +372,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
                   <button
                     key={song.id}
                     onClick={() => handleAddSong(song.id)}
-                    className="w-full flex items-center gap-3 p-3 hover:bg-gray-800 text-left"
+                    className="w-full flex items-center gap-2 p-3 hover:bg-gray-800 text-left"
                   >
                     <span className="text-green-500 text-lg">+</span>
                     <div className="flex-1 min-w-0">
@@ -353,11 +381,23 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
                         <div className="text-gray-400 text-xs truncate">{song.artist}</div>
                       )}
                     </div>
-                    {song.key && (
-                      <span className="text-xs px-1.5 py-0.5 bg-purple-900/50 text-purple-300 rounded">
-                        {song.key}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {song.bpm && (
+                        <span className="text-xs px-1.5 py-0.5 bg-gray-700 text-gray-300 rounded">
+                          {song.bpm}
+                        </span>
+                      )}
+                      {song.key && (
+                        <span className="text-xs px-1.5 py-0.5 bg-purple-900/50 text-purple-300 rounded">
+                          {song.key}
+                        </span>
+                      )}
+                      {song.duration && (
+                        <span className="text-xs text-gray-500 w-10 text-right">
+                          {formatDuration(song.duration)}
+                        </span>
+                      )}
+                    </div>
                   </button>
                 ))}
               </div>
