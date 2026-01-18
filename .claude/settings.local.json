@@ -29,7 +29,8 @@
       "Bash(npx eslint:*)",
       "Bash(node:*)",
       "Bash(npm run db:push:*)",
-      "WebFetch(domain:getsongbpm.com)"
+      "WebFetch(domain:getsongbpm.com)",
+      "WebFetch(domain:songbpm.com)"
     ]
   }
 }

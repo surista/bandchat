@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { isWorkspaceMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
+import songBPMScraperService from '../services/songbpm-scraper.js';
 import deezerService from '../services/deezer.js';
 import itunesService from '../services/itunes.js';
 import youtubeService from '../services/youtube.js';
@@ -81,7 +82,8 @@ router.get('/metadata-status', authenticate, async (req, res) => {
   res.json({
     configured: true,
     services: {
-      deezer: true,
+      songbpm: true,  // Scrapes songbpm.com for BPM and Key
+      deezer: true,   // Fallback for BPM
       youtube: youtubeService.isConfigured(),
       itunes: true,
       spotify: true
@@ -130,10 +132,29 @@ router.post('/workspace/:workspaceId/enrich', authenticate, isWorkspaceMember, a
         continue;
       }
 
-      // Fetch BPM from Deezer (no key available)
-      if (needsBpm) {
+      // Fetch BPM and Key from SongBPM.com scraper
+      if (needsBpm || needsKey) {
         try {
-          console.log(`Fetching BPM for "${song.title}" by "${song.artist}"`);
+          console.log(`Fetching BPM/Key for "${song.title}" by "${song.artist}"`);
+          const scraperData = await songBPMScraperService.getTrackMetadata(song.title, song.artist);
+          console.log(`SongBPM scraper data for "${song.title}":`, scraperData);
+          if (scraperData?.bpm && needsBpm) {
+            updates.bpm = scraperData.bpm;
+            fieldsUpdated.push('bpm');
+          }
+          if (scraperData?.key && needsKey) {
+            updates.key = scraperData.key;
+            fieldsUpdated.push('key');
+          }
+        } catch (err) {
+          console.error('SongBPM scraper failed for:', song.title, err.message);
+        }
+      }
+
+      // Fallback to Deezer for BPM if still missing
+      if (needsBpm && !updates.bpm) {
+        try {
+          console.log(`Trying Deezer for "${song.title}"`);
           const deezerData = await deezerService.getTrackMetadata(song.title, song.artist);
           console.log(`Deezer data for "${song.title}":`, deezerData);
           if (deezerData?.bpm) {
@@ -319,15 +340,32 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
         let gotMetadata = false;
 
         if (fetchMetadata) {
-          // Fetch BPM from Deezer
+          // Fetch BPM and Key from SongBPM.com scraper
           try {
-            const deezerData = await deezerService.getTrackMetadata(title, artist);
-            if (deezerData?.bpm) {
-              bpm = deezerData.bpm;
+            const scraperData = await songBPMScraperService.getTrackMetadata(title, artist);
+            if (scraperData?.bpm) {
+              bpm = scraperData.bpm;
+              gotMetadata = true;
+            }
+            if (scraperData?.key) {
+              key = scraperData.key;
               gotMetadata = true;
             }
           } catch (err) {
-            console.error('Deezer lookup failed for:', title, err.message);
+            console.error('SongBPM scraper failed for:', title, err.message);
+          }
+
+          // Fallback to Deezer for BPM if missing
+          if (!bpm) {
+            try {
+              const deezerData = await deezerService.getTrackMetadata(title, artist);
+              if (deezerData?.bpm) {
+                bpm = deezerData.bpm;
+                gotMetadata = true;
+              }
+            } catch (err) {
+              console.error('Deezer lookup failed for:', title, err.message);
+            }
           }
 
           // Fetch duration from iTunes
