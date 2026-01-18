@@ -3,6 +3,7 @@ import { authenticate } from '../middleware/auth.js';
 import { isWorkspaceMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 import songBPMService from '../services/songbpm.js';
+import tunebatService from '../services/tunebat.js';
 import itunesService from '../services/itunes.js';
 import youtubeService from '../services/youtube.js';
 import spotifyService from '../services/spotify.js';
@@ -125,27 +126,42 @@ router.post('/workspace/:workspaceId/enrich', authenticate, isWorkspaceMember, a
         continue;
       }
 
-      // Fetch BPM and Key from GetSongBPM
-      if ((needsBpm || needsKey) && songBPMService.isConfigured()) {
-        try {
-          console.log(`Enriching "${song.title}" by "${song.artist}" - needsBpm:${needsBpm} needsKey:${needsKey}`);
-          const bpmData = await songBPMService.getTrackMetadata(song.title, song.artist);
-          console.log(`BPM data for "${song.title}":`, bpmData);
-          if (bpmData) {
-            if (needsBpm && bpmData.bpm) {
-              updates.bpm = bpmData.bpm;
-              fieldsUpdated.push('bpm');
-            }
-            if (needsKey && bpmData.key) {
-              updates.key = bpmData.key;
-              fieldsUpdated.push('key');
-            }
+      // Fetch BPM and Key - try GetSongBPM first, then Tunebat as fallback
+      if (needsBpm || needsKey) {
+        let bpmData = null;
+
+        // Try GetSongBPM first
+        if (songBPMService.isConfigured()) {
+          try {
+            console.log(`Enriching "${song.title}" by "${song.artist}" - needsBpm:${needsBpm} needsKey:${needsKey}`);
+            bpmData = await songBPMService.getTrackMetadata(song.title, song.artist);
+            console.log(`GetSongBPM data for "${song.title}":`, bpmData);
+          } catch (err) {
+            console.error('GetSongBPM lookup failed for:', song.title, err.message);
           }
-        } catch (err) {
-          console.error('BPM lookup failed for:', song.title, err.message);
         }
-      } else if (needsBpm || needsKey) {
-        console.log(`Skipping BPM lookup for "${song.title}" - service configured: ${songBPMService.isConfigured()}`);
+
+        // Fallback to Tunebat if GetSongBPM failed or didn't return data
+        if (!bpmData || (!bpmData.bpm && !bpmData.key)) {
+          try {
+            console.log(`Trying Tunebat for "${song.title}"`);
+            bpmData = await tunebatService.getTrackMetadata(song.title, song.artist);
+            console.log(`Tunebat data for "${song.title}":`, bpmData);
+          } catch (err) {
+            console.error('Tunebat lookup failed for:', song.title, err.message);
+          }
+        }
+
+        if (bpmData) {
+          if (needsBpm && bpmData.bpm) {
+            updates.bpm = bpmData.bpm;
+            fieldsUpdated.push('bpm');
+          }
+          if (needsKey && bpmData.key) {
+            updates.key = bpmData.key;
+            fieldsUpdated.push('key');
+          }
+        }
       }
 
       // Fetch duration from iTunes
@@ -322,18 +338,27 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
         let gotMetadata = false;
 
         if (fetchMetadata) {
-          // Fetch BPM and Key from GetSongBPM
+          // Fetch BPM and Key - try GetSongBPM first, then Tunebat
+          let bpmData = null;
           if (songBPMService.isConfigured()) {
             try {
-              const bpmData = await songBPMService.getTrackMetadata(title, artist);
-              if (bpmData) {
-                bpm = bpmData.bpm;
-                key = bpmData.key;
-                if (bpm || key) gotMetadata = true;
-              }
+              bpmData = await songBPMService.getTrackMetadata(title, artist);
             } catch (err) {
-              console.error('BPM lookup failed for:', title, err.message);
+              console.error('GetSongBPM lookup failed for:', title, err.message);
             }
+          }
+          // Fallback to Tunebat
+          if (!bpmData || (!bpmData.bpm && !bpmData.key)) {
+            try {
+              bpmData = await tunebatService.getTrackMetadata(title, artist);
+            } catch (err) {
+              console.error('Tunebat lookup failed for:', title, err.message);
+            }
+          }
+          if (bpmData) {
+            bpm = bpmData.bpm;
+            key = bpmData.key;
+            if (bpm || key) gotMetadata = true;
           }
 
           // Fetch duration from iTunes
