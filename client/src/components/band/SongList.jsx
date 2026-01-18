@@ -65,20 +65,44 @@ function SongList({ workspaceId, onSelectSong }) {
     const lines = text.split('\n').filter(line => line.trim());
     return lines.map(line => {
       // Try different separators: " - ", " | ", tab, or just the title
-      let title, artist;
+      // Support format: "Title - ShortName - Artist" or "Title - Artist" or just "Title"
+      let title, shortName, artist;
 
       if (line.includes(' - ')) {
-        [title, artist] = line.split(' - ').map(s => s.trim());
+        const parts = line.split(' - ').map(s => s.trim());
+        if (parts.length >= 3) {
+          // Title - ShortName - Artist
+          title = parts[0];
+          shortName = parts[1];
+          artist = parts.slice(2).join(' - '); // In case artist has " - " in it
+        } else {
+          // Title - Artist
+          [title, artist] = parts;
+          shortName = null;
+        }
       } else if (line.includes(' | ')) {
-        [title, artist] = line.split(' | ').map(s => s.trim());
+        const parts = line.split(' | ').map(s => s.trim());
+        if (parts.length >= 3) {
+          [title, shortName, artist] = parts;
+        } else {
+          [title, artist] = parts;
+          shortName = null;
+        }
       } else if (line.includes('\t')) {
-        [title, artist] = line.split('\t').map(s => s.trim());
+        const parts = line.split('\t').map(s => s.trim());
+        if (parts.length >= 3) {
+          [title, shortName, artist] = parts;
+        } else {
+          [title, artist] = parts;
+          shortName = null;
+        }
       } else {
         title = line.trim();
+        shortName = null;
         artist = null;
       }
 
-      return { title, artist };
+      return { title, shortName: shortName || null, artist: artist || null };
     }).filter(song => song.title);
   };
 
@@ -386,9 +410,9 @@ function SongList({ workspaceId, onSelectSong }) {
                     Paste your song list below. One song per line in any of these formats:
                   </p>
                   <ul className="text-sm text-gray-500 mb-4 space-y-1">
-                    <li>• <code className="bg-gray-100 px-1 rounded">Song Title - Artist Name</code></li>
-                    <li>• <code className="bg-gray-100 px-1 rounded">Song Title | Artist Name</code></li>
-                    <li>• <code className="bg-gray-100 px-1 rounded">Song Title</code> (no artist)</li>
+                    <li>• <code className="bg-gray-100 px-1 rounded">Full Title - Short Name - Artist</code></li>
+                    <li>• <code className="bg-gray-100 px-1 rounded">Title - Artist</code></li>
+                    <li>• <code className="bg-gray-100 px-1 rounded">Title</code> (no artist)</li>
                   </ul>
 
                   <textarea
@@ -397,9 +421,9 @@ function SongList({ workspaceId, onSelectSong }) {
                     placeholder="Enter songs here...
 
 Example:
+Even Flow - Flow - Pearl Jam
 Bohemian Rhapsody - Queen
-Hotel California - Eagles
-Sweet Child O' Mine - Guns N' Roses"
+Hotel California - Eagles"
                     className="w-full h-64 px-3 py-2 border border-gray-300 rounded text-gray-900 font-mono text-sm"
                     disabled={bulkImporting}
                   />

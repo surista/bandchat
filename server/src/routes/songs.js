@@ -307,6 +307,7 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
 
       try {
         const title = songData.title.trim();
+        const shortName = songData.shortName?.trim() || null;
         const artist = songData.artist?.trim() || null;
 
         let bpm = null;
@@ -364,6 +365,7 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
         const song = await prisma.song.create({
           data: {
             title,
+            shortName,
             artist,
             duration,
             bpm,
