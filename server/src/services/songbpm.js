@@ -30,7 +30,6 @@ class SongBPMService {
       }
 
       const params = new URLSearchParams({
-        api_key: apiKey,
         type: 'song',
         lookup: query
       });
@@ -40,9 +39,8 @@ class SongBPMService {
 
       const response = await fetch(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'X-API-KEY': apiKey,
           'Accept': 'application/json',
-          'Accept-Language': 'en-US,en;q=0.9',
         }
       });
 
@@ -86,16 +84,13 @@ class SongBPMService {
 
     try {
       const params = new URLSearchParams({
-        api_key: apiKey,
-        type: 'song',
         id: songId
       });
 
       const response = await fetch(`${this.baseUrl}/song/?${params}`, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'X-API-KEY': apiKey,
           'Accept': 'application/json',
-          'Accept-Language': 'en-US,en;q=0.9',
         }
       });
 
