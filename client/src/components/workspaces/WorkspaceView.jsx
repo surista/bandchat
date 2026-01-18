@@ -32,8 +32,14 @@ function WorkspaceView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [directMessages, setDirectMessages] = useState([]);
-  const [activeBandView, setActiveBandView] = useState(null);
+  const [activeBandView, setActiveBandView] = useState(() => {
+    const saved = localStorage.getItem(`bandView:${workspaceId}`);
+    return saved || null;
+  });
   const [bandViewKey, setBandViewKey] = useState(0);
+  const [pendingChannelId, setPendingChannelId] = useState(() => {
+    return localStorage.getItem(`selectedChannel:${workspaceId}`) || null;
+  });
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem('sidebarWidth');
     return saved ? parseInt(saved, 10) : 256;
@@ -102,6 +108,22 @@ function WorkspaceView() {
     };
   }, [isResizing, sidebarWidth]);
 
+  // Persist activeBandView to localStorage
+  useEffect(() => {
+    if (activeBandView) {
+      localStorage.setItem(`bandView:${workspaceId}`, activeBandView);
+    } else {
+      localStorage.removeItem(`bandView:${workspaceId}`);
+    }
+  }, [activeBandView, workspaceId]);
+
+  // Persist selectedChannel to localStorage
+  useEffect(() => {
+    if (selectedChannel?.id) {
+      localStorage.setItem(`selectedChannel:${workspaceId}`, selectedChannel.id);
+    }
+  }, [selectedChannel, workspaceId]);
+
   const loadWorkspace = async () => {
     try {
       const [workspaceData, channelsData, groupsData, dmsData] = await Promise.all([
@@ -115,8 +137,19 @@ function WorkspaceView() {
       setChannelGroups(groupsData);
       setDirectMessages(dmsData);
 
-      // Select first channel by default
-      if (channelsData.length > 0 && !selectedChannel) {
+      // Restore saved channel/DM or select first channel by default
+      if (pendingChannelId && !selectedChannel) {
+        const savedChannel = channelsData.find(c => c.id === pendingChannelId);
+        const savedDM = dmsData.find(d => d.id === pendingChannelId);
+        if (savedChannel) {
+          setSelectedChannel(savedChannel);
+        } else if (savedDM) {
+          setSelectedChannel(savedDM);
+        } else if (channelsData.length > 0) {
+          const generalChannel = channelsData.find(c => c.name === 'general');
+          setSelectedChannel(generalChannel || channelsData[0]);
+        }
+      } else if (channelsData.length > 0 && !selectedChannel) {
         const generalChannel = channelsData.find(c => c.name === 'general');
         setSelectedChannel(generalChannel || channelsData[0]);
       }

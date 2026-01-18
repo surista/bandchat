@@ -602,7 +602,7 @@ function GigArchive({ workspaceId }) {
                   {/* Header with title and date */}
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-white font-medium truncate">{venue || title}</h3>
+                      <h3 className="text-white font-medium truncate">{title}</h3>
                       {date && (
                         <p className="text-gray-400 text-sm">
                           {date.toLocaleDateString('en-GB', {
@@ -743,7 +743,7 @@ function GigArchive({ workspaceId }) {
                 &times;
               </button>
               <h2 className="text-2xl font-bold text-white mb-1">
-                {selectedEntry.venue || selectedEntry.title}
+                {selectedEntry.title}
               </h2>
               {selectedEntry.date && (
                 <p className="text-purple-200 text-lg">
