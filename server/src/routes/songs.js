@@ -2,10 +2,7 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { isWorkspaceMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
-import songBPMService from '../services/songbpm.js';
-import tunebatService from '../services/tunebat.js';
 import deezerService from '../services/deezer.js';
-import acousticBrainzService from '../services/acousticbrainz.js';
 import itunesService from '../services/itunes.js';
 import youtubeService from '../services/youtube.js';
 import spotifyService from '../services/spotify.js';
@@ -82,9 +79,9 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
 // Check if metadata services are configured (must be before /:songId route)
 router.get('/metadata-status', authenticate, async (req, res) => {
   res.json({
-    configured: songBPMService.isConfigured(),
+    configured: true,
     services: {
-      getSongBPM: songBPMService.isConfigured(),
+      deezer: true,
       youtube: youtubeService.isConfigured(),
       itunes: true,
       spotify: true
@@ -133,67 +130,18 @@ router.post('/workspace/:workspaceId/enrich', authenticate, isWorkspaceMember, a
         continue;
       }
 
-      // Fetch BPM and Key - try GetSongBPM first, then Tunebat as fallback
-      if (needsBpm || needsKey) {
-        let bpmData = null;
-
-        // Try GetSongBPM first
-        if (songBPMService.isConfigured()) {
-          try {
-            console.log(`Enriching "${song.title}" by "${song.artist}" - needsBpm:${needsBpm} needsKey:${needsKey}`);
-            bpmData = await songBPMService.getTrackMetadata(song.title, song.artist);
-            console.log(`GetSongBPM data for "${song.title}":`, bpmData);
-          } catch (err) {
-            console.error('GetSongBPM lookup failed for:', song.title, err.message);
-          }
-        }
-
-        // Fallback to Tunebat if GetSongBPM failed or didn't return data
-        if (!bpmData || (!bpmData.bpm && !bpmData.key)) {
-          try {
-            console.log(`Trying Tunebat for "${song.title}"`);
-            bpmData = await tunebatService.getTrackMetadata(song.title, song.artist);
-            console.log(`Tunebat data for "${song.title}":`, bpmData);
-          } catch (err) {
-            console.error('Tunebat lookup failed for:', song.title, err.message);
-          }
-        }
-
-        // Fallback to Deezer (has BPM, no key)
-        if (!bpmData || !bpmData.bpm) {
-          try {
-            console.log(`Trying Deezer for "${song.title}"`);
-            const deezerData = await deezerService.getTrackMetadata(song.title, song.artist);
-            console.log(`Deezer data for "${song.title}":`, deezerData);
-            if (deezerData?.bpm) {
-              bpmData = bpmData || {};
-              bpmData.bpm = deezerData.bpm;
-            }
-          } catch (err) {
-            console.error('Deezer lookup failed for:', song.title, err.message);
-          }
-        }
-
-        // Fallback to AcousticBrainz if still missing data
-        if (!bpmData || (!bpmData.bpm && !bpmData.key)) {
-          try {
-            console.log(`Trying AcousticBrainz for "${song.title}"`);
-            bpmData = await acousticBrainzService.getTrackMetadata(song.title, song.artist);
-            console.log(`AcousticBrainz data for "${song.title}":`, bpmData);
-          } catch (err) {
-            console.error('AcousticBrainz lookup failed for:', song.title, err.message);
-          }
-        }
-
-        if (bpmData) {
-          if (needsBpm && bpmData.bpm) {
-            updates.bpm = bpmData.bpm;
+      // Fetch BPM from Deezer (no key available)
+      if (needsBpm) {
+        try {
+          console.log(`Fetching BPM for "${song.title}" by "${song.artist}"`);
+          const deezerData = await deezerService.getTrackMetadata(song.title, song.artist);
+          console.log(`Deezer data for "${song.title}":`, deezerData);
+          if (deezerData?.bpm) {
+            updates.bpm = deezerData.bpm;
             fieldsUpdated.push('bpm');
           }
-          if (needsKey && bpmData.key) {
-            updates.key = bpmData.key;
-            fieldsUpdated.push('key');
-          }
+        } catch (err) {
+          console.error('Deezer lookup failed for:', song.title, err.message);
         }
       }
 
@@ -371,47 +319,15 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
         let gotMetadata = false;
 
         if (fetchMetadata) {
-          // Fetch BPM and Key - try GetSongBPM first, then Tunebat
-          let bpmData = null;
-          if (songBPMService.isConfigured()) {
-            try {
-              bpmData = await songBPMService.getTrackMetadata(title, artist);
-            } catch (err) {
-              console.error('GetSongBPM lookup failed for:', title, err.message);
+          // Fetch BPM from Deezer
+          try {
+            const deezerData = await deezerService.getTrackMetadata(title, artist);
+            if (deezerData?.bpm) {
+              bpm = deezerData.bpm;
+              gotMetadata = true;
             }
-          }
-          // Fallback to Tunebat
-          if (!bpmData || (!bpmData.bpm && !bpmData.key)) {
-            try {
-              bpmData = await tunebatService.getTrackMetadata(title, artist);
-            } catch (err) {
-              console.error('Tunebat lookup failed for:', title, err.message);
-            }
-          }
-          // Fallback to Deezer (has BPM, no key)
-          if (!bpmData || !bpmData.bpm) {
-            try {
-              const deezerData = await deezerService.getTrackMetadata(title, artist);
-              if (deezerData?.bpm) {
-                bpmData = bpmData || {};
-                bpmData.bpm = deezerData.bpm;
-              }
-            } catch (err) {
-              console.error('Deezer lookup failed for:', title, err.message);
-            }
-          }
-          // Fallback to AcousticBrainz
-          if (!bpmData || (!bpmData.bpm && !bpmData.key)) {
-            try {
-              bpmData = await acousticBrainzService.getTrackMetadata(title, artist);
-            } catch (err) {
-              console.error('AcousticBrainz lookup failed for:', title, err.message);
-            }
-          }
-          if (bpmData) {
-            bpm = bpmData.bpm;
-            key = bpmData.key;
-            if (bpm || key) gotMetadata = true;
+          } catch (err) {
+            console.error('Deezer lookup failed for:', title, err.message);
           }
 
           // Fetch duration from iTunes
