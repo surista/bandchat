@@ -90,6 +90,9 @@ router.get('/metadata-status', authenticate, async (req, res) => {
   });
 });
 
+// Helper to delay between API calls
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 // Enrich songs with missing metadata
 router.post('/workspace/:workspaceId/enrich', authenticate, isWorkspaceMember, async (req, res) => {
   try {
@@ -102,10 +105,12 @@ router.post('/workspace/:workspaceId/enrich', authenticate, isWorkspaceMember, a
     };
 
     const songs = await prisma.song.findMany({ where });
+    console.log(`Enriching ${songs.length} songs...`);
 
     const results = {
       processed: 0,
       updated: 0,
+      errors: 0,
       details: []
     };
 
