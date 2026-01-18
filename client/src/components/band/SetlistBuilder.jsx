@@ -282,6 +282,24 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
               </div>
             )}
           </div>
+
+          {/* Total Time Footer */}
+          {setlistItems.length > 0 && (
+            <div className="flex-shrink-0 p-3 bg-gray-900 border-t border-gray-600">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400 text-sm">
+                  {songCount} song{songCount !== 1 ? 's' : ''}
+                  {mcCount > 0 && ` + ${mcCount} MC`}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-400 text-sm">Total:</span>
+                  <span className="text-xl font-bold text-emerald-400">
+                    {durationMins}:{String(durationSecs).padStart(2, '0')}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Available Songs */}
