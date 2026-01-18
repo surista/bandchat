@@ -37,11 +37,8 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
   };
 
   const handleAddSetBreak = async () => {
-    // Count existing set breaks to auto-label
-    const existingBreaks = setlistItems.filter(i => i.type === 'SET_BREAK').length;
-    const label = `Set ${existingBreaks + 2}`; // Next set number
     try {
-      const result = await api.addSetBreakToSetlist(setlist.id, label);
+      const result = await api.addSetBreakToSetlist(setlist.id, 'Set Break');
       setSetlistItems(prev => [...prev, result]);
     } catch (err) {
       alert(err.message);
