@@ -155,8 +155,8 @@ function GigArchive({ workspaceId }) {
       id: `setlist-${setlist.id}`,
       setlist,
       gig: associatedGig,
-      title: associatedGig?.title || parsed.title,
-      venue: associatedGig?.venue || setlistVenue,
+      title: setlist.name,
+      venue: setlistVenue || associatedGig?.venue,
       date: associatedGig ? new Date(associatedGig.date) : setlistDate,
       status: associatedGig?.status || (setlistDate && setlistDate < new Date() ? 'COMPLETED' : 'SCHEDULED'),
       hasFormalGig: !!associatedGig
