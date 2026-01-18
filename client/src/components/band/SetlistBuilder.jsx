@@ -36,6 +36,18 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
     }
   };
 
+  const handleAddSetBreak = async () => {
+    // Count existing set breaks to auto-label
+    const existingBreaks = setlistItems.filter(i => i.type === 'SET_BREAK').length;
+    const label = `Set ${existingBreaks + 2}`; // Next set number
+    try {
+      const result = await api.addSetBreakToSetlist(setlist.id, label);
+      setSetlistItems(prev => [...prev, result]);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   const handleRemoveItem = async (item) => {
     try {
       await api.removeSetlistItem(setlist.id, item.id);
@@ -115,6 +127,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
   };
 
   // Calculate total duration including MC sections (SET_BREAK has no duration)
+  // Round each song UP to the nearest minute for realistic set timing
   const getItemDuration = (item) => {
     if (item.type === 'SET_BREAK') {
       return 0;
@@ -122,7 +135,9 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
     if (item.type === 'MC') {
       return item.duration || 60;
     }
-    return item.song?.duration || 0;
+    const songDuration = item.song?.duration || 0;
+    // Round up to nearest minute (60 seconds)
+    return songDuration > 0 ? Math.ceil(songDuration / 60) * 60 : 0;
   };
 
   const totalDuration = setlistItems.reduce((acc, item) => acc + getItemDuration(item), 0);
@@ -185,12 +200,20 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
         <div className="flex-1 flex flex-col border-r border-gray-700 max-w-2xl">
           <div className="p-3 bg-gray-800 text-sm text-gray-400 uppercase tracking-wide flex items-center justify-between">
             <span>Setlist Order {saving && '(saving...)'}</span>
-            <button
-              onClick={handleAddMC}
-              className="px-2 py-1 bg-yellow-600 hover:bg-yellow-500 text-white text-xs rounded font-medium"
-            >
-              + MC Break
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleAddSetBreak}
+                className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded font-medium"
+              >
+                + Set Break
+              </button>
+              <button
+                onClick={handleAddMC}
+                className="px-2 py-1 bg-yellow-600 hover:bg-yellow-500 text-white text-xs rounded font-medium"
+              >
+                + MC Break
+              </button>
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto">
             {setlistItems.length === 0 ? (

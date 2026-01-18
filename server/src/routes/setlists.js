@@ -286,6 +286,45 @@ router.post('/:setlistId/mc', authenticate, async (req, res) => {
   }
 });
 
+// Add a Set Break/divider to a setlist
+router.post('/:setlistId/set-break', authenticate, async (req, res) => {
+  try {
+    const { label = 'Set Break' } = req.body;
+
+    // Get current max position
+    const maxPosition = await prisma.setlistSong.aggregate({
+      where: { setlistId: req.params.setlistId },
+      _max: { position: true }
+    });
+
+    const newPosition = (maxPosition._max.position ?? -1) + 1;
+
+    const setlistItem = await prisma.setlistSong.create({
+      data: {
+        setlistId: req.params.setlistId,
+        position: newPosition,
+        type: 'SET_BREAK',
+        label
+      }
+    });
+
+    const setlist = await prisma.setlist.findUnique({
+      where: { id: req.params.setlistId }
+    });
+
+    const io = req.app.get('io');
+    io.to(`workspace:${setlist.workspaceId}`).emit('setlist:itemAdded', {
+      setlistId: req.params.setlistId,
+      setlistItem
+    });
+
+    res.status(201).json(setlistItem);
+  } catch (error) {
+    console.error('Add Set Break to setlist error:', error);
+    res.status(500).json({ error: 'Failed to add Set Break' });
+  }
+});
+
 // Reorder items in a setlist
 router.put('/:setlistId/reorder', authenticate, async (req, res) => {
   try {

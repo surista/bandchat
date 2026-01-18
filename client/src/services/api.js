@@ -547,6 +547,13 @@ class ApiService {
     });
   }
 
+  async addSetBreakToSetlist(setlistId, label = 'Set Break') {
+    return this.request(`/setlists/${setlistId}/set-break`, {
+      method: 'POST',
+      body: JSON.stringify({ label })
+    });
+  }
+
   async removeSetlistItem(setlistId, itemId) {
     return this.request(`/setlists/${setlistId}/items/${itemId}`, {
       method: 'DELETE'
