@@ -236,6 +236,7 @@ function Sidebar({
         h-full bg-slack-sidebar flex flex-col text-gray-300
         fixed md:relative inset-y-0 left-0 z-50
         transform transition-transform duration-200 ease-in-out
+        pb-20 md:pb-0
         ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}
       style={{ width: `${width}px` }}
