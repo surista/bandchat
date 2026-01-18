@@ -4,6 +4,7 @@ import { isWorkspaceMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 import songBPMService from '../services/songbpm.js';
 import tunebatService from '../services/tunebat.js';
+import acousticBrainzService from '../services/acousticbrainz.js';
 import itunesService from '../services/itunes.js';
 import youtubeService from '../services/youtube.js';
 import spotifyService from '../services/spotify.js';
@@ -154,6 +155,17 @@ router.post('/workspace/:workspaceId/enrich', authenticate, isWorkspaceMember, a
             console.log(`Tunebat data for "${song.title}":`, bpmData);
           } catch (err) {
             console.error('Tunebat lookup failed for:', song.title, err.message);
+          }
+        }
+
+        // Fallback to AcousticBrainz if Tunebat also failed
+        if (!bpmData || (!bpmData.bpm && !bpmData.key)) {
+          try {
+            console.log(`Trying AcousticBrainz for "${song.title}"`);
+            bpmData = await acousticBrainzService.getTrackMetadata(song.title, song.artist);
+            console.log(`AcousticBrainz data for "${song.title}":`, bpmData);
+          } catch (err) {
+            console.error('AcousticBrainz lookup failed for:', song.title, err.message);
           }
         }
 
@@ -358,6 +370,14 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
               bpmData = await tunebatService.getTrackMetadata(title, artist);
             } catch (err) {
               console.error('Tunebat lookup failed for:', title, err.message);
+            }
+          }
+          // Fallback to AcousticBrainz
+          if (!bpmData || (!bpmData.bpm && !bpmData.key)) {
+            try {
+              bpmData = await acousticBrainzService.getTrackMetadata(title, artist);
+            } catch (err) {
+              console.error('AcousticBrainz lookup failed for:', title, err.message);
             }
           }
           if (bpmData) {
