@@ -36,7 +36,12 @@ class SongBPMService {
       const url = `${this.baseUrl}/search/?${params}`;
       console.log('GetSongBPM search URL:', url);
 
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'BandChat/1.0 (https://bandchat.app)',
+        }
+      });
 
       const responseText = await response.text();
 
