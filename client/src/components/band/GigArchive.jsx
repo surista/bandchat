@@ -809,8 +809,8 @@ function GigArchive({ workspaceId }) {
                     <div className="flex items-center justify-between">
                       <span className="text-gray-400">Date</span>
                       <span className="text-white font-medium">
-                        {selectedEntry.gig?.date
-                          ? new Date(selectedEntry.gig.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ /g, '-')
+                        {selectedEntry.date
+                          ? selectedEntry.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).replace(/ /g, '-')
                           : '—'}
                       </span>
                     </div>
