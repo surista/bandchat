@@ -17,13 +17,18 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
       orderBy: { name: 'asc' }
     });
 
-    // A member is "current" if they have at least one stint with no endDate
-    const currentMembers = members.filter(m => m.stints.some(s => !s.endDate));
-    const formerMembers = members.filter(m => m.stints.length > 0 && m.stints.every(s => s.endDate));
+    // Separate guests from regular members
+    const guests = members.filter(m => m.isGuest);
+    const regularMembers = members.filter(m => !m.isGuest);
+
+    // A member is "current" if they have at least one stint with no endDate (excludes guests)
+    const currentMembers = regularMembers.filter(m => m.stints.some(s => !s.endDate));
+    const formerMembers = regularMembers.filter(m => m.stints.length > 0 && m.stints.every(s => s.endDate));
 
     res.json({
       current: currentMembers,
       former: formerMembers,
+      guests: guests,
       all: members
     });
   } catch (error) {

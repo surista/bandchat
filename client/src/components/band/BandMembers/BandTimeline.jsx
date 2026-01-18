@@ -158,8 +158,8 @@ function BandTimeline({ members }) {
   };
 
   return (
-    <div className="overflow-x-auto">
-      <svg width={svgWidth} height={svgHeight} className="min-w-full">
+    <div className="overflow-x-auto w-full">
+      <svg width="100%" height={svgHeight} style={{ minWidth: svgWidth }} className="block">
         {/* Year labels and grid lines */}
         <g transform={`translate(${labelWidth}, 0)`}>
           {years.map((year, i) => (
@@ -203,7 +203,7 @@ function BandTimeline({ members }) {
                 <rect
                   x={0}
                   y={0}
-                  width={svgWidth}
+                  width="100%"
                   height={rowHeight}
                   fill={i % 2 === 0 ? '#1f2937' : '#111827'}
                 />

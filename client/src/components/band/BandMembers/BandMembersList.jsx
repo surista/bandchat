@@ -3,7 +3,7 @@ import api from '../../../services/api';
 import BandTimeline from './BandTimeline';
 
 function BandMembersList({ workspaceId }) {
-  const [members, setMembers] = useState({ current: [], former: [], all: [] });
+  const [members, setMembers] = useState({ current: [], former: [], guests: [], all: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -268,12 +268,26 @@ function BandMembersList({ workspaceId }) {
 
         {/* Former Members */}
         {members.former.length > 0 && (
-          <div>
+          <div className="mb-8">
             <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-3">
               Former Members ({members.former.length})
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {members.former.map((member) => (
+                <MemberCard key={member.id} member={member} isCurrent={false} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Guest Musicians */}
+        {members.guests && members.guests.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-3">
+              Guest Musicians ({members.guests.length})
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {members.guests.map((member) => (
                 <MemberCard key={member.id} member={member} isCurrent={false} />
               ))}
             </div>
