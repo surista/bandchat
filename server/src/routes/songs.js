@@ -146,6 +146,8 @@ router.post('/workspace/:workspaceId/enrich', authenticate, isWorkspaceMember, a
             updates.key = scraperData.key;
             fieldsUpdated.push('key');
           }
+          // Rate limit: wait 1.5s between songbpm requests
+          await delay(1500);
         } catch (err) {
           console.error('SongBPM scraper failed for:', song.title, err.message);
         }
@@ -161,6 +163,8 @@ router.post('/workspace/:workspaceId/enrich', authenticate, isWorkspaceMember, a
             updates.bpm = deezerData.bpm;
             fieldsUpdated.push('bpm');
           }
+          // Rate limit: wait 500ms between Deezer requests
+          await delay(500);
         } catch (err) {
           console.error('Deezer lookup failed for:', song.title, err.message);
         }
@@ -174,6 +178,7 @@ router.post('/workspace/:workspaceId/enrich', authenticate, isWorkspaceMember, a
             updates.duration = itunesData.duration;
             fieldsUpdated.push('duration');
           }
+          await delay(300);
         } catch (err) {
           console.error('iTunes lookup failed for:', song.title, err.message);
         }
@@ -187,6 +192,7 @@ router.post('/workspace/:workspaceId/enrich', authenticate, isWorkspaceMember, a
             updates.youtubeUrl = ytData.url;
             fieldsUpdated.push('youtube');
           }
+          await delay(500);
         } catch (err) {
           console.error('YouTube lookup failed for:', song.title, err.message);
         }
@@ -351,6 +357,7 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
               key = scraperData.key;
               gotMetadata = true;
             }
+            await delay(1500); // Rate limit songbpm
           } catch (err) {
             console.error('SongBPM scraper failed for:', title, err.message);
           }
@@ -363,6 +370,7 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
                 bpm = deezerData.bpm;
                 gotMetadata = true;
               }
+              await delay(500); // Rate limit Deezer
             } catch (err) {
               console.error('Deezer lookup failed for:', title, err.message);
             }
@@ -375,6 +383,7 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
               duration = itunesData.duration;
               gotMetadata = true;
             }
+            await delay(300);
           } catch (err) {
             console.error('iTunes lookup failed for:', title, err.message);
           }
@@ -386,6 +395,7 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
               youtubeUrl = ytData.url;
               gotMetadata = true;
             }
+            await delay(500);
           } catch (err) {
             console.error('YouTube lookup failed for:', title, err.message);
           }
