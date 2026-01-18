@@ -13,9 +13,7 @@ class SongBPMService {
   }
 
   isConfigured() {
-    // GetSongBPM API is behind Cloudflare protection and blocks server requests
-    // Disabled until they provide a server-friendly API
-    return false;
+    return !!this.getApiKey();
   }
 
   async searchTrack(title, artist) {
@@ -40,7 +38,13 @@ class SongBPMService {
       const url = `${this.baseUrl}/search/?${params}`;
       console.log('GetSongBPM search:', query);
 
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'application/json',
+          'Accept-Language': 'en-US,en;q=0.9',
+        }
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -87,7 +91,13 @@ class SongBPMService {
         id: songId
       });
 
-      const response = await fetch(`${this.baseUrl}/song/?${params}`);
+      const response = await fetch(`${this.baseUrl}/song/?${params}`, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'application/json',
+          'Accept-Language': 'en-US,en;q=0.9',
+        }
+      });
 
       if (!response.ok) {
         console.error('GetSongBPM details failed:', response.status);
