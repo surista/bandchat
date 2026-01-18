@@ -79,12 +79,17 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
 // Check if metadata services are configured (must be before /:songId route)
 router.get('/metadata-status', authenticate, async (req, res) => {
   res.json({
-    configured: songBPMService.isConfigured(), // Legacy - true if any service available
+    configured: true, // At least iTunes is always available
     services: {
-      getSongBPM: songBPMService.isConfigured(),
+      getSongBPM: false, // Cloudflare blocked - BPM/Key not available
       youtube: youtubeService.isConfigured(),
-      itunes: true, // Always available, no API key needed
-      spotify: false // API access restricted, using search URLs
+      itunes: true, // Always available - provides duration
+      spotify: true // Search URLs always generated
+    },
+    notes: {
+      bpmKey: 'BPM/Key lookup unavailable (GetSongBPM API blocked)',
+      duration: 'Duration from iTunes',
+      links: 'YouTube and Spotify links available'
     }
   });
 });

@@ -13,7 +13,9 @@ class SongBPMService {
   }
 
   isConfigured() {
-    return !!this.getApiKey();
+    // GetSongBPM API is behind Cloudflare protection and blocks server requests
+    // Disabled until they provide a server-friendly API
+    return false;
   }
 
   async searchTrack(title, artist) {
