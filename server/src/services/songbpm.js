@@ -3,8 +3,7 @@
 
 class SongBPMService {
   constructor() {
-    // Try the main domain with /api path
-    this.baseUrl = 'https://getsongbpm.com/api';
+    this.baseUrl = 'https://api.getsongbpm.com';
     // Log on startup whether API key is configured
     console.log('SongBPM Service initialized - API key configured:', !!process.env.GETSONGBPM_API_KEY);
   }
@@ -24,33 +23,20 @@ class SongBPMService {
     }
 
     try {
-      // Build search query using the documented format
-      // For "both" type: lookup=song:TITLE artist:ARTIST
-      let lookup;
-      let type;
-
-      if (artist) {
-        type = 'both';
-        lookup = `song:${title} artist:${artist}`;
-      } else {
-        type = 'song';
-        lookup = title;
-      }
+      // Build search query - match the exact format from docs
+      // https://api.getsongbpm.com/search/?api_key=KEY&type=song&lookup=QUERY
+      const query = artist ? `${artist} ${title}` : title;
 
       const params = new URLSearchParams({
-        type: type,
-        lookup: lookup
+        api_key: apiKey,
+        type: 'song',
+        lookup: query
       });
 
       const url = `${this.baseUrl}/search/?${params}`;
       console.log('GetSongBPM search URL:', url);
 
-      const response = await fetch(url, {
-        headers: {
-          'X-API-KEY': apiKey,
-          'Accept': 'application/json',
-        }
-      });
+      const response = await fetch(url);
 
       const responseText = await response.text();
 
@@ -99,15 +85,11 @@ class SongBPMService {
 
     try {
       const params = new URLSearchParams({
+        api_key: apiKey,
         id: songId
       });
 
-      const response = await fetch(`${this.baseUrl}/song/?${params}`, {
-        headers: {
-          'X-API-KEY': apiKey,
-          'Accept': 'application/json',
-        }
-      });
+      const response = await fetch(`${this.baseUrl}/song/?${params}`);
 
       if (!response.ok) {
         console.error('GetSongBPM details failed:', response.status);
