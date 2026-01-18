@@ -136,45 +136,30 @@ class SongBPMService {
         return null;
       }
 
-      // If we have BPM and key from search, use those
-      if (searchResult.bpm && searchResult.keyOf) {
-        // Parse key from search result
-        let key = null;
-        if (searchResult.keyOf) {
-          const keyParts = searchResult.keyOf.split(' ');
-          if (keyParts.length >= 1) {
-            key = keyParts[0];
-            if (keyParts[1]?.toLowerCase() === 'minor') {
-              key += 'm';
-            }
-          }
-        }
-
-        return {
-          bpm: searchResult.bpm,
-          key: key,
-          artist: searchResult.artist,
-          duration: null // GetSongBPM doesn't provide duration
-        };
-      }
-
-      // Otherwise, get full details
+      // Always fetch full details to get BPM and key
       const details = await this.getTrackDetails(searchResult.songId);
 
-      if (!details) {
-        // Return what we have from search
-        return {
-          bpm: searchResult.bpm,
-          key: null,
-          artist: searchResult.artist,
-          duration: null
-        };
+      console.log('GetSongBPM details for', title, ':', details);
+
+      // Combine search and details results
+      const bpm = details?.bpm || searchResult.bpm || null;
+      let key = details?.key || null;
+
+      // If no key from details but we have keyOf from search, parse it
+      if (!key && searchResult.keyOf) {
+        const keyParts = searchResult.keyOf.split(' ');
+        if (keyParts.length >= 1) {
+          key = keyParts[0];
+          if (keyParts[1]?.toLowerCase() === 'minor') {
+            key += 'm';
+          }
+        }
       }
 
       return {
-        bpm: details.bpm,
-        key: details.key,
-        artist: details.artist || searchResult.artist,
+        bpm: bpm,
+        key: key,
+        artist: details?.artist || searchResult.artist,
         duration: null // GetSongBPM doesn't provide duration
       };
     } catch (error) {
