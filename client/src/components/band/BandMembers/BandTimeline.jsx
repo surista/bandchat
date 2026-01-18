@@ -66,8 +66,9 @@ function BandTimeline({ members }) {
     }
 
     // Sort members: current first, then by join date, then alphabetical
+    // Exclude guests from timeline - they're shown separately
     const sortedMembers = [...members]
-      .filter(m => m.stints && m.stints.length > 0)
+      .filter(m => !m.isGuest && m.stints && m.stints.length > 0)
       .sort((a, b) => {
         const aIsCurrent = a.stints.some(s => !s.endDate);
         const bIsCurrent = b.stints.some(s => !s.endDate);
