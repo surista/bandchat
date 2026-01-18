@@ -199,12 +199,12 @@ function BandMembersList({ workspaceId }) {
                 </span>
               )}
             </div>
-            {yearRange && <p className="text-gray-500 text-xs mt-1">{yearRange}</p>}
+            {yearRange && !member.isGuest && <p className="text-gray-500 text-xs mt-1">{yearRange}</p>}
           </div>
         </div>
 
-        {/* Show stint details if multiple */}
-        {member.stints && member.stints.length > 1 && (
+        {/* Show stint details if multiple (not for guests) */}
+        {!member.isGuest && member.stints && member.stints.length > 1 && (
           <div className="mt-3 pt-3 border-t border-gray-700 space-y-1">
             {member.stints.map((stint, idx) => {
               const stintInstruments = stint.instruments || (stint.instrument ? [stint.instrument] : []);
