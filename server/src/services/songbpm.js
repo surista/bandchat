@@ -3,7 +3,7 @@
 
 class SongBPMService {
   constructor() {
-    this.baseUrl = 'https://api.getsongbpm.com';
+    this.baseUrl = 'https://api.getsong.co';
     // Log on startup whether API key is configured
     console.log('SongBPM Service initialized - API key configured:', !!process.env.GETSONGBPM_API_KEY);
   }
