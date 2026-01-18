@@ -1,6 +1,22 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 
 function BandTimeline({ members }) {
+  const containerRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(800);
+
+  // Measure container width
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
+    };
+
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+    return () => window.removeEventListener('resize', updateWidth);
+  }, []);
+
   const getInstrumentColor = (instrument) => {
     const colors = {
       'Vocals': '#9333ea', // purple
@@ -40,7 +56,7 @@ function BandTimeline({ members }) {
       }
     });
 
-    // Add padding to end only (start at first member's year)
+    // End at year after current year
     maxYear = Math.max(maxYear, currentYear) + 1;
 
     const yearRange = maxYear - minYear;
@@ -83,17 +99,21 @@ function BandTimeline({ members }) {
     return <div className="text-gray-500 text-center py-4">No timeline data</div>;
   }
 
-  const { minYear, years, members: sortedMembers, currentYear } = timelineData;
+  const { minYear, maxYear, years, members: sortedMembers, currentYear } = timelineData;
 
-  // Dimensions
+  // Dimensions - calculated based on container width
   const rowHeight = 36;
   const avatarSize = 22;
-  const labelWidth = 140;
-  const yearWidth = 60;
-  const chartWidth = years.length * yearWidth;
-  const chartHeight = sortedMembers.length * rowHeight + 40; // +40 for year labels
-  const svgWidth = labelWidth + chartWidth + 20;
+  const labelWidth = 110;
+  const chartWidth = containerWidth - labelWidth - 10; // Full remaining width
+  const yearWidth = chartWidth / (years.length - 1); // Distribute years across full width
+  const chartHeight = sortedMembers.length * rowHeight + 40;
   const svgHeight = chartHeight + 20;
+
+  // Helper: convert year to X position (0 = minYear, chartWidth = maxYear)
+  const yearToX = (year) => {
+    return ((year - minYear) / (maxYear - minYear)) * chartWidth;
+  };
 
   // Avatar component for timeline
   const TimelineAvatar = ({ member, x, y }) => {
@@ -158,26 +178,27 @@ function BandTimeline({ members }) {
   };
 
   return (
-    <div className="overflow-x-auto w-full">
-      <svg width="100%" height={svgHeight} style={{ minWidth: svgWidth }} className="block">
+    <div ref={containerRef} className="w-full">
+      <svg width="100%" height={svgHeight} className="block">
         {/* Year labels and grid lines */}
         <g transform={`translate(${labelWidth}, 0)`}>
-          {years.map((year, i) => (
-            <g key={year}>
-              {/* Vertical grid line */}
-              <line
-                x1={i * yearWidth}
-                y1={20}
-                x2={i * yearWidth}
-                y2={chartHeight}
-                stroke="#374151"
-                strokeWidth="1"
-                strokeDasharray={year % 5 === 0 ? '' : '2,2'}
-              />
-              {/* Year label (show every year or every 2 years if many) */}
-              {(years.length <= 20 || year % 2 === 0 || year === currentYear) && (
+          {years.map((year) => {
+            const x = yearToX(year);
+            return (
+              <g key={year}>
+                {/* Vertical grid line */}
+                <line
+                  x1={x}
+                  y1={20}
+                  x2={x}
+                  y2={chartHeight}
+                  stroke="#374151"
+                  strokeWidth="1"
+                  strokeDasharray={year % 5 === 0 ? '' : '2,2'}
+                />
+                {/* Year label */}
                 <text
-                  x={i * yearWidth}
+                  x={x}
                   y={14}
                   fill={year === currentYear ? '#10b981' : '#9ca3af'}
                   fontSize="11"
@@ -186,9 +207,9 @@ function BandTimeline({ members }) {
                 >
                   {year}
                 </text>
-              )}
-            </g>
-          ))}
+              </g>
+            );
+          })}
         </g>
 
         {/* Member rows */}
@@ -234,8 +255,9 @@ function BandTimeline({ members }) {
                   {member.stints.map((stint, stintIdx) => {
                     const startYear = new Date(stint.startDate).getFullYear();
                     const endYear = stint.endDate ? new Date(stint.endDate).getFullYear() : currentYear;
-                    const startX = (startYear - minYear) * yearWidth;
-                    const width = (endYear - startYear + 1) * yearWidth - 4;
+                    const startX = yearToX(startYear);
+                    const endX = yearToX(endYear + 1); // +1 to include the full end year
+                    const barWidth = endX - startX - 4;
                     const instruments = stint.instruments || (stint.instrument ? [stint.instrument] : []);
                     const primaryInstrument = instruments[0] || 'Unknown';
                     const color = getInstrumentColor(primaryInstrument);
@@ -249,23 +271,23 @@ function BandTimeline({ members }) {
                         <rect
                           x={startX + 2}
                           y={6}
-                          width={Math.max(width, 8)}
+                          width={Math.max(barWidth, 8)}
                           height={rowHeight - 12}
                           fill={color}
                           rx={3}
                           opacity={isOngoing ? 1 : 0.6}
                         />
                         {/* Instrument label on bar if wide enough */}
-                        {width > 50 && (
+                        {barWidth > 60 && (
                           <text
-                            x={startX + width / 2}
+                            x={startX + barWidth / 2}
                             y={rowHeight / 2 + 3}
                             fill="white"
                             fontSize="10"
                             textAnchor="middle"
                             opacity={0.9}
                           >
-                            {instrumentLabel.length > 12 ? instrumentLabel.slice(0, 10) + '...' : instrumentLabel}
+                            {instrumentLabel.length > 14 ? instrumentLabel.slice(0, 12) + '...' : instrumentLabel}
                           </text>
                         )}
                       </g>
@@ -280,9 +302,9 @@ function BandTimeline({ members }) {
         {/* Current year marker */}
         <g transform={`translate(${labelWidth}, 0)`}>
           <line
-            x1={(currentYear - minYear) * yearWidth}
+            x1={yearToX(currentYear)}
             y1={20}
-            x2={(currentYear - minYear) * yearWidth}
+            x2={yearToX(currentYear)}
             y2={chartHeight}
             stroke="#10b981"
             strokeWidth="2"
