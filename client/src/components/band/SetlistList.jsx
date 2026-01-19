@@ -104,6 +104,17 @@ function SetlistList({ workspaceId }) {
     }
   };
 
+  const handleDuplicateSetlist = async (setlist) => {
+    const newName = prompt('Name for the copy:', `Copy of ${setlist.name}`);
+    if (!newName) return;
+    try {
+      const duplicated = await api.duplicateSetlist(setlist.id, newName);
+      setSetlists(prev => [duplicated, ...prev]);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   const handleSetlistUpdated = (updatedSetlist) => {
     setSetlists(prev => prev.map(s => s.id === updatedSetlist.id ? updatedSetlist : s));
   };
@@ -364,6 +375,16 @@ function SetlistList({ workspaceId }) {
                       title="Edit"
                     >
                       ✏️
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDuplicateSetlist(setlist);
+                      }}
+                      className="p-1 text-gray-400 hover:text-blue-400"
+                      title="Copy"
+                    >
+                      📋
                     </button>
                     <button
                       onClick={(e) => {

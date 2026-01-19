@@ -485,6 +485,13 @@ class ApiService {
     });
   }
 
+  async duplicateSetlist(setlistId, name = null) {
+    return this.request(`/setlists/${setlistId}/duplicate`, {
+      method: 'POST',
+      body: JSON.stringify({ name })
+    });
+  }
+
   async importSetlist(workspaceId, name, songs, { useShortNames = false, performedAt = null, venue = null } = {}) {
     return this.request(`/setlists/workspace/${workspaceId}/import`, {
       method: 'POST',

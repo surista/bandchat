@@ -197,6 +197,71 @@ router.delete('/:setlistId', authenticate, async (req, res) => {
   }
 });
 
+// Duplicate a setlist
+router.post('/:setlistId/duplicate', authenticate, async (req, res) => {
+  try {
+    const { name } = req.body;
+
+    // Get source setlist with all items
+    const source = await prisma.setlist.findUnique({
+      where: { id: req.params.setlistId },
+      include: {
+        songs: {
+          orderBy: { position: 'asc' }
+        }
+      }
+    });
+
+    if (!source) {
+      return res.status(404).json({ error: 'Setlist not found' });
+    }
+
+    // Create new setlist with copied data
+    const newSetlist = await prisma.setlist.create({
+      data: {
+        name: name || `Copy of ${source.name}`,
+        description: source.description,
+        useShortNames: source.useShortNames,
+        workspaceId: source.workspaceId,
+        createdById: req.user.id,
+        // Copy all setlist items
+        songs: {
+          create: source.songs.map(item => ({
+            songId: item.songId,
+            position: item.position,
+            type: item.type,
+            duration: item.duration,
+            label: item.label
+          }))
+        }
+      },
+      include: {
+        createdBy: {
+          select: { id: true, displayName: true }
+        },
+        songs: {
+          include: { song: true },
+          orderBy: { position: 'asc' }
+        },
+        _count: {
+          select: { gigs: true }
+        }
+      }
+    });
+
+    const io = req.app.get('io');
+    io.to(`workspace:${source.workspaceId}`).emit('setlist:created', newSetlist);
+
+    res.status(201).json(newSetlist);
+  } catch (error) {
+    console.error('Duplicate setlist error:', error);
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'A setlist with this name already exists' });
+    }
+    res.status(500).json({ error: 'Failed to duplicate setlist' });
+  }
+});
+
 // Add a song to a setlist
 router.post('/:setlistId/songs', authenticate, async (req, res) => {
   try {
