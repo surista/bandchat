@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -350,7 +350,37 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
   const [saving, setSaving] = useState(false);
   const [useShortNames, setUseShortNames] = useState(setlist.useShortNames || false);
   const [songSortBy, setSongSortBy] = useState('title');
-  const [wideColumns, setWideColumns] = useState(false);
+  const [setlistPanelWidth, setSetlistPanelWidth] = useState(70); // percentage
+  const containerRef = useRef(null);
+  const isResizing = useRef(false);
+
+  // Resize handler for the divider between setlist and available songs
+  const handleResizeStart = useCallback((e) => {
+    e.preventDefault();
+    isResizing.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const handleMouseMove = (moveEvent) => {
+      if (!isResizing.current || !containerRef.current) return;
+      const container = containerRef.current;
+      const rect = container.getBoundingClientRect();
+      const newWidth = ((moveEvent.clientX - rect.left) / rect.width) * 100;
+      // Clamp between 30% and 90%
+      setSetlistPanelWidth(Math.min(90, Math.max(30, newWidth)));
+    };
+
+    const handleMouseUp = () => {
+      isResizing.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
 
   // Configure sensors for both mouse and touch
   const sensors = useSensors(
@@ -548,19 +578,6 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
             )}
           </div>
           <div className="hidden sm:flex items-center gap-4">
-            {hasMultipleSets && (
-              <button
-                onClick={() => setWideColumns(!wideColumns)}
-                className={`px-3 py-2 rounded text-sm touch-manipulation ${
-                  wideColumns
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
-                title="Toggle wide columns"
-              >
-                {wideColumns ? 'Wide' : 'Compact'}
-              </button>
-            )}
             <button
               onClick={toggleShortNames}
               className={`px-3 py-2 rounded text-sm touch-manipulation ${
@@ -583,9 +600,12 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+      <div ref={containerRef} className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Setlist Items */}
-        <div className={`flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-700 ${wideColumns ? '' : 'md:max-w-4xl'}`}>
+        <div
+          className="flex-1 flex flex-col border-b md:border-b-0 border-gray-700 min-w-0"
+          style={{ flex: `0 0 ${setlistPanelWidth}%` }}
+        >
           <div className="p-3 bg-gray-800 text-sm text-gray-400 uppercase tracking-wide flex items-center justify-between">
             <span>Setlist Order {saving && '(saving...)'}</span>
             <div className="flex gap-2">
@@ -618,10 +638,8 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
                 onDragEnd={handleDragEnd}
               >
                 <div className={`p-3 grid gap-3 ${
-                  wideColumns
-                    ? 'lg:grid-cols-1 xl:grid-cols-2'
-                    : sets.length === 2 ? 'lg:grid-cols-2' :
-                      sets.length >= 3 ? 'lg:grid-cols-2 xl:grid-cols-3' : ''
+                  sets.length === 2 ? 'grid-cols-1 md:grid-cols-2' :
+                  sets.length >= 3 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : ''
                 }`}>
                   {sets.map((set, setIndex) => (
                     <SetColumn
@@ -689,8 +707,17 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
           )}
         </div>
 
+        {/* Resize Handle */}
+        <div
+          className="hidden md:flex w-2 bg-gray-700 hover:bg-blue-600 cursor-col-resize items-center justify-center flex-shrink-0 transition-colors"
+          onMouseDown={handleResizeStart}
+          title="Drag to resize"
+        >
+          <div className="w-0.5 h-8 bg-gray-500 rounded"></div>
+        </div>
+
         {/* Available Songs */}
-        <div className="flex-1 md:w-80 md:flex-none flex flex-col min-h-[200px] md:min-h-0">
+        <div className="flex-1 flex flex-col min-h-[200px] md:min-h-0 min-w-[200px]">
           <div className="p-3 bg-gray-800 space-y-2">
             <input
               type="text"
