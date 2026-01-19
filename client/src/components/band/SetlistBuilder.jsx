@@ -2,6 +2,9 @@ import { useState, useMemo } from 'react';
 import {
   DndContext,
   closestCenter,
+  pointerWithin,
+  rectIntersection,
+  getFirstCollision,
   KeyboardSensor,
   PointerSensor,
   TouchSensor,
@@ -597,7 +600,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
               /* Multi-column view for desktop with multiple sets */
               <DndContext
                 sensors={sensors}
-                collisionDetection={closestCenter}
+                collisionDetection={pointerWithin}
                 onDragEnd={handleDragEnd}
               >
                 <div className={`p-3 grid gap-3 ${
