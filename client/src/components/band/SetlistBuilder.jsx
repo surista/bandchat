@@ -350,6 +350,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
   const [saving, setSaving] = useState(false);
   const [useShortNames, setUseShortNames] = useState(setlist.useShortNames || false);
   const [songSortBy, setSongSortBy] = useState('title');
+  const [wideColumns, setWideColumns] = useState(false);
 
   // Configure sensors for both mouse and touch
   const sensors = useSensors(
@@ -547,6 +548,19 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
             )}
           </div>
           <div className="hidden sm:flex items-center gap-4">
+            {hasMultipleSets && (
+              <button
+                onClick={() => setWideColumns(!wideColumns)}
+                className={`px-3 py-2 rounded text-sm touch-manipulation ${
+                  wideColumns
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+                title="Toggle wide columns"
+              >
+                {wideColumns ? 'Wide' : 'Compact'}
+              </button>
+            )}
             <button
               onClick={toggleShortNames}
               className={`px-3 py-2 rounded text-sm touch-manipulation ${
@@ -604,8 +618,10 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
                 onDragEnd={handleDragEnd}
               >
                 <div className={`p-3 grid gap-3 ${
-                  sets.length === 2 ? 'lg:grid-cols-2' :
-                  sets.length >= 3 ? 'lg:grid-cols-2 xl:grid-cols-3' : ''
+                  wideColumns
+                    ? 'lg:grid-cols-1 xl:grid-cols-2'
+                    : sets.length === 2 ? 'lg:grid-cols-2' :
+                      sets.length >= 3 ? 'lg:grid-cols-2 xl:grid-cols-3' : ''
                 }`}>
                   {sets.map((set, setIndex) => (
                     <SetColumn
