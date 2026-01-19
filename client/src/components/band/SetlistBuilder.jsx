@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -17,6 +17,32 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import api from '../../services/api';
+
+// Helper to split items into sets based on SET_BREAK markers
+function splitIntoSets(items) {
+  const sets = [];
+  let currentSet = { breakItem: null, items: [] };
+
+  for (const item of items) {
+    if (item.type === 'SET_BREAK') {
+      // Save current set if it has items
+      if (currentSet.items.length > 0 || currentSet.breakItem) {
+        sets.push(currentSet);
+      }
+      // Start new set with this break
+      currentSet = { breakItem: item, items: [] };
+    } else {
+      currentSet.items.push(item);
+    }
+  }
+
+  // Push last set
+  if (currentSet.items.length > 0 || currentSet.breakItem) {
+    sets.push(currentSet);
+  }
+
+  return sets;
+}
 
 // Sortable item component
 function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDisplayName, useShortNames, formatDuration }) {
@@ -119,6 +145,201 @@ function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDispla
       <button
         onClick={() => onRemove(item)}
         className="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-gray-700 rounded touch-manipulation"
+        aria-label="Remove item"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
+// Set Column component for multi-column view
+function SetColumn({
+  set,
+  setIndex,
+  globalStartIndex,
+  onRemove,
+  onMoveGlobal,
+  getSongDisplayName,
+  useShortNames,
+  formatDuration,
+  sensors,
+  onDragEnd,
+  getItemDuration
+}) {
+  // All items in this column including the break
+  const allColumnItems = set.breakItem ? [set.breakItem, ...set.items] : set.items;
+
+  // Calculate set statistics
+  const setSongCount = set.items.filter(i => i.type !== 'MC' && i.type !== 'SET_BREAK').length;
+  const setMcCount = set.items.filter(i => i.type === 'MC').length;
+  const setDuration = allColumnItems.reduce((acc, item) => acc + getItemDuration(item), 0);
+  const setMins = Math.floor(setDuration / 60);
+  const setSecs = setDuration % 60;
+
+  return (
+    <div className="flex flex-col bg-gray-850 rounded-lg overflow-hidden border border-gray-700">
+      {/* Set Header */}
+      <div className="p-3 bg-blue-900/30 border-b border-blue-800/50">
+        <div className="flex items-center justify-between">
+          <h3 className="text-blue-400 font-bold">
+            📋 {set.breakItem?.label || `Set ${setIndex + 1}`}
+          </h3>
+          <div className="text-right text-xs">
+            <div className="text-gray-300">
+              {setSongCount} song{setSongCount !== 1 ? 's' : ''}
+              {setMcCount > 0 && ` + ${setMcCount} MC`}
+            </div>
+            <div className="text-emerald-400 font-medium">
+              {setMins}:{String(setSecs).padStart(2, '0')}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Set Items */}
+      <div className="flex-1 overflow-y-auto overscroll-contain">
+        {set.items.length === 0 ? (
+          <div className="text-center text-gray-500 py-8 text-sm">
+            <p>No songs in this set</p>
+          </div>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={(event) => onDragEnd(event, setIndex)}
+          >
+            <SortableContext
+              items={set.items.map(item => item.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="divide-y divide-gray-700">
+                {set.items.map((item, localIndex) => {
+                  const globalIndex = globalStartIndex + localIndex + (set.breakItem ? 1 : 0);
+                  return (
+                    <SetColumnItem
+                      key={item.id}
+                      item={item}
+                      localIndex={localIndex}
+                      totalItems={set.items.length}
+                      globalIndex={globalIndex}
+                      onRemove={onRemove}
+                      onMoveGlobal={onMoveGlobal}
+                      getSongDisplayName={getSongDisplayName}
+                      useShortNames={useShortNames}
+                      formatDuration={formatDuration}
+                    />
+                  );
+                })}
+              </div>
+            </SortableContext>
+          </DndContext>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Simplified item component for set columns (no set break display since it's in the header)
+function SetColumnItem({
+  item,
+  localIndex,
+  totalItems,
+  globalIndex,
+  onRemove,
+  onMoveGlobal,
+  getSongDisplayName,
+  useShortNames,
+  formatDuration
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-2 p-2 ${
+        item.type === 'MC'
+          ? 'bg-yellow-900/30 hover:bg-yellow-900/50'
+          : 'bg-gray-900 hover:bg-gray-800'
+      }`}
+    >
+      {/* Move buttons */}
+      <div className="flex flex-col gap-0.5">
+        <button
+          onClick={() => onMoveGlobal(globalIndex, -1)}
+          className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-white hover:bg-gray-700 disabled:opacity-30 rounded text-xs touch-manipulation"
+          aria-label="Move up"
+        >
+          ▲
+        </button>
+        <button
+          onClick={() => onMoveGlobal(globalIndex, 1)}
+          className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-white hover:bg-gray-700 disabled:opacity-30 rounded text-xs touch-manipulation"
+          aria-label="Move down"
+        >
+          ▼
+        </button>
+      </div>
+
+      {/* Drag handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing p-1 touch-manipulation"
+        aria-label="Drag to reorder"
+      >
+        <span className="text-gray-500 select-none text-sm">⋮⋮</span>
+      </div>
+
+      <span className="text-gray-500 w-5 text-right text-sm">{localIndex + 1}.</span>
+
+      {item.type === 'MC' ? (
+        <>
+          <div className="flex-1 min-w-0">
+            <div className="text-yellow-400 truncate text-sm font-medium">
+              🎤 {item.label || 'MC'}
+            </div>
+          </div>
+          <div className="text-xs text-yellow-400">
+            {formatDuration(item.duration || 60)}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="flex-1 min-w-0">
+            <div className="text-white truncate text-sm">{getSongDisplayName(item.song)}</div>
+            {!useShortNames && item.song?.artist && (
+              <div className="text-gray-400 text-xs truncate">{item.song.artist}</div>
+            )}
+          </div>
+          <div className="flex items-center gap-1 text-xs text-gray-400">
+            {item.song?.key && (
+              <span className="px-1 py-0.5 bg-purple-900/50 rounded text-xs">{item.song.key}</span>
+            )}
+            {item.song?.duration && (
+              <span className="text-xs">{formatDuration(item.song.duration)}</span>
+            )}
+          </div>
+        </>
+      )}
+
+      <button
+        onClick={() => onRemove(item)}
+        className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-gray-700 rounded touch-manipulation"
         aria-label="Remove item"
       >
         ✕
@@ -296,6 +517,52 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
     return `${mins}:${String(secs).padStart(2, '0')}`;
   };
 
+  // Split items into sets for multi-column view
+  const sets = useMemo(() => splitIntoSets(setlistItems), [setlistItems]);
+  const hasMultipleSets = sets.length > 1 || (sets.length === 1 && sets[0].breakItem);
+
+  // Calculate global start indices for each set
+  const setStartIndices = useMemo(() => {
+    const indices = [];
+    let currentIndex = 0;
+    for (const set of sets) {
+      indices.push(currentIndex);
+      currentIndex += (set.breakItem ? 1 : 0) + set.items.length;
+    }
+    return indices;
+  }, [sets]);
+
+  // Handle drag within a specific set column
+  const handleSetDragEnd = async (event, setIndex) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const set = sets[setIndex];
+    const oldLocalIndex = set.items.findIndex(item => item.id === active.id);
+    const newLocalIndex = set.items.findIndex(item => item.id === over.id);
+
+    if (oldLocalIndex === -1 || newLocalIndex === -1) return;
+
+    // Calculate global indices
+    const globalStartIndex = setStartIndices[setIndex] + (set.breakItem ? 1 : 0);
+    const oldGlobalIndex = globalStartIndex + oldLocalIndex;
+    const newGlobalIndex = globalStartIndex + newLocalIndex;
+
+    // Reorder the full list
+    const newList = arrayMove(setlistItems, oldGlobalIndex, newGlobalIndex);
+    setSetlistItems(newList);
+
+    setSaving(true);
+    try {
+      const itemIds = newList.map(item => item.id);
+      await api.reorderSetlistItems(setlist.id, itemIds);
+    } catch (err) {
+      alert('Failed to save order: ' + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -339,7 +606,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
 
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Setlist Items */}
-        <div className="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-700 md:max-w-2xl">
+        <div className="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-700 md:max-w-4xl">
           <div className="p-3 bg-gray-800 text-sm text-gray-400 uppercase tracking-wide flex items-center justify-between">
             <span>Setlist Order {saving && '(saving...)'}</span>
             <div className="flex gap-2">
@@ -364,7 +631,31 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
                 <p>Add songs from below</p>
                 <p className="text-sm mt-1">Drag to reorder or use arrow buttons</p>
               </div>
+            ) : hasMultipleSets ? (
+              /* Multi-column view for desktop with multiple sets */
+              <div className={`p-3 grid gap-3 ${
+                sets.length === 2 ? 'lg:grid-cols-2' :
+                sets.length >= 3 ? 'lg:grid-cols-2 xl:grid-cols-3' : ''
+              }`}>
+                {sets.map((set, setIndex) => (
+                  <SetColumn
+                    key={set.breakItem?.id || `set-${setIndex}`}
+                    set={set}
+                    setIndex={setIndex}
+                    globalStartIndex={setStartIndices[setIndex]}
+                    onRemove={handleRemoveItem}
+                    onMoveGlobal={moveItem}
+                    getSongDisplayName={getSongDisplayName}
+                    useShortNames={useShortNames}
+                    formatDuration={formatDuration}
+                    sensors={sensors}
+                    onDragEnd={handleSetDragEnd}
+                    getItemDuration={getItemDuration}
+                  />
+                ))}
+              </div>
             ) : (
+              /* Original single-column view */
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
