@@ -163,8 +163,6 @@ function SetColumn({
   getSongDisplayName,
   useShortNames,
   formatDuration,
-  sensors,
-  onDragEnd,
   getItemDuration
 }) {
   // All items in this column including the break
@@ -198,42 +196,37 @@ function SetColumn({
       </div>
 
       {/* Set Items */}
-      <div className="flex-1 overflow-y-auto overscroll-contain">
+      <div className="flex-1 overflow-y-auto overscroll-contain min-h-[100px]">
         {set.items.length === 0 ? (
           <div className="text-center text-gray-500 py-8 text-sm">
             <p>No songs in this set</p>
+            <p className="text-xs mt-1">Drag songs here</p>
           </div>
         ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={(event) => onDragEnd(event, setIndex)}
+          <SortableContext
+            items={set.items.map(item => item.id)}
+            strategy={verticalListSortingStrategy}
           >
-            <SortableContext
-              items={set.items.map(item => item.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="divide-y divide-gray-700">
-                {set.items.map((item, localIndex) => {
-                  const globalIndex = globalStartIndex + localIndex + (set.breakItem ? 1 : 0);
-                  return (
-                    <SetColumnItem
-                      key={item.id}
-                      item={item}
-                      localIndex={localIndex}
-                      totalItems={set.items.length}
-                      globalIndex={globalIndex}
-                      onRemove={onRemove}
-                      onMoveGlobal={onMoveGlobal}
-                      getSongDisplayName={getSongDisplayName}
-                      useShortNames={useShortNames}
-                      formatDuration={formatDuration}
-                    />
-                  );
-                })}
-              </div>
-            </SortableContext>
-          </DndContext>
+            <div className="divide-y divide-gray-700">
+              {set.items.map((item, localIndex) => {
+                const globalIndex = globalStartIndex + localIndex + (set.breakItem ? 1 : 0);
+                return (
+                  <SetColumnItem
+                    key={item.id}
+                    item={item}
+                    localIndex={localIndex}
+                    totalItems={set.items.length}
+                    globalIndex={globalIndex}
+                    onRemove={onRemove}
+                    onMoveGlobal={onMoveGlobal}
+                    getSongDisplayName={getSongDisplayName}
+                    useShortNames={useShortNames}
+                    formatDuration={formatDuration}
+                  />
+                );
+              })}
+            </div>
+          </SortableContext>
         )}
       </div>
     </div>
@@ -532,37 +525,6 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
     return indices;
   }, [sets]);
 
-  // Handle drag within a specific set column
-  const handleSetDragEnd = async (event, setIndex) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    const set = sets[setIndex];
-    const oldLocalIndex = set.items.findIndex(item => item.id === active.id);
-    const newLocalIndex = set.items.findIndex(item => item.id === over.id);
-
-    if (oldLocalIndex === -1 || newLocalIndex === -1) return;
-
-    // Calculate global indices
-    const globalStartIndex = setStartIndices[setIndex] + (set.breakItem ? 1 : 0);
-    const oldGlobalIndex = globalStartIndex + oldLocalIndex;
-    const newGlobalIndex = globalStartIndex + newLocalIndex;
-
-    // Reorder the full list
-    const newList = arrayMove(setlistItems, oldGlobalIndex, newGlobalIndex);
-    setSetlistItems(newList);
-
-    setSaving(true);
-    try {
-      const itemIds = newList.map(item => item.id);
-      await api.reorderSetlistItems(setlist.id, itemIds);
-    } catch (err) {
-      alert('Failed to save order: ' + err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -633,27 +595,31 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
               </div>
             ) : hasMultipleSets ? (
               /* Multi-column view for desktop with multiple sets */
-              <div className={`p-3 grid gap-3 ${
-                sets.length === 2 ? 'lg:grid-cols-2' :
-                sets.length >= 3 ? 'lg:grid-cols-2 xl:grid-cols-3' : ''
-              }`}>
-                {sets.map((set, setIndex) => (
-                  <SetColumn
-                    key={set.breakItem?.id || `set-${setIndex}`}
-                    set={set}
-                    setIndex={setIndex}
-                    globalStartIndex={setStartIndices[setIndex]}
-                    onRemove={handleRemoveItem}
-                    onMoveGlobal={moveItem}
-                    getSongDisplayName={getSongDisplayName}
-                    useShortNames={useShortNames}
-                    formatDuration={formatDuration}
-                    sensors={sensors}
-                    onDragEnd={handleSetDragEnd}
-                    getItemDuration={getItemDuration}
-                  />
-                ))}
-              </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <div className={`p-3 grid gap-3 ${
+                  sets.length === 2 ? 'lg:grid-cols-2' :
+                  sets.length >= 3 ? 'lg:grid-cols-2 xl:grid-cols-3' : ''
+                }`}>
+                  {sets.map((set, setIndex) => (
+                    <SetColumn
+                      key={set.breakItem?.id || `set-${setIndex}`}
+                      set={set}
+                      setIndex={setIndex}
+                      globalStartIndex={setStartIndices[setIndex]}
+                      onRemove={handleRemoveItem}
+                      onMoveGlobal={moveItem}
+                      getSongDisplayName={getSongDisplayName}
+                      useShortNames={useShortNames}
+                      formatDuration={formatDuration}
+                      getItemDuration={getItemDuration}
+                    />
+                  ))}
+                </div>
+              </DndContext>
             ) : (
               /* Original single-column view */
               <DndContext
