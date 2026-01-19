@@ -585,7 +585,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
 
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Setlist Items */}
-        <div className="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-700 md:max-w-4xl">
+        <div className={`flex-1 flex flex-col border-b md:border-b-0 md:border-r border-gray-700 ${wideColumns ? '' : 'md:max-w-4xl'}`}>
           <div className="p-3 bg-gray-800 text-sm text-gray-400 uppercase tracking-wide flex items-center justify-between">
             <span>Setlist Order {saving && '(saving...)'}</span>
             <div className="flex gap-2">
