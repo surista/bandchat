@@ -23,6 +23,7 @@ function GigCalendar({ workspaceId }) {
   const [draggingGig, setDraggingGig] = useState(null);
   const [dropTargetDate, setDropTargetDate] = useState(null);
   const [showMoveOrCopy, setShowMoveOrCopy] = useState(null); // { gig, targetDate }
+  const [edgeZone, setEdgeZone] = useState(null); // 'left' | 'right' | null
   const edgeScrollRef = useRef(null);
   const calendarContainerRef = useRef(null);
 
@@ -107,9 +108,10 @@ function GigCalendar({ workspaceId }) {
   };
 
   const handleDragEnd = (e) => {
-    e.target.style.opacity = '1';
+    if (e.target) e.target.style.opacity = '1';
     setDraggingGig(null);
     setDropTargetDate(null);
+    setEdgeZone(null);
     if (edgeScrollRef.current) {
       clearInterval(edgeScrollRef.current);
       edgeScrollRef.current = null;
@@ -122,36 +124,52 @@ function GigCalendar({ workspaceId }) {
     setDropTargetDate(date);
 
     // Edge detection for month navigation
-    if (calendarContainerRef.current) {
+    if (calendarContainerRef.current && draggingGig) {
       const rect = calendarContainerRef.current.getBoundingClientRect();
-      const edgeThreshold = 60;
+      const edgeThreshold = 80;
 
-      // Clear any existing edge scroll
+      // Right edge - go to next month
+      if (e.clientX > rect.right - edgeThreshold) {
+        if (edgeZone !== 'right') {
+          setEdgeZone('right');
+          // Clear any existing interval
+          if (edgeScrollRef.current) clearInterval(edgeScrollRef.current);
+          // Initial scroll after delay, then continuous
+          edgeScrollRef.current = setInterval(() => {
+            setCurrentMonth(prev => addMonths(prev, 1));
+          }, 600);
+        }
+      }
+      // Left edge - go to previous month
+      else if (e.clientX < rect.left + edgeThreshold) {
+        if (edgeZone !== 'left') {
+          setEdgeZone('left');
+          if (edgeScrollRef.current) clearInterval(edgeScrollRef.current);
+          edgeScrollRef.current = setInterval(() => {
+            setCurrentMonth(prev => subMonths(prev, 1));
+          }, 600);
+        }
+      }
+      // Not at edge
+      else if (edgeZone) {
+        setEdgeZone(null);
+        if (edgeScrollRef.current) {
+          clearInterval(edgeScrollRef.current);
+          edgeScrollRef.current = null;
+        }
+      }
+    }
+  }, [draggingGig, edgeZone]);
+
+  const handleDragLeave = (e) => {
+    // Only clear if leaving the calendar entirely
+    if (calendarContainerRef.current && !calendarContainerRef.current.contains(e.relatedTarget)) {
+      setDropTargetDate(null);
+      setEdgeZone(null);
       if (edgeScrollRef.current) {
         clearInterval(edgeScrollRef.current);
         edgeScrollRef.current = null;
       }
-
-      // Right edge - go to next month
-      if (e.clientX > rect.right - edgeThreshold) {
-        edgeScrollRef.current = setTimeout(() => {
-          setCurrentMonth(prev => addMonths(prev, 1));
-        }, 500);
-      }
-      // Left edge - go to previous month
-      else if (e.clientX < rect.left + edgeThreshold) {
-        edgeScrollRef.current = setTimeout(() => {
-          setCurrentMonth(prev => subMonths(prev, 1));
-        }, 500);
-      }
-    }
-  }, []);
-
-  const handleDragLeave = () => {
-    setDropTargetDate(null);
-    if (edgeScrollRef.current) {
-      clearTimeout(edgeScrollRef.current);
-      edgeScrollRef.current = null;
     }
   };
 
@@ -328,7 +346,18 @@ function GigCalendar({ workspaceId }) {
 
         {view === 'calendar' ? (
           /* Calendar View */
-          <div ref={calendarContainerRef} className="bg-gray-800 rounded-lg overflow-hidden">
+          <div ref={calendarContainerRef} className="bg-gray-800 rounded-lg overflow-hidden relative">
+            {/* Edge zone indicators */}
+            {draggingGig && edgeZone === 'left' && (
+              <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-blue-500/30 to-transparent pointer-events-none z-10 flex items-center justify-start pl-2">
+                <span className="text-blue-400 text-2xl animate-pulse">←</span>
+              </div>
+            )}
+            {draggingGig && edgeZone === 'right' && (
+              <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-blue-500/30 to-transparent pointer-events-none z-10 flex items-center justify-end pr-2">
+                <span className="text-blue-400 text-2xl animate-pulse">→</span>
+              </div>
+            )}
             {/* Day Headers */}
             <div className="grid grid-cols-7 bg-gray-700">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
