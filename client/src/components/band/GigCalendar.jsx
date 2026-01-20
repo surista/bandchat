@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday } from 'date-fns';
 import api from '../../services/api';
 import GigForm from './GigForm';
@@ -18,6 +18,13 @@ function GigCalendar({ workspaceId }) {
   const [view, setView] = useState(() => window.innerWidth < 768 ? 'list' : 'calendar');
   const [filterType, setFilterType] = useState('');
   const [deleteGigId, setDeleteGigId] = useState(null);
+
+  // Drag and drop state
+  const [draggingGig, setDraggingGig] = useState(null);
+  const [dropTargetDate, setDropTargetDate] = useState(null);
+  const [showMoveOrCopy, setShowMoveOrCopy] = useState(null); // { gig, targetDate }
+  const edgeScrollRef = useRef(null);
+  const calendarContainerRef = useRef(null);
 
   useEffect(() => {
     loadData();
@@ -86,6 +93,100 @@ function GigCalendar({ workspaceId }) {
     } catch (err) {
       alert(err.message);
     }
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e, gig) => {
+    setDraggingGig(gig);
+    e.dataTransfer.effectAllowed = 'copyMove';
+    e.dataTransfer.setData('text/plain', gig.id);
+    // Add a slight delay to allow the drag image to be created
+    setTimeout(() => {
+      e.target.style.opacity = '0.5';
+    }, 0);
+  };
+
+  const handleDragEnd = (e) => {
+    e.target.style.opacity = '1';
+    setDraggingGig(null);
+    setDropTargetDate(null);
+    if (edgeScrollRef.current) {
+      clearInterval(edgeScrollRef.current);
+      edgeScrollRef.current = null;
+    }
+  };
+
+  const handleDragOver = useCallback((e, date) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    setDropTargetDate(date);
+
+    // Edge detection for month navigation
+    if (calendarContainerRef.current) {
+      const rect = calendarContainerRef.current.getBoundingClientRect();
+      const edgeThreshold = 60;
+
+      // Clear any existing edge scroll
+      if (edgeScrollRef.current) {
+        clearInterval(edgeScrollRef.current);
+        edgeScrollRef.current = null;
+      }
+
+      // Right edge - go to next month
+      if (e.clientX > rect.right - edgeThreshold) {
+        edgeScrollRef.current = setTimeout(() => {
+          setCurrentMonth(prev => addMonths(prev, 1));
+        }, 500);
+      }
+      // Left edge - go to previous month
+      else if (e.clientX < rect.left + edgeThreshold) {
+        edgeScrollRef.current = setTimeout(() => {
+          setCurrentMonth(prev => subMonths(prev, 1));
+        }, 500);
+      }
+    }
+  }, []);
+
+  const handleDragLeave = () => {
+    setDropTargetDate(null);
+    if (edgeScrollRef.current) {
+      clearTimeout(edgeScrollRef.current);
+      edgeScrollRef.current = null;
+    }
+  };
+
+  const handleDrop = (e, targetDate) => {
+    e.preventDefault();
+    setDropTargetDate(null);
+
+    if (draggingGig && targetDate) {
+      // Show Move or Copy dialog
+      setShowMoveOrCopy({ gig: draggingGig, targetDate });
+    }
+    setDraggingGig(null);
+  };
+
+  const handleMoveOrCopyConfirm = async (action) => {
+    if (!showMoveOrCopy) return;
+
+    const { gig, targetDate } = showMoveOrCopy;
+    const newDateStr = format(targetDate, 'yyyy-MM-dd');
+
+    try {
+      if (action === 'move') {
+        // Update the gig's date
+        const updated = await api.updateGig(gig.id, { date: newDateStr });
+        setGigs(prev => prev.map(g => g.id === updated.id ? updated : g).sort((a, b) => new Date(a.date) - new Date(b.date)));
+      } else if (action === 'copy') {
+        // Duplicate the gig
+        const duplicated = await api.duplicateGig(gig.id, newDateStr);
+        setGigs(prev => [...prev, duplicated].sort((a, b) => new Date(a.date) - new Date(b.date)));
+      }
+    } catch (err) {
+      alert(err.message);
+    }
+
+    setShowMoveOrCopy(null);
   };
 
   // Calendar calculations
@@ -227,7 +328,7 @@ function GigCalendar({ workspaceId }) {
 
         {view === 'calendar' ? (
           /* Calendar View */
-          <div className="bg-gray-800 rounded-lg overflow-hidden">
+          <div ref={calendarContainerRef} className="bg-gray-800 rounded-lg overflow-hidden">
             {/* Day Headers */}
             <div className="grid grid-cols-7 bg-gray-700">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
@@ -247,6 +348,7 @@ function GigCalendar({ workspaceId }) {
                 const filteredDayGigs = filterType
                   ? dayGigs.filter(g => g.type === filterType)
                   : dayGigs;
+                const isDropTarget = dropTargetDate && isSameDay(day, dropTargetDate);
 
                 return (
                   <div
@@ -256,9 +358,14 @@ function GigCalendar({ workspaceId }) {
                       setEditingGig(null);
                       setShowForm(true);
                     }}
+                    onDragOver={(e) => handleDragOver(e, day)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, day)}
                     className={`p-2 min-h-[100px] border-t border-gray-700 cursor-pointer hover:bg-gray-700/50 transition-colors ${
                       !isSameMonth(day, currentMonth) ? 'bg-gray-900/50' : ''
-                    } ${isToday(day) ? 'bg-blue-900/20' : ''}`}
+                    } ${isToday(day) ? 'bg-blue-900/20' : ''} ${
+                      isDropTarget ? 'bg-green-900/40 ring-2 ring-green-500 ring-inset' : ''
+                    }`}
                   >
                     <div className={`text-sm mb-1 ${
                       isToday(day) ? 'text-blue-400 font-bold' : 'text-gray-400'
@@ -269,14 +376,17 @@ function GigCalendar({ workspaceId }) {
                       {filteredDayGigs.slice(0, 3).map(gig => (
                         <div
                           key={gig.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, gig)}
+                          onDragEnd={handleDragEnd}
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditingGig(gig);
                             setShowForm(true);
                           }}
-                          className={`text-xs p-1 rounded text-white truncate ${getTypeColor(gig.type)} ${
+                          className={`text-xs p-1 rounded text-white truncate cursor-grab active:cursor-grabbing ${getTypeColor(gig.type)} ${
                             gig.status === 'CANCELLED' ? 'opacity-50 line-through' : ''
-                          }`}
+                          } ${draggingGig?.id === gig.id ? 'opacity-50' : ''}`}
                         >
                           {gig.title}
                         </div>
@@ -421,6 +531,38 @@ function GigCalendar({ workspaceId }) {
         onConfirm={() => handleDeleteGig(deleteGigId)}
         onCancel={() => setDeleteGigId(null)}
       />
+
+      {/* Move or Copy Dialog */}
+      {showMoveOrCopy && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-sm border border-gray-700">
+            <h3 className="text-xl font-bold text-white mb-2">Move or Copy?</h3>
+            <p className="text-gray-400 mb-4">
+              "{showMoveOrCopy.gig.title}" → {format(showMoveOrCopy.targetDate, 'MMM d, yyyy')}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleMoveOrCopyConfirm('move')}
+                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded font-medium"
+              >
+                Move
+              </button>
+              <button
+                onClick={() => handleMoveOrCopyConfirm('copy')}
+                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded font-medium"
+              >
+                Copy
+              </button>
+              <button
+                onClick={() => setShowMoveOrCopy(null)}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
