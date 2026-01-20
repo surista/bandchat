@@ -417,6 +417,9 @@ function GigCalendar({ workspaceId }) {
                             gig.status === 'CANCELLED' ? 'opacity-50 line-through' : ''
                           } ${draggingGig?.id === gig.id ? 'opacity-50' : ''}`}
                         >
+                          {gig.type === 'REHEARSAL' && (
+                            <span className="font-medium">{format(new Date(gig.date), 'HH:mm')} </span>
+                          )}
                           {gig.title}
                         </div>
                       ))}
