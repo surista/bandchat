@@ -66,6 +66,84 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
   }
 });
 
+// Get gigs from all user's workspaces (for cross-workspace calendar view)
+router.get('/all-workspaces', authenticate, async (req, res) => {
+  try {
+    const { type, status, from, to, excludeWorkspaceId } = req.query;
+
+    // Get all workspace IDs user belongs to
+    const memberships = await prisma.workspaceMember.findMany({
+      where: { userId: req.user.id },
+      select: { workspaceId: true }
+    });
+
+    let workspaceIds = memberships.map(m => m.workspaceId);
+
+    // Optionally exclude current workspace
+    if (excludeWorkspaceId) {
+      workspaceIds = workspaceIds.filter(id => id !== excludeWorkspaceId);
+    }
+
+    if (workspaceIds.length === 0) {
+      return res.json([]);
+    }
+
+    const where = {
+      workspaceId: { in: workspaceIds },
+      ...(type && { type }),
+      ...(status && { status }),
+      ...(from || to) && {
+        date: {
+          ...(from && { gte: new Date(from) }),
+          ...(to && { lte: new Date(to) })
+        }
+      }
+    };
+
+    const gigs = await prisma.gig.findMany({
+      where,
+      include: {
+        workspace: {
+          select: { id: true, name: true }
+        },
+        createdBy: {
+          select: { id: true, displayName: true }
+        },
+        setlist: {
+          include: {
+            songs: {
+              include: { song: true },
+              orderBy: { position: 'asc' }
+            }
+          }
+        },
+        setlists: {
+          include: {
+            setlist: {
+              include: {
+                songs: {
+                  include: { song: true },
+                  orderBy: { position: 'asc' }
+                }
+              }
+            }
+          },
+          orderBy: { setNumber: 'asc' }
+        },
+        _count: {
+          select: { songsPlayed: true }
+        }
+      },
+      orderBy: { date: 'asc' }
+    });
+
+    res.json(gigs);
+  } catch (error) {
+    console.error('Get all workspaces gigs error:', error);
+    res.status(500).json({ error: 'Failed to get gigs from all workspaces' });
+  }
+});
+
 // Get gig statistics
 router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, async (req, res) => {
   try {

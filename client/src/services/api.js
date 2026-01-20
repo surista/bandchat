@@ -589,6 +589,17 @@ class ApiService {
     return this.request(`/gigs/workspace/${workspaceId}${query ? `?${query}` : ''}`);
   }
 
+  async getGigsFromAllWorkspaces(excludeWorkspaceId = null, filters = {}) {
+    const params = new URLSearchParams();
+    if (excludeWorkspaceId) params.append('excludeWorkspaceId', excludeWorkspaceId);
+    if (filters.type) params.append('type', filters.type);
+    if (filters.status) params.append('status', filters.status);
+    if (filters.from) params.append('from', filters.from);
+    if (filters.to) params.append('to', filters.to);
+    const query = params.toString();
+    return this.request(`/gigs/all-workspaces${query ? `?${query}` : ''}`);
+  }
+
   async createGig(workspaceId, data) {
     return this.request(`/gigs/workspace/${workspaceId}`, {
       method: 'POST',

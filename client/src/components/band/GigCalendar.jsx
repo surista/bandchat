@@ -7,6 +7,8 @@ import Skeleton from '../common/Skeleton';
 
 function GigCalendar({ workspaceId }) {
   const [gigs, setGigs] = useState([]);
+  const [otherWorkspaceGigs, setOtherWorkspaceGigs] = useState([]);
+  const [showOtherWorkspaces, setShowOtherWorkspaces] = useState(false);
   const [setlists, setSetlists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,6 +33,15 @@ function GigCalendar({ workspaceId }) {
     loadData();
   }, [workspaceId]);
 
+  // Load other workspace gigs when toggle is enabled
+  useEffect(() => {
+    if (showOtherWorkspaces) {
+      loadOtherWorkspaceGigs();
+    } else {
+      setOtherWorkspaceGigs([]);
+    }
+  }, [showOtherWorkspaces, workspaceId]);
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -44,6 +55,16 @@ function GigCalendar({ workspaceId }) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadOtherWorkspaceGigs = async () => {
+    try {
+      const otherGigs = await api.getGigsFromAllWorkspaces(workspaceId);
+      // Mark these as external
+      setOtherWorkspaceGigs(otherGigs.map(g => ({ ...g, isExternal: true })));
+    } catch (err) {
+      console.error('Failed to load other workspace gigs:', err);
     }
   };
 
@@ -216,25 +237,43 @@ function GigCalendar({ workspaceId }) {
   const startDay = monthStart.getDay();
   const paddingDays = Array(startDay).fill(null);
 
+  // Combine current workspace gigs with other workspace gigs
+  const allGigs = useMemo(() => {
+    const combined = [...gigs];
+    if (showOtherWorkspaces) {
+      combined.push(...otherWorkspaceGigs);
+    }
+    return combined.sort((a, b) => new Date(a.date) - new Date(b.date));
+  }, [gigs, otherWorkspaceGigs, showOtherWorkspaces]);
+
   const gigsByDate = useMemo(() => {
     const map = {};
-    gigs.forEach(gig => {
+    allGigs.forEach(gig => {
       const dateKey = format(new Date(gig.date), 'yyyy-MM-dd');
       if (!map[dateKey]) map[dateKey] = [];
       map[dateKey].push(gig);
     });
     return map;
-  }, [gigs]);
+  }, [allGigs]);
 
   const filteredGigs = filterType
-    ? gigs.filter(g => g.type === filterType)
-    : gigs;
+    ? allGigs.filter(g => g.type === filterType)
+    : allGigs;
 
   const upcomingGigs = filteredGigs
     .filter(g => new Date(g.date) >= new Date() && g.status !== 'CANCELLED')
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-  const getTypeColor = (type) => {
+  const getTypeColor = (type, isExternal = false) => {
+    if (isExternal) {
+      // Muted/striped colors for external workspace events
+      switch (type) {
+        case 'GIG': return 'bg-green-800/60 border border-green-600 border-dashed';
+        case 'REHEARSAL': return 'bg-blue-800/60 border border-blue-600 border-dashed';
+        case 'RECORDING': return 'bg-purple-800/60 border border-purple-600 border-dashed';
+        default: return 'bg-gray-700/60 border border-gray-500 border-dashed';
+      }
+    }
     switch (type) {
       case 'GIG': return 'bg-green-500';
       case 'REHEARSAL': return 'bg-blue-500';
@@ -277,6 +316,16 @@ function GigCalendar({ workspaceId }) {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-white">Calendar</h2>
           <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showOtherWorkspaces}
+                onChange={(e) => setShowOtherWorkspaces(e.target.checked)}
+                className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
+              />
+              <span className="hidden sm:inline">Other Bands</span>
+              <span className="sm:hidden">Others</span>
+            </label>
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
@@ -405,15 +454,18 @@ function GigCalendar({ workspaceId }) {
                       {filteredDayGigs.slice(0, 3).map(gig => (
                         <div
                           key={gig.id}
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, gig)}
-                          onDragEnd={handleDragEnd}
+                          draggable={!gig.isExternal}
+                          onDragStart={gig.isExternal ? undefined : (e) => handleDragStart(e, gig)}
+                          onDragEnd={gig.isExternal ? undefined : handleDragEnd}
                           onClick={(e) => {
                             e.stopPropagation();
-                            setEditingGig(gig);
-                            setShowForm(true);
+                            if (!gig.isExternal) {
+                              setEditingGig(gig);
+                              setShowForm(true);
+                            }
                           }}
-                          className={`text-xs p-1 rounded text-white truncate cursor-grab active:cursor-grabbing ${getTypeColor(gig.type)} ${
+                          title={gig.isExternal ? `${gig.workspace?.name || 'Other workspace'}` : gig.title}
+                          className={`text-xs p-1 rounded text-white truncate ${gig.isExternal ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} ${getTypeColor(gig.type, gig.isExternal)} ${
                             gig.status === 'CANCELLED' ? 'opacity-50 line-through' : ''
                           } ${draggingGig?.id === gig.id ? 'opacity-50' : ''}`}
                         >
@@ -445,21 +497,28 @@ function GigCalendar({ workspaceId }) {
               upcomingGigs.map(gig => (
                 <div
                   key={gig.id}
-                  className="bg-gray-800 rounded-lg p-4 border border-gray-700"
+                  className={`bg-gray-800 rounded-lg p-4 ${gig.isExternal ? 'border-2 border-dashed border-gray-600' : 'border border-gray-700'}`}
                 >
                   <div className="flex items-start gap-4">
-                    <div className={`w-2 h-full rounded ${getTypeColor(gig.type)}`} />
+                    <div className={`w-2 h-full rounded ${getTypeColor(gig.type, gig.isExternal)}`} />
                     <div className="flex-1">
                       <div className="flex items-start justify-between">
                         <div>
-                          <h3 className="text-white font-medium">{gig.title}</h3>
+                          <h3 className="text-white font-medium">
+                            {gig.title}
+                            {gig.isExternal && (
+                              <span className="ml-2 text-xs text-gray-400 font-normal">
+                                ({gig.workspace?.name || 'Other band'})
+                              </span>
+                            )}
+                          </h3>
                           <p className="text-gray-400 text-sm">
                             {format(new Date(gig.date), 'EEEE, MMMM d, yyyy')} at {format(new Date(gig.date), 'h:mm a')}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
                           {getStatusBadge(gig.status)}
-                          <span className={`text-xs px-2 py-1 rounded ${getTypeColor(gig.type)} text-white`}>
+                          <span className={`text-xs px-2 py-1 rounded ${getTypeColor(gig.type, gig.isExternal)} text-white`}>
                             {gig.type}
                           </span>
                         </div>
@@ -498,37 +557,40 @@ function GigCalendar({ workspaceId }) {
                         <p className="text-gray-500 text-sm mt-2 italic">{gig.notes}</p>
                       )}
 
-                      <div className="flex gap-2 mt-3">
-                        <button
-                          onClick={() => {
-                            setEditingGig(gig);
-                            setShowForm(true);
-                          }}
-                          className="text-sm text-gray-400 hover:text-white"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDuplicateGig(gig)}
-                          className="text-sm text-blue-400 hover:text-blue-300"
-                        >
-                          Copy
-                        </button>
-                        {gig.status === 'SCHEDULED' && (
+                      {/* Only show action buttons for non-external events */}
+                      {!gig.isExternal && (
+                        <div className="flex gap-2 mt-3">
                           <button
-                            onClick={() => handleCompleteGig(gig)}
-                            className="text-sm text-green-400 hover:text-green-300"
+                            onClick={() => {
+                              setEditingGig(gig);
+                              setShowForm(true);
+                            }}
+                            className="text-sm text-gray-400 hover:text-white"
                           >
-                            Mark Complete
+                            Edit
                           </button>
-                        )}
-                        <button
-                          onClick={() => setDeleteGigId(gig.id)}
-                          className="text-sm text-red-400 hover:text-red-300"
-                        >
-                          Delete
-                        </button>
-                      </div>
+                          <button
+                            onClick={() => handleDuplicateGig(gig)}
+                            className="text-sm text-blue-400 hover:text-blue-300"
+                          >
+                            Copy
+                          </button>
+                          {gig.status === 'SCHEDULED' && (
+                            <button
+                              onClick={() => handleCompleteGig(gig)}
+                              className="text-sm text-green-400 hover:text-green-300"
+                            >
+                              Mark Complete
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setDeleteGigId(gig.id)}
+                            className="text-sm text-red-400 hover:text-red-300"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
