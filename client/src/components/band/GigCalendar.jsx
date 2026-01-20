@@ -264,6 +264,16 @@ function GigCalendar({ workspaceId }) {
     .filter(g => new Date(g.date) >= new Date() && g.status !== 'CANCELLED')
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 
+  // Format time range helper
+  const formatTimeRange = (startDate, endDate) => {
+    const start = format(new Date(startDate), 'HH:mm');
+    if (endDate) {
+      const end = format(new Date(endDate), 'HH:mm');
+      return `${start}-${end}`;
+    }
+    return start;
+  };
+
   const getTypeColor = (type, isExternal = false) => {
     if (isExternal) {
       // Muted/striped colors for external workspace events
@@ -469,9 +479,7 @@ function GigCalendar({ workspaceId }) {
                             gig.status === 'CANCELLED' ? 'opacity-50 line-through' : ''
                           } ${draggingGig?.id === gig.id ? 'opacity-50' : ''}`}
                         >
-                          {gig.type === 'REHEARSAL' && (
-                            <span className="font-medium">{format(new Date(gig.date), 'HH:mm')} </span>
-                          )}
+                          <span className="font-medium">{formatTimeRange(gig.date, gig.endDate)} </span>
                           {gig.title}
                         </div>
                       ))}
@@ -513,7 +521,7 @@ function GigCalendar({ workspaceId }) {
                             )}
                           </h3>
                           <p className="text-gray-400 text-sm">
-                            {format(new Date(gig.date), 'EEEE, MMMM d, yyyy')} at {format(new Date(gig.date), 'h:mm a')}
+                            {format(new Date(gig.date), 'EEEE, MMMM d, yyyy')} {formatTimeRange(gig.date, gig.endDate)}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">

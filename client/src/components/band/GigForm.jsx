@@ -2,14 +2,23 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 
 function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
-  const getDefaultDateTime = () => {
-    if (gig?.date) {
-      return format(new Date(gig.date), "yyyy-MM-dd'T'HH:mm");
+  // Round minutes to nearest half hour
+  const roundToHalfHour = (minutes) => minutes < 15 ? '00' : minutes < 45 ? '30' : '00';
+
+  const getDefaultDate = () => {
+    if (gig?.date) return format(new Date(gig.date), 'yyyy-MM-dd');
+    if (defaultDate) return format(defaultDate, 'yyyy-MM-dd');
+    return format(new Date(), 'yyyy-MM-dd');
+  };
+
+  const getDefaultTime = (dateVal, fallback = '19:00') => {
+    if (dateVal) {
+      const d = new Date(dateVal);
+      const hours = d.getHours().toString().padStart(2, '0');
+      const mins = roundToHalfHour(d.getMinutes());
+      return `${hours}:${mins}`;
     }
-    if (defaultDate) {
-      return format(defaultDate, "yyyy-MM-dd'T'19:00");
-    }
-    return format(new Date(), "yyyy-MM-dd'T'19:00");
+    return fallback;
   };
 
   // Initialize selected sets from existing gig data
@@ -27,8 +36,10 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
   const [formData, setFormData] = useState({
     title: gig?.title || '',
     type: gig?.type || 'GIG',
-    date: getDefaultDateTime(),
-    endDate: gig?.endDate ? format(new Date(gig.endDate), "yyyy-MM-dd'T'HH:mm") : '',
+    startDate: getDefaultDate(),
+    startTime: getDefaultTime(gig?.date),
+    endDate: gig?.endDate ? format(new Date(gig.endDate), 'yyyy-MM-dd') : '',
+    endTime: gig?.endDate ? getDefaultTime(gig.endDate, '') : '',
     venue: gig?.venue || '',
     address: gig?.address || '',
     notes: gig?.notes || '',
@@ -47,11 +58,17 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
     setError('');
 
     try {
+      // Combine date and time fields
+      const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
+      const endDateTime = formData.endDate && formData.endTime
+        ? new Date(`${formData.endDate}T${formData.endTime}`)
+        : null;
+
       const saveData = {
         title: formData.title,
         type: formData.type,
-        date: new Date(formData.date).toISOString(),
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
+        date: startDateTime.toISOString(),
+        endDate: endDateTime ? endDateTime.toISOString() : null,
         venue: formData.venue || null,
         address: formData.address || null,
         notes: formData.notes || null,
@@ -153,27 +170,59 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="modal-label">
-                    Start Date/Time <span className="text-red-400">*</span>
-                  </label>
+              <div>
+                <label className="modal-label">
+                  Start Date/Time <span className="text-red-400">*</span>
+                </label>
+                <div className="flex gap-2">
                   <input
-                    type="datetime-local"
-                    value={formData.date}
-                    onChange={(e) => handleChange('date', e.target.value)}
-                    className="modal-input"
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => handleChange('startDate', e.target.value)}
+                    className="modal-input flex-1"
                     required
                   />
+                  <select
+                    value={formData.startTime}
+                    onChange={(e) => handleChange('startTime', e.target.value)}
+                    className="modal-input w-24"
+                    required
+                  >
+                    {Array.from({ length: 24 }, (_, h) => (
+                      ['00', '30'].map(m => (
+                        <option key={`${h}-${m}`} value={`${h.toString().padStart(2, '0')}:${m}`}>
+                          {h.toString().padStart(2, '0')}:{m}
+                        </option>
+                      ))
+                    )).flat()}
+                  </select>
                 </div>
-                <div>
-                  <label className="modal-label">End Date/Time</label>
+              </div>
+
+              <div>
+                <label className="modal-label">End Date/Time</label>
+                <div className="flex gap-2">
                   <input
-                    type="datetime-local"
+                    type="date"
                     value={formData.endDate}
                     onChange={(e) => handleChange('endDate', e.target.value)}
-                    className="modal-input"
+                    className="modal-input flex-1"
                   />
+                  <select
+                    value={formData.endTime}
+                    onChange={(e) => handleChange('endTime', e.target.value)}
+                    className="modal-input w-24"
+                    disabled={!formData.endDate}
+                  >
+                    <option value="">--:--</option>
+                    {Array.from({ length: 24 }, (_, h) => (
+                      ['00', '30'].map(m => (
+                        <option key={`${h}-${m}`} value={`${h.toString().padStart(2, '0')}:${m}`}>
+                          {h.toString().padStart(2, '0')}:{m}
+                        </option>
+                      ))
+                    )).flat()}
+                  </select>
                 </div>
               </div>
 
