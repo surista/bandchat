@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, subDays, addDays, isToday } from 'date-fns';
 import api from '../../services/api';
 import GigForm from './GigForm';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -250,11 +250,30 @@ function GigCalendar({ workspaceId }) {
   // Calendar calculations
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
-  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-  // Pad to start on Sunday
+  // Get days from previous month to fill the first week
   const startDay = monthStart.getDay();
-  const paddingDays = Array(startDay).fill(null);
+  const prevMonthDays = startDay > 0
+    ? eachDayOfInterval({
+        start: subDays(monthStart, startDay),
+        end: subDays(monthStart, 1)
+      })
+    : [];
+
+  // Current month days
+  const currentMonthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+  // Get days from next month to fill the last week
+  const endDay = monthEnd.getDay();
+  const nextMonthDays = endDay < 6
+    ? eachDayOfInterval({
+        start: addDays(monthEnd, 1),
+        end: addDays(monthEnd, 6 - endDay)
+      })
+    : [];
+
+  // All calendar days (prev + current + next)
+  const calendarDays = [...prevMonthDays, ...currentMonthDays, ...nextMonthDays];
 
   // Combine current workspace gigs with other workspace gigs
   const allGigs = useMemo(() => {
@@ -446,16 +465,14 @@ function GigCalendar({ workspaceId }) {
             </div>
             {/* Calendar Grid */}
             <div className="grid grid-cols-7">
-              {paddingDays.map((_, i) => (
-                <div key={`pad-${i}`} className="p-2 min-h-[100px] border-t border-gray-700 bg-gray-900/50" />
-              ))}
-              {daysInMonth.map(day => {
+              {calendarDays.map(day => {
                 const dateKey = format(day, 'yyyy-MM-dd');
                 const dayGigs = gigsByDate[dateKey] || [];
                 const filteredDayGigs = filterType
                   ? dayGigs.filter(g => g.type === filterType)
                   : dayGigs;
                 const isDropTarget = dropTargetDate && isSameDay(day, dropTargetDate);
+                const isCurrentMonth = isSameMonth(day, currentMonth);
 
                 return (
                   <div
@@ -469,13 +486,13 @@ function GigCalendar({ workspaceId }) {
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(e, day)}
                     className={`p-2 min-h-[100px] border-t border-gray-700 cursor-pointer hover:bg-gray-700/50 transition-colors ${
-                      !isSameMonth(day, currentMonth) ? 'bg-gray-900/50' : ''
+                      !isCurrentMonth ? 'bg-gray-900/70' : ''
                     } ${isToday(day) ? 'bg-blue-900/20' : ''} ${
                       isDropTarget ? 'bg-green-900/40 ring-2 ring-green-500 ring-inset' : ''
                     }`}
                   >
                     <div className={`text-sm mb-1 ${
-                      isToday(day) ? 'text-blue-400 font-bold' : 'text-gray-400'
+                      isToday(day) ? 'text-blue-400 font-bold' : isCurrentMonth ? 'text-gray-400' : 'text-gray-600'
                     }`}>
                       {format(day, 'd')}
                     </div>
