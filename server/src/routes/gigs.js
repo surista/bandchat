@@ -677,6 +677,98 @@ router.delete('/:gigId', authenticate, async (req, res) => {
   }
 });
 
+// Duplicate a gig
+router.post('/:gigId/duplicate', authenticate, async (req, res) => {
+  try {
+    const { date, title } = req.body;
+
+    // Get source gig with setlists
+    const source = await prisma.gig.findUnique({
+      where: { id: req.params.gigId },
+      include: {
+        setlists: {
+          orderBy: { setNumber: 'asc' }
+        }
+      }
+    });
+
+    if (!source) {
+      return res.status(404).json({ error: 'Gig not found' });
+    }
+
+    // Calculate new end date if source has duration
+    let newEndDate = null;
+    if (source.endDate && date) {
+      const duration = new Date(source.endDate) - new Date(source.date);
+      newEndDate = new Date(new Date(date).getTime() + duration);
+    }
+
+    // Create new gig with copied data
+    const newGig = await prisma.gig.create({
+      data: {
+        title: title || source.title,
+        type: source.type,
+        date: date ? new Date(date) : source.date,
+        endDate: newEndDate,
+        venue: source.venue,
+        address: source.address,
+        notes: source.notes,
+        pay: source.pay,
+        status: 'SCHEDULED',
+        workspaceId: source.workspaceId,
+        createdById: req.user.id,
+        // Copy multi-set setlists
+        setlists: source.setlists.length > 0 ? {
+          create: source.setlists.map(gs => ({
+            setlistId: gs.setlistId,
+            setNumber: gs.setNumber
+          }))
+        } : undefined,
+        // Copy legacy single setlist if present
+        setlistId: source.setlistId
+      },
+      include: {
+        createdBy: {
+          select: { id: true, displayName: true }
+        },
+        setlist: {
+          include: {
+            songs: {
+              include: { song: true },
+              orderBy: { position: 'asc' }
+            }
+          }
+        },
+        setlists: {
+          include: {
+            setlist: {
+              include: {
+                songs: {
+                  include: { song: true },
+                  orderBy: { position: 'asc' }
+                }
+              }
+            }
+          },
+          orderBy: { setNumber: 'asc' }
+        },
+        media: true,
+        _count: {
+          select: { songsPlayed: true }
+        }
+      }
+    });
+
+    const io = req.app.get('io');
+    io.to(`workspace:${source.workspaceId}`).emit('gig:created', newGig);
+
+    res.status(201).json(newGig);
+  } catch (error) {
+    console.error('Duplicate gig error:', error);
+    res.status(500).json({ error: 'Failed to duplicate gig' });
+  }
+});
+
 // Add media to a gig
 router.post('/:gigId/media', authenticate, async (req, res) => {
   try {

@@ -613,6 +613,13 @@ class ApiService {
     });
   }
 
+  async duplicateGig(gigId, date = null, title = null) {
+    return this.request(`/gigs/${gigId}/duplicate`, {
+      method: 'POST',
+      body: JSON.stringify({ date, title })
+    });
+  }
+
   async completeGig(gigId, songIds = []) {
     return this.request(`/gigs/${gigId}/complete`, {
       method: 'PUT',

@@ -76,6 +76,18 @@ function GigCalendar({ workspaceId }) {
     }
   };
 
+  const handleDuplicateGig = async (gig) => {
+    const dateStr = prompt('Enter date for the copy (YYYY-MM-DD):', format(new Date(), 'yyyy-MM-dd'));
+    if (!dateStr) return;
+
+    try {
+      const duplicated = await api.duplicateGig(gig.id, dateStr);
+      setGigs(prev => [...prev, duplicated].sort((a, b) => new Date(a.date) - new Date(b.date)));
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   // Calendar calculations
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -353,6 +365,12 @@ function GigCalendar({ workspaceId }) {
                           className="text-sm text-gray-400 hover:text-white"
                         >
                           Edit
+                        </button>
+                        <button
+                          onClick={() => handleDuplicateGig(gig)}
+                          className="text-sm text-blue-400 hover:text-blue-300"
+                        >
+                          Copy
                         </button>
                         {gig.status === 'SCHEDULED' && (
                           <button
