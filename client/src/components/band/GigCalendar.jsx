@@ -620,6 +620,11 @@ function GigCalendar({ workspaceId }) {
             setEditingGig(null);
             setSelectedDate(null);
           }}
+          onDelete={(gigId) => {
+            setShowForm(false);
+            setEditingGig(null);
+            setDeleteGigId(gigId);
+          }}
         />
       )}
 

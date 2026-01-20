@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 
-function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
+function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete }) {
   // Round minutes to nearest half hour
   const roundToHalfHour = (minutes) => minutes < 15 ? '00' : minutes < 45 ? '30' : '00';
 
@@ -11,14 +11,26 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
     return format(new Date(), 'yyyy-MM-dd');
   };
 
-  const getDefaultTime = (dateVal, fallback = '19:00') => {
+  // Convert 24-hour time to 12-hour format with AM/PM
+  const to12Hour = (dateVal, fallback = { hour: '7', minute: '00', period: 'PM' }) => {
     if (dateVal) {
       const d = new Date(dateVal);
-      const hours = d.getHours().toString().padStart(2, '0');
+      let hours = d.getHours();
       const mins = roundToHalfHour(d.getMinutes());
-      return `${hours}:${mins}`;
+      const period = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      if (hours === 0) hours = 12;
+      return { hour: hours.toString(), minute: mins, period };
     }
     return fallback;
+  };
+
+  // Convert 12-hour format back to 24-hour time string
+  const to24Hour = (hour, minute, period) => {
+    let h = parseInt(hour);
+    if (period === 'AM' && h === 12) h = 0;
+    else if (period === 'PM' && h !== 12) h += 12;
+    return `${h.toString().padStart(2, '0')}:${minute}`;
   };
 
   // Initialize selected sets from existing gig data
@@ -33,13 +45,20 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
     return [];
   };
 
+  const startTime12 = to12Hour(gig?.date);
+  const endTime12 = gig?.endDate ? to12Hour(gig.endDate, { hour: '', minute: '00', period: 'PM' }) : { hour: '', minute: '00', period: 'PM' };
+
   const [formData, setFormData] = useState({
     title: gig?.title || '',
     type: gig?.type || 'GIG',
     startDate: getDefaultDate(),
-    startTime: getDefaultTime(gig?.date),
+    startHour: startTime12.hour,
+    startMinute: startTime12.minute,
+    startPeriod: startTime12.period,
     endDate: gig?.endDate ? format(new Date(gig.endDate), 'yyyy-MM-dd') : '',
-    endTime: gig?.endDate ? getDefaultTime(gig.endDate, '') : '',
+    endHour: endTime12.hour,
+    endMinute: endTime12.minute,
+    endPeriod: endTime12.period,
     venue: gig?.venue || '',
     address: gig?.address || '',
     notes: gig?.notes || '',
@@ -58,10 +77,12 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
     setError('');
 
     try {
-      // Combine date and time fields
-      const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
-      const endDateTime = formData.endDate && formData.endTime
-        ? new Date(`${formData.endDate}T${formData.endTime}`)
+      // Combine date and time fields (convert 12-hour to 24-hour)
+      const startTime24 = to24Hour(formData.startHour, formData.startMinute, formData.startPeriod);
+      const startDateTime = new Date(`${formData.startDate}T${startTime24}`);
+
+      const endDateTime = formData.endDate && formData.endHour
+        ? new Date(`${formData.endDate}T${to24Hour(formData.endHour, formData.endMinute, formData.endPeriod)}`)
         : null;
 
       const saveData = {
@@ -183,18 +204,32 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
                     required
                   />
                   <select
-                    value={formData.startTime}
-                    onChange={(e) => handleChange('startTime', e.target.value)}
-                    className="modal-input w-24"
+                    value={formData.startHour}
+                    onChange={(e) => handleChange('startHour', e.target.value)}
+                    className="modal-input w-16"
                     required
                   >
-                    {Array.from({ length: 24 }, (_, h) => (
-                      ['00', '30'].map(m => (
-                        <option key={`${h}-${m}`} value={`${h.toString().padStart(2, '0')}:${m}`}>
-                          {h.toString().padStart(2, '0')}:{m}
-                        </option>
-                      ))
-                    )).flat()}
+                    {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(h => (
+                      <option key={h} value={h.toString()}>{h}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={formData.startMinute}
+                    onChange={(e) => handleChange('startMinute', e.target.value)}
+                    className="modal-input w-16"
+                    required
+                  >
+                    <option value="00">:00</option>
+                    <option value="30">:30</option>
+                  </select>
+                  <select
+                    value={formData.startPeriod}
+                    onChange={(e) => handleChange('startPeriod', e.target.value)}
+                    className="modal-input w-16"
+                    required
+                  >
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
                   </select>
                 </div>
               </div>
@@ -209,19 +244,33 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
                     className="modal-input flex-1"
                   />
                   <select
-                    value={formData.endTime}
-                    onChange={(e) => handleChange('endTime', e.target.value)}
-                    className="modal-input w-24"
+                    value={formData.endHour}
+                    onChange={(e) => handleChange('endHour', e.target.value)}
+                    className="modal-input w-16"
                     disabled={!formData.endDate}
                   >
-                    <option value="">--:--</option>
-                    {Array.from({ length: 24 }, (_, h) => (
-                      ['00', '30'].map(m => (
-                        <option key={`${h}-${m}`} value={`${h.toString().padStart(2, '0')}:${m}`}>
-                          {h.toString().padStart(2, '0')}:{m}
-                        </option>
-                      ))
-                    )).flat()}
+                    <option value="">--</option>
+                    {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(h => (
+                      <option key={h} value={h.toString()}>{h}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={formData.endMinute}
+                    onChange={(e) => handleChange('endMinute', e.target.value)}
+                    className="modal-input w-16"
+                    disabled={!formData.endDate}
+                  >
+                    <option value="00">:00</option>
+                    <option value="30">:30</option>
+                  </select>
+                  <select
+                    value={formData.endPeriod}
+                    onChange={(e) => handleChange('endPeriod', e.target.value)}
+                    className="modal-input w-16"
+                    disabled={!formData.endDate}
+                  >
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
                   </select>
                 </div>
               </div>
@@ -353,7 +402,17 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose }) {
               </div>
             </div>
 
-            <div className="flex gap-2 justify-end mt-6">
+            <div className="flex gap-2 mt-6">
+              {gig && onDelete && (
+                <button
+                  type="button"
+                  onClick={() => onDelete(gig.id)}
+                  className="btn bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Delete
+                </button>
+              )}
+              <div className="flex-1" />
               <button
                 type="button"
                 onClick={onClose}
