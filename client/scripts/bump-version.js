@@ -24,7 +24,12 @@ switch (bumpType) {
     newVersion = `${major}.${String(minor + 1).padStart(2, '0')}.00`;
     break;
   case 'patch':
-    newVersion = `${major}.${String(minor).padStart(2, '0')}.${String(patch + 1).padStart(2, '0')}`;
+    // Roll over to next minor version if patch reaches 100
+    if (patch + 1 >= 100) {
+      newVersion = `${major}.${String(minor + 1).padStart(2, '0')}.00`;
+    } else {
+      newVersion = `${major}.${String(minor).padStart(2, '0')}.${String(patch + 1).padStart(2, '0')}`;
+    }
     break;
 }
 

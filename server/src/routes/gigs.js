@@ -774,11 +774,23 @@ router.post('/:gigId/duplicate', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Gig not found' });
     }
 
-    // Calculate new end date if source has duration
-    let newEndDate = null;
-    if (source.endDate && date) {
-      const duration = new Date(source.endDate) - new Date(source.date);
-      newEndDate = new Date(new Date(date).getTime() + duration);
+    // Calculate new dates preserving the original time of day
+    let newStartDate = source.date;
+    let newEndDate = source.endDate;
+
+    if (date) {
+      const sourceDate = new Date(source.date);
+      const targetDate = new Date(date);
+
+      // Preserve time from original, just change the date
+      newStartDate = new Date(targetDate);
+      newStartDate.setHours(sourceDate.getHours(), sourceDate.getMinutes(), sourceDate.getSeconds());
+
+      // Calculate new end date preserving duration
+      if (source.endDate) {
+        const duration = new Date(source.endDate) - sourceDate;
+        newEndDate = new Date(newStartDate.getTime() + duration);
+      }
     }
 
     // Create new gig with copied data
@@ -786,7 +798,7 @@ router.post('/:gigId/duplicate', authenticate, async (req, res) => {
       data: {
         title: title || source.title,
         type: source.type,
-        date: date ? new Date(date) : source.date,
+        date: newStartDate,
         endDate: newEndDate,
         venue: source.venue,
         address: source.address,

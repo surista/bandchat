@@ -42,6 +42,25 @@ function GigCalendar({ workspaceId }) {
     }
   }, [showOtherWorkspaces, workspaceId]);
 
+  // Keyboard navigation for calendar view
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Only handle when in calendar view and no modal is open
+      if (view !== 'calendar' || showForm || deleteGigId || showMoveOrCopy) return;
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setCurrentMonth(prev => subMonths(prev, 1));
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setCurrentMonth(prev => addMonths(prev, 1));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [view, showForm, deleteGigId, showMoveOrCopy]);
+
   const loadData = async () => {
     try {
       setLoading(true);
