@@ -10,8 +10,13 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
   try {
     const { type, status, from, to } = req.query;
 
+    // Filter: show non-personal events OR personal events created by current user
     const where = {
       workspaceId: req.params.workspaceId,
+      OR: [
+        { isPersonal: false },
+        { isPersonal: true, createdById: req.user.id }
+      ],
       ...(type && { type }),
       ...(status && { status }),
       ...(from || to) && {
@@ -483,11 +488,14 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
 // Create a gig
 router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
-    const { title, type, date, endDate, venue, address, notes, pay, setlistId, setlistIds } = req.body;
+    const { title, type, date, endDate, venue, address, notes, pay, setlistId, setlistIds, isLocked, isPersonal } = req.body;
 
     if (!title || !date) {
       return res.status(400).json({ error: 'Title and date are required' });
     }
+
+    // Only admins can create locked events
+    const canLock = req.workspaceMember?.role === 'ADMIN';
 
     // Create gig with optional multi-set support
     const gig = await prisma.gig.create({
@@ -500,6 +508,8 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
         address,
         notes,
         pay,
+        isLocked: canLock ? (isLocked || false) : false,
+        isPersonal: isPersonal || false,
         setlistId: setlistIds && setlistIds.length > 0 ? null : setlistId, // Don't use legacy setlistId if using multi-set
         workspaceId: req.params.workspaceId,
         createdById: req.user.id,
@@ -593,7 +603,40 @@ router.get('/:gigId', authenticate, async (req, res) => {
 // Update a gig
 router.put('/:gigId', authenticate, async (req, res) => {
   try {
-    const { title, type, date, endDate, venue, address, notes, pay, status, setlistId, setlistIds } = req.body;
+    const { title, type, date, endDate, venue, address, notes, pay, status, setlistId, setlistIds, isLocked, isPersonal } = req.body;
+
+    // Get the existing gig and check permissions
+    const existingGig = await prisma.gig.findUnique({
+      where: { id: req.params.gigId },
+      include: {
+        workspace: {
+          include: { members: true }
+        }
+      }
+    });
+
+    if (!existingGig) {
+      return res.status(404).json({ error: 'Gig not found' });
+    }
+
+    // Check if user is a member and get their role
+    const membership = existingGig.workspace.members.find(m => m.userId === req.user.id);
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    const isAdmin = membership.role === 'ADMIN';
+    const isCreator = existingGig.createdById === req.user.id;
+
+    // Non-admins cannot modify locked events
+    if (existingGig.isLocked && !isAdmin) {
+      return res.status(403).json({ error: 'This event is locked and can only be modified by an admin' });
+    }
+
+    // Non-admins can only modify their own personal events or non-locked shared events
+    if (existingGig.isPersonal && !isCreator && !isAdmin) {
+      return res.status(403).json({ error: 'You can only modify your own personal events' });
+    }
 
     // If setlistIds provided, handle multi-set update
     if (setlistIds !== undefined) {
@@ -626,6 +669,10 @@ router.put('/:gigId', authenticate, async (req, res) => {
         ...(notes !== undefined && { notes }),
         ...(pay !== undefined && { pay }),
         ...(status && { status }),
+        // Only admins can toggle isLocked
+        ...(isAdmin && isLocked !== undefined && { isLocked }),
+        // Creator or admin can toggle isPersonal
+        ...((isCreator || isAdmin) && isPersonal !== undefined && { isPersonal }),
         // Clear legacy setlistId if using multi-set, otherwise update it
         ...(setlistIds !== undefined
           ? { setlistId: null }
@@ -734,11 +781,35 @@ router.put('/:gigId/complete', authenticate, async (req, res) => {
 router.delete('/:gigId', authenticate, async (req, res) => {
   try {
     const gig = await prisma.gig.findUnique({
-      where: { id: req.params.gigId }
+      where: { id: req.params.gigId },
+      include: {
+        workspace: {
+          include: { members: true }
+        }
+      }
     });
 
     if (!gig) {
       return res.status(404).json({ error: 'Gig not found' });
+    }
+
+    // Check if user is a member and get their role
+    const membership = gig.workspace.members.find(m => m.userId === req.user.id);
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    const isAdmin = membership.role === 'ADMIN';
+    const isCreator = gig.createdById === req.user.id;
+
+    // Non-admins cannot delete locked events
+    if (gig.isLocked && !isAdmin) {
+      return res.status(403).json({ error: 'This event is locked and can only be deleted by an admin' });
+    }
+
+    // Non-admins can only delete their own personal events or non-locked shared events they created
+    if (gig.isPersonal && !isCreator && !isAdmin) {
+      return res.status(403).json({ error: 'You can only delete your own personal events' });
     }
 
     await prisma.gig.delete({

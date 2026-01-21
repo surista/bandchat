@@ -1,11 +1,20 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, subDays, addDays, isToday } from 'date-fns';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import GigForm from './GigForm';
 import ConfirmDialog from '../common/ConfirmDialog';
 import Skeleton from '../common/Skeleton';
 
-function GigCalendar({ workspaceId }) {
+function GigCalendar({ workspaceId, workspace }) {
+  const { user } = useAuth();
+
+  // Determine if current user is an admin
+  const isAdmin = useMemo(() => {
+    if (!workspace?.members || !user) return false;
+    const membership = workspace.members.find(m => m.user?.id === user.id);
+    return membership?.role === 'ADMIN';
+  }, [workspace, user]);
   const [gigs, setGigs] = useState([]);
   const [otherWorkspaceGigs, setOtherWorkspaceGigs] = useState([]);
   const [showOtherWorkspaces, setShowOtherWorkspaces] = useState(false);
@@ -497,28 +506,33 @@ function GigCalendar({ workspaceId }) {
                       {format(day, 'd')}
                     </div>
                     <div className="space-y-1">
-                      {filteredDayGigs.slice(0, 3).map(gig => (
+                      {filteredDayGigs.slice(0, 3).map(gig => {
+                        const canDrag = !gig.isExternal && (!gig.isLocked || isAdmin);
+                        return (
                         <div
                           key={gig.id}
-                          draggable={!gig.isExternal}
-                          onDragStart={gig.isExternal ? undefined : (e) => handleDragStart(e, gig)}
-                          onDragEnd={gig.isExternal ? undefined : handleDragEnd}
+                          draggable={canDrag}
+                          onDragStart={canDrag ? (e) => handleDragStart(e, gig) : undefined}
+                          onDragEnd={canDrag ? handleDragEnd : undefined}
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (!gig.isExternal) {
+                            // Can't edit external events or locked events (unless admin)
+                            if (!gig.isExternal && (!gig.isLocked || isAdmin)) {
                               setEditingGig(gig);
                               setShowForm(true);
                             }
                           }}
-                          title={gig.isExternal ? `${gig.workspace?.name || 'Other workspace'}` : gig.title}
-                          className={`text-xs p-1 rounded text-white truncate ${gig.isExternal ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} ${getTypeColor(gig.type, gig.isExternal)} ${
+                          title={gig.isExternal ? `${gig.workspace?.name || 'Other workspace'}` : gig.isLocked ? `${gig.title} (Locked)` : gig.title}
+                          className={`text-xs p-1 rounded text-white truncate ${gig.isExternal || (gig.isLocked && !isAdmin) ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} ${getTypeColor(gig.type, gig.isExternal)} ${
                             gig.status === 'CANCELLED' ? 'opacity-50 line-through' : ''
-                          } ${draggingGig?.id === gig.id ? 'opacity-50' : ''}`}
+                          } ${draggingGig?.id === gig.id ? 'opacity-50' : ''} ${gig.isPersonal ? 'border border-dashed border-gray-400' : ''}`}
                         >
+                          {gig.isLocked && <span className="mr-1">🔒</span>}
+                          {gig.isPersonal && <span className="mr-1">👤</span>}
                           <span className="font-medium">{formatTimeRange(gig.date, gig.endDate)} </span>
                           {gig.title}
                         </div>
-                      ))}
+                      );})}
                       {filteredDayGigs.length > 3 && (
                         <div className="text-xs text-gray-500">
                           +{filteredDayGigs.length - 3} more
@@ -549,6 +563,8 @@ function GigCalendar({ workspaceId }) {
                       <div className="flex items-start justify-between">
                         <div>
                           <h3 className="text-white font-medium">
+                            {gig.isLocked && <span className="mr-1">🔒</span>}
+                            {gig.isPersonal && <span className="mr-1">👤</span>}
                             {gig.title}
                             {gig.isExternal && (
                               <span className="ml-2 text-xs text-gray-400 font-normal">
@@ -604,22 +620,25 @@ function GigCalendar({ workspaceId }) {
                       {/* Only show action buttons for non-external events */}
                       {!gig.isExternal && (
                         <div className="flex gap-2 mt-3">
-                          <button
-                            onClick={() => {
-                              setEditingGig(gig);
-                              setShowForm(true);
-                            }}
-                            className="text-sm text-gray-400 hover:text-white"
-                          >
-                            Edit
-                          </button>
+                          {/* Edit only if not locked, or if user is admin */}
+                          {(!gig.isLocked || isAdmin) && (
+                            <button
+                              onClick={() => {
+                                setEditingGig(gig);
+                                setShowForm(true);
+                              }}
+                              className="text-sm text-gray-400 hover:text-white"
+                            >
+                              Edit
+                            </button>
+                          )}
                           <button
                             onClick={() => handleDuplicateGig(gig)}
                             className="text-sm text-blue-400 hover:text-blue-300"
                           >
                             Copy
                           </button>
-                          {gig.status === 'SCHEDULED' && (
+                          {gig.status === 'SCHEDULED' && (!gig.isLocked || isAdmin) && (
                             <button
                               onClick={() => handleCompleteGig(gig)}
                               className="text-sm text-green-400 hover:text-green-300"
@@ -627,12 +646,15 @@ function GigCalendar({ workspaceId }) {
                               Mark Complete
                             </button>
                           )}
-                          <button
-                            onClick={() => setDeleteGigId(gig.id)}
-                            className="text-sm text-red-400 hover:text-red-300"
-                          >
-                            Delete
-                          </button>
+                          {/* Delete only if not locked, or if user is admin */}
+                          {(!gig.isLocked || isAdmin) && (
+                            <button
+                              onClick={() => setDeleteGigId(gig.id)}
+                              className="text-sm text-red-400 hover:text-red-300"
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -661,6 +683,7 @@ function GigCalendar({ workspaceId }) {
             setEditingGig(null);
             setDeleteGigId(gigId);
           }}
+          isAdmin={isAdmin}
         />
       )}
 

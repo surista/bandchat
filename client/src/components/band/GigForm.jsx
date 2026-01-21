@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 
-function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete }) {
+function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmin }) {
   // Round minutes to nearest half hour
   const roundToHalfHour = (minutes) => minutes < 15 ? '00' : minutes < 45 ? '30' : '00';
 
@@ -64,7 +64,9 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete }) {
     notes: gig?.notes || '',
     pay: gig?.pay || '',
     status: gig?.status || 'SCHEDULED',
-    setlistId: gig?.setlistId || ''
+    setlistId: gig?.setlistId || '',
+    isLocked: gig?.isLocked || false,
+    isPersonal: gig?.isPersonal || false
   });
   const [selectedSets, setSelectedSets] = useState(getInitialSets());
   const [useMultiSet, setUseMultiSet] = useState((gig?.setlists?.length || 0) > 1);
@@ -95,6 +97,8 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete }) {
         notes: formData.notes || null,
         pay: formData.pay ? parseFloat(formData.pay) : null,
         status: formData.status,
+        isLocked: formData.isLocked,
+        isPersonal: formData.isPersonal,
       };
 
       // Handle setlist assignment
@@ -399,6 +403,37 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete }) {
                   rows={3}
                   placeholder="Additional details..."
                 />
+              </div>
+
+              {/* Visibility options */}
+              <div className="space-y-3 pt-2 border-t border-gray-700">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.isPersonal}
+                    onChange={(e) => handleChange('isPersonal', e.target.checked)}
+                    className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
+                  />
+                  <div>
+                    <span className="text-gray-200">Personal entry</span>
+                    <p className="text-xs text-gray-500">Only you can see this event</p>
+                  </div>
+                </label>
+
+                {isAdmin && (
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isLocked}
+                      onChange={(e) => handleChange('isLocked', e.target.checked)}
+                      className="rounded bg-gray-700 border-gray-600 text-yellow-500 focus:ring-yellow-500"
+                    />
+                    <div>
+                      <span className="text-gray-200">Lock event</span>
+                      <p className="text-xs text-gray-500">Only admins can edit or delete</p>
+                    </div>
+                  </label>
+                )}
               </div>
             </div>
 

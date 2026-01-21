@@ -399,7 +399,7 @@ function WorkspaceView() {
             ) : activeBandView === 'setlists' ? (
               <SetlistList key={bandViewKey} workspaceId={workspaceId} />
             ) : activeBandView === 'calendar' ? (
-              <GigCalendar workspaceId={workspaceId} />
+              <GigCalendar workspaceId={workspaceId} workspace={workspace} />
             ) : activeBandView === 'stats' ? (
               <GigStats workspaceId={workspaceId} />
             ) : activeBandView === 'archive' ? (
