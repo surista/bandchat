@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
+import VerifyEmailChange from './components/auth/VerifyEmailChange';
 import WorkspaceList from './components/workspaces/WorkspaceList';
 import WorkspaceView from './components/workspaces/WorkspaceView';
 import JoinWorkspace from './components/workspaces/JoinWorkspace';
@@ -52,6 +53,10 @@ function App() {
             <Signup />
           </PublicRoute>
         }
+      />
+      <Route
+        path="/verify-email-change"
+        element={<VerifyEmailChange />}
       />
       <Route
         path="/join/:inviteCode"

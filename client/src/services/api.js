@@ -131,6 +131,27 @@ class ApiService {
     });
   }
 
+  async changePassword(currentPassword, newPassword) {
+    return this.request('/auth/password', {
+      method: 'PUT',
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
+  }
+
+  async requestEmailChange(newEmail, password) {
+    return this.request('/auth/change-email', {
+      method: 'POST',
+      body: JSON.stringify({ newEmail, password })
+    });
+  }
+
+  async verifyEmailChange(token, email) {
+    return this.request('/auth/verify-email-change', {
+      method: 'POST',
+      body: JSON.stringify({ token, email })
+    });
+  }
+
   async googleAuth(credential) {
     const data = await this.request('/auth/google', {
       method: 'POST',

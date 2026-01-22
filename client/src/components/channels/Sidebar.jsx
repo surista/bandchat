@@ -46,7 +46,15 @@ function Sidebar({
   const [editAvatarUrl, setEditAvatarUrl] = useState('');
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsError, setSettingsError] = useState('');
+  const [settingsSuccess, setSettingsSuccess] = useState('');
   const [avatarUploading, setAvatarUploading] = useState(false);
+  // Password change
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  // Email change
+  const [newEmail, setNewEmail] = useState('');
+  const [emailPassword, setEmailPassword] = useState('');
   const [bandMembers, setBandMembers] = useState({ current: [], former: [], all: [] });
   const [bandMembersLoading, setBandMembersLoading] = useState(false);
   const [editingBandMember, setEditingBandMember] = useState(null);
@@ -548,6 +556,12 @@ function Sidebar({
                 setEditDisplayName(user?.displayName || '');
                 setEditAvatarUrl(user?.avatarUrl || '');
                 setSettingsError('');
+                setSettingsSuccess('');
+                setCurrentPassword('');
+                setNewPassword('');
+                setConfirmPassword('');
+                setNewEmail('');
+                setEmailPassword('');
                 setSettingsTab('profile');
                 setShowSettings(true);
               }}
@@ -791,100 +805,236 @@ function Sidebar({
                   {settingsError}
                 </div>
               )}
+              {settingsSuccess && (
+                <div className="bg-green-900/50 border border-green-500 text-green-200 px-4 py-2 rounded-lg mb-4">
+                  {settingsSuccess}
+                </div>
+              )}
 
               {/* Profile Tab */}
               {settingsTab === 'profile' && (
-                <form
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    setSettingsLoading(true);
-                    setSettingsError('');
-                    try {
-                      const updated = await api.updateProfile({
-                        displayName: editDisplayName,
-                        avatarUrl: editAvatarUrl || null
-                      });
-                      updateUser(updated);
-                      setShowSettings(false);
-                    } catch (err) {
-                      setSettingsError(err.message);
-                    } finally {
-                      setSettingsLoading(false);
-                    }
-                  }}
-                >
-                  <div className="mb-4">
-                    <label className="modal-label">Display Name</label>
-                    <input
-                      type="text"
-                      value={editDisplayName}
-                      onChange={(e) => setEditDisplayName(e.target.value)}
-                      className="modal-input"
-                      required
-                    />
-                  </div>
-                  <div className="mb-4">
-                    <label className="modal-label">Avatar</label>
-                    <div className="flex items-start gap-4">
-                      {/* Avatar Preview */}
-                      <div className="flex-shrink-0">
-                        {editAvatarUrl ? (
-                          <img
-                            src={editAvatarUrl}
-                            alt="Avatar preview"
-                            className="w-16 h-16 rounded-full object-cover border-2 border-[var(--color-modal-border)]"
-                          />
-                        ) : (
-                          <div className="w-16 h-16 rounded-full bg-[var(--color-accent)] flex items-center justify-center text-white text-2xl font-medium">
-                            {editDisplayName?.charAt(0).toUpperCase() || '?'}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <label className="block">
-                          <span className="btn btn-secondary cursor-pointer inline-block">
-                            {avatarUploading ? 'Uploading...' : 'Upload Photo'}
-                          </span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleAvatarUpload}
-                            disabled={avatarUploading}
-                            className="hidden"
-                          />
-                        </label>
-                        <p className="text-xs text-gray-400 mt-2">
-                          Max 10MB. JPG, PNG, GIF, WebP.
-                        </p>
-                        {editAvatarUrl && (
-                          <button
-                            type="button"
-                            onClick={() => setEditAvatarUrl('')}
-                            className="text-xs text-red-400 hover:text-red-300 mt-1"
-                          >
-                            Remove avatar
-                          </button>
-                        )}
+                <div className="space-y-6">
+                  {/* Profile Info Section */}
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      setSettingsLoading(true);
+                      setSettingsError('');
+                      setSettingsSuccess('');
+                      try {
+                        const updated = await api.updateProfile({
+                          displayName: editDisplayName,
+                          avatarUrl: editAvatarUrl || null
+                        });
+                        updateUser(updated);
+                        setSettingsSuccess('Profile updated successfully');
+                      } catch (err) {
+                        setSettingsError(err.message);
+                      } finally {
+                        setSettingsLoading(false);
+                      }
+                    }}
+                  >
+                    <h4 className="text-lg font-medium text-white mb-4">Profile Information</h4>
+                    <div className="mb-4">
+                      <label className="modal-label">Display Name</label>
+                      <input
+                        type="text"
+                        value={editDisplayName}
+                        onChange={(e) => setEditDisplayName(e.target.value)}
+                        className="modal-input"
+                        required
+                      />
+                    </div>
+                    <div className="mb-4">
+                      <label className="modal-label">Avatar</label>
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0">
+                          {editAvatarUrl ? (
+                            <img
+                              src={editAvatarUrl}
+                              alt="Avatar preview"
+                              className="w-16 h-16 rounded-full object-cover border-2 border-[var(--color-modal-border)]"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 rounded-full bg-[var(--color-accent)] flex items-center justify-center text-white text-2xl font-medium">
+                              {editDisplayName?.charAt(0).toUpperCase() || '?'}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <label className="block">
+                            <span className="btn btn-secondary cursor-pointer inline-block">
+                              {avatarUploading ? 'Uploading...' : 'Upload Photo'}
+                            </span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleAvatarUpload}
+                              disabled={avatarUploading}
+                              className="hidden"
+                            />
+                          </label>
+                          <p className="text-xs text-gray-400 mt-2">
+                            Max 10MB. JPG, PNG, GIF, WebP.
+                          </p>
+                          {editAvatarUrl && (
+                            <button
+                              type="button"
+                              onClick={() => setEditAvatarUrl('')}
+                              className="text-xs text-red-400 hover:text-red-300 mt-1"
+                            >
+                              Remove avatar
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex gap-2 justify-end pt-4">
-                    <button
-                      type="button"
-                      onClick={() => setShowSettings(false)}
-                      className="btn btn-secondary"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={settingsLoading}
-                      className="btn bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      {settingsLoading ? 'Saving...' : 'Save'}
-                    </button>
-                  </div>
-                </form>
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={settingsLoading}
+                        className="btn bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        {settingsLoading ? 'Saving...' : 'Update Profile'}
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* Divider */}
+                  <div className="border-t border-[var(--color-modal-border)]" />
+
+                  {/* Email Section */}
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      setSettingsLoading(true);
+                      setSettingsError('');
+                      setSettingsSuccess('');
+                      try {
+                        await api.requestEmailChange(newEmail, emailPassword);
+                        setSettingsSuccess('Verification email sent to ' + newEmail);
+                        setNewEmail('');
+                        setEmailPassword('');
+                      } catch (err) {
+                        setSettingsError(err.message);
+                      } finally {
+                        setSettingsLoading(false);
+                      }
+                    }}
+                  >
+                    <h4 className="text-lg font-medium text-white mb-4">Change Email</h4>
+                    <p className="text-sm text-gray-400 mb-4">
+                      Current email: <span className="text-white">{user?.email}</span>
+                    </p>
+                    <div className="mb-4">
+                      <label className="modal-label">New Email Address</label>
+                      <input
+                        type="email"
+                        value={newEmail}
+                        onChange={(e) => setNewEmail(e.target.value)}
+                        className="modal-input"
+                        placeholder="new@email.com"
+                        required
+                      />
+                    </div>
+                    <div className="mb-4">
+                      <label className="modal-label">Current Password</label>
+                      <input
+                        type="password"
+                        value={emailPassword}
+                        onChange={(e) => setEmailPassword(e.target.value)}
+                        className="modal-input"
+                        placeholder="Enter your password to confirm"
+                        required
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={settingsLoading || !newEmail}
+                        className="btn bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                      >
+                        {settingsLoading ? 'Sending...' : 'Send Verification Email'}
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* Divider */}
+                  <div className="border-t border-[var(--color-modal-border)]" />
+
+                  {/* Password Section */}
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (newPassword !== confirmPassword) {
+                        setSettingsError('New passwords do not match');
+                        return;
+                      }
+                      setSettingsLoading(true);
+                      setSettingsError('');
+                      setSettingsSuccess('');
+                      try {
+                        await api.changePassword(currentPassword, newPassword);
+                        setSettingsSuccess('Password changed successfully');
+                        setCurrentPassword('');
+                        setNewPassword('');
+                        setConfirmPassword('');
+                      } catch (err) {
+                        setSettingsError(err.message);
+                      } finally {
+                        setSettingsLoading(false);
+                      }
+                    }}
+                  >
+                    <h4 className="text-lg font-medium text-white mb-4">Change Password</h4>
+                    <div className="mb-4">
+                      <label className="modal-label">Current Password</label>
+                      <input
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        className="modal-input"
+                        placeholder="Enter current password"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Leave blank if you signed up with Google and haven't set a password
+                      </p>
+                    </div>
+                    <div className="mb-4">
+                      <label className="modal-label">New Password</label>
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="modal-input"
+                        placeholder="At least 6 characters"
+                        minLength={6}
+                        required
+                      />
+                    </div>
+                    <div className="mb-4">
+                      <label className="modal-label">Confirm New Password</label>
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="modal-input"
+                        placeholder="Confirm new password"
+                        required
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={settingsLoading || !newPassword || !confirmPassword}
+                        className="btn bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                      >
+                        {settingsLoading ? 'Changing...' : 'Change Password'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
               )}
 
               {/* Theme Tab */}

@@ -531,6 +531,182 @@ router.put('/me', authenticate, async (req, res) => {
   }
 });
 
+// Change password
+router.put('/password', authenticate, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id }
+    });
+
+    // If user has a password, verify current password
+    if (user.password) {
+      if (!currentPassword) {
+        return res.status(400).json({ error: 'Current password is required' });
+      }
+      const validPassword = await bcrypt.compare(currentPassword, user.password);
+      if (!validPassword) {
+        return res.status(401).json({ error: 'Current password is incorrect' });
+      }
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        password: hashedPassword,
+        authProvider: user.googleId ? 'both' : 'local'
+      }
+    });
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Password change error:', error);
+    res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
+// Request email change - sends verification to new email
+router.post('/change-email', authenticate, async (req, res) => {
+  try {
+    const { newEmail, password } = req.body;
+
+    if (!newEmail) {
+      return res.status(400).json({ error: 'New email is required' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id }
+    });
+
+    // Require password verification if user has a password
+    if (user.password) {
+      if (!password) {
+        return res.status(400).json({ error: 'Password is required to change email' });
+      }
+      const validPassword = await bcrypt.compare(password, user.password);
+      if (!validPassword) {
+        return res.status(401).json({ error: 'Password is incorrect' });
+      }
+    }
+
+    // Check if new email is already in use
+    const existingUser = await prisma.user.findUnique({
+      where: { email: newEmail.toLowerCase() }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ error: 'Email is already in use' });
+    }
+
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    // Store the pending email change
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        verificationToken,
+        verificationExpires,
+        // Store pending email in a way we can retrieve it
+        // We'll encode it in the token verification process
+      }
+    });
+
+    // Send verification to NEW email
+    if (resend) {
+      const verifyUrl = `${process.env.CLIENT_URL}/verify-email-change?token=${verificationToken}&email=${encodeURIComponent(newEmail.toLowerCase())}`;
+
+      await resend.emails.send({
+        from: 'BandChat <noreply@' + (process.env.RESEND_DOMAIN || 'resend.dev') + '>',
+        to: newEmail.toLowerCase(),
+        subject: 'Verify your new BandChat email',
+        html: `
+          <h2>Email Change Request</h2>
+          <p>You requested to change your BandChat email address. Click the link below to confirm:</p>
+          <a href="${verifyUrl}" style="background:#4A154B;color:white;padding:12px 24px;text-decoration:none;border-radius:4px;display:inline-block;">Verify New Email</a>
+          <p>Or copy this link: ${verifyUrl}</p>
+          <p>This link expires in 24 hours.</p>
+          <p>If you didn't request this change, you can ignore this email.</p>
+        `
+      });
+    } else {
+      console.log('Email not configured. Verification token:', verificationToken);
+    }
+
+    res.json({ message: 'Verification email sent to ' + newEmail });
+  } catch (error) {
+    console.error('Email change request error:', error);
+    res.status(500).json({ error: 'Failed to request email change' });
+  }
+});
+
+// Verify email change
+router.post('/verify-email-change', async (req, res) => {
+  try {
+    const { token, email } = req.body;
+
+    if (!token || !email) {
+      return res.status(400).json({ error: 'Token and email are required' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { verificationToken: token }
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid verification token' });
+    }
+
+    if (user.verificationExpires < new Date()) {
+      return res.status(400).json({ error: 'Verification token has expired' });
+    }
+
+    // Check if email is still available
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ error: 'Email is already in use' });
+    }
+
+    // Update email
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        email: email.toLowerCase(),
+        emailVerified: true,
+        verificationToken: null,
+        verificationExpires: null
+      },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        avatarUrl: true
+      }
+    });
+
+    res.json({ message: 'Email updated successfully', user: updatedUser });
+  } catch (error) {
+    console.error('Email change verification error:', error);
+    res.status(500).json({ error: 'Failed to verify email change' });
+  }
+});
+
 // Logout - revoke refresh token
 router.post('/logout', async (req, res) => {
   try {
