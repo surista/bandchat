@@ -1,6 +1,37 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 
+// Generate Google Calendar URL
+const getGoogleCalendarUrl = (gig) => {
+  const formatGoogleDate = (date) => {
+    return format(new Date(date), "yyyyMMdd'T'HHmmss");
+  };
+
+  const startDate = formatGoogleDate(gig.date);
+  const endDate = gig.endDate
+    ? formatGoogleDate(gig.endDate)
+    : formatGoogleDate(new Date(new Date(gig.date).getTime() + 2 * 60 * 60 * 1000));
+
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: gig.title,
+    dates: `${startDate}/${endDate}`,
+  });
+
+  if (gig.venue || gig.address) {
+    params.append('location', [gig.venue, gig.address].filter(Boolean).join(', '));
+  }
+
+  const details = [];
+  if (gig.type) details.push(`Type: ${gig.type}`);
+  if (gig.notes) details.push(gig.notes);
+  if (details.length > 0) {
+    params.append('details', details.join('\n'));
+  }
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+};
+
 function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmin }) {
   // Round minutes to nearest half hour
   const roundToHalfHour = (minutes) => minutes < 15 ? '00' : minutes < 45 ? '30' : '00';
@@ -437,7 +468,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
               </div>
             </div>
 
-            <div className="flex gap-2 mt-6">
+            <div className="flex gap-2 mt-6 flex-wrap">
               {gig && onDelete && (
                 <button
                   type="button"
@@ -446,6 +477,16 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                 >
                   Delete
                 </button>
+              )}
+              {gig && (
+                <a
+                  href={getGoogleCalendarUrl(gig)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  + Google Cal
+                </a>
               )}
               <div className="flex-1" />
               <button

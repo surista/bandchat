@@ -321,6 +321,50 @@ function GigCalendar({ workspaceId, workspace }) {
     return start;
   };
 
+  // Generate Google Calendar URL
+  const getGoogleCalendarUrl = (gig) => {
+    const formatGoogleDate = (date) => {
+      // Format as YYYYMMDDTHHMMSS (local time)
+      return format(new Date(date), "yyyyMMdd'T'HHmmss");
+    };
+
+    const startDate = formatGoogleDate(gig.date);
+    // If no end date, default to 2 hours after start
+    const endDate = gig.endDate
+      ? formatGoogleDate(gig.endDate)
+      : formatGoogleDate(new Date(new Date(gig.date).getTime() + 2 * 60 * 60 * 1000));
+
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: gig.title,
+      dates: `${startDate}/${endDate}`,
+    });
+
+    // Add location if available
+    if (gig.venue || gig.address) {
+      const location = [gig.venue, gig.address].filter(Boolean).join(', ');
+      params.append('location', location);
+    }
+
+    // Add details/notes
+    const details = [];
+    if (gig.type) details.push(`Type: ${gig.type}`);
+    if (gig.notes) details.push(gig.notes);
+    if (gig.setlist?.name) details.push(`Setlist: ${gig.setlist.name}`);
+    if (gig.setlists?.length > 0) {
+      const setlistNames = gig.setlists
+        .sort((a, b) => a.setNumber - b.setNumber)
+        .map(gs => gs.setlist?.name || `Set ${gs.setNumber}`)
+        .join(' → ');
+      details.push(`Sets: ${setlistNames}`);
+    }
+    if (details.length > 0) {
+      params.append('details', details.join('\n'));
+    }
+
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  };
+
   const getTypeColor = (type, isExternal = false) => {
     if (isExternal) {
       // Muted/striped colors for external workspace events
@@ -617,46 +661,59 @@ function GigCalendar({ workspaceId, workspace }) {
                         <p className="text-gray-500 text-sm mt-2 italic">{gig.notes}</p>
                       )}
 
-                      {/* Only show action buttons for non-external events */}
-                      {!gig.isExternal && (
-                        <div className="flex gap-2 mt-3">
-                          {/* Edit only if not locked, or if user is admin */}
-                          {(!gig.isLocked || isAdmin) && (
+                      {/* Action buttons */}
+                      <div className="flex gap-2 mt-3 flex-wrap">
+                        {/* Google Calendar - available for all events */}
+                        <a
+                          href={getGoogleCalendarUrl(gig)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-sm text-orange-400 hover:text-orange-300"
+                        >
+                          + Google Cal
+                        </a>
+                        {/* Other actions only for non-external events */}
+                        {!gig.isExternal && (
+                          <>
+                            {/* Edit only if not locked, or if user is admin */}
+                            {(!gig.isLocked || isAdmin) && (
+                              <button
+                                onClick={() => {
+                                  setEditingGig(gig);
+                                  setShowForm(true);
+                                }}
+                                className="text-sm text-gray-400 hover:text-white"
+                              >
+                                Edit
+                              </button>
+                            )}
                             <button
-                              onClick={() => {
-                                setEditingGig(gig);
-                                setShowForm(true);
-                              }}
-                              className="text-sm text-gray-400 hover:text-white"
+                              onClick={() => handleDuplicateGig(gig)}
+                              className="text-sm text-blue-400 hover:text-blue-300"
                             >
-                              Edit
+                              Copy
                             </button>
-                          )}
-                          <button
-                            onClick={() => handleDuplicateGig(gig)}
-                            className="text-sm text-blue-400 hover:text-blue-300"
-                          >
-                            Copy
-                          </button>
-                          {gig.status === 'SCHEDULED' && (!gig.isLocked || isAdmin) && (
-                            <button
-                              onClick={() => handleCompleteGig(gig)}
-                              className="text-sm text-green-400 hover:text-green-300"
-                            >
-                              Mark Complete
-                            </button>
-                          )}
-                          {/* Delete only if not locked, or if user is admin */}
-                          {(!gig.isLocked || isAdmin) && (
-                            <button
-                              onClick={() => setDeleteGigId(gig.id)}
-                              className="text-sm text-red-400 hover:text-red-300"
-                            >
-                              Delete
-                            </button>
-                          )}
-                        </div>
-                      )}
+                            {gig.status === 'SCHEDULED' && (!gig.isLocked || isAdmin) && (
+                              <button
+                                onClick={() => handleCompleteGig(gig)}
+                                className="text-sm text-green-400 hover:text-green-300"
+                              >
+                                Mark Complete
+                              </button>
+                            )}
+                            {/* Delete only if not locked, or if user is admin */}
+                            {(!gig.isLocked || isAdmin) && (
+                              <button
+                                onClick={() => setDeleteGigId(gig.id)}
+                                className="text-sm text-red-400 hover:text-red-300"
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
