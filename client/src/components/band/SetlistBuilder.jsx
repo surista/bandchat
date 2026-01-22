@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
+import { format } from 'date-fns';
 import {
   DndContext,
   closestCenter,
@@ -548,6 +549,213 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
   const sets = useMemo(() => splitIntoSets(setlistItems), [setlistItems]);
   const hasMultipleSets = sets.length > 1 || (sets.length === 1 && sets[0].breakItem);
 
+  // Print/PDF export function
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow popups for this site to print the setlist');
+      return;
+    }
+
+    // Format date if available
+    const dateStr = setlist.performedAt
+      ? format(new Date(setlist.performedAt), 'EEEE, MMMM d, yyyy')
+      : format(new Date(), 'EEEE, MMMM d, yyyy');
+
+    // Build the setlist content
+    let setlistHtml = '';
+    let currentSetNumber = 0;
+
+    setlistItems.forEach((item, index) => {
+      if (item.type === 'SET_BREAK') {
+        currentSetNumber++;
+        if (index > 0) {
+          setlistHtml += '</ol>';
+        }
+        setlistHtml += `
+          <div class="set-header">${item.label || `Set ${currentSetNumber}`}</div>
+          <ol class="song-list">
+        `;
+      } else if (item.type === 'MC') {
+        setlistHtml += `
+          <li class="mc-item">
+            <span class="mc-label">🎤 ${item.label || 'MC'}</span>
+            <span class="duration">${formatDuration(item.duration || 60)}</span>
+          </li>
+        `;
+      } else {
+        const songName = getSongDisplayName(item.song);
+        const artist = !useShortNames && item.song?.artist ? item.song.artist : '';
+        const key = item.song?.key || '';
+        const duration = item.song?.duration ? formatDuration(item.song.duration) : '';
+
+        setlistHtml += `
+          <li class="song-item">
+            <div class="song-info">
+              <span class="song-title">${songName}</span>
+              ${artist ? `<span class="song-artist"> - ${artist}</span>` : ''}
+            </div>
+            <div class="song-meta">
+              ${key ? `<span class="key">${key}</span>` : ''}
+              ${duration ? `<span class="duration">${duration}</span>` : ''}
+            </div>
+          </li>
+        `;
+      }
+    });
+
+    // Close the last list if we had sets
+    if (currentSetNumber > 0) {
+      setlistHtml += '</ol>';
+    } else {
+      // Wrap in a single list if no set breaks
+      setlistHtml = `<ol class="song-list">${setlistHtml}</ol>`;
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${setlist.name} - Setlist</title>
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #333;
+          }
+          .venue {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 8px;
+          }
+          .setlist-name {
+            font-size: 18px;
+            color: #666;
+          }
+          .content {
+            flex: 1;
+          }
+          .set-header {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 24px 0 12px 0;
+            padding: 8px 12px;
+            background: #f0f0f0;
+            border-left: 4px solid #333;
+          }
+          .song-list {
+            list-style: decimal;
+            padding-left: 40px;
+          }
+          .song-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+          .song-info {
+            flex: 1;
+          }
+          .song-title {
+            font-size: 16px;
+            font-weight: 500;
+          }
+          .song-artist {
+            color: #666;
+            font-size: 14px;
+          }
+          .song-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 13px;
+            color: #888;
+          }
+          .key {
+            background: #e8e0f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+          }
+          .mc-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            color: #b8860b;
+            font-style: italic;
+          }
+          .footer {
+            margin-top: 32px;
+            padding-top: 16px;
+            border-top: 2px solid #333;
+            text-align: center;
+          }
+          .date {
+            font-size: 18px;
+            font-weight: 500;
+          }
+          .stats {
+            margin-top: 8px;
+            font-size: 14px;
+            color: #666;
+          }
+          @media print {
+            body {
+              padding: 0;
+            }
+            .set-header {
+              break-inside: avoid;
+            }
+            .song-item {
+              break-inside: avoid;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          ${setlist.venue ? `<div class="venue">${setlist.venue}</div>` : ''}
+          <div class="setlist-name">${setlist.name}</div>
+        </div>
+
+        <div class="content">
+          ${setlistHtml}
+        </div>
+
+        <div class="footer">
+          <div class="date">${dateStr}</div>
+          <div class="stats">${songCount} songs • ${durationMins}:${String(durationSecs).padStart(2, '0')} total</div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   // Calculate global start indices for each set
   const setStartIndices = useMemo(() => {
     const indices = [];
@@ -578,6 +786,13 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
             )}
           </div>
           <div className="hidden sm:flex items-center gap-4">
+            <button
+              onClick={handlePrint}
+              className="px-3 py-2 rounded text-sm bg-orange-600 hover:bg-orange-500 text-white touch-manipulation"
+              title="Print or save as PDF"
+            >
+              🖨️ Print
+            </button>
             <button
               onClick={toggleShortNames}
               className={`px-3 py-2 rounded text-sm touch-manipulation ${
