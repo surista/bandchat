@@ -30,6 +30,7 @@ model User {
   songs             Song[]
   setlists          Setlist[]
   gigs              Gig[]
+  availability      MemberAvailability[]
 }
 
 model RefreshToken {
@@ -60,6 +61,7 @@ model Workspace {
   setlists      Setlist[]
   gigs          Gig[]
   bandMembers   BandMember[]
+  availability  MemberAvailability[]
 }
 
 model ChannelGroup {
@@ -390,4 +392,28 @@ model SetlistPerformer {
 
   @@unique([setlistId, bandMemberId])
   @@index([setlistId])
+}
+
+// Member Availability Calendar
+model MemberAvailability {
+  id          String             @id @default(uuid())
+  userId      String
+  workspaceId String
+  date        DateTime           @db.Date
+  status      AvailabilityStatus
+  note        String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId, date])
+  @@index([workspaceId, date])
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  UNAVAILABLE
+  MAYBE
 }

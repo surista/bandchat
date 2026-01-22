@@ -741,6 +741,7 @@ function GigCalendar({ workspaceId, workspace }) {
             setDeleteGigId(gigId);
           }}
           isAdmin={isAdmin}
+          workspaceId={workspaceId}
         />
       )}
 

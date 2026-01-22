@@ -404,6 +404,13 @@ function Sidebar({
             <span className="flex-1 truncate">Calendar</span>
           </button>
           <button
+            onClick={() => onSelectBandView?.('availability')}
+            className={`channel-item w-full ${activeBandView === 'availability' ? 'active' : ''}`}
+          >
+            <span className="text-gray-400">🗓️</span>
+            <span className="flex-1 truncate">Availability</span>
+          </button>
+          <button
             onClick={() => onSelectBandView?.('stats')}
             className={`channel-item w-full ${activeBandView === 'stats' ? 'active' : ''}`}
           >

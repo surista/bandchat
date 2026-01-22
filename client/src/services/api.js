@@ -701,6 +701,47 @@ class ApiService {
       method: 'DELETE'
     });
   }
+
+  // Member Availability
+  async getAvailability(workspaceId, startDate = null, endDate = null) {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const query = params.toString();
+    return this.request(`/availability/workspace/${workspaceId}${query ? `?${query}` : ''}`);
+  }
+
+  async getMyAvailability(workspaceId, startDate = null, endDate = null) {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const query = params.toString();
+    return this.request(`/availability/workspace/${workspaceId}/me${query ? `?${query}` : ''}`);
+  }
+
+  async setAvailability(workspaceId, date, status, note = null) {
+    return this.request(`/availability/workspace/${workspaceId}/date/${date}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status, note })
+    });
+  }
+
+  async setBulkAvailability(workspaceId, dates, status, note = null) {
+    return this.request(`/availability/workspace/${workspaceId}/bulk`, {
+      method: 'PUT',
+      body: JSON.stringify({ dates, status, note })
+    });
+  }
+
+  async clearAvailability(workspaceId, date) {
+    return this.request(`/availability/workspace/${workspaceId}/date/${date}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async getAvailabilitySummary(workspaceId, date) {
+    return this.request(`/availability/workspace/${workspaceId}/summary/${date}`);
+  }
 }
 
 export const api = new ApiService();

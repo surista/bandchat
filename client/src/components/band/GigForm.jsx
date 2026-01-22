@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
+import api from '../../services/api';
 
 // Generate Google Calendar URL
 const getGoogleCalendarUrl = (gig) => {
@@ -32,7 +33,7 @@ const getGoogleCalendarUrl = (gig) => {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 };
 
-function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmin }) {
+function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmin, workspaceId }) {
   // Round minutes to nearest half hour
   const roundToHalfHour = (minutes) => minutes < 15 ? '00' : minutes < 45 ? '30' : '00';
 
@@ -103,6 +104,16 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
   const [useMultiSet, setUseMultiSet] = useState((gig?.setlists?.length || 0) > 1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [availabilitySummary, setAvailabilitySummary] = useState(null);
+
+  // Fetch availability summary when date changes
+  useEffect(() => {
+    if (workspaceId && formData.startDate) {
+      api.getAvailabilitySummary(workspaceId, formData.startDate)
+        .then(setAvailabilitySummary)
+        .catch(err => console.error('Failed to load availability:', err));
+    }
+  }, [workspaceId, formData.startDate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -268,6 +279,49 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                   </select>
                 </div>
               </div>
+
+              {/* Availability Summary */}
+              {availabilitySummary && availabilitySummary.total > 0 && (
+                <div className="bg-gray-900/50 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-gray-400">Team Availability</span>
+                    <span className="text-sm font-medium">
+                      <span className="text-green-400">{availabilitySummary.available}</span>
+                      <span className="text-gray-500">/{availabilitySummary.total}</span>
+                    </span>
+                  </div>
+                  <div className="flex gap-0.5 h-2 rounded overflow-hidden mb-2">
+                    {availabilitySummary.available > 0 && (
+                      <div className="bg-green-500" style={{ flex: availabilitySummary.available }} />
+                    )}
+                    {availabilitySummary.maybe > 0 && (
+                      <div className="bg-yellow-500" style={{ flex: availabilitySummary.maybe }} />
+                    )}
+                    {availabilitySummary.unavailable > 0 && (
+                      <div className="bg-red-500" style={{ flex: availabilitySummary.unavailable }} />
+                    )}
+                    {availabilitySummary.unknown > 0 && (
+                      <div className="bg-gray-600" style={{ flex: availabilitySummary.unknown }} />
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    {availabilitySummary.members?.map(m => (
+                      <span
+                        key={m.user.id}
+                        className={`px-2 py-0.5 rounded ${
+                          m.status === 'AVAILABLE' ? 'bg-green-900/50 text-green-300' :
+                          m.status === 'UNAVAILABLE' ? 'bg-red-900/50 text-red-300' :
+                          m.status === 'MAYBE' ? 'bg-yellow-900/50 text-yellow-300' :
+                          'bg-gray-700 text-gray-400'
+                        }`}
+                        title={m.note || m.status}
+                      >
+                        {m.user.displayName?.split(' ')[0]}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="modal-label">End Date/Time</label>

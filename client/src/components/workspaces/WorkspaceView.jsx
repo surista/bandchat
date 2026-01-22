@@ -10,6 +10,7 @@ import MobileNav from '../navigation/MobileNav';
 import SongList from '../band/SongList';
 import SetlistList from '../band/SetlistList';
 import GigCalendar from '../band/GigCalendar';
+import AvailabilityCalendar from '../band/AvailabilityCalendar';
 import GigStats from '../band/GigStats';
 import GigArchive from '../band/GigArchive';
 import BandMembersList from '../band/BandMembers/BandMembersList';
@@ -371,6 +372,7 @@ function WorkspaceView() {
             {activeBandView === 'songs' ? '🎵 Songs' :
              activeBandView === 'setlists' ? '📋 Setlists' :
              activeBandView === 'calendar' ? '📅 Calendar' :
+             activeBandView === 'availability' ? '🗓️ Availability' :
              activeBandView === 'stats' ? '📊 Stats' :
              activeBandView === 'archive' ? '📸 Gig Archive' :
              activeBandView === 'members' ? '👥 Members' :
@@ -400,6 +402,8 @@ function WorkspaceView() {
               <SetlistList key={bandViewKey} workspaceId={workspaceId} />
             ) : activeBandView === 'calendar' ? (
               <GigCalendar workspaceId={workspaceId} workspace={workspace} />
+            ) : activeBandView === 'availability' ? (
+              <AvailabilityCalendar workspaceId={workspaceId} workspace={workspace} />
             ) : activeBandView === 'stats' ? (
               <GigStats workspaceId={workspaceId} />
             ) : activeBandView === 'archive' ? (
