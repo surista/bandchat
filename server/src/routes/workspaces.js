@@ -1,5 +1,6 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcryptjs';
 import { Resend } from 'resend';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
@@ -469,6 +470,41 @@ router.put('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, asyn
     res.json(member);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update member role' });
+  }
+});
+
+// Admin reset password for member
+router.post('/:workspaceId/members/:userId/reset-password', authenticate, isWorkspaceAdmin, async (req, res) => {
+  try {
+    const { workspaceId, userId } = req.params;
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    // Verify user is a member of this workspace
+    const membership = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: { userId, workspaceId }
+      }
+    });
+
+    if (!membership) {
+      return res.status(404).json({ error: 'User is not a member of this workspace' });
+    }
+
+    // Hash and update password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword }
+    });
+
+    res.json({ message: 'Password reset successfully' });
+  } catch (error) {
+    console.error('Admin password reset error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
   }
 });
 

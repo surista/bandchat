@@ -234,6 +234,13 @@ class ApiService {
     });
   }
 
+  async adminResetPassword(workspaceId, userId, newPassword) {
+    return this.request(`/workspaces/${workspaceId}/members/${userId}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ newPassword })
+    });
+  }
+
   // Channels
   async getChannels(workspaceId) {
     return this.request(`/channels/workspace/${workspaceId}`);

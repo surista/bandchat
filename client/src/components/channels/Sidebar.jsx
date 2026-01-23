@@ -1137,25 +1137,48 @@ function Sidebar({
                           <div className="text-sm text-gray-400">{member.user.email}</div>
                         </div>
                       </div>
-                      <select
-                        value={member.role}
-                        onChange={async (e) => {
-                          try {
-                            await api.updateMemberRole(
-                              workspace.id,
-                              member.user.id,
-                              e.target.value
-                            );
-                            window.location.reload();
-                          } catch (err) {
-                            alert(err.message);
-                          }
-                        }}
-                        className="modal-input w-auto"
-                      >
-                        <option value="MEMBER">Member</option>
-                        <option value="ADMIN">Admin</option>
-                      </select>
+                      <div className="flex items-center gap-2">
+                        {member.user.id !== user?.id && (
+                          <button
+                            onClick={async () => {
+                              const newPassword = prompt(`Enter new password for ${member.user.displayName} (min 6 characters):`);
+                              if (!newPassword) return;
+                              if (newPassword.length < 6) {
+                                alert('Password must be at least 6 characters');
+                                return;
+                              }
+                              try {
+                                await api.adminResetPassword(workspace.id, member.user.id, newPassword);
+                                alert(`Password reset for ${member.user.displayName}`);
+                              } catch (err) {
+                                alert(err.message);
+                              }
+                            }}
+                            className="text-xs text-blue-400 hover:text-blue-300 px-2 py-1"
+                          >
+                            Reset PW
+                          </button>
+                        )}
+                        <select
+                          value={member.role}
+                          onChange={async (e) => {
+                            try {
+                              await api.updateMemberRole(
+                                workspace.id,
+                                member.user.id,
+                                e.target.value
+                              );
+                              window.location.reload();
+                            } catch (err) {
+                              alert(err.message);
+                            }
+                          }}
+                          className="modal-input w-auto"
+                        >
+                          <option value="MEMBER">Member</option>
+                          <option value="ADMIN">Admin</option>
+                        </select>
+                      </div>
                     </div>
                   ))}
                 </div>
