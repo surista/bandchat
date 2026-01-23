@@ -77,7 +77,8 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     return [];
   };
 
-  const startTime12 = to12Hour(gig?.date);
+  const startTime12 = to12Hour(gig?.date, { hour: '7', minute: '00', period: 'PM' });
+  const endTime12 = to12Hour(gig?.endDate, { hour: '9', minute: '00', period: 'PM' });
 
   const [formData, setFormData] = useState({
     title: gig?.title || '',
@@ -86,6 +87,9 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     startHour: startTime12.hour,
     startMinute: startTime12.minute,
     startPeriod: startTime12.period,
+    endHour: endTime12.hour,
+    endMinute: endTime12.minute,
+    endPeriod: endTime12.period,
     venue: gig?.venue || '',
     address: gig?.address || '',
     notes: gig?.notes || '',
@@ -120,8 +124,9 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
       const startTime24 = to24Hour(formData.startHour, formData.startMinute, formData.startPeriod);
       const startDateTime = new Date(`${formData.startDate}T${startTime24}`);
 
-      // Auto-calculate end time as start + 2 hours
-      const endDateTime = new Date(startDateTime.getTime() + 2 * 60 * 60 * 1000);
+      // End time uses same date as start
+      const endTime24 = to24Hour(formData.endHour, formData.endMinute, formData.endPeriod);
+      const endDateTime = new Date(`${formData.startDate}T${endTime24}`);
 
       const saveData = {
         title: formData.title,
@@ -233,44 +238,84 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
 
               <div>
                 <label className="modal-label">
-                  Date & Time <span className="text-red-400">*</span>
+                  Date <span className="text-red-400">*</span>
                 </label>
-                <div className="flex gap-2">
-                  <input
-                    type="date"
-                    value={formData.startDate}
-                    onChange={(e) => handleChange('startDate', e.target.value)}
-                    className="modal-input flex-1"
-                    required
-                  />
-                  <select
-                    value={formData.startHour}
-                    onChange={(e) => handleChange('startHour', e.target.value)}
-                    className="modal-input w-16"
-                    required
-                  >
-                    {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(h => (
-                      <option key={h} value={h.toString()}>{h}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={formData.startMinute}
-                    onChange={(e) => handleChange('startMinute', e.target.value)}
-                    className="modal-input w-16"
-                    required
-                  >
-                    <option value="00">:00</option>
-                    <option value="30">:30</option>
-                  </select>
-                  <select
-                    value={formData.startPeriod}
-                    onChange={(e) => handleChange('startPeriod', e.target.value)}
-                    className="modal-input w-16"
-                    required
-                  >
-                    <option value="AM">AM</option>
-                    <option value="PM">PM</option>
-                  </select>
+                <input
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => handleChange('startDate', e.target.value)}
+                  className="modal-input"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="modal-label">Start Time</label>
+                  <div className="flex gap-1">
+                    <select
+                      value={formData.startHour}
+                      onChange={(e) => handleChange('startHour', e.target.value)}
+                      className="modal-input flex-1"
+                      required
+                    >
+                      {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(h => (
+                        <option key={h} value={h.toString()}>{h}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={formData.startMinute}
+                      onChange={(e) => handleChange('startMinute', e.target.value)}
+                      className="modal-input w-14"
+                      required
+                    >
+                      <option value="00">:00</option>
+                      <option value="30">:30</option>
+                    </select>
+                    <select
+                      value={formData.startPeriod}
+                      onChange={(e) => handleChange('startPeriod', e.target.value)}
+                      className="modal-input w-14"
+                      required
+                    >
+                      <option value="AM">AM</option>
+                      <option value="PM">PM</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="modal-label">End Time</label>
+                  <div className="flex gap-1">
+                    <select
+                      value={formData.endHour}
+                      onChange={(e) => handleChange('endHour', e.target.value)}
+                      className="modal-input flex-1"
+                      required
+                    >
+                      {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(h => (
+                        <option key={h} value={h.toString()}>{h}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={formData.endMinute}
+                      onChange={(e) => handleChange('endMinute', e.target.value)}
+                      className="modal-input w-14"
+                      required
+                    >
+                      <option value="00">:00</option>
+                      <option value="30">:30</option>
+                    </select>
+                    <select
+                      value={formData.endPeriod}
+                      onChange={(e) => handleChange('endPeriod', e.target.value)}
+                      className="modal-input w-14"
+                      required
+                    >
+                      <option value="AM">AM</option>
+                      <option value="PM">PM</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
