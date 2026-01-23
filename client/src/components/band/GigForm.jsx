@@ -384,7 +384,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                 />
               </div>
 
-              {setlists.length > 0 && (
+              {setlists.length > 0 && formData.type === 'GIG' && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="modal-label mb-0">Setlist(s)</label>
