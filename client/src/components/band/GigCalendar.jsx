@@ -365,21 +365,47 @@ function GigCalendar({ workspaceId, workspace }) {
     return `https://calendar.google.com/calendar/render?${params.toString()}`;
   };
 
-  const getTypeColor = (type, isExternal = false) => {
-    if (isExternal) {
-      // Muted/striped colors for external workspace events
-      switch (type) {
-        case 'GIG': return 'bg-green-800/60 border border-green-600 border-dashed';
-        case 'REHEARSAL': return 'bg-blue-800/60 border border-blue-600 border-dashed';
-        case 'RECORDING': return 'bg-purple-800/60 border border-purple-600 border-dashed';
-        default: return 'bg-gray-700/60 border border-gray-500 border-dashed';
+  // Color palettes for other bands (each band gets a unique color family)
+  const externalColorPalettes = [
+    { gig: 'bg-purple-600', rehearsal: 'bg-purple-400', other: 'bg-purple-500' },
+    { gig: 'bg-emerald-600', rehearsal: 'bg-emerald-400', other: 'bg-emerald-500' },
+    { gig: 'bg-orange-600', rehearsal: 'bg-orange-400', other: 'bg-orange-500' },
+    { gig: 'bg-pink-600', rehearsal: 'bg-pink-400', other: 'bg-pink-500' },
+    { gig: 'bg-teal-600', rehearsal: 'bg-teal-400', other: 'bg-teal-500' },
+    { gig: 'bg-amber-600', rehearsal: 'bg-amber-400', other: 'bg-amber-500' },
+    { gig: 'bg-rose-600', rehearsal: 'bg-rose-400', other: 'bg-rose-500' },
+    { gig: 'bg-cyan-600', rehearsal: 'bg-cyan-400', other: 'bg-cyan-500' },
+  ];
+
+  // Map workspace IDs to color palette indices for consistency
+  const workspaceColorMap = useMemo(() => {
+    const map = {};
+    let colorIndex = 0;
+    otherWorkspaceGigs.forEach(gig => {
+      if (gig.workspaceId && !map[gig.workspaceId]) {
+        map[gig.workspaceId] = colorIndex % externalColorPalettes.length;
+        colorIndex++;
       }
+    });
+    return map;
+  }, [otherWorkspaceGigs]);
+
+  const getTypeColor = (type, isExternal = false, externalWorkspaceId = null) => {
+    if (isExternal && externalWorkspaceId) {
+      // Get consistent color palette for this external workspace
+      const paletteIndex = workspaceColorMap[externalWorkspaceId] || 0;
+      const palette = externalColorPalettes[paletteIndex];
+      const baseColor = type === 'GIG' ? palette.gig :
+                        type === 'REHEARSAL' ? palette.rehearsal :
+                        palette.other;
+      return `${baseColor} border border-white/20 border-dashed`;
     }
+    // Current workspace: blue shades
     switch (type) {
-      case 'GIG': return 'bg-green-500';
-      case 'REHEARSAL': return 'bg-blue-500';
-      case 'RECORDING': return 'bg-purple-500';
-      default: return 'bg-gray-500';
+      case 'GIG': return 'bg-blue-600';           // Dark blue for gigs
+      case 'REHEARSAL': return 'bg-sky-400';      // Light blue for rehearsals
+      case 'RECORDING': return 'bg-blue-500';     // Medium blue for recording
+      default: return 'bg-slate-500';             // Gray for other
     }
   };
 
@@ -567,7 +593,7 @@ function GigCalendar({ workspaceId, workspace }) {
                             }
                           }}
                           title={gig.isExternal ? `${gig.workspace?.name || 'Other workspace'}` : gig.isLocked ? `${gig.title} (Locked)` : gig.title}
-                          className={`text-xs p-1 rounded text-white truncate ${gig.isExternal || (gig.isLocked && !isAdmin) ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} ${getTypeColor(gig.type, gig.isExternal)} ${
+                          className={`text-xs p-1 rounded text-white truncate ${gig.isExternal || (gig.isLocked && !isAdmin) ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} ${getTypeColor(gig.type, gig.isExternal, gig.workspaceId)} ${
                             gig.status === 'CANCELLED' ? 'opacity-50 line-through' : ''
                           } ${draggingGig?.id === gig.id ? 'opacity-50' : ''} ${gig.isPersonal ? 'border border-dashed border-gray-400' : ''}`}
                         >
@@ -602,7 +628,7 @@ function GigCalendar({ workspaceId, workspace }) {
                   className={`bg-gray-800 rounded-lg p-4 ${gig.isExternal ? 'border-2 border-dashed border-gray-600' : 'border border-gray-700'}`}
                 >
                   <div className="flex items-start gap-4">
-                    <div className={`w-2 h-full rounded ${getTypeColor(gig.type, gig.isExternal)}`} />
+                    <div className={`w-2 h-full rounded ${getTypeColor(gig.type, gig.isExternal, gig.workspaceId)}`} />
                     <div className="flex-1">
                       <div className="flex items-start justify-between">
                         <div>
@@ -622,7 +648,7 @@ function GigCalendar({ workspaceId, workspace }) {
                         </div>
                         <div className="flex items-center gap-2">
                           {getStatusBadge(gig.status)}
-                          <span className={`text-xs px-2 py-1 rounded ${getTypeColor(gig.type, gig.isExternal)} text-white`}>
+                          <span className={`text-xs px-2 py-1 rounded ${getTypeColor(gig.type, gig.isExternal, gig.workspaceId)} text-white`}>
                             {gig.type}
                           </span>
                         </div>
