@@ -17,6 +17,7 @@ import BandMembersList from '../band/BandMembers/BandMembersList';
 import ContactsList from '../band/ContactsList';
 import AnnouncementsList from '../band/AnnouncementsList';
 import PollsList from '../band/PollsList';
+import MedleyList from '../band/MedleyList';
 
 function WorkspaceView() {
   const { workspaceId } = useParams();
@@ -434,6 +435,7 @@ function WorkspaceView() {
              activeBandView === 'contacts' ? '📇 Contacts' :
              activeBandView === 'announcements' ? '📢 Announcements' :
              activeBandView === 'polls' ? '🗳️ Polls' :
+             activeBandView === 'medleys' ? '🎶 Medleys' :
              selectedChannel
               ? selectedChannel.isDirect
                 ? selectedChannel.otherMembers?.map(m => m.displayName).join(', ') || 'Direct Message'
@@ -474,6 +476,8 @@ function WorkspaceView() {
               <AnnouncementsList workspaceId={workspaceId} workspace={workspace} />
             ) : activeBandView === 'polls' ? (
               <PollsList workspaceId={workspaceId} />
+            ) : activeBandView === 'medleys' ? (
+              <MedleyList workspaceId={workspaceId} />
             ) : selectedChannel ? (
               <ChannelView
                 channel={selectedChannel}

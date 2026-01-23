@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import api from '../../services/api';
 
 function SongForm({ song, onSave, onClose }) {
   // Parse existing key into root and mode
@@ -49,6 +50,68 @@ function SongForm({ song, onSave, onClose }) {
   const [activeTab, setActiveTab] = useState('details');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [attachments, setAttachments] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // Load attachments when editing an existing song
+  useEffect(() => {
+    if (song?.id) {
+      loadAttachments();
+    }
+  }, [song?.id]);
+
+  const loadAttachments = async () => {
+    try {
+      const data = await api.getSongAttachments(song.id);
+      setAttachments(data);
+    } catch (err) {
+      console.error('Failed to load attachments:', err);
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Check file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File size must be less than 10MB');
+      return;
+    }
+
+    setUploading(true);
+    setError('');
+
+    try {
+      const attachment = await api.uploadSongAttachment(song.id, file);
+      setAttachments(prev => [...prev, attachment]);
+    } catch (err) {
+      setError(err.message || 'Failed to upload file');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId) => {
+    if (!confirm('Delete this attachment?')) return;
+    try {
+      await api.deleteSongAttachment(song.id, attachmentId);
+      setAttachments(prev => prev.filter(a => a.id !== attachmentId));
+    } catch (err) {
+      console.error('Failed to delete attachment:', err);
+    }
+  };
+
+  const getFileIcon = (type) => {
+    if (type.startsWith('image/')) return '🖼️';
+    if (type.startsWith('audio/')) return '🎵';
+    if (type.includes('pdf')) return '📄';
+    return '📎';
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -116,7 +179,8 @@ function SongForm({ song, onSave, onClose }) {
             {[
               { id: 'details', label: 'Details' },
               { id: 'lyrics', label: 'Lyrics' },
-              { id: 'arrangement', label: 'Arrangement' }
+              { id: 'arrangement', label: 'Arrangement' },
+              ...(song ? [{ id: 'attachments', label: 'Files' }] : [])
             ].map(tab => (
               <button
                 key={tab.id}
@@ -134,6 +198,9 @@ function SongForm({ song, onSave, onClose }) {
                 )}
                 {tab.id === 'arrangement' && formData.arrangement && (
                   <span className="ml-1 text-green-400">*</span>
+                )}
+                {tab.id === 'attachments' && attachments.length > 0 && (
+                  <span className="ml-1 text-green-400">({attachments.length})</span>
                 )}
               </button>
             ))}
@@ -311,6 +378,78 @@ Example:
               />
               <p className="text-xs text-gray-500 mt-1">
                 Note any changes from the original arrangement
+              </p>
+            </div>
+            )}
+
+            {/* Attachments Tab */}
+            {activeTab === 'attachments' && song && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <label className="modal-label mb-0">Attachments</label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  accept="image/*,audio/*,.pdf,.doc,.docx"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="btn bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-50"
+                >
+                  {uploading ? 'Uploading...' : '+ Add File'}
+                </button>
+              </div>
+
+              {attachments.length === 0 ? (
+                <div className="text-center text-gray-400 py-8 border border-dashed border-gray-600 rounded-lg">
+                  <p>No attachments yet</p>
+                  <p className="text-sm mt-1">Add chord charts, sheet music, audio files, etc.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {attachments.map(attachment => (
+                    <div
+                      key={attachment.id}
+                      className="flex items-center justify-between bg-gray-700 rounded-lg p-3"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-xl">{getFileIcon(attachment.type)}</span>
+                        <div className="min-w-0">
+                          <a
+                            href={attachment.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:text-blue-300 truncate block"
+                          >
+                            {attachment.filename}
+                          </a>
+                          {attachment.size && (
+                            <span className="text-xs text-gray-500">
+                              {(attachment.size / 1024).toFixed(1)} KB
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAttachment(attachment.id)}
+                        className="p-1.5 text-gray-400 hover:text-red-400"
+                        title="Delete"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-gray-500 mt-3">
+                Max file size: 10MB. Supported: images, audio, PDFs, documents
               </p>
             </div>
             )}
