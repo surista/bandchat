@@ -438,14 +438,16 @@ function Sidebar({
           <span className="text-sm font-medium uppercase tracking-wide text-gray-400">
             Members ({workspace.members?.length || 0})
           </span>
-          <button
-            onClick={onShowInvite}
-            className="text-gray-400 hover:text-white transition-colors text-lg px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
-            title="Invite people"
-            aria-label="Invite people"
-          >
-            +
-          </button>
+          {workspace.members?.find(m => m.user.id === user?.id)?.role === 'ADMIN' && (
+            <button
+              onClick={onShowInvite}
+              className="text-gray-400 hover:text-white transition-colors text-lg px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
+              title="Invite people"
+              aria-label="Invite people"
+            >
+              +
+            </button>
+          )}
         </div>
 
         <div className="space-y-0.5">

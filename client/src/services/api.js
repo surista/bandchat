@@ -203,9 +203,21 @@ class ApiService {
     });
   }
 
-  async regenerateInviteCode(workspaceId) {
+  async getInviteCode(workspaceId) {
+    return this.request(`/workspaces/${workspaceId}/invite-code`);
+  }
+
+  async regenerateInviteCode(workspaceId, options = {}) {
     return this.request(`/workspaces/${workspaceId}/invite-code`, {
-      method: 'POST'
+      method: 'POST',
+      body: JSON.stringify(options)
+    });
+  }
+
+  async sendInviteEmail(workspaceId, email) {
+    return this.request(`/workspaces/${workspaceId}/invite-email`, {
+      method: 'POST',
+      body: JSON.stringify({ email })
     });
   }
 

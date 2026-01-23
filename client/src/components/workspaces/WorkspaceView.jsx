@@ -27,6 +27,11 @@ function WorkspaceView() {
   const [selectedThread, setSelectedThread] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showInvite, setShowInvite] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteExpiresIn, setInviteExpiresIn] = useState(24);
+  const [inviteMaxUses, setInviteMaxUses] = useState(null);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState('home');
   const [showSearch, setShowSearch] = useState(false);
@@ -438,55 +443,194 @@ function WorkspaceView() {
       </div>
 
       {/* Invite Modal */}
-      {showInvite && (
+      {showInvite && (() => {
+        const isAdmin = workspace.members?.find(m => m.user.id === user?.id)?.role === 'ADMIN';
+        return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4">Invite to {workspace.name}</h3>
-            <p className="text-gray-600 mb-4">Share this invite code with your bandmates:</p>
-            <div className="bg-gray-100 rounded-lg p-4 text-center mb-4">
-              <code className="text-2xl font-mono font-bold tracking-wider">
-                {workspace.inviteCode}
-              </code>
+          <div className="bg-[var(--color-modal-bg)] rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-white">Invite to {workspace.name}</h3>
+              <button
+                onClick={() => {
+                  setShowInvite(false);
+                  setInviteMessage('');
+                  setInviteEmail('');
+                }}
+                className="text-gray-400 hover:text-white text-2xl leading-none"
+              >
+                &times;
+              </button>
             </div>
-            {workspace.inviteCodeExpiresAt && (
-              <p className="text-sm text-gray-500 mb-2 text-center">
-                Expires: {new Date(workspace.inviteCodeExpiresAt).toLocaleString()}
-              </p>
+
+            {inviteMessage && (
+              <div className={`mb-4 px-4 py-2 rounded-lg text-sm ${
+                inviteMessage.includes('Failed') || inviteMessage.includes('error')
+                  ? 'bg-red-900/50 border border-red-500 text-red-200'
+                  : 'bg-green-900/50 border border-green-500 text-green-200'
+              }`}>
+                {inviteMessage}
+              </div>
             )}
-            <p className="text-sm text-gray-500 mb-4">
-              Or share this link:<br />
-              <code className="text-xs break-all">
-                {window.location.origin}/join/{workspace.inviteCode}
-              </code>
-            </p>
-            <div className="flex gap-2">
+
+            {/* Current Invite Code */}
+            <div className="mb-6">
+              <p className="text-gray-400 text-sm mb-2">Share this invite code:</p>
+              <div className="bg-gray-800 rounded-lg p-4 text-center">
+                <code className="text-2xl font-mono font-bold tracking-wider text-white">
+                  {workspace.inviteCode}
+                </code>
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs text-gray-500 mt-2 justify-center">
+                {workspace.inviteCodeExpiresAt && (
+                  <span>
+                    Expires: {new Date(workspace.inviteCodeExpiresAt).toLocaleString()}
+                  </span>
+                )}
+                {workspace.inviteMaxUses !== null && (
+                  <span>
+                    • Uses: {workspace.inviteUsedCount || 0}/{workspace.inviteMaxUses}
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-gray-500 mt-2 text-center">
+                <code className="text-xs break-all">
+                  {window.location.origin}/join/{workspace.inviteCode}
+                </code>
+              </p>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/join/${workspace.inviteCode}`);
+                  setInviteMessage('Link copied to clipboard!');
+                  setTimeout(() => setInviteMessage(''), 3000);
+                }}
+                className="w-full mt-2 btn btn-secondary text-sm"
+              >
+                Copy Invite Link
+              </button>
+            </div>
+
+            {/* Email Invite - Admin only */}
+            {isAdmin && (
+            <div className="border-t border-gray-700 pt-4 mb-4">
+              <p className="text-gray-400 text-sm mb-2">Send invite via email:</p>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!inviteEmail.trim()) return;
+                  setInviteLoading(true);
+                  setInviteMessage('');
+                  try {
+                    await api.sendInviteEmail(workspace.id, inviteEmail);
+                    setInviteMessage(`Invite sent to ${inviteEmail}`);
+                    setInviteEmail('');
+                  } catch (err) {
+                    setInviteMessage(`Failed: ${err.message}`);
+                  } finally {
+                    setInviteLoading(false);
+                  }
+                }}
+                className="flex gap-2"
+              >
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="bandmate@email.com"
+                  className="flex-1 modal-input"
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={inviteLoading || !inviteEmail.trim()}
+                  className="btn bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                >
+                  {inviteLoading ? '...' : 'Send'}
+                </button>
+              </form>
+            </div>
+            )}
+
+            {/* Generate New Code - Admin only */}
+            {isAdmin && (
+            <div className="border-t border-gray-700 pt-4">
+              <p className="text-gray-400 text-sm mb-3">Generate new invite code:</p>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Expires in</label>
+                  <select
+                    value={inviteExpiresIn || ''}
+                    onChange={(e) => setInviteExpiresIn(e.target.value ? parseInt(e.target.value) : null)}
+                    className="modal-input text-sm"
+                  >
+                    <option value="">Never</option>
+                    <option value="1">1 hour</option>
+                    <option value="24">24 hours</option>
+                    <option value="168">7 days</option>
+                    <option value="720">30 days</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Max uses</label>
+                  <select
+                    value={inviteMaxUses || ''}
+                    onChange={(e) => setInviteMaxUses(e.target.value ? parseInt(e.target.value) : null)}
+                    className="modal-input text-sm"
+                  >
+                    <option value="">Unlimited</option>
+                    <option value="1">1 use</option>
+                    <option value="5">5 uses</option>
+                    <option value="10">10 uses</option>
+                    <option value="25">25 uses</option>
+                  </select>
+                </div>
+              </div>
               <button
                 onClick={async () => {
+                  setInviteLoading(true);
+                  setInviteMessage('');
                   try {
-                    const result = await api.regenerateInviteCode(workspace.id);
+                    const result = await api.regenerateInviteCode(workspace.id, {
+                      expiresInHours: inviteExpiresIn,
+                      maxUses: inviteMaxUses
+                    });
                     setWorkspace(prev => ({
                       ...prev,
                       inviteCode: result.inviteCode,
-                      inviteCodeExpiresAt: result.expiresAt
+                      inviteCodeExpiresAt: result.expiresAt,
+                      inviteMaxUses: result.maxUses,
+                      inviteUsedCount: result.usedCount
                     }));
+                    setInviteMessage('New invite code generated!');
                   } catch (err) {
-                    console.error('Failed to regenerate code:', err);
+                    setInviteMessage(`Failed: ${err.message}`);
+                  } finally {
+                    setInviteLoading(false);
                   }
                 }}
-                className="flex-1 btn btn-secondary"
+                disabled={inviteLoading}
+                className="w-full btn btn-secondary disabled:opacity-50"
               >
-                Regenerate Code
+                {inviteLoading ? 'Generating...' : 'Generate New Code'}
               </button>
+            </div>
+            )}
+
+            <div className="mt-4 pt-4 border-t border-gray-700">
               <button
-                onClick={() => setShowInvite(false)}
-                className="flex-1 btn bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => {
+                  setShowInvite(false);
+                  setInviteMessage('');
+                  setInviteEmail('');
+                }}
+                className="w-full btn bg-green-600 hover:bg-green-700 text-white"
               >
                 Done
               </button>
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Search Modal */}
       {showSearch && (

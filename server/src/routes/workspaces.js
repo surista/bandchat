@@ -1,18 +1,21 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import { Resend } from 'resend';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 
 const router = express.Router();
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 // Generate a random invite code
 const generateInviteCode = () => {
   return uuidv4().split('-')[0].toUpperCase();
 };
 
-// Get expiration date 24 hours from now
-const getInviteExpiration = () => {
-  return new Date(Date.now() + 24 * 60 * 60 * 1000);
+// Get expiration date based on duration (in hours, null = never expires)
+const getInviteExpiration = (hours = 24) => {
+  if (hours === null || hours === 0) return null;
+  return new Date(Date.now() + hours * 60 * 60 * 1000);
 };
 
 // Get all workspaces for current user
@@ -187,6 +190,11 @@ router.post('/join/:inviteCode', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Invite code has expired' });
     }
 
+    // Check if invite has reached max uses
+    if (workspace.inviteMaxUses !== null && workspace.inviteUsedCount >= workspace.inviteMaxUses) {
+      return res.status(400).json({ error: 'Invite link has reached its usage limit' });
+    }
+
     // Check if already a member
     const existingMember = await prisma.workspaceMember.findUnique({
       where: {
@@ -215,6 +223,11 @@ router.post('/join/:inviteCode', authenticate, async (req, res) => {
           userId: req.user.id,
           workspaceId: workspace.id
         }
+      }),
+      // Increment the invite used count
+      prisma.workspace.update({
+        where: { id: workspace.id },
+        data: { inviteUsedCount: { increment: 1 } }
       }),
       ...publicChannels.map(channel =>
         prisma.channelMember.create({
@@ -260,23 +273,124 @@ router.post('/join/:inviteCode', authenticate, async (req, res) => {
   }
 });
 
-// Regenerate invite code
+// Regenerate invite code with optional expiration and max uses
 router.post('/:workspaceId/invite-code', authenticate, isWorkspaceAdmin, async (req, res) => {
   try {
+    const { expiresInHours, maxUses } = req.body;
+
+    // expiresInHours: number of hours until expiration (null = never)
+    // maxUses: max number of uses (null = unlimited)
+
     const workspace = await prisma.workspace.update({
       where: { id: req.params.workspaceId },
       data: {
         inviteCode: generateInviteCode(),
-        inviteCodeExpiresAt: getInviteExpiration()
+        inviteCodeExpiresAt: getInviteExpiration(expiresInHours !== undefined ? expiresInHours : 24),
+        inviteMaxUses: maxUses !== undefined ? maxUses : null,
+        inviteUsedCount: 0 // Reset used count when regenerating
       }
     });
 
     res.json({
       inviteCode: workspace.inviteCode,
-      expiresAt: workspace.inviteCodeExpiresAt
+      expiresAt: workspace.inviteCodeExpiresAt,
+      maxUses: workspace.inviteMaxUses,
+      usedCount: workspace.inviteUsedCount
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to regenerate invite code' });
+  }
+});
+
+// Get current invite code info
+router.get('/:workspaceId/invite-code', authenticate, isWorkspaceAdmin, async (req, res) => {
+  try {
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: req.params.workspaceId },
+      select: {
+        inviteCode: true,
+        inviteCodeExpiresAt: true,
+        inviteMaxUses: true,
+        inviteUsedCount: true
+      }
+    });
+
+    if (!workspace) {
+      return res.status(404).json({ error: 'Workspace not found' });
+    }
+
+    res.json({
+      inviteCode: workspace.inviteCode,
+      expiresAt: workspace.inviteCodeExpiresAt,
+      maxUses: workspace.inviteMaxUses,
+      usedCount: workspace.inviteUsedCount
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get invite code info' });
+  }
+});
+
+// Send email invite
+router.post('/:workspaceId/invite-email', authenticate, isWorkspaceAdmin, async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || !email.trim()) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: req.params.workspaceId }
+    });
+
+    if (!workspace) {
+      return res.status(404).json({ error: 'Workspace not found' });
+    }
+
+    // Check if invite code is valid
+    if (workspace.inviteCodeExpiresAt && new Date() > workspace.inviteCodeExpiresAt) {
+      return res.status(400).json({ error: 'Invite code has expired. Please generate a new one.' });
+    }
+
+    if (workspace.inviteMaxUses !== null && workspace.inviteUsedCount >= workspace.inviteMaxUses) {
+      return res.status(400).json({ error: 'Invite has reached max uses. Please generate a new one.' });
+    }
+
+    const inviteUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/join/${workspace.inviteCode}`;
+
+    if (!resend) {
+      console.log(`[DEV] Would send invite email to ${email} for workspace ${workspace.name}`);
+      console.log(`[DEV] Invite URL: ${inviteUrl}`);
+      return res.json({ message: 'Invite email sent (dev mode)' });
+    }
+
+    await resend.emails.send({
+      from: process.env.EMAIL_FROM || 'BandChat <noreply@bandchat.app>',
+      to: email.trim(),
+      subject: `You're invited to join ${workspace.name} on BandChat`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #3B82F6;">You're invited!</h1>
+          <p><strong>${req.user.displayName}</strong> has invited you to join <strong>${workspace.name}</strong> on BandChat.</p>
+          <p>BandChat is a collaboration platform built for bands and musicians.</p>
+          <div style="margin: 30px 0;">
+            <a href="${inviteUrl}"
+               style="background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+              Join ${workspace.name}
+            </a>
+          </div>
+          <p style="color: #666; font-size: 14px;">
+            Or copy this link: <a href="${inviteUrl}">${inviteUrl}</a>
+          </p>
+          ${workspace.inviteCodeExpiresAt ? `<p style="color: #999; font-size: 12px;">This invite expires on ${new Date(workspace.inviteCodeExpiresAt).toLocaleDateString()}.</p>` : ''}
+        </div>
+      `
+    });
+
+    res.json({ message: 'Invite email sent' });
+  } catch (error) {
+    console.error('Send invite email error:', error);
+    res.status(500).json({ error: 'Failed to send invite email' });
   }
 });
 
