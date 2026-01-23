@@ -22,11 +22,12 @@ function MessageInput({ channelName, onSend, onTyping }) {
       setContent('');
       setSelectedFiles([]);
       setPreviews([]);
-      textareaRef.current?.focus();
     } catch (err) {
       setError(err.message || 'Failed to send message');
     } finally {
       setSending(false);
+      // Ensure focus returns to textarea after send completes
+      setTimeout(() => textareaRef.current?.focus(), 0);
     }
   };
 

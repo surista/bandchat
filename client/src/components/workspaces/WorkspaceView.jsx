@@ -60,6 +60,29 @@ function WorkspaceView() {
     if (socket) {
       joinWorkspace(workspaceId);
 
+      // Handle new messages for unread counts
+      const handleNewMessage = (message) => {
+        // Only increment unread if message is for a different channel than currently selected
+        if (message.channelId !== selectedChannel?.id) {
+          setChannels(prev =>
+            prev.map(c =>
+              c.id === message.channelId ? { ...c, unreadCount: (c.unreadCount || 0) + 1 } : c
+            )
+          );
+          setDirectMessages(prev =>
+            prev.map(dm =>
+              dm.id === message.channelId ? { ...dm, unreadCount: (dm.unreadCount || 0) + 1 } : dm
+            )
+          );
+        }
+      };
+
+      // Handle reconnection - refresh data
+      const handleReconnect = () => {
+        console.log('Socket reconnected, refreshing data...');
+        loadWorkspace();
+      };
+
       socket.on('channel:created', handleChannelCreated);
       socket.on('channel:deleted', handleChannelDeleted);
       socket.on('channel:moved', handleChannelMoved);
@@ -69,6 +92,8 @@ function WorkspaceView() {
       socket.on('channelGroup:updated', handleGroupUpdated);
       socket.on('channelGroup:deleted', handleGroupDeleted);
       socket.on('dm:created', handleDMCreated);
+      socket.on('message:new', handleNewMessage);
+      socket.on('reconnect', handleReconnect);
 
       return () => {
         socket.off('channel:created', handleChannelCreated);
@@ -80,9 +105,11 @@ function WorkspaceView() {
         socket.off('channelGroup:updated', handleGroupUpdated);
         socket.off('channelGroup:deleted', handleGroupDeleted);
         socket.off('dm:created', handleDMCreated);
+        socket.off('message:new', handleNewMessage);
+        socket.off('reconnect', handleReconnect);
       };
     }
-  }, [socket, workspaceId]);
+  }, [socket, workspaceId, selectedChannel?.id]);
 
   // Sidebar resize handling
   useEffect(() => {
@@ -113,6 +140,18 @@ function WorkspaceView() {
       document.body.style.userSelect = '';
     };
   }, [isResizing, sidebarWidth]);
+
+  // Refresh data when tab becomes visible again
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadWorkspace();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [workspaceId]);
 
   // Persist activeBandView to localStorage
   useEffect(() => {
