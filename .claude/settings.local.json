@@ -32,7 +32,8 @@
       "WebFetch(domain:getsongbpm.com)",
       "WebFetch(domain:songbpm.com)",
       "Bash(dir /s /b *.md)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(where:*)"
     ]
   }
 }

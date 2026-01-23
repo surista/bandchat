@@ -78,7 +78,6 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
   };
 
   const startTime12 = to12Hour(gig?.date);
-  const endTime12 = gig?.endDate ? to12Hour(gig.endDate, { hour: '', minute: '00', period: 'PM' }) : { hour: '', minute: '00', period: 'PM' };
 
   const [formData, setFormData] = useState({
     title: gig?.title || '',
@@ -87,10 +86,6 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     startHour: startTime12.hour,
     startMinute: startTime12.minute,
     startPeriod: startTime12.period,
-    endDate: gig?.endDate ? format(new Date(gig.endDate), 'yyyy-MM-dd') : '',
-    endHour: endTime12.hour,
-    endMinute: endTime12.minute,
-    endPeriod: endTime12.period,
     venue: gig?.venue || '',
     address: gig?.address || '',
     notes: gig?.notes || '',
@@ -125,15 +120,14 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
       const startTime24 = to24Hour(formData.startHour, formData.startMinute, formData.startPeriod);
       const startDateTime = new Date(`${formData.startDate}T${startTime24}`);
 
-      const endDateTime = formData.endDate && formData.endHour
-        ? new Date(`${formData.endDate}T${to24Hour(formData.endHour, formData.endMinute, formData.endPeriod)}`)
-        : null;
+      // Auto-calculate end time as start + 2 hours
+      const endDateTime = new Date(startDateTime.getTime() + 2 * 60 * 60 * 1000);
 
       const saveData = {
         title: formData.title,
         type: formData.type,
         date: startDateTime.toISOString(),
-        endDate: endDateTime ? endDateTime.toISOString() : null,
+        endDate: endDateTime.toISOString(),
         venue: formData.venue || null,
         address: formData.address || null,
         notes: formData.notes || null,
@@ -239,7 +233,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
 
               <div>
                 <label className="modal-label">
-                  Start Date/Time <span className="text-red-400">*</span>
+                  Date & Time <span className="text-red-400">*</span>
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -322,47 +316,6 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                   </div>
                 </div>
               )}
-
-              <div>
-                <label className="modal-label">End Date/Time</label>
-                <div className="flex gap-2">
-                  <input
-                    type="date"
-                    value={formData.endDate}
-                    onChange={(e) => handleChange('endDate', e.target.value)}
-                    className="modal-input flex-1"
-                  />
-                  <select
-                    value={formData.endHour}
-                    onChange={(e) => handleChange('endHour', e.target.value)}
-                    className="modal-input w-16"
-                    disabled={!formData.endDate}
-                  >
-                    <option value="">--</option>
-                    {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(h => (
-                      <option key={h} value={h.toString()}>{h}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={formData.endMinute}
-                    onChange={(e) => handleChange('endMinute', e.target.value)}
-                    className="modal-input w-16"
-                    disabled={!formData.endDate}
-                  >
-                    <option value="00">:00</option>
-                    <option value="30">:30</option>
-                  </select>
-                  <select
-                    value={formData.endPeriod}
-                    onChange={(e) => handleChange('endPeriod', e.target.value)}
-                    className="modal-input w-16"
-                    disabled={!formData.endDate}
-                  >
-                    <option value="AM">AM</option>
-                    <option value="PM">PM</option>
-                  </select>
-                </div>
-              </div>
 
               <div>
                 <label className="modal-label">Venue</label>
