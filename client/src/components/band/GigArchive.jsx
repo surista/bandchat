@@ -140,10 +140,12 @@ function GigArchive({ workspaceId }) {
 
   // Build archive entries from setlists AND standalone gigs
   const setlistEntries = setlists.map(setlist => {
-    // Find formal gig that uses this setlist
+    // Find formal gig that uses this setlist (only actual gigs, not rehearsals)
     const associatedGig = gigs.find(g =>
-      g.setlistId === setlist.id ||
-      (g.setlists && g.setlists.some(gs => gs.setlistId === setlist.id))
+      g.type === 'GIG' && (
+        g.setlistId === setlist.id ||
+        (g.setlists && g.setlists.some(gs => gs.setlistId === setlist.id))
+      )
     );
 
     // Use setlist's performedAt/venue fields first, then fall back to parsing name
@@ -163,10 +165,10 @@ function GigArchive({ workspaceId }) {
     };
   }).filter(entry => entry.date || entry.hasFormalGig);
 
-  // Add standalone gigs (gigs without setlists)
+  // Add standalone gigs (gigs without setlists, only actual gigs not rehearsals)
   const setlistGigIds = new Set(setlistEntries.filter(e => e.gig).map(e => e.gig.id));
   const standaloneGigs = gigs
-    .filter(g => !setlistGigIds.has(g.id) && !g.setlistId && (!g.setlists || g.setlists.length === 0))
+    .filter(g => g.type === 'GIG' && !setlistGigIds.has(g.id) && !g.setlistId && (!g.setlists || g.setlists.length === 0))
     .map(gig => ({
       id: `gig-${gig.id}`,
       setlist: null,
