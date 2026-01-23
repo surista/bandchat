@@ -14,6 +14,9 @@ import AvailabilityCalendar from '../band/AvailabilityCalendar';
 import GigStats from '../band/GigStats';
 import GigArchive from '../band/GigArchive';
 import BandMembersList from '../band/BandMembers/BandMembersList';
+import ContactsList from '../band/ContactsList';
+import AnnouncementsList from '../band/AnnouncementsList';
+import PollsList from '../band/PollsList';
 
 function WorkspaceView() {
   const { workspaceId } = useParams();
@@ -428,6 +431,9 @@ function WorkspaceView() {
              activeBandView === 'stats' ? '📊 Stats' :
              activeBandView === 'archive' ? '📸 Gig Archive' :
              activeBandView === 'members' ? '👥 Members' :
+             activeBandView === 'contacts' ? '📇 Contacts' :
+             activeBandView === 'announcements' ? '📢 Announcements' :
+             activeBandView === 'polls' ? '🗳️ Polls' :
              selectedChannel
               ? selectedChannel.isDirect
                 ? selectedChannel.otherMembers?.map(m => m.displayName).join(', ') || 'Direct Message'
@@ -462,6 +468,12 @@ function WorkspaceView() {
               <GigArchive workspaceId={workspaceId} />
             ) : activeBandView === 'members' ? (
               <BandMembersList key={bandViewKey} workspaceId={workspaceId} />
+            ) : activeBandView === 'contacts' ? (
+              <ContactsList workspaceId={workspaceId} />
+            ) : activeBandView === 'announcements' ? (
+              <AnnouncementsList workspaceId={workspaceId} workspace={workspace} />
+            ) : activeBandView === 'polls' ? (
+              <PollsList workspaceId={workspaceId} />
             ) : selectedChannel ? (
               <ChannelView
                 channel={selectedChannel}

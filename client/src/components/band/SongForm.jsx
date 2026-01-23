@@ -41,9 +41,12 @@ function SongForm({ song, onSave, onClose }) {
     keyIsMinor: initialIsMinor,
     bpm: song?.bpm || '',
     notes: song?.notes || '',
+    lyrics: song?.lyrics || '',
+    arrangement: song?.arrangement || '',
     youtubeUrl: song?.youtubeUrl || '',
     spotifyUrl: song?.spotifyUrl || ''
   });
+  const [activeTab, setActiveTab] = useState('details');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -66,6 +69,8 @@ function SongForm({ song, onSave, onClose }) {
         key,
         bpm: formData.bpm ? parseInt(formData.bpm) : null,
         notes: formData.notes || null,
+        lyrics: formData.lyrics || null,
+        arrangement: formData.arrangement || null,
         youtubeUrl: formData.youtubeUrl || null,
         spotifyUrl: formData.spotifyUrl || null
       });
@@ -106,7 +111,37 @@ function SongForm({ song, onSave, onClose }) {
             </div>
           )}
 
+          {/* Tabs */}
+          <div className="flex gap-1 mb-4 border-b border-gray-700">
+            {[
+              { id: 'details', label: 'Details' },
+              { id: 'lyrics', label: 'Lyrics' },
+              { id: 'arrangement', label: 'Arrangement' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                  activeTab === tab.id
+                    ? 'text-blue-400 border-blue-400'
+                    : 'text-gray-400 border-transparent hover:text-white'
+                }`}
+              >
+                {tab.label}
+                {tab.id === 'lyrics' && formData.lyrics && (
+                  <span className="ml-1 text-green-400">*</span>
+                )}
+                {tab.id === 'arrangement' && formData.arrangement && (
+                  <span className="ml-1 text-green-400">*</span>
+                )}
+              </button>
+            ))}
+          </div>
+
           <form onSubmit={handleSubmit}>
+            {/* Details Tab */}
+            {activeTab === 'details' && (
             <div className="space-y-4">
               <div>
                 <label className="modal-label">
@@ -225,13 +260,62 @@ function SongForm({ song, onSave, onClose }) {
                   value={formData.notes}
                   onChange={(e) => handleChange('notes', e.target.value)}
                   className="modal-input"
-                  rows={4}
-                  placeholder="Chords, structure, lyrics, etc."
+                  rows={3}
+                  placeholder="Quick notes about the song"
                 />
               </div>
             </div>
+            )}
 
-            <div className="flex gap-2 justify-end mt-6">
+            {/* Lyrics Tab */}
+            {activeTab === 'lyrics' && (
+            <div>
+              <label className="modal-label">Lyrics / Chord Chart</label>
+              <textarea
+                value={formData.lyrics}
+                onChange={(e) => handleChange('lyrics', e.target.value)}
+                className="modal-input font-mono text-sm"
+                rows={15}
+                placeholder="Paste lyrics or chord chart here...
+
+Example:
+[Verse 1]
+G        D        Em       C
+Amazing grace, how sweet the sound
+G        D        G
+That saved a wretch like me..."
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Use monospace formatting for chord alignment
+              </p>
+            </div>
+            )}
+
+            {/* Arrangement Tab */}
+            {activeTab === 'arrangement' && (
+            <div>
+              <label className="modal-label">Custom Arrangement</label>
+              <textarea
+                value={formData.arrangement}
+                onChange={(e) => handleChange('arrangement', e.target.value)}
+                className="modal-input"
+                rows={12}
+                placeholder="Document your band's custom arrangement...
+
+Example:
+- Intro: 4 bars guitar only
+- Verse 1: Full band, drums light
+- Chorus: Big energy, backing vocals
+- Solo: 16 bars, trade with keys
+- Outro: Fade out, drums last"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Note any changes from the original arrangement
+              </p>
+            </div>
+            )}
+
+            <div className="flex gap-2 justify-end mt-6 pt-4 border-t border-gray-700">
               <button
                 type="button"
                 onClick={onClose}
@@ -241,7 +325,7 @@ function SongForm({ song, onSave, onClose }) {
               </button>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !formData.title.trim()}
                 className="btn bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
               >
                 {loading ? 'Saving...' : song ? 'Update' : 'Add Song'}

@@ -431,6 +431,27 @@ function Sidebar({
             <span className="text-gray-400">👥</span>
             <span className="flex-1 truncate">Members</span>
           </button>
+          <button
+            onClick={() => onSelectBandView?.('contacts')}
+            className={`channel-item w-full ${activeBandView === 'contacts' ? 'active' : ''}`}
+          >
+            <span className="text-gray-400">📇</span>
+            <span className="flex-1 truncate">Contacts</span>
+          </button>
+          <button
+            onClick={() => onSelectBandView?.('announcements')}
+            className={`channel-item w-full ${activeBandView === 'announcements' ? 'active' : ''}`}
+          >
+            <span className="text-gray-400">📢</span>
+            <span className="flex-1 truncate">Announcements</span>
+          </button>
+          <button
+            onClick={() => onSelectBandView?.('polls')}
+            className={`channel-item w-full ${activeBandView === 'polls' ? 'active' : ''}`}
+          >
+            <span className="text-gray-400">🗳️</span>
+            <span className="flex-1 truncate">Polls</span>
+          </button>
         </div>
 
         {/* Members Section */}
