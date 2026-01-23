@@ -4,10 +4,16 @@
   "description": "Chat app for bands",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#4A154B",
-  "theme_color": "#4A154B",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "orientation": "portrait-primary",
   "icons": [
+    {
+      "src": "/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
     {
       "src": "/favicon.svg",
       "sizes": "any",

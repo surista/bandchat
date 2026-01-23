@@ -51,6 +51,11 @@ function Login() {
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
+            <img
+              src="/logo.jpg"
+              alt="BandChat"
+              className="w-24 h-24 mx-auto mb-4 rounded-xl shadow-lg"
+            />
             <h1 className="text-4xl font-bold text-white mb-2">BandChat</h1>
             <p className="text-gray-300">Sign in to your workspace</p>
           </div>

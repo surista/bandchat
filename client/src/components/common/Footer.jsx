@@ -80,9 +80,11 @@ function Footer({ theme = 'dark' }) {
 
             <div className="modal-body space-y-6">
               <div className="text-center py-4">
-                <div className="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-sidebar)] rounded-xl flex items-center justify-center shadow-lg">
-                  <span className="text-3xl">🎸</span>
-                </div>
+                <img
+                  src="/logo.jpg"
+                  alt="BandChat"
+                  className="w-20 h-20 mx-auto mb-3 rounded-xl shadow-lg"
+                />
                 <h3 className="text-xl font-bold text-white">BandChat</h3>
                 <p className="text-gray-400">v{__APP_VERSION__}</p>
               </div>
