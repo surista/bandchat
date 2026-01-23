@@ -269,9 +269,16 @@ function WorkspaceView() {
   };
 
   const updateChannelUnread = (channelId, count) => {
+    // Update channels
     setChannels(prev =>
       prev.map(c =>
         c.id === channelId ? { ...c, unreadCount: count } : c
+      )
+    );
+    // Also update DMs
+    setDirectMessages(prev =>
+      prev.map(dm =>
+        dm.id === channelId ? { ...dm, unreadCount: count } : dm
       )
     );
   };
@@ -304,7 +311,8 @@ function WorkspaceView() {
     }
   };
 
-  const totalUnread = channels.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+  const totalUnread = channels.reduce((sum, c) => sum + (c.unreadCount || 0), 0) +
+    directMessages.reduce((sum, dm) => sum + (dm.unreadCount || 0), 0);
 
   if (loading) {
     return (
