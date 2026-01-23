@@ -21,16 +21,22 @@ model User {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
-  workspaces        WorkspaceMember[]
-  messages          Message[]
-  channelMembers    ChannelMember[]
-  pushSubscriptions PushSubscription[]
-  refreshTokens     RefreshToken[]
-  reactions         Reaction[]
-  songs             Song[]
-  setlists          Setlist[]
-  gigs              Gig[]
-  availability      MemberAvailability[]
+  workspaces              WorkspaceMember[]
+  messages                Message[]
+  channelMembers          ChannelMember[]
+  pushSubscriptions       PushSubscription[]
+  refreshTokens           RefreshToken[]
+  reactions               Reaction[]
+  songs                   Song[]
+  setlists                Setlist[]
+  gigs                    Gig[]
+  availability            MemberAvailability[]
+  medleys                 Medley[]
+  contacts                Contact[]
+  announcements           Announcement[]
+  acknowledgments         AnnouncementAcknowledgment[]
+  polls                   Poll[]
+  pollVotes               PollVote[]
 }
 
 model RefreshToken {
@@ -64,6 +70,10 @@ model Workspace {
   gigs          Gig[]
   bandMembers   BandMember[]
   availability  MemberAvailability[]
+  medleys       Medley[]
+  contacts      Contact[]
+  announcements Announcement[]
+  polls         Poll[]
 }
 
 model ChannelGroup {
@@ -110,6 +120,7 @@ model Channel {
   group     ChannelGroup?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
   members   ChannelMember[]
   messages  Message[]
+  polls     Poll[]
 
   @@unique([workspaceId, name])
   @@index([groupId, position])
@@ -211,6 +222,8 @@ model Song {
   key         String?
   bpm         Int?
   notes       String?
+  lyrics      String?  // Lyrics or chord chart text
+  arrangement String?  // Custom arrangement notes (intro, solo, ending, etc.)
   youtubeUrl  String?
   spotifyUrl  String?
   workspaceId String
@@ -218,13 +231,30 @@ model Song {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy    User          @relation(fields: [createdById], references: [id])
+  workspace    Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy    User             @relation(fields: [createdById], references: [id])
   setlistSongs SetlistSong[]
   gigSongs     GigSong[]
+  attachments  SongAttachment[]
+  medleySongs  MedleySong[]
 
   @@unique([workspaceId, title, artist])
   @@index([workspaceId])
+}
+
+// Song file attachments (PDFs, chord sheets, etc.)
+model SongAttachment {
+  id        String   @id @default(uuid())
+  songId    String
+  filename  String
+  url       String
+  type      String   // 'pdf', 'doc', 'image', etc.
+  size      Int?
+  createdAt DateTime @default(now())
+
+  song Song @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@index([songId])
 }
 
 model Setlist {
@@ -418,4 +448,140 @@ enum AvailabilityStatus {
   AVAILABLE
   UNAVAILABLE
   MAYBE
+}
+
+// Medley - group of songs that play back-to-back
+model Medley {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  workspaceId String
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User         @relation(fields: [createdById], references: [id])
+  songs     MedleySong[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+}
+
+model MedleySong {
+  id        String @id @default(uuid())
+  medleyId  String
+  songId    String
+  position  Int
+
+  medley Medley @relation(fields: [medleyId], references: [id], onDelete: Cascade)
+  song   Song   @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@unique([medleyId, songId])
+  @@index([medleyId, position])
+}
+
+// Shared Contacts (venues, sound engineers, photographers, etc.)
+model Contact {
+  id          String   @id @default(uuid())
+  name        String
+  category    String   // 'venue', 'sound_engineer', 'photographer', 'agent', 'other'
+  email       String?
+  phone       String?
+  website     String?
+  address     String?
+  notes       String?
+  workspaceId String
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User      @relation(fields: [createdById], references: [id])
+
+  @@index([workspaceId])
+  @@index([workspaceId, category])
+}
+
+// Announcements - pinned messages with acknowledgment tracking
+model Announcement {
+  id          String   @id @default(uuid())
+  title       String
+  content     String
+  priority    String   @default("normal") // 'low', 'normal', 'high', 'urgent'
+  isPinned    Boolean  @default(true)
+  workspaceId String
+  createdById String
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace        Workspace                     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy        User                          @relation(fields: [createdById], references: [id])
+  acknowledgments  AnnouncementAcknowledgment[]
+
+  @@index([workspaceId])
+  @@index([workspaceId, isPinned])
+}
+
+model AnnouncementAcknowledgment {
+  id             String   @id @default(uuid())
+  announcementId String
+  userId         String
+  acknowledgedAt DateTime @default(now())
+
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, userId])
+  @@index([announcementId])
+}
+
+// Polls/Voting
+model Poll {
+  id          String    @id @default(uuid())
+  question    String
+  description String?
+  allowMultiple Boolean @default(false)
+  isAnonymous Boolean   @default(false)
+  isClosed    Boolean   @default(false)
+  workspaceId String
+  channelId   String?   // Optional: poll can be in a channel
+  createdById String
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  channel   Channel?     @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  createdBy User         @relation(fields: [createdById], references: [id])
+  options   PollOption[]
+
+  @@index([workspaceId])
+  @@index([channelId])
+}
+
+model PollOption {
+  id       String @id @default(uuid())
+  pollId   String
+  text     String
+  position Int
+
+  poll  Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes PollVote[]
+
+  @@index([pollId])
+}
+
+model PollVote {
+  id        String   @id @default(uuid())
+  optionId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  option PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([optionId, userId])
+  @@index([optionId])
 }

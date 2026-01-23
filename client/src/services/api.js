@@ -754,6 +754,165 @@ class ApiService {
   async getAvailabilitySummary(workspaceId, date) {
     return this.request(`/availability/workspace/${workspaceId}/summary/${date}`);
   }
+
+  // Song Attachments
+  async getSongAttachments(songId) {
+    return this.request(`/songs/${songId}/attachments`);
+  }
+
+  async addSongAttachment(songId, data) {
+    return this.request(`/songs/${songId}/attachments`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteSongAttachment(songId, attachmentId) {
+    return this.request(`/songs/${songId}/attachments/${attachmentId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Contacts
+  async getContacts(workspaceId, category = null) {
+    const params = category ? `?category=${category}` : '';
+    return this.request(`/contacts/workspace/${workspaceId}${params}`);
+  }
+
+  async createContact(workspaceId, data) {
+    return this.request(`/contacts/workspace/${workspaceId}`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async getContact(contactId) {
+    return this.request(`/contacts/${contactId}`);
+  }
+
+  async updateContact(contactId, data) {
+    return this.request(`/contacts/${contactId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteContact(contactId) {
+    return this.request(`/contacts/${contactId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Announcements
+  async getAnnouncements(workspaceId, pinnedOnly = false) {
+    const params = pinnedOnly ? '?pinnedOnly=true' : '';
+    return this.request(`/announcements/workspace/${workspaceId}${params}`);
+  }
+
+  async createAnnouncement(workspaceId, data) {
+    return this.request(`/announcements/workspace/${workspaceId}`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async getAnnouncement(announcementId) {
+    return this.request(`/announcements/${announcementId}`);
+  }
+
+  async updateAnnouncement(announcementId, data) {
+    return this.request(`/announcements/${announcementId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async acknowledgeAnnouncement(announcementId) {
+    return this.request(`/announcements/${announcementId}/acknowledge`, {
+      method: 'POST'
+    });
+  }
+
+  async deleteAnnouncement(announcementId) {
+    return this.request(`/announcements/${announcementId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Polls
+  async getPolls(workspaceId, options = {}) {
+    const params = new URLSearchParams();
+    if (options.channelId) params.append('channelId', options.channelId);
+    if (options.includeCompleted) params.append('includeCompleted', 'true');
+    const query = params.toString();
+    return this.request(`/polls/workspace/${workspaceId}${query ? `?${query}` : ''}`);
+  }
+
+  async createPoll(workspaceId, data) {
+    return this.request(`/polls/workspace/${workspaceId}`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async getPoll(pollId) {
+    return this.request(`/polls/${pollId}`);
+  }
+
+  async votePoll(pollId, optionIds) {
+    return this.request(`/polls/${pollId}/vote`, {
+      method: 'POST',
+      body: JSON.stringify({ optionIds })
+    });
+  }
+
+  async closePoll(pollId) {
+    return this.request(`/polls/${pollId}/close`, {
+      method: 'POST'
+    });
+  }
+
+  async deletePoll(pollId) {
+    return this.request(`/polls/${pollId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Medleys
+  async getMedleys(workspaceId) {
+    return this.request(`/medleys/workspace/${workspaceId}`);
+  }
+
+  async createMedley(workspaceId, data) {
+    return this.request(`/medleys/workspace/${workspaceId}`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async getMedley(medleyId) {
+    return this.request(`/medleys/${medleyId}`);
+  }
+
+  async updateMedley(medleyId, data) {
+    return this.request(`/medleys/${medleyId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async reorderMedley(medleyId, songIds) {
+    return this.request(`/medleys/${medleyId}/reorder`, {
+      method: 'PUT',
+      body: JSON.stringify({ songIds })
+    });
+  }
+
+  async deleteMedley(medleyId) {
+    return this.request(`/medleys/${medleyId}`, {
+      method: 'DELETE'
+    });
+  }
 }
 
 export const api = new ApiService();

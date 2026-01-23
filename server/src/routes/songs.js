@@ -36,7 +36,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 // Create a song
 router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
-    const { title, shortName, artist, duration, key, bpm, notes, youtubeUrl, spotifyUrl } = req.body;
+    const { title, shortName, artist, duration, key, bpm, notes, lyrics, arrangement, youtubeUrl, spotifyUrl } = req.body;
 
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
@@ -51,6 +51,8 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
         key,
         bpm,
         notes,
+        lyrics,
+        arrangement,
         youtubeUrl,
         spotifyUrl,
         workspaceId: req.params.workspaceId,
@@ -243,6 +245,9 @@ router.get('/:songId', authenticate, async (req, res) => {
         createdBy: {
           select: { id: true, displayName: true }
         },
+        attachments: {
+          orderBy: { createdAt: 'desc' }
+        },
         setlistSongs: {
           include: {
             setlist: {
@@ -274,7 +279,7 @@ router.get('/:songId', authenticate, async (req, res) => {
 // Update a song
 router.put('/:songId', authenticate, async (req, res) => {
   try {
-    const { title, shortName, artist, duration, key, bpm, notes, youtubeUrl, spotifyUrl } = req.body;
+    const { title, shortName, artist, duration, key, bpm, notes, lyrics, arrangement, youtubeUrl, spotifyUrl } = req.body;
 
     const song = await prisma.song.update({
       where: { id: req.params.songId },
@@ -286,6 +291,8 @@ router.put('/:songId', authenticate, async (req, res) => {
         ...(key !== undefined && { key }),
         ...(bpm !== undefined && { bpm }),
         ...(notes !== undefined && { notes }),
+        ...(lyrics !== undefined && { lyrics }),
+        ...(arrangement !== undefined && { arrangement }),
         ...(youtubeUrl !== undefined && { youtubeUrl }),
         ...(spotifyUrl !== undefined && { spotifyUrl })
       },
@@ -480,6 +487,93 @@ router.delete('/:songId', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Delete song error:', error);
     res.status(500).json({ error: 'Failed to delete song' });
+  }
+});
+
+// Song Attachments
+
+// Get attachments for a song
+router.get('/:songId/attachments', authenticate, async (req, res) => {
+  try {
+    const attachments = await prisma.songAttachment.findMany({
+      where: { songId: req.params.songId },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(attachments);
+  } catch (error) {
+    console.error('Get attachments error:', error);
+    res.status(500).json({ error: 'Failed to get attachments' });
+  }
+});
+
+// Add attachment to a song
+router.post('/:songId/attachments', authenticate, async (req, res) => {
+  try {
+    const { filename, url, type, size } = req.body;
+
+    if (!filename || !url) {
+      return res.status(400).json({ error: 'Filename and URL are required' });
+    }
+
+    const song = await prisma.song.findUnique({
+      where: { id: req.params.songId }
+    });
+
+    if (!song) {
+      return res.status(404).json({ error: 'Song not found' });
+    }
+
+    const attachment = await prisma.songAttachment.create({
+      data: {
+        songId: req.params.songId,
+        filename,
+        url,
+        type: type || 'file',
+        size
+      }
+    });
+
+    // Broadcast update
+    const io = req.app.get('io');
+    io.to(`workspace:${song.workspaceId}`).emit('song:attachmentAdded', {
+      songId: req.params.songId,
+      attachment
+    });
+
+    res.status(201).json(attachment);
+  } catch (error) {
+    console.error('Add attachment error:', error);
+    res.status(500).json({ error: 'Failed to add attachment' });
+  }
+});
+
+// Delete attachment
+router.delete('/:songId/attachments/:attachmentId', authenticate, async (req, res) => {
+  try {
+    const attachment = await prisma.songAttachment.findUnique({
+      where: { id: req.params.attachmentId },
+      include: { song: true }
+    });
+
+    if (!attachment) {
+      return res.status(404).json({ error: 'Attachment not found' });
+    }
+
+    await prisma.songAttachment.delete({
+      where: { id: req.params.attachmentId }
+    });
+
+    // Broadcast update
+    const io = req.app.get('io');
+    io.to(`workspace:${attachment.song.workspaceId}`).emit('song:attachmentDeleted', {
+      songId: req.params.songId,
+      attachmentId: req.params.attachmentId
+    });
+
+    res.json({ message: 'Attachment deleted' });
+  } catch (error) {
+    console.error('Delete attachment error:', error);
+    res.status(500).json({ error: 'Failed to delete attachment' });
   }
 });
 

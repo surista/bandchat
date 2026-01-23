@@ -1,0 +1,157 @@
+import express from 'express';
+import { authenticate, isWorkspaceMember } from '../middleware/auth.js';
+import prisma from '../lib/prisma.js';
+
+const router = express.Router();
+
+// Get all contacts for a workspace
+router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
+  try {
+    const { category } = req.query;
+
+    const contacts = await prisma.contact.findMany({
+      where: {
+        workspaceId: req.params.workspaceId,
+        ...(category && { category })
+      },
+      include: {
+        createdBy: {
+          select: { id: true, displayName: true }
+        }
+      },
+      orderBy: [
+        { category: 'asc' },
+        { name: 'asc' }
+      ]
+    });
+
+    res.json(contacts);
+  } catch (error) {
+    console.error('Get contacts error:', error);
+    res.status(500).json({ error: 'Failed to get contacts' });
+  }
+});
+
+// Create a contact
+router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
+  try {
+    const { name, category, email, phone, website, address, notes } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+
+    const contact = await prisma.contact.create({
+      data: {
+        name,
+        category: category || 'other',
+        email,
+        phone,
+        website,
+        address,
+        notes,
+        workspaceId: req.params.workspaceId,
+        createdById: req.user.id
+      },
+      include: {
+        createdBy: {
+          select: { id: true, displayName: true }
+        }
+      }
+    });
+
+    // Broadcast to workspace
+    const io = req.app.get('io');
+    io.to(`workspace:${req.params.workspaceId}`).emit('contact:created', contact);
+
+    res.status(201).json(contact);
+  } catch (error) {
+    console.error('Create contact error:', error);
+    res.status(500).json({ error: 'Failed to create contact' });
+  }
+});
+
+// Get a single contact
+router.get('/:contactId', authenticate, async (req, res) => {
+  try {
+    const contact = await prisma.contact.findUnique({
+      where: { id: req.params.contactId },
+      include: {
+        createdBy: {
+          select: { id: true, displayName: true }
+        }
+      }
+    });
+
+    if (!contact) {
+      return res.status(404).json({ error: 'Contact not found' });
+    }
+
+    res.json(contact);
+  } catch (error) {
+    console.error('Get contact error:', error);
+    res.status(500).json({ error: 'Failed to get contact' });
+  }
+});
+
+// Update a contact
+router.put('/:contactId', authenticate, async (req, res) => {
+  try {
+    const { name, category, email, phone, website, address, notes } = req.body;
+
+    const contact = await prisma.contact.update({
+      where: { id: req.params.contactId },
+      data: {
+        ...(name && { name }),
+        ...(category !== undefined && { category }),
+        ...(email !== undefined && { email }),
+        ...(phone !== undefined && { phone }),
+        ...(website !== undefined && { website }),
+        ...(address !== undefined && { address }),
+        ...(notes !== undefined && { notes })
+      },
+      include: {
+        createdBy: {
+          select: { id: true, displayName: true }
+        }
+      }
+    });
+
+    // Broadcast update
+    const io = req.app.get('io');
+    io.to(`workspace:${contact.workspaceId}`).emit('contact:updated', contact);
+
+    res.json(contact);
+  } catch (error) {
+    console.error('Update contact error:', error);
+    res.status(500).json({ error: 'Failed to update contact' });
+  }
+});
+
+// Delete a contact
+router.delete('/:contactId', authenticate, async (req, res) => {
+  try {
+    const contact = await prisma.contact.findUnique({
+      where: { id: req.params.contactId }
+    });
+
+    if (!contact) {
+      return res.status(404).json({ error: 'Contact not found' });
+    }
+
+    await prisma.contact.delete({
+      where: { id: req.params.contactId }
+    });
+
+    // Broadcast deletion
+    const io = req.app.get('io');
+    io.to(`workspace:${contact.workspaceId}`).emit('contact:deleted', { contactId: req.params.contactId });
+
+    res.json({ message: 'Contact deleted' });
+  } catch (error) {
+    console.error('Delete contact error:', error);
+    res.status(500).json({ error: 'Failed to delete contact' });
+  }
+});
+
+export default router;

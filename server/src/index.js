@@ -16,6 +16,10 @@ import setlistRoutes from './routes/setlists.js';
 import gigRoutes from './routes/gigs.js';
 import bandMemberRoutes from './routes/bandMembers.js';
 import availabilityRoutes from './routes/availability.js';
+import contactRoutes from './routes/contacts.js';
+import announcementRoutes from './routes/announcements.js';
+import pollRoutes from './routes/polls.js';
+import medleyRoutes from './routes/medleys.js';
 import { setupSocketHandlers } from './socket/handlers.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 
@@ -63,6 +67,10 @@ app.use('/api/setlists', setlistRoutes);
 app.use('/api/gigs', gigRoutes);
 app.use('/api/band-members', bandMemberRoutes);
 app.use('/api/availability', availabilityRoutes);
+app.use('/api/contacts', contactRoutes);
+app.use('/api/announcements', announcementRoutes);
+app.use('/api/polls', pollRoutes);
+app.use('/api/medleys', medleyRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
