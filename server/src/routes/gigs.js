@@ -57,6 +57,13 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
         media: {
           orderBy: { createdAt: 'desc' }
         },
+        attendees: {
+          include: {
+            user: {
+              select: { id: true, displayName: true, avatarUrl: true }
+            }
+          }
+        },
         _count: {
           select: { songsPlayed: true }
         }
@@ -488,7 +495,7 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
 // Create a gig
 router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
-    const { title, type, date, endDate, venue, address, notes, pay, setlistId, setlistIds, isLocked, isPersonal } = req.body;
+    const { title, type, date, endDate, venue, address, notes, pay, setlistId, setlistIds, isLocked, isPersonal, attendeeIds } = req.body;
 
     if (!title || !date) {
       return res.status(400).json({ error: 'Title and date are required' });
@@ -521,6 +528,15 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
               setNumber: index + 1
             }))
           }
+        }),
+        // Create attendee entries if attendeeIds provided
+        ...(attendeeIds && attendeeIds.length > 0 && {
+          attendees: {
+            create: attendeeIds.map(userId => ({
+              userId,
+              status: 'ATTENDING'
+            }))
+          }
         })
       },
       include: {
@@ -537,6 +553,13 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
             }
           },
           orderBy: { setNumber: 'asc' }
+        },
+        attendees: {
+          include: {
+            user: {
+              select: { id: true, displayName: true, avatarUrl: true }
+            }
+          }
         }
       }
     });
@@ -585,6 +608,13 @@ router.get('/:gigId', authenticate, async (req, res) => {
           include: {
             song: true
           }
+        },
+        attendees: {
+          include: {
+            user: {
+              select: { id: true, displayName: true, avatarUrl: true }
+            }
+          }
         }
       }
     });
@@ -611,7 +641,7 @@ router.get('/:gigId', authenticate, async (req, res) => {
 // Update a gig
 router.put('/:gigId', authenticate, async (req, res) => {
   try {
-    const { title, type, date, endDate, venue, address, notes, pay, status, setlistId, setlistIds, isLocked, isPersonal } = req.body;
+    const { title, type, date, endDate, venue, address, notes, pay, status, setlistId, setlistIds, isLocked, isPersonal, attendeeIds } = req.body;
 
     // Get the existing gig and check permissions
     const existingGig = await prisma.gig.findUnique({
@@ -665,6 +695,25 @@ router.put('/:gigId', authenticate, async (req, res) => {
       }
     }
 
+    // If attendeeIds provided, handle attendee update
+    if (attendeeIds !== undefined) {
+      // Delete existing attendee entries
+      await prisma.gigAttendee.deleteMany({
+        where: { gigId: req.params.gigId }
+      });
+
+      // Create new ones if there are attendeeIds
+      if (attendeeIds && attendeeIds.length > 0) {
+        await prisma.gigAttendee.createMany({
+          data: attendeeIds.map(userId => ({
+            gigId: req.params.gigId,
+            userId,
+            status: 'ATTENDING'
+          }))
+        });
+      }
+    }
+
     const gig = await prisma.gig.update({
       where: { id: req.params.gigId },
       data: {
@@ -700,6 +749,13 @@ router.put('/:gigId', authenticate, async (req, res) => {
             }
           },
           orderBy: { setNumber: 'asc' }
+        },
+        attendees: {
+          include: {
+            user: {
+              select: { id: true, displayName: true, avatarUrl: true }
+            }
+          }
         }
       }
     });

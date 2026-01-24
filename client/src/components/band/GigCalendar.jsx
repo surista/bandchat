@@ -768,6 +768,7 @@ function GigCalendar({ workspaceId, workspace }) {
           }}
           isAdmin={isAdmin}
           workspaceId={workspaceId}
+          workspaceMembers={workspace?.members || []}
         />
       )}
 

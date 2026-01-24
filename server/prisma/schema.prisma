@@ -44,6 +44,7 @@ model User {
   memberAchievements      MemberAchievement[]
   recordings              Recording[]
   bandMemberLinks         BandMember[]
+  gigAttendances          GigAttendee[]
 }
 
 model RefreshToken {
@@ -342,8 +343,29 @@ model Gig {
   setlists    GigSetlist[] // Multi-set support
   songsPlayed GigSong[]
   media       GigMedia[]
+  attendees   GigAttendee[]
 
   @@index([workspaceId, date])
+}
+
+model GigAttendee {
+  id        String   @id @default(uuid())
+  gigId     String
+  userId    String
+  status    AttendeeStatus @default(ATTENDING)
+  createdAt DateTime @default(now())
+
+  gig  Gig  @relation(fields: [gigId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([gigId, userId])
+  @@index([gigId])
+}
+
+enum AttendeeStatus {
+  ATTENDING
+  NOT_ATTENDING
+  MAYBE
 }
 
 model GigSetlist {

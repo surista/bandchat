@@ -33,7 +33,13 @@
       "WebFetch(domain:songbpm.com)",
       "Bash(dir /s /b *.md)",
       "Bash(findstr:*)",
-      "Bash(where:*)"
+      "Bash(where:*)",
+      "Bash(wc:*)",
+      "Bash(done)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout:*)",
+      "Bash(curl:*)",
+      "Bash(npx prisma generate:*)"
     ]
   }
 }

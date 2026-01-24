@@ -33,7 +33,7 @@ const getGoogleCalendarUrl = (gig) => {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 };
 
-function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmin, workspaceId }) {
+function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmin, workspaceId, workspaceMembers = [] }) {
   // Round minutes to nearest half hour
   const roundToHalfHour = (minutes) => minutes < 15 ? '00' : minutes < 45 ? '30' : '00';
 
@@ -101,6 +101,9 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
   });
   const [selectedSets, setSelectedSets] = useState(getInitialSets());
   const [useMultiSet, setUseMultiSet] = useState((gig?.setlists?.length || 0) > 1);
+  const [selectedAttendees, setSelectedAttendees] = useState(
+    gig?.attendees?.map(a => a.userId || a.user?.id) || []
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [availabilitySummary, setAvailabilitySummary] = useState(null);
@@ -155,6 +158,9 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
         saveData.setlistId = null;
         saveData.setlistIds = null;
       }
+
+      // Include attendees
+      saveData.attendeeIds = selectedAttendees;
 
       await onSave(saveData);
     } catch (err) {
@@ -359,6 +365,61 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                       </span>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Attendees Selection */}
+              {workspaceMembers.length > 0 && (
+                <div>
+                  <label className="modal-label">
+                    Attending
+                    <span className="text-gray-500 font-normal ml-2">
+                      ({selectedAttendees.length} selected)
+                    </span>
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {workspaceMembers.map(member => {
+                      const userId = member.user?.id || member.userId;
+                      const displayName = member.user?.displayName || member.displayName;
+                      const isSelected = selectedAttendees.includes(userId);
+
+                      // Get availability status for this member if available
+                      const availStatus = availabilitySummary?.members?.find(
+                        m => m.user.id === userId
+                      )?.status;
+
+                      return (
+                        <button
+                          key={userId}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setSelectedAttendees(selectedAttendees.filter(id => id !== userId));
+                            } else {
+                              setSelectedAttendees([...selectedAttendees, userId]);
+                            }
+                          }}
+                          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                            isSelected
+                              ? 'bg-green-600 text-white ring-2 ring-green-400'
+                              : availStatus === 'UNAVAILABLE'
+                              ? 'bg-gray-700 text-red-400 hover:bg-gray-600'
+                              : availStatus === 'MAYBE'
+                              ? 'bg-gray-700 text-yellow-400 hover:bg-gray-600'
+                              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          }`}
+                        >
+                          {isSelected && <span className="mr-1">✓</span>}
+                          {displayName?.split(' ')[0]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selectedAttendees.length === 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Click members to mark them as attending
+                    </p>
+                  )}
                 </div>
               )}
 
