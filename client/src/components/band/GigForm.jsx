@@ -68,7 +68,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
 
   const [formData, setFormData] = useState({
     title: gig?.title || '',
-    type: gig?.type || 'GIG',
+    type: gig?.type || 'REHEARSAL',
     startDate: getDefaultDate(),
     startTime: getTimeFromDate(gig?.date, '19:00'),
     endTime: getTimeFromDate(gig?.endDate, '21:00'),
