@@ -443,10 +443,24 @@ router.put('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, asyn
 router.post('/:workspaceId/members/:userId/reset-password', authenticate, isWorkspaceAdmin, async (req, res) => {
   try {
     const { workspaceId, userId } = req.params;
-    const { newPassword } = req.body;
+    const { newPassword, adminPassword } = req.body;
+
+    if (!adminPassword) {
+      return res.status(400).json({ error: 'Admin password is required for verification' });
+    }
 
     if (!newPassword || newPassword.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    // Verify admin's password before allowing reset
+    const admin = await prisma.user.findUnique({
+      where: { id: req.user.id }
+    });
+
+    const isValidPassword = await bcrypt.compare(adminPassword, admin.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Invalid admin password' });
     }
 
     // Verify user is a member of this workspace

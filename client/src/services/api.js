@@ -234,10 +234,10 @@ class ApiService {
     });
   }
 
-  async adminResetPassword(workspaceId, userId, newPassword) {
+  async adminResetPassword(workspaceId, userId, newPassword, adminPassword) {
     return this.request(`/workspaces/${workspaceId}/members/${userId}/reset-password`, {
       method: 'POST',
-      body: JSON.stringify({ newPassword })
+      body: JSON.stringify({ newPassword, adminPassword })
     });
   }
 

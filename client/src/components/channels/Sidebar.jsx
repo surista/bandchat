@@ -1146,6 +1146,8 @@ function Sidebar({
                           <>
                             <button
                               onClick={async () => {
+                                const adminPassword = prompt('Enter YOUR password to confirm:');
+                                if (!adminPassword) return;
                                 const newPassword = prompt(`Enter new password for ${member.user.displayName} (min 6 characters):`);
                                 if (!newPassword) return;
                                 if (newPassword.length < 6) {
@@ -1153,7 +1155,7 @@ function Sidebar({
                                   return;
                                 }
                                 try {
-                                  await api.adminResetPassword(workspace.id, member.user.id, newPassword);
+                                  await api.adminResetPassword(workspace.id, member.user.id, newPassword, adminPassword);
                                   alert(`Password reset for ${member.user.displayName}`);
                                 } catch (err) {
                                   alert(err.message);
