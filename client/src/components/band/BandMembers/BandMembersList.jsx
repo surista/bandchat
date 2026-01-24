@@ -259,7 +259,7 @@ function BandMembersList({ workspaceId }) {
               Timeline
             </h3>
             <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
-              <BandTimeline members={members.all} />
+              <BandTimeline members={members.all} onMemberClick={(userId) => setShowProfileUserId(userId)} />
             </div>
           </div>
         )}

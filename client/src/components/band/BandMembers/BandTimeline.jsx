@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 
-function BandTimeline({ members }) {
+function BandTimeline({ members, onMemberClick }) {
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(800);
 
@@ -230,26 +230,46 @@ function BandTimeline({ members }) {
                   fill={i % 2 === 0 ? '#1f2937' : '#111827'}
                 />
 
-                {/* Member avatar */}
-                <TimelineAvatar
-                  member={member}
-                  x={4}
-                  y={(rowHeight - avatarSize) / 2}
-                />
-
-                {/* Member name */}
-                <text
-                  x={avatarSize + 10}
-                  y={rowHeight / 2 + 4}
-                  fill={isCurrent ? '#ffffff' : '#9ca3af'}
-                  fontSize="12"
-                  fontWeight={isCurrent ? '500' : '400'}
+                {/* Member avatar and name - clickable if linked to user */}
+                <g
+                  onClick={() => {
+                    const linkedId = member.linkedUserId || member.linkedUser?.id;
+                    if (linkedId && onMemberClick) {
+                      onMemberClick(linkedId);
+                    }
+                  }}
+                  style={{ cursor: (member.linkedUserId || member.linkedUser?.id) ? 'pointer' : 'default' }}
+                  className="timeline-member-row"
                 >
-                  {member.name.length > (member.isGuest ? 9 : 11) ? member.name.slice(0, member.isGuest ? 7 : 9) + '...' : member.name}
-                  {member.isGuest && (
-                    <tspan fill="#a855f7" fontSize="10"> (G)</tspan>
-                  )}
-                </text>
+                  {/* Invisible clickable area */}
+                  <rect
+                    x={0}
+                    y={0}
+                    width={labelWidth}
+                    height={rowHeight}
+                    fill="transparent"
+                  />
+                  {/* Member avatar */}
+                  <TimelineAvatar
+                    member={member}
+                    x={4}
+                    y={(rowHeight - avatarSize) / 2}
+                  />
+
+                  {/* Member name */}
+                  <text
+                    x={avatarSize + 10}
+                    y={rowHeight / 2 + 4}
+                    fill={isCurrent ? '#ffffff' : '#9ca3af'}
+                    fontSize="12"
+                    fontWeight={isCurrent ? '500' : '400'}
+                  >
+                    {member.name.length > (member.isGuest ? 9 : 11) ? member.name.slice(0, member.isGuest ? 7 : 9) + '...' : member.name}
+                    {member.isGuest && (
+                      <tspan fill="#a855f7" fontSize="10"> (G)</tspan>
+                    )}
+                  </text>
+                </g>
 
                 {/* Timeline bars - one per stint */}
                 <g transform={`translate(${labelWidth}, 0)`}>
