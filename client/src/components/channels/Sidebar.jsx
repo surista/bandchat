@@ -41,6 +41,7 @@ function Sidebar({
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState({});
+  const [collapsedSections, setCollapsedSections] = useState({});
   const [showSettings, setShowSettings] = useState(false);
   const [settingsTab, setSettingsTab] = useState('profile');
   const [editDisplayName, setEditDisplayName] = useState('');
@@ -206,6 +207,13 @@ function Sidebar({
     }));
   };
 
+  const toggleSectionCollapse = (section) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
   const handleAvatarUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -281,229 +289,275 @@ function Sidebar({
       {/* Channels List */}
       <div className="flex-1 overflow-y-auto py-4">
         <div className="px-4 mb-2 flex items-center justify-between">
-          <span className="text-sm font-medium uppercase tracking-wide text-gray-400">
-            Channels
-          </span>
-          <div className="flex gap-1">
-            <button
-              onClick={() => setShowCreateGroup(true)}
-              className="text-gray-400 hover:text-white transition-colors text-sm px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
-              title="Create group"
-              aria-label="Create group"
-            >
-              📁
-            </button>
-            <button
-              onClick={() => setShowCreateChannel(true)}
-              className="text-gray-400 hover:text-white transition-colors text-lg px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
-              title="Create channel"
-              aria-label="Create channel"
-            >
-              +
-            </button>
-          </div>
-        </div>
-
-        {/* Channel Groups */}
-        {channelGroups.map((group) => (
-          <div key={group.id} className="mb-2">
-            <button
-              onClick={() => toggleGroupCollapse(group.id)}
-              className="w-full px-4 py-2.5 sm:py-1 flex items-center gap-1 text-gray-400 hover:text-white transition-colors text-sm min-h-[44px] sm:min-h-0"
-              aria-expanded={!collapsedGroups[group.id]}
-              aria-label={`${group.name} channel group`}
-            >
-              <span className={`transform transition-transform ${collapsedGroups[group.id] ? '' : 'rotate-90'}`}>
-                ▶
-              </span>
-              <span className="font-medium uppercase tracking-wide truncate">
-                {group.name}
-              </span>
-              <span className="text-xs text-gray-500 ml-auto">
-                {groupedChannels[group.id]?.length || 0}
-              </span>
-            </button>
-            {!collapsedGroups[group.id] && (
-              <div className="space-y-0.5 ml-2">
-                {groupedChannels[group.id]?.map(renderChannel)}
-              </div>
-            )}
-          </div>
-        ))}
-
-        {/* Ungrouped Channels */}
-        {ungroupedChannels.length > 0 && (
-          <div className="space-y-0.5">
-            {channelGroups.length > 0 && (
-              <div className="px-4 py-1 text-xs text-gray-500 uppercase tracking-wide">
-                Other Channels
-              </div>
-            )}
-            {ungroupedChannels.map(renderChannel)}
-          </div>
-        )}
-
-        {/* Direct Messages Section */}
-        <div className="mt-6 px-4 mb-2 flex items-center justify-between">
-          <span className="text-sm font-medium uppercase tracking-wide text-gray-400">
-            Direct Messages
-          </span>
-        </div>
-
-        <div className="space-y-0.5">
-          {directMessages.map((dm) => {
-            const displayName = dm.otherMembers?.length > 0
-              ? dm.otherMembers.map(m => m.displayName).join(', ')
-              : 'Unknown';
-            const initial = dm.otherMembers?.[0]?.displayName?.charAt(0).toUpperCase() || '?';
-
-            return (
+          <button
+            onClick={() => toggleSectionCollapse('channels')}
+            className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors"
+            aria-expanded={!collapsedSections.channels}
+          >
+            <span className={`transform transition-transform text-xs ${collapsedSections.channels ? '' : 'rotate-90'}`}>
+              ▶
+            </span>
+            <span className="text-sm font-bold uppercase tracking-wide">
+              CHANNELS
+            </span>
+          </button>
+          {!collapsedSections.channels && (
+            <div className="flex gap-1">
               <button
-                key={dm.id}
-                onClick={() => onSelectChannel(dm)}
-                className={`channel-item w-full ${
-                  selectedChannel?.id === dm.id ? 'active' : ''
-                }`}
+                onClick={() => setShowCreateGroup(true)}
+                className="text-gray-400 hover:text-white transition-colors text-sm px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                title="Create group"
+                aria-label="Create group"
               >
-                <div className="w-5 h-5 rounded bg-gray-600 flex items-center justify-center text-xs text-white flex-shrink-0">
-                  {initial}
-                </div>
-                <span className="flex-1 truncate">{displayName}</span>
-                {dm.unreadCount > 0 && (
-                  <span className="bg-slack-red text-white text-xs px-1.5 py-0.5 rounded-full">
-                    {dm.unreadCount}
-                  </span>
-                )}
+                📁
               </button>
-            );
-          })}
-          {directMessages.length === 0 && (
-            <div className="px-4 py-1 text-gray-500 text-sm italic">
-              Click a member to start a DM
+              <button
+                onClick={() => setShowCreateChannel(true)}
+                className="text-gray-400 hover:text-white transition-colors text-lg px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                title="Create channel"
+                aria-label="Create channel"
+              >
+                +
+              </button>
             </div>
           )}
         </div>
 
-        {/* Band Section */}
-        <div className="mt-6 px-4 mb-2">
-          <span className="text-sm font-medium uppercase tracking-wide text-gray-400">
-            Band
-          </span>
-        </div>
-        <div className="space-y-0.5">
+        {/* Channel Groups */}
+        {!collapsedSections.channels && (
+          <>
+            {channelGroups.map((group) => (
+              <div key={group.id} className="mb-2 ml-2">
+                <button
+                  onClick={() => toggleGroupCollapse(group.id)}
+                  className="w-full px-4 py-2.5 sm:py-1 flex items-center gap-1 text-gray-400 hover:text-white transition-colors text-sm min-h-[44px] sm:min-h-0"
+                  aria-expanded={!collapsedGroups[group.id]}
+                  aria-label={`${group.name} channel group`}
+                >
+                  <span className={`transform transition-transform ${collapsedGroups[group.id] ? '' : 'rotate-90'}`}>
+                    ▶
+                  </span>
+                  <span className="font-medium uppercase tracking-wide truncate">
+                    {group.name}
+                  </span>
+                  <span className="text-xs text-gray-500 ml-auto">
+                    {groupedChannels[group.id]?.length || 0}
+                  </span>
+                </button>
+                {!collapsedGroups[group.id] && (
+                  <div className="space-y-0.5 ml-2">
+                    {groupedChannels[group.id]?.map(renderChannel)}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Ungrouped Channels */}
+            {ungroupedChannels.length > 0 && (
+              <div className="space-y-0.5 ml-2">
+                {channelGroups.length > 0 && (
+                  <div className="px-4 py-1 text-xs text-gray-500 uppercase tracking-wide">
+                    Other Channels
+                  </div>
+                )}
+                {ungroupedChannels.map(renderChannel)}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Direct Messages Section */}
+        <div className="mt-6 px-4 mb-2 flex items-center justify-between">
           <button
-            onClick={() => onSelectBandView?.('songs')}
-            className={`channel-item w-full ${activeBandView === 'songs' ? 'active' : ''}`}
+            onClick={() => toggleSectionCollapse('dms')}
+            className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors"
+            aria-expanded={!collapsedSections.dms}
           >
-            <span className="text-gray-400">🎵</span>
-            <span className="flex-1 truncate">Songs</span>
-          </button>
-          <button
-            onClick={() => onSelectBandView?.('setlists')}
-            className={`channel-item w-full ${activeBandView === 'setlists' ? 'active' : ''}`}
-          >
-            <span className="text-gray-400">📋</span>
-            <span className="flex-1 truncate">Setlists</span>
-          </button>
-          <button
-            onClick={() => onSelectBandView?.('calendar')}
-            className={`channel-item w-full ${activeBandView === 'calendar' ? 'active' : ''}`}
-          >
-            <span className="text-gray-400">📅</span>
-            <span className="flex-1 truncate">Calendar</span>
-          </button>
-          <button
-            onClick={() => onSelectBandView?.('availability')}
-            className={`channel-item w-full ${activeBandView === 'availability' ? 'active' : ''}`}
-          >
-            <span className="text-gray-400">🗓️</span>
-            <span className="flex-1 truncate">Availability</span>
-          </button>
-          <button
-            onClick={() => onSelectBandView?.('stats')}
-            className={`channel-item w-full ${activeBandView === 'stats' ? 'active' : ''}`}
-          >
-            <span className="text-gray-400">📊</span>
-            <span className="flex-1 truncate">Stats</span>
-          </button>
-          <button
-            onClick={() => onSelectBandView?.('archive')}
-            className={`channel-item w-full ${activeBandView === 'archive' ? 'active' : ''}`}
-          >
-            <span className="text-gray-400">📸</span>
-            <span className="flex-1 truncate">Gig Archive</span>
-          </button>
-          <button
-            onClick={() => onSelectBandView?.('members')}
-            className={`channel-item w-full ${activeBandView === 'members' ? 'active' : ''}`}
-          >
-            <span className="text-gray-400">👥</span>
-            <span className="flex-1 truncate">Members</span>
-          </button>
-          <button
-            onClick={() => onSelectBandView?.('contacts')}
-            className={`channel-item w-full ${activeBandView === 'contacts' ? 'active' : ''}`}
-          >
-            <span className="text-gray-400">📇</span>
-            <span className="flex-1 truncate">Contacts</span>
-          </button>
-          <button
-            onClick={() => onSelectBandView?.('announcements')}
-            className={`channel-item w-full ${activeBandView === 'announcements' ? 'active' : ''}`}
-          >
-            <span className="text-gray-400">📢</span>
-            <span className="flex-1 truncate">Announcements</span>
-          </button>
-          <button
-            onClick={() => onSelectBandView?.('polls')}
-            className={`channel-item w-full ${activeBandView === 'polls' ? 'active' : ''}`}
-          >
-            <span className="text-gray-400">🗳️</span>
-            <span className="flex-1 truncate">Polls</span>
-          </button>
-          <button
-            onClick={() => onSelectBandView?.('medleys')}
-            className={`channel-item w-full ${activeBandView === 'medleys' ? 'active' : ''}`}
-          >
-            <span className="text-gray-400">🎶</span>
-            <span className="flex-1 truncate">Medleys</span>
-          </button>
-          <button
-            onClick={() => onSelectBandView?.('timeline')}
-            className={`channel-item w-full ${activeBandView === 'timeline' ? 'active' : ''}`}
-          >
-            <span className="text-gray-400">📜</span>
-            <span className="flex-1 truncate">Timeline</span>
-          </button>
-          <button
-            onClick={() => onSelectBandView?.('achievements')}
-            className={`channel-item w-full ${activeBandView === 'achievements' ? 'active' : ''}`}
-          >
-            <span className="text-gray-400">🏆</span>
-            <span className="flex-1 truncate">Achievements</span>
-          </button>
-          <button
-            onClick={() => onSelectBandView?.('recordings')}
-            className={`channel-item w-full ${activeBandView === 'recordings' ? 'active' : ''}`}
-          >
-            <span className="text-gray-400">🎙️</span>
-            <span className="flex-1 truncate">Recordings</span>
-          </button>
-          <button
-            onClick={() => onSelectBandView?.('suggestions')}
-            className={`channel-item w-full ${activeBandView === 'suggestions' ? 'active' : ''}`}
-          >
-            <span className="text-gray-400">💡</span>
-            <span className="flex-1 truncate">Song Intelligence</span>
+            <span className={`transform transition-transform text-xs ${collapsedSections.dms ? '' : 'rotate-90'}`}>
+              ▶
+            </span>
+            <span className="text-sm font-bold uppercase tracking-wide">
+              DIRECT MESSAGES
+            </span>
           </button>
         </div>
 
+        {!collapsedSections.dms && (
+          <div className="space-y-0.5 ml-2">
+            {directMessages.map((dm) => {
+              const displayName = dm.otherMembers?.length > 0
+                ? dm.otherMembers.map(m => m.displayName).join(', ')
+                : 'Unknown';
+              const initial = dm.otherMembers?.[0]?.displayName?.charAt(0).toUpperCase() || '?';
+
+              return (
+                <button
+                  key={dm.id}
+                  onClick={() => onSelectChannel(dm)}
+                  className={`channel-item w-full ${
+                    selectedChannel?.id === dm.id ? 'active' : ''
+                  }`}
+                >
+                  <div className="w-5 h-5 rounded bg-gray-600 flex items-center justify-center text-xs text-white flex-shrink-0">
+                    {initial}
+                  </div>
+                  <span className="flex-1 truncate">{displayName}</span>
+                  {dm.unreadCount > 0 && (
+                    <span className="bg-slack-red text-white text-xs px-1.5 py-0.5 rounded-full">
+                      {dm.unreadCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+            {directMessages.length === 0 && (
+              <div className="px-4 py-1 text-gray-500 text-sm italic">
+                Click a member to start a DM
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Band Section */}
+        <div className="mt-6 px-4 mb-2">
+          <button
+            onClick={() => toggleSectionCollapse('band')}
+            className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors"
+            aria-expanded={!collapsedSections.band}
+          >
+            <span className={`transform transition-transform text-xs ${collapsedSections.band ? '' : 'rotate-90'}`}>
+              ▶
+            </span>
+            <span className="text-sm font-bold uppercase tracking-wide">
+              BAND
+            </span>
+          </button>
+        </div>
+        {!collapsedSections.band && (
+          <div className="space-y-0.5 ml-2">
+            <button
+              onClick={() => onSelectBandView?.('songs')}
+              className={`channel-item w-full ${activeBandView === 'songs' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">🎵</span>
+              <span className="flex-1 truncate">Songs</span>
+            </button>
+            <button
+              onClick={() => onSelectBandView?.('setlists')}
+              className={`channel-item w-full ${activeBandView === 'setlists' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">📋</span>
+              <span className="flex-1 truncate">Setlists</span>
+            </button>
+            <button
+              onClick={() => onSelectBandView?.('calendar')}
+              className={`channel-item w-full ${activeBandView === 'calendar' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">📅</span>
+              <span className="flex-1 truncate">Calendar</span>
+            </button>
+            <button
+              onClick={() => onSelectBandView?.('availability')}
+              className={`channel-item w-full ${activeBandView === 'availability' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">🗓️</span>
+              <span className="flex-1 truncate">Availability</span>
+            </button>
+            <button
+              onClick={() => onSelectBandView?.('stats')}
+              className={`channel-item w-full ${activeBandView === 'stats' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">📊</span>
+              <span className="flex-1 truncate">Stats</span>
+            </button>
+            <button
+              onClick={() => onSelectBandView?.('archive')}
+              className={`channel-item w-full ${activeBandView === 'archive' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">📸</span>
+              <span className="flex-1 truncate">Gig Archive</span>
+            </button>
+            <button
+              onClick={() => onSelectBandView?.('members')}
+              className={`channel-item w-full ${activeBandView === 'members' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">👥</span>
+              <span className="flex-1 truncate">Members</span>
+            </button>
+            <button
+              onClick={() => onSelectBandView?.('contacts')}
+              className={`channel-item w-full ${activeBandView === 'contacts' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">📇</span>
+              <span className="flex-1 truncate">Contacts</span>
+            </button>
+            <button
+              onClick={() => onSelectBandView?.('announcements')}
+              className={`channel-item w-full ${activeBandView === 'announcements' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">📢</span>
+              <span className="flex-1 truncate">Announcements</span>
+            </button>
+            <button
+              onClick={() => onSelectBandView?.('polls')}
+              className={`channel-item w-full ${activeBandView === 'polls' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">🗳️</span>
+              <span className="flex-1 truncate">Polls</span>
+            </button>
+            <button
+              onClick={() => onSelectBandView?.('medleys')}
+              className={`channel-item w-full ${activeBandView === 'medleys' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">🎶</span>
+              <span className="flex-1 truncate">Medleys</span>
+            </button>
+            <button
+              onClick={() => onSelectBandView?.('timeline')}
+              className={`channel-item w-full ${activeBandView === 'timeline' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">📜</span>
+              <span className="flex-1 truncate">Timeline</span>
+            </button>
+            <button
+              onClick={() => onSelectBandView?.('achievements')}
+              className={`channel-item w-full ${activeBandView === 'achievements' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">🏆</span>
+              <span className="flex-1 truncate">Achievements</span>
+            </button>
+            <button
+              onClick={() => onSelectBandView?.('recordings')}
+              className={`channel-item w-full ${activeBandView === 'recordings' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">🎙️</span>
+              <span className="flex-1 truncate">Recordings</span>
+            </button>
+            <button
+              onClick={() => onSelectBandView?.('suggestions')}
+              className={`channel-item w-full ${activeBandView === 'suggestions' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">💡</span>
+              <span className="flex-1 truncate">Song Intelligence</span>
+            </button>
+          </div>
+        )}
+
         {/* Members Section */}
         <div className="mt-6 px-4 mb-2 flex items-center justify-between">
-          <span className="text-sm font-medium uppercase tracking-wide text-gray-400">
-            Members ({workspace.members?.length || 0})
-          </span>
-          {workspace.members?.find(m => m.user.id === user?.id)?.role === 'ADMIN' && (
+          <button
+            onClick={() => toggleSectionCollapse('members')}
+            className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors"
+            aria-expanded={!collapsedSections.members}
+          >
+            <span className={`transform transition-transform text-xs ${collapsedSections.members ? '' : 'rotate-90'}`}>
+              ▶
+            </span>
+            <span className="text-sm font-bold uppercase tracking-wide">
+              MEMBERS ({workspace.members?.length || 0})
+            </span>
+          </button>
+          {!collapsedSections.members && workspace.members?.find(m => m.user.id === user?.id)?.role === 'ADMIN' && (
             <button
               onClick={onShowInvite}
               className="text-gray-400 hover:text-white transition-colors text-lg px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
@@ -515,40 +569,42 @@ function Sidebar({
           )}
         </div>
 
-        <div className="space-y-0.5">
-          {workspace.members?.slice(0, 10).map((member) => (
-            <button
-              key={member.user.id}
-              onClick={() => setShowProfileUserId(member.user.id)}
-              className="flex items-center gap-2 px-4 py-2.5 sm:py-1 text-gray-300 w-full text-left min-h-[44px] sm:min-h-0 hover:bg-slack-hover cursor-pointer"
-              aria-label={`View ${member.user.displayName}'s profile`}
-            >
-              {member.user.avatarUrl ? (
-                <img
-                  src={member.user.avatarUrl}
-                  alt=""
-                  className="w-6 h-6 rounded-full object-cover flex-shrink-0"
-                />
-              ) : (
-                <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs flex-shrink-0">
-                  {member.user.displayName?.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <span className="truncate flex-1">
-                {member.user.displayName}
-                {member.user.id === user?.id && ' (you)'}
-              </span>
-              {member.role === 'ADMIN' && (
-                <span className="text-xs text-gray-500">admin</span>
-              )}
-            </button>
-          ))}
-          {workspace.members?.length > 10 && (
-            <div className="px-4 py-1 text-gray-500 text-sm">
-              +{workspace.members.length - 10} more
-            </div>
-          )}
-        </div>
+        {!collapsedSections.members && (
+          <div className="space-y-0.5 ml-2">
+            {workspace.members?.slice(0, 10).map((member) => (
+              <button
+                key={member.user.id}
+                onClick={() => setShowProfileUserId(member.user.id)}
+                className="flex items-center gap-2 px-4 py-2.5 sm:py-1 text-gray-300 w-full text-left min-h-[44px] sm:min-h-0 hover:bg-slack-hover cursor-pointer"
+                aria-label={`View ${member.user.displayName}'s profile`}
+              >
+                {member.user.avatarUrl ? (
+                  <img
+                    src={member.user.avatarUrl}
+                    alt=""
+                    className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs flex-shrink-0">
+                    {member.user.displayName?.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <span className="truncate flex-1">
+                  {member.user.displayName}
+                  {member.user.id === user?.id && ' (you)'}
+                </span>
+                {member.role === 'ADMIN' && (
+                  <span className="text-xs text-gray-500">admin</span>
+                )}
+              </button>
+            ))}
+            {workspace.members?.length > 10 && (
+              <div className="px-4 py-1 text-gray-500 text-sm">
+                +{workspace.members.length - 10} more
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* User Section */}
