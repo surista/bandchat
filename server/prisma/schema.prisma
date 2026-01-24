@@ -13,10 +13,13 @@ model User {
   password            String?
   displayName         String
   avatarUrl           String?
+  bio                 String?
   emailVerified       Boolean   @default(false)
-  verificationToken   String?   @unique
-  verificationExpires DateTime?
-  googleId            String?   @unique
+  verificationToken       String?   @unique
+  verificationExpires     DateTime?
+  passwordResetToken      String?   @unique
+  passwordResetExpires    DateTime?
+  googleId                String?   @unique
   authProvider        String    @default("local")
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
@@ -37,6 +40,10 @@ model User {
   acknowledgments         AnnouncementAcknowledgment[]
   polls                   Poll[]
   pollVotes               PollVote[]
+  timelineEvents          TimelineEvent[]
+  memberAchievements      MemberAchievement[]
+  recordings              Recording[]
+  bandMemberLinks         BandMember[]
 }
 
 model RefreshToken {
@@ -72,8 +79,12 @@ model Workspace {
   availability  MemberAvailability[]
   medleys       Medley[]
   contacts      Contact[]
-  announcements Announcement[]
-  polls         Poll[]
+  announcements       Announcement[]
+  polls               Poll[]
+  timelineEvents      TimelineEvent[]
+  memberAchievements  MemberAchievement[]
+  bandAchievements    BandAchievement[]
+  recordings          Recording[]
 }
 
 model ChannelGroup {
@@ -239,6 +250,7 @@ model Song {
   gigSongs     GigSong[]
   attachments  SongAttachment[]
   medleySongs  MedleySong[]
+  recordings   Recording[]
 
   @@unique([workspaceId, title, artist])
   @@index([workspaceId])
@@ -387,20 +399,23 @@ enum GigStatus {
 }
 
 model BandMember {
-  id          String    @id @default(uuid())
-  name        String
-  imageUrl    String?
-  notes       String?
-  isGuest     Boolean   @default(false)
-  workspaceId String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id           String    @id @default(uuid())
+  name         String
+  imageUrl     String?
+  notes        String?
+  isGuest      Boolean   @default(false)
+  linkedUserId String?   // Optional link to a workspace user account
+  workspaceId  String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   workspace    Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  linkedUser   User?               @relation(fields: [linkedUserId], references: [id], onDelete: SetNull)
   stints       InstrumentStint[]
   performances SetlistPerformer[]
 
   @@index([workspaceId])
+  @@index([linkedUserId])
 }
 
 model InstrumentStint {
@@ -586,4 +601,93 @@ model PollVote {
 
   @@unique([optionId, userId])
   @@index([optionId])
+}
+
+// Band Timeline - milestones and events in band history
+model TimelineEvent {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  eventType   String   // 'formation', 'first_gig', 'member_joined', 'member_left', 'album_release', 'milestone', 'custom'
+  eventDate   DateTime
+  imageUrl    String?
+  workspaceId String
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User      @relation(fields: [createdById], references: [id])
+
+  @@index([workspaceId, eventDate])
+}
+
+// Achievement definitions
+model Achievement {
+  id          String   @id @default(uuid())
+  code        String   @unique // 'first_gig', 'hundred_gigs', 'road_warrior', etc.
+  name        String
+  description String
+  icon        String   // emoji or icon name
+  category    String   // 'gigs', 'songs', 'rehearsals', 'social', 'milestones'
+  threshold   Int?     // numeric threshold for auto-awards (e.g., 100 for "100 gigs")
+  isBandWide  Boolean  @default(false) // true = band achievement, false = member achievement
+  createdAt   DateTime @default(now())
+
+  memberAchievements MemberAchievement[]
+  bandAchievements   BandAchievement[]
+}
+
+// Achievements earned by workspace members
+model MemberAchievement {
+  id            String   @id @default(uuid())
+  achievementId String
+  userId        String
+  workspaceId   String
+  earnedAt      DateTime @default(now())
+  metadata      Json?    // Extra data like "gigId" for context
+
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([achievementId, userId, workspaceId])
+  @@index([userId, workspaceId])
+}
+
+// Achievements earned by the band (workspace)
+model BandAchievement {
+  id            String   @id @default(uuid())
+  achievementId String
+  workspaceId   String
+  earnedAt      DateTime @default(now())
+  metadata      Json?
+
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([achievementId, workspaceId])
+  @@index([workspaceId])
+}
+
+// Quick audio/video recordings
+model Recording {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  url         String   // Cloudinary URL
+  type        String   // 'audio', 'video'
+  duration    Int?     // Duration in seconds
+  songId      String?  // Optional link to a song
+  workspaceId String
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  song      Song?     @relation(fields: [songId], references: [id], onDelete: SetNull)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User      @relation(fields: [createdById], references: [id])
+
+  @@index([workspaceId])
+  @@index([songId])
 }

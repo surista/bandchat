@@ -60,7 +60,7 @@ const createImage = (url) =>
     image.src = url;
   });
 
-function BandMemberForm({ member, onSave, onCancel, loading }) {
+function BandMemberForm({ member, onSave, onCancel, loading, workspaceMembers = [] }) {
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
   const [imageUrl, setImageUrl] = useState('');
@@ -68,6 +68,7 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
   const [isGuest, setIsGuest] = useState(false);
   const [guestInstruments, setGuestInstruments] = useState([]);
   const [stints, setStints] = useState([{ instruments: [], startDate: '', endDate: '' }]);
+  const [linkedUserId, setLinkedUserId] = useState('');
 
   // Cropper state
   const [showCropper, setShowCropper] = useState(false);
@@ -82,6 +83,7 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
       setNotes(member.notes || '');
       setImageUrl(member.imageUrl || '');
       setIsGuest(member.isGuest || false);
+      setLinkedUserId(member.linkedUserId || member.linkedUser?.id || '');
       if (member.stints && member.stints.length > 0) {
         // For guests, extract instruments from first stint
         const allInstruments = member.stints.flatMap(s =>
@@ -105,6 +107,7 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
       setImageUrl('');
       setIsGuest(false);
       setGuestInstruments([]);
+      setLinkedUserId('');
       setStints([{ instruments: [], startDate: '', endDate: '' }]);
     }
   }, [member]);
@@ -216,6 +219,7 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
       notes: notes || null,
       imageUrl: imageUrl || null,
       isGuest,
+      linkedUserId: linkedUserId || null,
       // Guests have NO stints - instruments stored separately if needed
       // Regular members have stints with dates
       stints: isGuest ? [] : validStints.map(s => ({
@@ -245,6 +249,30 @@ function BandMemberForm({ member, onSave, onCancel, loading }) {
             required
           />
         </div>
+
+        {/* Link to Workspace User */}
+        {workspaceMembers.length > 0 && (
+          <div>
+            <label className="block text-gray-300 text-sm font-medium mb-2">
+              Link to User Account
+            </label>
+            <select
+              value={linkedUserId}
+              onChange={(e) => setLinkedUserId(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white"
+            >
+              <option value="">No linked account</option>
+              {workspaceMembers.map(m => (
+                <option key={m.user.id} value={m.user.id}>
+                  {m.user.displayName} ({m.user.email})
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Link to a workspace member to show their profile and badges when clicked.
+            </p>
+          </div>
+        )}
 
         {/* Photo Upload */}
         <div>

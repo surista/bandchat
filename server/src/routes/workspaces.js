@@ -581,4 +581,86 @@ router.delete('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, a
   }
 });
 
+// Get member profile with achievements
+router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMember, async (req, res) => {
+  try {
+    const { workspaceId, userId } = req.params;
+
+    // Verify the user is a member of this workspace
+    const membership = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: { userId, workspaceId }
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            displayName: true,
+            avatarUrl: true,
+            bio: true,
+            email: true,
+            createdAt: true
+          }
+        }
+      }
+    });
+
+    if (!membership) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+
+    // Get their achievements in this workspace
+    const achievements = await prisma.memberAchievement.findMany({
+      where: {
+        userId,
+        workspaceId
+      },
+      include: {
+        achievement: true
+      },
+      orderBy: { earnedAt: 'desc' }
+    });
+
+    // Get some stats
+    const messageCount = await prisma.message.count({
+      where: {
+        authorId: userId,
+        channel: { workspaceId }
+      }
+    });
+
+    const songsAdded = await prisma.song.count({
+      where: {
+        workspaceId,
+        createdById: userId
+      }
+    });
+
+    const setlistsCreated = await prisma.setlist.count({
+      where: {
+        workspaceId,
+        createdById: userId
+      }
+    });
+
+    res.json({
+      user: membership.user,
+      role: membership.role,
+      joinedAt: membership.joinedAt,
+      achievements: achievements.map(a => ({
+        ...a.achievement,
+        earnedAt: a.earnedAt
+      })),
+      stats: {
+        messages: messageCount,
+        songsAdded,
+        setlistsCreated
+      }
+    });
+  } catch (error) {
+    console.error('Get member profile error:', error);
+    res.status(500).json({ error: 'Failed to get member profile' });
+  }
+});
+
 export default router;

@@ -131,6 +131,10 @@ class ApiService {
     });
   }
 
+  async getMemberProfile(workspaceId, userId) {
+    return this.request(`/workspaces/${workspaceId}/members/${userId}/profile`);
+  }
+
   async changePassword(currentPassword, newPassword) {
     return this.request('/auth/password', {
       method: 'PUT',
@@ -166,6 +170,24 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ credential })
     });
+  }
+
+  async forgotPassword(email) {
+    return this.request('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    });
+  }
+
+  async resetPassword(token, password) {
+    return this.request('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password })
+    });
+  }
+
+  async verifyResetToken(token) {
+    return this.request(`/auth/verify-reset-token?token=${token}`);
   }
 
   // Workspaces
@@ -926,6 +948,124 @@ class ApiService {
   async deleteMedley(medleyId) {
     return this.request(`/medleys/${medleyId}`, {
       method: 'DELETE'
+    });
+  }
+
+  // Timeline
+  async getTimeline(workspaceId) {
+    return this.request(`/timeline/workspace/${workspaceId}`);
+  }
+
+  async createTimelineEvent(workspaceId, data) {
+    return this.request(`/timeline/workspace/${workspaceId}`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async updateTimelineEvent(eventId, data) {
+    return this.request(`/timeline/${eventId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteTimelineEvent(eventId) {
+    return this.request(`/timeline/${eventId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async generateTimeline(workspaceId) {
+    return this.request(`/timeline/workspace/${workspaceId}/generate`, {
+      method: 'POST'
+    });
+  }
+
+  // Achievements
+  async getAchievementDefinitions() {
+    return this.request('/achievements/definitions');
+  }
+
+  async getBandAchievements(workspaceId) {
+    return this.request(`/achievements/workspace/${workspaceId}/band`);
+  }
+
+  async getMemberAchievements(workspaceId) {
+    return this.request(`/achievements/workspace/${workspaceId}/members`);
+  }
+
+  async getMyAchievements(workspaceId) {
+    return this.request(`/achievements/workspace/${workspaceId}/me`);
+  }
+
+  async checkAchievements(workspaceId) {
+    return this.request(`/achievements/workspace/${workspaceId}/check`, {
+      method: 'POST'
+    });
+  }
+
+  async awardAchievement(workspaceId, achievementCode, userId = null) {
+    return this.request(`/achievements/workspace/${workspaceId}/award`, {
+      method: 'POST',
+      body: JSON.stringify({ achievementCode, userId })
+    });
+  }
+
+  async getAchievementLeaderboard(workspaceId) {
+    return this.request(`/achievements/workspace/${workspaceId}/leaderboard`);
+  }
+
+  // Recordings
+  async getRecordings(workspaceId, filters = {}) {
+    const params = new URLSearchParams();
+    if (filters.songId) params.append('songId', filters.songId);
+    if (filters.type) params.append('type', filters.type);
+    const query = params.toString();
+    return this.request(`/recordings/workspace/${workspaceId}${query ? `?${query}` : ''}`);
+  }
+
+  async getSongRecordings(songId) {
+    return this.request(`/recordings/song/${songId}`);
+  }
+
+  async createRecording(workspaceId, data) {
+    return this.request(`/recordings/workspace/${workspaceId}`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async updateRecording(recordingId, data) {
+    return this.request(`/recordings/${recordingId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteRecording(recordingId) {
+    return this.request(`/recordings/${recordingId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // Suggestions & Mashups
+  async getMashupSuggestions(workspaceId, songId) {
+    return this.request(`/suggestions/workspace/${workspaceId}/mashups/${songId}`);
+  }
+
+  async getTransitions(workspaceId, minScore = 50) {
+    return this.request(`/suggestions/workspace/${workspaceId}/transitions?minScore=${minScore}`);
+  }
+
+  async getSongRecommendations(workspaceId, limit = 20) {
+    return this.request(`/suggestions/workspace/${workspaceId}/recommendations?limit=${limit}`);
+  }
+
+  async optimizeSetlist(workspaceId, songIds) {
+    return this.request(`/suggestions/workspace/${workspaceId}/optimize-setlist`, {
+      method: 'POST',
+      body: JSON.stringify({ songIds })
     });
   }
 }

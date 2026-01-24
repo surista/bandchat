@@ -98,7 +98,7 @@ function Login() {
             />
           </div>
 
-          <div className="mb-6">
+          <div className="mb-4">
             <label htmlFor="password" className="block text-gray-700 font-medium mb-2">
               Password
             </label>
@@ -111,6 +111,12 @@ function Login() {
               placeholder="Your password"
               required
             />
+          </div>
+
+          <div className="mb-6 text-right">
+            <Link to="/forgot-password" className="text-sm text-slack-purple hover:underline">
+              Forgot password?
+            </Link>
           </div>
 
           <button

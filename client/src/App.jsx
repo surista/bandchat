@@ -2,6 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
+import ForgotPassword from './components/auth/ForgotPassword';
+import ResetPassword from './components/auth/ResetPassword';
 import VerifyEmailChange from './components/auth/VerifyEmailChange';
 import WorkspaceList from './components/workspaces/WorkspaceList';
 import WorkspaceView from './components/workspaces/WorkspaceView';
@@ -51,6 +53,22 @@ function App() {
         element={
           <PublicRoute>
             <Signup />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <PublicRoute>
+            <ForgotPassword />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={
+          <PublicRoute>
+            <ResetPassword />
           </PublicRoute>
         }
       />

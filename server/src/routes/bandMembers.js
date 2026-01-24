@@ -12,6 +12,14 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
       include: {
         stints: {
           orderBy: { startDate: 'asc' }
+        },
+        linkedUser: {
+          select: {
+            id: true,
+            displayName: true,
+            avatarUrl: true,
+            email: true
+          }
         }
       },
       orderBy: { name: 'asc' }
@@ -40,7 +48,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 // Create a band member (admin only)
 router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => {
   try {
-    const { name, imageUrl, notes, isGuest, stints } = req.body;
+    const { name, imageUrl, notes, isGuest, stints, linkedUserId } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
@@ -60,12 +68,28 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (re
       }
     }
 
+    // Validate linkedUserId if provided
+    if (linkedUserId) {
+      const linkedMember = await prisma.workspaceMember.findUnique({
+        where: {
+          userId_workspaceId: {
+            userId: linkedUserId,
+            workspaceId: req.params.workspaceId
+          }
+        }
+      });
+      if (!linkedMember) {
+        return res.status(400).json({ error: 'Linked user is not a member of this workspace' });
+      }
+    }
+
     const member = await prisma.bandMember.create({
       data: {
         name,
         imageUrl,
         notes,
         isGuest: isGuest || false,
+        linkedUserId: linkedUserId || null,
         workspaceId: req.params.workspaceId,
         ...(validStints.length > 0 && {
           stints: {
@@ -80,6 +104,14 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (re
       include: {
         stints: {
           orderBy: { startDate: 'asc' }
+        },
+        linkedUser: {
+          select: {
+            id: true,
+            displayName: true,
+            avatarUrl: true,
+            email: true
+          }
         }
       }
     });
@@ -121,7 +153,7 @@ router.get('/:memberId', authenticate, async (req, res) => {
 // Update a band member (admin only)
 router.put('/:memberId', authenticate, async (req, res) => {
   try {
-    const { name, imageUrl, notes, isGuest, stints } = req.body;
+    const { name, imageUrl, notes, isGuest, stints, linkedUserId } = req.body;
 
     // Get the member to find its workspace
     const existing = await prisma.bandMember.findUnique({
@@ -147,12 +179,28 @@ router.put('/:memberId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
+    // Validate linkedUserId if provided
+    if (linkedUserId !== undefined && linkedUserId !== null) {
+      const linkedMember = await prisma.workspaceMember.findUnique({
+        where: {
+          userId_workspaceId: {
+            userId: linkedUserId,
+            workspaceId: existing.workspaceId
+          }
+        }
+      });
+      if (!linkedMember) {
+        return res.status(400).json({ error: 'Linked user is not a member of this workspace' });
+      }
+    }
+
     // Build update operations
     const updateData = {
       ...(name && { name }),
       ...(imageUrl !== undefined && { imageUrl }),
       ...(notes !== undefined && { notes }),
-      ...(isGuest !== undefined && { isGuest })
+      ...(isGuest !== undefined && { isGuest }),
+      ...(linkedUserId !== undefined && { linkedUserId: linkedUserId || null })
     };
 
     // Determine if member is/will be a guest
@@ -203,12 +251,20 @@ router.put('/:memberId', authenticate, async (req, res) => {
       });
     }
 
-    // Fetch updated member with stints
+    // Fetch updated member with stints and linkedUser
     const member = await prisma.bandMember.findUnique({
       where: { id: req.params.memberId },
       include: {
         stints: {
           orderBy: { startDate: 'asc' }
+        },
+        linkedUser: {
+          select: {
+            id: true,
+            displayName: true,
+            avatarUrl: true,
+            email: true
+          }
         }
       }
     });

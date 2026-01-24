@@ -18,6 +18,10 @@ import ContactsList from '../band/ContactsList';
 import AnnouncementsList from '../band/AnnouncementsList';
 import PollsList from '../band/PollsList';
 import MedleyList from '../band/MedleyList';
+import BandTimeline from '../band/BandTimeline';
+import Achievements from '../band/Achievements';
+import RecordingsList from '../band/RecordingsList';
+import SongSuggestions from '../band/SongSuggestions';
 
 function WorkspaceView() {
   const { workspaceId } = useParams();
@@ -436,6 +440,10 @@ function WorkspaceView() {
              activeBandView === 'announcements' ? '📢 Announcements' :
              activeBandView === 'polls' ? '🗳️ Polls' :
              activeBandView === 'medleys' ? '🎶 Medleys' :
+             activeBandView === 'timeline' ? '📜 Timeline' :
+             activeBandView === 'achievements' ? '🏆 Achievements' :
+             activeBandView === 'recordings' ? '🎙️ Recordings' :
+             activeBandView === 'suggestions' ? '💡 Song Intelligence' :
              selectedChannel
               ? selectedChannel.isDirect
                 ? selectedChannel.otherMembers?.map(m => m.displayName).join(', ') || 'Direct Message'
@@ -478,6 +486,14 @@ function WorkspaceView() {
               <PollsList workspaceId={workspaceId} />
             ) : activeBandView === 'medleys' ? (
               <MedleyList workspaceId={workspaceId} />
+            ) : activeBandView === 'timeline' ? (
+              <BandTimeline workspaceId={workspaceId} />
+            ) : activeBandView === 'achievements' ? (
+              <Achievements workspaceId={workspaceId} />
+            ) : activeBandView === 'recordings' ? (
+              <RecordingsList workspaceId={workspaceId} />
+            ) : activeBandView === 'suggestions' ? (
+              <SongSuggestions workspaceId={workspaceId} />
             ) : selectedChannel ? (
               <ChannelView
                 channel={selectedChannel}

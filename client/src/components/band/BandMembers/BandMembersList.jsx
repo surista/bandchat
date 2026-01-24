@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import api from '../../../services/api';
 import BandTimeline from './BandTimeline';
+import MemberProfile from '../../common/MemberProfile';
 
 function BandMembersList({ workspaceId }) {
   const [members, setMembers] = useState({ current: [], former: [], guests: [], all: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showProfileUserId, setShowProfileUserId] = useState(null);
 
   useEffect(() => {
     loadMembers();
@@ -169,10 +171,20 @@ function BandMembersList({ workspaceId }) {
     const primaryInstrument = getPrimaryInstrument(member);
     const instruments = getInstruments(member);
     const yearRange = getMemberYearRange(member);
+    const hasLinkedUser = !!member.linkedUserId || !!member.linkedUser;
+
+    const handleClick = () => {
+      if (member.linkedUserId) {
+        setShowProfileUserId(member.linkedUserId);
+      } else if (member.linkedUser?.id) {
+        setShowProfileUserId(member.linkedUser.id);
+      }
+    };
 
     return (
       <div
-        className={`bg-gray-900 rounded-lg p-4 border border-gray-700 transition-all duration-200 hover:border-gray-600 hover:bg-gray-900/80 ${!isCurrent ? 'opacity-75 hover:opacity-90' : ''}`}
+        onClick={hasLinkedUser ? handleClick : undefined}
+        className={`bg-gray-900 rounded-lg p-4 border border-gray-700 transition-all duration-200 hover:border-gray-600 hover:bg-gray-900/80 ${!isCurrent ? 'opacity-75 hover:opacity-90' : ''} ${hasLinkedUser ? 'cursor-pointer' : ''}`}
       >
         <div className="flex items-start gap-3">
           <MemberAvatar member={member} size="md" isCurrent={isCurrent} />
@@ -316,6 +328,15 @@ function BandMembersList({ workspaceId }) {
           </div>
         </div>
       </div>
+
+      {/* Member Profile Modal */}
+      {showProfileUserId && (
+        <MemberProfile
+          userId={showProfileUserId}
+          workspaceId={workspaceId}
+          onClose={() => setShowProfileUserId(null)}
+        />
+      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import BandMemberForm from '../band/BandMembers/BandMemberForm';
+import MemberProfile from '../common/MemberProfile';
 
 function Sidebar({
   workspace,
@@ -63,6 +64,10 @@ function Sidebar({
   const [removePostAction, setRemovePostAction] = useState('keep');
   const [removeMergeUserId, setRemoveMergeUserId] = useState('');
   const [removeLoading, setRemoveLoading] = useState(false);
+  // Member profile
+  const [showProfileUserId, setShowProfileUserId] = useState(null);
+  // Bio editing
+  const [editBio, setEditBio] = useState('');
 
   useEffect(() => {
     // Check if notifications are already enabled
@@ -463,6 +468,34 @@ function Sidebar({
             <span className="text-gray-400">🎶</span>
             <span className="flex-1 truncate">Medleys</span>
           </button>
+          <button
+            onClick={() => onSelectBandView?.('timeline')}
+            className={`channel-item w-full ${activeBandView === 'timeline' ? 'active' : ''}`}
+          >
+            <span className="text-gray-400">📜</span>
+            <span className="flex-1 truncate">Timeline</span>
+          </button>
+          <button
+            onClick={() => onSelectBandView?.('achievements')}
+            className={`channel-item w-full ${activeBandView === 'achievements' ? 'active' : ''}`}
+          >
+            <span className="text-gray-400">🏆</span>
+            <span className="flex-1 truncate">Achievements</span>
+          </button>
+          <button
+            onClick={() => onSelectBandView?.('recordings')}
+            className={`channel-item w-full ${activeBandView === 'recordings' ? 'active' : ''}`}
+          >
+            <span className="text-gray-400">🎙️</span>
+            <span className="flex-1 truncate">Recordings</span>
+          </button>
+          <button
+            onClick={() => onSelectBandView?.('suggestions')}
+            className={`channel-item w-full ${activeBandView === 'suggestions' ? 'active' : ''}`}
+          >
+            <span className="text-gray-400">💡</span>
+            <span className="flex-1 truncate">Song Intelligence</span>
+          </button>
         </div>
 
         {/* Members Section */}
@@ -486,14 +519,21 @@ function Sidebar({
           {workspace.members?.slice(0, 10).map((member) => (
             <button
               key={member.user.id}
-              onClick={() => member.user.id !== user?.id && onStartDM?.(member.user.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 sm:py-1 text-gray-300 w-full text-left min-h-[44px] sm:min-h-0 ${
-                member.user.id !== user?.id ? 'hover:bg-slack-hover cursor-pointer' : ''
-              }`}
-              disabled={member.user.id === user?.id}
-              aria-label={`${member.user.displayName}${member.user.id === user?.id ? ' (you)' : ' - Start direct message'}`}
+              onClick={() => setShowProfileUserId(member.user.id)}
+              className="flex items-center gap-2 px-4 py-2.5 sm:py-1 text-gray-300 w-full text-left min-h-[44px] sm:min-h-0 hover:bg-slack-hover cursor-pointer"
+              aria-label={`View ${member.user.displayName}'s profile`}
             >
-              <div className="w-2 h-2 rounded-full bg-green-500" />
+              {member.user.avatarUrl ? (
+                <img
+                  src={member.user.avatarUrl}
+                  alt=""
+                  className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                />
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs flex-shrink-0">
+                  {member.user.displayName?.charAt(0).toUpperCase()}
+                </div>
+              )}
               <span className="truncate flex-1">
                 {member.user.displayName}
                 {member.user.id === user?.id && ' (you)'}
@@ -596,6 +636,7 @@ function Sidebar({
               onClick={() => {
                 setEditDisplayName(user?.displayName || '');
                 setEditAvatarUrl(user?.avatarUrl || '');
+                setEditBio(user?.bio || '');
                 setSettingsError('');
                 setSettingsSuccess('');
                 setCurrentPassword('');
@@ -865,7 +906,8 @@ function Sidebar({
                       try {
                         const updated = await api.updateProfile({
                           displayName: editDisplayName,
-                          avatarUrl: editAvatarUrl || null
+                          avatarUrl: editAvatarUrl || null,
+                          bio: editBio || null
                         });
                         updateUser(updated);
                         setSettingsSuccess('Profile updated successfully');
@@ -930,6 +972,22 @@ function Sidebar({
                           )}
                         </div>
                       </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-1">
+                        Bio
+                      </label>
+                      <textarea
+                        value={editBio}
+                        onChange={(e) => setEditBio(e.target.value)}
+                        className="w-full bg-[var(--color-modal-input)] border border-[var(--color-modal-border)] rounded px-3 py-2 text-white placeholder-gray-400"
+                        placeholder="Tell others about yourself..."
+                        rows={3}
+                        maxLength={500}
+                      />
+                      <p className="text-xs text-gray-400 mt-1">
+                        {editBio.length}/500 characters
+                      </p>
                     </div>
                     <div className="flex justify-end">
                       <button
@@ -1336,6 +1394,7 @@ function Sidebar({
                           setEditingBandMember(null);
                         }}
                         loading={settingsLoading}
+                        workspaceMembers={workspace?.members || []}
                       />
                     </div>
                   ) : (
@@ -1716,6 +1775,16 @@ function Sidebar({
           </div>
         </div>,
         document.body
+      )}
+
+      {/* Member Profile Modal */}
+      {showProfileUserId && (
+        <MemberProfile
+          userId={showProfileUserId}
+          workspaceId={workspace.id}
+          onClose={() => setShowProfileUserId(null)}
+          onStartDM={showProfileUserId !== user?.id ? onStartDM : null}
+        />
       )}
     </div>
   );
