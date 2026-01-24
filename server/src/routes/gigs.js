@@ -1162,7 +1162,7 @@ router.put('/:gigId/setlists/reorder', authenticate, async (req, res) => {
       )
     );
 
-    const gig = await prisma.gig.findUnique({
+    const updatedGig = await prisma.gig.findUnique({
       where: { id: req.params.gigId },
       include: {
         setlists: {
@@ -1181,7 +1181,7 @@ router.put('/:gigId/setlists/reorder', authenticate, async (req, res) => {
       }
     });
 
-    res.json(gig);
+    res.json(updatedGig);
   } catch (error) {
     console.error('Reorder gig setlists error:', error);
     res.status(500).json({ error: 'Failed to reorder setlists' });
