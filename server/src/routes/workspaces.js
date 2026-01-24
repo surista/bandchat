@@ -643,27 +643,34 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
       }
     });
 
-    // Count gigs attended
-    const gigsAttended = await prisma.gigAttendee.count({
+    // Find band members linked to this user to count attendance
+    const linkedBandMembers = await prisma.bandMember.findMany({
+      where: { workspaceId, linkedUserId: userId },
+      select: { id: true }
+    });
+    const linkedBandMemberIds = linkedBandMembers.map(bm => bm.id);
+
+    // Count gigs attended (via band member)
+    const gigsAttended = linkedBandMemberIds.length > 0 ? await prisma.gigAttendee.count({
       where: {
-        userId,
+        bandMemberId: { in: linkedBandMemberIds },
         gig: {
           workspaceId,
           type: 'GIG'
         }
       }
-    });
+    }) : 0;
 
-    // Count rehearsals attended
-    const rehearsalsAttended = await prisma.gigAttendee.count({
+    // Count rehearsals attended (via band member)
+    const rehearsalsAttended = linkedBandMemberIds.length > 0 ? await prisma.gigAttendee.count({
       where: {
-        userId,
+        bandMemberId: { in: linkedBandMemberIds },
         gig: {
           workspaceId,
           type: 'REHEARSAL'
         }
       }
-    });
+    }) : 0;
 
     res.json({
       user: membership.user,

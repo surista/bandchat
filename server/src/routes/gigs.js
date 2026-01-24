@@ -59,8 +59,8 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
         },
         attendees: {
           include: {
-            user: {
-              select: { id: true, displayName: true, avatarUrl: true }
+            bandMember: {
+              select: { id: true, name: true, imageUrl: true }
             }
           }
         },
@@ -495,7 +495,7 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
 // Create a gig
 router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
-    const { title, type, date, endDate, venue, address, notes, pay, setlistId, setlistIds, isLocked, isPersonal, attendeeIds } = req.body;
+    const { title, type, date, endDate, venue, address, notes, pay, setlistId, setlistIds, isLocked, isPersonal, bandMemberIds } = req.body;
 
     if (!title || !date) {
       return res.status(400).json({ error: 'Title and date are required' });
@@ -529,11 +529,11 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
             }))
           }
         }),
-        // Create attendee entries if attendeeIds provided
-        ...(attendeeIds && attendeeIds.length > 0 && {
+        // Create attendee entries if bandMemberIds provided
+        ...(bandMemberIds && bandMemberIds.length > 0 && {
           attendees: {
-            create: attendeeIds.map(userId => ({
-              userId,
+            create: bandMemberIds.map(bandMemberId => ({
+              bandMemberId,
               status: 'ATTENDING'
             }))
           }
@@ -556,8 +556,8 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
         },
         attendees: {
           include: {
-            user: {
-              select: { id: true, displayName: true, avatarUrl: true }
+            bandMember: {
+              select: { id: true, name: true, imageUrl: true }
             }
           }
         }
@@ -611,8 +611,8 @@ router.get('/:gigId', authenticate, async (req, res) => {
         },
         attendees: {
           include: {
-            user: {
-              select: { id: true, displayName: true, avatarUrl: true }
+            bandMember: {
+              select: { id: true, name: true, imageUrl: true }
             }
           }
         }
@@ -641,7 +641,7 @@ router.get('/:gigId', authenticate, async (req, res) => {
 // Update a gig
 router.put('/:gigId', authenticate, async (req, res) => {
   try {
-    const { title, type, date, endDate, venue, address, notes, pay, status, setlistId, setlistIds, isLocked, isPersonal, attendeeIds } = req.body;
+    const { title, type, date, endDate, venue, address, notes, pay, status, setlistId, setlistIds, isLocked, isPersonal, bandMemberIds } = req.body;
 
     // Get the existing gig and check permissions
     const existingGig = await prisma.gig.findUnique({
@@ -695,19 +695,19 @@ router.put('/:gigId', authenticate, async (req, res) => {
       }
     }
 
-    // If attendeeIds provided, handle attendee update
-    if (attendeeIds !== undefined) {
+    // If bandMemberIds provided, handle attendee update
+    if (bandMemberIds !== undefined) {
       // Delete existing attendee entries
       await prisma.gigAttendee.deleteMany({
         where: { gigId: req.params.gigId }
       });
 
-      // Create new ones if there are attendeeIds
-      if (attendeeIds && attendeeIds.length > 0) {
+      // Create new ones if there are bandMemberIds
+      if (bandMemberIds && bandMemberIds.length > 0) {
         await prisma.gigAttendee.createMany({
-          data: attendeeIds.map(userId => ({
+          data: bandMemberIds.map(bandMemberId => ({
             gigId: req.params.gigId,
-            userId,
+            bandMemberId,
             status: 'ATTENDING'
           }))
         });
@@ -752,8 +752,8 @@ router.put('/:gigId', authenticate, async (req, res) => {
         },
         attendees: {
           include: {
-            user: {
-              select: { id: true, displayName: true, avatarUrl: true }
+            bandMember: {
+              select: { id: true, name: true, imageUrl: true }
             }
           }
         }

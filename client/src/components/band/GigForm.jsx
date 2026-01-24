@@ -95,7 +95,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
   const [selectedSets, setSelectedSets] = useState(getInitialSets());
   const [useMultiSet, setUseMultiSet] = useState((gig?.setlists?.length || 0) > 1);
   const [selectedAttendees, setSelectedAttendees] = useState(
-    gig?.attendees?.map(a => a.userId || a.user?.id) || []
+    gig?.attendees?.map(a => a.bandMemberId || a.bandMember?.id) || []
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -160,8 +160,8 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
         saveData.setlistIds = null;
       }
 
-      // Include attendees
-      saveData.attendeeIds = selectedAttendees;
+      // Include attendees (band member IDs)
+      saveData.bandMemberIds = selectedAttendees;
 
       await onSave(saveData);
     } catch (err) {
@@ -369,76 +369,84 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                 </div>
               )}
 
-              {/* Attendees Selection */}
-              {workspaceMembers.length > 0 && (
-                <div>
-                  <label className="modal-label">
-                    Attending
-                    <span className="text-gray-500 font-normal ml-2">
-                      ({selectedAttendees.length} selected)
-                    </span>
-                  </label>
+              {/* Attendees Selection - uses band members */}
+              {(() => {
+                const allBandMembers = [
+                  ...(bandMembers.current || []),
+                  ...(bandMembers.former || []),
+                  ...(bandMembers.guests || [])
+                ];
+                if (allBandMembers.length === 0) return null;
 
-                  {/* Current workspace members */}
-                  <div className="flex flex-wrap gap-2">
-                    {workspaceMembers.map(member => {
-                      const userId = member.user?.id || member.userId;
-                      const displayName = member.user?.displayName || member.displayName;
-                      const isSelected = selectedAttendees.includes(userId);
+                // Filter for search
+                const filteredMembers = attendeeSearch
+                  ? allBandMembers.filter(bm =>
+                      bm.name.toLowerCase().includes(attendeeSearch.toLowerCase())
+                    )
+                  : allBandMembers;
 
-                      // Get availability status for this member if available
-                      const availStatus = availabilitySummary?.members?.find(
-                        m => m.user.id === userId
-                      )?.status;
+                // Separate current vs former/guest
+                const currentMembers = filteredMembers.filter(bm => !bm.isGuest && bandMembers.current?.some(c => c.id === bm.id));
+                const otherMembers = filteredMembers.filter(bm => bm.isGuest || bandMembers.former?.some(f => f.id === bm.id) || bandMembers.guests?.some(g => g.id === bm.id));
 
-                      return (
-                        <button
-                          key={userId}
-                          type="button"
-                          onClick={() => {
-                            if (isSelected) {
-                              setSelectedAttendees(selectedAttendees.filter(id => id !== userId));
-                            } else {
-                              setSelectedAttendees([...selectedAttendees, userId]);
-                            }
-                          }}
-                          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                            isSelected
-                              ? 'bg-green-600 text-white ring-2 ring-green-400'
-                              : availStatus === 'UNAVAILABLE'
-                              ? 'bg-gray-700 text-red-400 hover:bg-gray-600'
-                              : availStatus === 'MAYBE'
-                              ? 'bg-gray-700 text-yellow-400 hover:bg-gray-600'
-                              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                          }`}
-                        >
-                          {isSelected && <span className="mr-1">✓</span>}
-                          {displayName?.split(' ')[0]}
-                        </button>
-                      );
-                    })}
-                  </div>
+                return (
+                  <div>
+                    <label className="modal-label">
+                      Attending
+                      <span className="text-gray-500 font-normal ml-2">
+                        ({selectedAttendees.length} selected)
+                      </span>
+                    </label>
 
-                  {/* Former/Guest members section */}
-                  {(() => {
-                    // Get all former and guest band members
-                    // Exclude those already in workspaceMembers (by linkedUserId)
-                    const workspaceMemberIds = new Set(workspaceMembers.map(m => m.user?.id || m.userId));
-                    const allOtherMembers = [
-                      ...(bandMembers.former || []),
-                      ...(bandMembers.guests || [])
-                    ].filter(bm => !bm.linkedUserId || !workspaceMemberIds.has(bm.linkedUserId));
+                    {allBandMembers.length > 6 && (
+                      <input
+                        type="text"
+                        placeholder="Search members..."
+                        value={attendeeSearch}
+                        onChange={(e) => setAttendeeSearch(e.target.value)}
+                        className="w-full px-3 py-1.5 mb-2 bg-gray-800 border border-gray-700 rounded text-white text-sm"
+                      />
+                    )}
 
-                    if (allOtherMembers.length === 0) return null;
+                    {/* Current band members */}
+                    <div className="flex flex-wrap gap-2">
+                      {currentMembers.map(bm => {
+                        const isSelected = selectedAttendees.includes(bm.id);
+                        // Get availability status if this band member is linked to a user
+                        const availStatus = bm.linkedUserId && availabilitySummary?.members?.find(
+                          m => m.user.id === bm.linkedUserId
+                        )?.status;
 
-                    // Filter by search
-                    const filteredOthers = attendeeSearch
-                      ? allOtherMembers.filter(bm =>
-                          bm.name.toLowerCase().includes(attendeeSearch.toLowerCase())
-                        )
-                      : allOtherMembers;
+                        return (
+                          <button
+                            key={bm.id}
+                            type="button"
+                            onClick={() => {
+                              if (isSelected) {
+                                setSelectedAttendees(selectedAttendees.filter(id => id !== bm.id));
+                              } else {
+                                setSelectedAttendees([...selectedAttendees, bm.id]);
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                              isSelected
+                                ? 'bg-green-600 text-white ring-2 ring-green-400'
+                                : availStatus === 'UNAVAILABLE'
+                                ? 'bg-gray-700 text-red-400 hover:bg-gray-600'
+                                : availStatus === 'MAYBE'
+                                ? 'bg-gray-700 text-yellow-400 hover:bg-gray-600'
+                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                            }`}
+                          >
+                            {isSelected && <span className="mr-1">✓</span>}
+                            {bm.name.split(' ')[0]}
+                          </button>
+                        );
+                      })}
+                    </div>
 
-                    return (
+                    {/* Former/Guest members */}
+                    {otherMembers.length > 0 && (
                       <div className="mt-3">
                         <button
                           type="button"
@@ -448,75 +456,48 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                           <span className={`transform transition-transform ${showMoreAttendees ? 'rotate-90' : ''}`}>
                             ▶
                           </span>
-                          {showMoreAttendees ? 'Hide' : 'Add'} former/guest members ({allOtherMembers.length})
+                          {showMoreAttendees ? 'Hide' : 'Show'} former/guest members ({otherMembers.length})
                         </button>
 
                         {showMoreAttendees && (
-                          <div className="mt-2 p-3 bg-gray-900/50 rounded-lg">
-                            {allOtherMembers.length > 3 && (
-                              <input
-                                type="text"
-                                placeholder="Search members..."
-                                value={attendeeSearch}
-                                onChange={(e) => setAttendeeSearch(e.target.value)}
-                                className="w-full px-3 py-1.5 mb-2 bg-gray-800 border border-gray-700 rounded text-white text-sm"
-                              />
-                            )}
-                            <div className="flex flex-wrap gap-2">
-                              {filteredOthers.map(bm => {
-                                const canSelect = !!bm.linkedUserId;
-                                const isSelected = canSelect && selectedAttendees.includes(bm.linkedUserId);
-                                const label = bm.isGuest ? 'Guest' : 'Former';
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {otherMembers.map(bm => {
+                              const isSelected = selectedAttendees.includes(bm.id);
+                              const label = bm.isGuest ? 'Guest' : 'Former';
 
-                                return (
-                                  <button
-                                    key={bm.id}
-                                    type="button"
-                                    disabled={!canSelect}
-                                    title={!canSelect ? 'Link this member to a user account in Members to track attendance' : ''}
-                                    onClick={() => {
-                                      if (!canSelect) return;
-                                      if (isSelected) {
-                                        setSelectedAttendees(selectedAttendees.filter(id => id !== bm.linkedUserId));
-                                      } else {
-                                        setSelectedAttendees([...selectedAttendees, bm.linkedUserId]);
-                                      }
-                                    }}
-                                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                                      !canSelect
-                                        ? 'bg-gray-800 text-gray-500 cursor-not-allowed opacity-60'
-                                        : isSelected
-                                        ? 'bg-green-600 text-white ring-2 ring-green-400'
-                                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                                    }`}
-                                  >
-                                    {isSelected && <span className="mr-1">✓</span>}
-                                    {!canSelect && <span className="mr-1">🔗</span>}
-                                    {bm.name}
-                                    <span className={`ml-1 text-xs ${bm.isGuest ? 'text-purple-400' : 'text-gray-500'}`}>
-                                      ({label})
-                                    </span>
-                                  </button>
-                                );
-                              })}
-                              {filteredOthers.length === 0 && attendeeSearch && (
-                                <p className="text-sm text-gray-500">No matches found</p>
-                              )}
-                            </div>
-                            {filteredOthers.some(bm => !bm.linkedUserId) && (
-                              <p className="text-xs text-gray-500 mt-2">
-                                🔗 = needs to be linked to a user account in Members tab
-                              </p>
-                            )}
+                              return (
+                                <button
+                                  key={bm.id}
+                                  type="button"
+                                  onClick={() => {
+                                    if (isSelected) {
+                                      setSelectedAttendees(selectedAttendees.filter(id => id !== bm.id));
+                                    } else {
+                                      setSelectedAttendees([...selectedAttendees, bm.id]);
+                                    }
+                                  }}
+                                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                                    isSelected
+                                      ? 'bg-green-600 text-white ring-2 ring-green-400'
+                                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                  }`}
+                                >
+                                  {isSelected && <span className="mr-1">✓</span>}
+                                  {bm.name}
+                                  <span className={`ml-1 text-xs ${bm.isGuest ? 'text-purple-400' : 'text-gray-500'}`}>
+                                    ({label})
+                                  </span>
+                                </button>
+                              );
+                            })}
                           </div>
                         )}
                       </div>
-                    );
-                  })()}
+                    )}
 
-                  {selectedAttendees.length === 0 && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      Click members to mark them as attending
+                    {selectedAttendees.length === 0 && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        Click members to mark them as attending
                     </p>
                   )}
                 </div>

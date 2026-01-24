@@ -44,7 +44,6 @@ model User {
   memberAchievements      MemberAchievement[]
   recordings              Recording[]
   bandMemberLinks         BandMember[]
-  gigAttendances          GigAttendee[]
 }
 
 model RefreshToken {
@@ -349,16 +348,16 @@ model Gig {
 }
 
 model GigAttendee {
-  id        String   @id @default(uuid())
-  gigId     String
-  userId    String
-  status    AttendeeStatus @default(ATTENDING)
-  createdAt DateTime @default(now())
+  id           String   @id @default(uuid())
+  gigId        String
+  bandMemberId String
+  status       AttendeeStatus @default(ATTENDING)
+  createdAt    DateTime @default(now())
 
-  gig  Gig  @relation(fields: [gigId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gig        Gig        @relation(fields: [gigId], references: [id], onDelete: Cascade)
+  bandMember BandMember @relation(fields: [bandMemberId], references: [id], onDelete: Cascade)
 
-  @@unique([gigId, userId])
+  @@unique([gigId, bandMemberId])
   @@index([gigId])
 }
 
@@ -431,10 +430,11 @@ model BandMember {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  workspace    Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  linkedUser   User?               @relation(fields: [linkedUserId], references: [id], onDelete: SetNull)
-  stints       InstrumentStint[]
-  performances SetlistPerformer[]
+  workspace      Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  linkedUser     User?               @relation(fields: [linkedUserId], references: [id], onDelete: SetNull)
+  stints         InstrumentStint[]
+  performances   SetlistPerformer[]
+  gigAttendances GigAttendee[]
 
   @@index([workspaceId])
   @@index([linkedUserId])
