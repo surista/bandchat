@@ -421,22 +421,22 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
 
                   {/* Former/Guest members section */}
                   {(() => {
-                    // Get former and guest band members with linked user accounts
-                    // Exclude those already in workspaceMembers
+                    // Get all former and guest band members
+                    // Exclude those already in workspaceMembers (by linkedUserId)
                     const workspaceMemberIds = new Set(workspaceMembers.map(m => m.user?.id || m.userId));
-                    const otherMembers = [
+                    const allOtherMembers = [
                       ...(bandMembers.former || []),
                       ...(bandMembers.guests || [])
-                    ].filter(bm => bm.linkedUserId && !workspaceMemberIds.has(bm.linkedUserId));
+                    ].filter(bm => !bm.linkedUserId || !workspaceMemberIds.has(bm.linkedUserId));
 
-                    if (otherMembers.length === 0) return null;
+                    if (allOtherMembers.length === 0) return null;
 
                     // Filter by search
                     const filteredOthers = attendeeSearch
-                      ? otherMembers.filter(bm =>
+                      ? allOtherMembers.filter(bm =>
                           bm.name.toLowerCase().includes(attendeeSearch.toLowerCase())
                         )
-                      : otherMembers;
+                      : allOtherMembers;
 
                     return (
                       <div className="mt-3">
@@ -448,12 +448,12 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                           <span className={`transform transition-transform ${showMoreAttendees ? 'rotate-90' : ''}`}>
                             ▶
                           </span>
-                          {showMoreAttendees ? 'Hide' : 'Add'} former/guest members ({otherMembers.length})
+                          {showMoreAttendees ? 'Hide' : 'Add'} former/guest members ({allOtherMembers.length})
                         </button>
 
                         {showMoreAttendees && (
                           <div className="mt-2 p-3 bg-gray-900/50 rounded-lg">
-                            {otherMembers.length > 3 && (
+                            {allOtherMembers.length > 3 && (
                               <input
                                 type="text"
                                 placeholder="Search members..."
@@ -464,14 +464,18 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                             )}
                             <div className="flex flex-wrap gap-2">
                               {filteredOthers.map(bm => {
-                                const isSelected = selectedAttendees.includes(bm.linkedUserId);
+                                const canSelect = !!bm.linkedUserId;
+                                const isSelected = canSelect && selectedAttendees.includes(bm.linkedUserId);
                                 const label = bm.isGuest ? 'Guest' : 'Former';
 
                                 return (
                                   <button
                                     key={bm.id}
                                     type="button"
+                                    disabled={!canSelect}
+                                    title={!canSelect ? 'Link this member to a user account in Members to track attendance' : ''}
                                     onClick={() => {
+                                      if (!canSelect) return;
                                       if (isSelected) {
                                         setSelectedAttendees(selectedAttendees.filter(id => id !== bm.linkedUserId));
                                       } else {
@@ -479,12 +483,15 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                                       }
                                     }}
                                     className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                                      isSelected
+                                      !canSelect
+                                        ? 'bg-gray-800 text-gray-500 cursor-not-allowed opacity-60'
+                                        : isSelected
                                         ? 'bg-green-600 text-white ring-2 ring-green-400'
                                         : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                     }`}
                                   >
                                     {isSelected && <span className="mr-1">✓</span>}
+                                    {!canSelect && <span className="mr-1">🔗</span>}
                                     {bm.name}
                                     <span className={`ml-1 text-xs ${bm.isGuest ? 'text-purple-400' : 'text-gray-500'}`}>
                                       ({label})
@@ -496,6 +503,11 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                                 <p className="text-sm text-gray-500">No matches found</p>
                               )}
                             </div>
+                            {filteredOthers.some(bm => !bm.linkedUserId) && (
+                              <p className="text-xs text-gray-500 mt-2">
+                                🔗 = needs to be linked to a user account in Members tab
+                              </p>
+                            )}
                           </div>
                         )}
                       </div>
