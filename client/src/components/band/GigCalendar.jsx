@@ -21,7 +21,15 @@ function GigCalendar({ workspaceId, workspace }) {
   const [setlists, setSetlists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    // Restore from localStorage if available
+    const saved = localStorage.getItem(`calendar-month-${workspaceId}`);
+    if (saved) {
+      const date = new Date(saved);
+      if (!isNaN(date.getTime())) return date;
+    }
+    return new Date();
+  });
   const [showForm, setShowForm] = useState(false);
   const [editingGig, setEditingGig] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -41,6 +49,11 @@ function GigCalendar({ workspaceId, workspace }) {
   useEffect(() => {
     loadData();
   }, [workspaceId]);
+
+  // Persist calendar month to localStorage
+  useEffect(() => {
+    localStorage.setItem(`calendar-month-${workspaceId}`, currentMonth.toISOString());
+  }, [currentMonth, workspaceId]);
 
   // Load other workspace gigs when toggle is enabled
   useEffect(() => {

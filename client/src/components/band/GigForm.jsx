@@ -34,35 +34,24 @@ const getGoogleCalendarUrl = (gig) => {
 };
 
 function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmin, workspaceId, workspaceMembers = [] }) {
-  // Round minutes to nearest half hour
-  const roundToHalfHour = (minutes) => minutes < 15 ? '00' : minutes < 45 ? '30' : '00';
-
   const getDefaultDate = () => {
     if (gig?.date) return format(new Date(gig.date), 'yyyy-MM-dd');
     if (defaultDate) return format(defaultDate, 'yyyy-MM-dd');
     return format(new Date(), 'yyyy-MM-dd');
   };
 
-  // Convert 24-hour time to 12-hour format with AM/PM
-  const to12Hour = (dateVal, fallback = { hour: '7', minute: '00', period: 'PM' }) => {
+  // Get time in HH:MM format from a date, or return default
+  const getTimeFromDate = (dateVal, defaultTime) => {
     if (dateVal) {
       const d = new Date(dateVal);
-      let hours = d.getHours();
-      const mins = roundToHalfHour(d.getMinutes());
-      const period = hours >= 12 ? 'PM' : 'AM';
-      hours = hours % 12;
-      if (hours === 0) hours = 12;
-      return { hour: hours.toString(), minute: mins, period };
+      const hours = d.getHours().toString().padStart(2, '0');
+      const mins = d.getMinutes();
+      // Round to nearest half hour
+      const roundedMins = mins < 15 ? '00' : mins < 45 ? '30' : '00';
+      const finalHours = mins >= 45 ? ((d.getHours() + 1) % 24).toString().padStart(2, '0') : hours;
+      return `${finalHours}:${roundedMins}`;
     }
-    return fallback;
-  };
-
-  // Convert 12-hour format back to 24-hour time string
-  const to24Hour = (hour, minute, period) => {
-    let h = parseInt(hour);
-    if (period === 'AM' && h === 12) h = 0;
-    else if (period === 'PM' && h !== 12) h += 12;
-    return `${h.toString().padStart(2, '0')}:${minute}`;
+    return defaultTime;
   };
 
   // Initialize selected sets from existing gig data
@@ -77,19 +66,12 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     return [];
   };
 
-  const startTime12 = to12Hour(gig?.date, { hour: '7', minute: '00', period: 'PM' });
-  const endTime12 = to12Hour(gig?.endDate, { hour: '9', minute: '00', period: 'PM' });
-
   const [formData, setFormData] = useState({
     title: gig?.title || '',
     type: gig?.type || 'GIG',
     startDate: getDefaultDate(),
-    startHour: startTime12.hour,
-    startMinute: startTime12.minute,
-    startPeriod: startTime12.period,
-    endHour: endTime12.hour,
-    endMinute: endTime12.minute,
-    endPeriod: endTime12.period,
+    startTime: getTimeFromDate(gig?.date, '19:00'),
+    endTime: getTimeFromDate(gig?.endDate, '21:00'),
     venue: gig?.venue || '',
     address: gig?.address || '',
     notes: gig?.notes || '',
@@ -99,6 +81,17 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     isLocked: gig?.isLocked || false,
     isPersonal: gig?.isPersonal || false
   });
+
+  // Time dropdown visibility
+  const [showStartTimeDropdown, setShowStartTimeDropdown] = useState(false);
+  const [showEndTimeDropdown, setShowEndTimeDropdown] = useState(false);
+
+  // Generate time options (00:00 to 23:30 in 30-min increments)
+  const timeOptions = [];
+  for (let h = 0; h < 24; h++) {
+    timeOptions.push(`${h.toString().padStart(2, '0')}:00`);
+    timeOptions.push(`${h.toString().padStart(2, '0')}:30`);
+  }
   const [selectedSets, setSelectedSets] = useState(getInitialSets());
   const [useMultiSet, setUseMultiSet] = useState((gig?.setlists?.length || 0) > 1);
   const [selectedAttendees, setSelectedAttendees] = useState(
@@ -135,13 +128,9 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     setError('');
 
     try {
-      // Combine date and time fields (convert 12-hour to 24-hour)
-      const startTime24 = to24Hour(formData.startHour, formData.startMinute, formData.startPeriod);
-      const startDateTime = new Date(`${formData.startDate}T${startTime24}`);
-
-      // End time uses same date as start
-      const endTime24 = to24Hour(formData.endHour, formData.endMinute, formData.endPeriod);
-      const endDateTime = new Date(`${formData.startDate}T${endTime24}`);
+      // Combine date and time fields
+      const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
+      const endDateTime = new Date(`${formData.startDate}T${formData.endTime}`);
 
       const saveData = {
         title: formData.title,
@@ -268,72 +257,72 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="relative">
                   <label className="modal-label">Start Time</label>
-                  <div className="flex gap-1">
-                    <select
-                      value={formData.startHour}
-                      onChange={(e) => handleChange('startHour', e.target.value)}
-                      className="modal-input flex-1"
-                      required
-                    >
-                      {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(h => (
-                        <option key={h} value={h.toString()}>{h}</option>
+                  <input
+                    type="text"
+                    value={formData.startTime}
+                    onChange={(e) => handleChange('startTime', e.target.value)}
+                    onFocus={() => setShowStartTimeDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowStartTimeDropdown(false), 150)}
+                    className="modal-input w-full"
+                    placeholder="19:00"
+                    pattern="[0-2][0-9]:[0-5][0-9]"
+                  />
+                  {showStartTimeDropdown && (
+                    <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+                      {timeOptions.map(time => (
+                        <button
+                          key={time}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleChange('startTime', time);
+                            setShowStartTimeDropdown(false);
+                          }}
+                          className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 ${
+                            formData.startTime === time ? 'bg-blue-600 text-white' : 'text-gray-300'
+                          }`}
+                        >
+                          {time}
+                        </button>
                       ))}
-                    </select>
-                    <select
-                      value={formData.startMinute}
-                      onChange={(e) => handleChange('startMinute', e.target.value)}
-                      className="modal-input w-14"
-                      required
-                    >
-                      <option value="00">:00</option>
-                      <option value="30">:30</option>
-                    </select>
-                    <select
-                      value={formData.startPeriod}
-                      onChange={(e) => handleChange('startPeriod', e.target.value)}
-                      className="modal-input w-14"
-                      required
-                    >
-                      <option value="AM">AM</option>
-                      <option value="PM">PM</option>
-                    </select>
-                  </div>
+                    </div>
+                  )}
                 </div>
 
-                <div>
+                <div className="relative">
                   <label className="modal-label">End Time</label>
-                  <div className="flex gap-1">
-                    <select
-                      value={formData.endHour}
-                      onChange={(e) => handleChange('endHour', e.target.value)}
-                      className="modal-input flex-1"
-                      required
-                    >
-                      {[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(h => (
-                        <option key={h} value={h.toString()}>{h}</option>
+                  <input
+                    type="text"
+                    value={formData.endTime}
+                    onChange={(e) => handleChange('endTime', e.target.value)}
+                    onFocus={() => setShowEndTimeDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowEndTimeDropdown(false), 150)}
+                    className="modal-input w-full"
+                    placeholder="21:00"
+                    pattern="[0-2][0-9]:[0-5][0-9]"
+                  />
+                  {showEndTimeDropdown && (
+                    <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+                      {timeOptions.map(time => (
+                        <button
+                          key={time}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleChange('endTime', time);
+                            setShowEndTimeDropdown(false);
+                          }}
+                          className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 ${
+                            formData.endTime === time ? 'bg-blue-600 text-white' : 'text-gray-300'
+                          }`}
+                        >
+                          {time}
+                        </button>
                       ))}
-                    </select>
-                    <select
-                      value={formData.endMinute}
-                      onChange={(e) => handleChange('endMinute', e.target.value)}
-                      className="modal-input w-14"
-                      required
-                    >
-                      <option value="00">:00</option>
-                      <option value="30">:30</option>
-                    </select>
-                    <select
-                      value={formData.endPeriod}
-                      onChange={(e) => handleChange('endPeriod', e.target.value)}
-                      className="modal-input w-14"
-                      required
-                    >
-                      <option value="AM">AM</option>
-                      <option value="PM">PM</option>
-                    </select>
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
