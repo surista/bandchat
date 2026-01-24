@@ -10,7 +10,7 @@ function GoogleSignInButton({ onSuccess, onError, text = 'signin_with' }) {
         shape="rectangular"
         size="large"
         theme="outline"
-        width="100%"
+        width="300"
       />
     </div>
   );
