@@ -87,6 +87,14 @@ router.get('/:contactId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Contact not found' });
     }
 
+    // Verify user is a workspace member
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: contact.workspaceId } }
+    });
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
     res.json(contact);
   } catch (error) {
     console.error('Get contact error:', error);
@@ -98,6 +106,23 @@ router.get('/:contactId', authenticate, async (req, res) => {
 router.put('/:contactId', authenticate, async (req, res) => {
   try {
     const { name, category, email, phone, website, address, notes } = req.body;
+
+    // First fetch the contact to check workspace membership
+    const existingContact = await prisma.contact.findUnique({
+      where: { id: req.params.contactId }
+    });
+
+    if (!existingContact) {
+      return res.status(404).json({ error: 'Contact not found' });
+    }
+
+    // Verify user is a workspace member
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: existingContact.workspaceId } }
+    });
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
 
     const contact = await prisma.contact.update({
       where: { id: req.params.contactId },
@@ -137,6 +162,14 @@ router.delete('/:contactId', authenticate, async (req, res) => {
 
     if (!contact) {
       return res.status(404).json({ error: 'Contact not found' });
+    }
+
+    // Verify user is a workspace member
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: contact.workspaceId } }
+    });
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
     }
 
     await prisma.contact.delete({

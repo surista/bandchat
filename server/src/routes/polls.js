@@ -159,6 +159,14 @@ router.get('/:pollId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Poll not found' });
     }
 
+    // Verify user is a workspace member
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: poll.workspaceId } }
+    });
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
     const totalVotes = poll.options.reduce((sum, opt) => sum + opt._count.votes, 0);
     const userVotes = poll.options
       .filter(opt => opt.votes.some(v => v.user.id === req.user.id))
@@ -205,6 +213,14 @@ router.post('/:pollId/vote', authenticate, async (req, res) => {
 
     if (!poll) {
       return res.status(404).json({ error: 'Poll not found' });
+    }
+
+    // Verify user is a workspace member
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: poll.workspaceId } }
+    });
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
     }
 
     if (poll.isClosed) {

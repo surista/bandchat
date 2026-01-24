@@ -593,6 +593,14 @@ router.get('/:gigId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Gig not found' });
     }
 
+    // Verify user is a workspace member
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: gig.workspaceId } }
+    });
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
     res.json(gig);
   } catch (error) {
     console.error('Get gig error:', error);
@@ -730,6 +738,14 @@ router.put('/:gigId/complete', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Gig not found' });
     }
 
+    // Verify user is a workspace member
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: existingGig.workspaceId } }
+    });
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
     // If no songIds provided but gig has a setlist, use setlist songs
     if ((!songIds || songIds.length === 0) && existingGig.setlist?.songs?.length > 0) {
       songIds = existingGig.setlist.songs.map(s => s.songId).filter(Boolean);
@@ -843,6 +859,14 @@ router.post('/:gigId/duplicate', authenticate, async (req, res) => {
 
     if (!source) {
       return res.status(404).json({ error: 'Gig not found' });
+    }
+
+    // Verify user is a workspace member
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: source.workspaceId } }
+    });
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
     }
 
     // Calculate new dates preserving the original time of day
@@ -1110,6 +1134,22 @@ router.put('/:gigId/setlists/reorder', authenticate, async (req, res) => {
 
     if (!gigSetlistIds || !Array.isArray(gigSetlistIds)) {
       return res.status(400).json({ error: 'gigSetlistIds array is required' });
+    }
+
+    // Verify gig exists and user is a workspace member
+    const gig = await prisma.gig.findUnique({
+      where: { id: req.params.gigId }
+    });
+
+    if (!gig) {
+      return res.status(404).json({ error: 'Gig not found' });
+    }
+
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: gig.workspaceId } }
+    });
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
     }
 
     // Update set numbers in a transaction

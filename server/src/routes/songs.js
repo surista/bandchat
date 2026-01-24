@@ -269,6 +269,14 @@ router.get('/:songId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Song not found' });
     }
 
+    // Verify user is a workspace member
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: song.workspaceId } }
+    });
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
     res.json(song);
   } catch (error) {
     console.error('Get song error:', error);
@@ -280,6 +288,23 @@ router.get('/:songId', authenticate, async (req, res) => {
 router.put('/:songId', authenticate, async (req, res) => {
   try {
     const { title, shortName, artist, duration, key, bpm, notes, lyrics, arrangement, youtubeUrl, spotifyUrl } = req.body;
+
+    // First fetch the song to check workspace membership
+    const existingSong = await prisma.song.findUnique({
+      where: { id: req.params.songId }
+    });
+
+    if (!existingSong) {
+      return res.status(404).json({ error: 'Song not found' });
+    }
+
+    // Verify user is a workspace member
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: existingSong.workspaceId } }
+    });
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
 
     const song = await prisma.song.update({
       where: { id: req.params.songId },
@@ -475,6 +500,14 @@ router.delete('/:songId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Song not found' });
     }
 
+    // Verify user is a workspace member
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: song.workspaceId } }
+    });
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
     await prisma.song.delete({
       where: { id: req.params.songId }
     });
@@ -495,6 +528,22 @@ router.delete('/:songId', authenticate, async (req, res) => {
 // Get attachments for a song
 router.get('/:songId/attachments', authenticate, async (req, res) => {
   try {
+    // Verify song exists and user is a workspace member
+    const song = await prisma.song.findUnique({
+      where: { id: req.params.songId }
+    });
+
+    if (!song) {
+      return res.status(404).json({ error: 'Song not found' });
+    }
+
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: song.workspaceId } }
+    });
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
     const attachments = await prisma.songAttachment.findMany({
       where: { songId: req.params.songId },
       orderBy: { createdAt: 'desc' }
@@ -521,6 +570,14 @@ router.post('/:songId/attachments', authenticate, async (req, res) => {
 
     if (!song) {
       return res.status(404).json({ error: 'Song not found' });
+    }
+
+    // Verify user is a workspace member
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: song.workspaceId } }
+    });
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
     }
 
     const attachment = await prisma.songAttachment.create({
@@ -557,6 +614,14 @@ router.delete('/:songId/attachments/:attachmentId', authenticate, async (req, re
 
     if (!attachment) {
       return res.status(404).json({ error: 'Attachment not found' });
+    }
+
+    // Verify user is a workspace member
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: attachment.song.workspaceId } }
+    });
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
     }
 
     await prisma.songAttachment.delete({
