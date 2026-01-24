@@ -395,40 +395,6 @@ router.post('/:workspaceId/invite-email', authenticate, isWorkspaceAdmin, async 
   }
 });
 
-// Remove member from workspace
-router.delete('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, async (req, res) => {
-  try {
-    const { workspaceId, userId } = req.params;
-
-    // Can't remove yourself if you're the only admin
-    if (userId === req.user.id) {
-      const adminCount = await prisma.workspaceMember.count({
-        where: { workspaceId, role: 'ADMIN' }
-      });
-
-      if (adminCount === 1) {
-        return res.status(400).json({ error: 'Cannot remove the only admin' });
-      }
-    }
-
-    await prisma.workspaceMember.delete({
-      where: {
-        userId_workspaceId: { userId, workspaceId }
-      }
-    });
-
-    // Notify via socket
-    const io = req.app.get('io');
-    io.to(`workspace:${workspaceId}`).emit('member:removed', {
-      workspaceId,
-      userId
-    });
-
-    res.json({ message: 'Member removed' });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to remove member' });
-  }
-});
 
 // Update member role
 router.put('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, async (req, res) => {
@@ -515,9 +481,15 @@ router.delete('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, a
     const { postAction, mergeUserId } = req.query;
     // postAction: 'keep' | 'hide' | 'delete' | 'anonymize' | 'merge'
 
-    // Can't remove yourself
+    // Can't remove yourself if you're the only admin
     if (userId === req.user.id) {
-      return res.status(400).json({ error: 'Cannot remove yourself' });
+      const adminCount = await prisma.workspaceMember.count({
+        where: { workspaceId, role: 'ADMIN' }
+      });
+
+      if (adminCount === 1) {
+        return res.status(400).json({ error: 'Cannot remove the only admin' });
+      }
     }
 
     // Verify user is a member
@@ -579,6 +551,13 @@ router.delete('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, a
     // Remove from workspace
     await prisma.workspaceMember.delete({
       where: { userId_workspaceId: { userId, workspaceId } }
+    });
+
+    // Notify via socket
+    const io = req.app.get('io');
+    io.to(`workspace:${workspaceId}`).emit('member:removed', {
+      workspaceId,
+      userId
     });
 
     res.json({ message: 'Member removed successfully' });
