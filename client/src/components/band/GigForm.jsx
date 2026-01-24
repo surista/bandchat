@@ -107,6 +107,9 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [availabilitySummary, setAvailabilitySummary] = useState(null);
+  const [bandMembers, setBandMembers] = useState({ current: [], former: [], guests: [] });
+  const [showMoreAttendees, setShowMoreAttendees] = useState(false);
+  const [attendeeSearch, setAttendeeSearch] = useState('');
 
   // Fetch availability summary when date changes
   useEffect(() => {
@@ -116,6 +119,15 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
         .catch(err => console.error('Failed to load availability:', err));
     }
   }, [workspaceId, formData.startDate]);
+
+  // Fetch band members for former/guest selection
+  useEffect(() => {
+    if (workspaceId) {
+      api.getBandMembers(workspaceId)
+        .then(setBandMembers)
+        .catch(err => console.error('Failed to load band members:', err));
+    }
+  }, [workspaceId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -377,6 +389,8 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                       ({selectedAttendees.length} selected)
                     </span>
                   </label>
+
+                  {/* Current workspace members */}
                   <div className="flex flex-wrap gap-2">
                     {workspaceMembers.map(member => {
                       const userId = member.user?.id || member.userId;
@@ -415,8 +429,92 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                       );
                     })}
                   </div>
+
+                  {/* Former/Guest members section */}
+                  {(() => {
+                    // Get former and guest band members with linked user accounts
+                    // Exclude those already in workspaceMembers
+                    const workspaceMemberIds = new Set(workspaceMembers.map(m => m.user?.id || m.userId));
+                    const otherMembers = [
+                      ...(bandMembers.former || []),
+                      ...(bandMembers.guests || [])
+                    ].filter(bm => bm.linkedUserId && !workspaceMemberIds.has(bm.linkedUserId));
+
+                    if (otherMembers.length === 0) return null;
+
+                    // Filter by search
+                    const filteredOthers = attendeeSearch
+                      ? otherMembers.filter(bm =>
+                          bm.name.toLowerCase().includes(attendeeSearch.toLowerCase())
+                        )
+                      : otherMembers;
+
+                    return (
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={() => setShowMoreAttendees(!showMoreAttendees)}
+                          className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                        >
+                          <span className={`transform transition-transform ${showMoreAttendees ? 'rotate-90' : ''}`}>
+                            ▶
+                          </span>
+                          {showMoreAttendees ? 'Hide' : 'Add'} former/guest members ({otherMembers.length})
+                        </button>
+
+                        {showMoreAttendees && (
+                          <div className="mt-2 p-3 bg-gray-900/50 rounded-lg">
+                            {otherMembers.length > 3 && (
+                              <input
+                                type="text"
+                                placeholder="Search members..."
+                                value={attendeeSearch}
+                                onChange={(e) => setAttendeeSearch(e.target.value)}
+                                className="w-full px-3 py-1.5 mb-2 bg-gray-800 border border-gray-700 rounded text-white text-sm"
+                              />
+                            )}
+                            <div className="flex flex-wrap gap-2">
+                              {filteredOthers.map(bm => {
+                                const isSelected = selectedAttendees.includes(bm.linkedUserId);
+                                const label = bm.isGuest ? 'Guest' : 'Former';
+
+                                return (
+                                  <button
+                                    key={bm.id}
+                                    type="button"
+                                    onClick={() => {
+                                      if (isSelected) {
+                                        setSelectedAttendees(selectedAttendees.filter(id => id !== bm.linkedUserId));
+                                      } else {
+                                        setSelectedAttendees([...selectedAttendees, bm.linkedUserId]);
+                                      }
+                                    }}
+                                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                                      isSelected
+                                        ? 'bg-green-600 text-white ring-2 ring-green-400'
+                                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                    }`}
+                                  >
+                                    {isSelected && <span className="mr-1">✓</span>}
+                                    {bm.name}
+                                    <span className={`ml-1 text-xs ${bm.isGuest ? 'text-purple-400' : 'text-gray-500'}`}>
+                                      ({label})
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                              {filteredOthers.length === 0 && attendeeSearch && (
+                                <p className="text-sm text-gray-500">No matches found</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   {selectedAttendees.length === 0 && (
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 mt-2">
                       Click members to mark them as attending
                     </p>
                   )}
