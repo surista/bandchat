@@ -498,10 +498,11 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                     {selectedAttendees.length === 0 && (
                       <p className="text-xs text-gray-500 mt-2">
                         Click members to mark them as attending
-                    </p>
-                  )}
-                </div>
-              )}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div>
                 <label className="modal-label">Venue</label>
