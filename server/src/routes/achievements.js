@@ -32,6 +32,23 @@ const DEFAULT_ACHIEVEMENTS = [
   { code: 'marathon', name: 'Marathon', description: 'Played a 3+ hour setlist', icon: '⏱️', category: 'milestones', threshold: null, isBandWide: true },
   { code: 'crowd_favorite', name: 'Crowd Favorite', description: 'Played the same song 50 times', icon: '⭐', category: 'milestones', threshold: null, isBandWide: true },
 
+  // Hours gigged
+  { code: 'ten_hours_gigged', name: 'Stage Time', description: 'Played 10 hours of gigs', icon: '⏰', category: 'gigs', threshold: 10, isBandWide: true },
+  { code: 'fifty_hours_gigged', name: 'Seasoned Performers', description: 'Played 50 hours of gigs', icon: '🎭', category: 'gigs', threshold: 50, isBandWide: true },
+  { code: 'hundred_hours_gigged', name: 'Stage Veterans', description: 'Played 100 hours of gigs', icon: '🌟', category: 'gigs', threshold: 100, isBandWide: true },
+  { code: 'fivehundred_hours_gigged', name: 'Live Legends', description: 'Played 500 hours of gigs', icon: '🎪', category: 'gigs', threshold: 500, isBandWide: true },
+
+  // Hours rehearsed
+  { code: 'ten_hours_rehearsed', name: 'Practice Time', description: 'Logged 10 hours of rehearsals', icon: '🔧', category: 'rehearsals', threshold: 10, isBandWide: true },
+  { code: 'fifty_hours_rehearsed', name: 'Woodshedding', description: 'Logged 50 hours of rehearsals', icon: '🛠️', category: 'rehearsals', threshold: 50, isBandWide: true },
+  { code: 'hundred_hours_rehearsed', name: 'Perfectionists', description: 'Logged 100 hours of rehearsals', icon: '🏋️', category: 'rehearsals', threshold: 100, isBandWide: true },
+  { code: 'fivehundred_hours_rehearsed', name: 'Practice Masters', description: 'Logged 500 hours of rehearsals', icon: '🧘', category: 'rehearsals', threshold: 500, isBandWide: true },
+
+  // Songs played at gigs
+  { code: 'hundred_songs_played', name: 'Century of Songs', description: 'Played 100 songs at gigs', icon: '🎶', category: 'gigs', threshold: 100, isBandWide: true },
+  { code: 'fivehundred_songs_played', name: 'Jukebox Band', description: 'Played 500 songs at gigs', icon: '📻', category: 'gigs', threshold: 500, isBandWide: true },
+  { code: 'thousand_songs_played', name: 'Endless Setlist', description: 'Played 1000 songs at gigs', icon: '🎰', category: 'gigs', threshold: 1000, isBandWide: true },
+
   // Member achievements
   { code: 'member_first_gig', name: 'Stage Debut', description: 'Performed your first gig with the band', icon: '🌟', category: 'gigs', threshold: 1, isBandWide: false },
   { code: 'member_ten_gigs', name: 'Regular', description: 'Performed in 10 gigs', icon: '🎯', category: 'gigs', threshold: 10, isBandWide: false },
@@ -44,6 +61,17 @@ const DEFAULT_ACHIEVEMENTS = [
   { code: 'always_available', name: 'Always Available', description: 'Marked available for 30 days in a row', icon: '✅', category: 'social', threshold: 30, isBandWide: false },
   { code: 'communicator', name: 'Communicator', description: 'Sent 100 messages', icon: '💬', category: 'social', threshold: 100, isBandWide: false },
   { code: 'super_communicator', name: 'Super Communicator', description: 'Sent 1000 messages', icon: '📢', category: 'social', threshold: 1000, isBandWide: false },
+
+  // Anniversary badges (by month, so 12 months = 1 year)
+  { code: 'one_year_member', name: 'First Anniversary', description: 'Been a member for 1 year', icon: '🎂', category: 'milestones', threshold: 12, isBandWide: false },
+  { code: 'two_year_member', name: 'Two Years Strong', description: 'Been a member for 2 years', icon: '🎊', category: 'milestones', threshold: 24, isBandWide: false },
+  { code: 'five_year_member', name: 'Half Decade', description: 'Been a member for 5 years', icon: '🏅', category: 'milestones', threshold: 60, isBandWide: false },
+  { code: 'ten_year_member', name: 'Decade Legend', description: 'Been a member for 10 years', icon: '🏆', category: 'milestones', threshold: 120, isBandWide: false },
+
+  // Emoji/reaction badges
+  { code: 'emoji_fan', name: 'Emoji Fan', description: 'Added 50 emoji reactions', icon: '😄', category: 'social', threshold: 50, isBandWide: false },
+  { code: 'emoji_enthusiast', name: 'Emoji Enthusiast', description: 'Added 250 emoji reactions', icon: '🤩', category: 'social', threshold: 250, isBandWide: false },
+  { code: 'emoji_master', name: 'Emoji Master', description: 'Added 1000 emoji reactions', icon: '🎭', category: 'social', threshold: 1000, isBandWide: false },
 ];
 
 // Seed achievements if they don't exist
@@ -164,6 +192,31 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
       _sum: { pay: true }
     });
 
+    // Calculate hours gigged (from completed gigs with start and end times)
+    const completedGigs = await prisma.gig.findMany({
+      where: { workspaceId, type: 'GIG', status: 'COMPLETED', endDate: { not: null } },
+      select: { date: true, endDate: true }
+    });
+    const hoursGigged = completedGigs.reduce((total, gig) => {
+      const duration = (new Date(gig.endDate) - new Date(gig.date)) / (1000 * 60 * 60);
+      return total + (duration > 0 ? duration : 0);
+    }, 0);
+
+    // Calculate hours rehearsed
+    const completedRehearsals = await prisma.gig.findMany({
+      where: { workspaceId, type: 'REHEARSAL', status: 'COMPLETED', endDate: { not: null } },
+      select: { date: true, endDate: true }
+    });
+    const hoursRehearsed = completedRehearsals.reduce((total, rehearsal) => {
+      const duration = (new Date(rehearsal.endDate) - new Date(rehearsal.date)) / (1000 * 60 * 60);
+      return total + (duration > 0 ? duration : 0);
+    }, 0);
+
+    // Total songs played at gigs
+    const songsPlayedCount = await prisma.gigSong.count({
+      where: { gig: { workspaceId, type: 'GIG', status: 'COMPLETED' } }
+    });
+
     // Check for road warrior (5 gigs in 7 days)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -265,6 +318,26 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
         case 'crowd_favorite':
           shouldAward = hasCrowdFavorite;
           break;
+        // Hours gigged
+        case 'ten_hours_gigged':
+        case 'fifty_hours_gigged':
+        case 'hundred_hours_gigged':
+        case 'fivehundred_hours_gigged':
+          shouldAward = hoursGigged >= achievement.threshold;
+          break;
+        // Hours rehearsed
+        case 'ten_hours_rehearsed':
+        case 'fifty_hours_rehearsed':
+        case 'hundred_hours_rehearsed':
+        case 'fivehundred_hours_rehearsed':
+          shouldAward = hoursRehearsed >= achievement.threshold;
+          break;
+        // Songs played at gigs
+        case 'hundred_songs_played':
+        case 'fivehundred_songs_played':
+        case 'thousand_songs_played':
+          shouldAward = songsPlayedCount >= achievement.threshold;
+          break;
       }
 
       if (shouldAward) {
@@ -302,6 +375,23 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
       }
     });
 
+    // Get member emoji/reaction count
+    const memberReactionCount = await prisma.reaction.count({
+      where: {
+        message: { channel: { workspaceId } },
+        userId: req.user.id
+      }
+    });
+
+    // Calculate months as member
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId } },
+      select: { joinedAt: true }
+    });
+    const memberMonths = membership ? Math.floor(
+      (new Date() - new Date(membership.joinedAt)) / (1000 * 60 * 60 * 24 * 30)
+    ) : 0;
+
     // Award member achievements
     for (const achievement of allAchievements.filter(a => !a.isBandWide)) {
       if (existingMemberIds.has(achievement.id)) continue;
@@ -325,6 +415,19 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
         case 'communicator':
         case 'super_communicator':
           shouldAward = memberMessageCount >= achievement.threshold;
+          break;
+        // Emoji reaction badges
+        case 'emoji_fan':
+        case 'emoji_enthusiast':
+        case 'emoji_master':
+          shouldAward = memberReactionCount >= achievement.threshold;
+          break;
+        // Anniversary badges (threshold is in months)
+        case 'one_year_member':
+        case 'two_year_member':
+        case 'five_year_member':
+        case 'ten_year_member':
+          shouldAward = memberMonths >= achievement.threshold;
           break;
       }
 
