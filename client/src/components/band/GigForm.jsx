@@ -33,7 +33,7 @@ const getGoogleCalendarUrl = (gig) => {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 };
 
-function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmin, workspaceId, workspaceMembers = [] }) {
+function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmin, workspaceId, workspaceMembers = [], previousEvents = [] }) {
   const getDefaultDate = () => {
     if (gig?.date) return format(new Date(gig.date), 'yyyy-MM-dd');
     if (defaultDate) return format(defaultDate, 'yyyy-MM-dd');
@@ -103,6 +103,36 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
   const [bandMembers, setBandMembers] = useState({ current: [], former: [], guests: [] });
   const [showMoreAttendees, setShowMoreAttendees] = useState(false);
   const [attendeeSearch, setAttendeeSearch] = useState('');
+  const [showTitleSuggestions, setShowTitleSuggestions] = useState(false);
+  const [showVenueSuggestions, setShowVenueSuggestions] = useState(false);
+
+  // Get unique titles and venues from previous events, filtered by type
+  const getSuggestions = (field, eventType) => {
+    const filtered = previousEvents.filter(e => {
+      if (eventType && e.type !== eventType) return false;
+      return e[field] && e[field].trim();
+    });
+    // Get unique values, sorted by most recent first (most frequently used)
+    const counts = {};
+    filtered.forEach(e => {
+      const val = e[field].trim();
+      counts[val] = (counts[val] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([val]) => val);
+  };
+
+  const titleSuggestions = getSuggestions('title', formData.type);
+  const venueSuggestions = getSuggestions('venue', formData.type);
+
+  // Filter suggestions based on current input
+  const filteredTitleSuggestions = titleSuggestions.filter(t =>
+    t.toLowerCase().includes(formData.title.toLowerCase()) && t !== formData.title
+  );
+  const filteredVenueSuggestions = venueSuggestions.filter(v =>
+    v.toLowerCase().includes(formData.venue.toLowerCase()) && v !== formData.venue
+  );
 
   // Fetch availability summary when date changes
   useEffect(() => {
@@ -198,7 +228,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
 
           <form onSubmit={handleSubmit}>
             <div className="space-y-4">
-              <div>
+              <div className="relative">
                 <label className="modal-label">
                   Title <span className="text-red-400">*</span>
                 </label>
@@ -206,10 +236,38 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                   type="text"
                   value={formData.title}
                   onChange={(e) => handleChange('title', e.target.value)}
+                  onFocus={() => setShowTitleSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowTitleSuggestions(false), 150)}
                   className="modal-input"
                   placeholder="e.g., Friday Night at The Venue"
                   required
                 />
+                {showTitleSuggestions && filteredTitleSuggestions.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+                    {filteredTitleSuggestions.slice(0, 8).map(title => (
+                      <button
+                        key={title}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleChange('title', title);
+                          // Also auto-fill venue if we have it from a matching previous event
+                          const matchingEvent = previousEvents.find(e => e.title === title && e.type === formData.type);
+                          if (matchingEvent?.venue && !formData.venue) {
+                            handleChange('venue', matchingEvent.venue);
+                            if (matchingEvent.address) {
+                              handleChange('address', matchingEvent.address);
+                            }
+                          }
+                          setShowTitleSuggestions(false);
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-700 text-gray-300"
+                      >
+                        {title}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -504,15 +562,40 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                 );
               })()}
 
-              <div>
+              <div className="relative">
                 <label className="modal-label">Venue</label>
                 <input
                   type="text"
                   value={formData.venue}
                   onChange={(e) => handleChange('venue', e.target.value)}
+                  onFocus={() => setShowVenueSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowVenueSuggestions(false), 150)}
                   className="modal-input"
                   placeholder="Venue name"
                 />
+                {showVenueSuggestions && filteredVenueSuggestions.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+                    {filteredVenueSuggestions.slice(0, 8).map(venue => (
+                      <button
+                        key={venue}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleChange('venue', venue);
+                          // Also auto-fill address if we have it from a matching previous event
+                          const matchingEvent = previousEvents.find(ev => ev.venue === venue);
+                          if (matchingEvent?.address && !formData.address) {
+                            handleChange('address', matchingEvent.address);
+                          }
+                          setShowVenueSuggestions(false);
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-700 text-gray-300"
+                      >
+                        {venue}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div>
