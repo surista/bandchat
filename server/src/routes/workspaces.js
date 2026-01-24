@@ -508,4 +508,84 @@ router.post('/:workspaceId/members/:userId/reset-password', authenticate, isWork
   }
 });
 
+// Remove member from workspace with post handling options
+router.delete('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, async (req, res) => {
+  try {
+    const { workspaceId, userId } = req.params;
+    const { postAction, mergeUserId } = req.query;
+    // postAction: 'keep' | 'hide' | 'delete' | 'anonymize' | 'merge'
+
+    // Can't remove yourself
+    if (userId === req.user.id) {
+      return res.status(400).json({ error: 'Cannot remove yourself' });
+    }
+
+    // Verify user is a member
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId, workspaceId } }
+    });
+
+    if (!membership) {
+      return res.status(404).json({ error: 'User is not a member of this workspace' });
+    }
+
+    // Get all channel IDs in this workspace
+    const channels = await prisma.channel.findMany({
+      where: { workspaceId },
+      select: { id: true }
+    });
+    const channelIds = channels.map(c => c.id);
+
+    // Handle posts based on action
+    if (postAction === 'delete') {
+      // Delete all messages by this user in workspace channels
+      await prisma.message.deleteMany({
+        where: {
+          authorId: userId,
+          channelId: { in: channelIds }
+        }
+      });
+    } else if (postAction === 'hide') {
+      // Mark messages as hidden
+      await prisma.message.updateMany({
+        where: {
+          authorId: userId,
+          channelId: { in: channelIds }
+        },
+        data: { isHidden: true }
+      });
+    } else if (postAction === 'anonymize') {
+      // Set a display name for removed user
+      const removedId = Math.random().toString(36).substring(2, 8).toUpperCase();
+      await prisma.message.updateMany({
+        where: {
+          authorId: userId,
+          channelId: { in: channelIds }
+        },
+        data: { removedUserName: `Removed User ${removedId}` }
+      });
+    } else if (postAction === 'merge' && mergeUserId) {
+      // Transfer all messages to another user
+      await prisma.message.updateMany({
+        where: {
+          authorId: userId,
+          channelId: { in: channelIds }
+        },
+        data: { authorId: mergeUserId }
+      });
+    }
+    // 'keep' - do nothing with posts
+
+    // Remove from workspace
+    await prisma.workspaceMember.delete({
+      where: { userId_workspaceId: { userId, workspaceId } }
+    });
+
+    res.json({ message: 'Member removed successfully' });
+  } catch (error) {
+    console.error('Remove member error:', error);
+    res.status(500).json({ error: 'Failed to remove member' });
+  }
+});
+
 export default router;

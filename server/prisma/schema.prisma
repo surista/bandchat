@@ -141,13 +141,15 @@ model ChannelMember {
 }
 
 model Message {
-  id        String   @id @default(uuid())
-  content   String
-  authorId  String
-  channelId String
-  parentId  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String   @id @default(uuid())
+  content         String
+  authorId        String
+  channelId       String
+  parentId        String?
+  isHidden        Boolean  @default(false)
+  removedUserName String?  // Set when user is removed with 'anonymize' option
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   channel     Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)

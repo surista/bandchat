@@ -241,6 +241,14 @@ class ApiService {
     });
   }
 
+  async removeMember(workspaceId, userId, postAction, mergeUserId = null) {
+    const params = new URLSearchParams({ postAction });
+    if (mergeUserId) params.append('mergeUserId', mergeUserId);
+    return this.request(`/workspaces/${workspaceId}/members/${userId}?${params}`, {
+      method: 'DELETE'
+    });
+  }
+
   // Channels
   async getChannels(workspaceId) {
     return this.request(`/channels/workspace/${workspaceId}`);

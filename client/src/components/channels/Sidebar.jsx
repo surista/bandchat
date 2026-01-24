@@ -59,6 +59,10 @@ function Sidebar({
   const [bandMembersLoading, setBandMembersLoading] = useState(false);
   const [editingBandMember, setEditingBandMember] = useState(null);
   const [showBandMemberForm, setShowBandMemberForm] = useState(false);
+  const [removingMember, setRemovingMember] = useState(null);
+  const [removePostAction, setRemovePostAction] = useState('keep');
+  const [removeMergeUserId, setRemoveMergeUserId] = useState('');
+  const [removeLoading, setRemoveLoading] = useState(false);
 
   useEffect(() => {
     // Check if notifications are already enabled
@@ -1139,25 +1143,37 @@ function Sidebar({
                       </div>
                       <div className="flex items-center gap-2">
                         {member.user.id !== user?.id && (
-                          <button
-                            onClick={async () => {
-                              const newPassword = prompt(`Enter new password for ${member.user.displayName} (min 6 characters):`);
-                              if (!newPassword) return;
-                              if (newPassword.length < 6) {
-                                alert('Password must be at least 6 characters');
-                                return;
-                              }
-                              try {
-                                await api.adminResetPassword(workspace.id, member.user.id, newPassword);
-                                alert(`Password reset for ${member.user.displayName}`);
-                              } catch (err) {
-                                alert(err.message);
-                              }
-                            }}
-                            className="text-xs text-blue-400 hover:text-blue-300 px-2 py-1"
-                          >
-                            Reset PW
-                          </button>
+                          <>
+                            <button
+                              onClick={async () => {
+                                const newPassword = prompt(`Enter new password for ${member.user.displayName} (min 6 characters):`);
+                                if (!newPassword) return;
+                                if (newPassword.length < 6) {
+                                  alert('Password must be at least 6 characters');
+                                  return;
+                                }
+                                try {
+                                  await api.adminResetPassword(workspace.id, member.user.id, newPassword);
+                                  alert(`Password reset for ${member.user.displayName}`);
+                                } catch (err) {
+                                  alert(err.message);
+                                }
+                              }}
+                              className="text-xs text-blue-400 hover:text-blue-300 px-2 py-1"
+                            >
+                              Reset PW
+                            </button>
+                            <button
+                              onClick={() => {
+                                setRemovingMember(member);
+                                setRemovePostAction('keep');
+                                setRemoveMergeUserId('');
+                              }}
+                              className="text-xs text-red-400 hover:text-red-300 px-2 py-1"
+                            >
+                              Remove
+                            </button>
+                          </>
                         )}
                         <select
                           value={member.role}
@@ -1181,6 +1197,124 @@ function Sidebar({
                       </div>
                     </div>
                   ))}
+
+                  {/* Remove Member Modal */}
+                  {removingMember && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                      <div className="bg-[var(--color-modal-bg)] rounded-lg p-6 max-w-md w-full mx-4">
+                        <h3 className="text-lg font-bold text-white mb-4">
+                          Remove {removingMember.user.displayName}?
+                        </h3>
+                        <p className="text-gray-400 text-sm mb-4">
+                          What should happen to their messages?
+                        </p>
+                        <div className="space-y-2 mb-4">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="postAction"
+                              value="keep"
+                              checked={removePostAction === 'keep'}
+                              onChange={(e) => setRemovePostAction(e.target.value)}
+                            />
+                            <span className="text-gray-200">Keep messages as-is</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="postAction"
+                              value="hide"
+                              checked={removePostAction === 'hide'}
+                              onChange={(e) => setRemovePostAction(e.target.value)}
+                            />
+                            <span className="text-gray-200">Hide all messages</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="postAction"
+                              value="delete"
+                              checked={removePostAction === 'delete'}
+                              onChange={(e) => setRemovePostAction(e.target.value)}
+                            />
+                            <span className="text-gray-200">Delete all messages</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="postAction"
+                              value="anonymize"
+                              checked={removePostAction === 'anonymize'}
+                              onChange={(e) => setRemovePostAction(e.target.value)}
+                            />
+                            <span className="text-gray-200">Show as "Removed User"</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="postAction"
+                              value="merge"
+                              checked={removePostAction === 'merge'}
+                              onChange={(e) => setRemovePostAction(e.target.value)}
+                            />
+                            <span className="text-gray-200">Transfer messages to another member</span>
+                          </label>
+                          {removePostAction === 'merge' && (
+                            <select
+                              value={removeMergeUserId}
+                              onChange={(e) => setRemoveMergeUserId(e.target.value)}
+                              className="modal-input ml-6 mt-2"
+                            >
+                              <option value="">Select member...</option>
+                              {workspace.members
+                                ?.filter(m => m.user.id !== removingMember.user.id && m.user.id !== user?.id)
+                                .map(m => (
+                                  <option key={m.user.id} value={m.user.id}>
+                                    {m.user.displayName}
+                                  </option>
+                                ))}
+                            </select>
+                          )}
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <button
+                            onClick={() => setRemovingMember(null)}
+                            className="btn btn-secondary"
+                            disabled={removeLoading}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (removePostAction === 'merge' && !removeMergeUserId) {
+                                alert('Please select a member to transfer messages to');
+                                return;
+                              }
+                              setRemoveLoading(true);
+                              try {
+                                await api.removeMember(
+                                  workspace.id,
+                                  removingMember.user.id,
+                                  removePostAction,
+                                  removeMergeUserId || null
+                                );
+                                setRemovingMember(null);
+                                window.location.reload();
+                              } catch (err) {
+                                alert(err.message);
+                              } finally {
+                                setRemoveLoading(false);
+                              }
+                            }}
+                            className="btn bg-red-600 hover:bg-red-700 text-white"
+                            disabled={removeLoading}
+                          >
+                            {removeLoading ? 'Removing...' : 'Remove Member'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
