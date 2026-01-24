@@ -643,6 +643,28 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
       }
     });
 
+    // Count gigs attended
+    const gigsAttended = await prisma.gigAttendee.count({
+      where: {
+        userId,
+        gig: {
+          workspaceId,
+          type: 'GIG'
+        }
+      }
+    });
+
+    // Count rehearsals attended
+    const rehearsalsAttended = await prisma.gigAttendee.count({
+      where: {
+        userId,
+        gig: {
+          workspaceId,
+          type: 'REHEARSAL'
+        }
+      }
+    });
+
     res.json({
       user: membership.user,
       role: membership.role,
@@ -654,7 +676,9 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
       stats: {
         messages: messageCount,
         songsAdded,
-        setlistsCreated
+        setlistsCreated,
+        gigsAttended,
+        rehearsalsAttended
       }
     });
   } catch (error) {

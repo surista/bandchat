@@ -94,18 +94,22 @@ export default function MemberProfile({ userId, workspaceId, onClose, onStartDM 
               </div>
 
               {/* Stats */}
-              <div className="grid grid-cols-3 gap-3 mb-6">
+              <div className="grid grid-cols-4 gap-2 mb-6">
                 <div className="bg-gray-700/50 rounded-lg p-3 text-center">
-                  <p className="text-xl font-bold text-white">{profile.stats.messages}</p>
-                  <p className="text-xs text-gray-400">Messages</p>
+                  <p className="text-xl font-bold text-white">{profile.stats.gigsAttended || 0}</p>
+                  <p className="text-xs text-gray-400">Gigs</p>
+                </div>
+                <div className="bg-gray-700/50 rounded-lg p-3 text-center">
+                  <p className="text-xl font-bold text-white">{profile.stats.rehearsalsAttended || 0}</p>
+                  <p className="text-xs text-gray-400">Rehearsals</p>
                 </div>
                 <div className="bg-gray-700/50 rounded-lg p-3 text-center">
                   <p className="text-xl font-bold text-white">{profile.stats.songsAdded}</p>
-                  <p className="text-xs text-gray-400">Songs Added</p>
+                  <p className="text-xs text-gray-400">Songs</p>
                 </div>
                 <div className="bg-gray-700/50 rounded-lg p-3 text-center">
-                  <p className="text-xl font-bold text-white">{profile.stats.setlistsCreated}</p>
-                  <p className="text-xs text-gray-400">Setlists</p>
+                  <p className="text-xl font-bold text-white">{profile.stats.messages}</p>
+                  <p className="text-xs text-gray-400">Messages</p>
                 </div>
               </div>
 
