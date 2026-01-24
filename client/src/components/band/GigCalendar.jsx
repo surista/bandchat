@@ -512,9 +512,17 @@ function GigCalendar({ workspaceId, workspace }) {
             >
               ← Prev
             </button>
-            <h3 className="text-lg font-medium text-white">
-              {format(currentMonth, 'MMMM yyyy')}
-            </h3>
+            <div className="flex items-center gap-3">
+              <h3 className="text-lg font-medium text-white">
+                {format(currentMonth, 'MMMM yyyy')}
+              </h3>
+              <button
+                onClick={() => setCurrentMonth(new Date())}
+                className="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded"
+              >
+                Today
+              </button>
+            </div>
             <button
               onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
               className="p-2 text-gray-400 hover:text-white"
