@@ -190,7 +190,12 @@ function BandMembersList({ workspaceId }) {
           <MemberAvatar member={member} size="md" isCurrent={isCurrent} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h4 className="font-medium text-white truncate">{member.name}</h4>
+              <h4 className={`font-medium truncate ${hasLinkedUser ? 'text-blue-400 hover:text-blue-300' : 'text-white'}`}>
+                {member.name}
+              </h4>
+              {hasLinkedUser && (
+                <span className="text-xs text-gray-500" title="Click to view profile">👤</span>
+              )}
               {member.isGuest && (
                 <span className="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-300 rounded">
                   Guest

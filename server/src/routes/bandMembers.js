@@ -9,7 +9,15 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
   try {
     const members = await prisma.bandMember.findMany({
       where: { workspaceId: req.params.workspaceId },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        imageUrl: true,
+        notes: true,
+        isGuest: true,
+        linkedUserId: true,
+        workspaceId: true,
+        createdAt: true,
         stints: {
           orderBy: { startDate: 'asc' }
         },
