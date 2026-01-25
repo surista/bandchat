@@ -376,9 +376,18 @@ router.post('/:channelId/read', authenticate, isChannelMember, async (req, res) 
 // Get DMs for a workspace
 router.get('/workspace/:workspaceId/dms', authenticate, isWorkspaceMember, async (req, res) => {
   try {
+    const workspaceId = req.params.workspaceId;
+
+    // Get current workspace members
+    const currentMembers = await prisma.workspaceMember.findMany({
+      where: { workspaceId },
+      select: { userId: true }
+    });
+    const currentMemberIds = new Set(currentMembers.map(m => m.userId));
+
     const dms = await prisma.channel.findMany({
       where: {
-        workspaceId: req.params.workspaceId,
+        workspaceId,
         isDirect: true,
         members: {
           some: { userId: req.user.id }
@@ -432,8 +441,10 @@ router.get('/workspace/:workspaceId/dms', authenticate, isWorkspaceMember, async
           }
         });
 
-        // Get the other user(s) in the DM
-        const otherMembers = dm.members.filter(m => m.user.id !== req.user.id);
+        // Get the other user(s) in the DM - only if they're still workspace members
+        const otherMembers = dm.members
+          .filter(m => m.user.id !== req.user.id)
+          .filter(m => currentMemberIds.has(m.user.id));
 
         return {
           ...dm,
@@ -445,7 +456,10 @@ router.get('/workspace/:workspaceId/dms', authenticate, isWorkspaceMember, async
       })
     );
 
-    res.json(dmsWithUnread);
+    // Filter out DMs where there are no valid other members (they all left)
+    const validDms = dmsWithUnread.filter(dm => dm.otherMembers.length > 0);
+
+    res.json(validDms);
   } catch (error) {
     console.error('Get DMs error:', error);
     res.status(500).json({ error: 'Failed to get DMs' });
