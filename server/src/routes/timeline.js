@@ -183,36 +183,45 @@ router.post('/workspace/:workspaceId/generate', authenticate, isWorkspaceMember,
       });
     }
 
-    // 1. BAND MEMBERS JOINING/LEAVING
+    // 1. BAND MEMBERS JOINING/LEAVING (dates from InstrumentStint)
     const members = await prisma.bandMember.findMany({
       where: { workspaceId },
-      orderBy: { joinDate: 'asc' }
+      include: {
+        stints: {
+          orderBy: { startDate: 'asc' }
+        }
+      }
     });
 
     for (const member of members) {
-      // Member joined
-      if (member.joinDate) {
+      // Get earliest stint as join date
+      const firstStint = member.stints[0];
+      if (firstStint?.startDate) {
         const joinTitle = `${member.name} Joined`;
         if (!await eventExistsByTitle(joinTitle)) {
+          // Get instruments from first stint for description
+          const instruments = firstStint.instruments?.join(', ') || '';
           events.push({
             title: joinTitle,
-            description: member.role ? `Joined as ${member.role}` : 'Joined the band',
+            description: instruments ? `Joined as ${instruments}` : 'Joined the band',
             eventType: 'member_joined',
-            eventDate: member.joinDate,
+            eventDate: firstStint.startDate,
             workspaceId,
             createdById: req.user.id
           });
         }
       }
-      // Member left
-      if (member.leftDate) {
+
+      // Check if member has left (all stints have endDate, or last stint has endDate)
+      const lastStint = member.stints[member.stints.length - 1];
+      if (lastStint?.endDate) {
         const leftTitle = `${member.name} Left`;
         if (!await eventExistsByTitle(leftTitle)) {
           events.push({
             title: leftTitle,
             description: 'Left the band',
             eventType: 'member_left',
-            eventDate: member.leftDate,
+            eventDate: lastStint.endDate,
             workspaceId,
             createdById: req.user.id
           });
