@@ -677,19 +677,33 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
       });
 
       // Also count gigs where they performed (via setlist performers)
+      // Check both legacy single setlist and multi-setlist relations
       const gigsFromPerformers = await prisma.gig.findMany({
         where: {
           workspaceId,
           type: 'GIG',
-          setlists: {
-            some: {
+          OR: [
+            // Legacy single setlist
+            {
               setlist: {
                 performers: {
                   some: { bandMemberId: { in: linkedBandMemberIds } }
                 }
               }
+            },
+            // Multi-setlist
+            {
+              setlists: {
+                some: {
+                  setlist: {
+                    performers: {
+                      some: { bandMemberId: { in: linkedBandMemberIds } }
+                    }
+                  }
+                }
+              }
             }
-          }
+          ]
         },
         select: { id: true }
       });
