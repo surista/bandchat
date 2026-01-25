@@ -166,6 +166,7 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
 
     // Get all achievement definitions
     const allAchievements = await prisma.achievement.findMany();
+    console.log('DEBUG achievements - total definitions found:', allAchievements.length);
 
     // Get existing achievements
     const existingBandAchievements = await prisma.bandAchievement.findMany({
@@ -173,9 +174,13 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
       select: { achievementId: true }
     });
     const existingBandIds = new Set(existingBandAchievements.map(a => a.achievementId));
+    console.log('DEBUG achievements - existing band achievements:', existingBandAchievements.length);
 
     // Get stats - count completed OR past events (date before now)
     const now = new Date();
+    console.log('DEBUG achievements - checking workspace:', workspaceId);
+    console.log('DEBUG achievements - current date:', now);
+
     const gigCount = await prisma.gig.count({
       where: {
         workspaceId,
@@ -186,6 +191,7 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
         ]
       }
     });
+    console.log('DEBUG achievements - gigCount:', gigCount);
 
     const rehearsalCount = await prisma.gig.count({
       where: {
@@ -356,6 +362,7 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
       }
 
       if (shouldAward) {
+        console.log('DEBUG achievements - awarding band achievement:', achievement.code);
         const awarded = await prisma.bandAchievement.create({
           data: {
             achievementId: achievement.id,
