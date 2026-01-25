@@ -502,7 +502,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
     }
 
     // Only admins can create locked events
-    const canLock = req.workspaceMember?.role === 'ADMIN';
+    const canLock = req.workspaceMembership?.role === 'ADMIN';
 
     // Create gig with optional multi-set support
     const gig = await prisma.gig.create({
