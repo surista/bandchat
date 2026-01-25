@@ -184,8 +184,9 @@ router.post('/workspace/:workspaceId/generate', authenticate, isWorkspaceMember,
     }
 
     // 1. BAND MEMBERS JOINING/LEAVING (dates from InstrumentStint)
+    // Skip guests - they don't "join" the band
     const members = await prisma.bandMember.findMany({
-      where: { workspaceId },
+      where: { workspaceId, isGuest: false },
       include: {
         stints: {
           orderBy: { startDate: 'asc' }
@@ -416,9 +417,9 @@ router.post('/workspace/:workspaceId/regenerate', authenticate, isWorkspaceAdmin
     const now = new Date();
     const events = [];
 
-    // 1. BAND MEMBERS JOINING/LEAVING
+    // 1. BAND MEMBERS JOINING/LEAVING (skip guests)
     const members = await prisma.bandMember.findMany({
-      where: { workspaceId },
+      where: { workspaceId, isGuest: false },
       include: {
         stints: { orderBy: { startDate: 'asc' } }
       }
