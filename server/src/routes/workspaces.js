@@ -663,6 +663,36 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
     if (linkedBandMemberIds.length > 0) {
       // GIG ATTENDANCE = "Who Played" in Gig Archive (SetlistPerformer table)
       // This is set via the Gig Archive "Who Played This Gig?" dialog
+
+      // DEBUG: Check total SetlistPerformer records for this band member
+      const totalPerformerRecords = await prisma.setlistPerformer.count({
+        where: { bandMemberId: { in: linkedBandMemberIds } }
+      });
+      console.log('DEBUG - Total SetlistPerformer records for band member:', totalPerformerRecords);
+
+      // DEBUG: Get the setlist IDs this member performed
+      const performerSetlists = await prisma.setlistPerformer.findMany({
+        where: { bandMemberId: { in: linkedBandMemberIds } },
+        select: { setlistId: true }
+      });
+      console.log('DEBUG - Setlist IDs performed:', performerSetlists.map(p => p.setlistId));
+
+      // DEBUG: Check how many of those setlists are attached to gigs
+      if (performerSetlists.length > 0) {
+        const setlistIds = performerSetlists.map(p => p.setlistId);
+        const gigsWithSetlists = await prisma.gig.count({
+          where: {
+            workspaceId,
+            type: 'GIG',
+            OR: [
+              { setlistId: { in: setlistIds } },
+              { setlists: { some: { setlistId: { in: setlistIds } } } }
+            ]
+          }
+        });
+        console.log('DEBUG - Gigs attached to those setlists:', gigsWithSetlists);
+      }
+
       gigsAttended = await prisma.setlistPerformer.count({
         where: {
           bandMemberId: { in: linkedBandMemberIds },
@@ -675,6 +705,7 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
           }
         }
       });
+      console.log('DEBUG - Final gigsAttended count:', gigsAttended);
 
       // REHEARSAL ATTENDANCE = Attendees in Calendar events (GigAttendee table)
       // Note: "GigAttendee" is used for ALL event types (gigs, rehearsals, etc.)
