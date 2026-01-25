@@ -678,18 +678,38 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
     if (linkedBandMemberIds.length > 0) {
       // GIG ATTENDANCE = "Who Played" in Gig Archive (SetlistPerformer table)
       // This is set via the Gig Archive "Who Played This Gig?" dialog
-      gigsAttended = await prisma.setlistPerformer.count({
+      // We need to count UNIQUE gigs, not setlist performers (since multi-set gigs have multiple setlists)
+      const setlistPerformers = await prisma.setlistPerformer.findMany({
         where: {
           bandMemberId: { in: linkedBandMemberIds },
           setlist: {
-            // Setlist must be attached to a gig
             OR: [
-              { gigs: { some: { workspaceId } } },           // Legacy single setlist
-              { gigSetlists: { some: { gig: { workspaceId } } } }  // Multi-setlist
+              { gigs: { some: { workspaceId } } },
+              { gigSetlists: { some: { gig: { workspaceId } } } }
             ]
+          }
+        },
+        select: {
+          setlist: {
+            select: {
+              gigs: { where: { workspaceId }, select: { id: true } },
+              gigSetlists: { where: { gig: { workspaceId } }, select: { gig: { select: { id: true } } } }
+            }
           }
         }
       });
+
+      // Extract unique gig IDs
+      const gigIds = new Set();
+      for (const sp of setlistPerformers) {
+        for (const gig of sp.setlist.gigs || []) {
+          gigIds.add(gig.id);
+        }
+        for (const gs of sp.setlist.gigSetlists || []) {
+          gigIds.add(gs.gig.id);
+        }
+      }
+      gigsAttended = gigIds.size;
 
       // REHEARSAL ATTENDANCE = Attendees in Calendar events (GigAttendee table)
       // Note: "GigAttendee" is used for ALL event types (gigs, rehearsals, etc.)
