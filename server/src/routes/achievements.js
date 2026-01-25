@@ -74,15 +74,21 @@ const DEFAULT_ACHIEVEMENTS = [
   { code: 'emoji_master', name: 'Emoji Master', description: 'Added 1000 emoji reactions', icon: '🎭', category: 'social', threshold: 1000, isBandWide: false },
 ];
 
-// Seed achievements if they don't exist
+// Seed achievements - update existing records to ensure icons are set
 async function seedAchievements() {
+  console.log('Seeding achievements...');
   for (const achievement of DEFAULT_ACHIEVEMENTS) {
     await prisma.achievement.upsert({
       where: { code: achievement.code },
-      update: {},
+      update: {
+        icon: achievement.icon,
+        name: achievement.name,
+        description: achievement.description
+      },
       create: achievement
     });
   }
+  console.log('Achievements seeded:', DEFAULT_ACHIEVEMENTS.length);
 }
 
 // Initialize achievements on startup
