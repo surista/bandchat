@@ -34,7 +34,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       return res.status(400).json({ error: 'Title, event type, and date are required' });
     }
 
-    const validTypes = ['formation', 'first_gig', 'member_joined', 'member_left', 'album_release', 'milestone', 'custom'];
+    const validTypes = ['formation', 'first_gig', 'gig', 'rehearsal', 'member_joined', 'member_left', 'album_release', 'milestone', 'custom'];
     if (!validTypes.includes(eventType)) {
       return res.status(400).json({ error: 'Invalid event type' });
     }
@@ -169,93 +169,168 @@ router.delete('/:eventId', authenticate, async (req, res) => {
   }
 });
 
-// Auto-generate timeline from gigs data
+// Auto-generate timeline from actual band data
 router.post('/workspace/:workspaceId/generate', authenticate, isWorkspaceAdmin, async (req, res) => {
   try {
     const workspaceId = req.params.workspaceId;
-
-    // Get first gig
-    const firstGig = await prisma.gig.findFirst({
-      where: { workspaceId, type: 'GIG', status: 'COMPLETED' },
-      orderBy: { date: 'asc' }
-    });
-
-    // Get workspace creation date
-    const workspace = await prisma.workspace.findUnique({
-      where: { id: workspaceId }
-    });
-
+    const now = new Date();
     const events = [];
 
-    // Add formation event
-    const existingFormation = await prisma.timelineEvent.findFirst({
-      where: { workspaceId, eventType: 'formation' }
+    // Helper to check if event already exists
+    async function eventExists(eventType, titlePattern = null) {
+      const where = { workspaceId, eventType };
+      if (titlePattern) {
+        where.title = { contains: titlePattern };
+      }
+      return await prisma.timelineEvent.findFirst({ where });
+    }
+
+    // Get all band members with join dates
+    const members = await prisma.bandMember.findMany({
+      where: { workspaceId },
+      orderBy: { joinDate: 'asc' }
     });
 
-    if (!existingFormation) {
+    // Find earliest member join date for "Band Formed"
+    const earliestMember = members.find(m => m.joinDate);
+    if (earliestMember && !await eventExists('formation')) {
       events.push({
         title: 'Band Formed',
         description: 'The beginning of our journey',
         eventType: 'formation',
-        eventDate: workspace.createdAt,
+        eventDate: earliestMember.joinDate,
         workspaceId,
         createdById: req.user.id
       });
     }
 
-    // Add first gig event
-    if (firstGig) {
-      const existingFirstGig = await prisma.timelineEvent.findFirst({
-        where: { workspaceId, eventType: 'first_gig' }
-      });
-
-      if (!existingFirstGig) {
+    // Add member joined events
+    for (const member of members) {
+      if (member.joinDate && !await eventExists('member_joined', member.name)) {
         events.push({
-          title: 'First Gig',
-          description: `Our first show at ${firstGig.venue || 'an awesome venue'}`,
-          eventType: 'first_gig',
-          eventDate: firstGig.date,
+          title: `${member.name} Joined`,
+          description: member.role ? `Joined as ${member.role}` : 'Joined the band',
+          eventType: 'member_joined',
+          eventDate: member.joinDate,
+          workspaceId,
+          createdById: req.user.id
+        });
+      }
+      // Add member left events
+      if (member.leftDate && !await eventExists('member_left', member.name)) {
+        events.push({
+          title: `${member.name} Left`,
+          description: 'Left the band',
+          eventType: 'member_left',
+          eventDate: member.leftDate,
           workspaceId,
           createdById: req.user.id
         });
       }
     }
 
-    // Add milestone events for gig counts
-    const gigCount = await prisma.gig.count({
-      where: { workspaceId, type: 'GIG', status: 'COMPLETED' }
+    // Get all past rehearsals
+    const rehearsals = await prisma.gig.findMany({
+      where: {
+        workspaceId,
+        type: 'REHEARSAL',
+        date: { lt: now },
+        status: { not: 'CANCELLED' }
+      },
+      orderBy: { date: 'asc' }
     });
 
-    const milestones = [10, 25, 50, 100, 250, 500, 1000];
-    for (const milestone of milestones) {
-      if (gigCount >= milestone) {
-        const existingMilestone = await prisma.timelineEvent.findFirst({
-          where: {
-            workspaceId,
-            eventType: 'milestone',
-            title: { contains: `${milestone}` }
-          }
+    // First rehearsal
+    if (rehearsals.length > 0 && !await eventExists('milestone', 'First Rehearsal')) {
+      events.push({
+        title: 'First Rehearsal',
+        description: 'Our first practice session',
+        eventType: 'milestone',
+        eventDate: rehearsals[0].date,
+        workspaceId,
+        createdById: req.user.id
+      });
+    }
+
+    // Rehearsal milestones
+    const rehearsalMilestones = [10, 25, 50, 100];
+    for (const milestone of rehearsalMilestones) {
+      if (rehearsals.length >= milestone && !await eventExists('milestone', `${milestone} Rehearsals`)) {
+        events.push({
+          title: `${milestone} Rehearsals`,
+          description: `We've practiced ${milestone} times!`,
+          eventType: 'milestone',
+          eventDate: rehearsals[milestone - 1].date,
+          workspaceId,
+          createdById: req.user.id
         });
+      }
+    }
 
-        if (!existingMilestone) {
-          // Find the date of the milestone gig
-          const gigs = await prisma.gig.findMany({
-            where: { workspaceId, type: 'GIG', status: 'COMPLETED' },
-            orderBy: { date: 'asc' },
-            skip: milestone - 1,
-            take: 1
+    // Get all past gigs
+    const gigs = await prisma.gig.findMany({
+      where: {
+        workspaceId,
+        type: 'GIG',
+        date: { lt: now },
+        status: { not: 'CANCELLED' }
+      },
+      orderBy: { date: 'asc' }
+    });
+
+    // First gig
+    if (gigs.length > 0 && !await eventExists('first_gig')) {
+      events.push({
+        title: 'First Gig',
+        description: gigs[0].venue ? `Our first show at ${gigs[0].venue}` : 'Our first show!',
+        eventType: 'first_gig',
+        eventDate: gigs[0].date,
+        workspaceId,
+        createdById: req.user.id
+      });
+    }
+
+    // First paid gig
+    const firstPaidGig = gigs.find(g => g.pay && g.pay > 0);
+    if (firstPaidGig && !await eventExists('milestone', 'First Paid Gig')) {
+      events.push({
+        title: 'First Paid Gig',
+        description: `Our first paying gig${firstPaidGig.venue ? ` at ${firstPaidGig.venue}` : ''}!`,
+        eventType: 'milestone',
+        eventDate: firstPaidGig.date,
+        workspaceId,
+        createdById: req.user.id
+      });
+    }
+
+    // Gig milestones
+    const gigMilestones = [10, 25, 50, 100, 250, 500, 1000];
+    for (const milestone of gigMilestones) {
+      if (gigs.length >= milestone && !await eventExists('milestone', `${milestone} Gigs`)) {
+        events.push({
+          title: `${milestone} Gigs Milestone`,
+          description: `We hit ${milestone} gigs!`,
+          eventType: 'milestone',
+          eventDate: gigs[milestone - 1].date,
+          workspaceId,
+          createdById: req.user.id
+        });
+      }
+    }
+
+    // Add individual gig events (only for gigs with venues)
+    for (const gig of gigs) {
+      if (gig.venue && gig.title) {
+        const gigTitle = gig.title || `Gig at ${gig.venue}`;
+        if (!await eventExists('custom', gigTitle)) {
+          events.push({
+            title: gigTitle,
+            description: gig.venue,
+            eventType: 'custom',
+            eventDate: gig.date,
+            workspaceId,
+            createdById: req.user.id
           });
-
-          if (gigs.length > 0) {
-            events.push({
-              title: `${milestone} Gigs Milestone`,
-              description: `We hit ${milestone} gigs!`,
-              eventType: 'milestone',
-              eventDate: gigs[0].date,
-              workspaceId,
-              createdById: req.user.id
-            });
-          }
         }
       }
     }

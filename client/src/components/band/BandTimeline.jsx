@@ -4,7 +4,9 @@ import { api } from '../../services/api';
 const EVENT_TYPES = [
   { value: 'formation', label: 'Band Formation', icon: '🎸' },
   { value: 'first_gig', label: 'First Gig', icon: '🎤' },
-  { value: 'member_joined', label: 'Member Joined', icon: '👋' },
+  { value: 'gig', label: 'Gig/Show', icon: '🎵' },
+  { value: 'rehearsal', label: 'Rehearsal', icon: '🥁' },
+  { value: 'member_joined', label: 'Member Joined', icon: '🙌' },
   { value: 'member_left', label: 'Member Left', icon: '👋' },
   { value: 'album_release', label: 'Album/EP Release', icon: '💿' },
   { value: 'milestone', label: 'Milestone', icon: '🏆' },
@@ -135,25 +137,27 @@ export default function BandTimeline({ workspaceId }) {
   }
 
   return (
-    <div className="p-4 max-w-4xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-white">Band Timeline</h2>
-        <div className="flex gap-2">
-          <button
-            onClick={handleGenerate}
-            disabled={generating}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg disabled:opacity-50"
-          >
-            {generating ? 'Generating...' : 'Auto-Generate'}
-          </button>
-          <button
-            onClick={() => setShowForm(true)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
-          >
-            Add Event
-          </button>
-        </div>
-      </div>
+    <div className="h-full flex flex-col bg-gray-900">
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-white">Band Timeline</h2>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleGenerate}
+                disabled={generating}
+                className="text-sm text-gray-400 hover:text-white disabled:opacity-50"
+              >
+                {generating ? 'Generating...' : 'Auto-Generate'}
+              </button>
+              <button
+                onClick={() => setShowForm(true)}
+                className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+              >
+                + Add Event
+              </button>
+            </div>
+          </div>
 
       {/* Add/Edit Form */}
       {showForm && (
@@ -306,6 +310,8 @@ export default function BandTimeline({ workspaceId }) {
           ))}
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }
