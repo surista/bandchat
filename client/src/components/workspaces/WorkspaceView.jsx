@@ -477,7 +477,7 @@ function WorkspaceView() {
             ) : activeBandView === 'archive' ? (
               <GigArchive workspaceId={workspaceId} />
             ) : activeBandView === 'members' ? (
-              <BandMembersList key={bandViewKey} workspaceId={workspaceId} />
+              <BandMembersList key={bandViewKey} workspaceId={workspaceId} workspace={workspace} />
             ) : activeBandView === 'contacts' ? (
               <ContactsList workspaceId={workspaceId} />
             ) : activeBandView === 'announcements' ? (

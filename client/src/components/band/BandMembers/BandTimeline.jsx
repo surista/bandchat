@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 
-function BandTimeline({ members, onMemberClick }) {
+function BandTimeline({ members, onMemberClick, findUserByName }) {
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(800);
 
@@ -233,12 +233,12 @@ function BandTimeline({ members, onMemberClick }) {
                 {/* Member avatar and name - clickable if linked to user */}
                 <g
                   onClick={() => {
-                    const linkedId = member.linkedUserId || member.linkedUser?.id;
+                    const linkedId = member.linkedUserId || member.linkedUser?.id || (findUserByName && findUserByName(member.name));
                     if (linkedId && onMemberClick) {
                       onMemberClick(linkedId);
                     }
                   }}
-                  style={{ cursor: (member.linkedUserId || member.linkedUser?.id) ? 'pointer' : 'default' }}
+                  style={{ cursor: (member.linkedUserId || member.linkedUser?.id || (findUserByName && findUserByName(member.name))) ? 'pointer' : 'default' }}
                   className="timeline-member-row"
                 >
                   {/* Invisible clickable area */}

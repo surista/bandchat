@@ -3,11 +3,20 @@ import api from '../../../services/api';
 import BandTimeline from './BandTimeline';
 import MemberProfile from '../../common/MemberProfile';
 
-function BandMembersList({ workspaceId }) {
+function BandMembersList({ workspaceId, workspace }) {
   const [members, setMembers] = useState({ current: [], former: [], guests: [], all: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showProfileUserId, setShowProfileUserId] = useState(null);
+
+  // Helper to find a workspace user by band member name
+  const findUserByName = (bandMemberName) => {
+    if (!workspace?.members) return null;
+    const match = workspace.members.find(
+      m => m.user.displayName?.toLowerCase() === bandMemberName?.toLowerCase()
+    );
+    return match?.user?.id || null;
+  };
 
   useEffect(() => {
     loadMembers();
@@ -171,13 +180,14 @@ function BandMembersList({ workspaceId }) {
     const primaryInstrument = getPrimaryInstrument(member);
     const instruments = getInstruments(member);
     const yearRange = getMemberYearRange(member);
-    const hasLinkedUser = !!member.linkedUserId || !!member.linkedUser;
+
+    // Try linkedUserId first, then linkedUser.id, then match by name
+    const resolvedUserId = member.linkedUserId || member.linkedUser?.id || findUserByName(member.name);
+    const hasLinkedUser = !!resolvedUserId;
 
     const handleClick = () => {
-      if (member.linkedUserId) {
-        setShowProfileUserId(member.linkedUserId);
-      } else if (member.linkedUser?.id) {
-        setShowProfileUserId(member.linkedUser.id);
+      if (resolvedUserId) {
+        setShowProfileUserId(resolvedUserId);
       }
     };
 
@@ -264,7 +274,11 @@ function BandMembersList({ workspaceId }) {
               Timeline
             </h3>
             <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
-              <BandTimeline members={members.all} onMemberClick={(userId) => setShowProfileUserId(userId)} />
+              <BandTimeline
+                members={members.all}
+                onMemberClick={(userId) => setShowProfileUserId(userId)}
+                findUserByName={findUserByName}
+              />
             </div>
           </div>
         )}
