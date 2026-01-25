@@ -742,4 +742,112 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
   }
 });
 
+// Get member's attended events (gigs or rehearsals)
+router.get('/:workspaceId/members/:userId/events', authenticate, isWorkspaceMember, async (req, res) => {
+  try {
+    const { workspaceId, userId } = req.params;
+    const { type } = req.query; // 'GIG' or 'REHEARSAL'
+
+    // Find band members linked to this user (by ID or by name)
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { displayName: true }
+    });
+
+    let linkedBandMembers = await prisma.bandMember.findMany({
+      where: { workspaceId, linkedUserId: userId },
+      select: { id: true }
+    });
+
+    if (linkedBandMembers.length === 0 && user?.displayName) {
+      linkedBandMembers = await prisma.bandMember.findMany({
+        where: {
+          workspaceId,
+          name: { equals: user.displayName, mode: 'insensitive' }
+        },
+        select: { id: true }
+      });
+    }
+
+    const linkedBandMemberIds = linkedBandMembers.map(bm => bm.id);
+
+    if (linkedBandMemberIds.length === 0) {
+      return res.json([]);
+    }
+
+    // Get events from GigAttendee
+    const attendedEvents = await prisma.gig.findMany({
+      where: {
+        workspaceId,
+        type: type || 'GIG',
+        attendees: {
+          some: { bandMemberId: { in: linkedBandMemberIds } }
+        }
+      },
+      select: {
+        id: true,
+        title: true,
+        date: true,
+        venue: true,
+        type: true
+      },
+      orderBy: { date: 'desc' }
+    });
+
+    // For gigs, also check setlist performers
+    if (type === 'GIG' || !type) {
+      const performedGigs = await prisma.gig.findMany({
+        where: {
+          workspaceId,
+          type: 'GIG',
+          OR: [
+            {
+              setlist: {
+                performers: {
+                  some: { bandMemberId: { in: linkedBandMemberIds } }
+                }
+              }
+            },
+            {
+              setlists: {
+                some: {
+                  setlist: {
+                    performers: {
+                      some: { bandMemberId: { in: linkedBandMemberIds } }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        select: {
+          id: true,
+          title: true,
+          date: true,
+          venue: true,
+          type: true
+        },
+        orderBy: { date: 'desc' }
+      });
+
+      // Merge and dedupe
+      const allGigIds = new Set(attendedEvents.map(e => e.id));
+      for (const gig of performedGigs) {
+        if (!allGigIds.has(gig.id)) {
+          attendedEvents.push(gig);
+        }
+      }
+
+      // Re-sort by date
+      attendedEvents.sort((a, b) => new Date(b.date) - new Date(a.date));
+    }
+
+    res.json(attendedEvents);
+  } catch (error) {
+    console.error('Get member events error:', error);
+    res.status(500).json({ error: 'Failed to get member events' });
+  }
+});
+
 export default router;

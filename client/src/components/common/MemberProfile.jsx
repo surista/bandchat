@@ -1,11 +1,24 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { format } from 'date-fns';
 import api from '../../services/api';
 
 export default function MemberProfile({ userId, workspaceId, onClose, onStartDM }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [eventsModal, setEventsModal] = useState(null); // { type: 'GIG' | 'REHEARSAL', events: [], loading: boolean }
+
+  async function loadEvents(type) {
+    setEventsModal({ type, events: [], loading: true });
+    try {
+      const events = await api.getMemberEvents(workspaceId, userId, type);
+      setEventsModal({ type, events, loading: false });
+    } catch (err) {
+      console.error('Failed to load events:', err);
+      setEventsModal({ type, events: [], loading: false, error: err.message });
+    }
+  }
 
   useEffect(() => {
     loadProfile();
@@ -95,14 +108,24 @@ export default function MemberProfile({ userId, workspaceId, onClose, onStartDM 
 
               {/* Stats */}
               <div className="grid grid-cols-4 gap-2 mb-6">
-                <div className="bg-gray-700/50 rounded-lg p-3 text-center">
+                <button
+                  onClick={() => profile.stats.gigsAttended > 0 && loadEvents('GIG')}
+                  className={`bg-gray-700/50 rounded-lg p-3 text-center transition-colors ${
+                    profile.stats.gigsAttended > 0 ? 'hover:bg-gray-600/50 cursor-pointer' : ''
+                  }`}
+                >
                   <p className="text-xl font-bold text-white">{profile.stats.gigsAttended || 0}</p>
                   <p className="text-xs text-gray-400">Gigs</p>
-                </div>
-                <div className="bg-gray-700/50 rounded-lg p-3 text-center">
+                </button>
+                <button
+                  onClick={() => profile.stats.rehearsalsAttended > 0 && loadEvents('REHEARSAL')}
+                  className={`bg-gray-700/50 rounded-lg p-3 text-center transition-colors ${
+                    profile.stats.rehearsalsAttended > 0 ? 'hover:bg-gray-600/50 cursor-pointer' : ''
+                  }`}
+                >
                   <p className="text-xl font-bold text-white">{profile.stats.rehearsalsAttended || 0}</p>
                   <p className="text-xs text-gray-400">Rehearsals</p>
-                </div>
+                </button>
                 <div className="bg-gray-700/50 rounded-lg p-3 text-center">
                   <p className="text-xl font-bold text-white">{profile.stats.songsAdded}</p>
                   <p className="text-xs text-gray-400">Songs</p>
@@ -152,6 +175,50 @@ export default function MemberProfile({ userId, workspaceId, onClose, onStartDM 
             </div>
           </>
         ) : null}
+
+        {/* Events Modal */}
+        {eventsModal && (
+          <div
+            className="absolute inset-0 bg-gray-900/95 rounded-xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-gray-700">
+              <h3 className="text-lg font-medium text-white">
+                {eventsModal.type === 'GIG' ? 'Gigs' : 'Rehearsals'} ({eventsModal.events.length})
+              </h3>
+              <button
+                onClick={() => setEventsModal(null)}
+                className="text-gray-400 hover:text-white text-2xl leading-none"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {eventsModal.loading ? (
+                <div className="text-center text-gray-400 py-8">Loading...</div>
+              ) : eventsModal.error ? (
+                <div className="text-center text-red-400 py-8">{eventsModal.error}</div>
+              ) : eventsModal.events.length === 0 ? (
+                <div className="text-center text-gray-500 py-8">No events found</div>
+              ) : (
+                <div className="space-y-2">
+                  {eventsModal.events.map(event => (
+                    <div
+                      key={event.id}
+                      className="bg-gray-800 rounded-lg p-3 border border-gray-700"
+                    >
+                      <div className="font-medium text-white">{event.title}</div>
+                      <div className="text-sm text-gray-400 mt-1">
+                        {format(new Date(event.date), 'd-MMM-yyyy')}
+                        {event.venue && ` • ${event.venue}`}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

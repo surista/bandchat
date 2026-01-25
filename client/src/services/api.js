@@ -135,6 +135,10 @@ class ApiService {
     return this.request(`/workspaces/${workspaceId}/members/${userId}/profile`);
   }
 
+  async getMemberEvents(workspaceId, userId, type) {
+    return this.request(`/workspaces/${workspaceId}/members/${userId}/events?type=${type}`);
+  }
+
   async changePassword(currentPassword, newPassword) {
     return this.request('/auth/password', {
       method: 'PUT',
