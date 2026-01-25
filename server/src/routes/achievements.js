@@ -259,23 +259,73 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
       }
     }
 
-    // Calculate cumulative hours for gigs
+    // Calculate cumulative hours for gigs based on SETLIST DURATION (not start/end time)
+    // Get gigs with their setlists and song durations
+    const gigsWithSetlists = await prisma.gig.findMany({
+      where: {
+        workspaceId,
+        type: 'GIG',
+        date: { lt: now },
+        status: { not: 'CANCELLED' }
+      },
+      include: {
+        setlist: {
+          include: {
+            songs: {
+              include: { song: true }
+            }
+          }
+        },
+        setlists: {
+          include: {
+            setlist: {
+              include: {
+                songs: {
+                  include: { song: true }
+                }
+              }
+            }
+          }
+        }
+      },
+      orderBy: { date: 'asc' }
+    });
+
     let cumulativeGigHours = 0;
     const gigHourMilestones = {};
-    for (const gig of allGigs) {
-      if (gig.endDate) {
-        const hours = (new Date(gig.endDate) - new Date(gig.date)) / (1000 * 60 * 60);
-        if (hours > 0) {
-          const prevHours = cumulativeGigHours;
-          cumulativeGigHours += hours;
-          for (const milestone of [10, 50, 100, 500]) {
-            if (prevHours < milestone && cumulativeGigHours >= milestone) {
-              gigHourMilestones[milestone] = gig.date;
-            }
+    for (const gig of gigsWithSetlists) {
+      let gigDurationSeconds = 0;
+
+      // Check single setlist (setlistId)
+      if (gig.setlist?.songs) {
+        gigDurationSeconds = gig.setlist.songs.reduce((sum, item) => {
+          return sum + (item.song?.duration || item.duration || 0);
+        }, 0);
+      }
+
+      // Check multi-set (GigSetlist join table)
+      if (gig.setlists?.length > 0) {
+        for (const gs of gig.setlists) {
+          if (gs.setlist?.songs) {
+            gigDurationSeconds += gs.setlist.songs.reduce((sum, item) => {
+              return sum + (item.song?.duration || item.duration || 0);
+            }, 0);
+          }
+        }
+      }
+
+      if (gigDurationSeconds > 0) {
+        const hours = gigDurationSeconds / 3600; // Convert seconds to hours
+        const prevHours = cumulativeGigHours;
+        cumulativeGigHours += hours;
+        for (const milestone of [10, 50, 100, 500]) {
+          if (prevHours < milestone && cumulativeGigHours >= milestone) {
+            gigHourMilestones[milestone] = gig.date;
           }
         }
       }
     }
+    console.log('DEBUG achievements - cumulativeGigHours from setlists:', cumulativeGigHours);
 
     // Find first paid gig
     const firstPaidGig = allGigs.find(g => g.pay && g.pay > 0);
@@ -629,7 +679,8 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
         rehearsals: allRehearsals.length,
         songs: allSongs.length,
         revenue: cumulativeRevenue,
-        hoursRehearsed: Math.round(cumulativeRehearsalHours * 10) / 10
+        hoursRehearsed: Math.round(cumulativeRehearsalHours * 10) / 10,
+        hoursGigged: Math.round(cumulativeGigHours * 10) / 10
       }
     });
   } catch (error) {
