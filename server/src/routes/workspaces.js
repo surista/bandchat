@@ -651,11 +651,19 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
     });
 
     // If no explicit link, try to match by name (case-insensitive)
+    // Also try matching first name or if band member name is contained in display name
     if (linkedBandMembers.length === 0 && membership.user.displayName) {
+      const displayName = membership.user.displayName;
+      const firstName = displayName.split(' ')[0];
+
       linkedBandMembers = await prisma.bandMember.findMany({
         where: {
           workspaceId,
-          name: { equals: membership.user.displayName, mode: 'insensitive' }
+          OR: [
+            { name: { equals: displayName, mode: 'insensitive' } },
+            { name: { equals: firstName, mode: 'insensitive' } },
+            { name: { contains: firstName, mode: 'insensitive' } }
+          ]
         },
         select: { id: true }
       });
@@ -760,10 +768,17 @@ router.get('/:workspaceId/members/:userId/events', authenticate, isWorkspaceMemb
     });
 
     if (linkedBandMembers.length === 0 && user?.displayName) {
+      const displayName = user.displayName;
+      const firstName = displayName.split(' ')[0];
+
       linkedBandMembers = await prisma.bandMember.findMany({
         where: {
           workspaceId,
-          name: { equals: user.displayName, mode: 'insensitive' }
+          OR: [
+            { name: { equals: displayName, mode: 'insensitive' } },
+            { name: { equals: firstName, mode: 'insensitive' } },
+            { name: { contains: firstName, mode: 'insensitive' } }
+          ]
         },
         select: { id: true }
       });

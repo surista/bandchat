@@ -10,11 +10,20 @@ function BandMembersList({ workspaceId, workspace }) {
   const [showProfileUserId, setShowProfileUserId] = useState(null);
 
   // Helper to find a workspace user by band member name
+  // Matches exact name, first name, or if band member name is contained in display name
   const findUserByName = (bandMemberName) => {
-    if (!workspace?.members) return null;
-    const match = workspace.members.find(
-      m => m.user.displayName?.toLowerCase() === bandMemberName?.toLowerCase()
-    );
+    if (!workspace?.members || !bandMemberName) return null;
+    const bmNameLower = bandMemberName.toLowerCase();
+
+    const match = workspace.members.find(m => {
+      const displayName = m.user.displayName?.toLowerCase() || '';
+      const firstName = displayName.split(' ')[0];
+      return (
+        displayName === bmNameLower ||
+        firstName === bmNameLower ||
+        displayName.includes(bmNameLower)
+      );
+    });
     return match?.user?.id || null;
   };
 
