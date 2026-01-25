@@ -8,6 +8,7 @@ import VerifyEmailChange from './components/auth/VerifyEmailChange';
 import WorkspaceList from './components/workspaces/WorkspaceList';
 import WorkspaceView from './components/workspaces/WorkspaceView';
 import JoinWorkspace from './components/workspaces/JoinWorkspace';
+import UpdatePrompt from './components/common/UpdatePrompt';
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -39,7 +40,9 @@ function PublicRoute({ children }) {
 
 function App() {
   return (
-    <Routes>
+    <>
+      <UpdatePrompt />
+      <Routes>
       <Route
         path="/login"
         element={
@@ -101,6 +104,7 @@ function App() {
         }
       />
     </Routes>
+    </>
   );
 }
 
