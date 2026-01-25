@@ -176,46 +176,51 @@ export default function MemberProfile({ userId, workspaceId, onClose, onStartDM 
           </>
         ) : null}
 
-        {/* Events Modal */}
+        {/* Events Popup */}
         {eventsModal && (
           <div
-            className="absolute inset-0 bg-gray-900/95 rounded-xl flex flex-col"
-            onClick={(e) => e.stopPropagation()}
+            className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center p-4"
+            onClick={() => setEventsModal(null)}
           >
-            <div className="flex items-center justify-between p-4 border-b border-gray-700">
-              <h3 className="text-lg font-medium text-white">
-                {eventsModal.type === 'GIG' ? 'Gigs' : 'Rehearsals'} ({eventsModal.events.length})
-              </h3>
-              <button
-                onClick={() => setEventsModal(null)}
-                className="text-gray-400 hover:text-white text-2xl leading-none"
-              >
-                &times;
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              {eventsModal.loading ? (
-                <div className="text-center text-gray-400 py-8">Loading...</div>
-              ) : eventsModal.error ? (
-                <div className="text-center text-red-400 py-8">{eventsModal.error}</div>
-              ) : eventsModal.events.length === 0 ? (
-                <div className="text-center text-gray-500 py-8">No events found</div>
-              ) : (
-                <div className="space-y-2">
-                  {eventsModal.events.map(event => (
-                    <div
-                      key={event.id}
-                      className="bg-gray-800 rounded-lg p-3 border border-gray-700"
-                    >
-                      <div className="font-medium text-white">{event.title}</div>
-                      <div className="text-sm text-gray-400 mt-1">
-                        {format(new Date(event.date), 'd-MMM-yyyy')}
-                        {event.venue && ` • ${event.venue}`}
+            <div
+              className="bg-gray-800 rounded-lg shadow-xl max-w-sm w-full max-h-[70%] flex flex-col border border-gray-600"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-3 border-b border-gray-700">
+                <h3 className="text-base font-medium text-white">
+                  {eventsModal.type === 'GIG' ? 'Gigs' : 'Rehearsals'} ({eventsModal.events.length})
+                </h3>
+                <button
+                  onClick={() => setEventsModal(null)}
+                  className="text-gray-400 hover:text-white text-xl leading-none"
+                >
+                  &times;
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3">
+                {eventsModal.loading ? (
+                  <div className="text-center text-gray-400 py-6">Loading...</div>
+                ) : eventsModal.error ? (
+                  <div className="text-center text-red-400 py-6">{eventsModal.error}</div>
+                ) : eventsModal.events.length === 0 ? (
+                  <div className="text-center text-gray-500 py-6">No events found</div>
+                ) : (
+                  <div className="space-y-2">
+                    {eventsModal.events.map(event => (
+                      <div
+                        key={event.id}
+                        className="bg-gray-700/50 rounded-lg p-2.5"
+                      >
+                        <div className="font-medium text-white text-sm">{event.title}</div>
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          {format(new Date(event.date), 'd-MMM-yyyy')}
+                          {event.venue && ` • ${event.venue}`}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

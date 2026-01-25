@@ -139,19 +139,44 @@ function GigArchive({ workspaceId }) {
   };
 
   // Build archive entries from setlists AND standalone gigs
+  // Track which gigs have been associated with setlists
+  const usedGigIds = new Set();
+
   const setlistEntries = setlists.map(setlist => {
-    // Find formal gig that uses this setlist (only actual gigs, not rehearsals)
-    const associatedGig = gigs.find(g =>
+    // Use setlist's performedAt/venue fields first, then fall back to parsing name
+    const parsed = parseSetlistName(setlist.name);
+    const setlistDate = setlist.performedAt ? new Date(setlist.performedAt) : parsed.date;
+    const setlistVenue = setlist.venue || parsed.venue;
+
+    // Find formal gig that uses this setlist (by setlistId link)
+    let associatedGig = gigs.find(g =>
       g.type === 'GIG' && (
         g.setlistId === setlist.id ||
         (g.setlists && g.setlists.some(gs => gs.setlistId === setlist.id))
       )
     );
 
-    // Use setlist's performedAt/venue fields first, then fall back to parsing name
-    const parsed = parseSetlistName(setlist.name);
-    const setlistDate = setlist.performedAt ? new Date(setlist.performedAt) : parsed.date;
-    const setlistVenue = setlist.venue || parsed.venue;
+    // Fallback: match by date/venue if no direct link exists
+    // This handles cases where gig and setlist were created separately
+    if (!associatedGig && setlistDate) {
+      const setlistDateStr = setlistDate.toDateString();
+      associatedGig = gigs.find(g => {
+        if (g.type !== 'GIG' || usedGigIds.has(g.id)) return false;
+        const gigDateStr = new Date(g.date).toDateString();
+        if (gigDateStr !== setlistDateStr) return false;
+        // Match by venue or title
+        const venueMatch = g.venue && setlistVenue &&
+          g.venue.toLowerCase().includes(setlistVenue.toLowerCase());
+        const titleMatch = g.title && setlist.name &&
+          (g.title.toLowerCase().includes(setlist.name.toLowerCase()) ||
+           setlist.name.toLowerCase().includes(g.title.toLowerCase()));
+        return venueMatch || titleMatch;
+      });
+    }
+
+    if (associatedGig) {
+      usedGigIds.add(associatedGig.id);
+    }
 
     return {
       id: `setlist-${setlist.id}`,
@@ -165,10 +190,9 @@ function GigArchive({ workspaceId }) {
     };
   }).filter(entry => entry.date || entry.hasFormalGig);
 
-  // Add standalone gigs (gigs without setlists, only actual gigs not rehearsals)
-  const setlistGigIds = new Set(setlistEntries.filter(e => e.gig).map(e => e.gig.id));
+  // Add standalone gigs (gigs not associated with any setlist entry)
   const standaloneGigs = gigs
-    .filter(g => g.type === 'GIG' && !setlistGigIds.has(g.id) && !g.setlistId && (!g.setlists || g.setlists.length === 0))
+    .filter(g => g.type === 'GIG' && !usedGigIds.has(g.id))
     .map(gig => ({
       id: `gig-${gig.id}`,
       setlist: null,
@@ -400,13 +424,40 @@ function GigArchive({ workspaceId }) {
     }
   };
 
-  // Create a gig from a setlist-derived entry (so we can add media)
+  // Ensure a gig exists for this entry (either find existing or create new)
   const ensureGigExists = async (entry) => {
     if (entry.hasFormalGig && entry.gig) {
       return entry.gig;
     }
 
-    // Create a gig linked to this setlist
+    // First, look for an existing unlinked gig with matching date/title
+    // This prevents creating duplicates when gig was created separately from setlist
+    const entryDate = entry.date ? new Date(entry.date).toDateString() : null;
+    const existingGig = gigs.find(g => {
+      if (g.type !== 'GIG') return false;
+      // Already linked to a setlist - skip
+      if (g.setlistId || (g.setlists && g.setlists.length > 0)) return false;
+      // Match by date (same day) and title or venue
+      const gigDate = new Date(g.date).toDateString();
+      if (gigDate !== entryDate) return false;
+      // Match by title or venue
+      return (g.title && entry.title && g.title.toLowerCase() === entry.title.toLowerCase()) ||
+             (g.venue && entry.venue && g.venue.toLowerCase() === entry.venue.toLowerCase());
+    });
+
+    if (existingGig) {
+      // Link existing gig to this setlist
+      try {
+        await api.updateGig(existingGig.id, { setlistId: entry.setlist.id });
+        await loadData();
+        return { ...existingGig, setlistId: entry.setlist.id };
+      } catch (err) {
+        setError(err.message);
+        return null;
+      }
+    }
+
+    // No existing gig found - create a new one linked to this setlist
     try {
       const gigData = {
         title: entry.title,
