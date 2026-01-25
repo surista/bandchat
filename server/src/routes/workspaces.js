@@ -609,8 +609,8 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
       return res.status(404).json({ error: 'Member not found' });
     }
 
-    // Get their achievements in this workspace
-    const achievements = await prisma.memberAchievement.findMany({
+    // Get their member achievements in this workspace
+    const memberAchievements = await prisma.memberAchievement.findMany({
       where: {
         userId,
         workspaceId
@@ -620,6 +620,21 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
       },
       orderBy: { earnedAt: 'desc' }
     });
+
+    // Also get band achievements (shared by all members)
+    const bandAchievements = await prisma.bandAchievement.findMany({
+      where: { workspaceId },
+      include: {
+        achievement: true
+      },
+      orderBy: { earnedAt: 'desc' }
+    });
+
+    // Combine both types of achievements
+    const achievements = [
+      ...memberAchievements.map(a => ({ ...a.achievement, earnedAt: a.earnedAt, type: 'member' })),
+      ...bandAchievements.map(a => ({ ...a.achievement, earnedAt: a.earnedAt, type: 'band' }))
+    ].sort((a, b) => new Date(b.earnedAt) - new Date(a.earnedAt));
 
     // Get some stats
     const messageCount = await prisma.message.count({
@@ -691,10 +706,7 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
       user: membership.user,
       role: membership.role,
       joinedAt: membership.joinedAt,
-      achievements: achievements.map(a => ({
-        ...a.achievement,
-        earnedAt: a.earnedAt
-      })),
+      achievements, // Combined member + band achievements, already formatted
       stats: {
         messages: messageCount,
         songsAdded,

@@ -176,60 +176,51 @@ router.post('/workspace/:workspaceId/generate', authenticate, isWorkspaceAdmin, 
     const now = new Date();
     const events = [];
 
-    // Helper to check if event already exists
-    async function eventExists(eventType, titlePattern = null) {
-      const where = { workspaceId, eventType };
-      if (titlePattern) {
-        where.title = { contains: titlePattern };
-      }
-      return await prisma.timelineEvent.findFirst({ where });
+    // Helper to check if event already exists by exact title
+    async function eventExistsByTitle(title) {
+      return await prisma.timelineEvent.findFirst({
+        where: { workspaceId, title }
+      });
     }
 
-    // Get all band members with join dates
+    // 1. BAND MEMBERS JOINING/LEAVING
     const members = await prisma.bandMember.findMany({
       where: { workspaceId },
       orderBy: { joinDate: 'asc' }
     });
 
-    // Find earliest member join date for "Band Formed"
-    const earliestMember = members.find(m => m.joinDate);
-    if (earliestMember && !await eventExists('formation')) {
-      events.push({
-        title: 'Band Formed',
-        description: 'The beginning of our journey',
-        eventType: 'formation',
-        eventDate: earliestMember.joinDate,
-        workspaceId,
-        createdById: req.user.id
-      });
-    }
-
-    // Add member joined events
     for (const member of members) {
-      if (member.joinDate && !await eventExists('member_joined', member.name)) {
-        events.push({
-          title: `${member.name} Joined`,
-          description: member.role ? `Joined as ${member.role}` : 'Joined the band',
-          eventType: 'member_joined',
-          eventDate: member.joinDate,
-          workspaceId,
-          createdById: req.user.id
-        });
+      // Member joined
+      if (member.joinDate) {
+        const joinTitle = `${member.name} Joined`;
+        if (!await eventExistsByTitle(joinTitle)) {
+          events.push({
+            title: joinTitle,
+            description: member.role ? `Joined as ${member.role}` : 'Joined the band',
+            eventType: 'member_joined',
+            eventDate: member.joinDate,
+            workspaceId,
+            createdById: req.user.id
+          });
+        }
       }
-      // Add member left events
-      if (member.leftDate && !await eventExists('member_left', member.name)) {
-        events.push({
-          title: `${member.name} Left`,
-          description: 'Left the band',
-          eventType: 'member_left',
-          eventDate: member.leftDate,
-          workspaceId,
-          createdById: req.user.id
-        });
+      // Member left
+      if (member.leftDate) {
+        const leftTitle = `${member.name} Left`;
+        if (!await eventExistsByTitle(leftTitle)) {
+          events.push({
+            title: leftTitle,
+            description: 'Left the band',
+            eventType: 'member_left',
+            eventDate: member.leftDate,
+            workspaceId,
+            createdById: req.user.id
+          });
+        }
       }
     }
 
-    // Get all past rehearsals
+    // 2. REHEARSALS
     const rehearsals = await prisma.gig.findMany({
       where: {
         workspaceId,
@@ -241,7 +232,7 @@ router.post('/workspace/:workspaceId/generate', authenticate, isWorkspaceAdmin, 
     });
 
     // First rehearsal
-    if (rehearsals.length > 0 && !await eventExists('milestone', 'First Rehearsal')) {
+    if (rehearsals.length >= 1 && !await eventExistsByTitle('First Rehearsal')) {
       events.push({
         title: 'First Rehearsal',
         description: 'Our first practice session',
@@ -252,22 +243,70 @@ router.post('/workspace/:workspaceId/generate', authenticate, isWorkspaceAdmin, 
       });
     }
 
-    // Rehearsal milestones
-    const rehearsalMilestones = [10, 25, 50, 100];
+    // Rehearsal count milestones: 5, 10, then every 25 (25, 50, 75, 100, etc.)
+    const rehearsalMilestones = [5, 10];
+    for (let i = 25; i <= rehearsals.length; i += 25) {
+      rehearsalMilestones.push(i);
+    }
+
     for (const milestone of rehearsalMilestones) {
-      if (rehearsals.length >= milestone && !await eventExists('milestone', `${milestone} Rehearsals`)) {
+      if (rehearsals.length >= milestone) {
+        const title = `${milestone} Rehearsals`;
+        if (!await eventExistsByTitle(title)) {
+          events.push({
+            title,
+            description: `We've practiced ${milestone} times!`,
+            eventType: 'milestone',
+            eventDate: rehearsals[milestone - 1].date,
+            workspaceId,
+            createdById: req.user.id
+          });
+        }
+      }
+    }
+
+    // Calculate total rehearsal hours and create hour milestones
+    let totalRehearsalHours = 0;
+    const rehearsalHourMilestones = []; // { hours: number, date: Date }
+
+    for (const rehearsal of rehearsals) {
+      if (rehearsal.endDate) {
+        const hours = (new Date(rehearsal.endDate) - new Date(rehearsal.date)) / (1000 * 60 * 60);
+        if (hours > 0) {
+          const prevHours = totalRehearsalHours;
+          totalRehearsalHours += hours;
+
+          // Check milestones: 10, then every 25 (25, 50, 75, 100, etc.)
+          const checkMilestones = [10];
+          for (let h = 25; h <= totalRehearsalHours; h += 25) {
+            checkMilestones.push(h);
+          }
+
+          for (const milestone of checkMilestones) {
+            if (prevHours < milestone && totalRehearsalHours >= milestone) {
+              rehearsalHourMilestones.push({ hours: milestone, date: rehearsal.date });
+            }
+          }
+        }
+      }
+    }
+
+    // Add rehearsal hour milestone events
+    for (const { hours, date } of rehearsalHourMilestones) {
+      const title = `${hours} Hours of Practice`;
+      if (!await eventExistsByTitle(title)) {
         events.push({
-          title: `${milestone} Rehearsals`,
-          description: `We've practiced ${milestone} times!`,
+          title,
+          description: `We've logged ${hours} hours of rehearsal time!`,
           eventType: 'milestone',
-          eventDate: rehearsals[milestone - 1].date,
+          eventDate: date,
           workspaceId,
           createdById: req.user.id
         });
       }
     }
 
-    // Get all past gigs
+    // 3. GIGS
     const gigs = await prisma.gig.findMany({
       where: {
         workspaceId,
@@ -279,7 +318,7 @@ router.post('/workspace/:workspaceId/generate', authenticate, isWorkspaceAdmin, 
     });
 
     // First gig
-    if (gigs.length > 0 && !await eventExists('first_gig')) {
+    if (gigs.length >= 1 && !await eventExistsByTitle('First Gig')) {
       events.push({
         title: 'First Gig',
         description: gigs[0].venue ? `Our first show at ${gigs[0].venue}` : 'Our first show!',
@@ -292,7 +331,7 @@ router.post('/workspace/:workspaceId/generate', authenticate, isWorkspaceAdmin, 
 
     // First paid gig
     const firstPaidGig = gigs.find(g => g.pay && g.pay > 0);
-    if (firstPaidGig && !await eventExists('milestone', 'First Paid Gig')) {
+    if (firstPaidGig && !await eventExistsByTitle('First Paid Gig')) {
       events.push({
         title: 'First Paid Gig',
         description: `Our first paying gig${firstPaidGig.venue ? ` at ${firstPaidGig.venue}` : ''}!`,
@@ -303,35 +342,19 @@ router.post('/workspace/:workspaceId/generate', authenticate, isWorkspaceAdmin, 
       });
     }
 
-    // Gig milestones
-    const gigMilestones = [10, 25, 50, 100, 250, 500, 1000];
-    for (const milestone of gigMilestones) {
-      if (gigs.length >= milestone && !await eventExists('milestone', `${milestone} Gigs`)) {
+    // ALL subsequent gigs (skip the first one since it has its own event)
+    for (let i = 1; i < gigs.length; i++) {
+      const gig = gigs[i];
+      const gigTitle = gig.title || (gig.venue ? `Gig at ${gig.venue}` : `Gig #${i + 1}`);
+      if (!await eventExistsByTitle(gigTitle)) {
         events.push({
-          title: `${milestone} Gigs Milestone`,
-          description: `We hit ${milestone} gigs!`,
-          eventType: 'milestone',
-          eventDate: gigs[milestone - 1].date,
+          title: gigTitle,
+          description: gig.venue || '',
+          eventType: 'gig',
+          eventDate: gig.date,
           workspaceId,
           createdById: req.user.id
         });
-      }
-    }
-
-    // Add individual gig events (only for gigs with venues)
-    for (const gig of gigs) {
-      if (gig.venue && gig.title) {
-        const gigTitle = gig.title || `Gig at ${gig.venue}`;
-        if (!await eventExists('custom', gigTitle)) {
-          events.push({
-            title: gigTitle,
-            description: gig.venue,
-            eventType: 'custom',
-            eventDate: gig.date,
-            workspaceId,
-            createdById: req.user.id
-          });
-        }
       }
     }
 
