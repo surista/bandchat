@@ -19,6 +19,7 @@ export default function BandTimeline({ workspaceId }) {
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [generating, setGenerating] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -86,6 +87,23 @@ export default function BandTimeline({ workspaceId }) {
     }
   }
 
+  async function handleRegenerate() {
+    if (!confirm('This will delete all auto-generated timeline events and recreate them from current band data. Custom events will be kept. Continue?')) {
+      return;
+    }
+    setRegenerating(true);
+    try {
+      const result = await api.regenerateTimeline(workspaceId);
+      setEvents(result.events);
+      alert(`Regenerated timeline: deleted ${result.deleted} old events, created ${result.created} new events.`);
+    } catch (error) {
+      console.error('Failed to regenerate timeline:', error);
+      alert('Failed to regenerate timeline: ' + (error.message || 'Unknown error'));
+    } finally {
+      setRegenerating(false);
+    }
+  }
+
   function startEdit(event) {
     setEditingEvent(event);
     setFormData({
@@ -145,9 +163,18 @@ export default function BandTimeline({ workspaceId }) {
             <h2 className="text-2xl font-bold text-white">Band Timeline</h2>
             <div className="flex items-center gap-3">
               <button
-                onClick={handleGenerate}
-                disabled={generating}
+                onClick={handleRegenerate}
+                disabled={regenerating || generating}
                 className="text-sm text-gray-400 hover:text-white disabled:opacity-50"
+                title="Delete auto-generated events and recreate from current data"
+              >
+                {regenerating ? 'Regenerating...' : 'Regenerate'}
+              </button>
+              <button
+                onClick={handleGenerate}
+                disabled={generating || regenerating}
+                className="text-sm text-gray-400 hover:text-white disabled:opacity-50"
+                title="Add new events without removing existing ones"
               >
                 {generating ? 'Generating...' : 'Auto-Generate'}
               </button>

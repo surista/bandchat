@@ -992,6 +992,12 @@ class ApiService {
     });
   }
 
+  async regenerateTimeline(workspaceId) {
+    return this.request(`/timeline/workspace/${workspaceId}/regenerate`, {
+      method: 'POST'
+    });
+  }
+
   // Achievements
   async getAchievementDefinitions() {
     return this.request('/achievements/definitions');
