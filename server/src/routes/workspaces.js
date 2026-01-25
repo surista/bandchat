@@ -650,24 +650,9 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
       select: { id: true }
     });
 
-    // If no explicit link, try to match by name (case-insensitive)
-    // Also try matching first name or if band member name is contained in display name
-    if (linkedBandMembers.length === 0 && membership.user.displayName) {
-      const displayName = membership.user.displayName;
-      const firstName = displayName.split(' ')[0];
-
-      linkedBandMembers = await prisma.bandMember.findMany({
-        where: {
-          workspaceId,
-          OR: [
-            { name: { equals: displayName, mode: 'insensitive' } },
-            { name: { equals: firstName, mode: 'insensitive' } },
-            { name: { contains: firstName, mode: 'insensitive' } }
-          ]
-        },
-        select: { id: true }
-      });
-    }
+    // DEBUG: Log what we found
+    console.log('Profile lookup for user:', userId, 'in workspace:', workspaceId);
+    console.log('Found linked band members:', linkedBandMembers);
 
     const linkedBandMemberIds = linkedBandMembers.map(bm => bm.id);
 
@@ -767,22 +752,8 @@ router.get('/:workspaceId/members/:userId/events', authenticate, isWorkspaceMemb
       select: { id: true }
     });
 
-    if (linkedBandMembers.length === 0 && user?.displayName) {
-      const displayName = user.displayName;
-      const firstName = displayName.split(' ')[0];
-
-      linkedBandMembers = await prisma.bandMember.findMany({
-        where: {
-          workspaceId,
-          OR: [
-            { name: { equals: displayName, mode: 'insensitive' } },
-            { name: { equals: firstName, mode: 'insensitive' } },
-            { name: { contains: firstName, mode: 'insensitive' } }
-          ]
-        },
-        select: { id: true }
-      });
-    }
+    // DEBUG: Log what we found
+    console.log('Events lookup for user:', userId, 'found band members:', linkedBandMembers);
 
     const linkedBandMemberIds = linkedBandMembers.map(bm => bm.id);
 

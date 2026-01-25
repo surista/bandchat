@@ -127,8 +127,8 @@ export default function MemberProfile({ userId, workspaceId, onClose, onStartDM 
                   <p className="text-xs text-gray-400">Rehearsals</p>
                 </button>
                 <div className="bg-gray-700/50 rounded-lg p-3 text-center">
-                  <p className="text-xl font-bold text-white">{profile.stats.songsAdded}</p>
-                  <p className="text-xs text-gray-400">Songs</p>
+                  <p className="text-xl font-bold text-white">{profile.achievements?.length || 0}</p>
+                  <p className="text-xs text-gray-400">Badges</p>
                 </div>
                 <div className="bg-gray-700/50 rounded-lg p-3 text-center">
                   <p className="text-xl font-bold text-white">{profile.stats.messages}</p>

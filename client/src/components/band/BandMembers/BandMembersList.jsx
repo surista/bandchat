@@ -9,23 +9,8 @@ function BandMembersList({ workspaceId, workspace }) {
   const [error, setError] = useState(null);
   const [showProfileUserId, setShowProfileUserId] = useState(null);
 
-  // Helper to find a workspace user by band member name
-  // Matches exact name, first name, or if band member name is contained in display name
-  const findUserByName = (bandMemberName) => {
-    if (!workspace?.members || !bandMemberName) return null;
-    const bmNameLower = bandMemberName.toLowerCase();
-
-    const match = workspace.members.find(m => {
-      const displayName = m.user.displayName?.toLowerCase() || '';
-      const firstName = displayName.split(' ')[0];
-      return (
-        displayName === bmNameLower ||
-        firstName === bmNameLower ||
-        displayName.includes(bmNameLower)
-      );
-    });
-    return match?.user?.id || null;
-  };
+  // No name matching - linkedUserId is the only way to link band members to users
+  const findUserByName = () => null;
 
   useEffect(() => {
     loadMembers();
