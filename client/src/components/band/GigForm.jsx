@@ -177,18 +177,17 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
       };
 
       // Handle setlist assignment
+      // IMPORTANT: Only send setlistIds if actually using multi-set mode
+      // Sending setlistIds: null was causing the server to clear setlistId
       if (useMultiSet && selectedSets.length > 0) {
-        // Multi-set mode: send setlistIds array
+        // Multi-set mode: send setlistIds array, clear legacy setlistId
         saveData.setlistIds = selectedSets.filter(id => id);
         saveData.setlistId = null;
       } else if (formData.setlistId) {
-        // Single setlist mode
+        // Single setlist mode - only send setlistId
         saveData.setlistId = formData.setlistId;
-        saveData.setlistIds = null;
-      } else {
-        saveData.setlistId = null;
-        saveData.setlistIds = null;
       }
+      // If neither, don't send any setlist fields - preserve existing value on server
 
       // Include attendees (band member IDs)
       saveData.bandMemberIds = selectedAttendees;
