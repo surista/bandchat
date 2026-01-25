@@ -40,9 +40,23 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
   }
 });
 
-// Create a channel group
+// Create a channel group (admin only)
 router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
+    // Verify user is admin
+    const membership = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: req.params.workspaceId
+        }
+      }
+    });
+
+    if (!membership || membership.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
     const { name } = req.body;
 
     if (!name || name.trim().length === 0) {
@@ -93,7 +107,7 @@ router.put('/:groupId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Group not found' });
     }
 
-    // Verify user is workspace member
+    // Verify user is workspace admin
     const membership = await prisma.workspaceMember.findUnique({
       where: {
         userId_workspaceId: {
@@ -103,8 +117,8 @@ router.put('/:groupId', authenticate, async (req, res) => {
       }
     });
 
-    if (!membership) {
-      return res.status(403).json({ error: 'Not a member of this workspace' });
+    if (!membership || membership.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Admin access required' });
     }
 
     const updated = await prisma.channelGroup.update({
@@ -211,7 +225,7 @@ router.put('/:groupId/channels/:channelId', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Invalid channel' });
     }
 
-    // Verify user is workspace member
+    // Verify user is workspace admin
     const membership = await prisma.workspaceMember.findUnique({
       where: {
         userId_workspaceId: {
@@ -221,8 +235,8 @@ router.put('/:groupId/channels/:channelId', authenticate, async (req, res) => {
       }
     });
 
-    if (!membership) {
-      return res.status(403).json({ error: 'Not a member of this workspace' });
+    if (!membership || membership.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Admin access required' });
     }
 
     const updated = await prisma.channel.update({
@@ -261,7 +275,7 @@ router.delete('/channels/:channelId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Channel not found' });
     }
 
-    // Verify user is workspace member
+    // Verify user is workspace admin
     const membership = await prisma.workspaceMember.findUnique({
       where: {
         userId_workspaceId: {
@@ -271,8 +285,8 @@ router.delete('/channels/:channelId', authenticate, async (req, res) => {
       }
     });
 
-    if (!membership) {
-      return res.status(403).json({ error: 'Not a member of this workspace' });
+    if (!membership || membership.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Admin access required' });
     }
 
     const updated = await prisma.channel.update({

@@ -1,6 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors
+} from '@dnd-kit/core';
+import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { pushService } from '../../services/push';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -8,6 +18,44 @@ import api from '../../services/api';
 import BandMemberForm from '../band/BandMembers/BandMemberForm';
 import MemberProfile from '../common/MemberProfile';
 import MemberHoverCard from '../common/MemberHoverCard';
+
+// Draggable channel item wrapper
+function DraggableChannel({ channel, children, disabled }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: channel.id,
+    data: { type: 'channel', channel },
+    disabled
+  });
+
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : undefined
+  } : undefined;
+
+  return (
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
+      {children}
+    </div>
+  );
+}
+
+// Droppable section wrapper
+function DroppableSection({ groupId, children }) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: groupId || 'ungrouped',
+    data: { type: 'section', groupId }
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`transition-colors rounded ${isOver ? 'bg-blue-500/20' : ''}`}
+    >
+      {children}
+    </div>
+  );
+}
 
 function Sidebar({
   workspace,
@@ -181,6 +229,55 @@ function Sidebar({
     return { groupedChannels: grouped, ungroupedChannels: ungrouped };
   }, [channels]);
 
+  // Check if current user is admin
+  const isAdmin = useMemo(() => {
+    return workspace?.members?.find(m => m.user?.id === user?.id)?.role === 'ADMIN';
+  }, [workspace, user]);
+
+  // Drag and drop setup for channels (admin only)
+  const [activeChannel, setActiveChannel] = useState(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 }
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 5 }
+    })
+  );
+
+  const handleDragStart = (event) => {
+    const channel = channels.find(c => c.id === event.active.id);
+    setActiveChannel(channel);
+  };
+
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+    setActiveChannel(null);
+
+    if (!over || !isAdmin) return;
+
+    const channelId = active.id;
+    const targetGroupId = over.data?.current?.groupId;
+    const channel = channels.find(c => c.id === channelId);
+
+    // Don't do anything if dropped in the same group
+    if (channel?.groupId === targetGroupId) return;
+    if (!channel?.groupId && !targetGroupId) return; // Both ungrouped
+
+    try {
+      if (targetGroupId) {
+        // Move to a group
+        await api.moveChannelToGroup(targetGroupId, channelId);
+      } else {
+        // Move to ungrouped
+        await api.removeChannelFromGroup(channelId);
+      }
+    } catch (error) {
+      console.error('Failed to move channel:', error);
+    }
+  };
+
   const handleCreateChannel = (e) => {
     e.preventDefault();
     if (newChannelName.trim()) {
@@ -236,25 +333,38 @@ function Sidebar({
     }
   };
 
-  const renderChannel = (channel) => (
-    <button
-      key={channel.id}
-      onClick={() => onSelectChannel(channel)}
-      className={`channel-item w-full ${
-        selectedChannel?.id === channel.id ? 'active' : ''
-      }`}
-    >
-      <span className="text-gray-400">
-        {channel.isPrivate ? '🔒' : '#'}
-      </span>
-      <span className="flex-1 truncate">{channel.name}</span>
-      {channel.unreadCount > 0 && (
-        <span className="bg-slack-red text-white text-xs px-1.5 py-0.5 rounded-full">
-          {channel.unreadCount}
+  const renderChannel = (channel) => {
+    const channelButton = (
+      <button
+        key={channel.id}
+        onClick={() => onSelectChannel(channel)}
+        className={`channel-item w-full ${
+          selectedChannel?.id === channel.id ? 'active' : ''
+        }`}
+      >
+        <span className="text-gray-400">
+          {channel.isPrivate ? '🔒' : '#'}
         </span>
-      )}
-    </button>
-  );
+        <span className="flex-1 truncate">{channel.name}</span>
+        {channel.unreadCount > 0 && (
+          <span className="bg-slack-red text-white text-xs px-1.5 py-0.5 rounded-full">
+            {channel.unreadCount}
+          </span>
+        )}
+      </button>
+    );
+
+    // Wrap with draggable for admins
+    if (isAdmin) {
+      return (
+        <DraggableChannel key={channel.id} channel={channel}>
+          {channelButton}
+        </DraggableChannel>
+      );
+    }
+
+    return channelButton;
+  };
 
   return (
     <div
@@ -304,14 +414,16 @@ function Sidebar({
           </button>
           {!collapsedSections.channels && (
             <div className="flex gap-1">
-              <button
-                onClick={() => setShowCreateGroup(true)}
-                className="text-gray-400 hover:text-white transition-colors text-sm px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
-                title="Create group"
-                aria-label="Create group"
-              >
-                📁
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => setShowCreateGroup(true)}
+                  className="text-gray-400 hover:text-white transition-colors text-sm px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                  title="Create section"
+                  aria-label="Create section"
+                >
+                  📁
+                </button>
+              )}
               <button
                 onClick={() => setShowCreateChannel(true)}
                 className="text-gray-400 hover:text-white transition-colors text-lg px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
@@ -326,45 +438,66 @@ function Sidebar({
 
         {/* Channel Groups */}
         {!collapsedSections.channels && (
-          <>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
             {channelGroups.map((group) => (
-              <div key={group.id} className="mb-2 ml-2">
-                <button
-                  onClick={() => toggleGroupCollapse(group.id)}
-                  className="w-full px-4 py-2.5 sm:py-1 flex items-center gap-1 text-gray-400 hover:text-white transition-colors text-sm min-h-[44px] sm:min-h-0"
-                  aria-expanded={!collapsedGroups[group.id]}
-                  aria-label={`${group.name} channel group`}
-                >
-                  <span className={`transform transition-transform ${collapsedGroups[group.id] ? '' : 'rotate-90'}`}>
-                    ▶
-                  </span>
-                  <span className="font-medium uppercase tracking-wide truncate">
-                    {group.name}
-                  </span>
-                  <span className="text-xs text-gray-500 ml-auto">
-                    {groupedChannels[group.id]?.length || 0}
-                  </span>
-                </button>
-                {!collapsedGroups[group.id] && (
-                  <div className="space-y-0.5 ml-2">
-                    {groupedChannels[group.id]?.map(renderChannel)}
-                  </div>
-                )}
-              </div>
+              <DroppableSection key={group.id} groupId={group.id}>
+                <div className="mb-2 ml-2">
+                  <button
+                    onClick={() => toggleGroupCollapse(group.id)}
+                    className="w-full px-4 py-2.5 sm:py-1 flex items-center gap-1 text-gray-400 hover:text-white transition-colors text-sm min-h-[44px] sm:min-h-0"
+                    aria-expanded={!collapsedGroups[group.id]}
+                    aria-label={`${group.name} channel group`}
+                  >
+                    <span className={`transform transition-transform ${collapsedGroups[group.id] ? '' : 'rotate-90'}`}>
+                      ▶
+                    </span>
+                    <span className="font-medium uppercase tracking-wide truncate">
+                      {group.name}
+                    </span>
+                    <span className="text-xs text-gray-500 ml-auto">
+                      {groupedChannels[group.id]?.length || 0}
+                    </span>
+                  </button>
+                  {!collapsedGroups[group.id] && (
+                    <div className="space-y-0.5 ml-2">
+                      {groupedChannels[group.id]?.map(renderChannel)}
+                    </div>
+                  )}
+                </div>
+              </DroppableSection>
             ))}
 
             {/* Ungrouped Channels */}
-            {ungroupedChannels.length > 0 && (
-              <div className="space-y-0.5 ml-2">
-                {channelGroups.length > 0 && (
-                  <div className="px-4 py-1 text-xs text-gray-500 uppercase tracking-wide">
-                    Other Channels
-                  </div>
-                )}
-                {ungroupedChannels.map(renderChannel)}
-              </div>
-            )}
-          </>
+            <DroppableSection groupId={null}>
+              {ungroupedChannels.length > 0 && (
+                <div className="space-y-0.5 ml-2">
+                  {channelGroups.length > 0 && (
+                    <div className="px-4 py-1 text-xs text-gray-500 uppercase tracking-wide">
+                      Other Channels
+                    </div>
+                  )}
+                  {ungroupedChannels.map(renderChannel)}
+                </div>
+              )}
+            </DroppableSection>
+
+            {/* Drag overlay for visual feedback */}
+            <DragOverlay>
+              {activeChannel ? (
+                <div className="channel-item bg-slack-sidebar border border-blue-500 rounded shadow-lg opacity-90">
+                  <span className="text-gray-400">
+                    {activeChannel.isPrivate ? '🔒' : '#'}
+                  </span>
+                  <span className="flex-1 truncate">{activeChannel.name}</span>
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
         )}
 
         {/* Direct Messages Section */}
