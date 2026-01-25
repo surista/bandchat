@@ -1244,4 +1244,78 @@ router.put('/:gigId/setlists/reorder', authenticate, async (req, res) => {
   }
 });
 
+// Auto-link unlinked gigs to matching setlists by date/venue
+// This fixes data where gigs and setlists were created separately
+router.post('/workspace/:workspaceId/auto-link-setlists', authenticate, isWorkspaceMember, async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+
+    // Get all gigs without setlists
+    const unlinkedGigs = await prisma.gig.findMany({
+      where: {
+        workspaceId,
+        type: 'GIG',
+        setlistId: null,
+        setlists: { none: {} }
+      }
+    });
+
+    // Get all setlists
+    const setlists = await prisma.setlist.findMany({
+      where: { workspaceId },
+      include: {
+        gigs: { select: { id: true } },
+        gigSetlists: { select: { gigId: true } }
+      }
+    });
+
+    // Find setlists not attached to any gig
+    const unlinkedSetlists = setlists.filter(s =>
+      s.gigs.length === 0 && s.gigSetlists.length === 0
+    );
+
+    let linkedCount = 0;
+    const links = [];
+
+    for (const gig of unlinkedGigs) {
+      const gigDate = new Date(gig.date).toDateString();
+
+      // Find matching setlist by date and venue/title
+      const matchingSetlist = unlinkedSetlists.find(s => {
+        if (!s.performedAt) return false;
+        const setlistDate = new Date(s.performedAt).toDateString();
+        if (setlistDate !== gigDate) return false;
+
+        // Match by venue or title
+        const venueMatch = s.venue && gig.venue &&
+          s.venue.toLowerCase().includes(gig.venue.toLowerCase());
+        const titleMatch = s.name && gig.title &&
+          (s.name.toLowerCase().includes(gig.title.toLowerCase()) ||
+           gig.title.toLowerCase().includes(s.name.toLowerCase()));
+
+        return venueMatch || titleMatch;
+      });
+
+      if (matchingSetlist) {
+        await prisma.gig.update({
+          where: { id: gig.id },
+          data: { setlistId: matchingSetlist.id }
+        });
+        linkedCount++;
+        links.push({ gig: gig.title, setlist: matchingSetlist.name });
+
+        // Remove from unlinkedSetlists so we don't match it again
+        const idx = unlinkedSetlists.indexOf(matchingSetlist);
+        if (idx > -1) unlinkedSetlists.splice(idx, 1);
+      }
+    }
+
+    console.log(`Auto-linked ${linkedCount} gigs to setlists:`, links);
+    res.json({ linkedCount, links });
+  } catch (error) {
+    console.error('Auto-link setlists error:', error);
+    res.status(500).json({ error: 'Failed to auto-link setlists' });
+  }
+});
+
 export default router;
