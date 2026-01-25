@@ -1,0 +1,165 @@
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import api from '../../services/api';
+
+export default function MemberHoverCard({ userId, workspaceId, children, onClick }) {
+  const [isHovered, setIsHovered] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const triggerRef = useRef(null);
+  const hoverTimeout = useRef(null);
+  const leaveTimeout = useRef(null);
+
+  useEffect(() => {
+    if (isHovered && !profile && !loading) {
+      loadProfile();
+    }
+  }, [isHovered, profile, loading]);
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+      if (leaveTimeout.current) clearTimeout(leaveTimeout.current);
+    };
+  }, []);
+
+  async function loadProfile() {
+    setLoading(true);
+    try {
+      const data = await api.getMemberProfile(workspaceId, userId);
+      setProfile(data);
+    } catch (err) {
+      console.error('Failed to load profile for hover:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleMouseEnter(e) {
+    if (leaveTimeout.current) {
+      clearTimeout(leaveTimeout.current);
+      leaveTimeout.current = null;
+    }
+
+    hoverTimeout.current = setTimeout(() => {
+      if (triggerRef.current) {
+        const rect = triggerRef.current.getBoundingClientRect();
+        setPosition({
+          top: rect.top,
+          left: rect.right + 8
+        });
+      }
+      setIsHovered(true);
+    }, 400); // Delay before showing
+  }
+
+  function handleMouseLeave() {
+    if (hoverTimeout.current) {
+      clearTimeout(hoverTimeout.current);
+      hoverTimeout.current = null;
+    }
+
+    leaveTimeout.current = setTimeout(() => {
+      setIsHovered(false);
+    }, 150);
+  }
+
+  function handleCardMouseEnter() {
+    if (leaveTimeout.current) {
+      clearTimeout(leaveTimeout.current);
+      leaveTimeout.current = null;
+    }
+  }
+
+  function handleCardMouseLeave() {
+    leaveTimeout.current = setTimeout(() => {
+      setIsHovered(false);
+    }, 150);
+  }
+
+  const card = isHovered && createPortal(
+    <div
+      className="fixed z-[100] bg-gray-800 rounded-lg shadow-xl border border-gray-700 p-3 min-w-[200px] max-w-[280px]"
+      style={{ top: position.top, left: position.left }}
+      onMouseEnter={handleCardMouseEnter}
+      onMouseLeave={handleCardMouseLeave}
+    >
+      {loading ? (
+        <div className="text-gray-400 text-sm">Loading...</div>
+      ) : profile ? (
+        <div>
+          {/* Mini profile header */}
+          <div className="flex items-center gap-2 mb-2">
+            {profile.user.avatarUrl ? (
+              <img
+                src={profile.user.avatarUrl}
+                alt=""
+                className="w-10 h-10 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                {profile.user.displayName?.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div>
+              <div className="font-medium text-white text-sm">{profile.user.displayName}</div>
+              <div className="text-xs text-gray-400">{profile.role}</div>
+            </div>
+          </div>
+
+          {/* Quick stats */}
+          <div className="flex gap-3 text-xs text-gray-400 mb-2 border-t border-gray-700 pt-2">
+            <span>{profile.stats.gigsAttended || 0} gigs</span>
+            <span>{profile.stats.rehearsalsAttended || 0} rehearsals</span>
+          </div>
+
+          {/* Badges */}
+          {profile.achievements.length > 0 ? (
+            <div className="border-t border-gray-700 pt-2">
+              <div className="text-xs text-gray-500 mb-1">Badges</div>
+              <div className="flex flex-wrap gap-1">
+                {profile.achievements.slice(0, 8).map(a => (
+                  <span
+                    key={a.id}
+                    className="text-lg"
+                    title={`${a.name}: ${a.description}`}
+                  >
+                    {a.icon}
+                  </span>
+                ))}
+                {profile.achievements.length > 8 && (
+                  <span className="text-xs text-gray-500 self-center">
+                    +{profile.achievements.length - 8}
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="border-t border-gray-700 pt-2 text-xs text-gray-500">
+              No badges yet
+            </div>
+          )}
+
+          <div className="text-xs text-gray-500 mt-2 text-center">
+            Click for full profile
+          </div>
+        </div>
+      ) : null}
+    </div>,
+    document.body
+  );
+
+  return (
+    <div
+      ref={triggerRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onClick={onClick}
+      className="contents"
+    >
+      {children}
+      {card}
+    </div>
+  );
+}

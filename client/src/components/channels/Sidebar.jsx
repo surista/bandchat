@@ -7,6 +7,7 @@ import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import BandMemberForm from '../band/BandMembers/BandMemberForm';
 import MemberProfile from '../common/MemberProfile';
+import MemberHoverCard from '../common/MemberHoverCard';
 
 function Sidebar({
   workspace,
@@ -572,31 +573,36 @@ function Sidebar({
         {!collapsedSections.members && (
           <div className="space-y-0.5 ml-2">
             {workspace.members?.slice(0, 10).map((member) => (
-              <button
+              <MemberHoverCard
                 key={member.user.id}
+                userId={member.user.id}
+                workspaceId={workspace.id}
                 onClick={() => setShowProfileUserId(member.user.id)}
-                className="flex items-center gap-2 px-4 py-2.5 sm:py-1 text-gray-300 w-full text-left min-h-[44px] sm:min-h-0 hover:bg-slack-hover cursor-pointer"
-                aria-label={`View ${member.user.displayName}'s profile`}
               >
-                {member.user.avatarUrl ? (
-                  <img
-                    src={member.user.avatarUrl}
-                    alt=""
-                    className="w-6 h-6 rounded-full object-cover flex-shrink-0"
-                  />
-                ) : (
-                  <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs flex-shrink-0">
-                    {member.user.displayName?.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <span className="truncate flex-1">
-                  {member.user.displayName}
-                  {member.user.id === user?.id && ' (you)'}
-                </span>
-                {member.role === 'ADMIN' && (
-                  <span className="text-xs text-gray-500">admin</span>
-                )}
-              </button>
+                <button
+                  className="flex items-center gap-2 px-4 py-2.5 sm:py-1 text-gray-300 w-full text-left min-h-[44px] sm:min-h-0 hover:bg-slack-hover cursor-pointer"
+                  aria-label={`View ${member.user.displayName}'s profile`}
+                >
+                  {member.user.avatarUrl ? (
+                    <img
+                      src={member.user.avatarUrl}
+                      alt=""
+                      className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs flex-shrink-0">
+                      {member.user.displayName?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span className="truncate flex-1">
+                    {member.user.displayName}
+                    {member.user.id === user?.id && ' (you)'}
+                  </span>
+                  {member.role === 'ADMIN' && (
+                    <span className="text-xs text-gray-500">admin</span>
+                  )}
+                </button>
+              </MemberHoverCard>
             ))}
             {workspace.members?.length > 10 && (
               <div className="px-4 py-1 text-gray-500 text-sm">
