@@ -663,27 +663,48 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
 
     const linkedBandMemberIds = linkedBandMembers.map(bm => bm.id);
 
-    // Count gigs attended (via band member)
-    const gigsAttended = linkedBandMemberIds.length > 0 ? await prisma.gigAttendee.count({
-      where: {
-        bandMemberId: { in: linkedBandMemberIds },
-        gig: {
-          workspaceId,
-          type: 'GIG'
-        }
-      }
-    }) : 0;
+    // Count gigs attended (via GigAttendee OR SetlistPerformer on a gig's setlist)
+    let gigsAttended = 0;
+    let rehearsalsAttended = 0;
 
-    // Count rehearsals attended (via band member)
-    const rehearsalsAttended = linkedBandMemberIds.length > 0 ? await prisma.gigAttendee.count({
-      where: {
-        bandMemberId: { in: linkedBandMemberIds },
-        gig: {
-          workspaceId,
-          type: 'REHEARSAL'
+    if (linkedBandMemberIds.length > 0) {
+      // Count from GigAttendee table
+      const gigAttendeeCount = await prisma.gigAttendee.count({
+        where: {
+          bandMemberId: { in: linkedBandMemberIds },
+          gig: { workspaceId, type: 'GIG' }
         }
-      }
-    }) : 0;
+      });
+
+      // Also count gigs where they performed (via setlist performers)
+      const gigsFromPerformers = await prisma.gig.findMany({
+        where: {
+          workspaceId,
+          type: 'GIG',
+          setlists: {
+            some: {
+              setlist: {
+                performers: {
+                  some: { bandMemberId: { in: linkedBandMemberIds } }
+                }
+              }
+            }
+          }
+        },
+        select: { id: true }
+      });
+
+      // Use the higher of the two counts (to avoid double-counting if both are set)
+      gigsAttended = Math.max(gigAttendeeCount, gigsFromPerformers.length);
+
+      // Count rehearsals (these usually just use attendees)
+      rehearsalsAttended = await prisma.gigAttendee.count({
+        where: {
+          bandMemberId: { in: linkedBandMemberIds },
+          gig: { workspaceId, type: 'REHEARSAL' }
+        }
+      });
+    }
 
     res.json({
       user: membership.user,

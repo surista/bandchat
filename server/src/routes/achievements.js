@@ -174,13 +174,28 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
     });
     const existingBandIds = new Set(existingBandAchievements.map(a => a.achievementId));
 
-    // Get stats
+    // Get stats - count completed OR past events (date before now)
+    const now = new Date();
     const gigCount = await prisma.gig.count({
-      where: { workspaceId, type: 'GIG', status: 'COMPLETED' }
+      where: {
+        workspaceId,
+        type: 'GIG',
+        OR: [
+          { status: 'COMPLETED' },
+          { date: { lt: now }, status: { not: 'CANCELLED' } }
+        ]
+      }
     });
 
     const rehearsalCount = await prisma.gig.count({
-      where: { workspaceId, type: 'REHEARSAL', status: 'COMPLETED' }
+      where: {
+        workspaceId,
+        type: 'REHEARSAL',
+        OR: [
+          { status: 'COMPLETED' },
+          { date: { lt: now }, status: { not: 'CANCELLED' } }
+        ]
+      }
     });
 
     const songCount = await prisma.song.count({
