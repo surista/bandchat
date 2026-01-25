@@ -332,16 +332,32 @@ router.post('/workspace/:workspaceId/generate', authenticate, isWorkspaceMember,
       orderBy: { date: 'asc' }
     });
 
-    // First gig
-    if (gigs.length >= 1 && !await eventExistsByTitle('First Gig')) {
-      events.push({
-        title: 'First Gig',
-        description: gigs[0].venue ? `Our first show at ${gigs[0].venue}` : 'Our first show!',
-        eventType: 'first_gig',
-        eventDate: gigs[0].date,
-        workspaceId,
-        createdById: req.user.id
-      });
+    // Gig milestones: 1st, 5th, 10th, then every 5th (15, 20, 25, etc.)
+    const gigMilestones = [1, 5, 10];
+    for (let i = 15; i <= gigs.length; i += 5) {
+      gigMilestones.push(i);
+    }
+
+    for (const milestone of gigMilestones) {
+      if (gigs.length >= milestone) {
+        const gig = gigs[milestone - 1];
+        const title = milestone === 1
+          ? 'First Gig'
+          : `${milestone}${milestone === 5 ? 'th' : milestone === 10 ? 'th' : 'th'} Gig: ${gig.title || gig.venue || 'Milestone'}`;
+
+        if (!await eventExistsByTitle(title) && (milestone > 1 || !await eventExistsByTitle('First Gig'))) {
+          events.push({
+            title: milestone === 1 ? 'First Gig' : title,
+            description: milestone === 1
+              ? (gig.venue ? `Our first show at ${gig.venue}` : 'Our first show!')
+              : (gig.venue || ''),
+            eventType: milestone === 1 ? 'first_gig' : 'milestone',
+            eventDate: gig.date,
+            workspaceId,
+            createdById: req.user.id
+          });
+        }
+      }
     }
 
     // First paid gig
@@ -355,22 +371,6 @@ router.post('/workspace/:workspaceId/generate', authenticate, isWorkspaceMember,
         workspaceId,
         createdById: req.user.id
       });
-    }
-
-    // ALL subsequent gigs (skip the first one since it has its own event)
-    for (let i = 1; i < gigs.length; i++) {
-      const gig = gigs[i];
-      const gigTitle = gig.title || (gig.venue ? `Gig at ${gig.venue}` : `Gig #${i + 1}`);
-      if (!await eventExistsByTitle(gigTitle)) {
-        events.push({
-          title: gigTitle,
-          description: gig.venue || '',
-          eventType: 'gig',
-          eventDate: gig.date,
-          workspaceId,
-          createdById: req.user.id
-        });
-      }
     }
 
     // Create all events
@@ -535,17 +535,31 @@ router.post('/workspace/:workspaceId/regenerate', authenticate, isWorkspaceAdmin
 
     console.log(`Timeline regenerate: Found ${gigs.length} gigs, first = ${gigs[0]?.date}`);
 
-    if (gigs.length >= 1) {
-      events.push({
-        title: 'First Gig',
-        description: gigs[0].venue ? `Our first show at ${gigs[0].venue}` : 'Our first show!',
-        eventType: 'first_gig',
-        eventDate: gigs[0].date,
-        workspaceId,
-        createdById: req.user.id
-      });
+    // Gig milestones: 1st, 5th, 10th, then every 5th (15, 20, 25, etc.)
+    const gigMilestones = [1, 5, 10];
+    for (let i = 15; i <= gigs.length; i += 5) {
+      gigMilestones.push(i);
     }
 
+    for (const milestone of gigMilestones) {
+      if (gigs.length >= milestone) {
+        const gig = gigs[milestone - 1];
+        events.push({
+          title: milestone === 1
+            ? 'First Gig'
+            : `${milestone}th Gig: ${gig.title || gig.venue || 'Milestone'}`,
+          description: milestone === 1
+            ? (gig.venue ? `Our first show at ${gig.venue}` : 'Our first show!')
+            : (gig.venue || ''),
+          eventType: milestone === 1 ? 'first_gig' : 'milestone',
+          eventDate: gig.date,
+          workspaceId,
+          createdById: req.user.id
+        });
+      }
+    }
+
+    // First paid gig
     const firstPaidGig = gigs.find(g => g.pay && g.pay > 0);
     if (firstPaidGig) {
       events.push({
@@ -553,18 +567,6 @@ router.post('/workspace/:workspaceId/regenerate', authenticate, isWorkspaceAdmin
         description: `Our first paying gig${firstPaidGig.venue ? ` at ${firstPaidGig.venue}` : ''}!`,
         eventType: 'milestone',
         eventDate: firstPaidGig.date,
-        workspaceId,
-        createdById: req.user.id
-      });
-    }
-
-    for (let i = 1; i < gigs.length; i++) {
-      const gig = gigs[i];
-      events.push({
-        title: gig.title || (gig.venue ? `Gig at ${gig.venue}` : `Gig #${i + 1}`),
-        description: gig.venue || '',
-        eventType: 'gig',
-        eventDate: gig.date,
         workspaceId,
         createdById: req.user.id
       });
