@@ -88,7 +88,7 @@ export default function Achievements({ workspaceId }) {
   }
 
   return (
-    <div className="p-4 max-w-5xl mx-auto">
+    <div className="p-4 max-w-5xl mx-auto min-h-full bg-gray-900">
       {/* New Achievement Celebration */}
       {newAchievements.length > 0 && (
         <div className="mb-6 bg-gradient-to-r from-yellow-600/20 to-orange-600/20 border border-yellow-500/50 rounded-lg p-4">
