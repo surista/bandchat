@@ -716,6 +716,12 @@ class ApiService {
     return this.request(`/gigs/workspace/${workspaceId}/stats`);
   }
 
+  async autoLinkSetlists(workspaceId) {
+    return this.request(`/gigs/workspace/${workspaceId}/auto-link-setlists`, {
+      method: 'POST'
+    });
+  }
+
   // Gig Archive / Media
   async addGigMedia(gigId, data) {
     return this.request(`/gigs/${gigId}/media`, {

@@ -54,6 +54,12 @@ function GigArchive({ workspaceId }) {
   const loadData = async () => {
     try {
       setLoading(true);
+      // Auto-link any unlinked gigs to matching setlists (runs silently)
+      try {
+        await api.autoLinkSetlists(workspaceId);
+      } catch (e) {
+        // Ignore errors - this is just a data fix
+      }
       const [setlistsData, gigsData, membersData] = await Promise.all([
         api.getSetlists(workspaceId),
         api.getGigs(workspaceId),
