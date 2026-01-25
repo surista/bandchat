@@ -661,50 +661,24 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
     let rehearsalsAttended = 0;
 
     if (linkedBandMemberIds.length > 0) {
-      // Count from GigAttendee table
-      const gigAttendeeCount = await prisma.gigAttendee.count({
+      // GIG ATTENDANCE = "Who Played" in Gig Archive (SetlistPerformer table)
+      // This is set via the Gig Archive "Who Played This Gig?" dialog
+      gigsAttended = await prisma.setlistPerformer.count({
         where: {
           bandMemberId: { in: linkedBandMemberIds },
-          gig: { workspaceId, type: 'GIG' }
+          setlist: {
+            // Setlist must be attached to a gig
+            OR: [
+              { gigs: { some: { workspaceId } } },           // Legacy single setlist
+              { gigSetlists: { some: { gig: { workspaceId } } } }  // Multi-setlist
+            ]
+          }
         }
       });
 
-      // Also count gigs where they performed (via setlist performers)
-      // Check both legacy single setlist and multi-setlist relations
-      const gigsFromPerformers = await prisma.gig.findMany({
-        where: {
-          workspaceId,
-          type: 'GIG',
-          OR: [
-            // Legacy single setlist
-            {
-              setlist: {
-                performers: {
-                  some: { bandMemberId: { in: linkedBandMemberIds } }
-                }
-              }
-            },
-            // Multi-setlist
-            {
-              setlists: {
-                some: {
-                  setlist: {
-                    performers: {
-                      some: { bandMemberId: { in: linkedBandMemberIds } }
-                    }
-                  }
-                }
-              }
-            }
-          ]
-        },
-        select: { id: true }
-      });
-
-      // Use the higher of the two counts (to avoid double-counting if both are set)
-      gigsAttended = Math.max(gigAttendeeCount, gigsFromPerformers.length);
-
-      // Count rehearsals (these usually just use attendees)
+      // REHEARSAL ATTENDANCE = Attendees in Calendar events (GigAttendee table)
+      // Note: "GigAttendee" is used for ALL event types (gigs, rehearsals, etc.)
+      // This is set via the Calendar event form "Attending" section
       rehearsalsAttended = await prisma.gigAttendee.count({
         where: {
           bandMemberId: { in: linkedBandMemberIds },
@@ -741,19 +715,12 @@ router.get('/:workspaceId/members/:userId/events', authenticate, isWorkspaceMemb
     const { workspaceId, userId } = req.params;
     const { type } = req.query; // 'GIG' or 'REHEARSAL'
 
-    // Find band members linked to this user (by ID or by name)
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { displayName: true }
-    });
-
-    let linkedBandMembers = await prisma.bandMember.findMany({
+    // Find band members linked to this user via linkedUserId
+    // Note: linkedUserId is the ONLY way to link band members to users
+    const linkedBandMembers = await prisma.bandMember.findMany({
       where: { workspaceId, linkedUserId: userId },
       select: { id: true }
     });
-
-    // DEBUG: Log what we found
-    console.log('Events lookup for user:', userId, 'found band members:', linkedBandMembers);
 
     const linkedBandMemberIds = linkedBandMembers.map(bm => bm.id);
 
@@ -761,51 +728,71 @@ router.get('/:workspaceId/members/:userId/events', authenticate, isWorkspaceMemb
       return res.json([]);
     }
 
-    // Get events from GigAttendee
-    const attendedEvents = await prisma.gig.findMany({
-      where: {
-        workspaceId,
-        type: type || 'GIG',
-        attendees: {
-          some: { bandMemberId: { in: linkedBandMemberIds } }
-        }
-      },
-      select: {
-        id: true,
-        title: true,
-        date: true,
-        venue: true,
-        type: true
-      },
-      orderBy: { date: 'desc' }
-    });
+    let events = [];
 
-    // For gigs, also check setlist performers
-    if (type === 'GIG' || !type) {
-      const performedGigs = await prisma.gig.findMany({
+    if (type === 'GIG') {
+      // GIG ATTENDANCE = "Who Played" in Gig Archive (SetlistPerformer table)
+      // This is set via the Gig Archive "Who Played This Gig?" dialog
+      // We find gigs through their setlists where the band member performed
+      const setlistPerformers = await prisma.setlistPerformer.findMany({
         where: {
-          workspaceId,
-          type: 'GIG',
-          OR: [
-            {
-              setlist: {
-                performers: {
-                  some: { bandMemberId: { in: linkedBandMemberIds } }
-                }
-              }
-            },
-            {
-              setlists: {
-                some: {
-                  setlist: {
-                    performers: {
-                      some: { bandMemberId: { in: linkedBandMemberIds } }
-                    }
+          bandMemberId: { in: linkedBandMemberIds },
+          setlist: {
+            OR: [
+              { gigs: { some: { workspaceId } } },           // Legacy single setlist
+              { gigSetlists: { some: { gig: { workspaceId } } } }  // Multi-setlist
+            ]
+          }
+        },
+        select: {
+          setlist: {
+            select: {
+              gigs: {
+                where: { workspaceId },
+                select: { id: true, title: true, date: true, venue: true, type: true }
+              },
+              gigSetlists: {
+                where: { gig: { workspaceId } },
+                select: {
+                  gig: {
+                    select: { id: true, title: true, date: true, venue: true, type: true }
                   }
                 }
               }
             }
-          ]
+          }
+        }
+      });
+
+      // Extract unique gigs from setlist performers
+      const gigMap = new Map();
+      for (const sp of setlistPerformers) {
+        // Legacy single setlist relation
+        for (const gig of sp.setlist.gigs || []) {
+          if (!gigMap.has(gig.id)) {
+            gigMap.set(gig.id, gig);
+          }
+        }
+        // Multi-setlist relation
+        for (const gs of sp.setlist.gigSetlists || []) {
+          if (!gigMap.has(gs.gig.id)) {
+            gigMap.set(gs.gig.id, gs.gig);
+          }
+        }
+      }
+      events = Array.from(gigMap.values());
+
+    } else if (type === 'REHEARSAL') {
+      // REHEARSAL ATTENDANCE = Attendees in Calendar events (GigAttendee table)
+      // Note: "GigAttendee" is confusingly named - it's used for ALL event types
+      // This is set via the Calendar event form "Attending" section
+      events = await prisma.gig.findMany({
+        where: {
+          workspaceId,
+          type: 'REHEARSAL',
+          attendees: {
+            some: { bandMemberId: { in: linkedBandMemberIds } }
+          }
         },
         select: {
           id: true,
@@ -816,20 +803,12 @@ router.get('/:workspaceId/members/:userId/events', authenticate, isWorkspaceMemb
         },
         orderBy: { date: 'desc' }
       });
-
-      // Merge and dedupe
-      const allGigIds = new Set(attendedEvents.map(e => e.id));
-      for (const gig of performedGigs) {
-        if (!allGigIds.has(gig.id)) {
-          attendedEvents.push(gig);
-        }
-      }
-
-      // Re-sort by date
-      attendedEvents.sort((a, b) => new Date(b.date) - new Date(a.date));
     }
 
-    res.json(attendedEvents);
+    // Sort by date descending
+    events.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    res.json(events);
   } catch (error) {
     console.error('Get member events error:', error);
     res.status(500).json({ error: 'Failed to get member events' });
