@@ -301,15 +301,28 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                 )}
               </div>
 
-              <div>
+              <div className="relative">
                 <label className="modal-label">
                   Date <span className="text-red-400">*</span>
                 </label>
+                <div
+                  className="modal-input cursor-pointer flex items-center justify-between"
+                  onClick={() => document.getElementById('gig-date-picker').showPicker?.() || document.getElementById('gig-date-picker').click()}
+                >
+                  <span>
+                    {formData.startDate
+                      ? format(new Date(formData.startDate + 'T00:00:00'), 'd-MMM-yyyy')
+                      : 'Select date'}
+                  </span>
+                  <span className="text-gray-500">📅</span>
+                </div>
                 <input
+                  id="gig-date-picker"
                   type="date"
                   value={formData.startDate}
                   onChange={(e) => handleChange('startDate', e.target.value)}
-                  className="modal-input"
+                  className="absolute opacity-0 pointer-events-none"
+                  style={{ top: 0, left: 0, width: '1px', height: '1px' }}
                   required
                 />
               </div>
