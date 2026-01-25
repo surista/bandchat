@@ -13,8 +13,6 @@ export default function Achievements({ workspaceId }) {
   const [checking, setChecking] = useState(false);
   const [newAchievements, setNewAchievements] = useState([]);
   const [message, setMessage] = useState(null);
-  const [reseeding, setReseeding] = useState(false);
-  const [resettingBadges, setResettingBadges] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -61,40 +59,6 @@ export default function Achievements({ workspaceId }) {
       setMessage({ type: 'error', text: 'Failed to check achievements: ' + error.message });
     } finally {
       setChecking(false);
-    }
-  }
-
-  async function reseedAchievements() {
-    setReseeding(true);
-    setMessage(null);
-    try {
-      await api.reseedAchievements();
-      setMessage({ type: 'success', text: 'Achievement icons refreshed!' });
-      await loadData();
-      setTimeout(() => setMessage(null), 3000);
-    } catch (error) {
-      console.error('Failed to reseed:', error);
-      setMessage({ type: 'error', text: 'Failed to refresh: ' + error.message });
-    } finally {
-      setReseeding(false);
-    }
-  }
-
-  async function resetBandBadges() {
-    if (!confirm('This will reset all band badges so they can be recalculated with correct dates. Continue?')) {
-      return;
-    }
-    setResettingBadges(true);
-    setMessage(null);
-    try {
-      const result = await api.resetBandBadges(workspaceId);
-      setMessage({ type: 'success', text: result.message });
-      await loadData();
-    } catch (error) {
-      console.error('Failed to reset badges:', error);
-      setMessage({ type: 'error', text: 'Failed to reset: ' + error.message });
-    } finally {
-      setResettingBadges(false);
     }
   }
 
@@ -176,37 +140,20 @@ export default function Achievements({ workspaceId }) {
 
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-white">Achievements</h2>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={resetBandBadges}
-            disabled={resettingBadges}
-            className="text-sm text-gray-400 hover:text-white disabled:opacity-50"
-            title="Reset all band badges to recalculate with correct dates"
-          >
-            {resettingBadges ? 'Resetting...' : 'Reset Band Badges'}
-          </button>
-          <button
-            onClick={reseedAchievements}
-            disabled={reseeding}
-            className="text-sm text-gray-400 hover:text-white disabled:opacity-50"
-          >
-            {reseeding ? 'Fixing...' : 'Fix Icons'}
-          </button>
-          <button
-            onClick={checkAchievements}
-            disabled={checking}
-            className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg disabled:opacity-50 flex items-center gap-2"
-          >
-            {checking ? (
-              <>Checking...</>
-            ) : (
-              <>
-                <span>Check for New</span>
-                <span className="text-lg">🔍</span>
-              </>
-            )}
-          </button>
-        </div>
+        <button
+          onClick={checkAchievements}
+          disabled={checking}
+          className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg disabled:opacity-50 flex items-center gap-2"
+        >
+          {checking ? (
+            <>Checking...</>
+          ) : (
+            <>
+              <span>Check for New</span>
+              <span className="text-lg">🔍</span>
+            </>
+          )}
+        </button>
       </div>
 
       {/* Stats Summary */}
