@@ -644,10 +644,23 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
     });
 
     // Find band members linked to this user to count attendance
-    const linkedBandMembers = await prisma.bandMember.findMany({
+    // First try explicit linkedUserId, then fall back to name matching
+    let linkedBandMembers = await prisma.bandMember.findMany({
       where: { workspaceId, linkedUserId: userId },
       select: { id: true }
     });
+
+    // If no explicit link, try to match by name (case-insensitive)
+    if (linkedBandMembers.length === 0 && membership.user.displayName) {
+      linkedBandMembers = await prisma.bandMember.findMany({
+        where: {
+          workspaceId,
+          name: { equals: membership.user.displayName, mode: 'insensitive' }
+        },
+        select: { id: true }
+      });
+    }
+
     const linkedBandMemberIds = linkedBandMembers.map(bm => bm.id);
 
     // Count gigs attended (via band member)
