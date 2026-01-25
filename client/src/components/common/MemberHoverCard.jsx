@@ -45,10 +45,19 @@ export default function MemberHoverCard({ userId, workspaceId, children, onClick
     hoverTimeout.current = setTimeout(() => {
       if (triggerRef.current) {
         const rect = triggerRef.current.getBoundingClientRect();
-        setPosition({
-          top: rect.top,
-          left: rect.right + 8
-        });
+        // Position to the right of the element, but keep within viewport
+        const cardWidth = 280;
+        let left = rect.right + 8;
+        // If would go off right edge, position to the left instead
+        if (left + cardWidth > window.innerWidth) {
+          left = rect.left - cardWidth - 8;
+        }
+        // Keep card within viewport vertically
+        let top = rect.top;
+        if (top + 200 > window.innerHeight) {
+          top = window.innerHeight - 220;
+        }
+        setPosition({ top: Math.max(10, top), left: Math.max(10, left) });
       }
       setIsHovered(true);
     }, 400); // Delay before showing
@@ -156,7 +165,7 @@ export default function MemberHoverCard({ userId, workspaceId, children, onClick
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={onClick}
-      className="contents"
+      className="block w-full"
     >
       {children}
       {card}
