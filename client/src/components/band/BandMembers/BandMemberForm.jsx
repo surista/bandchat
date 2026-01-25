@@ -214,15 +214,21 @@ function BandMemberForm({ member, onSave, onCancel, loading, workspaceMembers = 
     // Guests don't need stints, regular members need valid stints
     if (!isGuest && validStints.length === 0) return;
 
+    // For guests, create a stint with instruments and today's date
+    const guestStint = guestInstruments.length > 0 ? [{
+      instruments: guestInstruments,
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: null
+    }] : [];
+
     onSave({
       name,
       notes: notes || null,
       imageUrl: imageUrl || null,
       isGuest,
       linkedUserId: linkedUserId || null,
-      // Guests have NO stints - instruments stored separately if needed
-      // Regular members have stints with dates
-      stints: isGuest ? [] : validStints.map(s => ({
+      // Guests get a single stint with instruments, regular members have dated stints
+      stints: isGuest ? guestStint : validStints.map(s => ({
         instruments: s.instruments,
         startDate: s.startDate,
         endDate: s.endDate || null
@@ -334,11 +340,37 @@ function BandMemberForm({ member, onSave, onCancel, loading, workspaceMembers = 
           </label>
         </div>
 
-        {/* Info for guests */}
+        {/* Instruments picker for guests */}
         {isGuest && (
-          <p className="text-gray-500 text-sm">
-            Guests are session/touring musicians who don't have formal membership stints.
-          </p>
+          <div>
+            <label className="block text-gray-300 text-sm font-medium mb-2">
+              Instruments
+            </label>
+            <p className="text-gray-500 text-xs mb-2">
+              What instruments does this guest musician play?
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {INSTRUMENTS.map(inst => (
+                <button
+                  key={inst}
+                  type="button"
+                  onClick={() => toggleGuestInstrument(inst)}
+                  className={`px-2 py-1 text-xs rounded transition-colors ${
+                    guestInstruments.includes(inst)
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  {inst}
+                </button>
+              ))}
+            </div>
+            {guestInstruments.length > 0 && (
+              <div className="mt-2 text-sm text-purple-400">
+                Selected: {guestInstruments.join(', ')}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Only show stints section for non-guest members */}

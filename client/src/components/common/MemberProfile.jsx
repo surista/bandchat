@@ -102,8 +102,11 @@ export default function MemberProfile({ userId, workspaceId, onClose, onStartDM 
                 <p className="text-gray-300 mb-4">{profile.user.bio}</p>
               )}
 
-              <div className="text-sm text-gray-500 mb-4">
-                Joined {formatDate(profile.joinedAt)}
+              <div className="text-sm text-gray-500 mb-4 space-y-1">
+                <div>Joined {formatDate(profile.joinedAt)}</div>
+                {profile.firstGigDate && (
+                  <div>First gig: {formatDate(profile.firstGigDate)}</div>
+                )}
               </div>
 
               {/* Stats */}

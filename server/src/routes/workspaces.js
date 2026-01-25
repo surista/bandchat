@@ -702,10 +702,58 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
       });
     }
 
+    // Find first gig date for this member
+    let firstGigDate = null;
+    if (linkedBandMemberIds.length > 0) {
+      const firstGigPerformance = await prisma.setlistPerformer.findFirst({
+        where: {
+          bandMemberId: { in: linkedBandMemberIds },
+          setlist: {
+            OR: [
+              { gigs: { some: { workspaceId, type: 'GIG' } } },
+              { gigSetlists: { some: { gig: { workspaceId, type: 'GIG' } } } }
+            ]
+          }
+        },
+        select: {
+          setlist: {
+            select: {
+              gigs: {
+                where: { workspaceId, type: 'GIG' },
+                orderBy: { date: 'asc' },
+                take: 1,
+                select: { date: true }
+              },
+              gigSetlists: {
+                where: { gig: { workspaceId, type: 'GIG' } },
+                select: {
+                  gig: {
+                    select: { date: true }
+                  }
+                },
+                orderBy: { gig: { date: 'asc' } },
+                take: 1
+              }
+            }
+          }
+        }
+      });
+
+      if (firstGigPerformance?.setlist) {
+        const legacyGig = firstGigPerformance.setlist.gigs?.[0];
+        const multiSetGig = firstGigPerformance.setlist.gigSetlists?.[0]?.gig;
+        const gigDate = legacyGig?.date || multiSetGig?.date;
+        if (gigDate) {
+          firstGigDate = gigDate;
+        }
+      }
+    }
+
     res.json({
       user: membership.user,
       role: membership.role,
       joinedAt: membership.joinedAt,
+      firstGigDate,
       achievements, // Combined member + band achievements, already formatted
       stats: {
         messages: messageCount,
