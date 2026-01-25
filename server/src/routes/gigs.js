@@ -509,17 +509,41 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
     // Auto-create a blank setlist for GIG events (if no setlist already provided)
     let autoSetlistId = null;
     if (gigType === 'GIG' && !setlistId && (!setlistIds || setlistIds.length === 0)) {
-      const autoSetlist = await prisma.setlist.create({
-        data: {
-          name: title,
-          performedAt: gigDate,
-          venue: venue || null,
-          isAutoCreated: true,
-          workspaceId: req.params.workspaceId,
-          createdById: req.user.id
+      // Generate unique setlist name (title + date to avoid conflicts)
+      const dateStr = gigDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      let setlistName = title;
+
+      // Check if a setlist with this name already exists
+      const existingSetlist = await prisma.setlist.findUnique({
+        where: {
+          workspaceId_name: {
+            workspaceId: req.params.workspaceId,
+            name: title
+          }
         }
       });
-      autoSetlistId = autoSetlist.id;
+
+      // If exists, append date to make it unique
+      if (existingSetlist) {
+        setlistName = `${title} (${dateStr})`;
+      }
+
+      try {
+        const autoSetlist = await prisma.setlist.create({
+          data: {
+            name: setlistName,
+            performedAt: gigDate,
+            venue: venue || null,
+            isAutoCreated: true,
+            workspaceId: req.params.workspaceId,
+            createdById: req.user.id
+          }
+        });
+        autoSetlistId = autoSetlist.id;
+      } catch (err) {
+        // If still fails (e.g., name with date also exists), log but continue without auto-setlist
+        console.error('Failed to auto-create setlist:', err.message);
+      }
     }
 
     // Create gig with optional multi-set support
