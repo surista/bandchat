@@ -170,7 +170,7 @@ router.delete('/:eventId', authenticate, async (req, res) => {
 });
 
 // Auto-generate timeline from actual band data
-router.post('/workspace/:workspaceId/generate', authenticate, isWorkspaceAdmin, async (req, res) => {
+router.post('/workspace/:workspaceId/generate', authenticate, isWorkspaceMember, async (req, res) => {
   try {
     const workspaceId = req.params.workspaceId;
     const now = new Date();

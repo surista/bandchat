@@ -74,12 +74,13 @@ export default function BandTimeline({ workspaceId }) {
       const result = await api.generateTimeline(workspaceId);
       setEvents(result.events);
       if (result.created > 0) {
-        alert(`Generated ${result.created} timeline events from your gig history!`);
+        alert(`Generated ${result.created} timeline events from your band history!`);
       } else {
         alert('No new events to generate. Your timeline is up to date!');
       }
     } catch (error) {
       console.error('Failed to generate timeline:', error);
+      alert('Failed to generate timeline: ' + (error.message || 'Unknown error'));
     } finally {
       setGenerating(false);
     }
