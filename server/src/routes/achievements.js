@@ -200,10 +200,10 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
   try {
     const workspaceId = req.params.workspaceId;
     const newAchievements = [];
+    const now = new Date();
 
     // Get all achievement definitions
     const allAchievements = await prisma.achievement.findMany();
-    console.log('DEBUG achievements - total definitions found:', allAchievements.length);
 
     // Get existing achievements
     const existingBandAchievements = await prisma.bandAchievement.findMany({
@@ -211,214 +211,246 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
       select: { achievementId: true }
     });
     const existingBandIds = new Set(existingBandAchievements.map(a => a.achievementId));
-    console.log('DEBUG achievements - existing band achievements:', existingBandAchievements.length);
 
-    // Get stats - count completed OR past events (date before now)
-    const now = new Date();
-    console.log('DEBUG achievements - checking workspace:', workspaceId);
-    console.log('DEBUG achievements - current date:', now);
-
-    const gigCount = await prisma.gig.count({
+    // Get ALL gigs ordered by date (for finding milestone dates)
+    const allGigs = await prisma.gig.findMany({
       where: {
         workspaceId,
         type: 'GIG',
-        OR: [
-          { status: 'COMPLETED' },
-          { date: { lt: now }, status: { not: 'CANCELLED' } }
-        ]
-      }
-    });
-    console.log('DEBUG achievements - gigCount:', gigCount);
-
-    const rehearsalCount = await prisma.gig.count({
-      where: {
-        workspaceId,
-        type: 'REHEARSAL',
-        OR: [
-          { status: 'COMPLETED' },
-          { date: { lt: now }, status: { not: 'CANCELLED' } }
-        ]
-      }
-    });
-
-    const songCount = await prisma.song.count({
-      where: { workspaceId }
-    });
-
-    const totalRevenue = await prisma.gig.aggregate({
-      where: { workspaceId, type: 'GIG', status: 'COMPLETED', pay: { not: null } },
-      _sum: { pay: true }
-    });
-
-    // Calculate hours gigged (from completed gigs with start and end times)
-    const completedGigs = await prisma.gig.findMany({
-      where: { workspaceId, type: 'GIG', status: 'COMPLETED', endDate: { not: null } },
-      select: { date: true, endDate: true }
-    });
-    const hoursGigged = completedGigs.reduce((total, gig) => {
-      const duration = (new Date(gig.endDate) - new Date(gig.date)) / (1000 * 60 * 60);
-      return total + (duration > 0 ? duration : 0);
-    }, 0);
-
-    // Calculate hours rehearsed (completed OR past rehearsals with end times)
-    const countableRehearsals = await prisma.gig.findMany({
-      where: {
-        workspaceId,
-        type: 'REHEARSAL',
-        endDate: { not: null },
-        OR: [
-          { status: 'COMPLETED' },
-          { date: { lt: now }, status: { not: 'CANCELLED' } }
-        ]
+        date: { lt: now },
+        status: { not: 'CANCELLED' }
       },
-      select: { date: true, endDate: true }
-    });
-    console.log('DEBUG achievements - rehearsals with end times:', countableRehearsals.length);
-    const hoursRehearsed = countableRehearsals.reduce((total, rehearsal) => {
-      const duration = (new Date(rehearsal.endDate) - new Date(rehearsal.date)) / (1000 * 60 * 60);
-      return total + (duration > 0 ? duration : 0);
-    }, 0);
-    console.log('DEBUG achievements - hoursRehearsed:', hoursRehearsed);
-    console.log('DEBUG achievements - rehearsalCount:', rehearsalCount);
-
-    // Total songs played at gigs
-    const songsPlayedCount = await prisma.gigSong.count({
-      where: { gig: { workspaceId, type: 'GIG', status: 'COMPLETED' } }
+      orderBy: { date: 'asc' }
     });
 
-    // Check for road warrior (5 gigs in 7 days)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const recentGigs = await prisma.gig.count({
+    // Get ALL rehearsals ordered by date
+    const allRehearsals = await prisma.gig.findMany({
       where: {
         workspaceId,
-        type: 'GIG',
-        status: 'COMPLETED',
-        date: { gte: sevenDaysAgo }
-      }
+        type: 'REHEARSAL',
+        date: { lt: now },
+        status: { not: 'CANCELLED' }
+      },
+      orderBy: { date: 'asc' }
     });
 
-    // Check for marathon (3+ hour setlist)
-    const longestSetlist = await prisma.setlist.findFirst({
+    // Get songs ordered by creation date
+    const allSongs = await prisma.song.findMany({
       where: { workspaceId },
-      include: {
-        songs: {
-          include: { song: true }
-        }
-      }
+      orderBy: { createdAt: 'asc' }
     });
 
-    let hasMarathon = false;
-    if (longestSetlist) {
-      const allSetlists = await prisma.setlist.findMany({
-        where: { workspaceId },
-        include: {
-          songs: {
-            include: { song: true }
+    // Calculate cumulative hours for each rehearsal
+    let cumulativeRehearsalHours = 0;
+    const rehearsalHourMilestones = {}; // { hours: date }
+    for (const rehearsal of allRehearsals) {
+      if (rehearsal.endDate) {
+        const hours = (new Date(rehearsal.endDate) - new Date(rehearsal.date)) / (1000 * 60 * 60);
+        if (hours > 0) {
+          const prevHours = cumulativeRehearsalHours;
+          cumulativeRehearsalHours += hours;
+          // Track when we crossed each milestone
+          for (const milestone of [10, 50, 100, 500]) {
+            if (prevHours < milestone && cumulativeRehearsalHours >= milestone) {
+              rehearsalHourMilestones[milestone] = rehearsal.date;
+            }
           }
-        }
-      });
-
-      for (const setlist of allSetlists) {
-        const totalDuration = setlist.songs.reduce((sum, item) => {
-          if (item.song?.duration) return sum + item.song.duration;
-          if (item.duration) return sum + item.duration;
-          return sum;
-        }, 0);
-        if (totalDuration >= 10800) { // 3 hours in seconds
-          hasMarathon = true;
-          break;
         }
       }
     }
 
-    // Check for crowd favorite (same song 50 times)
-    const mostPlayedSong = await prisma.gigSong.groupBy({
-      by: ['songId'],
-      where: {
-        gig: { workspaceId }
-      },
-      _count: { songId: true },
-      orderBy: { _count: { songId: 'desc' } },
-      take: 1
-    });
+    // Calculate cumulative hours for gigs
+    let cumulativeGigHours = 0;
+    const gigHourMilestones = {};
+    for (const gig of allGigs) {
+      if (gig.endDate) {
+        const hours = (new Date(gig.endDate) - new Date(gig.date)) / (1000 * 60 * 60);
+        if (hours > 0) {
+          const prevHours = cumulativeGigHours;
+          cumulativeGigHours += hours;
+          for (const milestone of [10, 50, 100, 500]) {
+            if (prevHours < milestone && cumulativeGigHours >= milestone) {
+              gigHourMilestones[milestone] = gig.date;
+            }
+          }
+        }
+      }
+    }
 
-    const hasCrowdFavorite = mostPlayedSong.length > 0 && mostPlayedSong[0]._count.songId >= 50;
+    // Find first paid gig
+    const firstPaidGig = allGigs.find(g => g.pay && g.pay > 0);
 
-    // Award band achievements
+    // Calculate total revenue and track when milestones were hit
+    let cumulativeRevenue = 0;
+    const revenueMilestones = {};
+    for (const gig of allGigs) {
+      if (gig.pay && gig.pay > 0) {
+        const prevRevenue = cumulativeRevenue;
+        cumulativeRevenue += gig.pay;
+        if (prevRevenue === 0 && cumulativeRevenue > 0) {
+          revenueMilestones['first'] = gig.date;
+        }
+        for (const milestone of [1000, 10000]) {
+          if (prevRevenue < milestone && cumulativeRevenue >= milestone) {
+            revenueMilestones[milestone] = gig.date;
+          }
+        }
+      }
+    }
+
+    // Helper to get the date of the Nth item
+    const getNthDate = (items, n) => items[n - 1]?.date || items[n - 1]?.createdAt || now;
+
+    // Award band achievements with proper dates
     for (const achievement of allAchievements.filter(a => a.isBandWide)) {
       if (existingBandIds.has(achievement.id)) continue;
 
       let shouldAward = false;
+      let earnedAt = now;
 
       switch (achievement.code) {
+        // Gig count achievements
         case 'first_gig':
+          shouldAward = allGigs.length >= 1;
+          earnedAt = getNthDate(allGigs, 1);
+          break;
         case 'ten_gigs':
+          shouldAward = allGigs.length >= 10;
+          earnedAt = getNthDate(allGigs, 10);
+          break;
         case 'twentyfive_gigs':
+          shouldAward = allGigs.length >= 25;
+          earnedAt = getNthDate(allGigs, 25);
+          break;
         case 'fifty_gigs':
+          shouldAward = allGigs.length >= 50;
+          earnedAt = getNthDate(allGigs, 50);
+          break;
         case 'hundred_gigs':
+          shouldAward = allGigs.length >= 100;
+          earnedAt = getNthDate(allGigs, 100);
+          break;
         case 'twofifty_gigs':
+          shouldAward = allGigs.length >= 250;
+          earnedAt = getNthDate(allGigs, 250);
+          break;
         case 'five_hundred_gigs':
+          shouldAward = allGigs.length >= 500;
+          earnedAt = getNthDate(allGigs, 500);
+          break;
         case 'thousand_gigs':
-          shouldAward = gigCount >= achievement.threshold;
+          shouldAward = allGigs.length >= 1000;
+          earnedAt = getNthDate(allGigs, 1000);
           break;
+
+        // Rehearsal count achievements
         case 'first_rehearsal':
+          shouldAward = allRehearsals.length >= 1;
+          earnedAt = getNthDate(allRehearsals, 1);
+          break;
         case 'five_rehearsals':
+          shouldAward = allRehearsals.length >= 5;
+          earnedAt = getNthDate(allRehearsals, 5);
+          break;
         case 'ten_rehearsals':
+          shouldAward = allRehearsals.length >= 10;
+          earnedAt = getNthDate(allRehearsals, 10);
+          break;
         case 'twentyfive_rehearsals':
+          shouldAward = allRehearsals.length >= 25;
+          earnedAt = getNthDate(allRehearsals, 25);
+          break;
         case 'fifty_rehearsals':
+          shouldAward = allRehearsals.length >= 50;
+          earnedAt = getNthDate(allRehearsals, 50);
+          break;
         case 'hundred_rehearsals':
-          shouldAward = rehearsalCount >= achievement.threshold;
+          shouldAward = allRehearsals.length >= 100;
+          earnedAt = getNthDate(allRehearsals, 100);
           break;
+
+        // Song count achievements
         case 'ten_songs':
-        case 'fifty_songs':
-        case 'hundred_songs':
-          shouldAward = songCount >= achievement.threshold;
+          shouldAward = allSongs.length >= 10;
+          earnedAt = allSongs[9]?.createdAt || now;
           break;
+        case 'fifty_songs':
+          shouldAward = allSongs.length >= 50;
+          earnedAt = allSongs[49]?.createdAt || now;
+          break;
+        case 'hundred_songs':
+          shouldAward = allSongs.length >= 100;
+          earnedAt = allSongs[99]?.createdAt || now;
+          break;
+
+        // Revenue achievements
         case 'first_revenue':
-          shouldAward = (totalRevenue._sum.pay || 0) > 0;
+          shouldAward = cumulativeRevenue > 0;
+          earnedAt = revenueMilestones['first'] || now;
           break;
         case 'thousand_revenue':
+          shouldAward = cumulativeRevenue >= 1000;
+          earnedAt = revenueMilestones[1000] || now;
+          break;
         case 'ten_thousand_revenue':
-          shouldAward = (totalRevenue._sum.pay || 0) >= achievement.threshold;
+          shouldAward = cumulativeRevenue >= 10000;
+          earnedAt = revenueMilestones[10000] || now;
           break;
-        case 'road_warrior':
-          shouldAward = recentGigs >= 5;
-          break;
-        case 'marathon':
-          shouldAward = hasMarathon;
-          break;
-        case 'crowd_favorite':
-          shouldAward = hasCrowdFavorite;
-          break;
+
         // Hours gigged
         case 'ten_hours_gigged':
-        case 'fifty_hours_gigged':
-        case 'hundred_hours_gigged':
-        case 'fivehundred_hours_gigged':
-          shouldAward = hoursGigged >= achievement.threshold;
+          shouldAward = cumulativeGigHours >= 10;
+          earnedAt = gigHourMilestones[10] || now;
           break;
+        case 'fifty_hours_gigged':
+          shouldAward = cumulativeGigHours >= 50;
+          earnedAt = gigHourMilestones[50] || now;
+          break;
+        case 'hundred_hours_gigged':
+          shouldAward = cumulativeGigHours >= 100;
+          earnedAt = gigHourMilestones[100] || now;
+          break;
+        case 'fivehundred_hours_gigged':
+          shouldAward = cumulativeGigHours >= 500;
+          earnedAt = gigHourMilestones[500] || now;
+          break;
+
         // Hours rehearsed
         case 'ten_hours_rehearsed':
-        case 'fifty_hours_rehearsed':
-        case 'hundred_hours_rehearsed':
-        case 'fivehundred_hours_rehearsed':
-          shouldAward = hoursRehearsed >= achievement.threshold;
+          shouldAward = cumulativeRehearsalHours >= 10;
+          earnedAt = rehearsalHourMilestones[10] || now;
           break;
-        // Songs played at gigs
+        case 'fifty_hours_rehearsed':
+          shouldAward = cumulativeRehearsalHours >= 50;
+          earnedAt = rehearsalHourMilestones[50] || now;
+          break;
+        case 'hundred_hours_rehearsed':
+          shouldAward = cumulativeRehearsalHours >= 100;
+          earnedAt = rehearsalHourMilestones[100] || now;
+          break;
+        case 'fivehundred_hours_rehearsed':
+          shouldAward = cumulativeRehearsalHours >= 500;
+          earnedAt = rehearsalHourMilestones[500] || now;
+          break;
+
+        // These are harder to date precisely, use now
+        case 'road_warrior':
+        case 'marathon':
+        case 'crowd_favorite':
         case 'hundred_songs_played':
         case 'fivehundred_songs_played':
         case 'thousand_songs_played':
-          shouldAward = songsPlayedCount >= achievement.threshold;
+          // Skip for now - complex to date
           break;
       }
 
       if (shouldAward) {
-        console.log('DEBUG achievements - awarding band achievement:', achievement.code);
+        console.log('DEBUG achievements - awarding band achievement:', achievement.code, 'earnedAt:', earnedAt);
         const awarded = await prisma.bandAchievement.create({
           data: {
             achievementId: achievement.id,
-            workspaceId
+            workspaceId,
+            earnedAt: new Date(earnedAt)
           },
           include: { achievement: true }
         });
@@ -434,6 +466,7 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
     console.log('DEBUG achievements - checking', allMembers.length, 'members');
 
     const memberAchievementDefs = allAchievements.filter(a => !a.isBandWide);
+    const gigCount = allGigs.length;
 
     for (const member of allMembers) {
       const userId = member.userId;
@@ -445,78 +478,134 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
       });
       const existingMemberIds = new Set(existingMemberAchievements.map(a => a.achievementId));
 
-      // Get member stats
-      const memberSongCount = await prisma.song.count({
-        where: { workspaceId, createdById: userId }
+      // Get member's songs ordered by date
+      const memberSongs = await prisma.song.findMany({
+        where: { workspaceId, createdById: userId },
+        orderBy: { createdAt: 'asc' }
       });
 
-      const memberSetlistCount = await prisma.setlist.count({
-        where: { workspaceId, createdById: userId }
+      // Get member's setlists ordered by date
+      const memberSetlists = await prisma.setlist.findMany({
+        where: { workspaceId, createdById: userId },
+        orderBy: { createdAt: 'asc' }
       });
 
-      const memberMessageCount = await prisma.message.count({
+      // Get member's messages ordered by date
+      const memberMessages = await prisma.message.findMany({
         where: {
           channel: { workspaceId },
           authorId: userId
-        }
+        },
+        orderBy: { createdAt: 'asc' },
+        select: { createdAt: true }
       });
 
-      const memberReactionCount = await prisma.reaction.count({
+      // Get member's reactions
+      const memberReactions = await prisma.reaction.findMany({
         where: {
           message: { channel: { workspaceId } },
           userId
-        }
+        },
+        orderBy: { createdAt: 'asc' },
+        select: { createdAt: true }
       });
 
-      // Calculate months as member
-      const memberMonths = member.joinedAt ? Math.floor(
-        (new Date() - new Date(member.joinedAt)) / (1000 * 60 * 60 * 24 * 30)
+      // Calculate months as member and anniversary dates
+      const joinDate = member.joinedAt ? new Date(member.joinedAt) : null;
+      const memberMonths = joinDate ? Math.floor(
+        (now - joinDate) / (1000 * 60 * 60 * 24 * 30)
       ) : 0;
 
-      // Award member achievements
+      // Award member achievements with proper dates
       for (const achievement of memberAchievementDefs) {
         if (existingMemberIds.has(achievement.id)) continue;
 
         let shouldAward = false;
+        let earnedAt = now;
 
         switch (achievement.code) {
           case 'member_first_gig':
+            shouldAward = gigCount >= 1;
+            earnedAt = getNthDate(allGigs, 1);
+            break;
           case 'member_ten_gigs':
+            shouldAward = gigCount >= 10;
+            earnedAt = getNthDate(allGigs, 10);
+            break;
           case 'member_fifty_gigs':
+            shouldAward = gigCount >= 50;
+            earnedAt = getNthDate(allGigs, 50);
+            break;
           case 'member_hundred_gigs':
-            // Use band gig count as proxy (all members get credit)
-            shouldAward = gigCount >= achievement.threshold;
+            shouldAward = gigCount >= 100;
+            earnedAt = getNthDate(allGigs, 100);
             break;
           case 'song_master':
-            shouldAward = memberSongCount >= achievement.threshold;
+            shouldAward = memberSongs.length >= 25;
+            earnedAt = memberSongs[24]?.createdAt || now;
             break;
           case 'setlist_architect':
-            shouldAward = memberSetlistCount >= achievement.threshold;
+            shouldAward = memberSetlists.length >= 10;
+            earnedAt = memberSetlists[9]?.createdAt || now;
             break;
           case 'communicator':
+            shouldAward = memberMessages.length >= 100;
+            earnedAt = memberMessages[99]?.createdAt || now;
+            break;
           case 'super_communicator':
-            shouldAward = memberMessageCount >= achievement.threshold;
+            shouldAward = memberMessages.length >= 1000;
+            earnedAt = memberMessages[999]?.createdAt || now;
             break;
           case 'emoji_fan':
+            shouldAward = memberReactions.length >= 50;
+            earnedAt = memberReactions[49]?.createdAt || now;
+            break;
           case 'emoji_enthusiast':
+            shouldAward = memberReactions.length >= 250;
+            earnedAt = memberReactions[249]?.createdAt || now;
+            break;
           case 'emoji_master':
-            shouldAward = memberReactionCount >= achievement.threshold;
+            shouldAward = memberReactions.length >= 1000;
+            earnedAt = memberReactions[999]?.createdAt || now;
             break;
           case 'one_year_member':
+            shouldAward = memberMonths >= 12;
+            if (joinDate) {
+              earnedAt = new Date(joinDate);
+              earnedAt.setFullYear(earnedAt.getFullYear() + 1);
+            }
+            break;
           case 'two_year_member':
+            shouldAward = memberMonths >= 24;
+            if (joinDate) {
+              earnedAt = new Date(joinDate);
+              earnedAt.setFullYear(earnedAt.getFullYear() + 2);
+            }
+            break;
           case 'five_year_member':
+            shouldAward = memberMonths >= 60;
+            if (joinDate) {
+              earnedAt = new Date(joinDate);
+              earnedAt.setFullYear(earnedAt.getFullYear() + 5);
+            }
+            break;
           case 'ten_year_member':
-            shouldAward = memberMonths >= achievement.threshold;
+            shouldAward = memberMonths >= 120;
+            if (joinDate) {
+              earnedAt = new Date(joinDate);
+              earnedAt.setFullYear(earnedAt.getFullYear() + 10);
+            }
             break;
         }
 
         if (shouldAward) {
-          console.log('DEBUG achievements - awarding member achievement:', achievement.code, 'to user:', userId);
+          console.log('DEBUG achievements - awarding member achievement:', achievement.code, 'to user:', userId, 'earnedAt:', earnedAt);
           const awarded = await prisma.memberAchievement.create({
             data: {
               achievementId: achievement.id,
               userId,
-              workspaceId
+              workspaceId,
+              earnedAt: new Date(earnedAt)
             },
             include: { achievement: true }
           });
@@ -536,11 +625,11 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
     res.json({
       newAchievements,
       stats: {
-        gigs: gigCount,
-        rehearsals: rehearsalCount,
-        songs: songCount,
-        revenue: totalRevenue._sum.pay || 0,
-        hoursRehearsed: Math.round(hoursRehearsed * 10) / 10
+        gigs: allGigs.length,
+        rehearsals: allRehearsals.length,
+        songs: allSongs.length,
+        revenue: cumulativeRevenue,
+        hoursRehearsed: Math.round(cumulativeRehearsalHours * 10) / 10
       }
     });
   } catch (error) {
