@@ -503,13 +503,31 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
 
     // Only admins can create locked events
     const canLock = req.workspaceMembership?.role === 'ADMIN';
+    const gigType = type || 'GIG';
+    const gigDate = new Date(date);
+
+    // Auto-create a blank setlist for GIG events (if no setlist already provided)
+    let autoSetlistId = null;
+    if (gigType === 'GIG' && !setlistId && (!setlistIds || setlistIds.length === 0)) {
+      const autoSetlist = await prisma.setlist.create({
+        data: {
+          name: title,
+          performedAt: gigDate,
+          venue: venue || null,
+          isAutoCreated: true,
+          workspaceId: req.params.workspaceId,
+          createdById: req.user.id
+        }
+      });
+      autoSetlistId = autoSetlist.id;
+    }
 
     // Create gig with optional multi-set support
     const gig = await prisma.gig.create({
       data: {
         title,
-        type: type || 'GIG',
-        date: new Date(date),
+        type: gigType,
+        date: gigDate,
         endDate: endDate ? new Date(endDate) : null,
         venue,
         address,
@@ -517,7 +535,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
         pay,
         isLocked: canLock ? (isLocked || false) : false,
         isPersonal: isPersonal || false,
-        setlistId: setlistIds && setlistIds.length > 0 ? null : setlistId, // Don't use legacy setlistId if using multi-set
+        setlistId: setlistIds && setlistIds.length > 0 ? null : (setlistId || autoSetlistId), // Use auto-created setlist if no manual one
         workspaceId: req.params.workspaceId,
         createdById: req.user.id,
         // Create GigSetlist entries if setlistIds provided
@@ -649,6 +667,10 @@ router.put('/:gigId', authenticate, async (req, res) => {
       include: {
         workspace: {
           include: { members: true }
+        },
+        setlist: true, // Include legacy setlist to check isAutoCreated
+        setlists: {    // Include multi-set setlists
+          include: { setlist: true }
         }
       }
     });
@@ -674,6 +696,34 @@ router.put('/:gigId', authenticate, async (req, res) => {
     // Non-admins can only modify their own personal events or non-locked shared events
     if (existingGig.isPersonal && !isCreator && !isAdmin) {
       return res.status(403).json({ error: 'You can only modify your own personal events' });
+    }
+
+    // If type is changing from GIG to something else, delete auto-created setlists
+    if (type && type !== 'GIG' && existingGig.type === 'GIG') {
+      const autoSetlistIds = [];
+      if (existingGig.setlist?.isAutoCreated) {
+        autoSetlistIds.push(existingGig.setlist.id);
+      }
+      for (const gs of existingGig.setlists || []) {
+        if (gs.setlist?.isAutoCreated) {
+          autoSetlistIds.push(gs.setlist.id);
+        }
+      }
+      if (autoSetlistIds.length > 0) {
+        // Clear the setlist reference first
+        await prisma.gig.update({
+          where: { id: req.params.gigId },
+          data: { setlistId: null }
+        });
+        // Delete GigSetlist entries
+        await prisma.gigSetlist.deleteMany({
+          where: { gigId: req.params.gigId }
+        });
+        // Delete auto-created setlists
+        await prisma.setlist.deleteMany({
+          where: { id: { in: autoSetlistIds } }
+        });
+      }
     }
 
     // If setlistIds provided, handle multi-set update
@@ -857,6 +907,10 @@ router.delete('/:gigId', authenticate, async (req, res) => {
       include: {
         workspace: {
           include: { members: true }
+        },
+        setlist: true, // Include legacy setlist
+        setlists: {    // Include multi-set setlists
+          include: { setlist: true }
         }
       }
     });
@@ -884,9 +938,28 @@ router.delete('/:gigId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'You can only delete your own personal events' });
     }
 
+    // Collect auto-created setlist IDs to delete
+    const autoSetlistIds = [];
+    if (gig.setlist?.isAutoCreated) {
+      autoSetlistIds.push(gig.setlist.id);
+    }
+    for (const gs of gig.setlists || []) {
+      if (gs.setlist?.isAutoCreated) {
+        autoSetlistIds.push(gs.setlist.id);
+      }
+    }
+
+    // Delete the gig first (this will cascade delete GigSetlist entries)
     await prisma.gig.delete({
       where: { id: req.params.gigId }
     });
+
+    // Then delete any auto-created setlists
+    if (autoSetlistIds.length > 0) {
+      await prisma.setlist.deleteMany({
+        where: { id: { in: autoSetlistIds } }
+      });
+    }
 
     const io = req.app.get('io');
     io.to(`workspace:${gig.workspaceId}`).emit('gig:deleted', { gigId: req.params.gigId });

@@ -278,6 +278,7 @@ model Setlist {
   useShortNames Boolean   @default(false)
   performedAt   DateTime? // Date the setlist was performed
   venue         String?   // Venue name for the performance
+  isAutoCreated Boolean   @default(false) // True if auto-created with a gig
   workspaceId   String
   createdById   String
   createdAt     DateTime  @default(now())

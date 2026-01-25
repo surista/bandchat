@@ -103,9 +103,15 @@ export default function MemberProfile({ userId, workspaceId, onClose, onStartDM 
               )}
 
               <div className="text-sm text-gray-500 mb-4 space-y-1">
-                <div>Joined {formatDate(profile.joinedAt)}</div>
+                {/* Show band join date for members, nothing for guests */}
+                {!profile.isGuest && profile.bandJoinDate && (
+                  <div>Joined {formatDate(profile.bandJoinDate)}</div>
+                )}
                 {profile.firstGigDate && (
                   <div>First gig: {formatDate(profile.firstGigDate)}</div>
+                )}
+                {profile.lastGigDate && formatDate(profile.firstGigDate) !== formatDate(profile.lastGigDate) && (
+                  <div>Last gig: {formatDate(profile.lastGigDate)}</div>
                 )}
               </div>
 

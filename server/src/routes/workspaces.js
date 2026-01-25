@@ -658,18 +658,28 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
       }
     });
 
-    // Find band members linked to this user to count attendance
-    // First try explicit linkedUserId, then fall back to name matching
+    // Find band members linked to this user (with stints for join date)
     let linkedBandMembers = await prisma.bandMember.findMany({
       where: { workspaceId, linkedUserId: userId },
-      select: { id: true }
+      include: {
+        stints: {
+          orderBy: { startDate: 'asc' }
+        }
+      }
     });
 
-    // DEBUG: Log what we found
-    console.log('Profile lookup for user:', userId, 'in workspace:', workspaceId);
-    console.log('Found linked band members:', linkedBandMembers);
-
     const linkedBandMemberIds = linkedBandMembers.map(bm => bm.id);
+
+    // Get band join date from earliest instrument stint
+    let bandJoinDate = null;
+    for (const bm of linkedBandMembers) {
+      if (bm.stints && bm.stints.length > 0) {
+        const earliestStint = bm.stints[0];
+        if (!bandJoinDate || earliestStint.startDate < bandJoinDate) {
+          bandJoinDate = earliestStint.startDate;
+        }
+      }
+    }
 
     // Count gigs attended (via GigAttendee OR SetlistPerformer on a gig's setlist)
     let gigsAttended = 0;
@@ -714,18 +724,21 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
       // REHEARSAL ATTENDANCE = Attendees in Calendar events (GigAttendee table)
       // Note: "GigAttendee" is used for ALL event types (gigs, rehearsals, etc.)
       // This is set via the Calendar event form "Attending" section
+      // Only count past rehearsals (not future ones)
       rehearsalsAttended = await prisma.gigAttendee.count({
         where: {
           bandMemberId: { in: linkedBandMemberIds },
-          gig: { workspaceId, type: 'REHEARSAL' }
+          gig: { workspaceId, type: 'REHEARSAL', date: { lt: new Date() } }
         }
       });
     }
 
-    // Find first gig date for this member
+    // Find first and last gig dates for this member
     let firstGigDate = null;
+    let lastGigDate = null;
     if (linkedBandMemberIds.length > 0) {
-      const firstGigPerformance = await prisma.setlistPerformer.findFirst({
+      // Get all gig dates where this member performed
+      const performances = await prisma.setlistPerformer.findMany({
         where: {
           bandMemberId: { in: linkedBandMemberIds },
           setlist: {
@@ -740,40 +753,49 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
             select: {
               gigs: {
                 where: { workspaceId, type: 'GIG' },
-                orderBy: { date: 'asc' },
-                take: 1,
                 select: { date: true }
               },
               gigSetlists: {
                 where: { gig: { workspaceId, type: 'GIG' } },
                 select: {
-                  gig: {
-                    select: { date: true }
-                  }
-                },
-                orderBy: { gig: { date: 'asc' } },
-                take: 1
+                  gig: { select: { date: true } }
+                }
               }
             }
           }
         }
       });
 
-      if (firstGigPerformance?.setlist) {
-        const legacyGig = firstGigPerformance.setlist.gigs?.[0];
-        const multiSetGig = firstGigPerformance.setlist.gigSetlists?.[0]?.gig;
-        const gigDate = legacyGig?.date || multiSetGig?.date;
-        if (gigDate) {
-          firstGigDate = gigDate;
+      // Collect all gig dates
+      const gigDates = [];
+      for (const perf of performances) {
+        for (const gig of perf.setlist.gigs || []) {
+          if (gig.date) gigDates.push(new Date(gig.date));
+        }
+        for (const gs of perf.setlist.gigSetlists || []) {
+          if (gs.gig?.date) gigDates.push(new Date(gs.gig.date));
         }
       }
+
+      // Get min and max dates
+      if (gigDates.length > 0) {
+        gigDates.sort((a, b) => a - b);
+        firstGigDate = gigDates[0];
+        lastGigDate = gigDates[gigDates.length - 1];
+      }
     }
+
+    // Determine if this is a guest (no linked band member with stints)
+    const isGuest = linkedBandMembers.length === 0 || linkedBandMembers.every(bm => !bm.stints || bm.stints.length === 0);
 
     res.json({
       user: membership.user,
       role: membership.role,
       joinedAt: membership.joinedAt,
+      bandJoinDate: isGuest ? null : bandJoinDate, // Only for regular members with stints
       firstGigDate,
+      lastGigDate,
+      isGuest,
       achievements, // Combined member + band achievements, already formatted
       stats: {
         messages: messageCount,
@@ -1038,10 +1060,12 @@ router.get('/:workspaceId/members/:userId/events', authenticate, isWorkspaceMemb
       // REHEARSAL ATTENDANCE = Attendees in Calendar events (GigAttendee table)
       // Note: "GigAttendee" is confusingly named - it's used for ALL event types
       // This is set via the Calendar event form "Attending" section
+      // Only include past rehearsals
       events = await prisma.gig.findMany({
         where: {
           workspaceId,
           type: 'REHEARSAL',
+          date: { lt: new Date() },
           attendees: {
             some: { bandMemberId: { in: linkedBandMemberIds } }
           }

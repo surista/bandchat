@@ -461,12 +461,31 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
 
                 return (
                   <div>
-                    <label className="modal-label">
-                      Attending
-                      <span className="text-gray-500 font-normal ml-2">
-                        ({selectedAttendees.length} selected)
-                      </span>
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="modal-label mb-0">
+                        Attending
+                        <span className="text-gray-500 font-normal ml-2">
+                          ({selectedAttendees.length} selected)
+                        </span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const allCurrentIds = currentMembers.map(bm => bm.id);
+                          const allSelected = allCurrentIds.every(id => selectedAttendees.includes(id));
+                          if (allSelected) {
+                            // Deselect all current members
+                            setSelectedAttendees(selectedAttendees.filter(id => !allCurrentIds.includes(id)));
+                          } else {
+                            // Select all current members (keep any others already selected)
+                            setSelectedAttendees([...new Set([...selectedAttendees, ...allCurrentIds])]);
+                          }
+                        }}
+                        className="text-xs text-blue-400 hover:text-blue-300"
+                      >
+                        {currentMembers.every(bm => selectedAttendees.includes(bm.id)) ? 'Deselect All' : 'Select All'}
+                      </button>
+                    </div>
 
                     {allBandMembers.length > 6 && (
                       <input
