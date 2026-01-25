@@ -775,6 +775,29 @@ router.post('/workspace/:workspaceId/award', authenticate, isWorkspaceAdmin, asy
   }
 });
 
+// Reset ALL band badges (to fix incorrect earnedAt dates)
+router.post('/workspace/:workspaceId/reset-band-badges', authenticate, isWorkspaceMember, async (req, res) => {
+  try {
+    const workspaceId = req.params.workspaceId;
+
+    // Delete ALL band achievements for this workspace
+    const deleted = await prisma.bandAchievement.deleteMany({
+      where: { workspaceId }
+    });
+
+    console.log(`Reset ${deleted.count} band badges for workspace ${workspaceId}`);
+
+    res.json({
+      success: true,
+      deleted: deleted.count,
+      message: `Reset ${deleted.count} band badges. Click "Check for New" to recalculate with correct dates.`
+    });
+  } catch (error) {
+    console.error('Error resetting band badges:', error);
+    res.status(500).json({ error: 'Failed to reset band badges' });
+  }
+});
+
 // Get achievement leaderboard
 router.get('/workspace/:workspaceId/leaderboard', authenticate, isWorkspaceMember, async (req, res) => {
   try {

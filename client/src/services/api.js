@@ -1021,6 +1021,12 @@ class ApiService {
     });
   }
 
+  async resetBandBadges(workspaceId) {
+    return this.request(`/achievements/workspace/${workspaceId}/reset-band-badges`, {
+      method: 'POST'
+    });
+  }
+
   async awardAchievement(workspaceId, achievementCode, userId = null) {
     return this.request(`/achievements/workspace/${workspaceId}/award`, {
       method: 'POST',

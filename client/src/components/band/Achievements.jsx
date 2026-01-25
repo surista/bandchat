@@ -14,6 +14,7 @@ export default function Achievements({ workspaceId }) {
   const [newAchievements, setNewAchievements] = useState([]);
   const [message, setMessage] = useState(null);
   const [reseeding, setReseeding] = useState(false);
+  const [resettingBadges, setResettingBadges] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -76,6 +77,24 @@ export default function Achievements({ workspaceId }) {
       setMessage({ type: 'error', text: 'Failed to refresh: ' + error.message });
     } finally {
       setReseeding(false);
+    }
+  }
+
+  async function resetBandBadges() {
+    if (!confirm('This will reset all band badges so they can be recalculated with correct dates. Continue?')) {
+      return;
+    }
+    setResettingBadges(true);
+    setMessage(null);
+    try {
+      const result = await api.resetBandBadges(workspaceId);
+      setMessage({ type: 'success', text: result.message });
+      await loadData();
+    } catch (error) {
+      console.error('Failed to reset badges:', error);
+      setMessage({ type: 'error', text: 'Failed to reset: ' + error.message });
+    } finally {
+      setResettingBadges(false);
     }
   }
 
@@ -159,6 +178,14 @@ export default function Achievements({ workspaceId }) {
         <h2 className="text-2xl font-bold text-white">Achievements</h2>
         <div className="flex items-center gap-3">
           <button
+            onClick={resetBandBadges}
+            disabled={resettingBadges}
+            className="text-sm text-gray-400 hover:text-white disabled:opacity-50"
+            title="Reset all band badges to recalculate with correct dates"
+          >
+            {resettingBadges ? 'Resetting...' : 'Reset Band Badges'}
+          </button>
+          <button
             onClick={reseedAchievements}
             disabled={reseeding}
             className="text-sm text-gray-400 hover:text-white disabled:opacity-50"
@@ -184,10 +211,14 @@ export default function Achievements({ workspaceId }) {
 
       {/* Stats Summary */}
       {stats && (
-        <div className="mb-6 grid grid-cols-3 md:grid-cols-5 gap-3">
+        <div className="mb-6 grid grid-cols-3 md:grid-cols-6 gap-3">
           <div className="bg-gray-800 rounded-lg p-3 text-center">
             <p className="text-2xl font-bold text-white">{stats.gigs}</p>
             <p className="text-sm text-gray-400">Gigs</p>
+          </div>
+          <div className="bg-gray-800 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold text-white">{stats.hoursGigged || 0}h</p>
+            <p className="text-sm text-gray-400">Stage Time</p>
           </div>
           <div className="bg-gray-800 rounded-lg p-3 text-center">
             <p className="text-2xl font-bold text-white">{stats.rehearsals}</p>
