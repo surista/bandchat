@@ -789,6 +789,92 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
   }
 });
 
+// DEBUG: Diagnose gig count issues for a member
+router.get('/:workspaceId/members/:userId/debug-gigs', authenticate, isWorkspaceMember, async (req, res) => {
+  try {
+    const { workspaceId, userId } = req.params;
+
+    // Find band members linked to this user
+    const linkedBandMembers = await prisma.bandMember.findMany({
+      where: { workspaceId, linkedUserId: userId },
+      select: { id: true, name: true }
+    });
+    const linkedBandMemberIds = linkedBandMembers.map(bm => bm.id);
+
+    if (linkedBandMemberIds.length === 0) {
+      return res.json({ error: 'No linked band members found', linkedBandMembers: [] });
+    }
+
+    // Get ALL completed gigs
+    const allGigs = await prisma.gig.findMany({
+      where: { workspaceId, type: 'GIG' },
+      include: {
+        setlist: {
+          include: {
+            performers: {
+              where: { bandMemberId: { in: linkedBandMemberIds } },
+              select: { bandMemberId: true }
+            }
+          }
+        },
+        setlists: {
+          include: {
+            setlist: {
+              include: {
+                performers: {
+                  where: { bandMemberId: { in: linkedBandMemberIds } },
+                  select: { bandMemberId: true }
+                }
+              }
+            }
+          }
+        }
+      },
+      orderBy: { date: 'desc' }
+    });
+
+    // Analyze each gig
+    const analysis = allGigs.map(gig => {
+      const hasLegacySetlist = !!gig.setlistId;
+      const hasMultiSet = gig.setlists && gig.setlists.length > 0;
+
+      // Check if user performed via legacy setlist
+      const legacyPerformed = gig.setlist?.performers?.length > 0;
+
+      // Check if user performed via multi-set
+      const multiSetPerformed = gig.setlists?.some(gs => gs.setlist?.performers?.length > 0);
+
+      const userPerformed = legacyPerformed || multiSetPerformed;
+
+      return {
+        id: gig.id,
+        title: gig.title,
+        date: gig.date,
+        hasLegacySetlist,
+        hasMultiSet,
+        legacyPerformed,
+        multiSetPerformed,
+        userPerformed,
+        issue: !userPerformed ? (hasLegacySetlist || hasMultiSet ? 'NO_PERFORMER_RECORD' : 'NO_SETLIST_LINKED') : null
+      };
+    });
+
+    const counted = analysis.filter(g => g.userPerformed).length;
+    const notCounted = analysis.filter(g => !g.userPerformed);
+
+    res.json({
+      linkedBandMembers,
+      totalGigs: allGigs.length,
+      countedGigs: counted,
+      notCountedGigs: notCounted.length,
+      issues: notCounted
+    });
+  } catch (error) {
+    console.error('Debug gigs error:', error);
+    res.status(500).json({ error: 'Failed to debug gigs' });
+  }
+});
+
 // Get member's attended events (gigs or rehearsals)
 router.get('/:workspaceId/members/:userId/events', authenticate, isWorkspaceMember, async (req, res) => {
   try {
