@@ -107,6 +107,33 @@ router.get('/definitions', authenticate, async (req, res) => {
   }
 });
 
+// Force reseed achievements (fixes icons)
+router.post('/reseed', authenticate, async (req, res) => {
+  try {
+    console.log('Force reseeding achievements...');
+    for (const achievement of DEFAULT_ACHIEVEMENTS) {
+      const result = await prisma.achievement.upsert({
+        where: { code: achievement.code },
+        update: {
+          icon: achievement.icon,
+          name: achievement.name,
+          description: achievement.description,
+          category: achievement.category,
+          threshold: achievement.threshold,
+          isBandWide: achievement.isBandWide
+        },
+        create: achievement
+      });
+      console.log(`Reseeded ${achievement.code}: icon="${result.icon}"`);
+    }
+    console.log('Force reseed complete');
+    res.json({ success: true, count: DEFAULT_ACHIEVEMENTS.length });
+  } catch (error) {
+    console.error('Error reseeding achievements:', error);
+    res.status(500).json({ error: 'Failed to reseed achievements' });
+  }
+});
+
 // Get band achievements for a workspace
 router.get('/workspace/:workspaceId/band', authenticate, isWorkspaceMember, async (req, res) => {
   try {

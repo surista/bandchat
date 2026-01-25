@@ -12,6 +12,8 @@ export default function Achievements({ workspaceId }) {
   const [loading, setLoading] = useState(true);
   const [checking, setChecking] = useState(false);
   const [newAchievements, setNewAchievements] = useState([]);
+  const [message, setMessage] = useState(null);
+  const [reseeding, setReseeding] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -41,18 +43,39 @@ export default function Achievements({ workspaceId }) {
   async function checkAchievements() {
     setChecking(true);
     setNewAchievements([]);
+    setMessage(null);
     try {
       const result = await api.checkAchievements(workspaceId);
+      console.log('Check achievements result:', result);
       setStats(result.stats);
       if (result.newAchievements.length > 0) {
         setNewAchievements(result.newAchievements);
-        // Reload all data
         await loadData();
+      } else {
+        setMessage({ type: 'info', text: 'No new achievements - keep playing!' });
+        setTimeout(() => setMessage(null), 3000);
       }
     } catch (error) {
       console.error('Failed to check achievements:', error);
+      setMessage({ type: 'error', text: 'Failed to check achievements: ' + error.message });
     } finally {
       setChecking(false);
+    }
+  }
+
+  async function reseedAchievements() {
+    setReseeding(true);
+    setMessage(null);
+    try {
+      await api.reseedAchievements();
+      setMessage({ type: 'success', text: 'Achievement icons refreshed!' });
+      await loadData();
+      setTimeout(() => setMessage(null), 3000);
+    } catch (error) {
+      console.error('Failed to reseed:', error);
+      setMessage({ type: 'error', text: 'Failed to refresh: ' + error.message });
+    } finally {
+      setReseeding(false);
     }
   }
 
@@ -84,11 +107,17 @@ export default function Achievements({ workspaceId }) {
   };
 
   if (loading) {
-    return <div className="p-4 text-gray-400">Loading achievements...</div>;
+    return (
+      <div className="h-full flex flex-col bg-gray-900">
+        <div className="p-4 text-gray-400">Loading achievements...</div>
+      </div>
+    );
   }
 
   return (
-    <div className="p-4 max-w-5xl mx-auto min-h-full bg-gray-900">
+    <div className="h-full flex flex-col bg-gray-900">
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="max-w-5xl mx-auto">
       {/* New Achievement Celebration */}
       {newAchievements.length > 0 && (
         <div className="mb-6 bg-gradient-to-r from-yellow-600/20 to-orange-600/20 border border-yellow-500/50 rounded-lg p-4">
@@ -115,22 +144,42 @@ export default function Achievements({ workspaceId }) {
         </div>
       )}
 
+      {/* Message Banner */}
+      {message && (
+        <div className={`mb-4 p-3 rounded-lg ${
+          message.type === 'error' ? 'bg-red-900/50 text-red-300 border border-red-700' :
+          message.type === 'success' ? 'bg-green-900/50 text-green-300 border border-green-700' :
+          'bg-blue-900/50 text-blue-300 border border-blue-700'
+        }`}>
+          {message.text}
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-white">Achievements</h2>
-        <button
-          onClick={checkAchievements}
-          disabled={checking}
-          className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg disabled:opacity-50 flex items-center gap-2"
-        >
-          {checking ? (
-            <>Checking...</>
-          ) : (
-            <>
-              <span>Check for New</span>
-              <span className="text-lg">🔍</span>
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={reseedAchievements}
+            disabled={reseeding}
+            className="text-sm text-gray-400 hover:text-white disabled:opacity-50"
+          >
+            {reseeding ? 'Fixing...' : 'Fix Icons'}
+          </button>
+          <button
+            onClick={checkAchievements}
+            disabled={checking}
+            className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg disabled:opacity-50 flex items-center gap-2"
+          >
+            {checking ? (
+              <>Checking...</>
+            ) : (
+              <>
+                <span>Check for New</span>
+                <span className="text-lg">🔍</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Stats Summary */}
@@ -337,6 +386,8 @@ export default function Achievements({ workspaceId }) {
           </table>
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }

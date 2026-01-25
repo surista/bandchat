@@ -1015,6 +1015,12 @@ class ApiService {
     });
   }
 
+  async reseedAchievements() {
+    return this.request('/achievements/reseed', {
+      method: 'POST'
+    });
+  }
+
   async awardAchievement(workspaceId, achievementCode, userId = null) {
     return this.request(`/achievements/workspace/${workspaceId}/award`, {
       method: 'POST',
