@@ -22,7 +22,11 @@ const DEFAULT_ACHIEVEMENTS = [
   { code: 'hundred_songs', name: 'Walking Setlist', description: 'Added 100 songs', icon: '📚', category: 'songs', threshold: 100, isBandWide: true },
 
   { code: 'first_rehearsal', name: 'Practice Makes Perfect', description: 'Logged first rehearsal', icon: '🥁', category: 'rehearsals', threshold: 1, isBandWide: true },
+  { code: 'five_rehearsals', name: 'Getting Tight', description: 'Logged 5 rehearsals', icon: '🎵', category: 'rehearsals', threshold: 5, isBandWide: true },
+  { code: 'ten_rehearsals', name: 'Regular Practice', description: 'Logged 10 rehearsals', icon: '🎸', category: 'rehearsals', threshold: 10, isBandWide: true },
+  { code: 'twentyfive_rehearsals', name: 'Committed', description: 'Logged 25 rehearsals', icon: '🎯', category: 'rehearsals', threshold: 25, isBandWide: true },
   { code: 'fifty_rehearsals', name: 'Dedicated', description: 'Logged 50 rehearsals', icon: '💪', category: 'rehearsals', threshold: 50, isBandWide: true },
+  { code: 'hundred_rehearsals', name: 'Practice Legends', description: 'Logged 100 rehearsals', icon: '🏆', category: 'rehearsals', threshold: 100, isBandWide: true },
 
   { code: 'first_revenue', name: 'First Paycheck', description: 'Earned your first dollar', icon: '💵', category: 'milestones', threshold: null, isBandWide: true },
   { code: 'thousand_revenue', name: 'Making Bank', description: 'Earned $1,000 total', icon: '💰', category: 'milestones', threshold: 1000, isBandWide: true },
@@ -256,15 +260,26 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
       return total + (duration > 0 ? duration : 0);
     }, 0);
 
-    // Calculate hours rehearsed
-    const completedRehearsals = await prisma.gig.findMany({
-      where: { workspaceId, type: 'REHEARSAL', status: 'COMPLETED', endDate: { not: null } },
+    // Calculate hours rehearsed (completed OR past rehearsals with end times)
+    const countableRehearsals = await prisma.gig.findMany({
+      where: {
+        workspaceId,
+        type: 'REHEARSAL',
+        endDate: { not: null },
+        OR: [
+          { status: 'COMPLETED' },
+          { date: { lt: now }, status: { not: 'CANCELLED' } }
+        ]
+      },
       select: { date: true, endDate: true }
     });
-    const hoursRehearsed = completedRehearsals.reduce((total, rehearsal) => {
+    console.log('DEBUG achievements - rehearsals with end times:', countableRehearsals.length);
+    const hoursRehearsed = countableRehearsals.reduce((total, rehearsal) => {
       const duration = (new Date(rehearsal.endDate) - new Date(rehearsal.date)) / (1000 * 60 * 60);
       return total + (duration > 0 ? duration : 0);
     }, 0);
+    console.log('DEBUG achievements - hoursRehearsed:', hoursRehearsed);
+    console.log('DEBUG achievements - rehearsalCount:', rehearsalCount);
 
     // Total songs played at gigs
     const songsPlayedCount = await prisma.gigSong.count({
@@ -348,7 +363,11 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
           shouldAward = gigCount >= achievement.threshold;
           break;
         case 'first_rehearsal':
+        case 'five_rehearsals':
+        case 'ten_rehearsals':
+        case 'twentyfive_rehearsals':
         case 'fifty_rehearsals':
+        case 'hundred_rehearsals':
           shouldAward = rehearsalCount >= achievement.threshold;
           break;
         case 'ten_songs':
@@ -407,95 +426,102 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
       }
     }
 
-    // Check member achievements for requesting user
-    const existingMemberAchievements = await prisma.memberAchievement.findMany({
-      where: { workspaceId, userId: req.user.id },
-      select: { achievementId: true }
+    // Check member achievements for ALL workspace members
+    const allMembers = await prisma.workspaceMember.findMany({
+      where: { workspaceId },
+      select: { userId: true, joinedAt: true }
     });
-    const existingMemberIds = new Set(existingMemberAchievements.map(a => a.achievementId));
+    console.log('DEBUG achievements - checking', allMembers.length, 'members');
 
-    // Get member stats
-    const memberSongCount = await prisma.song.count({
-      where: { workspaceId, createdById: req.user.id }
-    });
+    const memberAchievementDefs = allAchievements.filter(a => !a.isBandWide);
 
-    const memberSetlistCount = await prisma.setlist.count({
-      where: { workspaceId, createdById: req.user.id }
-    });
+    for (const member of allMembers) {
+      const userId = member.userId;
 
-    const memberMessageCount = await prisma.message.count({
-      where: {
-        channel: { workspaceId },
-        authorId: req.user.id
-      }
-    });
+      // Get existing achievements for this member
+      const existingMemberAchievements = await prisma.memberAchievement.findMany({
+        where: { workspaceId, userId },
+        select: { achievementId: true }
+      });
+      const existingMemberIds = new Set(existingMemberAchievements.map(a => a.achievementId));
 
-    // Get member emoji/reaction count
-    const memberReactionCount = await prisma.reaction.count({
-      where: {
-        message: { channel: { workspaceId } },
-        userId: req.user.id
-      }
-    });
+      // Get member stats
+      const memberSongCount = await prisma.song.count({
+        where: { workspaceId, createdById: userId }
+      });
 
-    // Calculate months as member
-    const membership = await prisma.workspaceMember.findUnique({
-      where: { userId_workspaceId: { userId: req.user.id, workspaceId } },
-      select: { joinedAt: true }
-    });
-    const memberMonths = membership ? Math.floor(
-      (new Date() - new Date(membership.joinedAt)) / (1000 * 60 * 60 * 24 * 30)
-    ) : 0;
+      const memberSetlistCount = await prisma.setlist.count({
+        where: { workspaceId, createdById: userId }
+      });
 
-    // Award member achievements
-    for (const achievement of allAchievements.filter(a => !a.isBandWide)) {
-      if (existingMemberIds.has(achievement.id)) continue;
+      const memberMessageCount = await prisma.message.count({
+        where: {
+          channel: { workspaceId },
+          authorId: userId
+        }
+      });
 
-      let shouldAward = false;
+      const memberReactionCount = await prisma.reaction.count({
+        where: {
+          message: { channel: { workspaceId } },
+          userId
+        }
+      });
 
-      switch (achievement.code) {
-        case 'member_first_gig':
-        case 'member_ten_gigs':
-        case 'member_fifty_gigs':
-        case 'member_hundred_gigs':
-          // For now, use band gig count as proxy (could track per-member later)
-          shouldAward = gigCount >= achievement.threshold;
-          break;
-        case 'song_master':
-          shouldAward = memberSongCount >= achievement.threshold;
-          break;
-        case 'setlist_architect':
-          shouldAward = memberSetlistCount >= achievement.threshold;
-          break;
-        case 'communicator':
-        case 'super_communicator':
-          shouldAward = memberMessageCount >= achievement.threshold;
-          break;
-        // Emoji reaction badges
-        case 'emoji_fan':
-        case 'emoji_enthusiast':
-        case 'emoji_master':
-          shouldAward = memberReactionCount >= achievement.threshold;
-          break;
-        // Anniversary badges (threshold is in months)
-        case 'one_year_member':
-        case 'two_year_member':
-        case 'five_year_member':
-        case 'ten_year_member':
-          shouldAward = memberMonths >= achievement.threshold;
-          break;
-      }
+      // Calculate months as member
+      const memberMonths = member.joinedAt ? Math.floor(
+        (new Date() - new Date(member.joinedAt)) / (1000 * 60 * 60 * 24 * 30)
+      ) : 0;
 
-      if (shouldAward) {
-        const awarded = await prisma.memberAchievement.create({
-          data: {
-            achievementId: achievement.id,
-            userId: req.user.id,
-            workspaceId
-          },
-          include: { achievement: true }
-        });
-        newAchievements.push({ type: 'member', ...awarded });
+      // Award member achievements
+      for (const achievement of memberAchievementDefs) {
+        if (existingMemberIds.has(achievement.id)) continue;
+
+        let shouldAward = false;
+
+        switch (achievement.code) {
+          case 'member_first_gig':
+          case 'member_ten_gigs':
+          case 'member_fifty_gigs':
+          case 'member_hundred_gigs':
+            // Use band gig count as proxy (all members get credit)
+            shouldAward = gigCount >= achievement.threshold;
+            break;
+          case 'song_master':
+            shouldAward = memberSongCount >= achievement.threshold;
+            break;
+          case 'setlist_architect':
+            shouldAward = memberSetlistCount >= achievement.threshold;
+            break;
+          case 'communicator':
+          case 'super_communicator':
+            shouldAward = memberMessageCount >= achievement.threshold;
+            break;
+          case 'emoji_fan':
+          case 'emoji_enthusiast':
+          case 'emoji_master':
+            shouldAward = memberReactionCount >= achievement.threshold;
+            break;
+          case 'one_year_member':
+          case 'two_year_member':
+          case 'five_year_member':
+          case 'ten_year_member':
+            shouldAward = memberMonths >= achievement.threshold;
+            break;
+        }
+
+        if (shouldAward) {
+          console.log('DEBUG achievements - awarding member achievement:', achievement.code, 'to user:', userId);
+          const awarded = await prisma.memberAchievement.create({
+            data: {
+              achievementId: achievement.id,
+              userId,
+              workspaceId
+            },
+            include: { achievement: true }
+          });
+          newAchievements.push({ type: 'member', userId, ...awarded });
+        }
       }
     }
 
@@ -513,7 +539,8 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
         gigs: gigCount,
         rehearsals: rehearsalCount,
         songs: songCount,
-        revenue: totalRevenue._sum.pay || 0
+        revenue: totalRevenue._sum.pay || 0,
+        hoursRehearsed: Math.round(hoursRehearsed * 10) / 10
       }
     });
   } catch (error) {

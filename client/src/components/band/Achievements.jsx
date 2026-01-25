@@ -184,7 +184,7 @@ export default function Achievements({ workspaceId }) {
 
       {/* Stats Summary */}
       {stats && (
-        <div className="mb-6 grid grid-cols-4 gap-4">
+        <div className="mb-6 grid grid-cols-3 md:grid-cols-5 gap-3">
           <div className="bg-gray-800 rounded-lg p-3 text-center">
             <p className="text-2xl font-bold text-white">{stats.gigs}</p>
             <p className="text-sm text-gray-400">Gigs</p>
@@ -192,6 +192,10 @@ export default function Achievements({ workspaceId }) {
           <div className="bg-gray-800 rounded-lg p-3 text-center">
             <p className="text-2xl font-bold text-white">{stats.rehearsals}</p>
             <p className="text-sm text-gray-400">Rehearsals</p>
+          </div>
+          <div className="bg-gray-800 rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold text-white">{stats.hoursRehearsed || 0}h</p>
+            <p className="text-sm text-gray-400">Practice Hours</p>
           </div>
           <div className="bg-gray-800 rounded-lg p-3 text-center">
             <p className="text-2xl font-bold text-white">{stats.songs}</p>
