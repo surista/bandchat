@@ -13,7 +13,7 @@ const EVENT_TYPES = [
   { value: 'custom', label: 'Custom Event', icon: '📌' }
 ];
 
-export default function BandTimeline({ workspaceId }) {
+export default function BandTimeline({ workspaceId, isAdmin = false }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -162,22 +162,26 @@ export default function BandTimeline({ workspaceId }) {
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-white">Band Timeline</h2>
             <div className="flex items-center gap-3">
-              <button
-                onClick={handleRegenerate}
-                disabled={regenerating || generating}
-                className="text-sm text-gray-400 hover:text-white disabled:opacity-50"
-                title="Delete auto-generated events and recreate from current data"
-              >
-                {regenerating ? 'Regenerating...' : 'Regenerate'}
-              </button>
-              <button
-                onClick={handleGenerate}
-                disabled={generating || regenerating}
-                className="text-sm text-gray-400 hover:text-white disabled:opacity-50"
-                title="Add new events without removing existing ones"
-              >
-                {generating ? 'Generating...' : 'Auto-Generate'}
-              </button>
+              {isAdmin && (
+                <>
+                  <button
+                    onClick={handleRegenerate}
+                    disabled={regenerating || generating}
+                    className="text-sm text-gray-400 hover:text-white disabled:opacity-50"
+                    title="Delete auto-generated events and recreate from current data"
+                  >
+                    {regenerating ? 'Regenerating...' : 'Regenerate'}
+                  </button>
+                  <button
+                    onClick={handleGenerate}
+                    disabled={generating || regenerating}
+                    className="text-sm text-gray-400 hover:text-white disabled:opacity-50"
+                    title="Add new events without removing existing ones"
+                  >
+                    {generating ? 'Generating...' : 'Auto-Generate'}
+                  </button>
+                </>
+              )}
               <button
                 onClick={() => setShowForm(true)}
                 className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg"

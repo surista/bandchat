@@ -64,6 +64,11 @@ function WorkspaceView() {
     loadWorkspace();
   }, [workspaceId]);
 
+  // Update pendingChannelId when workspaceId changes
+  useEffect(() => {
+    setPendingChannelId(localStorage.getItem(`selectedChannel:${workspaceId}`) || null);
+  }, [workspaceId]);
+
   useEffect(() => {
     if (socket) {
       joinWorkspace(workspaceId);
@@ -373,6 +378,8 @@ function WorkspaceView() {
     return null;
   }
 
+  const isAdmin = workspace.members?.find(m => m.user.id === user?.id)?.role === 'ADMIN';
+
   return (
     <div className="h-screen flex bg-gray-900">
       {/* Mobile sidebar backdrop */}
@@ -487,7 +494,7 @@ function WorkspaceView() {
             ) : activeBandView === 'medleys' ? (
               <MedleyList workspaceId={workspaceId} />
             ) : activeBandView === 'timeline' ? (
-              <BandTimeline workspaceId={workspaceId} />
+              <BandTimeline workspaceId={workspaceId} isAdmin={isAdmin} />
             ) : activeBandView === 'achievements' ? (
               <Achievements workspaceId={workspaceId} />
             ) : activeBandView === 'recordings' ? (
@@ -522,9 +529,7 @@ function WorkspaceView() {
       </div>
 
       {/* Invite Modal */}
-      {showInvite && (() => {
-        const isAdmin = workspace.members?.find(m => m.user.id === user?.id)?.role === 'ADMIN';
-        return (
+      {showInvite && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-[var(--color-modal-bg)] rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
@@ -708,8 +713,7 @@ function WorkspaceView() {
             </div>
           </div>
         </div>
-        );
-      })()}
+      )}
 
       {/* Search Modal */}
       {showSearch && (
