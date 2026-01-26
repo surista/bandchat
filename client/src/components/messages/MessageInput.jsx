@@ -1,15 +1,29 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-function MessageInput({ channelName, onSend, onTyping }) {
+function MessageInput({ channelName, onSend, onTyping, members = [] }) {
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [error, setError] = useState('');
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionFilter, setMentionFilter] = useState('');
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const [mentionStart, setMentionStart] = useState(-1);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  // Filter members based on mention filter
+  const filteredMembers = members.filter(m =>
+    m.user.displayName.toLowerCase().includes(mentionFilter.toLowerCase())
+  ).slice(0, 6);
+
+  // Reset mention index when filter changes
+  useEffect(() => {
+    setMentionIndex(0);
+  }, [mentionFilter]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,6 +31,7 @@ function MessageInput({ channelName, onSend, onTyping }) {
 
     setSending(true);
     setError('');
+    setShowMentions(false);
     try {
       await onSend(content.trim(), selectedFiles);
       setContent('');
@@ -26,12 +41,56 @@ function MessageInput({ channelName, onSend, onTyping }) {
       setError(err.message || 'Failed to send message');
     } finally {
       setSending(false);
-      // Ensure focus returns to textarea after send completes
       setTimeout(() => textareaRef.current?.focus(), 0);
     }
   };
 
+  const insertMention = (displayName) => {
+    if (mentionStart === -1) return;
+
+    const before = content.slice(0, mentionStart);
+    const after = content.slice(textareaRef.current?.selectionStart || content.length);
+    const newContent = `${before}@${displayName} ${after}`;
+
+    setContent(newContent);
+    setShowMentions(false);
+    setMentionFilter('');
+    setMentionStart(-1);
+
+    // Focus and set cursor position after the inserted mention
+    setTimeout(() => {
+      const newPos = mentionStart + displayName.length + 2; // +2 for @ and space
+      textareaRef.current?.focus();
+      textareaRef.current?.setSelectionRange(newPos, newPos);
+    }, 0);
+  };
+
   const handleKeyDown = (e) => {
+    // Handle mention dropdown navigation
+    if (showMentions && filteredMembers.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setMentionIndex(prev => (prev + 1) % filteredMembers.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setMentionIndex(prev => (prev - 1 + filteredMembers.length) % filteredMembers.length);
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        insertMention(filteredMembers[mentionIndex].user.displayName);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowMentions(false);
+        return;
+      }
+    }
+
+    // Normal enter to send
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
@@ -39,8 +98,24 @@ function MessageInput({ channelName, onSend, onTyping }) {
   };
 
   const handleChange = (e) => {
-    setContent(e.target.value);
+    const value = e.target.value;
+    const cursorPos = e.target.selectionStart;
+    setContent(value);
     onTyping();
+
+    // Check for @ mention trigger
+    const textBeforeCursor = value.slice(0, cursorPos);
+    const atMatch = textBeforeCursor.match(/@(\w*)$/);
+
+    if (atMatch) {
+      setShowMentions(true);
+      setMentionFilter(atMatch[1]);
+      setMentionStart(cursorPos - atMatch[0].length);
+    } else {
+      setShowMentions(false);
+      setMentionFilter('');
+      setMentionStart(-1);
+    }
   };
 
   // Auto-resize textarea
@@ -60,7 +135,6 @@ function MessageInput({ channelName, onSend, onTyping }) {
       if (item.type.startsWith('image/')) {
         const file = item.getAsFile();
         if (file) {
-          // Check file size
           if (file.size > MAX_FILE_SIZE) {
             setError(`Pasted image exceeds 10MB limit`);
             continue;
@@ -71,10 +145,9 @@ function MessageInput({ channelName, onSend, onTyping }) {
     }
 
     if (imageFiles.length > 0) {
-      e.preventDefault(); // Prevent default paste behavior for images
+      e.preventDefault();
       setSelectedFiles(prev => [...prev, ...imageFiles]);
 
-      // Create previews
       imageFiles.forEach(file => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -93,28 +166,22 @@ function MessageInput({ channelName, onSend, onTyping }) {
     const files = Array.from(e.target.files);
     setError('');
 
-    // Validate files
     const validFiles = [];
     for (const file of files) {
-      // Check file size
       if (file.size > MAX_FILE_SIZE) {
         setError(`File "${file.name}" exceeds 10MB limit`);
         continue;
       }
-
-      // Check file type
       if (!file.type.startsWith('image/')) {
         setError(`File "${file.name}" is not an image`);
         continue;
       }
-
       validFiles.push(file);
     }
 
     if (validFiles.length > 0) {
       setSelectedFiles(prev => [...prev, ...validFiles]);
 
-      // Create previews
       validFiles.forEach(file => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -128,7 +195,6 @@ function MessageInput({ channelName, onSend, onTyping }) {
       });
     }
 
-    // Reset input
     e.target.value = '';
   };
 
@@ -186,7 +252,31 @@ function MessageInput({ channelName, onSend, onTyping }) {
         </div>
       )}
 
-      <div className="bg-gray-700 rounded-lg">
+      <div className="bg-gray-700 rounded-lg relative">
+        {/* @Mention dropdown */}
+        {showMentions && filteredMembers.length > 0 && (
+          <div className="absolute bottom-full left-0 mb-1 w-64 bg-gray-800 rounded-lg shadow-lg border border-gray-600 py-1 max-h-48 overflow-y-auto z-50">
+            {filteredMembers.map((member, idx) => (
+              <button
+                key={member.user.id}
+                type="button"
+                onClick={() => insertMention(member.user.displayName)}
+                className={`w-full px-3 py-2 text-left flex items-center gap-2 ${
+                  idx === mentionIndex ? 'bg-blue-600' : 'hover:bg-gray-700'
+                }`}
+              >
+                <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-xs text-white">
+                  {member.user.displayName.charAt(0).toUpperCase()}
+                </div>
+                <span className="text-white">{member.user.displayName}</span>
+                {member.role === 'ADMIN' && (
+                  <span className="text-xs text-gray-400">admin</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
         <textarea
           ref={textareaRef}
           value={content}
@@ -222,10 +312,17 @@ function MessageInput({ channelName, onSend, onTyping }) {
             </button>
             <button
               type="button"
+              onClick={() => {
+                setContent(prev => prev + '@');
+                setShowMentions(true);
+                setMentionStart(content.length);
+                setMentionFilter('');
+                textareaRef.current?.focus();
+              }}
               className="p-1 text-gray-400 hover:text-white transition-colors"
-              title="Add emoji (coming soon)"
+              title="Mention someone"
             >
-              <span className="text-lg">+</span>
+              <span className="text-lg font-bold">@</span>
             </button>
           </div>
           <button
@@ -239,7 +336,8 @@ function MessageInput({ channelName, onSend, onTyping }) {
       </div>
       <p className="text-xs text-gray-500 mt-2">
         Press <kbd className="bg-gray-700 px-1 rounded">Enter</kbd> to send,{' '}
-        <kbd className="bg-gray-700 px-1 rounded">Shift + Enter</kbd> for new line
+        <kbd className="bg-gray-700 px-1 rounded">Shift + Enter</kbd> for new line,{' '}
+        <kbd className="bg-gray-700 px-1 rounded">@</kbd> to mention
       </p>
     </form>
   );

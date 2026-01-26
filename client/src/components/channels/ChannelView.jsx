@@ -358,6 +358,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
         }
         onSend={handleSendMessage}
         onTyping={handleTyping}
+        members={workspace?.members || []}
       />
     </div>
   );
