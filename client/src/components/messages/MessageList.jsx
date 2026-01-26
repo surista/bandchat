@@ -166,7 +166,7 @@ function MessageList({
       return mentionParts.map((p, j) => {
         if (j % 2 === 1) {
           return (
-            <span key={`${i}-${j}`} className="mention">
+            <span key={`${i}-${j}`} className="bg-blue-900 text-blue-300 px-1 rounded">
               @{p}
             </span>
           );
