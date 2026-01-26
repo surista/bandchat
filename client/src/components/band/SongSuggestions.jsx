@@ -97,8 +97,10 @@ export default function SongSuggestions({ workspaceId }) {
   }
 
   return (
-    <div className="p-4 max-w-5xl mx-auto">
-      <h2 className="text-2xl font-bold text-white mb-6">Song Intelligence</h2>
+    <div className="h-full flex flex-col bg-gray-900">
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-2xl font-bold text-white mb-6">Song Intelligence</h2>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6 border-b border-gray-700 overflow-x-auto">
@@ -432,6 +434,8 @@ export default function SongSuggestions({ workspaceId }) {
           )}
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -191,8 +191,10 @@ export default function RecordingsList({ workspaceId }) {
   }
 
   return (
-    <div className="p-4 max-w-5xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
+    <div className="h-full flex flex-col bg-gray-900">
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-white">Quick Recordings</h2>
         <button
           onClick={() => setShowRecorder(true)}
@@ -457,6 +459,8 @@ export default function RecordingsList({ workspaceId }) {
           ))}
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }
