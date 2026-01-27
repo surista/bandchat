@@ -336,6 +336,40 @@ function MessageList({
                       {att.type === 'VIDEO' && (
                         <video src={att.url} controls className="max-w-md rounded" />
                       )}
+                      {att.type === 'AUDIO' && (
+                        <div className="bg-gray-700 rounded-lg p-3 max-w-md">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 bg-gray-600 rounded flex items-center justify-center flex-shrink-0">
+                              <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-sm text-white truncate">{att.filename}</div>
+                              {att.size && (
+                                <div className="text-xs text-gray-400">
+                                  {(att.size / (1024 * 1024)).toFixed(1)} MB
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => handleDownload(att.url, att.filename)}
+                              className="p-2 text-gray-400 hover:text-white transition-colors"
+                              title="Download"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                              </svg>
+                            </button>
+                          </div>
+                          <audio
+                            src={att.url}
+                            controls
+                            preload="metadata"
+                            className="w-full"
+                          />
+                        </div>
+                      )}
                       {att.type === 'DOCUMENT' && (
                         <a
                           href={att.url}

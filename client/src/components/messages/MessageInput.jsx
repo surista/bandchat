@@ -5,8 +5,16 @@
 
 import { useState, useRef, useEffect } from 'react';
 
-/** Maximum file size for uploads (10MB) */
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+/** Maximum file size for uploads */
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_AUDIO_SIZE = 30 * 1024 * 1024; // 30MB
+
+/** Allowed file types */
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const ALLOWED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/aac', 'audio/m4a', 'audio/x-m4a', 'audio/mp4'];
+
+const isImageFile = (file) => file.type.startsWith('image/') || ALLOWED_IMAGE_TYPES.includes(file.type);
+const isAudioFile = (file) => file.type.startsWith('audio/') || ALLOWED_AUDIO_TYPES.includes(file.type);
 
 /**
  * Message composition input with file attachments and @mention support.
@@ -150,7 +158,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
       if (item.type.startsWith('image/')) {
         const file = item.getAsFile();
         if (file) {
-          if (file.size > MAX_FILE_SIZE) {
+          if (file.size > MAX_IMAGE_SIZE) {
             setError(`Pasted image exceeds 10MB limit`);
             continue;
           }
@@ -169,7 +177,8 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
           setPreviews(prev => [...prev, {
             name: file.name || `pasted-image-${Date.now()}.png`,
             url: e.target.result,
-            size: file.size
+            size: file.size,
+            type: 'image'
           }]);
         };
         reader.readAsDataURL(file);
@@ -183,14 +192,21 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
 
     const validFiles = [];
     for (const file of files) {
-      if (file.size > MAX_FILE_SIZE) {
-        setError(`File "${file.name}" exceeds 10MB limit`);
+      const isImage = isImageFile(file);
+      const isAudio = isAudioFile(file);
+
+      if (!isImage && !isAudio) {
+        setError(`File "${file.name}" is not a supported type (images or audio only)`);
         continue;
       }
-      if (!file.type.startsWith('image/')) {
-        setError(`File "${file.name}" is not an image`);
+
+      const maxSize = isAudio ? MAX_AUDIO_SIZE : MAX_IMAGE_SIZE;
+      const limitMB = maxSize / (1024 * 1024);
+      if (file.size > maxSize) {
+        setError(`File "${file.name}" exceeds ${limitMB}MB limit`);
         continue;
       }
+
       validFiles.push(file);
     }
 
@@ -198,15 +214,27 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
       setSelectedFiles(prev => [...prev, ...validFiles]);
 
       validFiles.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
+        if (isImageFile(file)) {
+          // Generate image preview
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            setPreviews(prev => [...prev, {
+              name: file.name,
+              url: e.target.result,
+              size: file.size,
+              type: 'image'
+            }]);
+          };
+          reader.readAsDataURL(file);
+        } else {
+          // Audio files get a placeholder preview (no image)
           setPreviews(prev => [...prev, {
             name: file.name,
-            url: e.target.result,
-            size: file.size
+            url: null,
+            size: file.size,
+            type: 'audio'
           }]);
-        };
-        reader.readAsDataURL(file);
+        }
       });
     }
 
@@ -241,11 +269,19 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
               key={index}
               className="relative group bg-gray-700 rounded-lg p-2 flex items-center gap-2"
             >
-              <img
-                src={preview.url}
-                alt={preview.name}
-                className="w-16 h-16 object-cover rounded"
-              />
+              {preview.type === 'audio' ? (
+                <div className="w-16 h-16 bg-gray-600 rounded flex items-center justify-center">
+                  <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                  </svg>
+                </div>
+              ) : (
+                <img
+                  src={preview.url}
+                  alt={preview.name}
+                  className="w-16 h-16 object-cover rounded"
+                />
+              )}
               <div className="flex flex-col min-w-0">
                 <span className="text-sm text-white truncate max-w-[150px]">
                   {preview.name}
@@ -309,7 +345,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,audio/*"
               multiple
               onChange={handleFileSelect}
               className="hidden"
@@ -318,7 +354,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className="p-2 -m-1 text-gray-400 hover:text-white transition-colors"
-              title="Add image (max 10MB)"
+              title="Add file (images 10MB, audio 30MB)"
               disabled={sending}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

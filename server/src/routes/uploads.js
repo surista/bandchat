@@ -13,18 +13,24 @@ if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
   console.warn('Warning: CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET must be set for file uploads to work');
 }
 
-// Allowed image MIME types (validated by magic bytes)
+// Allowed MIME types (validated by magic bytes)
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const ALLOWED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/aac', 'audio/m4a', 'audio/x-m4a', 'audio/mp4'];
+const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_AUDIO_TYPES];
+
+// File size limits
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_AUDIO_SIZE = 30 * 1024 * 1024; // 30MB
 
 // Use memory storage for Cloudinary uploads
 const storage = multer.memoryStorage();
 
 // Initial file filter based on declared MIME type (will be verified by magic bytes later)
 const fileFilter = (req, file, cb) => {
-  if (ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
+  if (ALLOWED_TYPES.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Only image files (JPEG, PNG, GIF, WebP) are allowed'), false);
+    cb(new Error('Only image files (JPEG, PNG, GIF, WebP) and audio files (MP3, WAV, OGG, M4A) are allowed'), false);
   }
 };
 
@@ -32,40 +38,47 @@ const fileFilter = (req, file, cb) => {
  * Validates file content by checking magic bytes (file signature).
  * Prevents MIME type spoofing attacks.
  * @param {Buffer} buffer - File buffer to validate
- * @returns {Promise<{valid: boolean, detectedType: string|null}>}
+ * @returns {Promise<{valid: boolean, detectedType: string|null, fileCategory: string|null}>}
  */
 const validateFileType = async (buffer) => {
   const detected = await fileType.fromBuffer(buffer);
 
   if (!detected) {
-    return { valid: false, detectedType: null };
+    return { valid: false, detectedType: null, fileCategory: null };
   }
 
-  const isValid = ALLOWED_IMAGE_TYPES.includes(detected.mime);
-  return { valid: isValid, detectedType: detected.mime };
+  const isImage = ALLOWED_IMAGE_TYPES.includes(detected.mime);
+  const isAudio = ALLOWED_AUDIO_TYPES.includes(detected.mime);
+  const isValid = isImage || isAudio;
+  const fileCategory = isImage ? 'IMAGE' : isAudio ? 'AUDIO' : null;
+
+  return { valid: isValid, detectedType: detected.mime, fileCategory };
 };
 
-// Configure multer with 10MB limit
+// Configure multer with 30MB limit (will validate per-type in handler)
 const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB
+    fileSize: MAX_AUDIO_SIZE // 30MB max (audio), images validated separately
   }
 });
 
 // Helper to upload buffer to Cloudinary using unsigned upload
-const uploadToCloudinary = async (buffer, originalname) => {
+const uploadToCloudinary = async (buffer, originalname, fileCategory, mimeType) => {
   const base64 = buffer.toString('base64');
-  const dataUri = `data:image/png;base64,${base64}`;
+  const dataUri = `data:${mimeType};base64,${base64}`;
 
   const formData = new FormData();
   formData.append('file', dataUri);
   formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
   formData.append('folder', 'bandchat');
 
+  // Cloudinary uses 'video' endpoint for both video and audio files
+  const resourceType = fileCategory === 'AUDIO' ? 'video' : 'image';
+
   const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`,
     {
       method: 'POST',
       body: formData
@@ -80,7 +93,7 @@ const uploadToCloudinary = async (buffer, originalname) => {
   return response.json();
 };
 
-// Upload single image
+// Upload single file (image or audio)
 router.post('/', authenticate, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
@@ -88,21 +101,30 @@ router.post('/', authenticate, upload.single('file'), async (req, res) => {
     }
 
     // Validate file type by magic bytes (prevents MIME spoofing)
-    const { valid, detectedType } = await validateFileType(req.file.buffer);
+    const { valid, detectedType, fileCategory } = await validateFileType(req.file.buffer);
     if (!valid) {
       return res.status(400).json({
-        error: 'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.'
+        error: 'Invalid file type. Only images (JPEG, PNG, GIF, WebP) and audio (MP3, WAV, OGG, M4A) are allowed.'
+      });
+    }
+
+    // Validate file size based on type
+    const maxSize = fileCategory === 'AUDIO' ? MAX_AUDIO_SIZE : MAX_IMAGE_SIZE;
+    if (req.file.size > maxSize) {
+      const limitMB = maxSize / (1024 * 1024);
+      return res.status(400).json({
+        error: `File size exceeds ${limitMB}MB limit for ${fileCategory.toLowerCase()} files.`
       });
     }
 
     // Upload to Cloudinary
-    const result = await uploadToCloudinary(req.file.buffer, req.file.originalname);
+    const result = await uploadToCloudinary(req.file.buffer, req.file.originalname, fileCategory, detectedType);
 
     res.json({
       url: result.secure_url,
       filename: req.file.originalname,
       size: req.file.size,
-      type: 'IMAGE'
+      type: fileCategory
     });
   } catch (error) {
     console.error('Upload error:', error);
@@ -110,26 +132,38 @@ router.post('/', authenticate, upload.single('file'), async (req, res) => {
   }
 });
 
-// Upload multiple images (up to 5)
+// Upload multiple files (up to 5)
 router.post('/multiple', authenticate, upload.array('files', 5), async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: 'No files uploaded' });
     }
 
-    // Validate all files by magic bytes before uploading
+    // Validate all files by magic bytes and size before uploading
+    const fileValidations = [];
     for (const file of req.files) {
-      const { valid } = await validateFileType(file.buffer);
+      const { valid, detectedType, fileCategory } = await validateFileType(file.buffer);
       if (!valid) {
         return res.status(400).json({
-          error: `Invalid file type for "${file.originalname}". Only JPEG, PNG, GIF, and WebP images are allowed.`
+          error: `Invalid file type for "${file.originalname}". Only images (JPEG, PNG, GIF, WebP) and audio (MP3, WAV, OGG, M4A) are allowed.`
         });
       }
+
+      // Validate file size based on type
+      const maxSize = fileCategory === 'AUDIO' ? MAX_AUDIO_SIZE : MAX_IMAGE_SIZE;
+      if (file.size > maxSize) {
+        const limitMB = maxSize / (1024 * 1024);
+        return res.status(400).json({
+          error: `File "${file.originalname}" exceeds ${limitMB}MB limit for ${fileCategory.toLowerCase()} files.`
+        });
+      }
+
+      fileValidations.push({ file, detectedType, fileCategory });
     }
 
     // Upload all files to Cloudinary
-    const uploadPromises = req.files.map(file =>
-      uploadToCloudinary(file.buffer, file.originalname)
+    const uploadPromises = fileValidations.map(({ file, detectedType, fileCategory }) =>
+      uploadToCloudinary(file.buffer, file.originalname, fileCategory, detectedType)
     );
     const results = await Promise.all(uploadPromises);
 
@@ -137,7 +171,7 @@ router.post('/multiple', authenticate, upload.array('files', 5), async (req, res
       url: result.secure_url,
       filename: req.files[index].originalname,
       size: req.files[index].size,
-      type: 'IMAGE'
+      type: fileValidations[index].fileCategory
     }));
 
     res.json({ files });
@@ -151,7 +185,7 @@ router.post('/multiple', authenticate, upload.array('files', 5), async (req, res
 router.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'File size exceeds 10MB limit' });
+      return res.status(400).json({ error: 'File size exceeds limit (10MB for images, 30MB for audio)' });
     }
     return res.status(400).json({ error: error.message });
   }

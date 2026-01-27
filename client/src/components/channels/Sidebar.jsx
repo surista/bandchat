@@ -24,6 +24,7 @@ import api from '../../services/api';
 import BandMemberForm from '../band/BandMembers/BandMemberForm';
 import MemberProfile from '../common/MemberProfile';
 import MemberHoverCard from '../common/MemberHoverCard';
+import ConfirmDialog from '../common/ConfirmDialog';
 
 /** Draggable channel item wrapper for admin drag-and-drop */
 function DraggableChannel({ channel, children, disabled }) {
@@ -150,6 +151,13 @@ function Sidebar({
   const [showProfileUserId, setShowProfileUserId] = useState(null);
   // Bio editing
   const [editBio, setEditBio] = useState('');
+  // Context menu for channels/sections (admin only)
+  const [contextMenu, setContextMenu] = useState(null); // { type: 'channel' | 'section', id, name, x, y }
+  const [renameModal, setRenameModal] = useState(null); // { type: 'channel' | 'section', id, name }
+  const [renameValue, setRenameValue] = useState('');
+  const [renameLoading, setRenameLoading] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // { type: 'channel' | 'section', id, name }
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     // Check if notifications are already enabled
@@ -389,11 +397,95 @@ function Sidebar({
     }
   };
 
+  // Context menu handlers (admin only)
+  const handleContextMenu = (e, type, id, name) => {
+    if (!isAdmin) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ type, id, name, x: e.clientX, y: e.clientY });
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  const openRenameModal = () => {
+    if (!contextMenu) return;
+    setRenameModal({ type: contextMenu.type, id: contextMenu.id, name: contextMenu.name });
+    setRenameValue(contextMenu.name);
+    setContextMenu(null);
+  };
+
+  const openDeleteConfirm = () => {
+    if (!contextMenu) return;
+    setDeleteConfirm({ type: contextMenu.type, id: contextMenu.id, name: contextMenu.name });
+    setContextMenu(null);
+  };
+
+  const handleRename = async (e) => {
+    e.preventDefault();
+    if (!renameModal || !renameValue.trim()) return;
+
+    setRenameLoading(true);
+    try {
+      if (renameModal.type === 'channel') {
+        await api.updateChannel(renameModal.id, { name: renameValue.toLowerCase().replace(/\s+/g, '-') });
+      } else {
+        await api.updateChannelGroup(renameModal.id, { name: renameValue });
+      }
+      setRenameModal(null);
+      setRenameValue('');
+    } catch (err) {
+      alert(err.message || 'Failed to rename');
+    } finally {
+      setRenameLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+
+    setDeleteLoading(true);
+    try {
+      if (deleteConfirm.type === 'channel') {
+        await api.deleteChannel(deleteConfirm.id);
+      } else {
+        await api.deleteChannelGroup(deleteConfirm.id);
+      }
+      setDeleteConfirm(null);
+    } catch (err) {
+      alert(err.message || 'Failed to delete');
+      setDeleteLoading(false);
+    }
+  };
+
+  // Close context menu on click outside or escape
+  useEffect(() => {
+    if (!contextMenu) return;
+
+    const handleClick = () => closeContextMenu();
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') closeContextMenu();
+    };
+    const handleScroll = () => closeContextMenu();
+
+    document.addEventListener('click', handleClick);
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('scroll', handleScroll, true);
+
+    return () => {
+      document.removeEventListener('click', handleClick);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [contextMenu]);
+
   const renderChannel = (channel) => {
     const channelButton = (
       <button
         key={channel.id}
         onClick={() => onSelectChannel(channel)}
+        onContextMenu={(e) => handleContextMenu(e, 'channel', channel.id, channel.name)}
         className={`channel-item w-full ${
           selectedChannel?.id === channel.id ? 'active' : ''
         }`}
@@ -505,6 +597,7 @@ function Sidebar({
                 <div className="mb-2 ml-2">
                   <button
                     onClick={() => toggleGroupCollapse(group.id)}
+                    onContextMenu={(e) => handleContextMenu(e, 'section', group.id, group.name)}
                     className="w-full px-4 py-2.5 sm:py-1 flex items-center gap-1 text-gray-400 hover:text-white transition-colors text-sm min-h-[44px] sm:min-h-0"
                     aria-expanded={!collapsedGroups[group.id]}
                     aria-label={`${group.name} channel group`}
@@ -2101,6 +2194,106 @@ function Sidebar({
           onStartDM={showProfileUserId !== user?.id ? onStartDM : null}
         />
       )}
+
+      {/* Context Menu for Channels/Sections (Admin Only) */}
+      {contextMenu && createPortal(
+        <div
+          className="fixed bg-gray-800 rounded-lg shadow-xl border border-gray-700 py-1 z-[100] min-w-[160px]"
+          style={{
+            top: Math.min(contextMenu.y, window.innerHeight - 100),
+            left: Math.min(contextMenu.x, window.innerWidth - 180)
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={openRenameModal}
+            className="w-full px-4 py-2 text-left text-gray-200 hover:bg-gray-700 transition-colors flex items-center gap-2"
+          >
+            <span>Rename {contextMenu.type}</span>
+          </button>
+          <button
+            onClick={openDeleteConfirm}
+            className="w-full px-4 py-2 text-left text-red-400 hover:bg-gray-700 transition-colors flex items-center gap-2"
+          >
+            <span>Delete {contextMenu.type}</span>
+          </button>
+        </div>,
+        document.body
+      )}
+
+      {/* Rename Modal */}
+      {renameModal && createPortal(
+        <div className="modal-backdrop" onClick={() => setRenameModal(null)}>
+          <div className="modal-content max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Rename {renameModal.type === 'channel' ? 'Channel' : 'Section'}</h3>
+              <button
+                onClick={() => setRenameModal(null)}
+                className="text-gray-400 hover:text-white text-2xl leading-none"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="modal-body">
+              <form onSubmit={handleRename}>
+                <div className="mb-4">
+                  <label className="modal-label">Name</label>
+                  <div className="flex items-center gap-2">
+                    {renameModal.type === 'channel' && <span className="text-gray-400">#</span>}
+                    <input
+                      type="text"
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(
+                        renameModal.type === 'channel'
+                          ? e.target.value.toLowerCase().replace(/\s+/g, '-')
+                          : e.target.value
+                      )}
+                      className="modal-input flex-1"
+                      placeholder={renameModal.type === 'channel' ? 'channel-name' : 'Section Name'}
+                      required
+                      autoFocus
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setRenameModal(null)}
+                    className="btn btn-secondary"
+                    disabled={renameLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn bg-green-600 hover:bg-green-700 text-white"
+                    disabled={renameLoading || !renameValue.trim()}
+                  >
+                    {renameLoading ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={deleteConfirm !== null}
+        title={`Delete ${deleteConfirm?.type === 'channel' ? 'Channel' : 'Section'}`}
+        message={
+          deleteConfirm?.type === 'channel'
+            ? `Are you sure you want to delete #${deleteConfirm?.name}? This will permanently delete all messages in this channel.`
+            : `Are you sure you want to delete the "${deleteConfirm?.name}" section? Channels in this section will be moved to "Other Channels".`
+        }
+        confirmText="Delete"
+        confirmVariant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteConfirm(null)}
+        loading={deleteLoading}
+      />
     </div>
   );
 }

@@ -196,6 +196,7 @@ enum Role {
 enum AttachmentType {
   IMAGE
   VIDEO
+  AUDIO
   DOCUMENT
   LINK
 }
