@@ -1,5 +1,6 @@
 import express from 'express';
 import multer from 'multer';
+import { fileTypeFromBuffer } from 'file-type';
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -12,17 +13,36 @@ if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
   console.warn('Warning: CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET must be set for file uploads to work');
 }
 
+// Allowed image MIME types (validated by magic bytes)
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
 // Use memory storage for Cloudinary uploads
 const storage = multer.memoryStorage();
 
-// File filter for images only
+// Initial file filter based on declared MIME type (will be verified by magic bytes later)
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-  if (allowedTypes.includes(file.mimetype)) {
+  if (ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
     cb(null, true);
   } else {
     cb(new Error('Only image files (JPEG, PNG, GIF, WebP) are allowed'), false);
   }
+};
+
+/**
+ * Validates file content by checking magic bytes (file signature).
+ * Prevents MIME type spoofing attacks.
+ * @param {Buffer} buffer - File buffer to validate
+ * @returns {Promise<{valid: boolean, detectedType: string|null}>}
+ */
+const validateFileType = async (buffer) => {
+  const fileType = await fileTypeFromBuffer(buffer);
+
+  if (!fileType) {
+    return { valid: false, detectedType: null };
+  }
+
+  const isValid = ALLOWED_IMAGE_TYPES.includes(fileType.mime);
+  return { valid: isValid, detectedType: fileType.mime };
 };
 
 // Configure multer with 10MB limit
@@ -63,9 +83,16 @@ const uploadToCloudinary = async (buffer, originalname) => {
 // Upload single image
 router.post('/', authenticate, upload.single('file'), async (req, res) => {
   try {
-
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Validate file type by magic bytes (prevents MIME spoofing)
+    const { valid, detectedType } = await validateFileType(req.file.buffer);
+    if (!valid) {
+      return res.status(400).json({
+        error: 'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.'
+      });
     }
 
     // Upload to Cloudinary
@@ -88,6 +115,16 @@ router.post('/multiple', authenticate, upload.array('files', 5), async (req, res
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: 'No files uploaded' });
+    }
+
+    // Validate all files by magic bytes before uploading
+    for (const file of req.files) {
+      const { valid } = await validateFileType(file.buffer);
+      if (!valid) {
+        return res.status(400).json({
+          error: `Invalid file type for "${file.originalname}". Only JPEG, PNG, GIF, and WebP images are allowed.`
+        });
+      }
     }
 
     // Upload all files to Cloudinary

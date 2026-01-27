@@ -12,6 +12,49 @@ const router = express.Router();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const googleClient = process.env.GOOGLE_CLIENT_ID ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID) : null;
 
+// Minimum password length (increased from 6 to 8 for better security)
+const MIN_PASSWORD_LENGTH = 8;
+
+/**
+ * Hash a refresh token for secure storage.
+ * Uses SHA-256 which is fast for lookups but prevents token theft if DB is breached.
+ * @param {string} token - The refresh token to hash
+ * @returns {string} - Hex-encoded hash
+ */
+const hashRefreshToken = (token) => {
+  return crypto.createHash('sha256').update(token).digest('hex');
+};
+
+/**
+ * Validates a display name for security and usability.
+ * @param {string} displayName - The display name to validate
+ * @returns {{valid: boolean, error?: string}}
+ */
+const validateDisplayName = (displayName) => {
+  if (!displayName || typeof displayName !== 'string') {
+    return { valid: false, error: 'Display name is required' };
+  }
+
+  const trimmed = displayName.trim();
+
+  if (trimmed.length < 2) {
+    return { valid: false, error: 'Display name must be at least 2 characters' };
+  }
+
+  if (trimmed.length > 50) {
+    return { valid: false, error: 'Display name must be 50 characters or less' };
+  }
+
+  // Allow letters, numbers, spaces, hyphens, underscores, and common accented characters
+  // Block potentially dangerous characters that could be used for XSS
+  const dangerousPattern = /[<>'"&\\\/\x00-\x1f]/;
+  if (dangerousPattern.test(trimmed)) {
+    return { valid: false, error: 'Display name contains invalid characters' };
+  }
+
+  return { valid: true };
+};
+
 // Send verification email
 const sendVerificationEmail = async (email, token) => {
   if (!resend) {
@@ -46,14 +89,17 @@ const generateTokens = async (userId) => {
   const refreshToken = jwt.sign(
     { userId, type: 'refresh' },
     process.env.JWT_REFRESH_SECRET,
-    { expiresIn: '30d' }
+    { expiresIn: '14d' } // Reduced from 30d to 14d for better security
   );
 
-  // Store refresh token in database
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+  // Hash refresh token before storing (prevents token theft if DB is breached)
+  const hashedToken = hashRefreshToken(refreshToken);
+
+  // Store hashed refresh token in database
+  const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14 days
   await prisma.refreshToken.create({
     data: {
-      token: refreshToken,
+      token: hashedToken,
       userId,
       expiresAt
     }
@@ -71,8 +117,14 @@ router.post('/signup', authLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Email, password, and display name are required' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    // Validate display name
+    const displayNameCheck = validateDisplayName(displayName);
+    if (!displayNameCheck.valid) {
+      return res.status(400).json({ error: displayNameCheck.error });
+    }
+
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
     }
 
     const existingUser = await prisma.user.findUnique({
@@ -413,8 +465,8 @@ router.post('/link-google', authenticate, async (req, res) => {
   }
 });
 
-// Refresh token
-router.post('/refresh', async (req, res) => {
+// Refresh token (rate limited to prevent token enumeration)
+router.post('/refresh', authLimiter, async (req, res) => {
   try {
     const { refreshToken } = req.body;
 
@@ -422,16 +474,19 @@ router.post('/refresh', async (req, res) => {
       return res.status(400).json({ error: 'Refresh token required' });
     }
 
-    // Verify JWT signature
+    // Verify JWT signature first
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
     if (decoded.type !== 'refresh') {
       return res.status(401).json({ error: 'Invalid refresh token' });
     }
 
-    // Check if token exists in database (not revoked)
+    // Hash the token to look it up in database
+    const hashedToken = hashRefreshToken(refreshToken);
+
+    // Check if hashed token exists in database (not revoked)
     const storedToken = await prisma.refreshToken.findUnique({
-      where: { token: refreshToken }
+      where: { token: hashedToken }
     });
 
     if (!storedToken) {
@@ -512,10 +567,23 @@ router.put('/me', authenticate, async (req, res) => {
   try {
     const { displayName, avatarUrl, bio } = req.body;
 
+    // Validate display name if provided
+    if (displayName) {
+      const displayNameCheck = validateDisplayName(displayName);
+      if (!displayNameCheck.valid) {
+        return res.status(400).json({ error: displayNameCheck.error });
+      }
+    }
+
+    // Validate bio length if provided
+    if (bio !== undefined && bio !== null && bio.length > 500) {
+      return res.status(400).json({ error: 'Bio must be 500 characters or less' });
+    }
+
     const user = await prisma.user.update({
       where: { id: req.user.id },
       data: {
-        ...(displayName && { displayName }),
+        ...(displayName && { displayName: displayName.trim() }),
         ...(avatarUrl !== undefined && { avatarUrl }),
         ...(bio !== undefined && { bio })
       },
@@ -539,8 +607,8 @@ router.put('/password', authenticate, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
-    if (!newPassword || newPassword.length < 6) {
-      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    if (!newPassword || newPassword.length < MIN_PASSWORD_LENGTH) {
+      return res.status(400).json({ error: `New password must be at least ${MIN_PASSWORD_LENGTH} characters` });
     }
 
     const user = await prisma.user.findUnique({
@@ -716,9 +784,11 @@ router.post('/logout', async (req, res) => {
     const { refreshToken } = req.body;
 
     if (refreshToken) {
+      // Hash the token to find it in database
+      const hashedToken = hashRefreshToken(refreshToken);
       // Delete the refresh token from database
       await prisma.refreshToken.deleteMany({
-        where: { token: refreshToken }
+        where: { token: hashedToken }
       });
     }
 
@@ -820,8 +890,8 @@ router.post('/reset-password', authLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Token and password are required' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
     }
 
     const user = await prisma.user.findFirst({
