@@ -24,6 +24,19 @@ const handleDownload = async (url, filename) => {
   }
 };
 
+/** File size limits */
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_AUDIO_SIZE = 30 * 1024 * 1024; // 30MB
+
+const isImageFile = (file) => file.type.startsWith('image/');
+const isAudioFile = (file) => file.type.startsWith('audio/');
+
+const formatFileSize = (bytes) => {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+};
+
 function ThreadView({ message, channelId, onClose }) {
   const { user } = useAuth();
   const { socket } = useSocket();
@@ -33,7 +46,11 @@ function ThreadView({ message, channelId, onClose }) {
   const [sending, setSending] = useState(false);
   const [parentReactions, setParentReactions] = useState(message.reactions || []);
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [previews, setPreviews] = useState([]);
+  const [fileError, setFileError] = useState('');
   const repliesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     loadReplies();
@@ -169,16 +186,90 @@ function ThreadView({ message, channelId, onClose }) {
     }, 100);
   };
 
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    setFileError('');
+
+    const validFiles = [];
+    for (const file of files) {
+      const isImage = isImageFile(file);
+      const isAudio = isAudioFile(file);
+
+      if (!isImage && !isAudio) {
+        setFileError(`File "${file.name}" is not a supported type`);
+        continue;
+      }
+
+      const maxSize = isAudio ? MAX_AUDIO_SIZE : MAX_IMAGE_SIZE;
+      const limitMB = maxSize / (1024 * 1024);
+      if (file.size > maxSize) {
+        setFileError(`File "${file.name}" exceeds ${limitMB}MB limit`);
+        continue;
+      }
+
+      validFiles.push(file);
+    }
+
+    if (validFiles.length > 0) {
+      setSelectedFiles(prev => [...prev, ...validFiles]);
+
+      validFiles.forEach(file => {
+        if (isImageFile(file)) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            setPreviews(prev => [...prev, {
+              name: file.name,
+              url: e.target.result,
+              size: file.size,
+              type: 'image'
+            }]);
+          };
+          reader.readAsDataURL(file);
+        } else {
+          setPreviews(prev => [...prev, {
+            name: file.name,
+            url: null,
+            size: file.size,
+            type: 'audio'
+          }]);
+        }
+      });
+    }
+
+    e.target.value = '';
+  };
+
+  const removeFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!content.trim() || sending) return;
+    if ((!content.trim() && selectedFiles.length === 0) || sending) return;
 
     setSending(true);
+    setFileError('');
     try {
-      await api.sendMessage(channelId, content.trim(), message.id);
+      // Upload files first if any
+      let attachments = [];
+      if (selectedFiles.length > 0) {
+        if (selectedFiles.length === 1) {
+          const uploaded = await api.uploadFile(selectedFiles[0]);
+          attachments = [uploaded];
+        } else {
+          const result = await api.uploadFiles(selectedFiles);
+          attachments = result.files;
+        }
+      }
+
+      await api.sendMessage(channelId, content.trim(), message.id, attachments);
       setContent('');
+      setSelectedFiles([]);
+      setPreviews([]);
     } catch (err) {
       console.error('Failed to send reply:', err);
+      setFileError(err.message || 'Failed to send reply');
     } finally {
       setSending(false);
     }
@@ -309,6 +400,33 @@ function ThreadView({ message, channelId, onClose }) {
                               <div className="text-xs text-gray-400 mt-1">{att.filename}</div>
                             </div>
                           )}
+                          {att.type === 'VIDEO' && (
+                            <video src={att.url} controls className="max-w-sm rounded" />
+                          )}
+                          {att.type === 'AUDIO' && (
+                            <div className="bg-gray-700 rounded-lg p-2 max-w-sm">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-8 h-8 bg-gray-600 rounded flex items-center justify-center flex-shrink-0">
+                                  <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                                  </svg>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-xs text-white truncate">{att.filename}</div>
+                                </div>
+                                <button
+                                  onClick={() => handleDownload(att.url, att.filename)}
+                                  className="p-1 text-gray-400 hover:text-white transition-colors"
+                                  title="Download"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                  </svg>
+                                </button>
+                              </div>
+                              <audio src={att.url} controls preload="metadata" className="w-full" />
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -349,6 +467,52 @@ function ThreadView({ message, channelId, onClose }) {
 
       {/* Reply Input */}
       <form onSubmit={handleSend} className="p-4 border-t border-gray-700">
+        {/* File error */}
+        {fileError && (
+          <div className="mb-2 text-red-400 text-xs">{fileError}</div>
+        )}
+
+        {/* File previews */}
+        {previews.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {previews.map((preview, index) => (
+              <div
+                key={index}
+                className="relative bg-gray-700 rounded p-2 flex items-center gap-2"
+              >
+                {preview.type === 'audio' ? (
+                  <div className="w-10 h-10 bg-gray-600 rounded flex items-center justify-center">
+                    <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                    </svg>
+                  </div>
+                ) : (
+                  <img
+                    src={preview.url}
+                    alt={preview.name}
+                    className="w-10 h-10 object-cover rounded"
+                  />
+                )}
+                <div className="flex flex-col min-w-0">
+                  <span className="text-xs text-white truncate max-w-[100px]">
+                    {preview.name}
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {formatFileSize(preview.size)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeFile(index)}
+                  className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 flex items-center justify-center"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="bg-gray-700 rounded-lg">
           <textarea
             value={content}
@@ -364,10 +528,31 @@ function ThreadView({ message, channelId, onClose }) {
             rows={2}
             disabled={sending}
           />
-          <div className="flex justify-end px-3 py-2">
+          <div className="flex items-center justify-between px-3 py-2">
+            <div className="flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,audio/*"
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="p-1.5 text-gray-400 hover:text-white transition-colors"
+                title="Add file"
+                disabled={sending}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </button>
+            </div>
             <button
               type="submit"
-              disabled={!content.trim() || sending}
+              disabled={(!content.trim() && selectedFiles.length === 0) || sending}
               className="bg-slack-green text-white px-3 py-1 rounded text-sm font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {sending ? '...' : 'Reply'}
