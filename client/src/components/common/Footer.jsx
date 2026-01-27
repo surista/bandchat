@@ -67,7 +67,7 @@ function Footer({ theme = 'dark' }) {
       {/* About Modal */}
       {showAbout && (
         <div className="modal-backdrop">
-          <div className="modal-content max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="modal-content max-w-2xl max-h-modal overflow-y-auto">
             <div className="modal-header">
               <h3>About BandChat</h3>
               <button
@@ -148,7 +148,7 @@ function Footer({ theme = 'dark' }) {
       {/* What's New Modal */}
       {showWhatsNew && (
         <div className="modal-backdrop">
-          <div className="modal-content max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="modal-content max-w-2xl max-h-modal overflow-y-auto">
             <div className="modal-header">
               <h3>What's New</h3>
               <button

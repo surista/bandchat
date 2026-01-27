@@ -790,7 +790,7 @@ function GigArchive({ workspaceId }) {
           onClick={() => setSelectedEntry(null)}
         >
           <div
-            className="bg-gray-900 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden border border-gray-700 shadow-2xl"
+            className="bg-gray-900 rounded-xl w-full max-w-3xl max-h-modal overflow-hidden border border-gray-700 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -1460,7 +1460,7 @@ function GigArchive({ workspaceId }) {
 
           {/* Image container */}
           <div
-            className="relative max-w-[90vw] max-h-[90vh] flex flex-col items-center"
+            className="relative max-w-[90vw] max-h-modal flex flex-col items-center"
             onClick={(e) => e.stopPropagation()}
           >
             <img

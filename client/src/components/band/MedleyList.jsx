@@ -328,7 +328,7 @@ function MedleyForm({ medley, songs, onSave, onClose }) {
 
   return (
     <div className="modal-backdrop">
-      <div className="modal-content max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="modal-content max-w-2xl max-h-modal overflow-y-auto">
         <div className="modal-header">
           <h3>{medley ? 'Edit Medley' : 'Create Medley'}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl">&times;</button>

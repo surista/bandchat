@@ -242,7 +242,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
               <button
                 type="button"
                 onClick={() => removeFile(index)}
-                className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 flex items-center justify-center"
+                className="absolute -top-3 -right-3 w-8 h-8 bg-red-500 text-white rounded-full text-sm hover:bg-red-600 flex items-center justify-center"
                 title="Remove"
               >
                 &times;
@@ -302,7 +302,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="p-1 text-gray-400 hover:text-white transition-colors"
+              className="p-2 -m-1 text-gray-400 hover:text-white transition-colors"
               title="Add image (max 10MB)"
               disabled={sending}
             >
@@ -319,7 +319,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
                 setMentionFilter('');
                 textareaRef.current?.focus();
               }}
-              className="p-1 text-gray-400 hover:text-white transition-colors"
+              className="p-2 -m-1 text-gray-400 hover:text-white transition-colors"
               title="Mention someone"
             >
               <span className="text-lg font-bold">@</span>
@@ -334,7 +334,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
           </button>
         </div>
       </div>
-      <p className="text-xs text-gray-500 mt-2">
+      <p className="hidden md:block text-xs text-gray-500 mt-2">
         Press <kbd className="bg-gray-700 px-1 rounded">Enter</kbd> to send,{' '}
         <kbd className="bg-gray-700 px-1 rounded">Shift + Enter</kbd> for new line,{' '}
         <kbd className="bg-gray-700 px-1 rounded">@</kbd> to mention

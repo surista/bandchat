@@ -148,6 +148,8 @@ input:focus, textarea:focus {
   background-color: var(--color-modal-bg);
   border: 1px solid var(--color-modal-border);
   @apply rounded-xl shadow-2xl w-full;
+  max-height: 90vh;
+  max-height: 90dvh; /* Dynamic viewport height - accounts for mobile browser chrome */
 }
 
 .modal-header {
@@ -217,4 +219,16 @@ input:focus, textarea:focus {
 
 .animate-slide-up {
   animation: slide-up 0.3s ease-out;
+}
+
+/* Mobile-safe max height for modals */
+.max-h-modal {
+  max-height: 90vh;
+  max-height: 90dvh; /* Dynamic viewport height - better for mobile */
+}
+
+@supports (height: 100dvh) {
+  .max-h-modal {
+    max-height: 90dvh;
+  }
 }

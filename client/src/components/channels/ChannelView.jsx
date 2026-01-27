@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
@@ -13,10 +13,14 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState(null);
   const [typingUsers, setTypingUsers] = useState([]);
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
   useEffect(() => {
+    // Immediately clear the unread badge when channel is selected
+    onUpdateUnread(0);
+
     loadMessages();
     joinChannel(channel.id);
 
@@ -24,6 +28,14 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
       leaveChannel(channel.id);
     };
   }, [channel.id]);
+
+  // Scroll to bottom after messages are rendered
+  useLayoutEffect(() => {
+    if (shouldScrollToBottom && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'instant' });
+      setShouldScrollToBottom(false);
+    }
+  }, [shouldScrollToBottom, messages]);
 
   useEffect(() => {
     if (socket) {
@@ -56,11 +68,16 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
       setMessages(data.messages);
       setHasMore(data.hasMore);
       setNextCursor(data.nextCursor);
-      scrollToBottom();
 
-      // Mark channel as read
-      await api.markChannelRead(channel.id);
-      onUpdateUnread(0);
+      // Trigger scroll to bottom after messages render
+      setShouldScrollToBottom(true);
+
+      // Mark channel as read on server (badge already cleared optimistically)
+      try {
+        await api.markChannelRead(channel.id);
+      } catch (err) {
+        console.error('Failed to mark channel as read:', err);
+      }
     } catch (err) {
       console.error('Failed to load messages:', err);
     } finally {
@@ -175,10 +192,13 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
     );
   };
 
-  const scrollToBottom = () => {
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+  const scrollToBottom = (instant = false) => {
+    // Use requestAnimationFrame to ensure DOM is updated
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: instant ? 'instant' : 'smooth'
+      });
+    });
   };
 
   const handleSendMessage = async (content, files = []) => {

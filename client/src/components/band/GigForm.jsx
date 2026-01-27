@@ -206,7 +206,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
 
   return (
     <div className="modal-backdrop">
-      <div className="modal-content max-w-lg max-h-[90vh] overflow-y-auto">
+      <div className="modal-content max-w-lg max-h-modal overflow-y-auto">
         <div className="modal-header">
           <h3>{gig ? 'Edit Event' : 'New Event'}</h3>
           <button

@@ -997,7 +997,7 @@ function Sidebar({
       {/* Settings Modal - Portal to body to escape sidebar transform */}
       {showSettings && createPortal(
         <div className="modal-backdrop">
-          <div className="modal-content max-w-3xl max-h-[90vh] flex flex-col">
+          <div className="modal-content max-w-3xl max-h-modal flex flex-col">
             <div className="modal-header">
               <h3>Settings</h3>
               <button

@@ -51,7 +51,7 @@ export default function MemberProfile({ userId, workspaceId, onClose, onStartDM 
   const content = (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
-        className="bg-gray-800 rounded-xl max-w-md w-full max-h-[90vh] overflow-hidden shadow-2xl"
+        className="bg-gray-800 rounded-xl max-w-md w-full max-h-modal overflow-hidden shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         {loading ? (

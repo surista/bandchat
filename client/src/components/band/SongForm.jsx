@@ -155,7 +155,7 @@ function SongForm({ song, onSave, onClose }) {
 
   return (
     <div className="modal-backdrop">
-      <div className="modal-content max-w-lg max-h-[90vh] overflow-y-auto">
+      <div className="modal-content max-w-lg max-h-modal overflow-y-auto">
         <div className="modal-header">
           <h3>{song ? 'Edit Song' : 'Add Song'}</h3>
           <button

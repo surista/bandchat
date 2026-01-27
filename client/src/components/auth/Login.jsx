@@ -90,9 +90,11 @@ function Login() {
             <input
               type="email"
               id="email"
+              inputMode="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple"
+              className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple text-base"
               placeholder="you@example.com"
               required
             />
@@ -105,9 +107,10 @@ function Login() {
             <input
               type="password"
               id="password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple"
+              className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple text-base"
               placeholder="Your password"
               required
             />
