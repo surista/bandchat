@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Channel view component for displaying and sending messages.
+ * Handles real-time message updates, typing indicators, and reactions.
+ */
+
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
@@ -5,6 +10,16 @@ import api from '../../services/api';
 import MessageList from '../messages/MessageList';
 import MessageInput from '../messages/MessageInput';
 
+/**
+ * Main channel view component displaying messages and input.
+ * Manages Socket.IO subscriptions for real-time updates.
+ *
+ * @param {Object} props
+ * @param {Object} props.channel - Channel object with id, name, description, isDirect, isPrivate
+ * @param {Object} props.workspace - Current workspace with members array
+ * @param {function} props.onOpenThread - Callback when user clicks to open a thread
+ * @param {function} props.onUpdateUnread - Callback to update unread count (called with 0 on channel select)
+ */
 function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
   const { user } = useAuth();
   const { socket, joinChannel, leaveChannel, startTyping, stopTyping } = useSocket();

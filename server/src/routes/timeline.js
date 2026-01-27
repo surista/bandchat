@@ -241,11 +241,6 @@ router.post('/workspace/:workspaceId/generate', authenticate, isWorkspaceMember,
       orderBy: { date: 'asc' }
     });
 
-    console.log(`Timeline generate: Found ${rehearsals.length} rehearsals`);
-    if (rehearsals.length > 0) {
-      console.log(`Timeline generate: First rehearsal date = ${rehearsals[0].date}, title = ${rehearsals[0].title}`);
-    }
-
     // First rehearsal
     if (rehearsals.length >= 1 && !await eventExistsByTitle('First Rehearsal')) {
       events.push({
@@ -410,8 +405,6 @@ router.post('/workspace/:workspaceId/regenerate', authenticate, isWorkspaceAdmin
       }
     });
 
-    console.log(`Timeline regenerate: Deleted ${deleted.count} auto-generated events`);
-
     // Now call the generate logic (redirect internally)
     // We'll just duplicate the generate logic here for simplicity
     const now = new Date();
@@ -462,8 +455,6 @@ router.post('/workspace/:workspaceId/regenerate', authenticate, isWorkspaceAdmin
       },
       orderBy: { date: 'asc' }
     });
-
-    console.log(`Timeline regenerate: Found ${rehearsals.length} rehearsals, first = ${rehearsals[0]?.date}`);
 
     if (rehearsals.length >= 1) {
       events.push({
@@ -532,8 +523,6 @@ router.post('/workspace/:workspaceId/regenerate', authenticate, isWorkspaceAdmin
       },
       orderBy: { date: 'asc' }
     });
-
-    console.log(`Timeline regenerate: Found ${gigs.length} gigs, first = ${gigs[0]?.date}`);
 
     // Gig milestones: 1st, 5th, 10th, then every 5th (15, 20, 25, etc.)
     const gigMilestones = [1, 5, 10];

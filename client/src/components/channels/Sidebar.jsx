@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Sidebar navigation component.
+ * Contains channels, direct messages, band features, members list, and settings.
+ * Supports drag-and-drop channel reordering for admins.
+ */
+
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -19,7 +25,7 @@ import BandMemberForm from '../band/BandMembers/BandMemberForm';
 import MemberProfile from '../common/MemberProfile';
 import MemberHoverCard from '../common/MemberHoverCard';
 
-// Draggable channel item wrapper
+/** Draggable channel item wrapper for admin drag-and-drop */
 function DraggableChannel({ channel, children, disabled }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: channel.id,
@@ -57,6 +63,30 @@ function DroppableSection({ groupId, children }) {
   );
 }
 
+/**
+ * Main sidebar navigation component.
+ * Contains workspace header, channels, DMs, band features, members, and settings.
+ *
+ * @param {Object} props
+ * @param {Object} props.workspace - Current workspace object
+ * @param {Array} props.channels - Array of channel objects
+ * @param {Array} props.channelGroups - Array of channel group objects
+ * @param {Object} props.selectedChannel - Currently selected channel
+ * @param {function} props.onSelectChannel - Callback when channel is selected
+ * @param {function} props.onCreateChannel - Callback to create new channel
+ * @param {function} props.onCreateGroup - Callback to create channel group
+ * @param {function} props.onShowInvite - Callback to show invite modal
+ * @param {function} props.onLogout - Callback for logout action
+ * @param {Object} props.user - Current authenticated user
+ * @param {boolean} props.isOpen - Whether sidebar is open (mobile)
+ * @param {function} props.onClose - Callback to close sidebar (mobile)
+ * @param {Array} props.directMessages - Array of DM channels
+ * @param {function} props.onStartDM - Callback to start new DM
+ * @param {string} props.activeBandView - Currently active band view
+ * @param {function} props.onSelectBandView - Callback when band view is selected
+ * @param {number} props.width - Sidebar width in pixels
+ * @param {function} props.onResizeStart - Callback when resize handle is dragged
+ */
 function Sidebar({
   workspace,
   channels,

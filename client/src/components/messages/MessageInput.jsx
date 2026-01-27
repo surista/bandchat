@@ -1,7 +1,22 @@
+/**
+ * @fileoverview Message input component with file uploads and @mentions.
+ * Supports image paste, drag-drop files, and autocomplete for member mentions.
+ */
+
 import { useState, useRef, useEffect } from 'react';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+/** Maximum file size for uploads (10MB) */
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
+/**
+ * Message composition input with file attachments and @mention support.
+ *
+ * @param {Object} props
+ * @param {string} props.channelName - Channel name for placeholder text
+ * @param {function} props.onSend - Callback when message is sent (content, files)
+ * @param {function} props.onTyping - Callback when user is typing
+ * @param {Array} props.members - Workspace members for @mention autocomplete
+ */
 function MessageInput({ channelName, onSend, onTyping, members = [] }) {
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);

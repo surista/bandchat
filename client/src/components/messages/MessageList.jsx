@@ -1,9 +1,26 @@
+/**
+ * @fileoverview Message list component for displaying chat messages.
+ * Handles message rendering, editing, reactions, and thread navigation.
+ */
+
 import { useState } from 'react';
 import { format, isToday, isYesterday } from 'date-fns';
 import ReactionDisplay from './ReactionDisplay';
 import ReactionPicker from './ReactionPicker';
 import ConfirmDialog from '../common/ConfirmDialog';
 
+/**
+ * Renders a list of messages with date headers, reactions, and action buttons.
+ *
+ * @param {Object} props
+ * @param {Array} props.messages - Array of message objects to display
+ * @param {Object} props.currentUser - Current authenticated user
+ * @param {function} props.onOpenThread - Callback to open thread view for a message
+ * @param {function} props.onEditMessage - Callback to edit a message (messageId, content)
+ * @param {function} props.onDeleteMessage - Callback to delete a message (messageId)
+ * @param {function} props.onAddReaction - Callback to add reaction (messageId, emoji)
+ * @param {function} props.onRemoveReaction - Callback to remove reaction (messageId, emoji)
+ */
 function MessageList({
   messages,
   currentUser,

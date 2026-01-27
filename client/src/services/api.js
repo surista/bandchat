@@ -1,5 +1,33 @@
+/**
+ * @fileoverview API client for BandChat backend.
+ *
+ * Handles all HTTP communication with the server including:
+ * - Authentication (login, signup, token refresh)
+ * - Workspaces and channels
+ * - Messages and reactions
+ * - Band features (songs, setlists, gigs)
+ *
+ * Automatically refreshes expired access tokens using the refresh token.
+ *
+ * @example
+ * import api from './services/api';
+ *
+ * // Login
+ * const { user, accessToken } = await api.login(email, password);
+ *
+ * // Get messages
+ * const { messages, hasMore } = await api.getMessages(channelId);
+ *
+ * // Create a song
+ * const song = await api.createSong(workspaceId, { title: 'My Song', artist: 'My Band' });
+ */
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
+/**
+ * API Service class for making authenticated requests to the backend.
+ * Handles token storage, refresh, and request/response processing.
+ */
 class ApiService {
   constructor() {
     this.accessToken = localStorage.getItem('accessToken');

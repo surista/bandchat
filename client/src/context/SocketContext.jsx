@@ -1,12 +1,36 @@
+/**
+ * @fileoverview Socket.IO context provider for real-time communication.
+ * Manages WebSocket connection, room joining, and typing indicators.
+ */
+
 import { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import api from '../services/api';
 
+/**
+ * @typedef {Object} SocketContextValue
+ * @property {import('socket.io-client').Socket|null} socket - Socket.IO client instance
+ * @property {boolean} connected - Whether socket is currently connected
+ * @property {function(string): void} joinChannel - Join a channel room
+ * @property {function(string): void} leaveChannel - Leave a channel room
+ * @property {function(string): void} startTyping - Emit typing start event
+ * @property {function(string): void} stopTyping - Emit typing stop event
+ * @property {function(string): void} joinWorkspace - Join a workspace room
+ */
+
 const SocketContext = createContext(null);
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
 
+/**
+ * Socket.IO provider component.
+ * Automatically connects/disconnects based on authentication state.
+ * Provides methods for joining rooms and typing indicators.
+ *
+ * @param {Object} props
+ * @param {React.ReactNode} props.children - Child components
+ */
 export function SocketProvider({ children }) {
   const { user, isAuthenticated } = useAuth();
   const [socket, setSocket] = useState(null);
@@ -96,6 +120,23 @@ export function SocketProvider({ children }) {
   );
 }
 
+/**
+ * Hook to access Socket.IO context.
+ * Must be used within a SocketProvider.
+ *
+ * @returns {SocketContextValue} Socket context value
+ * @throws {Error} If used outside of SocketProvider
+ *
+ * @example
+ * const { socket, connected, joinChannel } = useSocket();
+ *
+ * useEffect(() => {
+ *   if (socket) {
+ *     socket.on('message:new', handleNewMessage);
+ *     return () => socket.off('message:new', handleNewMessage);
+ *   }
+ * }, [socket]);
+ */
 export function useSocket() {
   const context = useContext(SocketContext);
   if (!context) {

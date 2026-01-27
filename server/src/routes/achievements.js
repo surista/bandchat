@@ -325,8 +325,6 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
         }
       }
     }
-    console.log('DEBUG achievements - cumulativeGigHours from setlists:', cumulativeGigHours);
-
     // Find first paid gig
     const firstPaidGig = allGigs.find(g => g.pay && g.pay > 0);
 
@@ -495,7 +493,6 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
       }
 
       if (shouldAward) {
-        console.log('DEBUG achievements - awarding band achievement:', achievement.code, 'earnedAt:', earnedAt);
         const awarded = await prisma.bandAchievement.create({
           data: {
             achievementId: achievement.id,
@@ -513,7 +510,6 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
       where: { workspaceId },
       select: { userId: true, joinedAt: true }
     });
-    console.log('DEBUG achievements - checking', allMembers.length, 'members');
 
     const memberAchievementDefs = allAchievements.filter(a => !a.isBandWide);
     const gigCount = allGigs.length;
@@ -649,7 +645,6 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
         }
 
         if (shouldAward) {
-          console.log('DEBUG achievements - awarding member achievement:', achievement.code, 'to user:', userId, 'earnedAt:', earnedAt);
           const awarded = await prisma.memberAchievement.create({
             data: {
               achievementId: achievement.id,
