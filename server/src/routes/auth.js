@@ -485,9 +485,16 @@ router.post('/refresh', authLimiter, async (req, res) => {
     const hashedToken = hashRefreshToken(refreshToken);
 
     // Check if hashed token exists in database (not revoked)
-    const storedToken = await prisma.refreshToken.findUnique({
+    let storedToken = await prisma.refreshToken.findUnique({
       where: { token: hashedToken }
     });
+
+    // Migration fallback: check for unhashed token (legacy tokens before v1.02.86)
+    if (!storedToken) {
+      storedToken = await prisma.refreshToken.findUnique({
+        where: { token: refreshToken }
+      });
+    }
 
     if (!storedToken) {
       return res.status(401).json({ error: 'Refresh token has been revoked' });

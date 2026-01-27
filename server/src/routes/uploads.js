@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { fileTypeFromBuffer } from 'file-type';
+import fileType from 'file-type';
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -35,14 +35,14 @@ const fileFilter = (req, file, cb) => {
  * @returns {Promise<{valid: boolean, detectedType: string|null}>}
  */
 const validateFileType = async (buffer) => {
-  const fileType = await fileTypeFromBuffer(buffer);
+  const detected = await fileType.fromBuffer(buffer);
 
-  if (!fileType) {
+  if (!detected) {
     return { valid: false, detectedType: null };
   }
 
-  const isValid = ALLOWED_IMAGE_TYPES.includes(fileType.mime);
-  return { valid: isValid, detectedType: fileType.mime };
+  const isValid = ALLOWED_IMAGE_TYPES.includes(detected.mime);
+  return { valid: isValid, detectedType: detected.mime };
 };
 
 // Configure multer with 10MB limit
