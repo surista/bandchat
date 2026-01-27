@@ -22,6 +22,7 @@ import BandTimeline from '../band/BandTimeline';
 import Achievements from '../band/Achievements';
 import RecordingsList from '../band/RecordingsList';
 import SongSuggestions from '../band/SongSuggestions';
+import BandKitty from '../band/BandKitty';
 
 function WorkspaceView() {
   const { workspaceId } = useParams();
@@ -451,6 +452,7 @@ function WorkspaceView() {
              activeBandView === 'achievements' ? '🏆 Achievements' :
              activeBandView === 'recordings' ? '🎙️ Recordings' :
              activeBandView === 'suggestions' ? '💡 Song Intelligence' :
+             activeBandView === 'kitty' ? '💰 Band Kitty' :
              selectedChannel
               ? selectedChannel.isDirect
                 ? selectedChannel.otherMembers?.map(m => m.displayName).join(', ') || 'Direct Message'
@@ -501,6 +503,8 @@ function WorkspaceView() {
               <RecordingsList workspaceId={workspaceId} />
             ) : activeBandView === 'suggestions' ? (
               <SongSuggestions workspaceId={workspaceId} />
+            ) : activeBandView === 'kitty' ? (
+              <BandKitty workspaceId={workspaceId} isAdmin={isAdmin} />
             ) : selectedChannel ? (
               <ChannelView
                 channel={selectedChannel}

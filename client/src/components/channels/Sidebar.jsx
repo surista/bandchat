@@ -119,6 +119,8 @@ function Sidebar({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [snoozedUntil, setSnoozedUntil] = useState(null);
+  const [snoozeMenuOpen, setSnoozeMenuOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState({});
   const [collapsedSections, setCollapsedSections] = useState({});
   const [showSettings, setShowSettings] = useState(false);
@@ -152,6 +154,10 @@ function Sidebar({
   useEffect(() => {
     // Check if notifications are already enabled
     pushService.isSubscribed().then(setNotificationsEnabled);
+    // Check snooze status
+    api.getNotificationSnoozeStatus()
+      .then(({ snoozedUntil }) => setSnoozedUntil(snoozedUntil))
+      .catch(() => {});
   }, []);
 
   // ESC key to close settings modal
@@ -230,6 +236,26 @@ function Sidebar({
     } finally {
       setNotificationsLoading(false);
     }
+  };
+
+  const handleSnooze = async (duration) => {
+    try {
+      const { snoozedUntil } = await api.setNotificationSnooze(duration);
+      setSnoozedUntil(snoozedUntil);
+      setSnoozeMenuOpen(false);
+    } catch (error) {
+      console.error('Snooze failed:', error);
+    }
+  };
+
+  const getSnoozeLabel = () => {
+    if (!snoozedUntil) return null;
+    const until = new Date(snoozedUntil);
+    if (until < new Date()) return null;
+    if (until.getFullYear() > 2050) return 'Paused';
+    const remaining = Math.round((until - new Date()) / 60000);
+    if (remaining <= 60) return `${remaining}m`;
+    return `${Math.round(remaining / 60)}h`;
   };
 
   // Organize channels by group and sort alphabetically
@@ -704,6 +730,13 @@ function Sidebar({
               <span className="text-gray-400">💡</span>
               <span className="flex-1 truncate">Song Intelligence</span>
             </button>
+            <button
+              onClick={() => onSelectBandView?.('kitty')}
+              className={`channel-item w-full ${activeBandView === 'kitty' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">💰</span>
+              <span className="flex-1 truncate">Band Kitty</span>
+            </button>
           </div>
         )}
 
@@ -800,18 +833,75 @@ function Sidebar({
 
         {showUserMenu && (
           <div className="absolute bottom-full left-0 right-0 mb-1 mx-2 bg-gray-800 rounded-lg shadow-xl border border-gray-700 overflow-hidden">
-            <button
-              onClick={toggleNotifications}
-              disabled={notificationsLoading}
-              className="w-full px-4 py-2 text-left hover:bg-gray-700 transition-colors flex items-center justify-between"
-            >
-              <span>Notifications</span>
-              <span className={`text-xs px-2 py-0.5 rounded ${
-                notificationsEnabled ? 'bg-green-600' : 'bg-gray-600'
-              }`}>
-                {notificationsLoading ? '...' : notificationsEnabled ? 'ON' : 'OFF'}
-              </span>
-            </button>
+            {/* Notifications with snooze options */}
+            <div className="relative">
+              <button
+                onClick={() => setSnoozeMenuOpen(!snoozeMenuOpen)}
+                disabled={notificationsLoading}
+                className="w-full px-4 py-2 text-left hover:bg-gray-700 transition-colors flex items-center justify-between"
+              >
+                <span>Notifications</span>
+                <span className={`text-xs px-2 py-0.5 rounded ${
+                  !notificationsEnabled ? 'bg-gray-600' :
+                  getSnoozeLabel() ? 'bg-yellow-600' : 'bg-green-600'
+                }`}>
+                  {notificationsLoading ? '...' : !notificationsEnabled ? 'OFF' : getSnoozeLabel() || 'ON'}
+                </span>
+              </button>
+              {snoozeMenuOpen && (
+                <div className="absolute left-full bottom-0 ml-1 bg-gray-800 rounded-lg shadow-xl border border-gray-700 min-w-[160px] z-50">
+                  {!notificationsEnabled ? (
+                    <button
+                      onClick={() => { toggleNotifications(); setSnoozeMenuOpen(false); }}
+                      className="block w-full px-4 py-2 text-left hover:bg-gray-700 text-sm text-green-400"
+                    >
+                      Enable Notifications
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => handleSnooze('off')}
+                        className={`block w-full px-4 py-2 text-left hover:bg-gray-700 text-sm ${!getSnoozeLabel() ? 'text-green-400' : ''}`}
+                      >
+                        Active {!getSnoozeLabel() && '✓'}
+                      </button>
+                      <button
+                        onClick={() => handleSnooze(30)}
+                        className="block w-full px-4 py-2 text-left hover:bg-gray-700 text-sm"
+                      >
+                        Snooze 30 min
+                      </button>
+                      <button
+                        onClick={() => handleSnooze(60)}
+                        className="block w-full px-4 py-2 text-left hover:bg-gray-700 text-sm"
+                      >
+                        Snooze 1 hour
+                      </button>
+                      <button
+                        onClick={() => handleSnooze(120)}
+                        className="block w-full px-4 py-2 text-left hover:bg-gray-700 text-sm"
+                      >
+                        Snooze 2 hours
+                      </button>
+                      <button
+                        onClick={() => handleSnooze('indefinitely')}
+                        className={`block w-full px-4 py-2 text-left hover:bg-gray-700 text-sm ${getSnoozeLabel() === 'Paused' ? 'text-yellow-400' : ''}`}
+                      >
+                        Pause indefinitely {getSnoozeLabel() === 'Paused' && '✓'}
+                      </button>
+                      <div className="border-t border-gray-700 mt-1 pt-1">
+                        <button
+                          onClick={() => { toggleNotifications(); setSnoozeMenuOpen(false); }}
+                          className="block w-full px-4 py-2 text-left hover:bg-gray-700 text-sm text-red-400"
+                        >
+                          Disable Notifications
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
             <button
               onClick={() => {
                 setShowUserMenu(false);

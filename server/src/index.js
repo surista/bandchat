@@ -24,6 +24,7 @@ import timelineRoutes from './routes/timeline.js';
 import achievementRoutes from './routes/achievements.js';
 import recordingRoutes from './routes/recordings.js';
 import suggestionRoutes from './routes/suggestions.js';
+import kittyRoutes from './routes/kitty.js';
 import { setupSocketHandlers } from './socket/handlers.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 
@@ -79,6 +80,7 @@ app.use('/api/timeline', timelineRoutes);
 app.use('/api/achievements', achievementRoutes);
 app.use('/api/recordings', recordingRoutes);
 app.use('/api/suggestions', suggestionRoutes);
+app.use('/api/kitty', kittyRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

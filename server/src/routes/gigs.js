@@ -916,6 +916,50 @@ router.put('/:gigId/complete', authenticate, async (req, res) => {
     const io = req.app.get('io');
     io.to(`workspace:${gig.workspaceId}`).emit('gig:completed', updatedGig);
 
+    // Auto-create kitty transaction for gig pay
+    if (existingGig.pay && existingGig.pay > 0) {
+      try {
+        // Get or create band kitty
+        let kitty = await prisma.bandKitty.findUnique({
+          where: { workspaceId: existingGig.workspaceId }
+        });
+
+        if (!kitty) {
+          kitty = await prisma.bandKitty.create({
+            data: { workspaceId: existingGig.workspaceId }
+          });
+        }
+
+        // Check if transaction already exists for this gig
+        const existingTransaction = await prisma.kittyTransaction.findFirst({
+          where: { gigId: req.params.gigId }
+        });
+
+        if (!existingTransaction) {
+          const transaction = await prisma.kittyTransaction.create({
+            data: {
+              kittyId: kitty.id,
+              type: 'GIG_PAY',
+              amount: existingGig.pay,
+              description: `Gig: ${existingGig.title}`,
+              date: existingGig.date,
+              gigId: req.params.gigId,
+              createdById: req.user.id
+            },
+            include: {
+              gig: { select: { id: true, title: true, date: true } },
+              createdBy: { select: { id: true, displayName: true } }
+            }
+          });
+
+          io.to(`workspace:${existingGig.workspaceId}`).emit('kitty:transaction:created', transaction);
+        }
+      } catch (kittyError) {
+        console.error('Auto-create kitty transaction error:', kittyError);
+        // Don't fail the gig completion if kitty transaction fails
+      }
+    }
+
     res.json(updatedGig);
   } catch (error) {
     console.error('Complete gig error:', error);

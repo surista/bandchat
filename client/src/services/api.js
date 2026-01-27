@@ -1124,6 +1124,50 @@ class ApiService {
       body: JSON.stringify({ songIds })
     });
   }
+
+  // Notification Snooze
+  async getNotificationSnoozeStatus() {
+    return this.request('/push/snooze-status');
+  }
+
+  async setNotificationSnooze(duration) {
+    return this.request('/push/snooze', {
+      method: 'POST',
+      body: JSON.stringify({ duration })
+    });
+  }
+
+  // Band Kitty
+  async getKitty(workspaceId) {
+    return this.request(`/kitty/workspace/${workspaceId}`);
+  }
+
+  async updateKittySettings(workspaceId, data) {
+    return this.request(`/kitty/workspace/${workspaceId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async createKittyTransaction(workspaceId, data) {
+    return this.request(`/kitty/workspace/${workspaceId}/transactions`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async updateKittyTransaction(transactionId, data) {
+    return this.request(`/kitty/transactions/${transactionId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteKittyTransaction(transactionId) {
+    return this.request(`/kitty/transactions/${transactionId}`, {
+      method: 'DELETE'
+    });
+  }
 }
 
 export const api = new ApiService();

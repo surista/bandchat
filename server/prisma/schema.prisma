@@ -8,21 +8,22 @@ datasource db {
 }
 
 model User {
-  id                  String    @id @default(uuid())
-  email               String    @unique
-  password            String?
-  displayName         String
-  avatarUrl           String?
-  bio                 String?
-  emailVerified       Boolean   @default(false)
+  id                      String    @id @default(uuid())
+  email                   String    @unique
+  password                String?
+  displayName             String
+  avatarUrl               String?
+  bio                     String?
+  emailVerified           Boolean   @default(false)
   verificationToken       String?   @unique
   verificationExpires     DateTime?
   passwordResetToken      String?   @unique
   passwordResetExpires    DateTime?
   googleId                String?   @unique
-  authProvider        String    @default("local")
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  authProvider            String    @default("local")
+  notificationsSnoozedUntil DateTime? // null = active, future date = snoozed until then
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
   workspaces              WorkspaceMember[]
   messages                Message[]
@@ -44,6 +45,7 @@ model User {
   memberAchievements      MemberAchievement[]
   recordings              Recording[]
   bandMemberLinks         BandMember[]
+  kittyTransactions       KittyTransaction[]
 }
 
 model RefreshToken {
@@ -85,6 +87,7 @@ model Workspace {
   memberAchievements  MemberAchievement[]
   bandAchievements    BandAchievement[]
   recordings          Recording[]
+  bandKitty           BandKitty?
 }
 
 model ChannelGroup {
@@ -337,13 +340,14 @@ model Gig {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy   User         @relation(fields: [createdById], references: [id])
-  setlist     Setlist?     @relation(fields: [setlistId], references: [id], onDelete: SetNull)
-  setlists    GigSetlist[] // Multi-set support
-  songsPlayed GigSong[]
-  media       GigMedia[]
-  attendees   GigAttendee[]
+  workspace         Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy         User               @relation(fields: [createdById], references: [id])
+  setlist           Setlist?           @relation(fields: [setlistId], references: [id], onDelete: SetNull)
+  setlists          GigSetlist[]       // Multi-set support
+  songsPlayed       GigSong[]
+  media             GigMedia[]
+  attendees         GigAttendee[]
+  kittyTransactions KittyTransaction[]
 
   @@index([workspaceId, date])
 }
@@ -713,4 +717,45 @@ model Recording {
 
   @@index([workspaceId])
   @@index([songId])
+}
+
+// Band Kitty - Financial tracking for the band
+model BandKitty {
+  id              String   @id @default(uuid())
+  workspaceId     String   @unique
+  startingBalance Float    @default(0)
+  balanceAsOfDate DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  workspace    Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  transactions KittyTransaction[]
+}
+
+model KittyTransaction {
+  id          String               @id @default(uuid())
+  kittyId     String
+  type        KittyTransactionType
+  category    String?              // For EXPENSE: 'equipment', 'travel', 'rehearsal', 'promo', 'other'
+  amount      Float
+  description String
+  date        DateTime             @default(now())
+  gigId       String?              // Link to gig if auto-created from gig completion
+  createdById String
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  kitty     BandKitty @relation(fields: [kittyId], references: [id], onDelete: Cascade)
+  gig       Gig?      @relation(fields: [gigId], references: [id], onDelete: SetNull)
+  createdBy User      @relation(fields: [createdById], references: [id])
+
+  @@index([kittyId, date])
+  @@index([gigId])
+}
+
+enum KittyTransactionType {
+  GIG_PAY
+  FEE
+  EXPENSE
+  OTHER_INCOME
 }

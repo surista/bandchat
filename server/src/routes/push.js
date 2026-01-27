@@ -73,11 +73,64 @@ router.post('/unsubscribe', authenticate, async (req, res) => {
   }
 });
 
+// Get notification snooze status
+router.get('/snooze-status', authenticate, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { notificationsSnoozedUntil: true }
+    });
+    res.json({ snoozedUntil: user?.notificationsSnoozedUntil || null });
+  } catch (error) {
+    console.error('Get snooze status error:', error);
+    res.status(500).json({ error: 'Failed to get snooze status' });
+  }
+});
+
+// Set notification snooze
+router.post('/snooze', authenticate, async (req, res) => {
+  try {
+    const { duration } = req.body; // 'off' | 30 | 60 | 120 | 'indefinitely'
+
+    let snoozedUntil = null;
+    if (duration === 30) {
+      snoozedUntil = new Date(Date.now() + 30 * 60 * 1000);
+    } else if (duration === 60) {
+      snoozedUntil = new Date(Date.now() + 60 * 60 * 1000);
+    } else if (duration === 120) {
+      snoozedUntil = new Date(Date.now() + 120 * 60 * 1000);
+    } else if (duration === 'indefinitely') {
+      snoozedUntil = new Date('2099-12-31');
+    }
+    // 'off' or invalid value leaves snoozedUntil as null (notifications active)
+
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { notificationsSnoozedUntil: snoozedUntil }
+    });
+
+    res.json({ snoozedUntil });
+  } catch (error) {
+    console.error('Set snooze error:', error);
+    res.status(500).json({ error: 'Failed to set snooze' });
+  }
+});
+
 // Helper function to send push notification to a user
 export const sendPushToUser = async (userId, payload) => {
   if (!process.env.VAPID_PUBLIC_KEY) return;
 
   try {
+    // Check if user has snoozed notifications
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { notificationsSnoozedUntil: true }
+    });
+
+    if (user?.notificationsSnoozedUntil && new Date(user.notificationsSnoozedUntil) > new Date()) {
+      return; // Notifications are snoozed, skip sending
+    }
+
     const subscriptions = await prisma.pushSubscription.findMany({
       where: { userId }
     });
