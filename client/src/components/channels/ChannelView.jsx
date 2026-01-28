@@ -30,6 +30,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
   const [typingUsers, setTypingUsers] = useState([]);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
   useEffect(() => {
@@ -46,11 +47,16 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
 
   // Scroll to bottom after messages are rendered
   useLayoutEffect(() => {
-    if (shouldScrollToBottom && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'instant' });
+    if (shouldScrollToBottom && !loading && messagesContainerRef.current) {
+      // Use requestAnimationFrame to ensure DOM is fully updated
+      requestAnimationFrame(() => {
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+      });
       setShouldScrollToBottom(false);
     }
-  }, [shouldScrollToBottom, messages]);
+  }, [shouldScrollToBottom, messages, loading]);
 
   useEffect(() => {
     if (socket) {
@@ -210,9 +216,16 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
   const scrollToBottom = (instant = false) => {
     // Use requestAnimationFrame to ensure DOM is updated
     requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({
-        behavior: instant ? 'instant' : 'smooth'
-      });
+      if (messagesContainerRef.current) {
+        if (instant) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        } else {
+          messagesContainerRef.current.scrollTo({
+            top: messagesContainerRef.current.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      }
     });
   };
 
@@ -339,7 +352,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center h-full text-gray-400">
             Loading messages...
