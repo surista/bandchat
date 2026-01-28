@@ -382,6 +382,68 @@ App
 │   │   │                   └── ...
 ```
 
+### Component Quick Reference
+
+Visual layout of the main workspace screen:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        WorkspaceView                            │
+├─────────────────┬───────────────────────────────┬───────────────┤
+│                 │                               │               │
+│    Sidebar      │       ChannelView             │  ThreadView   │
+│                 │                               │   (panel)     │
+│  ┌───────────┐  │  ┌─────────────────────────┐  │               │
+│  │ Channels  │  │  │      MessageList        │  │  (opens when  │
+│  │ Sections  │  │  │                         │  │  you click    │
+│  │ DMs       │  │  │  (shows all messages)   │  │  "X replies") │
+│  │ Band Menu │  │  │                         │  │               │
+│  │ Members   │  │  └─────────────────────────┘  │               │
+│  │ Settings  │  │  ┌─────────────────────────┐  │               │
+│  └───────────┘  │  │     MessageInput        │  │               │
+│                 │  │  (text box + file btn)  │  │               │
+│                 │  └─────────────────────────┘  │               │
+└─────────────────┴───────────────────────────────┴───────────────┘
+```
+
+**Main UI Components:**
+
+| Common Name | Component File | Description |
+|-------------|----------------|-------------|
+| Sidebar | `Sidebar.jsx` | Left panel with channels, DMs, band menu, members |
+| Channel view / main area | `ChannelView.jsx` | Center area showing messages for selected channel |
+| Message list | `MessageList.jsx` | Scrollable list of messages |
+| Message input / text box | `MessageInput.jsx` | Compose area with file upload button |
+| Thread / thread panel | `ThreadView.jsx` | Right panel for threaded replies |
+| Emoji picker | `ReactionPicker.jsx` | Popup for selecting emoji reactions |
+| Confirm dialog | `ConfirmDialog.jsx` | Modal for delete confirmations |
+| Member profile | `MemberProfile.jsx` | Popup showing user details |
+
+**Band Features (accessed via sidebar menu):**
+
+| Common Name | Component File | Description |
+|-------------|----------------|-------------|
+| Songs | `SongList.jsx` | Song database with BPM, key, lyrics |
+| Setlists | `SetlistList.jsx` | List of setlists |
+| Setlist builder | `SetlistBuilder.jsx` | Drag-and-drop setlist editor |
+| Gigs / calendar | `GigCalendar.jsx` | Upcoming and past gigs |
+| Gig archive | `GigArchive.jsx` | Historical gig data |
+| Availability | `AvailabilityCalendar.jsx` | Member availability calendar |
+| Polls | `PollsList.jsx` | Band voting/polls |
+| Recordings | `RecordingsList.jsx` | Practice/gig recordings |
+| Contacts | `ContactsList.jsx` | Venues, promoters, contacts |
+| Band kitty | `BandKitty.jsx` | Shared band finances |
+| Announcements | `AnnouncementsList.jsx` | Pinned announcements |
+
+**Auth Components:**
+
+| Common Name | Component File |
+|-------------|----------------|
+| Login page | `Login.jsx` |
+| Signup page | `Signup.jsx` |
+| Forgot password | `ForgotPassword.jsx` |
+| Reset password | `ResetPassword.jsx` |
+
 ### State Management
 
 | State | Location | Purpose |
