@@ -830,6 +830,13 @@ function Sidebar({
               <span className="text-gray-400">💰</span>
               <span className="flex-1 truncate">Band Kitty</span>
             </button>
+            <button
+              onClick={() => onSelectBandView?.('analyzer')}
+              className={`channel-item w-full ${activeBandView === 'analyzer' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">🔊</span>
+              <span className="flex-1 truncate">Audio Analyzer</span>
+            </button>
           </div>
         )}
 

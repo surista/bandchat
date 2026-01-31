@@ -23,6 +23,7 @@ import Achievements from '../band/Achievements';
 import RecordingsList from '../band/RecordingsList';
 import SongSuggestions from '../band/SongSuggestions';
 import BandKitty from '../band/BandKitty';
+import AudioAnalyzer from '../band/AudioAnalyzer';
 
 function WorkspaceView() {
   const { workspaceId } = useParams();
@@ -505,6 +506,8 @@ function WorkspaceView() {
               <SongSuggestions workspaceId={workspaceId} />
             ) : activeBandView === 'kitty' ? (
               <BandKitty workspaceId={workspaceId} isAdmin={isAdmin} />
+            ) : activeBandView === 'analyzer' ? (
+              <AudioAnalyzer workspaceId={workspaceId} />
             ) : selectedChannel ? (
               <ChannelView
                 channel={selectedChannel}
