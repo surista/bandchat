@@ -24,9 +24,9 @@ export default function AudioAnalyzer({ workspaceId }) {
           import('essentia.js/dist/essentia.js-core.es.js'),
           import('essentia.js/dist/essentia-wasm.es.js')
         ]);
-        const wasm = await EssentiaWASM();
+        // EssentiaWASM is an Emscripten module - pass directly to constructor
         if (!cancelled) {
-          setEssentia(new Essentia(wasm));
+          setEssentia(new Essentia(EssentiaWASM));
           setEssentiaLoading(false);
         }
       } catch (err) {
