@@ -41,7 +41,7 @@ const CURRENCIES = [
   { code: 'THB', symbol: '฿', name: 'Thai Baht' }
 ];
 
-function BandKitty({ workspaceId, isAdmin }) {
+function BandKitty({ workspaceId }) {
   const [kitty, setKitty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -207,7 +207,7 @@ function BandKitty({ workspaceId, isAdmin }) {
               Starting balance: {getCurrencySymbol()}{kitty?.startingBalance?.toFixed(2) || '0.00'} as of {kitty?.balanceAsOfDate ? format(new Date(kitty.balanceAsOfDate), 'MMM d, yyyy') : '-'}
             </div>
           </div>
-          {isAdmin && (
+          {(
             <div className="flex gap-2">
               <button
                 onClick={() => setShowSettings(true)}
@@ -276,7 +276,7 @@ function BandKitty({ workspaceId, isAdmin }) {
         {Object.keys(groupedTransactions).length === 0 ? (
           <div className="text-center text-gray-500 py-8">
             No transactions yet.
-            {isAdmin && ' Click "Add Transaction" to get started.'}
+            {' Click "Add Transaction" to get started.'}
           </div>
         ) : (
           Object.entries(groupedTransactions).map(([month, transactions]) => (
@@ -314,7 +314,7 @@ function BandKitty({ workspaceId, isAdmin }) {
                       <div className={`text-lg font-semibold ${typeInfo.color}`}>
                         {typeInfo.positive ? '+' : '-'}{getCurrencySymbol()}{t.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </div>
-                      {isAdmin && !t.gigId && (
+                      {!t.gigId && (
                         <div className="flex gap-1">
                           <button
                             onClick={() => openEditForm(t)}
@@ -346,7 +346,7 @@ function BandKitty({ workspaceId, isAdmin }) {
       </div>
 
       {/* Transaction Form Modal */}
-      {showForm && isAdmin && (
+      {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 rounded-lg w-full max-w-md max-h-modal overflow-y-auto">
             <div className="p-4 border-b border-gray-700">
@@ -443,7 +443,7 @@ function BandKitty({ workspaceId, isAdmin }) {
       )}
 
       {/* Settings Modal */}
-      {showSettings && isAdmin && (
+      {showSettings && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 rounded-lg w-full max-w-md">
             <div className="p-4 border-b border-gray-700">
