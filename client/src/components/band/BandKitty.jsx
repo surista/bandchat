@@ -14,6 +14,7 @@ const EXPENSE_CATEGORIES = [
   { id: 'equipment', label: 'Equipment' },
   { id: 'travel', label: 'Travel' },
   { id: 'rehearsal', label: 'Rehearsal Space' },
+  { id: 'studio', label: 'Studio' },
   { id: 'promo', label: 'Promotion' },
   { id: 'other', label: 'Other' }
 ];
