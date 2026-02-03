@@ -726,6 +726,7 @@ model BandKitty {
   workspaceId     String   @unique
   startingBalance Float    @default(0)
   balanceAsOfDate DateTime @default(now())
+  currency        String   @default("USD")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

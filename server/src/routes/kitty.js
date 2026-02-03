@@ -46,18 +46,20 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 // Update kitty settings (admin only)
 router.put('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => {
   try {
-    const { startingBalance, balanceAsOfDate } = req.body;
+    const { startingBalance, balanceAsOfDate, currency } = req.body;
 
     const kitty = await prisma.bandKitty.upsert({
       where: { workspaceId: req.params.workspaceId },
       update: {
         ...(startingBalance !== undefined && { startingBalance }),
-        ...(balanceAsOfDate && { balanceAsOfDate: new Date(balanceAsOfDate) })
+        ...(balanceAsOfDate && { balanceAsOfDate: new Date(balanceAsOfDate) }),
+        ...(currency && { currency })
       },
       create: {
         workspaceId: req.params.workspaceId,
         startingBalance: startingBalance || 0,
-        balanceAsOfDate: balanceAsOfDate ? new Date(balanceAsOfDate) : new Date()
+        balanceAsOfDate: balanceAsOfDate ? new Date(balanceAsOfDate) : new Date(),
+        currency: currency || 'USD'
       }
     });
 

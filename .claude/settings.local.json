@@ -39,7 +39,10 @@
       "Bash(npm run dev:*)",
       "Bash(timeout:*)",
       "Bash(curl:*)",
-      "Bash(npx prisma generate:*)"
+      "Bash(npx prisma generate:*)",
+      "WebFetch(domain:mtg.github.io)",
+      "WebFetch(domain:cs310.hashnode.dev)",
+      "WebFetch(domain:gist.github.com)"
     ]
   }
 }

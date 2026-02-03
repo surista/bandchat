@@ -18,6 +18,29 @@ const EXPENSE_CATEGORIES = [
   { id: 'other', label: 'Other' }
 ];
 
+const CURRENCIES = [
+  { code: 'USD', symbol: '$', name: 'US Dollar' },
+  { code: 'EUR', symbol: '€', name: 'Euro' },
+  { code: 'GBP', symbol: '£', name: 'British Pound' },
+  { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
+  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar' },
+  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
+  { code: 'CHF', symbol: 'Fr', name: 'Swiss Franc' },
+  { code: 'CNY', symbol: '¥', name: 'Chinese Yuan' },
+  { code: 'SEK', symbol: 'kr', name: 'Swedish Krona' },
+  { code: 'NZD', symbol: 'NZ$', name: 'New Zealand Dollar' },
+  { code: 'MXN', symbol: 'MX$', name: 'Mexican Peso' },
+  { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar' },
+  { code: 'HKD', symbol: 'HK$', name: 'Hong Kong Dollar' },
+  { code: 'NOK', symbol: 'kr', name: 'Norwegian Krone' },
+  { code: 'KRW', symbol: '₩', name: 'South Korean Won' },
+  { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
+  { code: 'BRL', symbol: 'R$', name: 'Brazilian Real' },
+  { code: 'ZAR', symbol: 'R', name: 'South African Rand' },
+  { code: 'PHP', symbol: '₱', name: 'Philippine Peso' },
+  { code: 'THB', symbol: '฿', name: 'Thai Baht' }
+];
+
 function BandKitty({ workspaceId, isAdmin }) {
   const [kitty, setKitty] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -39,7 +62,13 @@ function BandKitty({ workspaceId, isAdmin }) {
   // Settings state
   const [settingsBalance, setSettingsBalance] = useState('');
   const [settingsDate, setSettingsDate] = useState('');
+  const [settingsCurrency, setSettingsCurrency] = useState('USD');
   const [settingsLoading, setSettingsLoading] = useState(false);
+
+  const getCurrencySymbol = () => {
+    const curr = CURRENCIES.find(c => c.code === (kitty?.currency || 'USD'));
+    return curr?.symbol || '$';
+  };
 
   useEffect(() => {
     loadKitty();
@@ -52,6 +81,7 @@ function BandKitty({ workspaceId, isAdmin }) {
       setKitty(data);
       setSettingsBalance(data.startingBalance?.toString() || '0');
       setSettingsDate(format(new Date(data.balanceAsOfDate), 'yyyy-MM-dd'));
+      setSettingsCurrency(data.currency || 'USD');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -104,7 +134,8 @@ function BandKitty({ workspaceId, isAdmin }) {
     try {
       await api.updateKittySettings(workspaceId, {
         startingBalance: parseFloat(settingsBalance) || 0,
-        balanceAsOfDate: settingsDate
+        balanceAsOfDate: settingsDate,
+        currency: settingsCurrency
       });
       await loadKitty();
       setShowSettings(false);
@@ -170,10 +201,10 @@ function BandKitty({ workspaceId, isAdmin }) {
               <span>💰</span> Band Kitty
             </h2>
             <div className={`text-3xl font-bold mt-2 ${(kitty?.currentBalance || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              ${(kitty?.currentBalance || 0).toFixed(2)}
+              {getCurrencySymbol()}{(kitty?.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="text-xs text-gray-500 mt-1">
-              Starting balance: ${kitty?.startingBalance?.toFixed(2) || '0.00'} as of {kitty?.balanceAsOfDate ? format(new Date(kitty.balanceAsOfDate), 'MMM d, yyyy') : '-'}
+              Starting balance: {getCurrencySymbol()}{kitty?.startingBalance?.toFixed(2) || '0.00'} as of {kitty?.balanceAsOfDate ? format(new Date(kitty.balanceAsOfDate), 'MMM d, yyyy') : '-'}
             </div>
           </div>
           {isAdmin && (
@@ -199,19 +230,19 @@ function BandKitty({ workspaceId, isAdmin }) {
           <div className="bg-gray-800 rounded-lg p-3">
             <div className="text-xs text-gray-400">Total Income</div>
             <div className="text-lg font-semibold text-green-400">
-              ${(kitty?.transactions?.filter(t => ['GIG_PAY', 'FEE', 'OTHER_INCOME'].includes(t.type)).reduce((sum, t) => sum + t.amount, 0) || 0).toFixed(2)}
+              {getCurrencySymbol()}{(kitty?.transactions?.filter(t => ['GIG_PAY', 'FEE', 'OTHER_INCOME'].includes(t.type)).reduce((sum, t) => sum + t.amount, 0) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
           <div className="bg-gray-800 rounded-lg p-3">
             <div className="text-xs text-gray-400">Total Expenses</div>
             <div className="text-lg font-semibold text-red-400">
-              ${(kitty?.transactions?.filter(t => t.type === 'EXPENSE').reduce((sum, t) => sum + t.amount, 0) || 0).toFixed(2)}
+              {getCurrencySymbol()}{(kitty?.transactions?.filter(t => t.type === 'EXPENSE').reduce((sum, t) => sum + t.amount, 0) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
           <div className="bg-gray-800 rounded-lg p-3">
             <div className="text-xs text-gray-400">Gig Payments</div>
             <div className="text-lg font-semibold text-blue-400">
-              ${(kitty?.transactions?.filter(t => t.type === 'GIG_PAY').reduce((sum, t) => sum + t.amount, 0) || 0).toFixed(2)}
+              {getCurrencySymbol()}{(kitty?.transactions?.filter(t => t.type === 'GIG_PAY').reduce((sum, t) => sum + t.amount, 0) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
         </div>
@@ -281,7 +312,7 @@ function BandKitty({ workspaceId, isAdmin }) {
                         </div>
                       </div>
                       <div className={`text-lg font-semibold ${typeInfo.color}`}>
-                        {typeInfo.positive ? '+' : '-'}${t.amount.toFixed(2)}
+                        {typeInfo.positive ? '+' : '-'}{getCurrencySymbol()}{t.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </div>
                       {isAdmin && !t.gigId && (
                         <div className="flex gap-1">
@@ -355,7 +386,7 @@ function BandKitty({ workspaceId, isAdmin }) {
               )}
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Amount ($)</label>
+                <label className="block text-sm text-gray-400 mb-1">Amount ({getCurrencySymbol()})</label>
                 <input
                   type="number"
                   step="0.01"
@@ -420,7 +451,22 @@ function BandKitty({ workspaceId, isAdmin }) {
             </div>
             <form onSubmit={handleSaveSettings} className="p-4 space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Starting Balance ($)</label>
+                <label className="block text-sm text-gray-400 mb-1">Currency</label>
+                <select
+                  value={settingsCurrency}
+                  onChange={(e) => setSettingsCurrency(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 text-white"
+                >
+                  {CURRENCIES.map(c => (
+                    <option key={c.code} value={c.code}>
+                      {c.symbol} - {c.name} ({c.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Starting Balance ({getCurrencySymbol()})</label>
                 <input
                   type="number"
                   step="0.01"
