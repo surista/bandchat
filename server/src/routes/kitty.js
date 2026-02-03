@@ -43,8 +43,8 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
   }
 });
 
-// Update kitty settings (admin only)
-router.put('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => {
+// Update kitty settings
+router.put('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
     const { startingBalance, balanceAsOfDate, currency } = req.body;
 
@@ -73,8 +73,8 @@ router.put('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (req
   }
 });
 
-// Create transaction (admin only)
-router.post('/workspace/:workspaceId/transactions', authenticate, isWorkspaceAdmin, async (req, res) => {
+// Create transaction
+router.post('/workspace/:workspaceId/transactions', authenticate, isWorkspaceMember, async (req, res) => {
   try {
     const { type, category, amount, description, date, gigId } = req.body;
 
@@ -140,7 +140,7 @@ router.put('/transactions/:transactionId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
-    // Check admin permission
+    // Check workspace membership
     const membership = await prisma.workspaceMember.findUnique({
       where: {
         userId_workspaceId: {
@@ -150,8 +150,8 @@ router.put('/transactions/:transactionId', authenticate, async (req, res) => {
       }
     });
 
-    if (!membership || membership.role !== 'ADMIN') {
-      return res.status(403).json({ error: 'Admin access required' });
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
     }
 
     const transaction = await prisma.kittyTransaction.update({
@@ -179,7 +179,7 @@ router.put('/transactions/:transactionId', authenticate, async (req, res) => {
   }
 });
 
-// Delete transaction (admin only)
+// Delete transaction
 router.delete('/transactions/:transactionId', authenticate, async (req, res) => {
   try {
     const existing = await prisma.kittyTransaction.findUnique({
@@ -191,7 +191,7 @@ router.delete('/transactions/:transactionId', authenticate, async (req, res) => 
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
-    // Check admin permission
+    // Check workspace membership
     const membership = await prisma.workspaceMember.findUnique({
       where: {
         userId_workspaceId: {
@@ -201,8 +201,8 @@ router.delete('/transactions/:transactionId', authenticate, async (req, res) => 
       }
     });
 
-    if (!membership || membership.role !== 'ADMIN') {
-      return res.status(403).json({ error: 'Admin access required' });
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
     }
 
     await prisma.kittyTransaction.delete({
