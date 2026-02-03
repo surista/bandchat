@@ -78,8 +78,8 @@ router.post('/workspace/:workspaceId/transactions', authenticate, isWorkspaceMem
   try {
     const { type, category, amount, description, date, gigId } = req.body;
 
-    if (!type || amount === undefined || !description) {
-      return res.status(400).json({ error: 'Type, amount, and description are required' });
+    if (!type || amount === undefined) {
+      return res.status(400).json({ error: 'Type and amount are required' });
     }
 
     // Validate type
@@ -105,7 +105,7 @@ router.post('/workspace/:workspaceId/transactions', authenticate, isWorkspaceMem
         type,
         category: type === 'EXPENSE' ? category : null,
         amount: Math.abs(amount),
-        description,
+        description: description || '',
         date: date ? new Date(date) : new Date(),
         gigId: gigId || null,
         createdById: req.user.id

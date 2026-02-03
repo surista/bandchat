@@ -92,7 +92,7 @@ function BandKitty({ workspaceId }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formAmount || !formDescription) return;
+    if (!formAmount) return;
 
     setFormLoading(true);
     try {
@@ -401,14 +401,13 @@ function BandKitty({ workspaceId }) {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Description</label>
+                <label className="block text-sm text-gray-400 mb-1">Description (optional)</label>
                 <input
                   type="text"
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
                   className="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 text-white"
                   placeholder="e.g., New guitar strings"
-                  required
                 />
               </div>
 
