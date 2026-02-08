@@ -122,8 +122,18 @@ function Sidebar({
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [snoozedUntil, setSnoozedUntil] = useState(null);
   const [snoozeMenuOpen, setSnoozeMenuOpen] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState({});
-  const [collapsedSections, setCollapsedSections] = useState({});
+  const [collapsedGroups, setCollapsedGroups] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`collapsedGroups:${workspace.id}`);
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+  const [collapsedSections, setCollapsedSections] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`collapsedSections:${workspace.id}`);
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
   const [showSettings, setShowSettings] = useState(false);
   const [settingsTab, setSettingsTab] = useState('profile');
   const [editDisplayName, setEditDisplayName] = useState('');
@@ -158,6 +168,14 @@ function Sidebar({
   const [renameLoading, setRenameLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { type: 'channel' | 'section', id, name }
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem(`collapsedGroups:${workspace.id}`, JSON.stringify(collapsedGroups));
+  }, [collapsedGroups, workspace.id]);
+
+  useEffect(() => {
+    localStorage.setItem(`collapsedSections:${workspace.id}`, JSON.stringify(collapsedSections));
+  }, [collapsedSections, workspace.id]);
 
   useEffect(() => {
     // Check if notifications are already enabled
