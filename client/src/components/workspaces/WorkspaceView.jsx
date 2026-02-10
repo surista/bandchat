@@ -159,6 +159,31 @@ function WorkspaceView() {
     };
   }, [isResizing, sidebarWidth]);
 
+  // Soft refresh: update channels/groups/DMs and selectedChannel metadata without resetting loading state
+  const refreshWorkspaceData = useCallback(async () => {
+    try {
+      const [channelsData, groupsData, dmsData] = await Promise.all([
+        api.getChannels(workspaceId),
+        api.getChannelGroups(workspaceId),
+        api.getDMs(workspaceId)
+      ]);
+      setChannels(channelsData);
+      setChannelGroups(groupsData);
+      setDirectMessages(dmsData);
+      lastRefreshRef.current = Date.now();
+
+      // Update selectedChannel with fresh data if it still exists
+      setSelectedChannel(prev => {
+        if (!prev) return prev;
+        const updated = channelsData.find(c => c.id === prev.id)
+          || dmsData.find(d => d.id === prev.id);
+        return updated || prev;
+      });
+    } catch (err) {
+      console.error('Failed to refresh workspace data:', err);
+    }
+  }, [workspaceId]);
+
   // Refresh data when tab becomes visible again (soft refresh to preserve selected channel)
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -226,31 +251,6 @@ function WorkspaceView() {
       setLoading(false);
     }
   };
-
-  // Soft refresh: update channels/groups/DMs and selectedChannel metadata without resetting loading state
-  const refreshWorkspaceData = useCallback(async () => {
-    try {
-      const [channelsData, groupsData, dmsData] = await Promise.all([
-        api.getChannels(workspaceId),
-        api.getChannelGroups(workspaceId),
-        api.getDMs(workspaceId)
-      ]);
-      setChannels(channelsData);
-      setChannelGroups(groupsData);
-      setDirectMessages(dmsData);
-      lastRefreshRef.current = Date.now();
-
-      // Update selectedChannel with fresh data if it still exists
-      setSelectedChannel(prev => {
-        if (!prev) return prev;
-        const updated = channelsData.find(c => c.id === prev.id)
-          || dmsData.find(d => d.id === prev.id);
-        return updated || prev;
-      });
-    } catch (err) {
-      console.error('Failed to refresh workspace data:', err);
-    }
-  }, [workspaceId]);
 
   const handleChannelCreated = (channel) => {
     setChannels(prev => [...prev, { ...channel, unreadCount: 0 }]);
