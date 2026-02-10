@@ -326,114 +326,114 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
   };
 
   return (
-    <div className="flex-1 flex min-h-0">
-      {/* Main channel area */}
-      <div className="flex-1 flex flex-col bg-gray-800 min-h-0 min-w-0">
-        {/* Channel Header */}
-        <div className="h-14 border-b border-gray-700 px-4 flex items-center shrink-0">
-          {channel.isDirect ? (
-            <>
-              <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white font-medium mr-2">
-                {channel.otherMembers?.[0]?.displayName?.charAt(0).toUpperCase() || '?'}
-              </div>
-              <h2 className="text-white font-semibold">
-                {channel.otherMembers?.map(m => m.displayName).join(', ') || 'Direct Message'}
-              </h2>
-            </>
-          ) : (
-            <>
-              <span className="text-gray-400 mr-2">
-                {channel.isPrivate ? '🔒' : '#'}
-              </span>
-              <h2 className="text-white font-semibold">{channel.name}</h2>
-              {channel.description && (
-                <span className="ml-4 text-gray-400 text-sm truncate">
-                  {channel.description}
-                </span>
-              )}
-            </>
-          )}
-          <div className="ml-auto">
-            <button
-              onClick={() => setShowMembers(prev => !prev)}
-              className={`p-2 rounded hover:bg-gray-700 transition-colors ${showMembers ? 'text-white bg-gray-700' : 'text-gray-400 hover:text-white'}`}
-              title="Members"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Messages */}
-        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto">
-          {loading ? (
-            <div className="flex items-center justify-center h-full text-gray-400">
-              Loading messages...
+    <div className="flex-1 flex flex-col bg-gray-800 min-h-0">
+      {/* Channel Header */}
+      <div className="h-14 border-b border-gray-700 px-4 flex items-center shrink-0">
+        {channel.isDirect ? (
+          <>
+            <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white font-medium mr-2">
+              {channel.otherMembers?.[0]?.displayName?.charAt(0).toUpperCase() || '?'}
             </div>
-          ) : (
-            <>
-              {hasMore && (
-                <div className="text-center py-4">
-                  <button
-                    onClick={loadMoreMessages}
-                    className="text-slack-blue hover:underline text-sm"
-                  >
-                    Load older messages
-                  </button>
-                </div>
-              )}
-              <MessageList
-                messages={messages}
-                currentUser={user}
-                onOpenThread={onOpenThread}
-                onEditMessage={handleEditMessage}
-                onDeleteMessage={handleDeleteMessage}
-                onAddReaction={handleAddReaction}
-                onRemoveReaction={handleRemoveReaction}
-              />
-              <div ref={messagesEndRef} />
-            </>
-          )}
-        </div>
-
-        {/* Typing Indicator */}
-        {typingUsers.length > 0 && (
-          <div className="px-4 py-2 text-gray-400 text-sm">
-            <span className="inline-flex items-center gap-1">
-              <span className="typing-dot w-1.5 h-1.5 bg-gray-400 rounded-full" />
-              <span className="typing-dot w-1.5 h-1.5 bg-gray-400 rounded-full" />
-              <span className="typing-dot w-1.5 h-1.5 bg-gray-400 rounded-full" />
+            <h2 className="text-white font-semibold">
+              {channel.otherMembers?.map(m => m.displayName).join(', ') || 'Direct Message'}
+            </h2>
+          </>
+        ) : (
+          <>
+            <span className="text-gray-400 mr-2">
+              {channel.isPrivate ? '🔒' : '#'}
             </span>
-            <span className="ml-2">
-              {typingUsers.map(u => u.displayName).join(', ')}{' '}
-              {typingUsers.length === 1 ? 'is' : 'are'} typing...
-            </span>
-          </div>
+            <h2 className="text-white font-semibold">{channel.name}</h2>
+            {channel.description && (
+              <span className="ml-4 text-gray-400 text-sm truncate hidden md:inline">
+                {channel.description}
+              </span>
+            )}
+          </>
         )}
-
-        {/* Message Input */}
-        <MessageInput
-          channelName={channel.isDirect
-            ? channel.otherMembers?.map(m => m.displayName).join(', ') || 'Direct Message'
-            : channel.name
-          }
-          onSend={handleSendMessage}
-          onTyping={handleTyping}
-          members={workspace?.members || []}
-        />
+        <div className="ml-auto">
+          <button
+            onClick={() => setShowMembers(prev => !prev)}
+            className={`p-2 rounded hover:bg-gray-700 transition-colors ${showMembers ? 'text-white bg-gray-700' : 'text-gray-400 hover:text-white'}`}
+            title="Members"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+            </svg>
+          </button>
+        </div>
       </div>
 
-      {/* Members Panel - full overlay on mobile, side panel on desktop */}
-      {showMembers && (
-        <div className="fixed inset-0 z-50 md:static md:inset-auto md:z-auto md:w-64 md:shrink-0">
-          <ChannelMembersPanel
-            channel={channel}
-            workspace={workspace}
-            onClose={() => setShowMembers(false)}
-          />
+      {/* Messages */}
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto">
+        {loading ? (
+          <div className="flex items-center justify-center h-full text-gray-400">
+            Loading messages...
+          </div>
+        ) : (
+          <>
+            {hasMore && (
+              <div className="text-center py-4">
+                <button
+                  onClick={loadMoreMessages}
+                  className="text-slack-blue hover:underline text-sm"
+                >
+                  Load older messages
+                </button>
+              </div>
+            )}
+            <MessageList
+              messages={messages}
+              currentUser={user}
+              onOpenThread={onOpenThread}
+              onEditMessage={handleEditMessage}
+              onDeleteMessage={handleDeleteMessage}
+              onAddReaction={handleAddReaction}
+              onRemoveReaction={handleRemoveReaction}
+            />
+            <div ref={messagesEndRef} />
+          </>
+        )}
+      </div>
+
+      {/* Typing Indicator */}
+      {typingUsers.length > 0 && (
+        <div className="px-4 py-2 text-gray-400 text-sm">
+          <span className="inline-flex items-center gap-1">
+            <span className="typing-dot w-1.5 h-1.5 bg-gray-400 rounded-full" />
+            <span className="typing-dot w-1.5 h-1.5 bg-gray-400 rounded-full" />
+            <span className="typing-dot w-1.5 h-1.5 bg-gray-400 rounded-full" />
+          </span>
+          <span className="ml-2">
+            {typingUsers.map(u => u.displayName).join(', ')}{' '}
+            {typingUsers.length === 1 ? 'is' : 'are'} typing...
+          </span>
         </div>
+      )}
+
+      {/* Message Input */}
+      <MessageInput
+        channelName={channel.isDirect
+          ? channel.otherMembers?.map(m => m.displayName).join(', ') || 'Direct Message'
+          : channel.name
+        }
+        onSend={handleSendMessage}
+        onTyping={handleTyping}
+        members={workspace?.members || []}
+      />
+
+      {/* Members Panel */}
+      {showMembers && (
+        <>
+          <div className="hidden md:block fixed inset-0 z-40" onClick={() => setShowMembers(false)} />
+          <div className="fixed inset-0 z-50 md:left-auto md:w-80 md:border-l md:border-gray-700">
+            <ChannelMembersPanel
+              channel={channel}
+              workspace={workspace}
+              onClose={() => setShowMembers(false)}
+            />
+          </div>
+        </>
       )}
     </div>
   );
