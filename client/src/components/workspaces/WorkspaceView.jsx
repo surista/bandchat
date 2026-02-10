@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Routes, Route } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
@@ -61,6 +61,7 @@ function WorkspaceView() {
     return saved ? parseInt(saved, 10) : 256;
   });
   const [isResizing, setIsResizing] = useState(false);
+  const lastRefreshRef = useRef(0);
 
   useEffect(() => {
     loadWorkspace();
@@ -92,10 +93,11 @@ function WorkspaceView() {
         }
       };
 
-      // Handle reconnection - refresh data
+      // Handle reconnection - refresh data without resetting selected channel
       const handleReconnect = () => {
         console.log('Socket reconnected, refreshing data...');
-        loadWorkspace();
+        joinWorkspace(workspaceId);
+        refreshWorkspaceData();
       };
 
       socket.on('channel:created', handleChannelCreated);
@@ -108,7 +110,7 @@ function WorkspaceView() {
       socket.on('channelGroup:deleted', handleGroupDeleted);
       socket.on('dm:created', handleDMCreated);
       socket.on('message:new', handleNewMessage);
-      socket.on('reconnect', handleReconnect);
+      socket.io.on('reconnect', handleReconnect);
 
       return () => {
         socket.off('channel:created', handleChannelCreated);
@@ -121,7 +123,7 @@ function WorkspaceView() {
         socket.off('channelGroup:deleted', handleGroupDeleted);
         socket.off('dm:created', handleDMCreated);
         socket.off('message:new', handleNewMessage);
-        socket.off('reconnect', handleReconnect);
+        socket.io.off('reconnect', handleReconnect);
       };
     }
   }, [socket, workspaceId, selectedChannel?.id]);
@@ -156,17 +158,20 @@ function WorkspaceView() {
     };
   }, [isResizing, sidebarWidth]);
 
-  // Refresh data when tab becomes visible again
+  // Refresh data when tab becomes visible again (soft refresh to preserve selected channel)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        loadWorkspace();
+        // Only refresh if more than 30 seconds since last refresh
+        if (Date.now() - lastRefreshRef.current > 30000) {
+          refreshWorkspaceData();
+        }
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [workspaceId]);
+  }, [refreshWorkspaceData]);
 
   // Persist activeBandView to localStorage
   useEffect(() => {
@@ -220,6 +225,31 @@ function WorkspaceView() {
       setLoading(false);
     }
   };
+
+  // Soft refresh: update channels/groups/DMs and selectedChannel metadata without resetting loading state
+  const refreshWorkspaceData = useCallback(async () => {
+    try {
+      const [channelsData, groupsData, dmsData] = await Promise.all([
+        api.getChannels(workspaceId),
+        api.getChannelGroups(workspaceId),
+        api.getDMs(workspaceId)
+      ]);
+      setChannels(channelsData);
+      setChannelGroups(groupsData);
+      setDirectMessages(dmsData);
+      lastRefreshRef.current = Date.now();
+
+      // Update selectedChannel with fresh data if it still exists
+      setSelectedChannel(prev => {
+        if (!prev) return prev;
+        const updated = channelsData.find(c => c.id === prev.id)
+          || dmsData.find(d => d.id === prev.id);
+        return updated || prev;
+      });
+    } catch (err) {
+      console.error('Failed to refresh workspace data:', err);
+    }
+  }, [workspaceId]);
 
   const handleChannelCreated = (channel) => {
     setChannels(prev => [...prev, { ...channel, unreadCount: 0 }]);
@@ -383,7 +413,7 @@ function WorkspaceView() {
   const isAdmin = workspace.members?.find(m => m.user.id === user?.id)?.role === 'ADMIN';
 
   return (
-    <div className="h-screen flex bg-gray-900">
+    <div className="h-screen-safe flex bg-gray-900">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
