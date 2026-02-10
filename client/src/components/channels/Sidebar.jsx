@@ -159,6 +159,7 @@ function Sidebar({
   const [removeLoading, setRemoveLoading] = useState(false);
   // Member profile
   const [showProfileUserId, setShowProfileUserId] = useState(null);
+  const [showAllMembers, setShowAllMembers] = useState(false);
   // Bio editing
   const [editBio, setEditBio] = useState('');
   // Context menu for channels/sections (admin only)
@@ -886,7 +887,7 @@ function Sidebar({
 
         {!collapsedSections.members && (
           <div className="space-y-0.5 ml-2">
-            {workspace.members?.slice(0, 10).map((member) => (
+            {(showAllMembers ? workspace.members : workspace.members?.slice(0, 10))?.map((member) => (
               <MemberHoverCard
                 key={member.user.id}
                 userId={member.user.id}
@@ -919,9 +920,12 @@ function Sidebar({
               </MemberHoverCard>
             ))}
             {workspace.members?.length > 10 && (
-              <div className="px-4 py-1 text-gray-500 text-sm">
-                +{workspace.members.length - 10} more
-              </div>
+              <button
+                onClick={() => setShowAllMembers(prev => !prev)}
+                className="px-4 py-1 text-gray-500 hover:text-gray-300 text-sm"
+              >
+                {showAllMembers ? 'Show less' : `+${workspace.members.length - 10} more`}
+              </button>
             )}
           </div>
         )}
