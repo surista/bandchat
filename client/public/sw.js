@@ -107,6 +107,16 @@ self.addEventListener('message', (event) => {
   if (event.data === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+  if (event.data && event.data.type === 'SET_BADGE') {
+    if ('setAppBadge' in self.navigator) {
+      const count = event.data.count || 0;
+      if (count > 0) {
+        self.navigator.setAppBadge(count).catch(() => {});
+      } else {
+        self.navigator.clearAppBadge().catch(() => {});
+      }
+    }
+  }
 });
 
 // Push notification event
@@ -135,6 +145,13 @@ self.addEventListener('push', (event) => {
 
   event.waitUntil(
     self.registration.showNotification(data.title || 'BandChat', options)
+      .then(() => {
+        // Update app badge on push so home screen icon reflects unread state
+        if ('setAppBadge' in self.navigator) {
+          const badgeCount = data.badgeCount || 1;
+          return self.navigator.setAppBadge(badgeCount).catch(() => {});
+        }
+      })
   );
 });
 

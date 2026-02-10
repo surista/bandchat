@@ -3,6 +3,7 @@ import { useParams, useNavigate, Routes, Route } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import api from '../../services/api';
+import { updateBadge, clearBadge } from '../../services/badge';
 import Sidebar from '../channels/Sidebar';
 import ChannelView from '../channels/ChannelView';
 import ThreadView from '../threads/ThreadView';
@@ -397,6 +398,12 @@ function WorkspaceView() {
 
   const totalUnread = channels.reduce((sum, c) => sum + (c.unreadCount || 0), 0) +
     directMessages.reduce((sum, dm) => sum + (dm.unreadCount || 0), 0);
+
+  // Update browser tab badge and PWA app badge when unread count changes
+  useEffect(() => {
+    updateBadge(totalUnread);
+    return () => clearBadge();
+  }, [totalUnread]);
 
   if (loading) {
     return (
