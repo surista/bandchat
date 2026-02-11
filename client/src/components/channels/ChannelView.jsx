@@ -365,7 +365,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
       </div>
 
       {/* Messages */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-full text-gray-400">
             Loading messages...

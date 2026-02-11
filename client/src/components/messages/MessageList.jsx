@@ -123,7 +123,7 @@ function MessageList({
                 href={part}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-slack-blue hover:underline"
+                className="text-slack-blue hover:underline break-all"
               >
                 {part}
               </a>
@@ -143,7 +143,7 @@ function MessageList({
               <img
                 src={part}
                 alt="Shared image"
-                className="max-w-md max-h-80 rounded"
+                className="max-w-full md:max-w-md max-h-80 rounded"
                 loading="lazy"
               />
             </div>
@@ -157,7 +157,7 @@ function MessageList({
               <video
                 src={part}
                 controls
-                className="max-w-md rounded"
+                className="max-w-full md:max-w-md rounded"
               />
             </div>
           );
@@ -169,7 +169,7 @@ function MessageList({
             href={part}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-slack-blue hover:underline"
+            className="text-slack-blue hover:underline break-all"
           >
             {part}
           </a>
@@ -309,7 +309,7 @@ function MessageList({
                           <img
                             src={att.url}
                             alt={att.filename}
-                            className="max-w-md max-h-80 rounded cursor-pointer"
+                            className="max-w-full md:max-w-md max-h-80 rounded cursor-pointer"
                             loading="lazy"
                             onClick={() => window.open(att.url, '_blank')}
                           />
@@ -334,10 +334,10 @@ function MessageList({
                         </div>
                       )}
                       {att.type === 'VIDEO' && (
-                        <video src={att.url} controls className="max-w-md rounded" />
+                        <video src={att.url} controls className="max-w-full md:max-w-md rounded" />
                       )}
                       {att.type === 'AUDIO' && (
-                        <div className="bg-gray-700 rounded-lg p-3 max-w-md">
+                        <div className="bg-gray-700 rounded-lg p-3 max-w-full md:max-w-md">
                           <div className="flex items-center gap-3 mb-2">
                             <div className="w-10 h-10 bg-gray-600 rounded flex items-center justify-center flex-shrink-0">
                               <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
