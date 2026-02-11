@@ -31,6 +31,7 @@ import { apiLimiter } from './middleware/rateLimit.js';
 dotenv.config();
 
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy (Railway)
 const httpServer = createServer(app);
 
 // Parse allowed origins from environment (comma-separated)
