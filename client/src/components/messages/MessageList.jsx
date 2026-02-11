@@ -405,7 +405,7 @@ function MessageList({
             </div>
 
             {/* Actions - visible on hover (desktop) or tap (mobile) */}
-            <div className={`absolute right-2 top-2 transition-opacity ${
+            <div className={`absolute right-2 -top-3 transition-opacity ${
               activeMessageId === message.id
                 ? 'opacity-100'
                 : 'opacity-0 group-hover:opacity-100'
