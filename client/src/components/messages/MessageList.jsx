@@ -206,7 +206,13 @@ function MessageList({
 
   return (
     <>
-    <div className="px-4 py-2">
+    <div className="px-4 py-2" onClick={(e) => {
+      // Dismiss active message actions when tapping empty space
+      if (e.target === e.currentTarget) {
+        setActiveMessageId(null);
+        setReactionPickerMessageId(null);
+      }
+    }}>
       {messages.map((message, index) => (
         <div key={message.id}>
           {/* Date Header */}
@@ -227,7 +233,9 @@ function MessageList({
             onClick={(e) => {
               // On mobile, tap to reveal actions (but not if clicking on buttons/links)
               if (e.target.closest('button') || e.target.closest('a') || e.target.closest('textarea')) return;
-              setActiveMessageId(activeMessageId === message.id ? null : message.id);
+              const newId = activeMessageId === message.id ? null : message.id;
+              setActiveMessageId(newId);
+              if (!newId) setReactionPickerMessageId(null);
             }}
           >
             {/* Avatar */}
