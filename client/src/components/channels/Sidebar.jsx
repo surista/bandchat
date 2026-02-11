@@ -540,7 +540,7 @@ function Sidebar({
         fixed md:relative inset-y-0 left-0 z-50
         transform transition-transform duration-200 ease-in-out
         pb-20 md:pb-0
-        ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        ${isOpen ? 'translate-x-0 pointer-events-auto' : '-translate-x-full md:translate-x-0 pointer-events-none md:pointer-events-auto'}
       `}
       style={{ width: `${width}px` }}
     >

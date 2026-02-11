@@ -40,7 +40,7 @@ function MobileNav({ activeTab, onTabChange, unreadCount = 0 }) {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 z-50 safe-area-bottom">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 z-[60] safe-area-bottom">
       <div className="flex items-center justify-around h-16">
         {tabs.map((tab) => (
           <button

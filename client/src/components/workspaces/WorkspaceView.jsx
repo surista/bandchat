@@ -378,6 +378,12 @@ function WorkspaceView() {
 
   const handleMobileTabChange = (tab) => {
     setMobileTab(tab);
+    // Always close the search modal when switching to a different tab
+    if (tab !== 'search') {
+      setShowSearch(false);
+      setSearchQuery('');
+      setSearchResults([]);
+    }
     if (tab === 'home') {
       setSidebarOpen(true);
     } else if (tab === 'search') {
@@ -462,7 +468,7 @@ function WorkspaceView() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col pb-16 md:pb-0 min-h-0">
         {/* Mobile Header */}
-        <div className="md:hidden flex items-center gap-3 p-3 border-b border-gray-700 bg-gray-900">
+        <div className="md:hidden flex items-center gap-3 p-3 border-b border-gray-700 bg-gray-900 safe-area-top">
           <button
             onClick={() => {
               setSidebarOpen(true);
@@ -761,7 +767,7 @@ function WorkspaceView() {
 
       {/* Search Modal */}
       {showSearch && (
-        <div className="fixed inset-0 bg-gray-900 z-50 flex flex-col">
+        <div className="fixed inset-0 bg-gray-900 z-50 flex flex-col pb-16 md:pb-0 safe-area-top">
           <div className="flex items-center gap-3 p-3 border-b border-gray-700">
             <button
               onClick={() => {
@@ -829,7 +835,7 @@ function WorkspaceView() {
 
       {/* DMs Panel */}
       {mobileTab === 'dms' && (
-        <div className="fixed inset-0 bg-gray-900 z-40 flex flex-col md:hidden">
+        <div className="fixed inset-0 bg-gray-900 z-40 flex flex-col md:hidden pb-16 safe-area-top">
           <div className="flex items-center gap-3 p-3 border-b border-gray-700">
             <button
               onClick={() => setMobileTab('home')}
@@ -896,7 +902,7 @@ function WorkspaceView() {
 
       {/* Activity Panel (Coming Soon) */}
       {mobileTab === 'activity' && (
-        <div className="fixed inset-0 bg-gray-900 z-40 flex flex-col md:hidden">
+        <div className="fixed inset-0 bg-gray-900 z-40 flex flex-col md:hidden pb-16 safe-area-top">
           <div className="flex items-center gap-3 p-3 border-b border-gray-700">
             <button
               onClick={() => setMobileTab('home')}
