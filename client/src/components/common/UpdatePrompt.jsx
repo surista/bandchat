@@ -53,7 +53,7 @@ export default function UpdatePrompt() {
   if (!showPrompt) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-blue-600 text-white rounded-lg shadow-lg p-4 z-50 animate-slide-up">
+    <div className="fixed bottom-20 md:bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-blue-600 text-white rounded-lg shadow-lg p-4 z-50 animate-slide-up">
       <div className="flex items-start gap-3">
         <span className="text-2xl">🚀</span>
         <div className="flex-1">

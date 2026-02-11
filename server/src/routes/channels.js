@@ -44,9 +44,10 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
         const userMembership = channel.members[0];
         const lastRead = userMembership?.lastRead || new Date(0);
 
-        const unreadCount = await prisma.message.count({
+        const unreadCount = userMembership?.muted ? 0 : await prisma.message.count({
           where: {
             channelId: channel.id,
+            parentId: null,
             createdAt: { gt: lastRead },
             authorId: { not: req.user.id }
           }
@@ -433,9 +434,10 @@ router.get('/workspace/:workspaceId/dms', authenticate, isWorkspaceMember, async
         });
         const lastRead = userMembership?.lastRead || new Date(0);
 
-        const unreadCount = await prisma.message.count({
+        const unreadCount = userMembership?.muted ? 0 : await prisma.message.count({
           where: {
             channelId: dm.id,
+            parentId: null,
             createdAt: { gt: lastRead },
             authorId: { not: req.user.id }
           }
