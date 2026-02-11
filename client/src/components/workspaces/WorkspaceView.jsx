@@ -160,6 +160,9 @@ function WorkspaceView() {
   }, [isResizing, sidebarWidth]);
 
   // Soft refresh: update channels/groups/DMs and selectedChannel metadata without resetting loading state
+  const selectedChannelRef = useRef(null);
+  selectedChannelRef.current = selectedChannel;
+
   const refreshWorkspaceData = useCallback(async () => {
     try {
       const [channelsData, groupsData, dmsData] = await Promise.all([
@@ -167,9 +170,15 @@ function WorkspaceView() {
         api.getChannelGroups(workspaceId),
         api.getDMs(workspaceId)
       ]);
-      setChannels(channelsData);
+      // Zero out unread for the currently viewed channel (user is already reading it)
+      const viewingId = selectedChannelRef.current?.id;
+      setChannels(channelsData.map(c =>
+        c.id === viewingId ? { ...c, unreadCount: 0 } : c
+      ));
       setChannelGroups(groupsData);
-      setDirectMessages(dmsData);
+      setDirectMessages(dmsData.map(dm =>
+        dm.id === viewingId ? { ...dm, unreadCount: 0 } : dm
+      ));
       lastRefreshRef.current = Date.now();
 
       // Update selectedChannel with fresh data if it still exists
