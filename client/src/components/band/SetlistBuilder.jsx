@@ -185,12 +185,11 @@ function SetColumn({
   // All items in this column including the break
   const allColumnItems = set.breakItem ? [set.breakItem, ...set.items] : set.items;
 
-  // Calculate set statistics
+  // Calculate set statistics - songs/MC only (exclude break duration)
   const setSongCount = set.items.filter(i => i.type !== 'MC' && i.type !== 'SET_BREAK').length;
   const setMcCount = set.items.filter(i => i.type === 'MC').length;
-  const setDuration = allColumnItems.reduce((acc, item) => acc + getItemDuration(item), 0);
-  const setMins = Math.floor(setDuration / 60);
-  const setSecs = setDuration % 60;
+  const songsDuration = set.items.reduce((acc, item) => acc + getItemDuration(item), 0);
+  const songsMins = Math.ceil(songsDuration / 60);
 
   return (
     <div className="flex flex-col bg-gray-850 rounded-lg overflow-hidden border border-gray-700">
@@ -213,7 +212,7 @@ function SetColumn({
               {setMcCount > 0 && ` + ${setMcCount} MC`}
             </div>
             <div className="text-emerald-400 font-medium">
-              {setMins}:{String(setSecs).padStart(2, '0')}
+              {songsMins} min
             </div>
           </div>
         </div>
