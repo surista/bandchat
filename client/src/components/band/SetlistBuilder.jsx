@@ -179,7 +179,8 @@ function SetColumn({
   formatDuration,
   getItemDuration,
   onBreakDurationChange,
-  timing
+  timing,
+  nextBreakItem
 }) {
   // All items in this column including the break
   const allColumnItems = set.breakItem ? [set.breakItem, ...set.items] : set.items;
@@ -214,19 +215,6 @@ function SetColumn({
             <div className="text-emerald-400 font-medium">
               {setMins}:{String(setSecs).padStart(2, '0')}
             </div>
-            {set.breakItem && setIndex > 0 && (
-              <div className="mt-1">
-                <select
-                  value={set.breakItem.duration || 900}
-                  onChange={(e) => onBreakDurationChange(set.breakItem, e.target.value)}
-                  className="px-1.5 py-0.5 bg-blue-900/50 border border-blue-700/50 rounded text-blue-300 text-xs"
-                >
-                  {BREAK_DURATION_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label} break</option>
-                  ))}
-                </select>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -265,6 +253,21 @@ function SetColumn({
           </SortableContext>
         )}
       </div>
+
+      {/* Break duration footer */}
+      {nextBreakItem && (
+        <div className="p-2 bg-blue-900/20 border-t border-blue-800/50 flex items-center justify-center gap-2">
+          <select
+            value={nextBreakItem.duration || 900}
+            onChange={(e) => onBreakDurationChange(nextBreakItem, e.target.value)}
+            className="px-2 py-1 bg-blue-900/50 border border-blue-700/50 rounded text-blue-300 text-xs"
+          >
+            {BREAK_DURATION_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label} break</option>
+            ))}
+          </select>
+        </div>
+      )}
     </div>
   );
 }
@@ -1057,6 +1060,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
                       getItemDuration={getItemDuration}
                       onBreakDurationChange={handleBreakDurationChange}
                       timing={setTimings?.[setIndex]}
+                      nextBreakItem={sets[setIndex + 1]?.breakItem}
                     />
                   ))}
                 </div>
