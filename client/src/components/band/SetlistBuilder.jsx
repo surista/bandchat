@@ -398,6 +398,15 @@ const addMinutesToTime = (time24, minutes) => {
   return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
 };
 
+const roundUpTo5 = (time24) => {
+  if (!time24) return '';
+  const [h, m] = time24.split(':').map(Number);
+  const rounded = Math.ceil(m / 5) * 5;
+  const newH = (h + Math.floor(rounded / 60)) % 24;
+  const newM = rounded % 60;
+  return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+};
+
 const BREAK_DURATION_OPTIONS = [
   { value: 300, label: '5 min' },
   { value: 600, label: '10 min' },
@@ -642,7 +651,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
         }
       }
 
-      const actualStart = i > 0 ? currentTime : setStart;
+      const actualStart = i > 0 ? roundUpTo5(currentTime) : setStart;
       const setEnd = addMinutesToTime(actualStart, setDurationSecs / 60);
 
       timings.push({
