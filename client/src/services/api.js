@@ -594,17 +594,17 @@ class ApiService {
     });
   }
 
-  async importSetlist(workspaceId, name, songs, { useShortNames = false, performedAt = null, venue = null } = {}) {
+  async importSetlist(workspaceId, name, songs, { useShortNames = false, performedAt = null, venue = null, startTime = null } = {}) {
     return this.request(`/setlists/workspace/${workspaceId}/import`, {
       method: 'POST',
-      body: JSON.stringify({ name, songs, useShortNames, performedAt, venue })
+      body: JSON.stringify({ name, songs, useShortNames, performedAt, venue, startTime })
     });
   }
 
-  async importMultiSetlist(workspaceId, baseName, sets, { gigId = null, performedAt = null, venue = null } = {}) {
+  async importMultiSetlist(workspaceId, baseName, sets, { gigId = null, performedAt = null, venue = null, startTime = null } = {}) {
     return this.request(`/setlists/workspace/${workspaceId}/import-multiset`, {
       method: 'POST',
-      body: JSON.stringify({ baseName, sets, gigId, performedAt, venue })
+      body: JSON.stringify({ baseName, sets, gigId, performedAt, venue, startTime })
     });
   }
 
@@ -656,10 +656,17 @@ class ApiService {
     });
   }
 
-  async addSetBreakToSetlist(setlistId, label = 'Set Break') {
+  async addSetBreakToSetlist(setlistId, label = 'Set Break', duration = 900) {
     return this.request(`/setlists/${setlistId}/set-break`, {
       method: 'POST',
-      body: JSON.stringify({ label })
+      body: JSON.stringify({ label, duration })
+    });
+  }
+
+  async updateSetlistItem(setlistId, itemId, data) {
+    return this.request(`/setlists/${setlistId}/items/${itemId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
     });
   }
 

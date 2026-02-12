@@ -53,7 +53,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 // Create a setlist
 router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
-    const { name, description, useShortNames, performedAt, venue } = req.body;
+    const { name, description, useShortNames, performedAt, venue, startTime } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
@@ -66,6 +66,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
         useShortNames: useShortNames || false,
         performedAt: performedAt ? new Date(performedAt) : null,
         venue: venue || null,
+        startTime: startTime || null,
         workspaceId: req.params.workspaceId,
         createdById: req.user.id
       },
@@ -140,7 +141,7 @@ router.get('/:setlistId', authenticate, async (req, res) => {
 // Update a setlist
 router.put('/:setlistId', authenticate, async (req, res) => {
   try {
-    const { name, description, useShortNames, performedAt, venue } = req.body;
+    const { name, description, useShortNames, performedAt, venue, startTime } = req.body;
 
     const setlist = await prisma.setlist.update({
       where: { id: req.params.setlistId },
@@ -149,7 +150,8 @@ router.put('/:setlistId', authenticate, async (req, res) => {
         ...(description !== undefined && { description }),
         ...(useShortNames !== undefined && { useShortNames }),
         ...(performedAt !== undefined && { performedAt: performedAt ? new Date(performedAt) : null }),
-        ...(venue !== undefined && { venue })
+        ...(venue !== undefined && { venue }),
+        ...(startTime !== undefined && { startTime: startTime || null })
       },
       include: {
         createdBy: {
@@ -222,6 +224,7 @@ router.post('/:setlistId/duplicate', authenticate, async (req, res) => {
         name: name || `Copy of ${source.name}`,
         description: source.description,
         useShortNames: source.useShortNames,
+        startTime: source.startTime,
         workspaceId: source.workspaceId,
         createdById: req.user.id,
         // Copy all setlist items
@@ -354,7 +357,7 @@ router.post('/:setlistId/mc', authenticate, async (req, res) => {
 // Add a Set Break/divider to a setlist
 router.post('/:setlistId/set-break', authenticate, async (req, res) => {
   try {
-    const { label = 'Set Break' } = req.body;
+    const { label = 'Set Break', duration = 900 } = req.body;
 
     // Get current max position
     const maxPosition = await prisma.setlistSong.aggregate({
@@ -369,7 +372,8 @@ router.post('/:setlistId/set-break', authenticate, async (req, res) => {
         setlistId: req.params.setlistId,
         position: newPosition,
         type: 'SET_BREAK',
-        label
+        label,
+        duration
       }
     });
 
@@ -463,7 +467,7 @@ router.delete('/:setlistId/songs/:songId', authenticate, async (req, res) => {
 // Bulk import a setlist from text
 router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceMember, async (req, res) => {
   try {
-    const { name, songs, useShortNames, performedAt, venue } = req.body;
+    const { name, songs, useShortNames, performedAt, venue, startTime } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Setlist name is required' });
@@ -551,6 +555,7 @@ router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceMember, a
         useShortNames: useShortNames || false,
         performedAt: performedAt ? new Date(performedAt) : null,
         venue: venue || null,
+        startTime: startTime || null,
         workspaceId: req.params.workspaceId,
         createdById: req.user.id,
         songs: {
@@ -592,7 +597,7 @@ router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceMember, a
 // Creates ONE setlist with SET_BREAK markers between sets
 router.post('/workspace/:workspaceId/import-multiset', authenticate, isWorkspaceMember, async (req, res) => {
   try {
-    const { baseName, sets, gigId, performedAt, venue } = req.body;
+    const { baseName, sets, gigId, performedAt, venue, startTime } = req.body;
 
     // sets is an array of { setNumber, songs: [{ title, artist }] }
     if (!sets || !Array.isArray(sets) || sets.length === 0) {
@@ -627,7 +632,8 @@ router.post('/workspace/:workspaceId/import-multiset', authenticate, isWorkspace
         songId: null,
         position: position++,
         type: 'SET_BREAK',
-        label: `Set ${setNumber}`
+        label: `Set ${setNumber}`,
+        duration: 900
       });
 
       const results = {
@@ -702,6 +708,7 @@ router.post('/workspace/:workspaceId/import-multiset', authenticate, isWorkspace
         name: baseName,
         performedAt: performedAt ? new Date(performedAt) : null,
         venue: venue || null,
+        startTime: startTime || null,
         workspaceId: req.params.workspaceId,
         createdById: req.user.id,
         songs: {
@@ -738,6 +745,60 @@ router.post('/workspace/:workspaceId/import-multiset', authenticate, isWorkspace
       return res.status(400).json({ error: 'A setlist with this name already exists' });
     }
     res.status(500).json({ error: 'Failed to import setlist' });
+  }
+});
+
+// Update a setlist item (label, duration)
+router.put('/:setlistId/items/:itemId', authenticate, async (req, res) => {
+  try {
+    const { label, duration } = req.body;
+
+    // Verify item belongs to this setlist
+    const item = await prisma.setlistSong.findFirst({
+      where: {
+        id: req.params.itemId,
+        setlistId: req.params.setlistId
+      },
+      include: { setlist: true }
+    });
+
+    if (!item) {
+      return res.status(404).json({ error: 'Item not found in this setlist' });
+    }
+
+    // Verify user is a workspace member
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: item.setlist.workspaceId
+        }
+      }
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const updated = await prisma.setlistSong.update({
+      where: { id: req.params.itemId },
+      data: {
+        ...(label !== undefined && { label }),
+        ...(duration !== undefined && { duration })
+      },
+      include: { song: true }
+    });
+
+    const io = req.app.get('io');
+    io.to(`workspace:${item.setlist.workspaceId}`).emit('setlist:itemUpdated', {
+      setlistId: req.params.setlistId,
+      item: updated
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Update setlist item error:', error);
+    res.status(500).json({ error: 'Failed to update setlist item' });
   }
 });
 

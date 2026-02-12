@@ -15,12 +15,14 @@ function SetlistList({ workspaceId }) {
   const [newSetlistDesc, setNewSetlistDesc] = useState('');
   const [newSetlistDate, setNewSetlistDate] = useState('');
   const [newSetlistVenue, setNewSetlistVenue] = useState('');
+  const [newSetlistStartTime, setNewSetlistStartTime] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importName, setImportName] = useState('');
   const [importText, setImportText] = useState('');
   const [importDate, setImportDate] = useState('');
   const [importVenue, setImportVenue] = useState('');
+  const [importStartTime, setImportStartTime] = useState('');
   const [importLoading, setImportLoading] = useState(false);
   const [importResults, setImportResults] = useState(null);
   const [viewingSetlist, setViewingSetlist] = useState(null);
@@ -28,6 +30,7 @@ function SetlistList({ workspaceId }) {
   const [editName, setEditName] = useState('');
   const [editDate, setEditDate] = useState('');
   const [editVenue, setEditVenue] = useState('');
+  const [editStartTime, setEditStartTime] = useState('');
   const [editLoading, setEditLoading] = useState(false);
 
   useEffect(() => {
@@ -78,7 +81,8 @@ function SetlistList({ workspaceId }) {
         name: newSetlistName,
         description: newSetlistDesc || null,
         performedAt: newSetlistDate || null,
-        venue: newSetlistVenue || null
+        venue: newSetlistVenue || null,
+        startTime: newSetlistStartTime || null
       });
       setSetlists(prev => [created, ...prev]);
       setShowCreateModal(false);
@@ -86,6 +90,7 @@ function SetlistList({ workspaceId }) {
       setNewSetlistDesc('');
       setNewSetlistDate('');
       setNewSetlistVenue('');
+      setNewSetlistStartTime('');
       setEditingSetlist(created);
       setShowBuilder(true);
     } catch (err) {
@@ -125,6 +130,7 @@ function SetlistList({ workspaceId }) {
     setEditName(setlist.name);
     setEditDate(setlist.performedAt ? new Date(setlist.performedAt).toISOString().split('T')[0] : '');
     setEditVenue(setlist.venue || '');
+    setEditStartTime(setlist.startTime || '');
   };
 
   const handleSaveDetails = async (e) => {
@@ -134,7 +140,8 @@ function SetlistList({ workspaceId }) {
       const updated = await api.updateSetlist(editingDetails.id, {
         name: editName,
         performedAt: editDate || null,
-        venue: editVenue || null
+        venue: editVenue || null,
+        startTime: editStartTime || null
       });
       setSetlists(prev => prev.map(s => s.id === updated.id ? updated : s));
       if (viewingSetlist?.id === updated.id) {
@@ -234,7 +241,8 @@ function SetlistList({ workspaceId }) {
       if (isMultiSet) {
         const result = await api.importMultiSetlist(workspaceId, importName, sets, {
           performedAt: importDate || null,
-          venue: importVenue || null
+          venue: importVenue || null,
+          startTime: importStartTime || null
         });
         setImportResults({ ...result.results, isMultiSet: true });
 
@@ -247,6 +255,7 @@ function SetlistList({ workspaceId }) {
           setImportText('');
           setImportDate('');
           setImportVenue('');
+          setImportStartTime('');
           setImportResults(null);
           setEditingSetlist(result.setlist);
           setShowBuilder(true);
@@ -255,7 +264,8 @@ function SetlistList({ workspaceId }) {
         // Single set import
         const result = await api.importSetlist(workspaceId, importName, sets[0].songs, {
           performedAt: importDate || null,
-          venue: importVenue || null
+          venue: importVenue || null,
+          startTime: importStartTime || null
         });
         setImportResults(result.results);
         setSetlists(prev => [result.setlist, ...prev]);
@@ -266,6 +276,7 @@ function SetlistList({ workspaceId }) {
           setImportText('');
           setImportDate('');
           setImportVenue('');
+          setImportStartTime('');
           setImportResults(null);
           setEditingSetlist(result.setlist);
           setShowBuilder(true);
@@ -280,7 +291,7 @@ function SetlistList({ workspaceId }) {
 
   const calculateDuration = (setlistSongs) => {
     const totalSeconds = setlistSongs.reduce((acc, ss) => {
-      if (ss.type === 'SET_BREAK') return acc;
+      if (ss.type === 'SET_BREAK') return acc + (ss.duration || 0);
       if (ss.type === 'MC') return acc + (ss.duration || 60);
       return acc + (ss.song?.duration || 0);
     }, 0);
@@ -294,6 +305,14 @@ function SetlistList({ workspaceId }) {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${String(secs).padStart(2, '0')}`;
+  };
+
+  const formatTime12h = (time24) => {
+    if (!time24) return '';
+    const [h, m] = time24.split(':').map(Number);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
   };
 
   // Print/PDF export function for any setlist
@@ -312,6 +331,27 @@ function SetlistList({ workspaceId }) {
     const songCount = setlistItems.filter(i => i.type !== 'MC' && i.type !== 'SET_BREAK').length;
     const totalDuration = calculateDuration(setlistItems);
 
+    // Calculate total seconds for time range
+    const totalSecs = setlistItems.reduce((acc, ss) => {
+      if (ss.type === 'SET_BREAK') return acc + (ss.duration || 0);
+      if (ss.type === 'MC') return acc + (ss.duration || 60);
+      return acc + (ss.song?.duration || 0);
+    }, 0);
+
+    const addMinsToTime = (time24, minutes) => {
+      if (!time24) return '';
+      const [h, m] = time24.split(':').map(Number);
+      const totalMins = h * 60 + m + minutes;
+      const newH = Math.floor(totalMins / 60) % 24;
+      const newM = totalMins % 60;
+      return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+    };
+
+    const printEndTime = setlist.startTime ? addMinsToTime(setlist.startTime, totalSecs / 60) : '';
+    const timeRangeStr = setlist.startTime && printEndTime
+      ? `${formatTime12h(setlist.startTime)} – ${formatTime12h(printEndTime)}`
+      : '';
+
     let setlistHtml = '';
     let currentSetNumber = 0;
 
@@ -320,6 +360,10 @@ function SetlistList({ workspaceId }) {
         currentSetNumber++;
         if (index > 0) {
           setlistHtml += '</ol>';
+          if (item.duration) {
+            const breakMins = Math.floor(item.duration / 60);
+            setlistHtml += `<div class="break-duration">${breakMins} minute break</div>`;
+          }
         }
         setlistHtml += `
           <div class="set-header">${item.label || `Set ${currentSetNumber}`}</div>
@@ -414,6 +458,18 @@ function SetlistList({ workspaceId }) {
             color: #b8860b;
             font-style: italic;
           }
+          .break-duration {
+            text-align: center;
+            color: #6b7280;
+            font-size: 13px;
+            font-style: italic;
+            padding: 8px 0;
+          }
+          .time-range {
+            font-size: 16px;
+            color: #0891b2;
+            margin-top: 4px;
+          }
           .footer {
             margin-top: 32px;
             padding-top: 16px;
@@ -433,11 +489,12 @@ function SetlistList({ workspaceId }) {
         <div class="header">
           ${setlist.venue ? `<div class="venue">${setlist.venue}</div>` : ''}
           <div class="setlist-name">${setlist.name}</div>
+          ${timeRangeStr ? `<div class="time-range">${timeRangeStr}</div>` : ''}
         </div>
         <div class="content">${setlistHtml}</div>
         <div class="footer">
           <div class="date">${dateStr}</div>
-          <div class="stats">${songCount} songs • ${totalDuration} total</div>
+          <div class="stats">${songCount} songs • ${totalDuration} total${timeRangeStr ? ` • ${timeRangeStr}` : ''}</div>
         </div>
         <script>window.onload = function() { window.print(); };</script>
       </body>
@@ -576,6 +633,11 @@ function SetlistList({ workspaceId }) {
                       </>
                     );
                   })()}
+                  {setlist.startTime && (
+                    <span className="px-2 py-1 bg-cyan-900/50 text-cyan-300 rounded">
+                      {formatTime12h(setlist.startTime)}
+                    </span>
+                  )}
                   {setlist.songs?.length > 0 && (
                     <span className="px-2 py-1 bg-gray-700 text-gray-300 rounded">
                       {calculateDuration(setlist.songs)}
@@ -675,6 +737,15 @@ function SetlistList({ workspaceId }) {
                   />
                 </div>
               </div>
+              <div className="mb-4">
+                <label className="block text-gray-700 font-medium mb-1">Start Time</label>
+                <input
+                  type="time"
+                  value={newSetlistStartTime}
+                  onChange={(e) => setNewSetlistStartTime(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                />
+              </div>
               <div className="flex gap-2 justify-end">
                 <button
                   type="button"
@@ -684,6 +755,7 @@ function SetlistList({ workspaceId }) {
                     setNewSetlistDesc('');
                     setNewSetlistDate('');
                     setNewSetlistVenue('');
+                    setNewSetlistStartTime('');
                   }}
                   className="btn btn-secondary"
                 >
@@ -759,6 +831,15 @@ function SetlistList({ workspaceId }) {
                     />
                   </div>
                 </div>
+                <div className="mb-4">
+                  <label className="block text-gray-700 font-medium mb-1">Start Time</label>
+                  <input
+                    type="time"
+                    value={importStartTime}
+                    onChange={(e) => setImportStartTime(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                  />
+                </div>
                 <div className="flex gap-2 justify-end">
                   <button
                     type="button"
@@ -768,6 +849,7 @@ function SetlistList({ workspaceId }) {
                       setImportText('');
                       setImportDate('');
                       setImportVenue('');
+                      setImportStartTime('');
                     }}
                     className="btn btn-secondary"
                     disabled={importLoading}
@@ -860,6 +942,7 @@ function SetlistList({ workspaceId }) {
                       setImportText('');
                       setImportDate('');
                       setImportVenue('');
+                      setImportStartTime('');
                       setImportResults(null);
                     }}
                     className="btn btn-secondary"
@@ -873,6 +956,7 @@ function SetlistList({ workspaceId }) {
                       setImportText('');
                       setImportDate('');
                       setImportVenue('');
+                      setImportStartTime('');
                       setImportResults(null);
                       const newSetlist = setlists[0];
                       if (newSetlist) {
@@ -904,10 +988,13 @@ function SetlistList({ workspaceId }) {
             <div className="p-4 border-b border-gray-700 flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-bold text-white">{viewingSetlist.name}</h3>
-                {(viewingSetlist.performedAt || viewingSetlist.venue) && (
+                {(viewingSetlist.performedAt || viewingSetlist.venue || viewingSetlist.startTime) && (
                   <p className="text-gray-500 text-sm">
                     {viewingSetlist.performedAt && new Date(viewingSetlist.performedAt).toLocaleDateString()}
-                    {viewingSetlist.performedAt && viewingSetlist.venue && ' · '}
+                    {viewingSetlist.startTime && (
+                      <span className="text-cyan-400"> at {formatTime12h(viewingSetlist.startTime)}</span>
+                    )}
+                    {(viewingSetlist.performedAt || viewingSetlist.startTime) && viewingSetlist.venue && ' · '}
                     {viewingSetlist.venue}
                   </p>
                 )}
@@ -1066,6 +1153,15 @@ function SetlistList({ workspaceId }) {
                     placeholder="e.g., The Blue Note"
                   />
                 </div>
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700 font-medium mb-1">Start Time</label>
+                <input
+                  type="time"
+                  value={editStartTime}
+                  onChange={(e) => setEditStartTime(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                />
               </div>
               <div className="flex gap-2 justify-end">
                 <button

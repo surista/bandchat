@@ -49,7 +49,7 @@ function splitIntoSets(items) {
 }
 
 // Sortable item component
-function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDisplayName, useShortNames, formatDuration }) {
+function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDisplayName, useShortNames, formatDuration, onBreakDurationChange }) {
   const {
     attributes,
     listeners,
@@ -110,10 +110,20 @@ function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDispla
       <span className="text-gray-500 w-6 text-right">{index + 1}.</span>
 
       {item.type === 'SET_BREAK' ? (
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 flex items-center gap-3">
           <div className="text-blue-400 truncate font-bold text-lg">
             📋 {item.label || 'Set Break'}
           </div>
+          <select
+            value={item.duration || 900}
+            onChange={(e) => onBreakDurationChange(item, e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            className="px-2 py-1 bg-blue-900/50 border border-blue-700/50 rounded text-blue-300 text-sm"
+          >
+            {BREAK_DURATION_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
         </div>
       ) : item.type === 'MC' ? (
         <>
@@ -167,7 +177,9 @@ function SetColumn({
   getSongDisplayName,
   useShortNames,
   formatDuration,
-  getItemDuration
+  getItemDuration,
+  onBreakDurationChange,
+  timing
 }) {
   // All items in this column including the break
   const allColumnItems = set.breakItem ? [set.breakItem, ...set.items] : set.items;
@@ -184,9 +196,16 @@ function SetColumn({
       {/* Set Header */}
       <div className="p-3 bg-blue-900/30 border-b border-blue-800/50">
         <div className="flex items-center justify-between">
-          <h3 className="text-blue-400 font-bold">
-            📋 {set.breakItem?.label || `Set ${setIndex + 1}`}
-          </h3>
+          <div>
+            <h3 className="text-blue-400 font-bold">
+              📋 {set.breakItem?.label || `Set ${setIndex + 1}`}
+            </h3>
+            {timing && (
+              <div className="text-cyan-300 text-xs mt-0.5">
+                {formatTime12h(timing.start)} – {formatTime12h(timing.end)}
+              </div>
+            )}
+          </div>
           <div className="text-right text-xs">
             <div className="text-gray-300">
               {setSongCount} song{setSongCount !== 1 ? 's' : ''}
@@ -195,6 +214,19 @@ function SetColumn({
             <div className="text-emerald-400 font-medium">
               {setMins}:{String(setSecs).padStart(2, '0')}
             </div>
+            {set.breakItem && setIndex > 0 && (
+              <div className="mt-1">
+                <select
+                  value={set.breakItem.duration || 900}
+                  onChange={(e) => onBreakDurationChange(set.breakItem, e.target.value)}
+                  className="px-1.5 py-0.5 bg-blue-900/50 border border-blue-700/50 rounded text-blue-300 text-xs"
+                >
+                  {BREAK_DURATION_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label} break</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -345,11 +377,41 @@ function SetColumnItem({
   );
 }
 
+// Time helper functions
+const formatTime12h = (time24) => {
+  if (!time24) return '';
+  const [h, m] = time24.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+};
+
+const addMinutesToTime = (time24, minutes) => {
+  if (!time24) return '';
+  const [h, m] = time24.split(':').map(Number);
+  const totalMins = h * 60 + m + minutes;
+  const newH = Math.floor(totalMins / 60) % 24;
+  const newM = totalMins % 60;
+  return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+};
+
+const BREAK_DURATION_OPTIONS = [
+  { value: 300, label: '5 min' },
+  { value: 600, label: '10 min' },
+  { value: 900, label: '15 min' },
+  { value: 1200, label: '20 min' },
+  { value: 1500, label: '25 min' },
+  { value: 1800, label: '30 min' },
+  { value: 2700, label: '45 min' },
+  { value: 3600, label: '60 min' },
+];
+
 function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
   const [setlistItems, setSetlistItems] = useState(setlist.songs || []);
   const [searchQuery, setSearchQuery] = useState('');
   const [saving, setSaving] = useState(false);
   const [useShortNames, setUseShortNames] = useState(setlist.useShortNames || false);
+  const [startTime, setStartTime] = useState(setlist.startTime || '');
   const [songSortBy, setSongSortBy] = useState('title');
   const [setlistPanelWidth, setSetlistPanelWidth] = useState(70); // percentage
   const containerRef = useRef(null);
@@ -447,7 +509,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
     const existingBreaks = setlistItems.filter(i => i.type === 'SET_BREAK').length;
     const label = `Set ${existingBreaks + 1}`;
     try {
-      const result = await api.addSetBreakToSetlist(setlist.id, label);
+      const result = await api.addSetBreakToSetlist(setlist.id, label, 900);
       setSetlistItems(prev => [...prev, result]);
     } catch (err) {
       alert(err.message);
@@ -522,7 +584,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
 
   const getItemDuration = (item) => {
     if (item.type === 'SET_BREAK') {
-      return 0;
+      return item.duration || 0;
     }
     if (item.type === 'MC') {
       return item.duration || 60;
@@ -549,6 +611,75 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
   const sets = useMemo(() => splitIntoSets(setlistItems), [setlistItems]);
   const hasMultipleSets = sets.length > 1 || (sets.length === 1 && sets[0].breakItem);
 
+  // Calculate per-set start/end times
+  const setTimings = useMemo(() => {
+    if (!startTime) return null;
+    const timings = [];
+    let currentTime = startTime;
+
+    for (let i = 0; i < sets.length; i++) {
+      const set = sets[i];
+      const allColumnItems = set.breakItem ? [set.breakItem, ...set.items] : set.items;
+
+      // For the first set, skip the break duration (it's just a label marker)
+      // For subsequent sets, the break duration before this set was already counted
+      const setStart = currentTime;
+      let setDurationSecs = 0;
+
+      for (const item of allColumnItems) {
+        if (item.type === 'SET_BREAK' && i > 0) {
+          // Break before this set - add break duration
+          currentTime = addMinutesToTime(currentTime, (item.duration || 0) / 60);
+        }
+        if (item.type === 'SET_BREAK' && i === 0) {
+          // First set break marker, skip duration (gig starts now)
+        }
+        if (item.type !== 'SET_BREAK') {
+          setDurationSecs += getItemDuration(item);
+        }
+      }
+
+      const actualStart = i > 0 ? currentTime : setStart;
+      const setEnd = addMinutesToTime(actualStart, setDurationSecs / 60);
+
+      timings.push({
+        start: actualStart,
+        end: setEnd
+      });
+
+      currentTime = setEnd;
+    }
+
+    return timings;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startTime, sets]);
+
+  const endTime = useMemo(() => {
+    if (!startTime) return '';
+    return addMinutesToTime(startTime, totalDuration / 60);
+  }, [startTime, totalDuration]);
+
+  const handleStartTimeChange = async (newTime) => {
+    setStartTime(newTime);
+    try {
+      await api.updateSetlist(setlist.id, { startTime: newTime || null });
+    } catch (err) {
+      console.error('Failed to save start time:', err);
+    }
+  };
+
+  const handleBreakDurationChange = async (item, newDuration) => {
+    const duration = parseInt(newDuration);
+    setSetlistItems(prev => prev.map(i =>
+      i.id === item.id ? { ...i, duration } : i
+    ));
+    try {
+      await api.updateSetlistItem(setlist.id, item.id, { duration });
+    } catch (err) {
+      console.error('Failed to save break duration:', err);
+    }
+  };
+
   // Print/PDF export function
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
@@ -562,18 +693,32 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
       ? format(new Date(setlist.performedAt), 'EEEE, MMMM d, yyyy')
       : format(new Date(), 'EEEE, MMMM d, yyyy');
 
+    const timeRangeStr = startTime && endTime
+      ? `${formatTime12h(startTime)} – ${formatTime12h(endTime)}`
+      : '';
+
     // Build the setlist content
     let setlistHtml = '';
     let currentSetNumber = 0;
+    let printSetIndex = -1;
 
     setlistItems.forEach((item, index) => {
       if (item.type === 'SET_BREAK') {
         currentSetNumber++;
+        printSetIndex++;
         if (index > 0) {
           setlistHtml += '</ol>';
+          // Show break duration between sets
+          if (item.duration) {
+            const breakMins = Math.floor(item.duration / 60);
+            setlistHtml += `<div class="break-duration">${breakMins} minute break</div>`;
+          }
         }
+        const setTimeStr = setTimings?.[printSetIndex]
+          ? ` <span class="set-time">${formatTime12h(setTimings[printSetIndex].start)} – ${formatTime12h(setTimings[printSetIndex].end)}</span>`
+          : '';
         setlistHtml += `
-          <div class="set-header">${item.label || `Set ${currentSetNumber}`}</div>
+          <div class="set-header">${item.label || `Set ${currentSetNumber}`}${setTimeStr}</div>
           <ol class="song-list">
         `;
       } else if (item.type === 'MC') {
@@ -700,6 +845,24 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
             color: #b8860b;
             font-style: italic;
           }
+          .set-time {
+            font-size: 14px;
+            font-weight: normal;
+            color: #0891b2;
+            margin-left: 8px;
+          }
+          .break-duration {
+            text-align: center;
+            color: #6b7280;
+            font-size: 13px;
+            font-style: italic;
+            padding: 8px 0;
+          }
+          .time-range {
+            font-size: 16px;
+            color: #0891b2;
+            margin-top: 4px;
+          }
           .footer {
             margin-top: 32px;
             padding-top: 16px;
@@ -732,6 +895,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
         <div class="header">
           ${setlist.venue ? `<div class="venue">${setlist.venue}</div>` : ''}
           <div class="setlist-name">${setlist.name}</div>
+          ${timeRangeStr ? `<div class="time-range">${timeRangeStr}</div>` : ''}
         </div>
 
         <div class="content">
@@ -740,7 +904,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
 
         <div class="footer">
           <div class="date">${dateStr}</div>
-          <div class="stats">${songCount} songs • ${durationMins}:${String(durationSecs).padStart(2, '0')} total</div>
+          <div class="stats">${songCount} songs • ${durationMins}:${String(durationSecs).padStart(2, '0')} total${timeRangeStr ? ` • ${timeRangeStr}` : ''}</div>
         </div>
 
         <script>
@@ -813,6 +977,29 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
             </div>
           </div>
         </div>
+
+        {/* Timing Row */}
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-700">
+          <div className="flex items-center gap-2">
+            <label className="text-gray-400 text-sm">Start</label>
+            <input
+              type="time"
+              value={startTime}
+              onChange={(e) => handleStartTimeChange(e.target.value)}
+              className="px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+            />
+          </div>
+          {startTime && endTime && (
+            <div className="px-3 py-1.5 bg-emerald-900/30 border border-emerald-700/50 rounded-full text-sm">
+              <span className="text-emerald-300 font-medium">
+                {formatTime12h(startTime)} – {formatTime12h(endTime)}
+              </span>
+              <span className="text-gray-400 ml-2">
+                ({durationMins}:{String(durationSecs).padStart(2, '0')})
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
       <div ref={containerRef} className="flex-1 flex flex-col md:flex-row overflow-hidden">
@@ -868,6 +1055,8 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
                       useShortNames={useShortNames}
                       formatDuration={formatDuration}
                       getItemDuration={getItemDuration}
+                      onBreakDurationChange={handleBreakDurationChange}
+                      timing={setTimings?.[setIndex]}
                     />
                   ))}
                 </div>
@@ -895,6 +1084,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
                         getSongDisplayName={getSongDisplayName}
                         useShortNames={useShortNames}
                         formatDuration={formatDuration}
+                        onBreakDurationChange={handleBreakDurationChange}
                       />
                     ))}
                   </div>
@@ -911,11 +1101,18 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
                   {songCount} song{songCount !== 1 ? 's' : ''}
                   {mcCount > 0 && ` + ${mcCount} MC`}
                 </span>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-400 text-sm">Total:</span>
-                  <span className="text-xl font-bold text-emerald-400">
-                    {durationMins}:{String(durationSecs).padStart(2, '0')}
-                  </span>
+                <div className="flex items-center gap-3">
+                  {startTime && endTime && (
+                    <span className="text-cyan-300 text-sm">
+                      {formatTime12h(startTime)} – {formatTime12h(endTime)}
+                    </span>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-400 text-sm">Total:</span>
+                    <span className="text-xl font-bold text-emerald-400">
+                      {durationMins}:{String(durationSecs).padStart(2, '0')}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
