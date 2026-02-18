@@ -99,16 +99,26 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
     }
 
     // Create channel with members
-    const membersToAdd = [req.user.id];
-    if (memberIds && Array.isArray(memberIds)) {
-      // Verify all members are in the workspace
-      const validMembers = await prisma.workspaceMember.findMany({
-        where: {
-          workspaceId: req.params.workspaceId,
-          userId: { in: memberIds }
-        }
+    let membersToAdd;
+    if (isPrivate) {
+      // Private channels: only creator + explicitly added members
+      membersToAdd = [req.user.id];
+      if (memberIds && Array.isArray(memberIds)) {
+        const validMembers = await prisma.workspaceMember.findMany({
+          where: {
+            workspaceId: req.params.workspaceId,
+            userId: { in: memberIds }
+          }
+        });
+        membersToAdd.push(...validMembers.map(m => m.userId).filter(id => id !== req.user.id));
+      }
+    } else {
+      // Public channels: add all workspace members
+      const allMembers = await prisma.workspaceMember.findMany({
+        where: { workspaceId: req.params.workspaceId },
+        select: { userId: true }
       });
-      membersToAdd.push(...validMembers.map(m => m.userId).filter(id => id !== req.user.id));
+      membersToAdd = allMembers.map(m => m.userId);
     }
 
     const channel = await prisma.channel.create({
@@ -358,14 +368,19 @@ router.put('/:channelId/mute', authenticate, isChannelMember, async (req, res) =
 // Mark channel as read
 router.post('/:channelId/read', authenticate, isChannelMember, async (req, res) => {
   try {
-    await prisma.channelMember.update({
+    await prisma.channelMember.upsert({
       where: {
         userId_channelId: {
           userId: req.user.id,
           channelId: req.params.channelId
         }
       },
-      data: { lastRead: new Date() }
+      update: { lastRead: new Date() },
+      create: {
+        userId: req.user.id,
+        channelId: req.params.channelId,
+        lastRead: new Date()
+      }
     });
 
     res.json({ success: true });
