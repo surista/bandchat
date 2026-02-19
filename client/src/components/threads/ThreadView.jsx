@@ -37,7 +37,7 @@ const formatFileSize = (bytes) => {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 };
 
-function ThreadView({ message, channelId, onClose }) {
+function ThreadView({ message, channelId, onClose, onThreadRead }) {
   const { user } = useAuth();
   const { socket } = useSocket();
   const [replies, setReplies] = useState([]);
@@ -54,6 +54,11 @@ function ThreadView({ message, channelId, onClose }) {
 
   useEffect(() => {
     loadReplies();
+    // Mark thread as read on open (only if there are unread replies)
+    if (message.unreadReplies > 0) {
+      api.markThreadRead(message.id).catch(() => {});
+      if (onThreadRead) onThreadRead(message.id);
+    }
   }, [message.id]);
 
   useEffect(() => {
@@ -91,6 +96,10 @@ function ThreadView({ message, channelId, onClose }) {
     if (parentId === message.id) {
       setReplies(prev => [...prev, newReply]);
       scrollToBottom();
+      // Mark thread as read when new replies arrive from others
+      if (newReply.author.id !== user.id) {
+        api.markThreadRead(message.id).catch(() => {});
+      }
     }
   };
 

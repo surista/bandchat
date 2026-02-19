@@ -43,8 +43,9 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
       channels.map(async (channel) => {
         const userMembership = channel.members[0];
         const lastRead = userMembership?.lastRead || new Date(0);
+        const isMuted = userMembership?.muted || false;
 
-        const unreadCount = userMembership?.muted ? 0 : await prisma.message.count({
+        const unreadCount = isMuted ? 0 : await prisma.message.count({
           where: {
             channelId: channel.id,
             parentId: null,
@@ -53,11 +54,52 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
           }
         });
 
+        // Count unread thread replies across all threads in this channel
+        let unreadThreadReplies = 0;
+        if (!isMuted) {
+          // Get all parent messages that have replies in this channel
+          const threadParents = await prisma.message.findMany({
+            where: {
+              channelId: channel.id,
+              parentId: null,
+              replies: { some: {} }
+            },
+            select: { id: true }
+          });
+
+          if (threadParents.length > 0) {
+            const parentIds = threadParents.map(m => m.id);
+
+            // Get user's ThreadRead records for these threads
+            const threadReads = await prisma.threadRead.findMany({
+              where: {
+                userId: req.user.id,
+                messageId: { in: parentIds }
+              }
+            });
+            const threadReadMap = Object.fromEntries(threadReads.map(tr => [tr.messageId, tr.lastRead]));
+
+            // Count unread replies per thread
+            const counts = await Promise.all(parentIds.map(async (parentId) => {
+              const threadLastRead = threadReadMap[parentId] || lastRead;
+              return prisma.message.count({
+                where: {
+                  parentId,
+                  createdAt: { gt: threadLastRead },
+                  authorId: { not: req.user.id }
+                }
+              });
+            }));
+            unreadThreadReplies = counts.reduce((sum, c) => sum + c, 0);
+          }
+        }
+
         return {
           ...channel,
           groupId: channel.group?.id || null,
-          muted: userMembership?.muted || false,
+          muted: isMuted,
           unreadCount,
+          unreadThreadReplies,
           members: undefined
         };
       })
@@ -448,8 +490,9 @@ router.get('/workspace/:workspaceId/dms', authenticate, isWorkspaceMember, async
           }
         });
         const lastRead = userMembership?.lastRead || new Date(0);
+        const isMuted = userMembership?.muted || false;
 
-        const unreadCount = userMembership?.muted ? 0 : await prisma.message.count({
+        const unreadCount = isMuted ? 0 : await prisma.message.count({
           where: {
             channelId: dm.id,
             parentId: null,
@@ -457,6 +500,42 @@ router.get('/workspace/:workspaceId/dms', authenticate, isWorkspaceMember, async
             authorId: { not: req.user.id }
           }
         });
+
+        // Count unread thread replies in DMs
+        let unreadThreadReplies = 0;
+        if (!isMuted) {
+          const threadParents = await prisma.message.findMany({
+            where: {
+              channelId: dm.id,
+              parentId: null,
+              replies: { some: {} }
+            },
+            select: { id: true }
+          });
+
+          if (threadParents.length > 0) {
+            const parentIds = threadParents.map(m => m.id);
+            const threadReads = await prisma.threadRead.findMany({
+              where: {
+                userId: req.user.id,
+                messageId: { in: parentIds }
+              }
+            });
+            const threadReadMap = Object.fromEntries(threadReads.map(tr => [tr.messageId, tr.lastRead]));
+
+            const counts = await Promise.all(parentIds.map(async (parentId) => {
+              const threadLastRead = threadReadMap[parentId] || lastRead;
+              return prisma.message.count({
+                where: {
+                  parentId,
+                  createdAt: { gt: threadLastRead },
+                  authorId: { not: req.user.id }
+                }
+              });
+            }));
+            unreadThreadReplies = counts.reduce((sum, c) => sum + c, 0);
+          }
+        }
 
         // Get the other user(s) in the DM - only if they're still workspace members
         const otherMembers = dm.members
@@ -468,6 +547,7 @@ router.get('/workspace/:workspaceId/dms', authenticate, isWorkspaceMember, async
           otherMembers: otherMembers.map(m => m.user),
           lastMessage: dm.messages[0] || null,
           unreadCount,
+          unreadThreadReplies,
           messages: undefined
         };
       })

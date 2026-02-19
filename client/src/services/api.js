@@ -460,6 +460,12 @@ class ApiService {
     });
   }
 
+  async markThreadRead(messageId) {
+    return this.request(`/messages/${messageId}/thread-read`, {
+      method: 'POST'
+    });
+  }
+
   // File uploads
   async uploadFile(file) {
     const formData = new FormData();

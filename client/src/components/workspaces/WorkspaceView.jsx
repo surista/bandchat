@@ -94,6 +94,26 @@ function WorkspaceView() {
         }
       };
 
+      // Handle thread replies for unread counts
+      const handleReplyUnread = ({ parentId, message: reply }) => {
+        if (reply.author.id === user.id) return;
+        const isThreadOpen = selectedThread?.id === parentId;
+        // If the thread is open, ThreadView will mark it as read
+        if (isThreadOpen) return;
+        // Increment thread unread count for the channel
+        const channelId = reply.channelId;
+        setChannels(prev =>
+          prev.map(c =>
+            c.id === channelId ? { ...c, unreadThreadReplies: (c.unreadThreadReplies || 0) + 1 } : c
+          )
+        );
+        setDirectMessages(prev =>
+          prev.map(dm =>
+            dm.id === channelId ? { ...dm, unreadThreadReplies: (dm.unreadThreadReplies || 0) + 1 } : dm
+          )
+        );
+      };
+
       // Handle reconnection - refresh data without resetting selected channel
       const handleReconnect = () => {
         console.log('Socket reconnected, refreshing data...');
@@ -111,6 +131,7 @@ function WorkspaceView() {
       socket.on('channelGroup:deleted', handleGroupDeleted);
       socket.on('dm:created', handleDMCreated);
       socket.on('message:new', handleNewMessage);
+      socket.on('message:reply', handleReplyUnread);
       socket.io.on('reconnect', handleReconnect);
 
       return () => {
@@ -124,10 +145,11 @@ function WorkspaceView() {
         socket.off('channelGroup:deleted', handleGroupDeleted);
         socket.off('dm:created', handleDMCreated);
         socket.off('message:new', handleNewMessage);
+        socket.off('message:reply', handleReplyUnread);
         socket.io.off('reconnect', handleReconnect);
       };
     }
-  }, [socket, workspaceId, selectedChannel?.id]);
+  }, [socket, workspaceId, selectedChannel?.id, selectedThread?.id]);
 
   // Sidebar resize handling
   useEffect(() => {
@@ -162,6 +184,8 @@ function WorkspaceView() {
   // Soft refresh: update channels/groups/DMs and selectedChannel metadata without resetting loading state
   const selectedChannelRef = useRef(null);
   selectedChannelRef.current = selectedChannel;
+  const selectedThreadRef = useRef(null);
+  selectedThreadRef.current = selectedThread;
 
   const refreshWorkspaceData = useCallback(async () => {
     try {
@@ -173,11 +197,11 @@ function WorkspaceView() {
       // Zero out unread for the currently viewed channel (user is already reading it)
       const viewingId = selectedChannelRef.current?.id;
       setChannels(channelsData.map(c =>
-        c.id === viewingId ? { ...c, unreadCount: 0 } : c
+        c.id === viewingId ? { ...c, unreadCount: 0, unreadThreadReplies: 0 } : c
       ));
       setChannelGroups(groupsData);
       setDirectMessages(dmsData.map(dm =>
-        dm.id === viewingId ? { ...dm, unreadCount: 0 } : dm
+        dm.id === viewingId ? { ...dm, unreadCount: 0, unreadThreadReplies: 0 } : dm
       ));
       lastRefreshRef.current = Date.now();
 
@@ -411,8 +435,8 @@ function WorkspaceView() {
     }
   };
 
-  const totalUnread = channels.reduce((sum, c) => sum + (c.unreadCount || 0), 0) +
-    directMessages.reduce((sum, dm) => sum + (dm.unreadCount || 0), 0);
+  const totalUnread = channels.reduce((sum, c) => sum + (c.unreadCount || 0) + (c.unreadThreadReplies || 0), 0) +
+    directMessages.reduce((sum, dm) => sum + (dm.unreadCount || 0) + (dm.unreadThreadReplies || 0), 0);
 
   // Update browser tab badge and PWA app badge when unread count changes
   useEffect(() => {
@@ -566,6 +590,7 @@ function WorkspaceView() {
                 workspace={workspace}
                 onOpenThread={setSelectedThread}
                 onUpdateUnread={(count) => updateChannelUnread(selectedChannel.id, count)}
+                openThreadId={selectedThread?.id || null}
               />
             ) : (
               <div className="flex-1 flex items-center justify-center text-gray-400">
@@ -581,6 +606,24 @@ function WorkspaceView() {
                 message={selectedThread}
                 channelId={selectedChannel?.id}
                 onClose={() => setSelectedThread(null)}
+                onThreadRead={(messageId) => {
+                  // Find the message's unreadReplies and subtract from channel thread unread count
+                  const msg = selectedThreadRef.current;
+                  const unread = msg?.unreadReplies || 0;
+                  if (unread > 0 && selectedChannel) {
+                    const chId = selectedChannel.id;
+                    setChannels(prev =>
+                      prev.map(c =>
+                        c.id === chId ? { ...c, unreadThreadReplies: Math.max(0, (c.unreadThreadReplies || 0) - unread) } : c
+                      )
+                    );
+                    setDirectMessages(prev =>
+                      prev.map(dm =>
+                        dm.id === chId ? { ...dm, unreadThreadReplies: Math.max(0, (dm.unreadThreadReplies || 0) - unread) } : dm
+                      )
+                    );
+                  }
+                }}
               />
             </div>
           )}

@@ -404,9 +404,18 @@ function MessageList({
               {message._count?.replies > 0 && (
                 <button
                   onClick={() => onOpenThread(message)}
-                  className="mt-2 text-slack-blue text-sm hover:underline flex items-center gap-1"
+                  className={`mt-2 text-sm hover:underline flex items-center gap-1 ${
+                    message.unreadReplies > 0
+                      ? 'text-slack-blue font-bold'
+                      : 'text-gray-500'
+                  }`}
                 >
-                  <span>{message._count.replies} replies</span>
+                  <span>
+                    {message.unreadReplies > 0
+                      ? `${message.unreadReplies} new ${message.unreadReplies === 1 ? 'reply' : 'replies'}`
+                      : `${message._count.replies} ${message._count.replies === 1 ? 'reply' : 'replies'}`
+                    }
+                  </span>
                   <span className="text-gray-400">→</span>
                 </button>
               )}

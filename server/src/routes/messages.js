@@ -55,10 +55,56 @@ router.get('/channel/:channelId', authenticate, isChannelMember, async (req, res
 
     const hasMore = messages.length > take;
     const items = hasMore ? messages.slice(0, take) : messages;
+    const result = items.reverse(); // Return in chronological order
+
+    // Compute unreadReplies for messages that have threads
+    const threadIds = result.filter(m => m._count.replies > 0).map(m => m.id);
+    let unreadMap = {};
+
+    if (threadIds.length > 0) {
+      // Get user's ThreadRead records for these parent messages
+      const threadReads = await prisma.threadRead.findMany({
+        where: {
+          userId: req.user.id,
+          messageId: { in: threadIds }
+        }
+      });
+      const threadReadMap = Object.fromEntries(threadReads.map(tr => [tr.messageId, tr.lastRead]));
+
+      // Get user's channel lastRead as fallback
+      const membership = await prisma.channelMember.findUnique({
+        where: {
+          userId_channelId: {
+            userId: req.user.id,
+            channelId: req.params.channelId
+          }
+        }
+      });
+      const channelLastRead = membership?.lastRead || new Date(0);
+
+      // Count unread replies for each threaded message
+      const counts = await Promise.all(threadIds.map(async (id) => {
+        const lastRead = threadReadMap[id] || channelLastRead;
+        const count = await prisma.message.count({
+          where: {
+            parentId: id,
+            createdAt: { gt: lastRead },
+            authorId: { not: req.user.id }
+          }
+        });
+        return [id, count];
+      }));
+      unreadMap = Object.fromEntries(counts);
+    }
+
+    const enriched = result.map(m => ({
+      ...m,
+      unreadReplies: unreadMap[m.id] || 0
+    }));
 
     res.json({
-      messages: items.reverse(), // Return in chronological order
-      nextCursor: hasMore ? items[0].id : null,
+      messages: enriched,
+      nextCursor: hasMore ? enriched[0].id : null,
       hasMore
     });
   } catch (error) {
@@ -538,6 +584,54 @@ router.delete('/:messageId/reactions/:emoji', authenticate, async (req, res) => 
   } catch (error) {
     console.error('Remove reaction error:', error);
     res.status(500).json({ error: 'Failed to remove reaction' });
+  }
+});
+
+// Mark a thread as read
+router.post('/:messageId/thread-read', authenticate, async (req, res) => {
+  try {
+    const message = await prisma.message.findUnique({
+      where: { id: req.params.messageId },
+      select: { channelId: true }
+    });
+
+    if (!message) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+
+    // Verify user has access to the channel
+    const membership = await prisma.channelMember.findUnique({
+      where: {
+        userId_channelId: {
+          userId: req.user.id,
+          channelId: message.channelId
+        }
+      }
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a member of this channel' });
+    }
+
+    await prisma.threadRead.upsert({
+      where: {
+        userId_messageId: {
+          userId: req.user.id,
+          messageId: req.params.messageId
+        }
+      },
+      update: { lastRead: new Date() },
+      create: {
+        userId: req.user.id,
+        messageId: req.params.messageId,
+        lastRead: new Date()
+      }
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Mark thread read error:', error);
+    res.status(500).json({ error: 'Failed to mark thread as read' });
   }
 });
 

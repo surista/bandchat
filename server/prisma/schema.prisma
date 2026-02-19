@@ -46,6 +46,7 @@ model User {
   recordings              Recording[]
   bandMemberLinks         BandMember[]
   kittyTransactions       KittyTransaction[]
+  threadReads             ThreadRead[]
 }
 
 model RefreshToken {
@@ -171,6 +172,7 @@ model Message {
   replies     Message[]    @relation("Threads")
   attachments Attachment[]
   reactions   Reaction[]
+  threadReads ThreadRead[]
 
   @@index([channelId, createdAt])
   @@index([parentId])
@@ -226,6 +228,16 @@ model Reaction {
 
   @@unique([userId, messageId, emoji])
   @@index([messageId])
+}
+
+model ThreadRead {
+  userId    String
+  messageId String
+  lastRead  DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@id([userId, messageId])
 }
 
 // Band Features

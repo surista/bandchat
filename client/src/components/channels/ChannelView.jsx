@@ -21,7 +21,7 @@ import ChannelMembersPanel from './ChannelMembersPanel';
  * @param {function} props.onOpenThread - Callback when user clicks to open a thread
  * @param {function} props.onUpdateUnread - Callback to update unread count (called with 0 on channel select)
  */
-function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
+function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThreadId }) {
   const { user } = useAuth();
   const { socket, joinChannel, leaveChannel, startTyping, stopTyping } = useSocket();
   const [messages, setMessages] = useState([]);
@@ -34,6 +34,8 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const openThreadIdRef = useRef(openThreadId);
+  openThreadIdRef.current = openThreadId;
 
   useEffect(() => {
     // Immediately clear the unread badge when channel is selected
@@ -158,11 +160,17 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
     setMessages(prev => prev.filter(m => m.id !== messageId));
   };
 
-  const handleNewReply = ({ parentId, message }) => {
+  const handleNewReply = ({ parentId, message: reply }) => {
     setMessages(prev =>
       prev.map(m =>
         m.id === parentId
-          ? { ...m, _count: { replies: (m._count?.replies || 0) + 1 } }
+          ? {
+              ...m,
+              _count: { replies: (m._count?.replies || 0) + 1 },
+              unreadReplies: (reply.author.id !== user.id && openThreadIdRef.current !== parentId)
+                ? (m.unreadReplies || 0) + 1
+                : m.unreadReplies || 0
+            }
           : m
       )
     );
@@ -309,6 +317,14 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
     }
   };
 
+  const handleOpenThread = (message) => {
+    // Clear local unread state for this thread
+    setMessages(prev =>
+      prev.map(m => m.id === message.id ? { ...m, unreadReplies: 0 } : m)
+    );
+    onOpenThread(message);
+  };
+
   const handleAddReaction = async (messageId, emoji) => {
     try {
       await api.addReaction(messageId, emoji);
@@ -385,7 +401,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread }) {
             <MessageList
               messages={messages}
               currentUser={user}
-              onOpenThread={onOpenThread}
+              onOpenThread={handleOpenThread}
               onEditMessage={handleEditMessage}
               onDeleteMessage={handleDeleteMessage}
               onAddReaction={handleAddReaction}
