@@ -38,12 +38,52 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
       orderBy: [{ position: 'asc' }, { name: 'asc' }]
     });
 
-    // Get unread counts
+    // Build per-channel metadata
+    const channelMeta = new Map();
+    channels.forEach(c => {
+      const membership = c.members[0];
+      channelMeta.set(c.id, {
+        lastRead: membership?.lastRead || new Date(0),
+        isMuted: membership?.muted || false
+      });
+    });
+
+    const unmutedChannelIds = channels
+      .filter(c => !channelMeta.get(c.id).isMuted)
+      .map(c => c.id);
+
+    // Batch: fetch all thread parents and thread reads in 2 queries (instead of N+N)
+    const [allThreadParents, allThreadReads] = await Promise.all([
+      unmutedChannelIds.length > 0
+        ? prisma.message.findMany({
+            where: {
+              channelId: { in: unmutedChannelIds },
+              parentId: null,
+              replies: { some: {} }
+            },
+            select: { id: true, channelId: true }
+          })
+        : [],
+      prisma.threadRead.findMany({
+        where: { userId: req.user.id }
+      })
+    ]);
+
+    // Build lookup maps
+    const threadParentsByChannel = new Map();
+    allThreadParents.forEach(tp => {
+      if (!threadParentsByChannel.has(tp.channelId)) {
+        threadParentsByChannel.set(tp.channelId, []);
+      }
+      threadParentsByChannel.get(tp.channelId).push(tp.id);
+    });
+    const threadReadMap = Object.fromEntries(allThreadReads.map(tr => [tr.messageId, tr.lastRead]));
+
+    // Parallel: compute unread counts and thread reply counts for all channels
     const channelsWithUnread = await Promise.all(
       channels.map(async (channel) => {
-        const userMembership = channel.members[0];
-        const lastRead = userMembership?.lastRead || new Date(0);
-        const isMuted = userMembership?.muted || false;
+        const meta = channelMeta.get(channel.id);
+        const { lastRead, isMuted } = meta;
 
         const unreadCount = isMuted ? 0 : await prisma.message.count({
           where: {
@@ -54,32 +94,10 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
           }
         });
 
-        // Count unread thread replies across all threads in this channel
         let unreadThreadReplies = 0;
         if (!isMuted) {
-          // Get all parent messages that have replies in this channel
-          const threadParents = await prisma.message.findMany({
-            where: {
-              channelId: channel.id,
-              parentId: null,
-              replies: { some: {} }
-            },
-            select: { id: true }
-          });
-
-          if (threadParents.length > 0) {
-            const parentIds = threadParents.map(m => m.id);
-
-            // Get user's ThreadRead records for these threads
-            const threadReads = await prisma.threadRead.findMany({
-              where: {
-                userId: req.user.id,
-                messageId: { in: parentIds }
-              }
-            });
-            const threadReadMap = Object.fromEntries(threadReads.map(tr => [tr.messageId, tr.lastRead]));
-
-            // Count unread replies per thread
+          const parentIds = threadParentsByChannel.get(channel.id) || [];
+          if (parentIds.length > 0) {
             const counts = await Promise.all(parentIds.map(async (parentId) => {
               const threadLastRead = threadReadMap[parentId] || lastRead;
               return prisma.message.count({

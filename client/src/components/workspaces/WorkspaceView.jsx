@@ -290,11 +290,12 @@ function WorkspaceView() {
   };
 
   const handleChannelDeleted = ({ channelId }) => {
-    setChannels(prev => prev.filter(c => c.id !== channelId));
-    if (selectedChannel?.id === channelId) {
-      const remaining = channels.filter(c => c.id !== channelId);
-      setSelectedChannel(remaining[0] || null);
-    }
+    setChannels(prev => {
+      const remaining = prev.filter(c => c.id !== channelId);
+      // If the deleted channel was selected, pick the first remaining
+      setSelectedChannel(sel => sel?.id === channelId ? (remaining[0] || null) : sel);
+      return remaining;
+    });
   };
 
   const handleChannelMoved = ({ channelId, groupId, position }) => {

@@ -3,7 +3,7 @@
  * Manages user authentication state, login/logout, and session persistence.
  */
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 
 /**
@@ -70,8 +70,13 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    await api.logout();
-    setUser(null);
+    try {
+      await api.logout();
+    } catch (err) {
+      console.error('Logout API failed:', err);
+    } finally {
+      setUser(null);
+    }
   };
 
   const googleLogin = async (credential) => {
@@ -84,7 +89,7 @@ export function AuthProvider({ children }) {
     setUser(prev => ({ ...prev, ...userData }));
   };
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     loading,
     signup,
@@ -93,7 +98,7 @@ export function AuthProvider({ children }) {
     logout,
     updateUser,
     isAuthenticated: !!user
-  };
+  }), [user, loading]);
 
   return (
     <AuthContext.Provider value={value}>

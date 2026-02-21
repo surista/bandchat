@@ -130,6 +130,18 @@ router.get('/:medleyId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Medley not found' });
     }
 
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: medley.workspaceId
+        }
+      }
+    });
+    if (!member) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
     res.json({
       ...medley,
       totalDuration: medley.songs.reduce((sum, ms) => sum + (ms.song.duration || 0), 0),
@@ -152,6 +164,18 @@ router.put('/:medleyId', authenticate, async (req, res) => {
 
     if (!existing) {
       return res.status(404).json({ error: 'Medley not found' });
+    }
+
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: existing.workspaceId
+        }
+      }
+    });
+    if (!member) {
+      return res.status(403).json({ error: 'Not a workspace member' });
     }
 
     // If songIds provided, update the songs
@@ -233,6 +257,18 @@ router.put('/:medleyId/reorder', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Medley not found' });
     }
 
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: medley.workspaceId
+        }
+      }
+    });
+    if (!member) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
     // Update positions
     for (let i = 0; i < songIds.length; i++) {
       await prisma.medleySong.updateMany({
@@ -283,6 +319,18 @@ router.delete('/:medleyId', authenticate, async (req, res) => {
 
     if (!medley) {
       return res.status(404).json({ error: 'Medley not found' });
+    }
+
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: medley.workspaceId
+        }
+      }
+    });
+    if (!member) {
+      return res.status(403).json({ error: 'Not a workspace member' });
     }
 
     await prisma.medley.delete({

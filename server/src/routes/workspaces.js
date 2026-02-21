@@ -449,8 +449,8 @@ router.post('/:workspaceId/members/:userId/reset-password', authenticate, isWork
       return res.status(400).json({ error: 'Admin password is required for verification' });
     }
 
-    if (!newPassword || newPassword.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    if (!newPassword || newPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
 
     // Verify admin's password before allowing reset

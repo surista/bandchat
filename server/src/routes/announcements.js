@@ -110,6 +110,20 @@ router.get('/:announcementId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Announcement not found' });
     }
 
+    // Verify workspace membership
+    const membership = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: announcement.workspaceId
+        }
+      }
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
     res.json({
       ...announcement,
       isAcknowledged: announcement.acknowledgments.some(ack => ack.user.id === req.user.id)
@@ -183,6 +197,20 @@ router.post('/:announcementId/acknowledge', authenticate, async (req, res) => {
 
     if (!announcement) {
       return res.status(404).json({ error: 'Announcement not found' });
+    }
+
+    // Verify workspace membership
+    const membership = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: announcement.workspaceId
+        }
+      }
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
     }
 
     // Check if already acknowledged

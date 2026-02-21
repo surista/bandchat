@@ -17,6 +17,7 @@ model User {
   emailVerified           Boolean   @default(false)
   verificationToken       String?   @unique
   verificationExpires     DateTime?
+  pendingEmail            String?
   passwordResetToken      String?   @unique
   passwordResetExpires    DateTime?
   googleId                String?   @unique

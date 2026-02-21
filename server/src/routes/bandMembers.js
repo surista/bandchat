@@ -151,6 +151,20 @@ router.get('/:memberId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Band member not found' });
     }
 
+    // Verify workspace membership
+    const membership = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: member.workspaceId
+        }
+      }
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
     res.json(member);
   } catch (error) {
     console.error('Get band member error:', error);

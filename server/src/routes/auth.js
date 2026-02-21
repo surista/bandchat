@@ -83,7 +83,7 @@ const generateTokens = async (userId) => {
   const accessToken = jwt.sign(
     { userId },
     process.env.JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: '15m' }
   );
 
   const refreshToken = jwt.sign(
@@ -698,8 +698,7 @@ router.post('/change-email', authenticate, async (req, res) => {
       data: {
         verificationToken,
         verificationExpires,
-        // Store pending email in a way we can retrieve it
-        // We'll encode it in the token verification process
+        pendingEmail: newEmail.toLowerCase()
       }
     });
 
@@ -734,10 +733,10 @@ router.post('/change-email', authenticate, async (req, res) => {
 // Verify email change
 router.post('/verify-email-change', async (req, res) => {
   try {
-    const { token, email } = req.body;
+    const { token } = req.body;
 
-    if (!token || !email) {
-      return res.status(400).json({ error: 'Token and email are required' });
+    if (!token) {
+      return res.status(400).json({ error: 'Token is required' });
     }
 
     const user = await prisma.user.findUnique({
@@ -752,21 +751,26 @@ router.post('/verify-email-change', async (req, res) => {
       return res.status(400).json({ error: 'Verification token has expired' });
     }
 
+    if (!user.pendingEmail) {
+      return res.status(400).json({ error: 'No pending email change' });
+    }
+
     // Check if email is still available
     const existingUser = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() }
+      where: { email: user.pendingEmail }
     });
 
     if (existingUser) {
       return res.status(400).json({ error: 'Email is already in use' });
     }
 
-    // Update email
+    // Update email using server-stored pendingEmail, not client-supplied value
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
       data: {
-        email: email.toLowerCase(),
+        email: user.pendingEmail,
         emailVerified: true,
+        pendingEmail: null,
         verificationToken: null,
         verificationExpires: null
       },
@@ -866,19 +870,20 @@ router.post('/forgot-password', authLimiter, async (req, res) => {
       return res.json({ message: 'If an account exists with this email, a reset link has been sent.' });
     }
 
-    // Generate reset token
+    // Generate reset token and hash it before storage
     const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedResetToken = hashRefreshToken(resetToken);
     const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        passwordResetToken: resetToken,
+        passwordResetToken: hashedResetToken,
         passwordResetExpires: resetExpires
       }
     });
 
-    // Send reset email
+    // Send unhashed token to user via email
     await sendPasswordResetEmail(user.email, resetToken);
 
     res.json({ message: 'If an account exists with this email, a reset link has been sent.' });
@@ -901,9 +906,11 @@ router.post('/reset-password', authLimiter, async (req, res) => {
       return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
     }
 
+    // Hash the incoming token to compare against stored hash
+    const hashedToken = hashRefreshToken(token);
     const user = await prisma.user.findFirst({
       where: {
-        passwordResetToken: token,
+        passwordResetToken: hashedToken,
         passwordResetExpires: { gt: new Date() }
       }
     });
@@ -945,9 +952,10 @@ router.get('/verify-reset-token', async (req, res) => {
       return res.status(400).json({ valid: false, error: 'Token is required' });
     }
 
+    const hashedVerifyToken = hashRefreshToken(token);
     const user = await prisma.user.findFirst({
       where: {
-        passwordResetToken: token,
+        passwordResetToken: hashedVerifyToken,
         passwordResetExpires: { gt: new Date() }
       }
     });

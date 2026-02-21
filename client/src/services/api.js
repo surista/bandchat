@@ -32,6 +32,7 @@ class ApiService {
   constructor() {
     this.accessToken = localStorage.getItem('accessToken');
     this.refreshToken = localStorage.getItem('refreshToken');
+    this._refreshPromise = null;
   }
 
   setTokens(accessToken, refreshToken) {
@@ -65,9 +66,14 @@ class ApiService {
         headers
       });
 
-      // Handle token expiration
+      // Handle token expiration with lock to prevent concurrent refreshes
       if (response.status === 401 && this.refreshToken) {
-        const refreshed = await this.refreshAccessToken();
+        if (!this._refreshPromise) {
+          this._refreshPromise = this.refreshAccessToken().finally(() => {
+            this._refreshPromise = null;
+          });
+        }
+        const refreshed = await this._refreshPromise;
         if (refreshed) {
           headers['Authorization'] = `Bearer ${this.accessToken}`;
           const retryResponse = await fetch(url, { ...options, headers });
@@ -181,10 +187,10 @@ class ApiService {
     });
   }
 
-  async verifyEmailChange(token, email) {
+  async verifyEmailChange(token) {
     return this.request('/auth/verify-email-change', {
       method: 'POST',
-      body: JSON.stringify({ token, email })
+      body: JSON.stringify({ token })
     });
   }
 

@@ -13,16 +13,15 @@ function VerifyEmailChange() {
   useEffect(() => {
     const verifyEmail = async () => {
       const token = searchParams.get('token');
-      const email = searchParams.get('email');
 
-      if (!token || !email) {
+      if (!token) {
         setStatus('error');
-        setMessage('Invalid verification link. Missing token or email.');
+        setMessage('Invalid verification link. Missing token.');
         return;
       }
 
       try {
-        const result = await api.verifyEmailChange(token, email);
+        const result = await api.verifyEmailChange(token);
         setStatus('success');
         setMessage('Your email has been updated successfully!');
         // Update the user context with new email

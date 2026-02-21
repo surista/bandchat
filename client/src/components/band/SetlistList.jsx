@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import api from '../../services/api';
+import { escapeHtml } from '../../utils/escapeHtml';
 import SetlistBuilder from './SetlistBuilder';
 
 function SetlistList({ workspaceId }) {
@@ -366,21 +367,21 @@ function SetlistList({ workspaceId }) {
           }
         }
         setlistHtml += `
-          <div class="set-header">${item.label || `Set ${currentSetNumber}`}</div>
+          <div class="set-header">${escapeHtml(item.label) || `Set ${currentSetNumber}`}</div>
           <ol class="song-list">
         `;
       } else if (item.type === 'MC') {
         setlistHtml += `
           <li class="mc-item">
-            <span class="mc-label">🎤 ${item.label || 'MC'}</span>
+            <span class="mc-label">🎤 ${escapeHtml(item.label) || 'MC'}</span>
             <span class="duration">${formatDuration(item.duration || 60)}</span>
           </li>
         `;
       } else {
         const song = item.song;
-        const songName = song?.title || 'Unknown';
-        const artist = song?.artist || '';
-        const key = song?.key || '';
+        const songName = escapeHtml(song?.title) || 'Unknown';
+        const artist = song?.artist ? escapeHtml(song.artist) : '';
+        const key = song?.key ? escapeHtml(song.key) : '';
         const duration = song?.duration ? formatDuration(song.duration) : '';
 
         setlistHtml += `
@@ -408,7 +409,7 @@ function SetlistList({ workspaceId }) {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>${setlist.name} - Setlist</title>
+        <title>${escapeHtml(setlist.name)} - Setlist</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body {
@@ -487,8 +488,8 @@ function SetlistList({ workspaceId }) {
       </head>
       <body>
         <div class="header">
-          ${setlist.venue ? `<div class="venue">${setlist.venue}</div>` : ''}
-          <div class="setlist-name">${setlist.name}</div>
+          ${setlist.venue ? `<div class="venue">${escapeHtml(setlist.venue)}</div>` : ''}
+          <div class="setlist-name">${escapeHtml(setlist.name)}</div>
           ${timeRangeStr ? `<div class="time-range">${timeRangeStr}</div>` : ''}
         </div>
         <div class="content">${setlistHtml}</div>

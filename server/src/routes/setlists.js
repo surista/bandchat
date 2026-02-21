@@ -127,6 +127,19 @@ router.get('/:setlistId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Setlist not found' });
     }
 
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: setlist.workspaceId
+        }
+      }
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
     // Transform performers
     res.json({
       ...setlist,
@@ -142,6 +155,27 @@ router.get('/:setlistId', authenticate, async (req, res) => {
 router.put('/:setlistId', authenticate, async (req, res) => {
   try {
     const { name, description, useShortNames, performedAt, venue, startTime } = req.body;
+
+    const existing = await prisma.setlist.findUnique({
+      where: { id: req.params.setlistId }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Setlist not found' });
+    }
+
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: existing.workspaceId
+        }
+      }
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
 
     const setlist = await prisma.setlist.update({
       where: { id: req.params.setlistId },
@@ -185,6 +219,19 @@ router.delete('/:setlistId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Setlist not found' });
     }
 
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: setlist.workspaceId
+        }
+      }
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
     await prisma.setlist.delete({
       where: { id: req.params.setlistId }
     });
@@ -216,6 +263,19 @@ router.post('/:setlistId/duplicate', authenticate, async (req, res) => {
 
     if (!source) {
       return res.status(404).json({ error: 'Setlist not found' });
+    }
+
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: source.workspaceId
+        }
+      }
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: 'Not a workspace member' });
     }
 
     // Create new setlist with copied data
@@ -268,6 +328,22 @@ router.post('/:setlistId/duplicate', authenticate, async (req, res) => {
 // Add a song to a setlist
 router.post('/:setlistId/songs', authenticate, async (req, res) => {
   try {
+    const setlist = await prisma.setlist.findUnique({ where: { id: req.params.setlistId } });
+    if (!setlist) return res.status(404).json({ error: 'Setlist not found' });
+
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: setlist.workspaceId
+        }
+      }
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
     const { songId } = req.body;
 
     if (!songId) {
@@ -294,10 +370,6 @@ router.post('/:setlistId/songs', authenticate, async (req, res) => {
       }
     });
 
-    const setlist = await prisma.setlist.findUnique({
-      where: { id: req.params.setlistId }
-    });
-
     const io = req.app.get('io');
     io.to(`workspace:${setlist.workspaceId}`).emit('setlist:songAdded', {
       setlistId: req.params.setlistId,
@@ -317,6 +389,22 @@ router.post('/:setlistId/songs', authenticate, async (req, res) => {
 // Add an MC break to a setlist
 router.post('/:setlistId/mc', authenticate, async (req, res) => {
   try {
+    const setlist = await prisma.setlist.findUnique({ where: { id: req.params.setlistId } });
+    if (!setlist) return res.status(404).json({ error: 'Setlist not found' });
+
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: setlist.workspaceId
+        }
+      }
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
     const { duration = 60, label = 'MC' } = req.body;
 
     // Get current max position
@@ -337,10 +425,6 @@ router.post('/:setlistId/mc', authenticate, async (req, res) => {
       }
     });
 
-    const setlist = await prisma.setlist.findUnique({
-      where: { id: req.params.setlistId }
-    });
-
     const io = req.app.get('io');
     io.to(`workspace:${setlist.workspaceId}`).emit('setlist:itemAdded', {
       setlistId: req.params.setlistId,
@@ -357,6 +441,22 @@ router.post('/:setlistId/mc', authenticate, async (req, res) => {
 // Add a Set Break/divider to a setlist
 router.post('/:setlistId/set-break', authenticate, async (req, res) => {
   try {
+    const setlist = await prisma.setlist.findUnique({ where: { id: req.params.setlistId } });
+    if (!setlist) return res.status(404).json({ error: 'Setlist not found' });
+
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: setlist.workspaceId
+        }
+      }
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
     const { label = 'Set Break', duration = 900 } = req.body;
 
     // Get current max position
@@ -375,10 +475,6 @@ router.post('/:setlistId/set-break', authenticate, async (req, res) => {
         label,
         duration
       }
-    });
-
-    const setlist = await prisma.setlist.findUnique({
-      where: { id: req.params.setlistId }
     });
 
     const io = req.app.get('io');
@@ -403,16 +499,6 @@ router.put('/:setlistId/reorder', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'itemIds array is required' });
     }
 
-    // Update positions in a transaction
-    await prisma.$transaction(
-      itemIds.map((itemId, index) =>
-        prisma.setlistSong.update({
-          where: { id: itemId },
-          data: { position: index }
-        })
-      )
-    );
-
     const setlist = await prisma.setlist.findUnique({
       where: { id: req.params.setlistId },
       include: {
@@ -423,10 +509,48 @@ router.put('/:setlistId/reorder', authenticate, async (req, res) => {
       }
     });
 
-    const io = req.app.get('io');
-    io.to(`workspace:${setlist.workspaceId}`).emit('setlist:reordered', setlist);
+    if (!setlist) {
+      return res.status(404).json({ error: 'Setlist not found' });
+    }
 
-    res.json(setlist);
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: setlist.workspaceId
+        }
+      }
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    // Update positions in a transaction
+    await prisma.$transaction(
+      itemIds.map((itemId, index) =>
+        prisma.setlistSong.update({
+          where: { id: itemId },
+          data: { position: index }
+        })
+      )
+    );
+
+    // Re-fetch with updated positions
+    const updatedSetlist = await prisma.setlist.findUnique({
+      where: { id: req.params.setlistId },
+      include: {
+        songs: {
+          include: { song: true },
+          orderBy: { position: 'asc' }
+        }
+      }
+    });
+
+    const io = req.app.get('io');
+    io.to(`workspace:${updatedSetlist.workspaceId}`).emit('setlist:reordered', updatedSetlist);
+
+    res.json(updatedSetlist);
   } catch (error) {
     console.error('Reorder setlist error:', error);
     res.status(500).json({ error: 'Failed to reorder setlist' });
@@ -442,6 +566,19 @@ router.delete('/:setlistId/songs/:songId', authenticate, async (req, res) => {
 
     if (!setlist) {
       return res.status(404).json({ error: 'Setlist not found' });
+    }
+
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: setlist.workspaceId
+        }
+      }
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: 'Not a workspace member' });
     }
 
     await prisma.setlistSong.deleteMany({
@@ -813,6 +950,19 @@ router.delete('/:setlistId/items/:itemId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Setlist not found' });
     }
 
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: setlist.workspaceId
+        }
+      }
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
     await prisma.setlistSong.delete({
       where: { id: req.params.itemId }
     });
@@ -833,6 +983,22 @@ router.delete('/:setlistId/items/:itemId', authenticate, async (req, res) => {
 // Get performers for a setlist
 router.get('/:setlistId/performers', authenticate, async (req, res) => {
   try {
+    const setlist = await prisma.setlist.findUnique({ where: { id: req.params.setlistId } });
+    if (!setlist) return res.status(404).json({ error: 'Setlist not found' });
+
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: setlist.workspaceId
+        }
+      }
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
     const performers = await prisma.setlistPerformer.findMany({
       where: { setlistId: req.params.setlistId },
       include: {
@@ -864,6 +1030,19 @@ router.put('/:setlistId/performers', authenticate, async (req, res) => {
 
     if (!setlist) {
       return res.status(404).json({ error: 'Setlist not found' });
+    }
+
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: setlist.workspaceId
+        }
+      }
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: 'Not a workspace member' });
     }
 
     // Delete existing performers and create new ones

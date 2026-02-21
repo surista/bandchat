@@ -3,7 +3,7 @@
  * Manages WebSocket connection, room joining, and typing indicators.
  */
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import api from '../services/api';
@@ -64,12 +64,8 @@ export function SocketProvider({ children }) {
 
       return () => {
         newSocket.disconnect();
-      };
-    } else {
-      if (socket) {
-        socket.disconnect();
         setSocket(null);
-      }
+      };
     }
   }, [isAuthenticated]);
 
@@ -103,7 +99,7 @@ export function SocketProvider({ children }) {
     }
   };
 
-  const value = {
+  const value = useMemo(() => ({
     socket,
     connected,
     joinChannel,
@@ -111,7 +107,7 @@ export function SocketProvider({ children }) {
     startTyping,
     stopTyping,
     joinWorkspace
-  };
+  }), [socket, connected]);
 
   return (
     <SocketContext.Provider value={value}>

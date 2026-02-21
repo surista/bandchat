@@ -21,6 +21,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import api from '../../services/api';
+import { escapeHtml } from '../../utils/escapeHtml';
 
 // Helper to split items into sets based on SET_BREAK markers
 function splitIntoSets(items) {
@@ -729,20 +730,20 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
           ? ` <span class="set-time">${formatTime12h(setTimings[printSetIndex].start)} – ${formatTime12h(setTimings[printSetIndex].end)}</span>`
           : '';
         setlistHtml += `
-          <div class="set-header">${item.label || `Set ${currentSetNumber}`}${setTimeStr}</div>
+          <div class="set-header">${escapeHtml(item.label) || `Set ${currentSetNumber}`}${setTimeStr}</div>
           <ol class="song-list">
         `;
       } else if (item.type === 'MC') {
         setlistHtml += `
           <li class="mc-item">
-            <span class="mc-label">🎤 ${item.label || 'MC'}</span>
+            <span class="mc-label">🎤 ${escapeHtml(item.label) || 'MC'}</span>
             <span class="duration">${formatDuration(item.duration || 60)}</span>
           </li>
         `;
       } else {
-        const songName = getSongDisplayName(item.song);
-        const artist = !useShortNames && item.song?.artist ? item.song.artist : '';
-        const key = item.song?.key || '';
+        const songName = escapeHtml(getSongDisplayName(item.song));
+        const artist = !useShortNames && item.song?.artist ? escapeHtml(item.song.artist) : '';
+        const key = item.song?.key ? escapeHtml(item.song.key) : '';
         const duration = item.song?.duration ? formatDuration(item.song.duration) : '';
 
         setlistHtml += `
@@ -772,7 +773,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>${setlist.name} - Setlist</title>
+        <title>${escapeHtml(setlist.name)} - Setlist</title>
         <style>
           * {
             margin: 0;
@@ -904,8 +905,8 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
       </head>
       <body>
         <div class="header">
-          ${setlist.venue ? `<div class="venue">${setlist.venue}</div>` : ''}
-          <div class="setlist-name">${setlist.name}</div>
+          ${setlist.venue ? `<div class="venue">${escapeHtml(setlist.venue)}</div>` : ''}
+          <div class="setlist-name">${escapeHtml(setlist.name)}</div>
           ${timeRangeStr ? `<div class="time-range">${timeRangeStr}</div>` : ''}
         </div>
 

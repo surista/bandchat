@@ -177,6 +177,10 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
       return res.status(400).json({ error: 'Message content or attachments required' });
     }
 
+    if (content && content.length > 10000) {
+      return res.status(400).json({ error: 'Message too long (max 10,000 characters)' });
+    }
+
     // If this is a reply, verify parent message exists and is in same channel
     if (parentId) {
       const parentMessage = await prisma.message.findUnique({
@@ -241,7 +245,7 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
     }
 
     // Extract mentions and notify
-    const mentions = content.match(/@(\w+)/g);
+    const mentions = content?.match(/@(\w+)/g);
     if (mentions) {
       const channel = req.channel;
       const workspaceMembers = await prisma.workspaceMember.findMany({
@@ -289,6 +293,14 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
 router.put('/:messageId', authenticate, async (req, res) => {
   try {
     const { content } = req.body;
+
+    if (!content || typeof content !== 'string' || !content.trim()) {
+      return res.status(400).json({ error: 'Message content is required' });
+    }
+
+    if (content.length > 10000) {
+      return res.status(400).json({ error: 'Message too long (max 10,000 characters)' });
+    }
 
     const message = await prisma.message.findUnique({
       where: { id: req.params.messageId }

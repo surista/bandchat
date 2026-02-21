@@ -199,11 +199,12 @@ export const setupSocketHandlers = (io) => {
       console.log(`${user.displayName} left channel ${channelId}`);
     });
 
-    // Handle typing indicator
+    // Handle typing indicator (verify socket is in the channel room)
     socket.on('typing:start', async (channelId) => {
       if (!rateLimiter.isAllowed(user.id, 'typing:start', RATE_LIMITS['typing:start'].max, RATE_LIMITS['typing:start'].windowMs)) {
         return;
       }
+      if (!socket.rooms.has(`channel:${channelId}`)) return;
       socket.to(`channel:${channelId}`).emit('typing:start', {
         channelId,
         user: {
@@ -217,17 +218,20 @@ export const setupSocketHandlers = (io) => {
       if (!rateLimiter.isAllowed(user.id, 'typing:stop', RATE_LIMITS['typing:stop'].max, RATE_LIMITS['typing:stop'].windowMs)) {
         return;
       }
+      if (!socket.rooms.has(`channel:${channelId}`)) return;
       socket.to(`channel:${channelId}`).emit('typing:stop', {
         channelId,
         userId: user.id
       });
     });
 
-    // Handle presence updates
+    // Handle presence updates (validate status against allowed values)
+    const VALID_STATUSES = ['online', 'away', 'busy', 'offline'];
     socket.on('presence:update', async (status) => {
       if (!rateLimiter.isAllowed(user.id, 'presence:update', RATE_LIMITS['presence:update'].max, RATE_LIMITS['presence:update'].windowMs)) {
         return;
       }
+      if (!VALID_STATUSES.includes(status)) return;
       // Broadcast to all workspaces user is in
       memberships.forEach(membership => {
         socket.to(`workspace:${membership.workspaceId}`).emit('presence:updated', {
