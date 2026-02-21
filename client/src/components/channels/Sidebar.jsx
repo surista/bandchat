@@ -555,7 +555,7 @@ function Sidebar({
         }}
       />
       {/* Workspace Header */}
-      <div className="p-4 border-b border-white/10">
+      <div className="p-4 border-b border-white/10 safe-area-top">
         <button
           onClick={() => navigate('/')}
           className="flex items-center gap-2 w-full hover:bg-slack-hover rounded p-1 transition-colors"
