@@ -8,6 +8,7 @@ import { format, isToday, isYesterday } from 'date-fns';
 import ReactionDisplay from './ReactionDisplay';
 import ReactionPicker from './ReactionPicker';
 import ConfirmDialog from '../common/ConfirmDialog';
+import ImageLightbox from '../common/ImageLightbox';
 
 /**
  * Renders a list of messages with date headers, reactions, and action buttons.
@@ -36,6 +37,7 @@ function MessageList({
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState(null);
   const [activeMessageId, setActiveMessageId] = useState(null); // For mobile tap-to-reveal actions
   const [deleteMessageId, setDeleteMessageId] = useState(null); // For delete confirmation dialog
+  const [lightboxImage, setLightboxImage] = useState(null);
 
   const formatMessageTime = (date) => {
     const d = new Date(date);
@@ -143,8 +145,9 @@ function MessageList({
               <img
                 src={part}
                 alt="Shared image"
-                className="max-w-full md:max-w-md max-h-80 rounded"
+                className="max-w-full md:max-w-md max-h-80 rounded cursor-pointer"
                 loading="lazy"
+                onClick={() => setLightboxImage({ src: part, alt: 'Shared image' })}
               />
             </div>
           );
@@ -319,7 +322,7 @@ function MessageList({
                             alt={att.filename}
                             className="max-w-full md:max-w-md max-h-80 rounded cursor-pointer"
                             loading="lazy"
-                            onClick={() => window.open(att.url, '_blank')}
+                            onClick={() => setLightboxImage({ src: att.url, alt: att.filename })}
                           />
                           {/* Download button - always visible on mobile, hover on desktop */}
                           <div className="absolute bottom-2 right-2 opacity-100 sm:opacity-0 sm:group-hover/img:opacity-100 transition-opacity flex gap-1">
@@ -506,6 +509,13 @@ function MessageList({
       }}
       onCancel={() => setDeleteMessageId(null)}
     />
+    {lightboxImage && (
+      <ImageLightbox
+        src={lightboxImage.src}
+        alt={lightboxImage.alt}
+        onClose={() => setLightboxImage(null)}
+      />
+    )}
     </>
   );
 }

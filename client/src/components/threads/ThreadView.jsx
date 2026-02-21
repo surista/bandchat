@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import ReactionDisplay from '../messages/ReactionDisplay';
 import ReactionPicker from '../messages/ReactionPicker';
+import ImageLightbox from '../common/ImageLightbox';
 
 const handleDownload = async (url, filename) => {
   try {
@@ -49,6 +50,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [fileError, setFileError] = useState('');
+  const [lightboxImage, setLightboxImage] = useState(null);
   const repliesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -390,7 +392,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
                                 alt={att.filename}
                                 className="max-w-sm max-h-60 rounded cursor-pointer"
                                 loading="lazy"
-                                onClick={() => window.open(att.url, '_blank')}
+                                onClick={() => setLightboxImage({ src: att.url, alt: att.filename })}
                               />
                               <div className="absolute bottom-2 right-2 opacity-0 group-hover/img:opacity-100 transition-opacity">
                                 <button
@@ -569,6 +571,13 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
           </div>
         </div>
       </form>
+      {lightboxImage && (
+        <ImageLightbox
+          src={lightboxImage.src}
+          alt={lightboxImage.alt}
+          onClose={() => setLightboxImage(null)}
+        />
+      )}
     </div>
   );
 }
