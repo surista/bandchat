@@ -50,7 +50,18 @@ const io = new Server(httpServer, {
 
 // Middleware
 app.use(helmet({
-  contentSecurityPolicy: false, // CSP can break frontend assets; configure per-deployment
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://*.googleusercontent.com"],
+      connectSrc: ["'self'", "wss:", "ws:", ...allowedOrigins],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"]
+    }
+  },
   crossOriginEmbedderPolicy: false // Allow embedding external resources (Cloudinary images, etc.)
 }));
 app.use(cors({
@@ -93,6 +104,12 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Global error handler (must be after all routes)
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
 // Socket.io setup
 setupSocketHandlers(io);
 
@@ -101,5 +118,22 @@ const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+// Graceful shutdown
+const gracefulShutdown = (signal) => {
+  console.log(`${signal} received. Shutting down gracefully...`);
+  httpServer.close(() => {
+    console.log('HTTP server closed');
+    process.exit(0);
+  });
+  // Force close after 10 seconds
+  setTimeout(() => {
+    console.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 export { io };

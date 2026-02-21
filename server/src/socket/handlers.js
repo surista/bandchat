@@ -225,6 +225,17 @@ export const setupSocketHandlers = (io) => {
       });
     });
 
+    // Helper to get current workspace IDs from socket rooms
+    const getWorkspaceRooms = () => {
+      const rooms = [];
+      for (const room of socket.rooms) {
+        if (room.startsWith('workspace:')) {
+          rooms.push(room.replace('workspace:', ''));
+        }
+      }
+      return rooms;
+    };
+
     // Handle presence updates (validate status against allowed values)
     const VALID_STATUSES = ['online', 'away', 'busy', 'offline'];
     socket.on('presence:update', async (status) => {
@@ -232,9 +243,10 @@ export const setupSocketHandlers = (io) => {
         return;
       }
       if (!VALID_STATUSES.includes(status)) return;
-      // Broadcast to all workspaces user is in
-      memberships.forEach(membership => {
-        socket.to(`workspace:${membership.workspaceId}`).emit('presence:updated', {
+      // Broadcast to all workspaces user is currently in (from socket rooms, not stale closure)
+      const workspaceIds = getWorkspaceRooms();
+      workspaceIds.forEach(workspaceId => {
+        socket.to(`workspace:${workspaceId}`).emit('presence:updated', {
           userId: user.id,
           status
         });
@@ -280,9 +292,10 @@ export const setupSocketHandlers = (io) => {
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${user.displayName}`);
 
-      // Notify workspaces about offline status
-      memberships.forEach(membership => {
-        socket.to(`workspace:${membership.workspaceId}`).emit('presence:updated', {
+      // Notify workspaces about offline status (from socket rooms, not stale closure)
+      const workspaceIds = getWorkspaceRooms();
+      workspaceIds.forEach(workspaceId => {
+        socket.to(`workspace:${workspaceId}`).emit('presence:updated', {
           userId: user.id,
           status: 'offline'
         });

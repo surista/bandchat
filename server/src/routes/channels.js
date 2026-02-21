@@ -496,17 +496,39 @@ router.get('/workspace/:workspaceId/dms', authenticate, isWorkspaceMember, async
       orderBy: { updatedAt: 'desc' }
     });
 
+    // Batch: fetch all DM thread parents and thread reads in 2 queries (instead of N+N)
+    const dmIds = dms.map(dm => dm.id);
+    const [allDmThreadParents, allDmThreadReads] = await Promise.all([
+      dmIds.length > 0
+        ? prisma.message.findMany({
+            where: {
+              channelId: { in: dmIds },
+              parentId: null,
+              replies: { some: {} }
+            },
+            select: { id: true, channelId: true }
+          })
+        : [],
+      prisma.threadRead.findMany({
+        where: { userId: req.user.id }
+      })
+    ]);
+
+    // Build lookup maps
+    const dmThreadParentsByChannel = new Map();
+    allDmThreadParents.forEach(tp => {
+      if (!dmThreadParentsByChannel.has(tp.channelId)) {
+        dmThreadParentsByChannel.set(tp.channelId, []);
+      }
+      dmThreadParentsByChannel.get(tp.channelId).push(tp.id);
+    });
+    const dmThreadReadMap = Object.fromEntries(allDmThreadReads.map(tr => [tr.messageId, tr.lastRead]));
+
     // Add unread counts and format for frontend
     const dmsWithUnread = await Promise.all(
       dms.map(async (dm) => {
-        const userMembership = await prisma.channelMember.findUnique({
-          where: {
-            userId_channelId: {
-              userId: req.user.id,
-              channelId: dm.id
-            }
-          }
-        });
+        // Use the already-included membership data instead of a separate query
+        const userMembership = dm.members.find(m => m.user.id === req.user.id);
         const lastRead = userMembership?.lastRead || new Date(0);
         const isMuted = userMembership?.muted || false;
 
@@ -519,30 +541,12 @@ router.get('/workspace/:workspaceId/dms', authenticate, isWorkspaceMember, async
           }
         });
 
-        // Count unread thread replies in DMs
         let unreadThreadReplies = 0;
         if (!isMuted) {
-          const threadParents = await prisma.message.findMany({
-            where: {
-              channelId: dm.id,
-              parentId: null,
-              replies: { some: {} }
-            },
-            select: { id: true }
-          });
-
-          if (threadParents.length > 0) {
-            const parentIds = threadParents.map(m => m.id);
-            const threadReads = await prisma.threadRead.findMany({
-              where: {
-                userId: req.user.id,
-                messageId: { in: parentIds }
-              }
-            });
-            const threadReadMap = Object.fromEntries(threadReads.map(tr => [tr.messageId, tr.lastRead]));
-
+          const parentIds = dmThreadParentsByChannel.get(dm.id) || [];
+          if (parentIds.length > 0) {
             const counts = await Promise.all(parentIds.map(async (parentId) => {
-              const threadLastRead = threadReadMap[parentId] || lastRead;
+              const threadLastRead = dmThreadReadMap[parentId] || lastRead;
               return prisma.message.count({
                 where: {
                   parentId,
@@ -631,37 +635,65 @@ router.post('/workspace/:workspaceId/dm', authenticate, isWorkspaceMember, async
     });
 
     if (!dm) {
-      // Create new DM
-      dm = await prisma.channel.create({
-        data: {
-          name: dmName,
-          isDirect: true,
-          isPrivate: true,
-          workspaceId: req.params.workspaceId,
-          members: {
-            create: allUserIds.map(userId => ({ userId }))
-          }
-        },
-        include: {
-          members: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  displayName: true,
-                  avatarUrl: true
+      try {
+        // Create new DM
+        dm = await prisma.channel.create({
+          data: {
+            name: dmName,
+            isDirect: true,
+            isPrivate: true,
+            workspaceId: req.params.workspaceId,
+            members: {
+              create: allUserIds.map(userId => ({ userId }))
+            }
+          },
+          include: {
+            members: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    displayName: true,
+                    avatarUrl: true
+                  }
                 }
               }
             }
           }
-        }
-      });
+        });
 
-      // Notify all members about the new DM
-      const io = req.app.get('io');
-      allUserIds.forEach(userId => {
-        io.to(`user:${userId}`).emit('dm:created', dm);
-      });
+        // Notify all members about the new DM
+        const io = req.app.get('io');
+        allUserIds.forEach(userId => {
+          io.to(`user:${userId}`).emit('dm:created', dm);
+        });
+      } catch (createError) {
+        // Handle race condition: another request already created this DM
+        if (createError.code === 'P2002') {
+          dm = await prisma.channel.findFirst({
+            where: {
+              workspaceId: req.params.workspaceId,
+              isDirect: true,
+              name: dmName
+            },
+            include: {
+              members: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      displayName: true,
+                      avatarUrl: true
+                    }
+                  }
+                }
+              }
+            }
+          });
+        } else {
+          throw createError;
+        }
+      }
     }
 
     // Get other members for display

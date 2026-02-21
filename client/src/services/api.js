@@ -79,6 +79,9 @@ class ApiService {
           const retryResponse = await fetch(url, { ...options, headers });
           return this.handleResponse(retryResponse);
         }
+        // Refresh failed - redirect to login
+        window.location.href = '/login';
+        throw new Error('Session expired. Please log in again.');
       }
 
       return this.handleResponse(response);

@@ -34,6 +34,10 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const channelIdRef = useRef(channel.id);
+  channelIdRef.current = channel.id;
+  const userIdRef = useRef(user.id);
+  userIdRef.current = user.id;
   const openThreadIdRef = useRef(openThreadId);
   openThreadIdRef.current = openThreadId;
 
@@ -46,6 +50,9 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
 
     return () => {
       leaveChannel(channel.id);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
     };
   }, [channel.id]);
 
@@ -84,7 +91,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
         socket.off('reaction:removed', handleReactionRemoved);
       };
     }
-  }, [socket, channel.id]);
+  }, [socket]);
 
   const loadMessages = async () => {
     setLoading(true);
@@ -124,7 +131,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   };
 
   const handleNewMessage = (message) => {
-    if (message.channelId === channel.id) {
+    if (message.channelId === channelIdRef.current) {
       setMessages(prev => {
         // Check if this is confirming an optimistic message we sent
         const optimisticIndex = prev.findIndex(
@@ -144,8 +151,8 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       scrollToBottom();
 
       // Mark as read if it's not our message
-      if (message.author.id !== user.id) {
-        api.markChannelRead(channel.id);
+      if (message.author.id !== userIdRef.current) {
+        api.markChannelRead(channelIdRef.current);
       }
     }
   };
@@ -167,7 +174,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
           ? {
               ...m,
               _count: { replies: (m._count?.replies || 0) + 1 },
-              unreadReplies: (reply.author.id !== user.id && openThreadIdRef.current !== parentId)
+              unreadReplies: (reply.author.id !== userIdRef.current && openThreadIdRef.current !== parentId)
                 ? (m.unreadReplies || 0) + 1
                 : m.unreadReplies || 0
             }
@@ -177,7 +184,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   };
 
   const handleTypingStart = ({ channelId, user: typingUser }) => {
-    if (channelId === channel.id && typingUser.id !== user.id) {
+    if (channelId === channelIdRef.current && typingUser.id !== userIdRef.current) {
       setTypingUsers(prev => {
         if (!prev.find(u => u.id === typingUser.id)) {
           return [...prev, typingUser];
@@ -188,7 +195,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   };
 
   const handleTypingStop = ({ channelId, userId }) => {
-    if (channelId === channel.id) {
+    if (channelId === channelIdRef.current) {
       setTypingUsers(prev => prev.filter(u => u.id !== userId));
     }
   };

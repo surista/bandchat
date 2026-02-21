@@ -107,8 +107,9 @@ router.post('/workspace/:workspaceId/enrich', authenticate, isWorkspaceMember, a
       ...(songIds?.length > 0 && { id: { in: songIds } })
     };
 
-    const songs = await prisma.song.findMany({ where });
-    console.log(`Enriching ${songs.length} songs...`);
+    const MAX_ENRICH_BATCH = 50;
+    const songs = await prisma.song.findMany({ where, take: MAX_ENRICH_BATCH });
+    console.log(`Enriching ${songs.length} songs (max ${MAX_ENRICH_BATCH} per batch)...`);
 
     const results = {
       processed: 0,

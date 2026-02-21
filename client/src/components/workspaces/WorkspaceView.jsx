@@ -80,7 +80,7 @@ function WorkspaceView() {
       // Handle new messages for unread counts
       const handleNewMessage = (message) => {
         // Only increment unread if message is for a different channel than currently selected
-        if (message.channelId !== selectedChannel?.id) {
+        if (message.channelId !== selectedChannelRef.current?.id) {
           setChannels(prev =>
             prev.map(c =>
               c.id === message.channelId ? { ...c, unreadCount: (c.unreadCount || 0) + 1 } : c
@@ -97,7 +97,7 @@ function WorkspaceView() {
       // Handle thread replies for unread counts
       const handleReplyUnread = ({ parentId, message: reply }) => {
         if (reply.author.id === user.id) return;
-        const isThreadOpen = selectedThread?.id === parentId;
+        const isThreadOpen = selectedThreadRef.current?.id === parentId;
         // If the thread is open, ThreadView will mark it as read
         if (isThreadOpen) return;
         // Increment thread unread count for the channel
@@ -149,7 +149,7 @@ function WorkspaceView() {
         socket.io.off('reconnect', handleReconnect);
       };
     }
-  }, [socket, workspaceId, selectedChannel?.id, selectedThread?.id]);
+  }, [socket, workspaceId]);
 
   // Sidebar resize handling
   useEffect(() => {

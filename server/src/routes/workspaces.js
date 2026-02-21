@@ -458,6 +458,10 @@ router.post('/:workspaceId/members/:userId/reset-password', authenticate, isWork
       where: { id: req.user.id }
     });
 
+    if (!admin.password) {
+      return res.status(400).json({ error: 'Admin account uses Google Sign-In only. Please set a password first.' });
+    }
+
     const isValidPassword = await bcrypt.compare(adminPassword, admin.password);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid admin password' });
@@ -551,6 +555,13 @@ router.delete('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, a
         data: { removedUserName: `Removed User ${removedId}` }
       });
     } else if (postAction === 'merge' && mergeUserId) {
+      // Validate mergeUserId is a member of this workspace
+      const mergeTarget = await prisma.workspaceMember.findUnique({
+        where: { userId_workspaceId: { userId: mergeUserId, workspaceId } }
+      });
+      if (!mergeTarget) {
+        return res.status(400).json({ error: 'Merge target user is not a member of this workspace' });
+      }
       // Transfer all messages to another user
       await prisma.message.updateMany({
         where: {
@@ -812,7 +823,12 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
 });
 
 // DEBUG: Diagnose gig count issues for current user (easy access)
-router.get('/:workspaceId/debug-my-gigs', authenticate, isWorkspaceMember, async (req, res) => {
+router.get('/:workspaceId/debug-my-gigs', authenticate, isWorkspaceMember, (req, res, next) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  next();
+}, async (req, res) => {
   // Redirect to the full debug endpoint with current user's ID
   req.params.userId = req.user.id;
   // Fall through to the next handler
@@ -898,7 +914,12 @@ router.get('/:workspaceId/debug-my-gigs', authenticate, isWorkspaceMember, async
 });
 
 // DEBUG: Diagnose gig count issues for a member
-router.get('/:workspaceId/members/:userId/debug-gigs', authenticate, isWorkspaceMember, async (req, res) => {
+router.get('/:workspaceId/members/:userId/debug-gigs', authenticate, isWorkspaceMember, (req, res, next) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  next();
+}, async (req, res) => {
   try {
     const { workspaceId, userId } = req.params;
 

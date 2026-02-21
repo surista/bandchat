@@ -58,7 +58,9 @@ const validateDisplayName = (displayName) => {
 // Send verification email
 const sendVerificationEmail = async (email, token) => {
   if (!resend) {
-    console.log('Email not configured. Verification token:', token);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Email not configured. Verification token:', token);
+    }
     return;
   }
 
@@ -364,7 +366,7 @@ router.post('/google', authLimiter, async (req, res) => {
         avatarUrl: picture,
         googleId,
         authProvider: 'google',
-        emailVerified: email_verified || true,
+        emailVerified: email_verified === true,
         password: null
       },
       select: {
@@ -488,13 +490,6 @@ router.post('/refresh', authLimiter, async (req, res) => {
     let storedToken = await prisma.refreshToken.findUnique({
       where: { token: hashedToken }
     });
-
-    // Migration fallback: check for unhashed token (legacy tokens before v1.02.86)
-    if (!storedToken) {
-      storedToken = await prisma.refreshToken.findUnique({
-        where: { token: refreshToken }
-      });
-    }
 
     if (!storedToken) {
       return res.status(401).json({ error: 'Refresh token has been revoked' });
@@ -720,7 +715,9 @@ router.post('/change-email', authenticate, async (req, res) => {
         `
       });
     } else {
-      console.log('Email not configured. Verification token:', verificationToken);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Email not configured. Verification token:', verificationToken);
+      }
     }
 
     res.json({ message: 'Verification email sent to ' + newEmail });
@@ -826,7 +823,9 @@ router.post('/logout-all', authenticate, async (req, res) => {
 // Send password reset email helper
 const sendPasswordResetEmail = async (email, token) => {
   if (!resend) {
-    console.log('Email not configured. Password reset token:', token);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Email not configured. Password reset token:', token);
+    }
     return;
   }
 

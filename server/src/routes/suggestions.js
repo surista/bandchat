@@ -1,9 +1,8 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticate, isWorkspaceMember } from '../middleware/auth.js';
+import prisma from '../lib/prisma.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Key compatibility chart (circle of fifths distance)
 const KEY_CIRCLE = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'];

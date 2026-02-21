@@ -140,6 +140,20 @@ router.get('/:messageId/replies', authenticate, async (req, res) => {
       if (!membership) {
         return res.status(403).json({ error: 'Not a member of this channel' });
       }
+    } else {
+      // For public channels, verify workspace membership
+      const workspaceMember = await prisma.workspaceMember.findUnique({
+        where: {
+          userId_workspaceId: {
+            userId: req.user.id,
+            workspaceId: channel.workspaceId
+          }
+        }
+      });
+
+      if (!workspaceMember) {
+        return res.status(403).json({ error: 'Not a member of this workspace' });
+      }
     }
 
     const replies = await prisma.message.findMany({
@@ -205,7 +219,15 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
         parentId,
         ...(hasAttachments && {
           attachments: {
-            create: attachments.map(att => ({
+            create: attachments.filter(att => {
+              // Only allow Cloudinary URLs for attachments
+              try {
+                const url = new URL(att.url);
+                return url.hostname.endsWith('cloudinary.com');
+              } catch {
+                return false;
+              }
+            }).map(att => ({
               type: att.type,
               url: att.url,
               filename: att.filename,

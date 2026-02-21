@@ -1,9 +1,8 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
+import prisma from '../lib/prisma.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Default achievements to seed
 const DEFAULT_ACHIEVEMENTS = [
