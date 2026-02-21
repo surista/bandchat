@@ -25,6 +25,7 @@ import BandMemberForm from '../band/BandMembers/BandMemberForm';
 import MemberProfile from '../common/MemberProfile';
 import MemberHoverCard from '../common/MemberHoverCard';
 import ConfirmDialog from '../common/ConfirmDialog';
+import NewMessageModal from './NewMessageModal';
 
 /** Draggable channel item wrapper for admin drag-and-drop */
 function DraggableChannel({ channel, children, disabled }) {
@@ -113,6 +114,7 @@ function Sidebar({
   const { currentTheme, setTheme, themes } = useTheme();
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [showNewMessage, setShowNewMessage] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
   const [isPrivate, setIsPrivate] = useState(false);
@@ -682,6 +684,16 @@ function Sidebar({
               DIRECT MESSAGES
             </span>
           </button>
+          {!collapsedSections.dms && (
+            <button
+              onClick={() => setShowNewMessage(true)}
+              className="text-gray-400 hover:text-white transition-colors text-lg px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
+              title="New message"
+              aria-label="New message"
+            >
+              +
+            </button>
+          )}
         </div>
 
         {!collapsedSections.dms && (
@@ -1234,6 +1246,16 @@ function Sidebar({
           </div>
         </div>,
         document.body
+      )}
+
+      {/* New Message Modal */}
+      {showNewMessage && (
+        <NewMessageModal
+          workspace={workspace}
+          user={user}
+          onStartDM={onStartDM}
+          onClose={() => setShowNewMessage(false)}
+        />
       )}
 
       {/* Settings Modal - Portal to body to escape sidebar transform */}

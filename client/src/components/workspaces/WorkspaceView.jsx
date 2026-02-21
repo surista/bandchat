@@ -332,9 +332,10 @@ function WorkspaceView() {
     });
   };
 
-  const handleStartDM = async (userId) => {
+  const handleStartDM = async (userIdOrIds) => {
     try {
-      const dm = await api.createOrGetDM(workspaceId, [userId]);
+      const userIds = Array.isArray(userIdOrIds) ? userIdOrIds : [userIdOrIds];
+      const dm = await api.createOrGetDM(workspaceId, userIds);
       // Check if DM already exists in state
       const existingDM = directMessages.find(d => d.id === dm.id);
       if (!existingDM) {
