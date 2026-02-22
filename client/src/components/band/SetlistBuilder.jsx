@@ -22,6 +22,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import api from '../../services/api';
 import { escapeHtml } from '../../utils/escapeHtml';
+import SongForm from './SongForm';
 
 // Helper to split items into sets based on SET_BREAK markers
 function splitIntoSets(items) {
@@ -50,7 +51,7 @@ function splitIntoSets(items) {
 }
 
 // Sortable item component
-function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDisplayName, useShortNames, formatDuration, onBreakDurationChange }) {
+function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDisplayName, useShortNames, formatDuration, onBreakDurationChange, onSongClick }) {
   const {
     attributes,
     listeners,
@@ -141,7 +142,12 @@ function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDispla
       ) : (
         <>
           <div className="flex-1 min-w-0">
-            <div className="text-white truncate">{getSongDisplayName(item.song)}</div>
+            <div
+              className="text-white truncate cursor-pointer hover:text-blue-400 hover:underline"
+              onClick={(e) => { e.stopPropagation(); onSongClick?.(item); }}
+            >
+              {getSongDisplayName(item.song)}
+            </div>
             {!useShortNames && item.song?.artist && (
               <div className="text-gray-400 text-sm truncate">{item.song.artist}</div>
             )}
@@ -181,7 +187,8 @@ function SetColumn({
   getItemDuration,
   onBreakDurationChange,
   timing,
-  nextBreakItem
+  nextBreakItem,
+  onSongClick
 }) {
   // All items in this column including the break
   const allColumnItems = set.breakItem ? [set.breakItem, ...set.items] : set.items;
@@ -246,6 +253,7 @@ function SetColumn({
                     getSongDisplayName={getSongDisplayName}
                     useShortNames={useShortNames}
                     formatDuration={formatDuration}
+                    onSongClick={onSongClick}
                   />
                 );
               })}
@@ -282,7 +290,8 @@ function SetColumnItem({
   onMoveGlobal,
   getSongDisplayName,
   useShortNames,
-  formatDuration
+  formatDuration,
+  onSongClick
 }) {
   const {
     attributes,
@@ -353,7 +362,12 @@ function SetColumnItem({
       ) : (
         <>
           <div className="flex-1 min-w-0">
-            <div className="text-white truncate text-sm">{getSongDisplayName(item.song)}</div>
+            <div
+              className="text-white truncate text-sm cursor-pointer hover:text-blue-400 hover:underline"
+              onClick={(e) => { e.stopPropagation(); onSongClick?.(item); }}
+            >
+              {getSongDisplayName(item.song)}
+            </div>
             {!useShortNames && item.song?.artist && (
               <div className="text-gray-400 text-xs truncate">{item.song.artist}</div>
             )}
@@ -425,6 +439,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
   const [useShortNames, setUseShortNames] = useState(setlist.useShortNames || false);
   const [startTime, setStartTime] = useState(setlist.startTime || '');
   const [songSortBy, setSongSortBy] = useState('title');
+  const [viewingSong, setViewingSong] = useState(null);
   const [setlistPanelWidth, setSetlistPanelWidth] = useState(70); // percentage
   const containerRef = useRef(null);
   const isResizing = useRef(false);
@@ -690,6 +705,19 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
     } catch (err) {
       console.error('Failed to save break duration:', err);
     }
+  };
+
+  const handleSongClick = (item) => {
+    const fullSong = allSongs.find(s => s.id === item.song?.id) || item.song;
+    if (fullSong) setViewingSong(fullSong);
+  };
+
+  const handleSongSave = async (songData) => {
+    const updated = await api.updateSong(viewingSong.id, songData);
+    setSetlistItems(prev => prev.map(item =>
+      item.song?.id === updated.id ? { ...item, song: updated } : item
+    ));
+    setViewingSong(null);
   };
 
   // Print/PDF export function
@@ -1070,6 +1098,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
                       onBreakDurationChange={handleBreakDurationChange}
                       timing={setTimings?.[setIndex]}
                       nextBreakItem={sets[setIndex + 1]?.breakItem}
+                      onSongClick={handleSongClick}
                     />
                   ))}
                 </div>
@@ -1098,6 +1127,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
                         useShortNames={useShortNames}
                         formatDuration={formatDuration}
                         onBreakDurationChange={handleBreakDurationChange}
+                        onSongClick={handleSongClick}
                       />
                     ))}
                   </div>
@@ -1208,6 +1238,15 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
           </div>
         </div>
       </div>
+
+      {/* Song Detail Modal */}
+      {viewingSong && (
+        <SongForm
+          song={viewingSong}
+          onSave={handleSongSave}
+          onClose={() => setViewingSong(null)}
+        />
+      )}
     </div>
   );
 }
