@@ -138,6 +138,44 @@ function MessageList({
           );
         }
 
+        // Check if it's a YouTube link
+        const ytMatch = part.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/|m\.youtube\.com\/watch\?v=)([\w-]{11})/);
+        if (ytMatch) {
+          const videoId = ytMatch[1];
+          return (
+            <div key={i} className="my-2">
+              <a
+                href={part}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-slack-blue hover:underline break-all"
+              >
+                {part}
+              </a>
+              <a
+                href={part}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block relative max-w-full md:max-w-md mt-1 rounded overflow-hidden group"
+              >
+                <img
+                  src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
+                  alt="YouTube video thumbnail"
+                  className="w-full rounded"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-16 h-16 bg-red-600 bg-opacity-90 rounded-2xl flex items-center justify-center group-hover:bg-opacity-100 transition-opacity">
+                    <svg viewBox="0 0 24 24" fill="white" className="w-8 h-8 ml-1">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                </div>
+              </a>
+            </div>
+          );
+        }
+
         // Check if it's an image
         if (part.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
           return (
