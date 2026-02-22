@@ -970,7 +970,14 @@ function Sidebar({
             {/* Notifications with snooze options */}
             <div className="relative">
               <button
-                onClick={() => setSnoozeMenuOpen(!snoozeMenuOpen)}
+                onClick={() => {
+                  if (!notificationsEnabled) {
+                    toggleNotifications();
+                    setSnoozeMenuOpen(false);
+                  } else {
+                    setSnoozeMenuOpen(!snoozeMenuOpen);
+                  }
+                }}
                 disabled={notificationsLoading}
                 className="w-full px-4 py-2 text-left hover:bg-gray-700 transition-colors flex items-center justify-between"
               >
