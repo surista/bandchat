@@ -411,6 +411,13 @@ class ApiService {
     });
   }
 
+  async reorderChannelGroups(workspaceId, groupIds) {
+    return this.request(`/channel-groups/workspace/${workspaceId}/reorder`, {
+      method: 'PUT',
+      body: JSON.stringify({ groupIds })
+    });
+  }
+
   async removeChannelFromGroup(channelId) {
     return this.request(`/channel-groups/channels/${channelId}`, {
       method: 'DELETE'

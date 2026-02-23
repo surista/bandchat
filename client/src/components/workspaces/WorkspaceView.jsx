@@ -129,6 +129,7 @@ function WorkspaceView() {
       socket.on('channelGroup:created', handleGroupCreated);
       socket.on('channelGroup:updated', handleGroupUpdated);
       socket.on('channelGroup:deleted', handleGroupDeleted);
+      socket.on('channelGroups:reordered', handleGroupsReordered);
       socket.on('dm:created', handleDMCreated);
       socket.on('message:new', handleNewMessage);
       socket.on('message:reply', handleReplyUnread);
@@ -143,6 +144,7 @@ function WorkspaceView() {
         socket.off('channelGroup:created', handleGroupCreated);
         socket.off('channelGroup:updated', handleGroupUpdated);
         socket.off('channelGroup:deleted', handleGroupDeleted);
+        socket.off('channelGroups:reordered', handleGroupsReordered);
         socket.off('dm:created', handleDMCreated);
         socket.off('message:new', handleNewMessage);
         socket.off('message:reply', handleReplyUnread);
@@ -314,6 +316,10 @@ function WorkspaceView() {
     setChannelGroups(prev =>
       prev.map(g => (g.id === group.id ? group : g))
     );
+  };
+
+  const handleGroupsReordered = (groups) => {
+    setChannelGroups(groups);
   };
 
   const handleGroupDeleted = ({ groupId }) => {
@@ -498,6 +504,7 @@ function WorkspaceView() {
         onSelectBandView={handleSelectBandView}
         width={sidebarWidth}
         onResizeStart={() => setIsResizing(true)}
+        onReorderGroups={(newGroups) => setChannelGroups(newGroups)}
       />
 
       {/* Main Content */}

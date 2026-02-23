@@ -17,6 +17,13 @@ import {
   useSensors
 } from '@dnd-kit/core';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { pushService } from '../../services/push';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -65,6 +72,35 @@ function DroppableSection({ groupId, children }) {
   );
 }
 
+/** Sortable wrapper for group sections (admin drag-and-drop reordering) */
+function SortableGroupWrapper({ group, children, disabled }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({
+    id: group.id,
+    data: { type: 'group', group },
+    disabled
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : undefined
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children({ dragHandleProps: { ...listeners, ...attributes } })}
+    </div>
+  );
+}
+
 /**
  * Main sidebar navigation component.
  * Contains workspace header, channels, DMs, band features, members, and settings.
@@ -107,7 +143,8 @@ function Sidebar({
   activeBandView,
   onSelectBandView,
   width = 256,
-  onResizeStart
+  onResizeStart,
+  onReorderGroups
 }) {
   const navigate = useNavigate();
   const { updateUser } = useAuth();
@@ -319,8 +356,9 @@ function Sidebar({
     return workspace?.members?.find(m => m.user?.id === user?.id)?.role === 'ADMIN';
   }, [workspace, user]);
 
-  // Drag and drop setup for channels (admin only)
+  // Drag and drop setup for channels and groups (admin only)
   const [activeChannel, setActiveChannel] = useState(null);
+  const [activeGroup, setActiveGroup] = useState(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -332,16 +370,55 @@ function Sidebar({
   );
 
   const handleDragStart = (event) => {
-    const channel = channels.find(c => c.id === event.active.id);
-    setActiveChannel(channel);
+    const { active } = event;
+    const type = active.data?.current?.type;
+
+    if (type === 'group') {
+      setActiveGroup(active.data.current.group);
+      setActiveChannel(null);
+    } else {
+      const channel = channels.find(c => c.id === active.id);
+      setActiveChannel(channel);
+      setActiveGroup(null);
+    }
   };
 
   const handleDragEnd = async (event) => {
     const { active, over } = event;
+    const type = active.data?.current?.type;
+
+    // Reset drag state
     setActiveChannel(null);
+    setActiveGroup(null);
 
     if (!over || !isAdmin) return;
 
+    // Handle group reorder
+    if (type === 'group') {
+      if (active.id === over.id) return;
+
+      const oldIndex = channelGroups.findIndex(g => g.id === active.id);
+      const newIndex = channelGroups.findIndex(g => g.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const previousOrder = [...channelGroups];
+      const newOrder = arrayMove(channelGroups, oldIndex, newIndex);
+      const newGroupIds = newOrder.map(g => g.id);
+
+      // Optimistic update
+      onReorderGroups?.(newOrder);
+
+      try {
+        await api.reorderChannelGroups(workspace.id, newGroupIds);
+      } catch (error) {
+        console.error('Failed to reorder groups:', error);
+        // Revert on error
+        onReorderGroups?.(previousOrder);
+      }
+      return;
+    }
+
+    // Handle channel move (existing logic)
     const channelId = active.id;
     const targetGroupId = over.data?.current?.groupId;
     const channel = channels.find(c => c.id === channelId);
@@ -613,34 +690,54 @@ function Sidebar({
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            {channelGroups.map((group) => (
-              <DroppableSection key={group.id} groupId={group.id}>
-                <div className="mb-2 ml-2">
-                  <button
-                    onClick={() => toggleGroupCollapse(group.id)}
-                    onContextMenu={(e) => handleContextMenu(e, 'section', group.id, group.name)}
-                    className="w-full px-4 py-2.5 sm:py-1 flex items-center gap-1 text-gray-400 hover:text-white transition-colors text-sm min-h-[44px] sm:min-h-0"
-                    aria-expanded={!collapsedGroups[group.id]}
-                    aria-label={`${group.name} channel group`}
-                  >
-                    <span className={`transform transition-transform ${collapsedGroups[group.id] ? '' : 'rotate-90'}`}>
-                      ▶
-                    </span>
-                    <span className="font-medium uppercase tracking-wide truncate">
-                      {group.name}
-                    </span>
-                    <span className="text-xs text-gray-500 ml-auto">
-                      {groupedChannels[group.id]?.length || 0}
-                    </span>
-                  </button>
-                  {!collapsedGroups[group.id] && (
-                    <div className="space-y-0.5 ml-2">
-                      {groupedChannels[group.id]?.map(renderChannel)}
-                    </div>
+            <SortableContext
+              items={channelGroups.map(g => g.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {channelGroups.map((group) => (
+                <SortableGroupWrapper key={group.id} group={group} disabled={!isAdmin}>
+                  {({ dragHandleProps }) => (
+                    <DroppableSection groupId={group.id}>
+                      <div className="mb-2 ml-2">
+                        <div className="flex items-center">
+                          {isAdmin && (
+                            <span
+                              {...dragHandleProps}
+                              className="cursor-grab active:cursor-grabbing text-gray-600 hover:text-gray-400 px-1 text-xs select-none"
+                              title="Drag to reorder section"
+                            >
+                              ⋮⋮
+                            </span>
+                          )}
+                          <button
+                            onClick={() => toggleGroupCollapse(group.id)}
+                            onContextMenu={(e) => handleContextMenu(e, 'section', group.id, group.name)}
+                            className="flex-1 px-2 py-2.5 sm:py-1 flex items-center gap-1 text-gray-400 hover:text-white transition-colors text-sm min-h-[44px] sm:min-h-0"
+                            aria-expanded={!collapsedGroups[group.id]}
+                            aria-label={`${group.name} channel group`}
+                          >
+                            <span className={`transform transition-transform ${collapsedGroups[group.id] ? '' : 'rotate-90'}`}>
+                              ▶
+                            </span>
+                            <span className="font-medium uppercase tracking-wide truncate">
+                              {group.name}
+                            </span>
+                            <span className="text-xs text-gray-500 ml-auto">
+                              {groupedChannels[group.id]?.length || 0}
+                            </span>
+                          </button>
+                        </div>
+                        {!collapsedGroups[group.id] && (
+                          <div className="space-y-0.5 ml-2">
+                            {groupedChannels[group.id]?.map(renderChannel)}
+                          </div>
+                        )}
+                      </div>
+                    </DroppableSection>
                   )}
-                </div>
-              </DroppableSection>
-            ))}
+                </SortableGroupWrapper>
+              ))}
+            </SortableContext>
 
             {/* Ungrouped Channels */}
             <DroppableSection groupId={null}>
@@ -657,16 +754,24 @@ function Sidebar({
             </DroppableSection>
 
             {/* Drag overlay for visual feedback */}
-            <DragOverlay>
-              {activeChannel ? (
-                <div className="channel-item bg-slack-sidebar border border-blue-500 rounded shadow-lg opacity-90">
-                  <span className="text-gray-400">
-                    {activeChannel.isPrivate ? '🔒' : '#'}
-                  </span>
-                  <span className="flex-1 truncate">{activeChannel.name}</span>
-                </div>
-              ) : null}
-            </DragOverlay>
+            {createPortal(
+              <DragOverlay>
+                {activeChannel ? (
+                  <div className="channel-item bg-slack-sidebar border border-blue-500 rounded shadow-lg opacity-90">
+                    <span className="text-gray-400">
+                      {activeChannel.isPrivate ? '🔒' : '#'}
+                    </span>
+                    <span className="flex-1 truncate">{activeChannel.name}</span>
+                  </div>
+                ) : activeGroup ? (
+                  <div className="flex items-center gap-1 px-4 py-1 bg-slack-sidebar border border-blue-500 rounded shadow-lg opacity-90 text-gray-300 text-sm">
+                    <span>▶</span>
+                    <span className="font-medium uppercase tracking-wide">{activeGroup.name}</span>
+                  </div>
+                ) : null}
+              </DragOverlay>,
+              document.body
+            )}
           </DndContext>
         )}
 

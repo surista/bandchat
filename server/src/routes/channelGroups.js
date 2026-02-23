@@ -94,6 +94,77 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
   }
 });
 
+// Reorder channel groups (admin only)
+router.put('/workspace/:workspaceId/reorder', authenticate, isWorkspaceMember, async (req, res) => {
+  try {
+    const { groupIds } = req.body;
+
+    if (!groupIds || !Array.isArray(groupIds)) {
+      return res.status(400).json({ error: 'groupIds array is required' });
+    }
+
+    // Verify user is admin
+    const membership = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: req.params.workspaceId
+        }
+      }
+    });
+
+    if (!membership || membership.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    // Update positions in a transaction
+    await prisma.$transaction(
+      groupIds.map((groupId, index) =>
+        prisma.channelGroup.update({
+          where: { id: groupId },
+          data: { position: index }
+        })
+      )
+    );
+
+    // Re-fetch with updated positions
+    const groups = await prisma.channelGroup.findMany({
+      where: { workspaceId: req.params.workspaceId },
+      orderBy: { position: 'asc' },
+      include: {
+        channels: {
+          where: {
+            OR: [
+              { isPrivate: false },
+              {
+                members: {
+                  some: { userId: req.user.id }
+                }
+              }
+            ]
+          },
+          orderBy: { position: 'asc' },
+          select: {
+            id: true,
+            name: true,
+            isPrivate: true,
+            position: true
+          }
+        }
+      }
+    });
+
+    // Notify workspace members via socket
+    const io = req.app.get('io');
+    io.to(`workspace:${req.params.workspaceId}`).emit('channelGroups:reordered', groups);
+
+    res.json(groups);
+  } catch (error) {
+    console.error('Reorder channel groups error:', error);
+    res.status(500).json({ error: 'Failed to reorder channel groups' });
+  }
+});
+
 // Update a channel group
 router.put('/:groupId', authenticate, async (req, res) => {
   try {
