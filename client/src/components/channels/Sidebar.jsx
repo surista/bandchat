@@ -703,7 +703,7 @@ function Sidebar({
                           {isAdmin && (
                             <span
                               {...dragHandleProps}
-                              className="cursor-grab active:cursor-grabbing text-gray-600 hover:text-gray-400 px-1 text-xs select-none"
+                              className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-200 px-1 text-xs select-none"
                               title="Drag to reorder section"
                             >
                               ⋮⋮
