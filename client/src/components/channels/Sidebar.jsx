@@ -82,7 +82,7 @@ function SortableGroupWrapper({ group, children, disabled }) {
     transition,
     isDragging
   } = useSortable({
-    id: group.id,
+    id: `sort-group-${group.id}`,
     data: { type: 'group', group },
     disabled
   });
@@ -397,8 +397,10 @@ function Sidebar({
     if (type === 'group') {
       if (active.id === over.id) return;
 
-      const oldIndex = channelGroups.findIndex(g => g.id === active.id);
-      const newIndex = channelGroups.findIndex(g => g.id === over.id);
+      const activeGroupId = String(active.id).replace('sort-group-', '');
+      const overGroupId = String(over.id).replace('sort-group-', '');
+      const oldIndex = channelGroups.findIndex(g => g.id === activeGroupId);
+      const newIndex = channelGroups.findIndex(g => g.id === overGroupId);
       if (oldIndex === -1 || newIndex === -1) return;
 
       const previousOrder = [...channelGroups];
@@ -691,7 +693,7 @@ function Sidebar({
             onDragEnd={handleDragEnd}
           >
             <SortableContext
-              items={channelGroups.map(g => g.id)}
+              items={channelGroups.map(g => `sort-group-${g.id}`)}
               strategy={verticalListSortingStrategy}
             >
               {channelGroups.map((group) => (
