@@ -8,13 +8,16 @@ import { useState, useRef, useEffect } from 'react';
 /** Maximum file size for uploads */
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_AUDIO_SIZE = 30 * 1024 * 1024; // 30MB
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
 
 /** Allowed file types */
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const ALLOWED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/aac', 'audio/m4a', 'audio/x-m4a', 'audio/mp4'];
+const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo', 'video/x-matroska'];
 
 const isImageFile = (file) => file.type.startsWith('image/') || ALLOWED_IMAGE_TYPES.includes(file.type);
 const isAudioFile = (file) => file.type.startsWith('audio/') || ALLOWED_AUDIO_TYPES.includes(file.type);
+const isVideoFile = (file) => file.type.startsWith('video/') || ALLOWED_VIDEO_TYPES.includes(file.type);
 
 /**
  * Message composition input with file attachments and @mention support.
@@ -194,13 +197,14 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
     for (const file of files) {
       const isImage = isImageFile(file);
       const isAudio = isAudioFile(file);
+      const isVideo = isVideoFile(file);
 
-      if (!isImage && !isAudio) {
-        setError(`File "${file.name}" is not a supported type (images or audio only)`);
+      if (!isImage && !isAudio && !isVideo) {
+        setError(`File "${file.name}" is not a supported type (images, audio, or video only)`);
         continue;
       }
 
-      const maxSize = isAudio ? MAX_AUDIO_SIZE : MAX_IMAGE_SIZE;
+      const maxSize = isVideo ? MAX_VIDEO_SIZE : isAudio ? MAX_AUDIO_SIZE : MAX_IMAGE_SIZE;
       const limitMB = maxSize / (1024 * 1024);
       if (file.size > maxSize) {
         setError(`File "${file.name}" exceeds ${limitMB}MB limit`);
@@ -226,6 +230,15 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
             }]);
           };
           reader.readAsDataURL(file);
+        } else if (isVideoFile(file)) {
+          // Video files get a thumbnail preview
+          const videoUrl = URL.createObjectURL(file);
+          setPreviews(prev => [...prev, {
+            name: file.name,
+            url: videoUrl,
+            size: file.size,
+            type: 'video'
+          }]);
         } else {
           // Audio files get a placeholder preview (no image)
           setPreviews(prev => [...prev, {
@@ -274,6 +287,15 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
                   <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                   </svg>
+                </div>
+              ) : preview.type === 'video' ? (
+                <div className="w-16 h-16 bg-gray-600 rounded flex items-center justify-center relative overflow-hidden">
+                  <video src={preview.url} className="w-full h-full object-cover" muted />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
                 </div>
               ) : (
                 <img
@@ -345,7 +367,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*,audio/*"
+              accept="image/*,audio/*,video/*"
               multiple
               onChange={handleFileSelect}
               className="hidden"
@@ -354,7 +376,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className="p-2 -m-1 text-gray-400 hover:text-white transition-colors"
-              title="Add file (images 10MB, audio 30MB)"
+              title="Add file (images 10MB, audio 30MB, video 50MB)"
               disabled={sending}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
