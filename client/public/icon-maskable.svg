@@ -10,19 +10,19 @@
       <stop offset="100%" style="stop-color:#36C5F0"/>
     </linearGradient>
     <filter id="shadow" x="-5%" y="-5%" width="120%" height="130%">
-      <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#000" flood-opacity="0.25"/>
+      <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#000" flood-opacity="0.2"/>
     </filter>
   </defs>
 
-  <!-- Background -->
-  <rect width="100" height="100" rx="22" fill="url(#bgGrad)"/>
+  <!-- Edge-to-edge background (no rounded corners - OS applies mask) -->
+  <rect width="100" height="100" fill="url(#bgGrad)"/>
 
-  <!-- Chat bubble -->
-  <path d="M18 24 h58 a9 9 0 0 1 9 9 v28 a9 9 0 0 1 -9 9 h-36 l-11 11 v-11 h-11 a9 9 0 0 1 -9 -9 v-28 a9 9 0 0 1 9 -9z"
+  <!-- Chat bubble (sized within 80% safe zone) -->
+  <path d="M22 27 h50 a8 8 0 0 1 8 8 v24 a8 8 0 0 1 -8 8 h-30 l-10 10 v-10 h-10 a8 8 0 0 1 -8 -8 v-24 a8 8 0 0 1 8 -8z"
         fill="white" opacity="0.95" filter="url(#shadow)"/>
 
-  <!-- Music notes -->
-  <g transform="translate(35, 31)">
+  <!-- Music notes (centered in safe zone) -->
+  <g transform="translate(36, 33) scale(0.88)">
     <!-- Note head 1 -->
     <ellipse cx="7" cy="27" rx="7.5" ry="5.5" fill="url(#noteGrad)" transform="rotate(-20, 7, 27)"/>
     <!-- Note head 2 -->

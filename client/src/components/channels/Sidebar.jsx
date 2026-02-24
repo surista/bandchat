@@ -2373,7 +2373,7 @@ function Sidebar({
                 <div className="space-y-6">
                   <div className="text-center py-4">
                     <img
-                      src="/logo.jpg"
+                      src="/icon-192.png"
                       alt="BandChat"
                       className="w-20 h-20 mx-auto mb-3 rounded-xl shadow-lg"
                     />

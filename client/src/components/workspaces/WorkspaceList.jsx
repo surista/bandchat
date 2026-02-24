@@ -70,9 +70,9 @@ function WorkspaceList() {
 
   return (
     <div className="min-h-screen bg-slack-purple flex flex-col">
-      <header className="bg-slack-purple-dark p-4 flex justify-between items-center">
+      <header className="bg-slack-purple-dark p-4 flex justify-between items-center safe-area-top">
         <div className="flex items-center gap-3">
-          <img src="/logo.jpg" alt="BandChat" className="w-8 h-8 rounded" />
+          <img src="/icon-96.png" alt="BandChat" className="w-8 h-8 rounded" />
           <h1 className="text-white text-xl font-bold">BandChat</h1>
         </div>
         <div className="flex items-center gap-4">

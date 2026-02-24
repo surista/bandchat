@@ -143,7 +143,7 @@ function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDispla
         <>
           <div className="flex-1 min-w-0">
             <div
-              className="text-white truncate cursor-pointer hover:text-blue-400 hover:underline"
+              className="text-blue-400 truncate cursor-pointer hover:underline"
               onClick={(e) => { e.stopPropagation(); onSongClick?.(item); }}
             >
               {getSongDisplayName(item.song)}
@@ -363,7 +363,7 @@ function SetColumnItem({
         <>
           <div className="flex-1 min-w-0">
             <div
-              className="text-white truncate text-sm cursor-pointer hover:text-blue-400 hover:underline"
+              className="text-blue-400 truncate text-sm cursor-pointer hover:underline"
               onClick={(e) => { e.stopPropagation(); onSongClick?.(item); }}
             >
               {getSongDisplayName(item.song)}
@@ -406,7 +406,7 @@ const formatTime12h = (time24) => {
 const addMinutesToTime = (time24, minutes) => {
   if (!time24) return '';
   const [h, m] = time24.split(':').map(Number);
-  const totalMins = h * 60 + m + minutes;
+  const totalMins = Math.round(h * 60 + m + minutes);
   const newH = Math.floor(totalMins / 60) % 24;
   const newM = totalMins % 60;
   return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
@@ -682,9 +682,12 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
   }, [startTime, sets]);
 
   const endTime = useMemo(() => {
+    if (setTimings && setTimings.length > 0) {
+      return setTimings[setTimings.length - 1].end;
+    }
     if (!startTime) return '';
     return addMinutesToTime(startTime, totalDuration / 60);
-  }, [startTime, totalDuration]);
+  }, [startTime, totalDuration, setTimings]);
 
   const handleStartTimeChange = async (newTime) => {
     setStartTime(newTime);
