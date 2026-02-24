@@ -247,6 +247,16 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   };
 
   const handleSendMessage = async (content, files = []) => {
+    // Build optimistic attachments from local files (show preview before upload)
+    const optimisticAttachments = files.map((file, i) => ({
+      id: `temp-att-${Date.now()}-${i}`,
+      type: file.type.startsWith('image/') ? 'IMAGE' : file.type.startsWith('audio/') ? 'AUDIO' : file.type.startsWith('video/') ? 'VIDEO' : 'DOCUMENT',
+      url: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+      filename: file.name,
+      size: file.size,
+      pending: true
+    }));
+
     // Create optimistic message immediately for instant feedback
     const optimisticMessage = {
       id: `temp-${Date.now()}`,
@@ -257,15 +267,15 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
         displayName: user.displayName,
         avatarUrl: user.avatarUrl
       },
-      attachments: [],
+      attachments: optimisticAttachments,
       reactions: [],
       createdAt: new Date().toISOString(),
       pending: true,
       _count: { replies: 0 }
     };
 
-    // Add optimistic message to UI immediately (only for text messages without files)
-    if (files.length === 0 && content) {
+    // Add optimistic message to UI immediately
+    if (content || files.length > 0) {
       setMessages(prev => [...prev, optimisticMessage]);
       scrollToBottom();
     }
@@ -288,9 +298,18 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       // Send message with attachments
       await api.sendMessage(channel.id, content || '', null, attachments);
       // Real message will replace optimistic one via socket event
+
+      // Revoke object URLs to free memory
+      optimisticAttachments.forEach(a => {
+        if (a.url?.startsWith('blob:')) URL.revokeObjectURL(a.url);
+      });
     } catch (err) {
       // Remove optimistic message on error
       setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
+      // Revoke object URLs on error too
+      optimisticAttachments.forEach(a => {
+        if (a.url?.startsWith('blob:')) URL.revokeObjectURL(a.url);
+      });
       console.error('Failed to send message:', err);
       throw err; // Re-throw to show error in MessageInput
     }
