@@ -400,32 +400,81 @@ router.post('/:workspaceId/invite-email', authenticate, isWorkspaceAdmin, async 
 router.put('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, async (req, res) => {
   try {
     const { workspaceId, userId } = req.params;
-    const { role } = req.body;
+    const { role, displayName, email } = req.body;
 
-    if (!['ADMIN', 'MEMBER'].includes(role)) {
-      return res.status(400).json({ error: 'Invalid role' });
-    }
-
-    // Can't demote yourself if you're the only admin
-    if (userId === req.user.id && role === 'MEMBER') {
-      const adminCount = await prisma.workspaceMember.count({
-        where: { workspaceId, role: 'ADMIN' }
-      });
-
-      if (adminCount === 1) {
-        return res.status(400).json({ error: 'Cannot demote the only admin' });
+    // Handle role update
+    if (role) {
+      if (!['ADMIN', 'MEMBER'].includes(role)) {
+        return res.status(400).json({ error: 'Invalid role' });
       }
+
+      // Can't demote yourself if you're the only admin
+      if (userId === req.user.id && role === 'MEMBER') {
+        const adminCount = await prisma.workspaceMember.count({
+          where: { workspaceId, role: 'ADMIN' }
+        });
+
+        if (adminCount === 1) {
+          return res.status(400).json({ error: 'Cannot demote the only admin' });
+        }
+      }
+
+      await prisma.workspaceMember.update({
+        where: {
+          userId_workspaceId: { userId, workspaceId }
+        },
+        data: { role }
+      });
     }
 
-    const member = await prisma.workspaceMember.update({
+    // Handle profile updates (displayName, email)
+    if (displayName !== undefined || email !== undefined) {
+      const userData = {};
+
+      if (displayName !== undefined) {
+        const trimmed = displayName.trim();
+        if (trimmed.length < 2) {
+          return res.status(400).json({ error: 'Display name must be at least 2 characters' });
+        }
+        if (trimmed.length > 50) {
+          return res.status(400).json({ error: 'Display name must be 50 characters or less' });
+        }
+        const dangerousPattern = /[<>'"&\\\/\x00-\x1f]/;
+        if (dangerousPattern.test(trimmed)) {
+          return res.status(400).json({ error: 'Display name contains invalid characters' });
+        }
+        userData.displayName = trimmed;
+      }
+
+      if (email !== undefined) {
+        const trimmedEmail = email.trim().toLowerCase();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+          return res.status(400).json({ error: 'Invalid email address' });
+        }
+        // Check uniqueness
+        const existing = await prisma.user.findUnique({ where: { email: trimmedEmail } });
+        if (existing && existing.id !== userId) {
+          return res.status(400).json({ error: 'Email already in use' });
+        }
+        userData.email = trimmedEmail;
+      }
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: userData
+      });
+    }
+
+    // Re-fetch updated member
+    const member = await prisma.workspaceMember.findUnique({
       where: {
         userId_workspaceId: { userId, workspaceId }
       },
-      data: { role },
       include: {
         user: {
           select: {
             id: true,
+            email: true,
             displayName: true,
             avatarUrl: true
           }
@@ -435,7 +484,8 @@ router.put('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, asyn
 
     res.json(member);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update member role' });
+    console.error('Update member error:', error);
+    res.status(500).json({ error: 'Failed to update member' });
   }
 });
 

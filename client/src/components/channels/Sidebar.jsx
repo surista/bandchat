@@ -201,6 +201,11 @@ function Sidebar({
   const [showAllMembers, setShowAllMembers] = useState(false);
   // Bio editing
   const [editBio, setEditBio] = useState('');
+  // Admin member editing
+  const [editingMemberId, setEditingMemberId] = useState(null);
+  const [editMemberName, setEditMemberName] = useState('');
+  const [editMemberEmail, setEditMemberEmail] = useState('');
+  const [editMemberLoading, setEditMemberLoading] = useState(false);
   // Context menu for channels/sections (admin only)
   const [contextMenu, setContextMenu] = useState(null); // { type: 'channel' | 'section', id, name, x, y }
   const [renameModal, setRenameModal] = useState(null); // { type: 'channel' | 'section', id, name }
@@ -1756,78 +1761,163 @@ function Sidebar({
                   {workspace.members?.map((member) => (
                     <div
                       key={member.user.id}
-                      className="flex items-center justify-between p-3 bg-[var(--color-modal-card)] rounded-lg"
+                      className="p-3 bg-[var(--color-modal-card)] rounded-lg"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded bg-[var(--color-accent)] flex items-center justify-center text-white font-medium">
-                          {member.user.displayName?.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <div className="font-medium text-white">
-                            {member.user.displayName}
-                            {member.user.id === user?.id && (
-                              <span className="text-gray-400 ml-1">(you)</span>
-                            )}
+                      {editingMemberId === member.user.id ? (
+                        <form
+                          onSubmit={async (e) => {
+                            e.preventDefault();
+                            setEditMemberLoading(true);
+                            try {
+                              const updates = {};
+                              if (editMemberName.trim() !== member.user.displayName) {
+                                updates.displayName = editMemberName.trim();
+                              }
+                              if (editMemberEmail.trim().toLowerCase() !== member.user.email?.toLowerCase()) {
+                                updates.email = editMemberEmail.trim();
+                              }
+                              if (Object.keys(updates).length > 0) {
+                                await api.adminUpdateMember(workspace.id, member.user.id, updates);
+                                window.location.reload();
+                              } else {
+                                setEditingMemberId(null);
+                              }
+                            } catch (err) {
+                              alert(err.message);
+                            } finally {
+                              setEditMemberLoading(false);
+                            }
+                          }}
+                          className="space-y-2"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded bg-[var(--color-accent)] flex items-center justify-center text-white font-medium flex-shrink-0">
+                              {editMemberName?.charAt(0)?.toUpperCase() || '?'}
+                            </div>
+                            <div className="flex-1 space-y-2">
+                              <input
+                                type="text"
+                                value={editMemberName}
+                                onChange={(e) => setEditMemberName(e.target.value)}
+                                className="modal-input w-full"
+                                placeholder="Display name"
+                                required
+                                minLength={2}
+                                maxLength={50}
+                                autoFocus
+                              />
+                              <input
+                                type="email"
+                                value={editMemberEmail}
+                                onChange={(e) => setEditMemberEmail(e.target.value)}
+                                className="modal-input w-full"
+                                placeholder="Email address"
+                                required
+                              />
+                            </div>
                           </div>
-                          <div className="text-sm text-gray-400">{member.user.email}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {member.user.id !== user?.id && (
-                          <>
+                          <div className="flex gap-2 justify-end">
                             <button
-                              onClick={async () => {
-                                const adminPassword = prompt('Enter YOUR password to confirm:');
-                                if (!adminPassword) return;
-                                const newPassword = prompt(`Enter new password for ${member.user.displayName} (min 6 characters):`);
-                                if (!newPassword) return;
-                                if (newPassword.length < 6) {
-                                  alert('Password must be at least 6 characters');
-                                  return;
-                                }
+                              type="button"
+                              onClick={() => setEditingMemberId(null)}
+                              className="btn btn-secondary text-xs"
+                              disabled={editMemberLoading}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              className="btn bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                              disabled={editMemberLoading}
+                            >
+                              {editMemberLoading ? 'Saving...' : 'Save'}
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded bg-[var(--color-accent)] flex items-center justify-center text-white font-medium">
+                              {member.user.displayName?.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="font-medium text-white">
+                                {member.user.displayName}
+                                {member.user.id === user?.id && (
+                                  <span className="text-gray-400 ml-1">(you)</span>
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-400">{member.user.email}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {member.user.id !== user?.id && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setEditingMemberId(member.user.id);
+                                    setEditMemberName(member.user.displayName || '');
+                                    setEditMemberEmail(member.user.email || '');
+                                  }}
+                                  className="text-xs text-green-400 hover:text-green-300 px-2 py-1"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    const adminPassword = prompt('Enter YOUR password to confirm:');
+                                    if (!adminPassword) return;
+                                    const newPassword = prompt(`Enter new password for ${member.user.displayName} (min 6 characters):`);
+                                    if (!newPassword) return;
+                                    if (newPassword.length < 6) {
+                                      alert('Password must be at least 6 characters');
+                                      return;
+                                    }
+                                    try {
+                                      await api.adminResetPassword(workspace.id, member.user.id, newPassword, adminPassword);
+                                      alert(`Password reset for ${member.user.displayName}`);
+                                    } catch (err) {
+                                      alert(err.message);
+                                    }
+                                  }}
+                                  className="text-xs text-blue-400 hover:text-blue-300 px-2 py-1"
+                                >
+                                  Reset PW
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setRemovingMember(member);
+                                    setRemovePostAction('keep');
+                                    setRemoveMergeUserId('');
+                                  }}
+                                  className="text-xs text-red-400 hover:text-red-300 px-2 py-1"
+                                >
+                                  Remove
+                                </button>
+                              </>
+                            )}
+                            <select
+                              value={member.role}
+                              onChange={async (e) => {
                                 try {
-                                  await api.adminResetPassword(workspace.id, member.user.id, newPassword, adminPassword);
-                                  alert(`Password reset for ${member.user.displayName}`);
+                                  await api.updateMemberRole(
+                                    workspace.id,
+                                    member.user.id,
+                                    e.target.value
+                                  );
+                                  window.location.reload();
                                 } catch (err) {
                                   alert(err.message);
                                 }
                               }}
-                              className="text-xs text-blue-400 hover:text-blue-300 px-2 py-1"
+                              className="modal-input w-auto"
                             >
-                              Reset PW
-                            </button>
-                            <button
-                              onClick={() => {
-                                setRemovingMember(member);
-                                setRemovePostAction('keep');
-                                setRemoveMergeUserId('');
-                              }}
-                              className="text-xs text-red-400 hover:text-red-300 px-2 py-1"
-                            >
-                              Remove
-                            </button>
-                          </>
-                        )}
-                        <select
-                          value={member.role}
-                          onChange={async (e) => {
-                            try {
-                              await api.updateMemberRole(
-                                workspace.id,
-                                member.user.id,
-                                e.target.value
-                              );
-                              window.location.reload();
-                            } catch (err) {
-                              alert(err.message);
-                            }
-                          }}
-                          className="modal-input w-auto"
-                        >
-                          <option value="MEMBER">Member</option>
-                          <option value="ADMIN">Admin</option>
-                        </select>
-                      </div>
+                              <option value="MEMBER">Member</option>
+                              <option value="ADMIN">Admin</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
 

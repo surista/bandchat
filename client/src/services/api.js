@@ -297,6 +297,13 @@ class ApiService {
     });
   }
 
+  async adminUpdateMember(workspaceId, userId, data) {
+    return this.request(`/workspaces/${workspaceId}/members/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
   async adminResetPassword(workspaceId, userId, newPassword, adminPassword) {
     return this.request(`/workspaces/${workspaceId}/members/${userId}/reset-password`, {
       method: 'POST',
