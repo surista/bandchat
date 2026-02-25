@@ -581,6 +581,16 @@ router.post('/:songId/attachments', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
+    // Validate that URL is a valid Cloudinary URL
+    try {
+      const parsedUrl = new URL(url);
+      if (!parsedUrl.hostname.endsWith('cloudinary.com')) {
+        return res.status(400).json({ error: 'Invalid attachment URL' });
+      }
+    } catch {
+      return res.status(400).json({ error: 'Invalid URL' });
+    }
+
     const attachment = await prisma.songAttachment.create({
       data: {
         songId: req.params.songId,

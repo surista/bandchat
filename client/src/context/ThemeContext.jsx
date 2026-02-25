@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 
 const themes = {
   default: {
@@ -159,15 +159,40 @@ const themes = {
   },
 };
 
+const structuralColors = {
+  dark: {
+    bgPrimary: '#111827',    // gray-900
+    bgSecondary: '#1f2937',  // gray-800
+    bgTertiary: '#374151',   // gray-700
+    textPrimary: '#ffffff',
+    textSecondary: '#9ca3af', // gray-400
+    border: '#374151',       // gray-700
+  },
+  light: {
+    bgPrimary: '#ffffff',
+    bgSecondary: '#f3f4f6',  // gray-100
+    bgTertiary: '#e5e7eb',   // gray-200
+    textPrimary: '#111827',  // gray-900
+    textSecondary: '#6b7280', // gray-500
+    border: '#d1d5db',       // gray-300
+  },
+};
+
 const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
   const [currentTheme, setCurrentTheme] = useState(() => {
     return localStorage.getItem('bandchat-theme') || 'default';
   });
+  const [mode, setMode] = useState(() => {
+    const saved = localStorage.getItem('bandchat-mode');
+    if (saved) return saved;
+    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  });
 
   useEffect(() => {
     const theme = themes[currentTheme] || themes.default;
+    const colors = structuralColors[mode];
     const root = document.documentElement;
 
     root.style.setProperty('--color-sidebar', theme.sidebar);
@@ -181,8 +206,20 @@ export function ThemeProvider({ children }) {
     root.style.setProperty('--color-modal-card', theme.modalCard);
     root.style.setProperty('--color-modal-border', theme.modalBorder);
 
+    // Structural colors for dark/light mode
+    root.style.setProperty('--color-bg-primary', colors.bgPrimary);
+    root.style.setProperty('--color-bg-secondary', colors.bgSecondary);
+    root.style.setProperty('--color-bg-tertiary', colors.bgTertiary);
+    root.style.setProperty('--color-text-primary', colors.textPrimary);
+    root.style.setProperty('--color-text-secondary', colors.textSecondary);
+    root.style.setProperty('--color-border', colors.border);
+
+    // Set data attribute for CSS selectors
+    root.dataset.mode = mode;
+
     localStorage.setItem('bandchat-theme', currentTheme);
-  }, [currentTheme]);
+    localStorage.setItem('bandchat-mode', mode);
+  }, [currentTheme, mode]);
 
   const setTheme = (themeId) => {
     if (themes[themeId]) {
@@ -190,8 +227,16 @@ export function ThemeProvider({ children }) {
     }
   };
 
+  const toggleMode = () => {
+    setMode(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
+  const contextValue = useMemo(() => ({
+    currentTheme, setTheme, themes, mode, toggleMode
+  }), [currentTheme, mode]);
+
   return (
-    <ThemeContext.Provider value={{ currentTheme, setTheme, themes }}>
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );

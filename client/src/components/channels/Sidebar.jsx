@@ -33,6 +33,8 @@ import MemberProfile from '../common/MemberProfile';
 import MemberHoverCard from '../common/MemberHoverCard';
 import ConfirmDialog from '../common/ConfirmDialog';
 import NewMessageModal from './NewMessageModal';
+import Skeleton from '../common/Skeleton';
+import { hapticMedium } from '../../services/haptic';
 
 /** Draggable channel item wrapper for admin drag-and-drop */
 function DraggableChannel({ channel, children, disabled }) {
@@ -148,7 +150,7 @@ function Sidebar({
 }) {
   const navigate = useNavigate();
   const { updateUser } = useAuth();
-  const { currentTheme, setTheme, themes } = useTheme();
+  const { currentTheme, setTheme, themes, mode, toggleMode } = useTheme();
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showNewMessage, setShowNewMessage] = useState(false);
@@ -375,6 +377,7 @@ function Sidebar({
   );
 
   const handleDragStart = (event) => {
+    hapticMedium();
     const { active } = event;
     const type = active.data?.current?.type;
 
@@ -1717,6 +1720,30 @@ function Sidebar({
               {/* Theme Tab */}
               {settingsTab === 'theme' && (
                 <div>
+                  {/* Dark/Light Mode Toggle */}
+                  <div className="flex items-center justify-between mb-6 p-3 bg-gray-800 rounded-lg">
+                    <span className="text-gray-300 text-sm font-medium">Appearance</span>
+                    <button
+                      onClick={toggleMode}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-sm"
+                    >
+                      {mode === 'dark' ? (
+                        <>
+                          <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                          </svg>
+                          <span className="text-gray-300">Light mode</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                          </svg>
+                          <span className="text-gray-300">Dark mode</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                   <p className="text-gray-400 mb-4">Choose a theme for your sidebar</p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                     {Object.entries(themes).map(([id, theme]) => (
@@ -2073,7 +2100,9 @@ function Sidebar({
                       </div>
 
                       {bandMembersLoading ? (
-                        <div className="text-center py-8 text-gray-400">Loading...</div>
+                        <div className="space-y-4 p-4">
+                          {Array.from({length: 3}).map((_, i) => <Skeleton.ListItem key={i} />)}
+                        </div>
                       ) : (
                         <div className="space-y-4">
                           {(() => {

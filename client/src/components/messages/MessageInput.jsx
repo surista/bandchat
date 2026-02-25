@@ -4,6 +4,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
+import { hapticLight } from '../../services/haptic';
 
 /** Maximum file size for uploads */
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -28,7 +29,7 @@ const isVideoFile = (file) => file.type.startsWith('video/') || ALLOWED_VIDEO_TY
  * @param {function} props.onTyping - Callback when user is typing
  * @param {Array} props.members - Workspace members for @mention autocomplete
  */
-function MessageInput({ channelName, onSend, onTyping, members = [] }) {
+function MessageInput({ channelName, onSend, onTyping, members = [], disabled = false }) {
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -58,9 +59,14 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
     setSending(true);
     setError('');
     setShowMentions(false);
+    hapticLight();
     try {
       await onSend(content.trim(), selectedFiles);
       setContent('');
+      // Revoke blob URLs before clearing previews
+      previews.forEach(p => {
+        if (p?.url?.startsWith('blob:')) URL.revokeObjectURL(p.url);
+      });
       setSelectedFiles([]);
       setPreviews([]);
     } catch (err) {
@@ -255,9 +261,24 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
   };
 
   const removeFile = (index) => {
+    const preview = previews[index];
+    if (preview?.url?.startsWith('blob:')) {
+      URL.revokeObjectURL(preview.url);
+    }
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
     setPreviews(prev => prev.filter((_, i) => i !== index));
   };
+
+  // Cleanup blob URLs on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      previews.forEach(p => {
+        if (p?.url?.startsWith('blob:')) {
+          URL.revokeObjectURL(p.url);
+        }
+      });
+    };
+  }, []);  // Empty deps - cleanup on unmount only
 
   const formatFileSize = (bytes) => {
     if (bytes < 1024) return bytes + ' B';
@@ -328,11 +349,17 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
       <div className="bg-gray-700 rounded-lg relative">
         {/* @Mention dropdown */}
         {showMentions && filteredMembers.length > 0 && (
-          <div className="absolute bottom-full left-0 mb-1 w-64 bg-gray-800 rounded-lg shadow-lg border border-gray-600 py-1 max-h-48 overflow-y-auto z-50">
+          <div
+            className="absolute bottom-full left-0 mb-1 w-64 bg-gray-800 rounded-lg shadow-lg border border-gray-600 py-1 max-h-48 overflow-y-auto z-50"
+            role="listbox"
+            id="mention-listbox"
+          >
             {filteredMembers.map((member, idx) => (
               <button
                 key={member.user.id}
                 type="button"
+                role="option"
+                aria-selected={idx === mentionIndex}
                 onClick={() => insertMention(member.user.displayName)}
                 className={`w-full px-3 py-2 text-left flex items-center gap-2 ${
                   idx === mentionIndex ? 'bg-blue-600' : 'hover:bg-gray-700'
@@ -357,10 +384,13 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
           onKeyDown={handleKeyDown}
           onInput={handleInput}
           onPaste={handlePaste}
-          placeholder={`Message #${channelName}`}
-          className="w-full bg-transparent text-white px-4 py-3 resize-none outline-none placeholder-gray-400"
+          placeholder={disabled ? "You're offline" : `Message #${channelName}`}
+          aria-label={`Message ${channelName}`}
+          aria-expanded={showMentions}
+          aria-controls="mention-listbox"
+          className={`w-full bg-transparent text-white px-4 py-3 resize-none outline-none placeholder-gray-400 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           rows={1}
-          disabled={sending}
+          disabled={sending || disabled}
         />
         <div className="flex items-center justify-between px-3 py-2 border-t border-gray-600">
           <div className="flex items-center gap-2">
@@ -401,7 +431,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [] }) {
           <button
             type="submit"
             disabled={(!content.trim() && selectedFiles.length === 0) || sending}
-            className="bg-slack-green text-white px-4 py-1.5 rounded font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-slack-green text-white px-4 py-1.5 rounded font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
           >
             {sending ? 'Sending...' : 'Send'}
           </button>

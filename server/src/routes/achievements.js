@@ -110,9 +110,17 @@ router.get('/definitions', authenticate, async (req, res) => {
   }
 });
 
-// Force reseed achievements (fixes icons)
+// Force reseed achievements (fixes icons) - requires admin of at least one workspace
 router.post('/reseed', authenticate, async (req, res) => {
   try {
+    // Require user to be an admin of at least one workspace
+    const adminMembership = await prisma.workspaceMember.findFirst({
+      where: { userId: req.user.id, role: 'ADMIN' }
+    });
+    if (!adminMembership) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
     console.log('Force reseeding achievements...');
     for (const achievement of DEFAULT_ACHIEVEMENTS) {
       const result = await prisma.achievement.upsert({
@@ -770,7 +778,7 @@ router.post('/workspace/:workspaceId/award', authenticate, isWorkspaceAdmin, asy
 });
 
 // Reset ALL band badges (to fix incorrect earnedAt dates)
-router.post('/workspace/:workspaceId/reset-band-badges', authenticate, isWorkspaceMember, async (req, res) => {
+router.post('/workspace/:workspaceId/reset-band-badges', authenticate, isWorkspaceAdmin, async (req, res) => {
   try {
     const workspaceId = req.params.workspaceId;
 

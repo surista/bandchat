@@ -1,9 +1,18 @@
 import express from 'express';
 import multer from 'multer';
 import fileType from 'file-type';
+import { rateLimit } from 'express-rate-limit';
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Dedicated rate limiter for uploads
+const uploadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { error: 'Too many uploads, please try again later' },
+  keyGenerator: (req) => req.user?.id || req.ip,
+});
 
 // Cloudinary cloud name for unsigned uploads - environment variables required
 const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
@@ -97,7 +106,7 @@ const uploadToCloudinary = async (buffer, originalname, fileCategory, mimeType) 
 };
 
 // Upload single file (image, audio, or video)
-router.post('/', authenticate, upload.single('file'), async (req, res) => {
+router.post('/', authenticate, uploadLimiter, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -136,7 +145,7 @@ router.post('/', authenticate, upload.single('file'), async (req, res) => {
 });
 
 // Upload multiple files (up to 5)
-router.post('/multiple', authenticate, upload.array('files', 5), async (req, res) => {
+router.post('/multiple', authenticate, uploadLimiter, upload.array('files', 5), async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: 'No files uploaded' });

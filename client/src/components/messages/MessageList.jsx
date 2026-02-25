@@ -3,12 +3,151 @@
  * Handles message rendering, editing, reactions, and thread navigation.
  */
 
-import { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { format, isToday, isYesterday } from 'date-fns';
 import ReactionDisplay from './ReactionDisplay';
 import ReactionPicker from './ReactionPicker';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ImageLightbox from '../common/ImageLightbox';
+import { hapticLight } from '../../services/haptic';
+import LinkPreviewCard from './LinkPreviewCard';
+
+/**
+ * Memoized component for rendering message content with URL detection,
+ * embeds (Google Docs, YouTube), images, videos, and @mentions.
+ */
+const MessageContent = React.memo(({ content, message, onOpenLightbox }) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = content.split(urlRegex);
+
+  return parts.map((part, i) => {
+    if (part.match(urlRegex)) {
+      // Check if it's a Google Doc/Sheet using proper URL parsing
+      let isGoogleDoc = false;
+      try {
+        const parsedUrl = new URL(part);
+        isGoogleDoc = parsedUrl.hostname === 'docs.google.com' || parsedUrl.hostname === 'sheets.google.com';
+      } catch {}
+      if (isGoogleDoc) {
+        return (
+          <div key={i} className="my-2">
+            <a
+              href={part}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slack-blue hover:underline break-all"
+            >
+              {part}
+            </a>
+            <iframe
+              src={part.replace('/edit', '/preview')}
+              className="w-full h-64 mt-2 rounded border border-gray-600"
+              title="Google Doc"
+              sandbox="allow-scripts allow-same-origin"
+              loading="lazy"
+            />
+          </div>
+        );
+      }
+
+      // Check if it's a YouTube link
+      const ytMatch = part.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/|m\.youtube\.com\/watch\?v=)([\w-]{11})/);
+      if (ytMatch) {
+        const videoId = ytMatch[1];
+        return (
+          <div key={i} className="my-2">
+            <a
+              href={part}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slack-blue hover:underline break-all"
+            >
+              {part}
+            </a>
+            <a
+              href={part}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block relative max-w-full md:max-w-md mt-1 rounded overflow-hidden group"
+            >
+              <img
+                src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
+                alt="YouTube video thumbnail"
+                className="w-full rounded"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-16 h-16 bg-red-600 bg-opacity-90 rounded-2xl flex items-center justify-center group-hover:bg-opacity-100 transition-opacity">
+                  <svg viewBox="0 0 24 24" fill="white" className="w-8 h-8 ml-1">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+              </div>
+            </a>
+          </div>
+        );
+      }
+
+      // Check if it's an image
+      if (part.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+        return (
+          <div key={i} className="my-2">
+            <img
+              src={part}
+              alt="Shared image"
+              className="max-w-full md:max-w-md max-h-80 rounded cursor-pointer"
+              loading="lazy"
+              onClick={() => message && onOpenLightbox(message, part)}
+            />
+          </div>
+        );
+      }
+
+      // Check if it's a video
+      if (part.match(/\.(mp4|webm|mov)$/i)) {
+        return (
+          <div key={i} className="my-2">
+            <video
+              src={part}
+              controls
+              className="max-w-full md:max-w-md rounded"
+            />
+          </div>
+        );
+      }
+
+      return (
+        <span key={i}>
+          <a
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-slack-blue hover:underline break-all"
+          >
+            {part}
+          </a>
+          <LinkPreviewCard url={part} />
+        </span>
+      );
+    }
+
+    // Convert @mentions
+    const mentionRegex = /@(\w+)/g;
+    const mentionParts = part.split(mentionRegex);
+
+    return mentionParts.map((p, j) => {
+      if (j % 2 === 1) {
+        return (
+          <span key={`${i}-${j}`} className="bg-blue-900 text-blue-300 px-1 rounded">
+            @{p}
+          </span>
+        );
+      }
+      return p;
+    });
+  });
+});
+MessageContent.displayName = 'MessageContent';
 
 /**
  * Renders a list of messages with date headers, reactions, and action buttons.
@@ -29,7 +168,11 @@ function MessageList({
   onEditMessage,
   onDeleteMessage,
   onAddReaction,
-  onRemoveReaction
+  onRemoveReaction,
+  onPinMessage,
+  onUnpinMessage,
+  pinnedMessageIds,
+  lastReadAt
 }) {
   const [editingId, setEditingId] = useState(null);
   const [editContent, setEditContent] = useState('');
@@ -37,7 +180,33 @@ function MessageList({
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState(null);
   const [activeMessageId, setActiveMessageId] = useState(null); // For mobile tap-to-reveal actions
   const [deleteMessageId, setDeleteMessageId] = useState(null); // For delete confirmation dialog
-  const [lightboxImage, setLightboxImage] = useState(null);
+  const [lightboxData, setLightboxData] = useState(null); // { images: [{src, alt}], index }
+
+  /** Collect all images from a message (inline URLs + IMAGE attachments) */
+  const getMessageImages = (message) => {
+    const images = [];
+    // Inline image URLs from content
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = message.content?.match(urlRegex) || [];
+    parts.forEach(url => {
+      if (url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+        images.push({ src: url, alt: 'Shared image' });
+      }
+    });
+    // Image attachments
+    (message.attachments || []).forEach(att => {
+      if (att.type === 'IMAGE') {
+        images.push({ src: att.url, alt: att.filename });
+      }
+    });
+    return images;
+  };
+
+  const openLightbox = (message, src) => {
+    const images = getMessageImages(message);
+    const index = images.findIndex(img => img.src === src);
+    setLightboxData({ images, index: Math.max(0, index) });
+  };
 
   const formatMessageTime = (date) => {
     const d = new Date(date);
@@ -79,6 +248,7 @@ function MessageList({
   };
 
   const handleToggleReaction = (messageId, emoji, hasReacted) => {
+    hapticLight();
     if (hasReacted) {
       onRemoveReaction(messageId, emoji);
     } else {
@@ -110,129 +280,14 @@ function MessageList({
     }
   };
 
-  const renderContent = (content) => {
-    // Convert URLs to links
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const parts = content.split(urlRegex);
-
-    return parts.map((part, i) => {
-      if (part.match(urlRegex)) {
-        // Check if it's a Google Doc/Sheet
-        if (part.includes('docs.google.com') || part.includes('sheets.google.com')) {
-          return (
-            <div key={i} className="my-2">
-              <a
-                href={part}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-slack-blue hover:underline break-all"
-              >
-                {part}
-              </a>
-              <iframe
-                src={part.replace('/edit', '/preview')}
-                className="w-full h-64 mt-2 rounded border border-gray-600"
-                title="Google Doc"
-              />
-            </div>
-          );
-        }
-
-        // Check if it's a YouTube link
-        const ytMatch = part.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/|m\.youtube\.com\/watch\?v=)([\w-]{11})/);
-        if (ytMatch) {
-          const videoId = ytMatch[1];
-          return (
-            <div key={i} className="my-2">
-              <a
-                href={part}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-slack-blue hover:underline break-all"
-              >
-                {part}
-              </a>
-              <a
-                href={part}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block relative max-w-full md:max-w-md mt-1 rounded overflow-hidden group"
-              >
-                <img
-                  src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
-                  alt="YouTube video thumbnail"
-                  className="w-full rounded"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-16 h-16 bg-red-600 bg-opacity-90 rounded-2xl flex items-center justify-center group-hover:bg-opacity-100 transition-opacity">
-                    <svg viewBox="0 0 24 24" fill="white" className="w-8 h-8 ml-1">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  </div>
-                </div>
-              </a>
-            </div>
-          );
-        }
-
-        // Check if it's an image
-        if (part.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-          return (
-            <div key={i} className="my-2">
-              <img
-                src={part}
-                alt="Shared image"
-                className="max-w-full md:max-w-md max-h-80 rounded cursor-pointer"
-                loading="lazy"
-                onClick={() => setLightboxImage({ src: part, alt: 'Shared image' })}
-              />
-            </div>
-          );
-        }
-
-        // Check if it's a video
-        if (part.match(/\.(mp4|webm|mov)$/i)) {
-          return (
-            <div key={i} className="my-2">
-              <video
-                src={part}
-                controls
-                className="max-w-full md:max-w-md rounded"
-              />
-            </div>
-          );
-        }
-
-        return (
-          <a
-            key={i}
-            href={part}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-slack-blue hover:underline break-all"
-          >
-            {part}
-          </a>
-        );
-      }
-
-      // Convert @mentions
-      const mentionRegex = /@(\w+)/g;
-      const mentionParts = part.split(mentionRegex);
-
-      return mentionParts.map((p, j) => {
-        if (j % 2 === 1) {
-          return (
-            <span key={`${i}-${j}`} className="bg-blue-900 text-blue-300 px-1 rounded">
-              @{p}
-            </span>
-          );
-        }
-        return p;
-      });
-    });
-  };
+  const firstUnreadIndex = useMemo(() => {
+    if (!lastReadAt) return -1;
+    const lastReadTime = new Date(lastReadAt).getTime();
+    return messages.findIndex(m =>
+      m.author?.id !== currentUser?.id &&
+      new Date(m.createdAt).getTime() > lastReadTime
+    );
+  }, [messages, lastReadAt, currentUser?.id]);
 
   if (messages.length === 0) {
     return (
@@ -264,6 +319,15 @@ function MessageList({
                 {formatDateHeader(message.createdAt)}
               </span>
               <div className="flex-1 border-t border-gray-700" />
+            </div>
+          )}
+
+          {/* Unread Divider */}
+          {index === firstUnreadIndex && (
+            <div className="unread-divider flex items-center my-3">
+              <div className="flex-1 border-t border-red-500" />
+              <span className="px-3 text-xs text-red-500 font-semibold">New messages</span>
+              <div className="flex-1 border-t border-red-500" />
             </div>
           )}
 
@@ -344,7 +408,7 @@ function MessageList({
                 </div>
               ) : (
                 <div className="text-gray-200 break-words whitespace-pre-wrap">
-                  {renderContent(message.content)}
+                  <MessageContent content={message.content} message={message} onOpenLightbox={openLightbox} />
                 </div>
               )}
 
@@ -360,7 +424,7 @@ function MessageList({
                             alt={att.filename}
                             className="max-w-full md:max-w-md max-h-80 rounded cursor-pointer"
                             loading="lazy"
-                            onClick={() => setLightboxImage({ src: att.url, alt: att.filename })}
+                            onClick={() => openLightbox(message, att.url)}
                           />
                           {/* Download button - always visible on mobile, hover on desktop */}
                           <div className="absolute bottom-2 right-2 opacity-100 sm:opacity-0 sm:group-hover/img:opacity-100 transition-opacity flex gap-1">
@@ -501,6 +565,25 @@ function MessageList({
                 >
                   💬
                 </button>
+                {onPinMessage && onUnpinMessage && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (pinnedMessageIds?.has(message.id)) {
+                        onUnpinMessage(message.id);
+                      } else {
+                        onPinMessage(message.id);
+                      }
+                    }}
+                    className={`p-2 sm:p-1.5 hover:bg-gray-600 rounded min-w-[36px] sm:min-w-0 ${
+                      pinnedMessageIds?.has(message.id) ? 'text-yellow-400' : 'text-gray-300 hover:text-white'
+                    }`}
+                    title={pinnedMessageIds?.has(message.id) ? 'Unpin message' : 'Pin message'}
+                    aria-label={pinnedMessageIds?.has(message.id) ? 'Unpin message' : 'Pin message'}
+                  >
+                    📌
+                  </button>
+                )}
                 {message.author.id === currentUser.id && (
                   <>
                     <button
@@ -547,11 +630,11 @@ function MessageList({
       }}
       onCancel={() => setDeleteMessageId(null)}
     />
-    {lightboxImage && (
+    {lightboxData && (
       <ImageLightbox
-        src={lightboxImage.src}
-        alt={lightboxImage.alt}
-        onClose={() => setLightboxImage(null)}
+        images={lightboxData.images}
+        initialIndex={lightboxData.index}
+        onClose={() => setLightboxData(null)}
       />
     )}
     </>

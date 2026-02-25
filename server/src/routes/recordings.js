@@ -88,6 +88,16 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       return res.status(400).json({ error: 'Type must be audio or video' });
     }
 
+    // Validate that URL is a valid Cloudinary URL
+    try {
+      const parsedUrl = new URL(url);
+      if (!parsedUrl.hostname.endsWith('cloudinary.com')) {
+        return res.status(400).json({ error: 'Invalid attachment URL' });
+      }
+    } catch {
+      return res.status(400).json({ error: 'Invalid URL' });
+    }
+
     // Verify song belongs to workspace if provided
     if (songId) {
       const song = await prisma.song.findFirst({

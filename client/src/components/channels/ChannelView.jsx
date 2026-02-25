@@ -10,6 +10,9 @@ import api from '../../services/api';
 import MessageList from '../messages/MessageList';
 import MessageInput from '../messages/MessageInput';
 import ChannelMembersPanel from './ChannelMembersPanel';
+import PinnedMessagesPanel from './PinnedMessagesPanel';
+import Skeleton from '../common/Skeleton';
+import useOnlineStatus from '../../hooks/useOnlineStatus';
 
 /**
  * Main channel view component displaying messages and input.
@@ -21,9 +24,10 @@ import ChannelMembersPanel from './ChannelMembersPanel';
  * @param {function} props.onOpenThread - Callback when user clicks to open a thread
  * @param {function} props.onUpdateUnread - Callback to update unread count (called with 0 on channel select)
  */
-function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThreadId }) {
+function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThreadId, onOpenSearch }) {
   const { user } = useAuth();
   const { socket, joinChannel, leaveChannel, startTyping, stopTyping } = useSocket();
+  const isOnline = useOnlineStatus();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
@@ -31,6 +35,9 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   const [typingUsers, setTypingUsers] = useState([]);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
+  const [pinnedMessages, setPinnedMessages] = useState([]);
+  const [showPinned, setShowPinned] = useState(false);
+  const lastReadAtRef = useRef(null);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -42,10 +49,14 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   openThreadIdRef.current = openThreadId;
 
   useEffect(() => {
+    // Capture lastRead before marking channel as read
+    lastReadAtRef.current = channel.lastRead || null;
+
     // Immediately clear the unread badge when channel is selected
     onUpdateUnread(0);
 
     loadMessages();
+    loadPinnedMessages();
     joinChannel(channel.id);
 
     return () => {
@@ -79,6 +90,8 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       socket.on('typing:stop', handleTypingStop);
       socket.on('reaction:added', handleReactionAdded);
       socket.on('reaction:removed', handleReactionRemoved);
+      socket.on('message:pinned', handleMessagePinned);
+      socket.on('message:unpinned', handleMessageUnpinned);
 
       return () => {
         socket.off('message:new', handleNewMessage);
@@ -89,6 +102,8 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
         socket.off('typing:stop', handleTypingStop);
         socket.off('reaction:added', handleReactionAdded);
         socket.off('reaction:removed', handleReactionRemoved);
+        socket.off('message:pinned', handleMessagePinned);
+        socket.off('message:unpinned', handleMessageUnpinned);
       };
     }
   }, [socket]);
@@ -127,6 +142,15 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       setNextCursor(data.nextCursor);
     } catch (err) {
       console.error('Failed to load more messages:', err);
+    }
+  };
+
+  const loadPinnedMessages = async () => {
+    try {
+      const data = await api.getPinnedMessages(channel.id);
+      setPinnedMessages(data);
+    } catch (err) {
+      console.error('Failed to load pinned messages:', err);
     }
   };
 
@@ -229,6 +253,40 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       })
     );
   };
+
+  const handleMessagePinned = (pinnedMessage) => {
+    if (pinnedMessage.message?.channelId === channelIdRef.current || pinnedMessage.channelId === channelIdRef.current) {
+      setPinnedMessages(prev => {
+        // Avoid duplicates
+        if (prev.some(p => p.id === pinnedMessage.id)) return prev;
+        return [pinnedMessage, ...prev];
+      });
+    }
+  };
+
+  const handleMessageUnpinned = ({ messageId, channelId }) => {
+    if (channelId === channelIdRef.current) {
+      setPinnedMessages(prev => prev.filter(p => p.messageId !== messageId));
+    }
+  };
+
+  const handlePinMessage = async (messageId) => {
+    try {
+      await api.pinMessage(messageId);
+    } catch (err) {
+      console.error('Failed to pin message:', err);
+    }
+  };
+
+  const handleUnpinMessage = async (messageId) => {
+    try {
+      await api.unpinMessage(messageId);
+    } catch (err) {
+      console.error('Failed to unpin message:', err);
+    }
+  };
+
+  const pinnedMessageIds = new Set(pinnedMessages.map(p => p.messageId));
 
   const scrollToBottom = (instant = false) => {
     // Use requestAnimationFrame to ensure DOM is updated
@@ -393,7 +451,32 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
             )}
           </>
         )}
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
+          {onOpenSearch && (
+            <button
+              onClick={onOpenSearch}
+              className="p-2 rounded hover:bg-gray-700 transition-colors text-gray-400 hover:text-white hidden md:block"
+              title="Search messages"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+          )}
+          <button
+            onClick={() => setShowPinned(prev => !prev)}
+            className={`p-2 rounded hover:bg-gray-700 transition-colors relative ${showPinned ? 'text-white bg-gray-700' : 'text-gray-400 hover:text-white'}`}
+            title="Pinned messages"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            </svg>
+            {pinnedMessages.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-medium">
+                {pinnedMessages.length}
+              </span>
+            )}
+          </button>
           <button
             onClick={() => setShowMembers(prev => !prev)}
             className={`p-2 rounded hover:bg-gray-700 transition-colors ${showMembers ? 'text-white bg-gray-700' : 'text-gray-400 hover:text-white'}`}
@@ -406,11 +489,21 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
         </div>
       </div>
 
+      {/* Offline Banner */}
+      {!isOnline && (
+        <div className="offline-banner px-4 py-2 text-center text-sm flex items-center justify-center gap-2">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636a9 9 0 010 12.728M5.636 18.364a9 9 0 010-12.728m2.828 9.9a5 5 0 010-7.072m7.072 0a5 5 0 010 7.072" />
+          </svg>
+          You're offline — showing cached messages
+        </div>
+      )}
+
       {/* Messages */}
       <div ref={messagesContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
         {loading ? (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            Loading messages...
+          <div className="px-4 py-2">
+            {Array.from({length: 8}).map((_, i) => <Skeleton.Message key={i} />)}
           </div>
         ) : (
           <>
@@ -432,6 +525,10 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
               onDeleteMessage={handleDeleteMessage}
               onAddReaction={handleAddReaction}
               onRemoveReaction={handleRemoveReaction}
+              onPinMessage={handlePinMessage}
+              onUnpinMessage={handleUnpinMessage}
+              pinnedMessageIds={pinnedMessageIds}
+              lastReadAt={lastReadAtRef.current}
             />
             <div ref={messagesEndRef} />
           </>
@@ -462,6 +559,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
         onSend={handleSendMessage}
         onTyping={handleTyping}
         members={workspace?.members || []}
+        disabled={!isOnline}
       />
 
       {/* Members Panel */}
@@ -473,6 +571,20 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
               channel={channel}
               workspace={workspace}
               onClose={() => setShowMembers(false)}
+            />
+          </div>
+        </>
+      )}
+
+      {/* Pinned Messages Panel */}
+      {showPinned && (
+        <>
+          <div className="hidden md:block fixed inset-0 z-40" onClick={() => setShowPinned(false)} />
+          <div className="fixed inset-0 z-50 md:left-auto md:w-80 md:border-l md:border-gray-700">
+            <PinnedMessagesPanel
+              pinnedMessages={pinnedMessages}
+              onUnpin={handleUnpinMessage}
+              onClose={() => setShowPinned(false)}
             />
           </div>
         </>

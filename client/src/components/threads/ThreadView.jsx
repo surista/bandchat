@@ -6,6 +6,8 @@ import api from '../../services/api';
 import ReactionDisplay from '../messages/ReactionDisplay';
 import ReactionPicker from '../messages/ReactionPicker';
 import ImageLightbox from '../common/ImageLightbox';
+import Skeleton from '../common/Skeleton';
+import useSwipeGesture from '../../hooks/useSwipeGesture';
 
 const handleDownload = async (url, filename) => {
   try {
@@ -53,6 +55,9 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
   const [lightboxImage, setLightboxImage] = useState(null);
   const repliesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const swipeRef = useSwipeGesture({
+    onSwipeRight: onClose,
+  });
 
   useEffect(() => {
     loadReplies();
@@ -289,7 +294,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
   const formatTime = (date) => format(new Date(date), 'MMM d, h:mm a');
 
   return (
-    <div className="flex flex-col h-full bg-gray-800">
+    <div ref={swipeRef} className="flex flex-col h-full bg-gray-800">
       {/* Header */}
       <div className="h-14 border-b border-gray-700 px-4 flex items-center justify-between">
         <h3 className="text-white font-semibold">Thread</h3>
@@ -354,8 +359,8 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
       {/* Replies */}
       <div className="flex-1 overflow-y-auto">
         {loading ? (
-          <div className="flex items-center justify-center h-32 text-gray-400">
-            Loading replies...
+          <div className="p-4">
+            {Array.from({length: 3}).map((_, i) => <Skeleton.Message key={i} />)}
           </div>
         ) : replies.length === 0 ? (
           <div className="flex items-center justify-center h-32 text-gray-400 text-sm">

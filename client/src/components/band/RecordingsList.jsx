@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../../services/api';
+import Skeleton from '../common/Skeleton';
 
 export default function RecordingsList({ workspaceId }) {
   const [recordings, setRecordings] = useState([]);
@@ -16,6 +17,8 @@ export default function RecordingsList({ workspaceId }) {
   const streamRef = useRef(null);
   const chunksRef = useRef([]);
   const previewRef = useRef(null);
+  const objectUrlRef = useRef(null);
+  const isInitialMount = useRef(true);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -30,10 +33,15 @@ export default function RecordingsList({ workspaceId }) {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
     };
   }, [workspaceId]);
 
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     loadRecordings();
   }, [filter]);
 
@@ -96,7 +104,8 @@ export default function RecordingsList({ workspaceId }) {
         // Show preview
         if (previewRef.current) {
           previewRef.current.srcObject = null;
-          previewRef.current.src = URL.createObjectURL(blob);
+          objectUrlRef.current = URL.createObjectURL(blob);
+          previewRef.current.src = objectUrlRef.current;
         }
       };
 
@@ -155,6 +164,10 @@ export default function RecordingsList({ workspaceId }) {
     setShowRecorder(false);
     setRecordedBlob(null);
     setFormData({ title: '', description: '', songId: '' });
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
     if (previewRef.current) {
       previewRef.current.src = '';
       previewRef.current.srcObject = null;
@@ -187,7 +200,11 @@ export default function RecordingsList({ workspaceId }) {
   }
 
   if (loading) {
-    return <div className="p-4 text-gray-400">Loading recordings...</div>;
+    return (
+      <div className="space-y-4 p-4">
+        {Array.from({length: 3}).map((_, i) => <Skeleton.Card key={i} />)}
+      </div>
+    );
   }
 
   return (

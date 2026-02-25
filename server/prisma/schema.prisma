@@ -48,6 +48,7 @@ model User {
   bandMemberLinks         BandMember[]
   kittyTransactions       KittyTransaction[]
   threadReads             ThreadRead[]
+  pinnedMessages          PinnedMessage[]
 }
 
 model RefreshToken {
@@ -134,9 +135,10 @@ model Channel {
 
   workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   group     ChannelGroup?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  members   ChannelMember[]
-  messages  Message[]
-  polls     Poll[]
+  members        ChannelMember[]
+  messages       Message[]
+  polls          Poll[]
+  pinnedMessages PinnedMessage[]
 
   @@unique([workspaceId, name])
   @@index([groupId, position])
@@ -172,8 +174,9 @@ model Message {
   parent      Message?     @relation("Threads", fields: [parentId], references: [id], onDelete: SetNull)
   replies     Message[]    @relation("Threads")
   attachments Attachment[]
-  reactions   Reaction[]
-  threadReads ThreadRead[]
+  reactions       Reaction[]
+  threadReads     ThreadRead[]
+  pinnedMessages  PinnedMessage[]
 
   @@index([channelId, createdAt])
   @@index([parentId])
@@ -239,6 +242,21 @@ model ThreadRead {
   message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@id([userId, messageId])
+}
+
+model PinnedMessage {
+  id         String   @id @default(uuid())
+  messageId  String
+  channelId  String
+  pinnedById String
+  createdAt  DateTime @default(now())
+
+  message    Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  channel    Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  pinnedBy   User     @relation(fields: [pinnedById], references: [id])
+
+  @@unique([messageId, channelId])
+  @@index([channelId])
 }
 
 // Band Features

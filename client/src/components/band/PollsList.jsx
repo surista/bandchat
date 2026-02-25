@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { formatDistanceToNow } from 'date-fns';
+import Skeleton from '../common/Skeleton';
 
 function PollsList({ workspaceId }) {
   const { user } = useAuth();
@@ -82,8 +83,8 @@ function PollsList({ workspaceId }) {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-gray-400">Loading polls...</div>
+      <div className="space-y-4 p-4">
+        {Array.from({length: 3}).map((_, i) => <Skeleton.Card key={i} />)}
       </div>
     );
   }
@@ -354,7 +355,7 @@ function PollForm({ onSave, onClose }) {
       <div className="modal-content max-w-lg">
         <div className="modal-header">
           <h3>Create Poll</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl">&times;</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl" aria-label="Close">&times;</button>
         </div>
 
         <div className="modal-body">

@@ -1,9 +1,10 @@
+import 'dotenv/config';
+
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
-import dotenv from 'dotenv';
 
 import authRoutes from './routes/auth.js';
 import workspaceRoutes from './routes/workspaces.js';
@@ -26,10 +27,10 @@ import achievementRoutes from './routes/achievements.js';
 import recordingRoutes from './routes/recordings.js';
 import suggestionRoutes from './routes/suggestions.js';
 import kittyRoutes from './routes/kitty.js';
+import linkPreviewRoutes from './routes/linkPreview.js';
 import { setupSocketHandlers } from './socket/handlers.js';
 import { apiLimiter } from './middleware/rateLimit.js';
-
-dotenv.config();
+import prisma from './lib/prisma.js';
 
 const app = express();
 app.set('trust proxy', 1); // Trust first proxy (Railway)
@@ -48,6 +49,17 @@ const io = new Server(httpServer, {
   }
 });
 
+// Derive specific WebSocket origins from allowedOrigins
+const wsOrigins = allowedOrigins.map(origin => {
+  if (origin.startsWith('https://')) {
+    return origin.replace('https://', 'wss://');
+  }
+  if (origin.startsWith('http://')) {
+    return origin.replace('http://', 'ws://');
+  }
+  return origin;
+});
+
 // Middleware
 app.use(helmet({
   contentSecurityPolicy: {
@@ -56,7 +68,7 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://*.googleusercontent.com"],
-      connectSrc: ["'self'", "wss:", "ws:", ...allowedOrigins],
+      connectSrc: ["'self'", ...wsOrigins, ...allowedOrigins],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
       frameAncestors: ["'none'"]
@@ -98,6 +110,7 @@ app.use('/api/achievements', achievementRoutes);
 app.use('/api/recordings', recordingRoutes);
 app.use('/api/suggestions', suggestionRoutes);
 app.use('/api/kitty', kittyRoutes);
+app.use('/api/link-preview', linkPreviewRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -106,7 +119,7 @@ app.get('/api/health', (req, res) => {
 
 // Global error handler (must be after all routes)
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
+  console.error(`Unhandled error on ${req.method} ${req.path}:`, err);
   res.status(500).json({ error: 'Internal server error' });
 });
 
@@ -120,10 +133,11 @@ httpServer.listen(PORT, () => {
 });
 
 // Graceful shutdown
-const gracefulShutdown = (signal) => {
+const gracefulShutdown = async (signal) => {
   console.log(`${signal} received. Shutting down gracefully...`);
-  httpServer.close(() => {
+  httpServer.close(async () => {
     console.log('HTTP server closed');
+    await prisma.$disconnect();
     process.exit(0);
   });
   // Force close after 10 seconds

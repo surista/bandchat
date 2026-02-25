@@ -489,6 +489,22 @@ class ApiService {
     });
   }
 
+  async pinMessage(messageId) {
+    return this.request(`/messages/${messageId}/pin`, {
+      method: 'POST'
+    });
+  }
+
+  async unpinMessage(messageId) {
+    return this.request(`/messages/${messageId}/pin`, {
+      method: 'DELETE'
+    });
+  }
+
+  async getPinnedMessages(channelId) {
+    return this.request(`/messages/channel/${channelId}/pins`);
+  }
+
   // File uploads
   async uploadFile(file) {
     const formData = new FormData();
@@ -1203,6 +1219,11 @@ class ApiService {
     return this.request(`/kitty/transactions/${transactionId}`, {
       method: 'DELETE'
     });
+  }
+
+  // Link Previews
+  async getLinkPreview(url) {
+    return this.request(`/link-preview?url=${encodeURIComponent(url)}`);
   }
 }
 

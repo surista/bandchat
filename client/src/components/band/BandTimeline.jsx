@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
+import Skeleton from '../common/Skeleton';
 
 const EVENT_TYPES = [
   { value: 'formation', label: 'Band Formation', icon: '🎸' },
@@ -152,7 +153,11 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
   const years = Object.keys(eventsByYear).sort((a, b) => b - a);
 
   if (loading) {
-    return <div className="p-4 text-gray-400">Loading timeline...</div>;
+    return (
+      <div className="space-y-4 p-4">
+        {Array.from({length: 3}).map((_, i) => <Skeleton.ListItem key={i} />)}
+      </div>
+    );
   }
 
   return (

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
+import Skeleton from '../common/Skeleton';
 
 export default function SongSuggestions({ workspaceId }) {
   const [activeTab, setActiveTab] = useState('recommendations');
@@ -12,6 +13,7 @@ export default function SongSuggestions({ workspaceId }) {
   const [selectedSongIds, setSelectedSongIds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMashups, setLoadingMashups] = useState(false);
+  const [loadingTransitions, setLoadingTransitions] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -46,14 +48,14 @@ export default function SongSuggestions({ workspaceId }) {
   }
 
   async function loadTransitions() {
-    setLoading(true);
+    setLoadingTransitions(true);
     try {
       const data = await api.getTransitions(workspaceId, 40);
       setTransitions(data);
     } catch (error) {
       console.error('Failed to load transitions:', error);
     } finally {
-      setLoading(false);
+      setLoadingTransitions(false);
     }
   }
 
@@ -93,7 +95,11 @@ export default function SongSuggestions({ workspaceId }) {
   }
 
   if (loading) {
-    return <div className="p-4 text-gray-400">Loading suggestions...</div>;
+    return (
+      <div className="space-y-4 p-4">
+        {Array.from({length: 3}).map((_, i) => <Skeleton.Card key={i} />)}
+      </div>
+    );
   }
 
   return (
@@ -321,7 +327,12 @@ export default function SongSuggestions({ workspaceId }) {
       )}
 
       {/* Transitions Tab */}
-      {activeTab === 'transitions' && transitions && (
+      {activeTab === 'transitions' && loadingTransitions && (
+        <div className="space-y-4">
+          {Array.from({length: 3}).map((_, i) => <Skeleton.Card key={i} />)}
+        </div>
+      )}
+      {activeTab === 'transitions' && !loadingTransitions && transitions && (
         <div>
           <p className="text-gray-400 mb-4">
             Found {transitions.count} compatible transitions. Showing top matches:

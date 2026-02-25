@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../../services/api';
+import Skeleton from '../common/Skeleton';
 
 export default function Achievements({ workspaceId }) {
   const [activeTab, setActiveTab] = useState('band');
@@ -13,10 +14,17 @@ export default function Achievements({ workspaceId }) {
   const [checking, setChecking] = useState(false);
   const [newAchievements, setNewAchievements] = useState([]);
   const [message, setMessage] = useState(null);
+  const messageTimerRef = useRef(null);
 
   useEffect(() => {
     loadData();
   }, [workspaceId]);
+
+  useEffect(() => {
+    return () => {
+      if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
+    };
+  }, []);
 
   async function loadData() {
     try {
@@ -52,7 +60,8 @@ export default function Achievements({ workspaceId }) {
         await loadData();
       } else {
         setMessage({ type: 'info', text: 'No new achievements - keep playing!' });
-        setTimeout(() => setMessage(null), 3000);
+        if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
+        messageTimerRef.current = setTimeout(() => setMessage(null), 3000);
       }
     } catch (error) {
       console.error('Failed to check achievements:', error);
@@ -92,7 +101,9 @@ export default function Achievements({ workspaceId }) {
   if (loading) {
     return (
       <div className="h-full flex flex-col bg-gray-900">
-        <div className="p-4 text-gray-400">Loading achievements...</div>
+        <div className="space-y-4 p-4">
+          {Array.from({length: 3}).map((_, i) => <Skeleton.Card key={i} />)}
+        </div>
       </div>
     );
   }

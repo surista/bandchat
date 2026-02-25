@@ -2,10 +2,19 @@
 // Version is injected at build time, fallback for dev
 const APP_VERSION = '__APP_VERSION__';
 const CACHE_NAME = `bandchat-${APP_VERSION}`;
+const API_CACHE_NAME = 'bandchat-api-cache';
+
+// API endpoints to cache for offline support (stale-while-revalidate)
+const CACHEABLE_API_PATTERNS = [
+  /\/api\/messages\/channel\/[^/]+$/,
+  /\/api\/songs\/workspace\/[^/]+$/,
+  /\/api\/channels\/workspace\/[^/]+$/,
+];
 
 // Assets to precache (minimal - we use network-first for most things)
 const PRECACHE_ASSETS = [
-  '/favicon.svg'
+  '/favicon.svg',
+  '/index.html'
 ];
 
 // Install event - precache minimal assets
@@ -26,7 +35,7 @@ self.addEventListener('activate', (event) => {
       .then(cacheNames => {
         return Promise.all(
           cacheNames
-            .filter(name => name.startsWith('bandchat-') && name !== CACHE_NAME)
+            .filter(name => name.startsWith('bandchat-') && name !== CACHE_NAME && name !== API_CACHE_NAME)
             .map(name => {
               console.log(`[SW] Deleting old cache: ${name}`);
               return caches.delete(name);
@@ -55,7 +64,42 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
 
-  // Skip API requests and external URLs
+  // Handle cacheable API requests (stale-while-revalidate)
+  if (url.pathname.startsWith('/api') && CACHEABLE_API_PATTERNS.some(p => p.test(url.pathname))) {
+    event.respondWith(
+      caches.open(API_CACHE_NAME).then(cache =>
+        cache.match(event.request).then(cached => {
+          const fetchPromise = fetch(event.request)
+            .then(async response => {
+              if (response.ok) {
+                await cache.put(event.request, response.clone());
+                // Evict oldest entries if cache exceeds limit
+                const entries = await cache.keys();
+                if (entries.length > 50) {
+                  const entriesToRemove = entries.slice(0, entries.length - 50);
+                  await Promise.all(entriesToRemove.map(entry => cache.delete(entry)));
+                }
+              }
+              return response;
+            })
+            .catch(() => {
+              // Offline: return cached response
+              if (cached) return cached;
+              return new Response(JSON.stringify({ error: 'Offline' }), {
+                status: 503,
+                headers: { 'Content-Type': 'application/json' }
+              });
+            });
+
+          // Return cached immediately if available, but revalidate in background
+          return cached || fetchPromise;
+        })
+      )
+    );
+    return;
+  }
+
+  // Skip other API requests and external URLs
   if (url.pathname.startsWith('/api') || url.origin !== self.location.origin) return;
 
   // For navigation requests (HTML pages) - always network first
@@ -116,6 +160,11 @@ self.addEventListener('message', (event) => {
         self.navigator.clearAppBadge().catch(() => {});
       }
     }
+  }
+  if (event.data && event.data.type === 'LOGOUT') {
+    caches.delete(API_CACHE_NAME).then(() => {
+      console.log('API cache cleared on logout');
+    });
   }
 });
 

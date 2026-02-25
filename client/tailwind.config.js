@@ -18,7 +18,19 @@ export default {
           sidebar: 'var(--color-sidebar)',
           hover: 'var(--color-sidebar-hover)',
           active: 'var(--color-sidebar-active)',
-        }
+        },
+        surface: {
+          primary: 'var(--color-bg-primary)',
+          secondary: 'var(--color-bg-secondary)',
+          tertiary: 'var(--color-bg-tertiary)',
+        },
+        content: {
+          primary: 'var(--color-text-primary)',
+          secondary: 'var(--color-text-secondary)',
+        },
+        border: {
+          DEFAULT: 'var(--color-border)',
+        },
       }
     },
   },

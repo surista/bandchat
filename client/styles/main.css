@@ -13,6 +13,13 @@
   --color-modal-bg: #1f1f23;
   --color-modal-card: #2a2a30;
   --color-modal-border: #3f3f46;
+  /* Structural colors (overridden by ThemeContext for light/dark mode) */
+  --color-bg-primary: #111827;
+  --color-bg-secondary: #1f2937;
+  --color-bg-tertiary: #374151;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #9ca3af;
+  --color-border: #374151;
 }
 
 * {
@@ -22,7 +29,6 @@
 
 html {
   height: 100%;
-  overscroll-behavior: none; /* Prevent page bounce on iOS */
 }
 
 body {
@@ -56,6 +62,12 @@ code {
 .h-screen-safe {
   height: 100vh;
   height: 100dvh;
+}
+
+/* Scrollbar styles */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.2) transparent;
 }
 
 /* Custom scrollbar */
@@ -155,6 +167,18 @@ input:focus, textarea:focus {
   @apply outline-none ring-2 ring-slack-active;
 }
 
+/* Keyboard focus styles for all interactive elements */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-bg-primary, #1a1d21), 0 0 0 4px var(--color-active, #4a9eff);
+}
+
+/* Suppress focus ring for mouse/touch users */
+:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
 /* Button styles */
 .btn {
   @apply px-4 py-2 rounded-lg font-medium transition-all duration-200;
@@ -240,16 +264,6 @@ input:focus, textarea:focus {
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
-/* Mobile nav active indicator animation */
-@keyframes nav-indicator {
-  from {
-    transform: translateX(-50%) scaleX(0);
-  }
-  to {
-    transform: translateX(-50%) scaleX(1);
-  }
-}
-
 /* Google Sign-In button container */
 .google-signin-container {
   @apply flex justify-center w-full;
@@ -283,10 +297,6 @@ input:focus, textarea:focus {
 
 /* iOS standalone mode adjustments */
 @media (display-mode: standalone) {
-  /* Prevent pull-to-refresh in PWA mode */
-  body {
-    overscroll-behavior-y: contain;
-  }
 }
 
 /* Smooth view transitions for native feel */
@@ -298,5 +308,99 @@ input:focus, textarea:focus {
     transition-duration: 150ms;
     transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
   }
+}
+
+/* Light mode overrides for core shell */
+[data-mode="light"] {
+  color-scheme: light;
+}
+
+[data-mode="light"] .bg-gray-900 {
+  background-color: var(--color-bg-primary) !important;
+}
+
+[data-mode="light"] .bg-gray-800 {
+  background-color: var(--color-bg-secondary) !important;
+}
+
+[data-mode="light"] .bg-gray-700 {
+  background-color: var(--color-bg-tertiary) !important;
+}
+
+[data-mode="light"] .text-white {
+  color: var(--color-text-primary) !important;
+}
+
+[data-mode="light"] .text-gray-400,
+[data-mode="light"] .text-gray-300 {
+  color: var(--color-text-secondary) !important;
+}
+
+[data-mode="light"] .text-gray-200 {
+  color: var(--color-text-primary) !important;
+}
+
+[data-mode="light"] .border-gray-700,
+[data-mode="light"] .border-gray-600 {
+  border-color: var(--color-border) !important;
+}
+
+[data-mode="light"] .hover\:bg-gray-700:hover {
+  background-color: var(--color-bg-tertiary) !important;
+}
+
+[data-mode="light"] .hover\:bg-gray-700\/30:hover {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-mode="light"] .bg-gray-700\/30 {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-mode="light"] .hover\:text-white:hover {
+  color: var(--color-text-primary) !important;
+}
+
+[data-mode="light"] .placeholder-gray-400::placeholder {
+  color: var(--color-text-secondary) !important;
+}
+
+/* Unread message divider */
+.unread-divider {
+  animation: unread-fade-in 0.3s ease-out;
+}
+
+@keyframes unread-fade-in {
+  from { opacity: 0; transform: scaleX(0.5); }
+  to { opacity: 1; transform: scaleX(1); }
+}
+
+/* Search result highlighting */
+.search-highlight mark {
+  background: rgba(234, 179, 8, 0.3);
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+/* Lightbox image */
+.lightbox-image {
+  touch-action: none;
+  will-change: transform;
+  transform-origin: center;
+  transition: transform 0.15s ease-out;
+}
+
+/* Offline banner */
+.offline-banner {
+  background: rgba(245, 158, 11, 0.15);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+  animation: offline-slide-down 0.3s ease-out;
+}
+
+@keyframes offline-slide-down {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 

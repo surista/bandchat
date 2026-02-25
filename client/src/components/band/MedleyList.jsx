@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
+import Skeleton from '../common/Skeleton';
 
 function MedleyList({ workspaceId }) {
   const [medleys, setMedleys] = useState([]);
@@ -64,8 +65,8 @@ function MedleyList({ workspaceId }) {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-gray-400">Loading medleys...</div>
+      <div className="space-y-4 p-4">
+        {Array.from({length: 3}).map((_, i) => <Skeleton.Card key={i} />)}
       </div>
     );
   }
@@ -129,6 +130,7 @@ function MedleyList({ workspaceId }) {
 function MedleyCard({ medley, onEdit, onDelete, onReorder }) {
   const [expanded, setExpanded] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState(null);
+  const [localSongs, setLocalSongs] = useState(null);
 
   const totalDuration = medley.songs?.reduce((sum, ms) => sum + (ms.song?.duration || 0), 0) || 0;
   const formatDuration = (seconds) => {
@@ -139,6 +141,9 @@ function MedleyCard({ medley, onEdit, onDelete, onReorder }) {
   };
 
   const handleDragStart = (e, index) => {
+    if (!localSongs) {
+      setLocalSongs(medley.songs);
+    }
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
   };
@@ -147,20 +152,24 @@ function MedleyCard({ medley, onEdit, onDelete, onReorder }) {
     e.preventDefault();
     if (draggedIndex === null || draggedIndex === index) return;
 
-    const newSongs = [...medley.songs];
+    const currentSongs = localSongs || medley.songs;
+    const newSongs = [...currentSongs];
     const [dragged] = newSongs.splice(draggedIndex, 1);
     newSongs.splice(index, 0, dragged);
 
     // Update the order locally for visual feedback
+    setLocalSongs(newSongs);
     setDraggedIndex(index);
   };
 
   const handleDragEnd = () => {
     if (draggedIndex !== null) {
-      const songIds = medley.songs.map(ms => ms.songId);
+      const songsToUse = localSongs || medley.songs;
+      const songIds = songsToUse.map(ms => ms.songId);
       onReorder(songIds);
     }
     setDraggedIndex(null);
+    setLocalSongs(null);
   };
 
   return (
@@ -226,7 +235,7 @@ function MedleyCard({ medley, onEdit, onDelete, onReorder }) {
             <p className="text-gray-500 text-sm text-center py-2">No songs in this medley</p>
           ) : (
             <div className="space-y-1">
-              {medley.songs?.map((medleySong, index) => (
+              {(localSongs || medley.songs)?.map((medleySong, index) => (
                 <div
                   key={medleySong.id}
                   draggable
@@ -331,7 +340,7 @@ function MedleyForm({ medley, songs, onSave, onClose }) {
       <div className="modal-content max-w-2xl max-h-modal overflow-y-auto">
         <div className="modal-header">
           <h3>{medley ? 'Edit Medley' : 'Create Medley'}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl">&times;</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl" aria-label="Close">&times;</button>
         </div>
 
         <div className="modal-body">

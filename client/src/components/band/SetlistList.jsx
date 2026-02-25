@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import api from '../../services/api';
 import { escapeHtml } from '../../utils/escapeHtml';
 import SetlistBuilder from './SetlistBuilder';
+import Skeleton from '../common/Skeleton';
 
 function SetlistList({ workspaceId }) {
   const [setlists, setSetlists] = useState([]);
@@ -507,7 +508,11 @@ function SetlistList({ workspaceId }) {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64 text-gray-400">Loading setlists...</div>;
+    return (
+      <div className="space-y-4 p-4">
+        {Array.from({length: 3}).map((_, i) => <Skeleton.Card key={i} />)}
+      </div>
+    );
   }
 
   if (showBuilder && editingSetlist) {

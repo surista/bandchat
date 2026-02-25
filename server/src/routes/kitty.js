@@ -44,7 +44,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 });
 
 // Update kitty settings
-router.put('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
+router.put('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => {
   try {
     const { startingBalance, balanceAsOfDate, currency } = req.body;
 
@@ -154,6 +154,11 @@ router.put('/transactions/:transactionId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
+    // Only admins or the creator can modify this transaction
+    if (membership.role !== 'ADMIN' && existing.createdById !== req.user.id) {
+      return res.status(403).json({ error: 'Only admins or the creator can modify this transaction' });
+    }
+
     const transaction = await prisma.kittyTransaction.update({
       where: { id: req.params.transactionId },
       data: {
@@ -203,6 +208,11 @@ router.delete('/transactions/:transactionId', authenticate, async (req, res) => 
 
     if (!membership) {
       return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    // Only admins or the creator can delete this transaction
+    if (membership.role !== 'ADMIN' && existing.createdById !== req.user.id) {
+      return res.status(403).json({ error: 'Only admins or the creator can delete this transaction' });
     }
 
     await prisma.kittyTransaction.delete({

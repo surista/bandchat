@@ -82,19 +82,43 @@ router.get('/channel/:channelId', authenticate, isChannelMember, async (req, res
       });
       const channelLastRead = membership?.lastRead || new Date(0);
 
-      // Count unread replies for each threaded message
-      const counts = await Promise.all(threadIds.map(async (id) => {
-        const lastRead = threadReadMap[id] || channelLastRead;
-        const count = await prisma.message.count({
+      // Separate threads that have specific read timestamps from those using channel default
+      const threadsWithCustomRead = threadIds.filter(id => threadReadMap[id]);
+      const threadsWithDefaultRead = threadIds.filter(id => !threadReadMap[id]);
+
+      // Use a single groupBy query for threads using the common channelLastRead
+      if (threadsWithDefaultRead.length > 0) {
+        const unreadCounts = await prisma.message.groupBy({
+          by: ['parentId'],
           where: {
-            parentId: id,
-            createdAt: { gt: lastRead },
-            authorId: { not: req.user.id }
-          }
+            parentId: { in: threadsWithDefaultRead },
+            authorId: { not: req.user.id },
+            createdAt: { gt: channelLastRead }
+          },
+          _count: { id: true }
         });
-        return [id, count];
-      }));
-      unreadMap = Object.fromEntries(counts);
+        unreadCounts.forEach(item => {
+          unreadMap[item.parentId] = item._count.id;
+        });
+      }
+
+      // For threads with custom per-thread read timestamps, query individually
+      if (threadsWithCustomRead.length > 0) {
+        const customCounts = await Promise.all(threadsWithCustomRead.map(async (id) => {
+          const lastRead = threadReadMap[id];
+          const count = await prisma.message.count({
+            where: {
+              parentId: id,
+              createdAt: { gt: lastRead },
+              authorId: { not: req.user.id }
+            }
+          });
+          return [id, count];
+        }));
+        customCounts.forEach(([id, count]) => {
+          unreadMap[id] = count;
+        });
+      }
     }
 
     const enriched = result.map(m => ({
@@ -182,6 +206,11 @@ router.get('/:messageId/replies', authenticate, async (req, res) => {
 router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember, async (req, res) => {
   try {
     const { content, parentId, attachments } = req.body;
+
+    // Limit attachments per message
+    if (attachments && attachments.length > 10) {
+      return res.status(400).json({ error: 'Maximum 10 attachments per message' });
+    }
 
     // Allow messages with either content or attachments (or both)
     const hasContent = content && content.trim().length > 0;
@@ -618,6 +647,193 @@ router.delete('/:messageId/reactions/:emoji', authenticate, async (req, res) => 
   } catch (error) {
     console.error('Remove reaction error:', error);
     res.status(500).json({ error: 'Failed to remove reaction' });
+  }
+});
+
+// Pin a message
+router.post('/:messageId/pin', authenticate, async (req, res) => {
+  try {
+    const message = await prisma.message.findUnique({
+      where: { id: req.params.messageId },
+      include: { channel: true }
+    });
+
+    if (!message) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+
+    // Verify user is a workspace member
+    const workspaceMember = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: message.channel.workspaceId
+        }
+      }
+    });
+
+    if (!workspaceMember) {
+      return res.status(403).json({ error: 'Not a member of this workspace' });
+    }
+
+    // Create pinned message (upsert to avoid duplicates)
+    const pinnedMessage = await prisma.pinnedMessage.upsert({
+      where: {
+        messageId_channelId: {
+          messageId: req.params.messageId,
+          channelId: message.channelId
+        }
+      },
+      update: {},
+      create: {
+        messageId: req.params.messageId,
+        channelId: message.channelId,
+        pinnedById: req.user.id
+      },
+      include: {
+        message: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                displayName: true,
+                avatarUrl: true
+              }
+            },
+            attachments: true
+          }
+        },
+        pinnedBy: {
+          select: {
+            id: true,
+            displayName: true
+          }
+        }
+      }
+    });
+
+    // Broadcast via socket
+    const io = req.app.get('io');
+    io.to(`channel:${message.channelId}`).emit('message:pinned', pinnedMessage);
+
+    res.status(201).json(pinnedMessage);
+  } catch (error) {
+    console.error('Pin message error:', error);
+    res.status(500).json({ error: 'Failed to pin message' });
+  }
+});
+
+// Unpin a message
+router.delete('/:messageId/pin', authenticate, async (req, res) => {
+  try {
+    const message = await prisma.message.findUnique({
+      where: { id: req.params.messageId },
+      include: { channel: true }
+    });
+
+    if (!message) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+
+    // Verify user is a workspace member
+    const workspaceMember = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: message.channel.workspaceId
+        }
+      }
+    });
+
+    if (!workspaceMember) {
+      return res.status(403).json({ error: 'Not a member of this workspace' });
+    }
+
+    const pinnedMessage = await prisma.pinnedMessage.findUnique({
+      where: {
+        messageId_channelId: {
+          messageId: req.params.messageId,
+          channelId: message.channelId
+        }
+      }
+    });
+
+    if (!pinnedMessage) {
+      return res.status(404).json({ error: 'Message is not pinned' });
+    }
+
+    await prisma.pinnedMessage.delete({
+      where: { id: pinnedMessage.id }
+    });
+
+    // Broadcast via socket
+    const io = req.app.get('io');
+    io.to(`channel:${message.channelId}`).emit('message:unpinned', {
+      messageId: req.params.messageId,
+      channelId: message.channelId
+    });
+
+    res.json({ message: 'Message unpinned' });
+  } catch (error) {
+    console.error('Unpin message error:', error);
+    res.status(500).json({ error: 'Failed to unpin message' });
+  }
+});
+
+// Get pinned messages for a channel
+router.get('/channel/:channelId/pins', authenticate, async (req, res) => {
+  try {
+    // Verify user has access to the channel
+    const channel = await prisma.channel.findUnique({
+      where: { id: req.params.channelId }
+    });
+
+    if (!channel) {
+      return res.status(404).json({ error: 'Channel not found' });
+    }
+
+    const workspaceMember = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: channel.workspaceId
+        }
+      }
+    });
+
+    if (!workspaceMember) {
+      return res.status(403).json({ error: 'Not a member of this workspace' });
+    }
+
+    const pinnedMessages = await prisma.pinnedMessage.findMany({
+      where: { channelId: req.params.channelId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        message: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                displayName: true,
+                avatarUrl: true
+              }
+            },
+            attachments: true
+          }
+        },
+        pinnedBy: {
+          select: {
+            id: true,
+            displayName: true
+          }
+        }
+      }
+    });
+
+    res.json(pinnedMessages);
+  } catch (error) {
+    console.error('Get pinned messages error:', error);
+    res.status(500).json({ error: 'Failed to get pinned messages' });
   }
 });
 

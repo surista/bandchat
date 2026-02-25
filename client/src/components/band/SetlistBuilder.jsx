@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
+import { hapticMedium } from '../../services/haptic';
 import { format } from 'date-fns';
 import {
   DndContext,
@@ -553,6 +554,7 @@ function SetlistBuilder({ setlist, allSongs, onBack, onUpdate }) {
   };
 
   const handleDragEnd = async (event) => {
+    hapticMedium();
     const { active, over } = event;
 
     if (active.id !== over?.id) {

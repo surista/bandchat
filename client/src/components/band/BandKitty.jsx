@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import api from '../../services/api';
 import ConfirmDialog from '../common/ConfirmDialog';
+import Skeleton from '../common/Skeleton';
 
 const TRANSACTION_TYPES = [
   { id: 'GIG_PAY', label: 'Gig Pay', icon: '🎤', color: 'text-green-400', positive: true },
@@ -92,6 +93,7 @@ function BandKitty({ workspaceId }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     if (!formAmount) return;
 
     setFormLoading(true);
@@ -120,6 +122,7 @@ function BandKitty({ workspaceId }) {
   };
 
   const handleDelete = async (transactionId) => {
+    setError('');
     try {
       await api.deleteKittyTransaction(transactionId);
       await loadKitty();
@@ -131,6 +134,7 @@ function BandKitty({ workspaceId }) {
 
   const handleSaveSettings = async (e) => {
     e.preventDefault();
+    setError('');
     setSettingsLoading(true);
     try {
       await api.updateKittySettings(workspaceId, {
@@ -186,8 +190,8 @@ function BandKitty({ workspaceId }) {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gray-900">
-        <div className="text-gray-400">Loading...</div>
+      <div className="space-y-4 p-4">
+        {Array.from({length: 3}).map((_, i) => <Skeleton.Card key={i} />)}
       </div>
     );
   }
@@ -208,22 +212,20 @@ function BandKitty({ workspaceId }) {
               Starting balance: {getCurrencySymbol()}{kitty?.startingBalance?.toFixed(2) || '0.00'} as of {kitty?.balanceAsOfDate ? format(new Date(kitty.balanceAsOfDate), 'MMM d, yyyy') : '-'}
             </div>
           </div>
-          {(
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowSettings(true)}
-                className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 rounded transition-colors"
-              >
-                Settings
-              </button>
-              <button
-                onClick={() => { resetForm(); setShowForm(true); }}
-                className="px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 rounded transition-colors"
-              >
-                + Add Transaction
-              </button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowSettings(true)}
+              className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+            >
+              Settings
+            </button>
+            <button
+              onClick={() => { resetForm(); setShowForm(true); }}
+              className="px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 rounded transition-colors"
+            >
+              + Add Transaction
+            </button>
+          </div>
         </div>
 
         {/* Summary Stats */}

@@ -60,7 +60,9 @@ class SocketRateLimiter {
 const rateLimiter = new SocketRateLimiter();
 
 // Cleanup old rate limit entries every 5 minutes
-setInterval(() => rateLimiter.cleanup(), 5 * 60 * 1000);
+const cleanupInterval = setInterval(() => rateLimiter.cleanup(), 5 * 60 * 1000);
+
+export { cleanupInterval };
 
 // Rate limit configurations (events per minute)
 const RATE_LIMITS = {

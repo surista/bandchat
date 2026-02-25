@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate, isWorkspaceMember, isChannelMember } from '../middleware/auth.js';
+import { authenticate, isWorkspaceMember, isWorkspaceAdmin, isChannelMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 
 const router = express.Router();
@@ -118,6 +118,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
           muted: isMuted,
           unreadCount,
           unreadThreadReplies,
+          lastRead: lastRead.toISOString(),
           members: undefined
         };
       })
@@ -261,10 +262,42 @@ router.put('/:channelId', authenticate, isChannelMember, async (req, res) => {
   try {
     const { name, description } = req.body;
 
+    // Fetch the channel to get createdById and workspaceId
+    const existingChannel = await prisma.channel.findUnique({
+      where: { id: req.params.channelId }
+    });
+
+    if (!existingChannel) {
+      return res.status(404).json({ error: 'Channel not found' });
+    }
+
+    // Check if user is workspace admin or channel creator
+    const membership = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: existingChannel.workspaceId
+        }
+      }
+    });
+
+    if (membership.role !== 'ADMIN' && req.user.id !== existingChannel.createdById) {
+      return res.status(403).json({ error: 'Only admins or the channel creator can update this channel' });
+    }
+
+    // Validate channel name if provided
+    let sanitizedName;
+    if (name) {
+      sanitizedName = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      if (!sanitizedName) {
+        return res.status(400).json({ error: 'Channel name must contain at least one alphanumeric character' });
+      }
+    }
+
     const channel = await prisma.channel.update({
       where: { id: req.params.channelId },
       data: {
-        ...(name && { name: name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') }),
+        ...(sanitizedName && { name: sanitizedName }),
         ...(description !== undefined && { description })
       }
     });
@@ -384,6 +417,23 @@ router.post('/:channelId/members', authenticate, isChannelMember, async (req, re
 router.delete('/:channelId/members/:userId', authenticate, isChannelMember, async (req, res) => {
   try {
     const { channelId, userId } = req.params;
+
+    // Allow self-removal; for removing others, require workspace admin role
+    if (userId !== req.user.id) {
+      const channel = req.channel;
+      const membership = await prisma.workspaceMember.findUnique({
+        where: {
+          userId_workspaceId: {
+            userId: req.user.id,
+            workspaceId: channel.workspaceId
+          }
+        }
+      });
+
+      if (!membership || membership.role !== 'ADMIN') {
+        return res.status(403).json({ error: 'Only admins can remove other members from a channel' });
+      }
+    }
 
     await prisma.channelMember.delete({
       where: {
