@@ -427,40 +427,20 @@ function SetlistList({ workspaceId, workspaceName }) {
       let itemsHtml = '';
       set.items.forEach(item => {
         if (item.type === 'MC') {
-          itemsHtml += `
-            <li class="mc-item">
-              <span class="mc-label">${escapeHtml(item.label) || 'MC'}</span>
-              <span class="duration">${formatDuration(item.duration || 60)}</span>
-            </li>
-          `;
+          itemsHtml += `<li class="mc-item">&lt;${escapeHtml(item.label) || 'MC'}&gt;</li>`;
         } else {
           const song = item.song;
           const songName = useShort && song?.shortName
             ? escapeHtml(song.shortName)
             : (escapeHtml(song?.title) || 'Unknown');
-          const artist = !useShort && song?.artist ? escapeHtml(song.artist) : '';
-          const key = song?.key ? escapeHtml(song.key) : '';
-          const duration = song?.duration ? formatDuration(song.duration) : '';
-
-          itemsHtml += `
-            <li class="song-item">
-              <div class="song-info">
-                <span class="song-title">${songName}</span>
-                ${artist ? `<span class="song-artist"> - ${artist}</span>` : ''}
-              </div>
-              <div class="song-meta">
-                ${key ? `<span class="key">${key}</span>` : ''}
-                ${duration ? `<span class="duration">${duration}</span>` : ''}
-              </div>
-            </li>
-          `;
+          itemsHtml += `<li class="song-item">${songName}</li>`;
         }
       });
 
       return `
         <div class="set-column">
           ${setLabel ? `<div class="set-header">${setLabel}${setTimeStr}</div>` : ''}
-          <ol class="song-list">${itemsHtml}</ol>
+          <ul class="song-list">${itemsHtml}</ul>
         </div>
       `;
     }).join('');
@@ -522,49 +502,36 @@ function SetlistList({ workspaceId, workspaceName }) {
           }
           .header-details span { white-space: nowrap; }
           .time-range { color: #0891b2; font-weight: 500; }
-          .content { flex: 1; }
-          .columns { display: flex; gap: 20px; }
-          .columns-1 { max-width: 600px; margin: 0 auto; }
+          .content { flex: 1; display: flex; align-items: flex-start; }
+          .columns { display: flex; gap: 12px; width: 100%; }
+          .columns-1 { max-width: 500px; margin: 0 auto; }
           .set-column { flex: 1; min-width: 0; }
           .set-header {
-            font-size: 15px;
+            font-size: 18px;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin: 0 0 6px 0;
-            padding: 5px 10px;
-            background: #f0f0f0;
-            border-left: 4px solid #333;
+            margin: 0 0 10px 0;
+            padding: 6px 0;
+            border-bottom: 2px solid #333;
           }
           .set-time {
-            font-size: 12px;
+            font-size: 13px;
             font-weight: normal;
             color: #0891b2;
             margin-left: 8px;
             text-transform: none;
             letter-spacing: 0;
           }
-          .song-list { list-style: decimal; padding-left: 28px; }
+          .song-list { list-style: none; padding: 0; }
           .song-item {
-            padding: 3px 0;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            padding: 5px 0;
+            font-size: 18px;
           }
-          .song-info { flex: 1; min-width: 0; }
-          .song-title { font-size: 13px; font-weight: 500; }
-          .song-artist { color: #666; font-size: 11px; }
-          .song-meta { display: flex; gap: 6px; font-size: 11px; color: #888; flex-shrink: 0; }
-          .key { background: #e8e0f0; padding: 1px 5px; border-radius: 3px; font-weight: 500; }
           .mc-item {
-            padding: 3px 0;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            color: #b8860b;
+            padding: 5px 0;
             font-style: italic;
-            font-size: 12px;
+            font-size: 18px;
           }
           .footer {
             margin-top: 14px;
