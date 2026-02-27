@@ -55,11 +55,45 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
     // Immediately clear the unread badge when channel is selected
     onUpdateUnread(0);
 
-    loadMessages();
+    let cancelled = false;
+
+    // Load messages FIRST, then join socket room to prevent race condition.
+    // This ensures no gap between the API snapshot and socket subscription
+    // where messages could be lost.
+    const init = async () => {
+      setLoading(true);
+      try {
+        const data = await api.getMessages(channel.id);
+        if (cancelled) return;
+        setMessages(data.messages);
+        setHasMore(data.hasMore);
+        setNextCursor(data.nextCursor);
+        setShouldScrollToBottom(true);
+
+        // Join socket room AFTER messages are loaded
+        joinChannel(channel.id);
+
+        try {
+          await api.markChannelRead(channel.id);
+        } catch (err) {
+          console.error('Failed to mark channel as read:', err);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Failed to load messages:', err);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    init();
     loadPinnedMessages();
-    joinChannel(channel.id);
 
     return () => {
+      cancelled = true;
       leaveChannel(channel.id);
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -79,6 +113,17 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       setShouldScrollToBottom(false);
     }
   }, [shouldScrollToBottom, messages, loading]);
+
+  // Re-join channel room on socket reconnection (server loses room memberships)
+  useEffect(() => {
+    if (socket) {
+      const handleReconnect = () => {
+        joinChannel(channelIdRef.current);
+      };
+      socket.on('connect', handleReconnect);
+      return () => socket.off('connect', handleReconnect);
+    }
+  }, [socket]);
 
   useEffect(() => {
     if (socket) {
@@ -108,30 +153,6 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
     }
   }, [socket]);
 
-  const loadMessages = async () => {
-    setLoading(true);
-    try {
-      const data = await api.getMessages(channel.id);
-      setMessages(data.messages);
-      setHasMore(data.hasMore);
-      setNextCursor(data.nextCursor);
-
-      // Trigger scroll to bottom after messages render
-      setShouldScrollToBottom(true);
-
-      // Mark channel as read on server (badge already cleared optimistically)
-      try {
-        await api.markChannelRead(channel.id);
-      } catch (err) {
-        console.error('Failed to mark channel as read:', err);
-      }
-    } catch (err) {
-      console.error('Failed to load messages:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const loadMoreMessages = async () => {
     if (!hasMore || !nextCursor) return;
 
@@ -157,6 +178,11 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   const handleNewMessage = (message) => {
     if (message.channelId === channelIdRef.current) {
       setMessages(prev => {
+        // Deduplicate: if message already exists (e.g., from API response), skip
+        if (prev.some(m => m.id === message.id)) {
+          return prev;
+        }
+
         // Check if this is confirming an optimistic message we sent
         const optimisticIndex = prev.findIndex(
           m => m.pending && m.author.id === message.author.id && m.content === message.content
@@ -353,9 +379,12 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
         }));
       }
 
-      // Send message with attachments
-      await api.sendMessage(channel.id, content || '', null, attachments);
-      // Real message will replace optimistic one via socket event
+      // Send message with attachments — use API response to replace optimistic message
+      // directly instead of relying solely on socket event (which can be missed)
+      const savedMessage = await api.sendMessage(channel.id, content || '', null, attachments);
+      setMessages(prev => prev.map(m =>
+        m.id === optimisticMessage.id ? savedMessage : m
+      ));
 
       // Revoke object URLs to free memory
       optimisticAttachments.forEach(a => {
