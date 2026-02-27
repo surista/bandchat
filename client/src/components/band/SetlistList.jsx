@@ -5,7 +5,7 @@ import { escapeHtml } from '../../utils/escapeHtml';
 import SetlistBuilder from './SetlistBuilder';
 import Skeleton from '../common/Skeleton';
 
-function SetlistList({ workspaceId }) {
+function SetlistList({ workspaceId, workspaceName }) {
   const [setlists, setSetlists] = useState([]);
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -343,7 +343,7 @@ function SetlistList({ workspaceId }) {
     const addMinsToTime = (time24, minutes) => {
       if (!time24) return '';
       const [h, m] = time24.split(':').map(Number);
-      const totalMins = h * 60 + m + minutes;
+      const totalMins = Math.round(h * 60 + m + minutes);
       const newH = Math.floor(totalMins / 60) % 24;
       const newM = totalMins % 60;
       return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
@@ -354,57 +354,118 @@ function SetlistList({ workspaceId }) {
       ? `${formatTime12h(setlist.startTime)} – ${formatTime12h(printEndTime)}`
       : '';
 
-    let setlistHtml = '';
-    let currentSetNumber = 0;
-
-    setlistItems.forEach((item, index) => {
+    // Split items into sets for multi-column layout
+    const sets = [];
+    let currentSet = { breakItem: null, items: [] };
+    for (const item of setlistItems) {
       if (item.type === 'SET_BREAK') {
-        currentSetNumber++;
-        if (index > 0) {
-          setlistHtml += '</ol>';
-          if (item.duration) {
-            const breakMins = Math.floor(item.duration / 60);
-            setlistHtml += `<div class="break-duration">${breakMins} minute break</div>`;
+        if (currentSet.items.length > 0 || currentSet.breakItem) {
+          sets.push(currentSet);
+        }
+        currentSet = { breakItem: item, items: [] };
+      } else {
+        currentSet.items.push(item);
+      }
+    }
+    if (currentSet.items.length > 0 || currentSet.breakItem) {
+      sets.push(currentSet);
+    }
+
+    const numSets = sets.length;
+    const useShort = setlist.useShortNames;
+    const isLandscape = numSets >= 2;
+    const bandName = workspaceName || '';
+
+    // Calculate per-set timings (matching SetlistBuilder logic)
+    const roundUpTo5 = (time24) => {
+      if (!time24) return '';
+      const [rh, rm] = time24.split(':').map(Number);
+      const rounded = Math.ceil(rm / 5) * 5;
+      const nh = (rh + Math.floor(rounded / 60)) % 24;
+      const nm = rounded % 60;
+      return `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`;
+    };
+    const getItemSecs = (item) => {
+      if (item.type === 'SET_BREAK') return item.duration || 0;
+      if (item.type === 'MC') return item.duration || 60;
+      const d = item.song?.duration || 0;
+      return d > 0 ? Math.ceil(d / 60) * 60 : 0;
+    };
+    let setTimings = null;
+    if (setlist.startTime) {
+      setTimings = [];
+      let curTime = setlist.startTime;
+      for (let i = 0; i < sets.length; i++) {
+        const s = sets[i];
+        const allItems = s.breakItem ? [s.breakItem, ...s.items] : s.items;
+        const setStart = curTime;
+        let setDurSecs = 0;
+        for (const it of allItems) {
+          if (it.type === 'SET_BREAK' && i > 0) {
+            curTime = addMinsToTime(curTime, (it.duration || 0) / 60);
+          }
+          if (it.type !== 'SET_BREAK') {
+            setDurSecs += getItemSecs(it);
           }
         }
-        setlistHtml += `
-          <div class="set-header">${escapeHtml(item.label) || `Set ${currentSetNumber}`}</div>
-          <ol class="song-list">
-        `;
-      } else if (item.type === 'MC') {
-        setlistHtml += `
-          <li class="mc-item">
-            <span class="mc-label">🎤 ${escapeHtml(item.label) || 'MC'}</span>
-            <span class="duration">${formatDuration(item.duration || 60)}</span>
-          </li>
-        `;
-      } else {
-        const song = item.song;
-        const songName = escapeHtml(song?.title) || 'Unknown';
-        const artist = song?.artist ? escapeHtml(song.artist) : '';
-        const key = song?.key ? escapeHtml(song.key) : '';
-        const duration = song?.duration ? formatDuration(song.duration) : '';
-
-        setlistHtml += `
-          <li class="song-item">
-            <div class="song-info">
-              <span class="song-title">${songName}</span>
-              ${artist ? `<span class="song-artist"> - ${artist}</span>` : ''}
-            </div>
-            <div class="song-meta">
-              ${key ? `<span class="key">${key}</span>` : ''}
-              ${duration ? `<span class="duration">${duration}</span>` : ''}
-            </div>
-          </li>
-        `;
+        const actualStart = i > 0 ? roundUpTo5(curTime) : setStart;
+        const setEnd = addMinsToTime(actualStart, setDurSecs / 60);
+        setTimings.push({ start: actualStart, end: setEnd });
+        curTime = setEnd;
       }
-    });
-
-    if (currentSetNumber > 0) {
-      setlistHtml += '</ol>';
-    } else {
-      setlistHtml = `<ol class="song-list">${setlistHtml}</ol>`;
     }
+
+    // Build HTML for each set as a column
+    const columnsHtml = sets.map((set, setIndex) => {
+      const setLabel = set.breakItem
+        ? (escapeHtml(set.breakItem.label) || `Set ${setIndex + 1}`)
+        : (numSets > 1 ? `Set ${setIndex + 1}` : '');
+      const setTimeStr = setTimings?.[setIndex]
+        ? ` <span class="set-time">${formatTime12h(setTimings[setIndex].start)} – ${formatTime12h(setTimings[setIndex].end)}</span>`
+        : '';
+
+      let itemsHtml = '';
+      set.items.forEach(item => {
+        if (item.type === 'MC') {
+          itemsHtml += `
+            <li class="mc-item">
+              <span class="mc-label">${escapeHtml(item.label) || 'MC'}</span>
+              <span class="duration">${formatDuration(item.duration || 60)}</span>
+            </li>
+          `;
+        } else {
+          const song = item.song;
+          const songName = useShort && song?.shortName
+            ? escapeHtml(song.shortName)
+            : (escapeHtml(song?.title) || 'Unknown');
+          const artist = !useShort && song?.artist ? escapeHtml(song.artist) : '';
+          const key = song?.key ? escapeHtml(song.key) : '';
+          const duration = song?.duration ? formatDuration(song.duration) : '';
+
+          itemsHtml += `
+            <li class="song-item">
+              <div class="song-info">
+                <span class="song-title">${songName}</span>
+                ${artist ? `<span class="song-artist"> - ${artist}</span>` : ''}
+              </div>
+              <div class="song-meta">
+                ${key ? `<span class="key">${key}</span>` : ''}
+                ${duration ? `<span class="duration">${duration}</span>` : ''}
+              </div>
+            </li>
+          `;
+        }
+      });
+
+      return `
+        <div class="set-column">
+          ${setLabel ? `<div class="set-header">${setLabel}${setTimeStr}</div>` : ''}
+          <ol class="song-list">${itemsHtml}</ol>
+        </div>
+      `;
+    }).join('');
+
+    const setlistHtml = `<div class="columns columns-${numSets}">${columnsHtml}</div>`;
 
     const html = `
       <!DOCTYPE html>
@@ -413,10 +474,10 @@ function SetlistList({ workspaceId }) {
         <title>${escapeHtml(setlist.name)} - Setlist</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
+          @page { ${isLandscape ? 'size: landscape;' : ''} margin: 10mm; }
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             padding: 20px;
-            max-width: 800px;
             margin: 0 auto;
             min-height: 100vh;
             display: flex;
@@ -424,62 +485,94 @@ function SetlistList({ workspaceId }) {
           }
           .header {
             text-align: center;
-            margin-bottom: 24px;
-            padding-bottom: 16px;
-            border-bottom: 2px solid #333;
+            margin-bottom: 16px;
+            padding-bottom: 14px;
+            border-bottom: 3px solid #222;
           }
-          .venue { font-size: 28px; font-weight: bold; margin-bottom: 8px; }
-          .setlist-name { font-size: 18px; color: #666; }
+          .band-name {
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+          }
+          .header-divider {
+            width: 60px;
+            height: 3px;
+            background: #0891b2;
+            margin: 8px auto;
+            border-radius: 2px;
+          }
+          .venue {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 2px;
+          }
+          .setlist-name {
+            font-size: 15px;
+            color: #666;
+          }
+          .header-details {
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            margin-top: 6px;
+            font-size: 14px;
+            color: #555;
+          }
+          .header-details span { white-space: nowrap; }
+          .time-range { color: #0891b2; font-weight: 500; }
           .content { flex: 1; }
+          .columns { display: flex; gap: 20px; }
+          .columns-1 { max-width: 600px; margin: 0 auto; }
+          .set-column { flex: 1; min-width: 0; }
           .set-header {
-            font-size: 20px;
+            font-size: 15px;
             font-weight: bold;
-            margin: 24px 0 12px 0;
-            padding: 8px 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 0 0 6px 0;
+            padding: 5px 10px;
             background: #f0f0f0;
             border-left: 4px solid #333;
           }
-          .song-list { list-style: decimal; padding-left: 40px; }
+          .set-time {
+            font-size: 12px;
+            font-weight: normal;
+            color: #0891b2;
+            margin-left: 8px;
+            text-transform: none;
+            letter-spacing: 0;
+          }
+          .song-list { list-style: decimal; padding-left: 28px; }
           .song-item {
-            padding: 8px 0;
+            padding: 3px 0;
             border-bottom: 1px solid #eee;
             display: flex;
             justify-content: space-between;
             align-items: center;
           }
-          .song-info { flex: 1; }
-          .song-title { font-size: 16px; font-weight: 500; }
-          .song-artist { color: #666; font-size: 14px; }
-          .song-meta { display: flex; gap: 12px; font-size: 13px; color: #888; }
-          .key { background: #e8e0f0; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+          .song-info { flex: 1; min-width: 0; }
+          .song-title { font-size: 13px; font-weight: 500; }
+          .song-artist { color: #666; font-size: 11px; }
+          .song-meta { display: flex; gap: 6px; font-size: 11px; color: #888; flex-shrink: 0; }
+          .key { background: #e8e0f0; padding: 1px 5px; border-radius: 3px; font-weight: 500; }
           .mc-item {
-            padding: 8px 0;
+            padding: 3px 0;
             border-bottom: 1px solid #eee;
             display: flex;
             justify-content: space-between;
             color: #b8860b;
             font-style: italic;
-          }
-          .break-duration {
-            text-align: center;
-            color: #6b7280;
-            font-size: 13px;
-            font-style: italic;
-            padding: 8px 0;
-          }
-          .time-range {
-            font-size: 16px;
-            color: #0891b2;
-            margin-top: 4px;
+            font-size: 12px;
           }
           .footer {
-            margin-top: 32px;
-            padding-top: 16px;
-            border-top: 2px solid #333;
+            margin-top: 14px;
+            padding-top: 10px;
+            border-top: 3px solid #222;
             text-align: center;
           }
-          .date { font-size: 18px; font-weight: 500; }
-          .stats { margin-top: 8px; font-size: 14px; color: #666; }
+          .stats { font-size: 12px; color: #666; }
           @media print {
             body { padding: 0; }
             .set-header { break-inside: avoid; }
@@ -489,14 +582,18 @@ function SetlistList({ workspaceId }) {
       </head>
       <body>
         <div class="header">
+          ${bandName ? `<div class="band-name">${escapeHtml(bandName)}</div>` : ''}
+          ${bandName && (setlist.venue || setlist.name) ? '<div class="header-divider"></div>' : ''}
           ${setlist.venue ? `<div class="venue">${escapeHtml(setlist.venue)}</div>` : ''}
           <div class="setlist-name">${escapeHtml(setlist.name)}</div>
-          ${timeRangeStr ? `<div class="time-range">${timeRangeStr}</div>` : ''}
+          <div class="header-details">
+            <span>${dateStr}</span>
+            ${timeRangeStr ? `<span class="time-range">${timeRangeStr}</span>` : ''}
+          </div>
         </div>
         <div class="content">${setlistHtml}</div>
         <div class="footer">
-          <div class="date">${dateStr}</div>
-          <div class="stats">${songCount} songs • ${totalDuration} total${timeRangeStr ? ` • ${timeRangeStr}` : ''}</div>
+          <div class="stats">${songCount} songs &bull; ${totalDuration} total</div>
         </div>
         <script>window.onload = function() { window.print(); };</script>
       </body>
@@ -520,6 +617,7 @@ function SetlistList({ workspaceId }) {
       <SetlistBuilder
         setlist={editingSetlist}
         allSongs={songs}
+        workspaceName={workspaceName}
         onBack={() => {
           setShowBuilder(false);
           setEditingSetlist(null);
