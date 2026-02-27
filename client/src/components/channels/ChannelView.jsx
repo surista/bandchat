@@ -114,11 +114,21 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
     }
   }, [shouldScrollToBottom, messages, loading]);
 
-  // Re-join channel room on socket reconnection (server loses room memberships)
+  // Re-join channel room and refresh messages on socket reconnection
+  // (server loses room memberships, and messages sent during disconnect are missed)
   useEffect(() => {
     if (socket) {
       const handleReconnect = () => {
-        joinChannel(channelIdRef.current);
+        const chId = channelIdRef.current;
+        joinChannel(chId);
+        // Re-fetch messages to catch anything missed during disconnect
+        api.getMessages(chId).then(data => {
+          if (chId === channelIdRef.current) {
+            setMessages(data.messages);
+            setHasMore(data.hasMore);
+            setNextCursor(data.nextCursor);
+          }
+        }).catch(() => {});
       };
       socket.on('connect', handleReconnect);
       return () => socket.off('connect', handleReconnect);

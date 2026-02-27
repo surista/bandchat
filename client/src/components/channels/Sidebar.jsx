@@ -624,6 +624,7 @@ function Sidebar({
 
   return (
     <div
+      data-sidebar
       className={`
         h-full bg-slack-sidebar flex flex-col text-gray-300
         fixed md:relative inset-y-0 left-0 z-50
@@ -1723,26 +1724,30 @@ function Sidebar({
                   {/* Dark/Light Mode Toggle */}
                   <div className="flex items-center justify-between mb-6 p-3 bg-gray-800 rounded-lg">
                     <span className="text-gray-300 text-sm font-medium">Appearance</span>
-                    <button
-                      onClick={toggleMode}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-sm"
-                    >
-                      {mode === 'dark' ? (
-                        <>
-                          <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                          </svg>
-                          <span className="text-gray-300">Light mode</span>
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                          </svg>
-                          <span className="text-gray-300">Dark mode</span>
-                        </>
-                      )}
-                    </button>
+                    <div className="flex rounded-lg bg-gray-900 p-0.5">
+                      <button
+                        onClick={() => mode !== 'dark' && toggleMode()}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
+                          mode === 'dark' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-gray-300'
+                        }`}
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                        Dark
+                      </button>
+                      <button
+                        onClick={() => mode !== 'light' && toggleMode()}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
+                          mode === 'light' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-gray-300'
+                        }`}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        Light
+                      </button>
+                    </div>
                   </div>
                   <p className="text-gray-400 mb-4">Choose a theme for your sidebar</p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
@@ -1949,121 +1954,124 @@ function Sidebar({
                   ))}
 
                   {/* Remove Member Modal */}
-                  {removingMember && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                      <div className="bg-[var(--color-modal-bg)] rounded-lg p-6 max-w-md w-full mx-4">
-                        <h3 className="text-lg font-bold text-white mb-4">
-                          Remove {removingMember.user.displayName}?
-                        </h3>
-                        <p className="text-gray-400 text-sm mb-4">
-                          What should happen to their messages?
-                        </p>
-                        <div className="space-y-2 mb-4">
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="postAction"
-                              value="keep"
-                              checked={removePostAction === 'keep'}
-                              onChange={(e) => setRemovePostAction(e.target.value)}
-                            />
-                            <span className="text-gray-200">Keep messages as-is</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="postAction"
-                              value="hide"
-                              checked={removePostAction === 'hide'}
-                              onChange={(e) => setRemovePostAction(e.target.value)}
-                            />
-                            <span className="text-gray-200">Hide all messages</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="postAction"
-                              value="delete"
-                              checked={removePostAction === 'delete'}
-                              onChange={(e) => setRemovePostAction(e.target.value)}
-                            />
-                            <span className="text-gray-200">Delete all messages</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="postAction"
-                              value="anonymize"
-                              checked={removePostAction === 'anonymize'}
-                              onChange={(e) => setRemovePostAction(e.target.value)}
-                            />
-                            <span className="text-gray-200">Show as "Removed User"</span>
-                          </label>
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="postAction"
-                              value="merge"
-                              checked={removePostAction === 'merge'}
-                              onChange={(e) => setRemovePostAction(e.target.value)}
-                            />
-                            <span className="text-gray-200">Transfer messages to another member</span>
-                          </label>
-                          {removePostAction === 'merge' && (
-                            <select
-                              value={removeMergeUserId}
-                              onChange={(e) => setRemoveMergeUserId(e.target.value)}
-                              className="modal-input ml-6 mt-2"
+                  {removingMember && createPortal(
+                    <div className="modal-backdrop">
+                      <div className="modal-content max-w-md mx-4">
+                        <div className="p-6">
+                          <h3 className="text-lg font-bold text-white mb-4">
+                            Remove {removingMember.user.displayName}?
+                          </h3>
+                          <p className="text-gray-400 text-sm mb-4">
+                            What should happen to their messages?
+                          </p>
+                          <div className="space-y-2 mb-4">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="postAction"
+                                value="keep"
+                                checked={removePostAction === 'keep'}
+                                onChange={(e) => setRemovePostAction(e.target.value)}
+                              />
+                              <span className="text-gray-200">Keep messages as-is</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="postAction"
+                                value="hide"
+                                checked={removePostAction === 'hide'}
+                                onChange={(e) => setRemovePostAction(e.target.value)}
+                              />
+                              <span className="text-gray-200">Hide all messages</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="postAction"
+                                value="delete"
+                                checked={removePostAction === 'delete'}
+                                onChange={(e) => setRemovePostAction(e.target.value)}
+                              />
+                              <span className="text-gray-200">Delete all messages</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="postAction"
+                                value="anonymize"
+                                checked={removePostAction === 'anonymize'}
+                                onChange={(e) => setRemovePostAction(e.target.value)}
+                              />
+                              <span className="text-gray-200">Show as "Removed User"</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="radio"
+                                name="postAction"
+                                value="merge"
+                                checked={removePostAction === 'merge'}
+                                onChange={(e) => setRemovePostAction(e.target.value)}
+                              />
+                              <span className="text-gray-200">Transfer messages to another member</span>
+                            </label>
+                            {removePostAction === 'merge' && (
+                              <select
+                                value={removeMergeUserId}
+                                onChange={(e) => setRemoveMergeUserId(e.target.value)}
+                                className="modal-input ml-6 mt-2"
+                              >
+                                <option value="">Select member...</option>
+                                {workspace.members
+                                  ?.filter(m => m.user.id !== removingMember.user.id && m.user.id !== user?.id)
+                                  .map(m => (
+                                    <option key={m.user.id} value={m.user.id}>
+                                      {m.user.displayName}
+                                    </option>
+                                  ))}
+                              </select>
+                            )}
+                          </div>
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              onClick={() => setRemovingMember(null)}
+                              className="btn btn-secondary"
+                              disabled={removeLoading}
                             >
-                              <option value="">Select member...</option>
-                              {workspace.members
-                                ?.filter(m => m.user.id !== removingMember.user.id && m.user.id !== user?.id)
-                                .map(m => (
-                                  <option key={m.user.id} value={m.user.id}>
-                                    {m.user.displayName}
-                                  </option>
-                                ))}
-                            </select>
-                          )}
-                        </div>
-                        <div className="flex gap-2 justify-end">
-                          <button
-                            onClick={() => setRemovingMember(null)}
-                            className="btn btn-secondary"
-                            disabled={removeLoading}
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={async () => {
-                              if (removePostAction === 'merge' && !removeMergeUserId) {
-                                alert('Please select a member to transfer messages to');
-                                return;
-                              }
-                              setRemoveLoading(true);
-                              try {
-                                await api.removeMember(
-                                  workspace.id,
-                                  removingMember.user.id,
-                                  removePostAction,
-                                  removeMergeUserId || null
-                                );
-                                setRemovingMember(null);
-                                window.location.reload();
-                              } catch (err) {
-                                alert(err.message);
-                              } finally {
-                                setRemoveLoading(false);
-                              }
-                            }}
-                            className="btn bg-red-600 hover:bg-red-700 text-white"
-                            disabled={removeLoading}
-                          >
-                            {removeLoading ? 'Removing...' : 'Remove Member'}
-                          </button>
+                              Cancel
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (removePostAction === 'merge' && !removeMergeUserId) {
+                                  alert('Please select a member to transfer messages to');
+                                  return;
+                                }
+                                setRemoveLoading(true);
+                                try {
+                                  await api.removeMember(
+                                    workspace.id,
+                                    removingMember.user.id,
+                                    removePostAction,
+                                    removeMergeUserId || null
+                                  );
+                                  setRemovingMember(null);
+                                  window.location.reload();
+                                } catch (err) {
+                                  alert(err.message);
+                                } finally {
+                                  setRemoveLoading(false);
+                                }
+                              }}
+                              className="btn bg-red-600 hover:bg-red-700 text-white"
+                              disabled={removeLoading}
+                            >
+                              {removeLoading ? 'Removing...' : 'Remove Member'}
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </div>,
+                    document.body
                   )}
                 </div>
               )}

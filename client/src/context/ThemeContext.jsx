@@ -202,9 +202,16 @@ export function ThemeProvider({ children }) {
     root.style.setProperty('--color-accent-hover', theme.accentHover);
     root.style.setProperty('--color-primary', theme.primary);
     root.style.setProperty('--color-primary-hover', theme.primaryHover);
-    root.style.setProperty('--color-modal-bg', theme.modalBg);
-    root.style.setProperty('--color-modal-card', theme.modalCard);
-    root.style.setProperty('--color-modal-border', theme.modalBorder);
+    // In light mode, use light modal colors regardless of theme
+    if (mode === 'light') {
+      root.style.setProperty('--color-modal-bg', '#ffffff');
+      root.style.setProperty('--color-modal-card', '#f3f4f6');
+      root.style.setProperty('--color-modal-border', '#d1d5db');
+    } else {
+      root.style.setProperty('--color-modal-bg', theme.modalBg);
+      root.style.setProperty('--color-modal-card', theme.modalCard);
+      root.style.setProperty('--color-modal-border', theme.modalBorder);
+    }
 
     // Structural colors for dark/light mode
     root.style.setProperty('--color-bg-primary', colors.bgPrimary);

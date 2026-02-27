@@ -5,8 +5,8 @@ const CACHE_NAME = `bandchat-${APP_VERSION}`;
 const API_CACHE_NAME = 'bandchat-api-cache';
 
 // API endpoints to cache for offline support (stale-while-revalidate)
+// NOTE: messages are NOT cached here — they must always be fresh
 const CACHEABLE_API_PATTERNS = [
-  /\/api\/messages\/channel\/[^/]+$/,
   /\/api\/songs\/workspace\/[^/]+$/,
   /\/api\/channels\/workspace\/[^/]+$/,
 ];
