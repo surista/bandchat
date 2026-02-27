@@ -87,8 +87,8 @@ function WorkspaceView() {
 
       // Handle new messages for unread counts
       const handleNewMessage = (message) => {
-        // Only increment unread if message is for a different channel than currently selected
-        if (message.channelId !== selectedChannelRef.current?.id) {
+        // Only increment unread if from another user and for a different channel
+        if (message.author?.id !== user.id && message.channelId !== selectedChannelRef.current?.id) {
           setChannels(prev =>
             prev.map(c =>
               c.id === message.channelId ? { ...c, unreadCount: (c.unreadCount || 0) + 1 } : c

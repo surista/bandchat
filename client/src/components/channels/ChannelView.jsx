@@ -70,14 +70,16 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
         setNextCursor(data.nextCursor);
         setShouldScrollToBottom(true);
 
-        // Join socket room AFTER messages are loaded
-        joinChannel(channel.id);
-
+        // Mark channel as read BEFORE joining socket room so any new messages
+        // that arrive after join will correctly be "after" the read timestamp
         try {
           await api.markChannelRead(channel.id);
         } catch (err) {
           console.error('Failed to mark channel as read:', err);
         }
+
+        // Join socket room after mark-read completes
+        if (!cancelled) joinChannel(channel.id);
       } catch (err) {
         if (!cancelled) {
           console.error('Failed to load messages:', err);
@@ -101,15 +103,11 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
     };
   }, [channel.id]);
 
-  // Scroll to bottom after messages are rendered
+  // Scroll to bottom after messages are rendered (useLayoutEffect runs
+  // synchronously before paint, so the user never sees an unscrolled state)
   useLayoutEffect(() => {
     if (shouldScrollToBottom && !loading && messagesContainerRef.current) {
-      // Use requestAnimationFrame to ensure DOM is fully updated
-      requestAnimationFrame(() => {
-        if (messagesContainerRef.current) {
-          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-        }
-      });
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
       setShouldScrollToBottom(false);
     }
   }, [shouldScrollToBottom, messages, loading]);
