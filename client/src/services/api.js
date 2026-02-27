@@ -35,6 +35,17 @@ class ApiService {
     this._refreshPromise = null;
   }
 
+  isTokenExpiringSoon() {
+    if (!this.accessToken) return false;
+    try {
+      const payload = JSON.parse(atob(this.accessToken.split('.')[1]));
+      // Refresh if token expires within 60 seconds
+      return payload.exp * 1000 < Date.now() + 60000;
+    } catch {
+      return false;
+    }
+  }
+
   setTokens(accessToken, refreshToken) {
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;
@@ -50,6 +61,16 @@ class ApiService {
   }
 
   async request(endpoint, options = {}) {
+    // Proactively refresh token before it expires to avoid 401 errors
+    if (this.refreshToken && this.isTokenExpiringSoon()) {
+      if (!this._refreshPromise) {
+        this._refreshPromise = this.refreshAccessToken().finally(() => {
+          this._refreshPromise = null;
+        });
+      }
+      await this._refreshPromise;
+    }
+
     const url = `${API_URL}${endpoint}`;
     const headers = {
       'Content-Type': 'application/json',

@@ -1025,7 +1025,7 @@ function WorkspaceView() {
         </div>
       )}
 
-      {/* Activity Panel (Coming Soon) */}
+      {/* Activity Panel - Unread Messages */}
       {mobileTab === 'activity' && (
         <div className="fixed inset-0 bg-gray-900 z-40 flex flex-col md:hidden pb-16 safe-area-top">
           <div className="flex items-center gap-3 p-3 border-b border-gray-700">
@@ -1039,13 +1039,89 @@ function WorkspaceView() {
             </button>
             <span className="text-white font-medium">Activity</span>
           </div>
-          <div className="flex-1 flex items-center justify-center text-gray-400">
-            <div className="text-center">
-              <svg className="w-16 h-16 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-              <p>Activity feed coming soon!</p>
-            </div>
+          <div className="flex-1 overflow-y-auto">
+            {(() => {
+              const unreadChannels = channels.filter(c => (c.unreadCount || 0) + (c.unreadThreadReplies || 0) > 0);
+              const unreadDMs = directMessages.filter(dm => (dm.unreadCount || 0) + (dm.unreadThreadReplies || 0) > 0);
+              const hasUnread = unreadChannels.length > 0 || unreadDMs.length > 0;
+
+              if (!hasUnread) {
+                return (
+                  <div className="flex-1 flex items-center justify-center text-gray-400 h-full">
+                    <div className="text-center py-20">
+                      <svg className="w-16 h-16 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <p>You're all caught up!</p>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="p-3 space-y-2">
+                  {unreadChannels.length > 0 && (
+                    <>
+                      <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 pt-2">Channels</div>
+                      {unreadChannels.map(ch => (
+                        <button
+                          key={ch.id}
+                          onClick={() => {
+                            setSelectedChannel(ch);
+                            setMobileTab('home');
+                          }}
+                          className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors"
+                        >
+                          <span className="text-gray-400 text-lg">#</span>
+                          <div className="flex-1 text-left">
+                            <div className="text-white font-medium">{ch.name}</div>
+                            {ch.unreadThreadReplies > 0 && (
+                              <div className="text-gray-400 text-sm">{ch.unreadThreadReplies} thread {ch.unreadThreadReplies === 1 ? 'reply' : 'replies'}</div>
+                            )}
+                          </div>
+                          <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                            {(ch.unreadCount || 0) + (ch.unreadThreadReplies || 0)}
+                          </span>
+                        </button>
+                      ))}
+                    </>
+                  )}
+                  {unreadDMs.length > 0 && (
+                    <>
+                      <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-2 pt-2">Direct Messages</div>
+                      {unreadDMs.map(dm => {
+                        const otherUser = dm.otherMembers?.[0];
+                        const displayName = otherUser?.displayName || 'Unknown';
+                        const initial = displayName.charAt(0).toUpperCase();
+                        return (
+                          <button
+                            key={dm.id}
+                            onClick={() => {
+                              setSelectedChannel(dm);
+                              setMobileTab('home');
+                            }}
+                            className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-800 transition-colors"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white text-sm font-medium">
+                              {initial}
+                            </div>
+                            <div className="flex-1 text-left">
+                              <div className="text-white font-medium">{displayName}</div>
+                              {dm.lastMessage && (
+                                <div className="text-gray-400 text-sm truncate">{dm.lastMessage.content}</div>
+                              )}
+                            </div>
+                            <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                              {(dm.unreadCount || 0) + (dm.unreadThreadReplies || 0)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
