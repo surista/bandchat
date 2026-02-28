@@ -1176,6 +1176,31 @@ class ApiService {
   async getLinkPreview(url) {
     return this.request(`/link-preview?url=${encodeURIComponent(url)}`);
   }
+
+  // File uploads
+  async uploadFile(uri, filename, mimeType) {
+    const formData = new FormData();
+    formData.append('file', { uri, name: filename, type: mimeType });
+
+    const url = `${API_URL}/uploads`;
+    const headers = {};
+    if (this.accessToken) {
+      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || 'Upload failed');
+    }
+
+    return response.json();
+  }
 }
 
 export const api = new ApiService();

@@ -2,6 +2,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import WorkspaceListScreen from '../screens/workspaces/WorkspaceListScreen';
 import ChannelListScreen from '../screens/workspace/ChannelListScreen';
 import ChannelScreen from '../screens/workspace/ChannelScreen';
+import ThreadScreen from '../screens/workspace/ThreadScreen';
 import { useTheme } from '../context/ThemeContext';
 
 const Stack = createNativeStackNavigator();
@@ -40,6 +41,11 @@ export default function AppStack() {
           const prefix = ch?.isPrivate ? '\u{1F512} ' : '# ';
           return { title: prefix + (ch?.name || 'Channel') };
         }}
+      />
+      <Stack.Screen
+        name="Thread"
+        component={ThreadScreen}
+        options={{ title: 'Thread' }}
       />
     </Stack.Navigator>
   );

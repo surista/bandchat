@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
 import { format, isToday, isYesterday } from 'date-fns';
 import { useTheme } from '../context/ThemeContext';
 
@@ -23,31 +23,47 @@ function formatTimestamp(dateStr) {
   return format(date, 'MMM d, h:mm a');
 }
 
-function MessageBubble({ message, isGrouped }) {
+function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress }) {
   const { colors } = useTheme();
   const author = message.author || {};
   const displayName = author.displayName || 'Unknown';
   const initial = displayName.charAt(0).toUpperCase();
   const avatarColor = getAvatarColor(displayName);
   const isPending = message.pending;
+  const isEdited = message.updatedAt && message.updatedAt !== message.createdAt;
+
+  const handleLongPress = () => {
+    if (!isPending && onLongPress) onLongPress(message);
+  };
 
   if (isGrouped) {
     return (
-      <View style={[styles.groupedContainer, isPending && styles.pending]}>
+      <Pressable
+        style={[styles.groupedContainer, isPending && styles.pending]}
+        onLongPress={handleLongPress}
+        delayLongPress={400}
+      >
         <View style={styles.groupedSpacer} />
         <View style={styles.contentContainer}>
-          <Text style={[styles.content, { color: colors.textPrimary }]}>
-            {message.content}
-          </Text>
-          {renderAttachments(message.attachments)}
+          {message.content ? (
+            <Text style={[styles.content, { color: colors.textPrimary }]}>
+              {message.content}
+              {isEdited && <Text style={[styles.edited, { color: colors.textSecondary }]}> (edited)</Text>}
+            </Text>
+          ) : null}
+          {renderAttachments(message.attachments, onImagePress)}
           {renderReactions(message.reactions, colors)}
         </View>
-      </View>
+      </Pressable>
     );
   }
 
   return (
-    <View style={[styles.container, isPending && styles.pending]}>
+    <Pressable
+      style={[styles.container, isPending && styles.pending]}
+      onLongPress={handleLongPress}
+      delayLongPress={400}
+    >
       <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
         {author.avatarUrl ? (
           <Image source={{ uri: author.avatarUrl }} style={styles.avatarImage} />
@@ -64,33 +80,47 @@ function MessageBubble({ message, isGrouped }) {
             {formatTimestamp(message.createdAt)}
           </Text>
         </View>
-        <Text style={[styles.content, { color: colors.textPrimary }]}>
-          {message.content}
-        </Text>
-        {renderAttachments(message.attachments)}
+        {message.content ? (
+          <Text style={[styles.content, { color: colors.textPrimary }]}>
+            {message.content}
+            {isEdited && <Text style={[styles.edited, { color: colors.textSecondary }]}> (edited)</Text>}
+          </Text>
+        ) : null}
+        {renderAttachments(message.attachments, onImagePress)}
         {renderReactions(message.reactions, colors)}
         {message._count?.replies > 0 && (
-          <Text style={[styles.replyCount, { color: colors.primary }]}>
-            {message._count.replies} {message._count.replies === 1 ? 'reply' : 'replies'}
-          </Text>
+          <TouchableOpacity onPress={() => onReplyPress?.(message)} activeOpacity={0.6}>
+            <Text style={[styles.replyCount, { color: colors.primary }]}>
+              {message._count.replies} {message._count.replies === 1 ? 'reply' : 'replies'}
+            </Text>
+          </TouchableOpacity>
         )}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
-function renderAttachments(attachments) {
+function renderAttachments(attachments, onImagePress) {
   if (!attachments || attachments.length === 0) return null;
-  return attachments
-    .filter(att => att.type === 'IMAGE' && att.url)
-    .map(att => (
-      <Image
-        key={att.id}
-        source={{ uri: att.url }}
-        style={styles.attachmentImage}
-        resizeMode="cover"
-      />
-    ));
+  return (
+    <View>
+      {attachments
+        .filter(att => att.type === 'IMAGE' && att.url)
+        .map(att => (
+          <TouchableOpacity
+            key={att.id}
+            onPress={() => onImagePress?.(att.url)}
+            activeOpacity={0.8}
+          >
+            <Image
+              source={{ uri: att.url }}
+              style={styles.attachmentImage}
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
+        ))}
+    </View>
+  );
 }
 
 function renderReactions(reactions, colors) {
@@ -173,6 +203,10 @@ const styles = StyleSheet.create({
   content: {
     fontSize: 15,
     lineHeight: 21,
+  },
+  edited: {
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   attachmentImage: {
     width: 200,

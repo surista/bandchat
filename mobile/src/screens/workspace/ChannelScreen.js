@@ -3,22 +3,28 @@ import {
   View,
   Text,
   FlatList,
+  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
 import api from '../../services/api';
 import MessageBubble from '../../components/MessageBubble';
 import MessageInput from '../../components/MessageInput';
+import MessageActionSheet from '../../components/MessageActionSheet';
+import EmojiPicker from '../../components/EmojiPicker';
+import ImageViewer from '../../components/ImageViewer';
 import { format, isSameDay } from 'date-fns';
 
 const GROUP_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
-export default function ChannelScreen({ route }) {
+export default function ChannelScreen({ navigation, route }) {
   const { channel, workspaceId } = route.params;
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -30,6 +36,13 @@ export default function ChannelScreen({ route }) {
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState(null);
   const [typingUsers, setTypingUsers] = useState([]);
+
+  // Action sheet / picker state
+  const [actionMessage, setActionMessage] = useState(null);
+  const [showActions, setShowActions] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [editingMessage, setEditingMessage] = useState(null);
+  const [viewingImage, setViewingImage] = useState(null);
 
   const channelIdRef = useRef(channel.id);
   const userIdRef = useRef(user?.id);
@@ -51,17 +64,14 @@ export default function ChannelScreen({ route }) {
       setTypingUsers([]);
 
       try {
-        // Step 1: Load messages
         const data = await api.getMessages(channel.id);
         if (cancelled) return;
         setMessages(data.messages);
         setHasMore(data.hasMore);
         setNextCursor(data.nextCursor);
 
-        // Step 2: Mark channel as read
         await api.markChannelRead(channel.id);
 
-        // Step 3: Join socket room
         if (!cancelled) joinChannel(channel.id);
       } catch (err) {
         console.error('Failed to load messages:', err);
@@ -84,12 +94,12 @@ export default function ChannelScreen({ route }) {
 
     const handleNewMessage = (message) => {
       if (message.channelId !== channelIdRef.current) return;
+      // Ignore replies (they go to threads)
+      if (message.parentId) return;
 
       setMessages(prev => {
-        // Deduplicate: skip if message already exists
         if (prev.some(m => m.id === message.id)) return prev;
 
-        // Check if this confirms an optimistic message
         const optimisticIdx = prev.findIndex(
           m => m.pending && m.author?.id === message.author?.id && m.content === message.content
         );
@@ -102,7 +112,6 @@ export default function ChannelScreen({ route }) {
         return [...prev, message];
       });
 
-      // Mark as read if from another user
       if (message.author?.id !== userIdRef.current) {
         api.markChannelRead(channelIdRef.current).catch(() => {});
       }
@@ -151,6 +160,15 @@ export default function ChannelScreen({ route }) {
       }));
     };
 
+    const handleReply = ({ parentId, message: reply }) => {
+      if (reply.channelId !== channelIdRef.current) return;
+      // Update reply count on parent message
+      setMessages(prev => prev.map(m => {
+        if (m.id !== parentId) return m;
+        return { ...m, _count: { ...m._count, replies: (m._count?.replies || 0) + 1 } };
+      }));
+    };
+
     const handleReconnect = () => {
       const chId = channelIdRef.current;
       joinChannel(chId);
@@ -170,6 +188,7 @@ export default function ChannelScreen({ route }) {
     socket.on('typing:stop', handleTypingStop);
     socket.on('reaction:added', handleReactionAdded);
     socket.on('reaction:removed', handleReactionRemoved);
+    socket.on('message:reply', handleReply);
     socket.on('connect', handleReconnect);
 
     return () => {
@@ -180,6 +199,7 @@ export default function ChannelScreen({ route }) {
       socket.off('typing:stop', handleTypingStop);
       socket.off('reaction:added', handleReactionAdded);
       socket.off('reaction:removed', handleReactionRemoved);
+      socket.off('message:reply', handleReply);
       socket.off('connect', handleReconnect);
     };
   }, [socket, joinChannel]);
@@ -202,16 +222,16 @@ export default function ChannelScreen({ route }) {
     }
   }, [hasMore, nextCursor, channel.id]);
 
-  // Send message with optimistic update
-  const handleSend = useCallback(async (content) => {
+  // Send message with optimistic update + optional attachment
+  const handleSend = useCallback(async (content, attachment) => {
     const optimisticMessage = {
       id: `temp-${Date.now()}`,
-      content,
+      content: content || '',
       author: { id: user.id, displayName: user.displayName, avatarUrl: user.avatarUrl },
       channelId: channel.id,
       createdAt: new Date().toISOString(),
       reactions: [],
-      attachments: [],
+      attachments: attachment ? [{ id: `temp-att-${Date.now()}`, type: 'IMAGE', url: attachment.uri, pending: true }] : [],
       _count: { replies: 0 },
       pending: true,
     };
@@ -219,12 +239,16 @@ export default function ChannelScreen({ route }) {
     setMessages(prev => [...prev, optimisticMessage]);
 
     try {
-      const savedMessage = await api.sendMessage(channel.id, content);
+      let uploadedAttachments = null;
+      if (attachment) {
+        const uploaded = await api.uploadFile(attachment.uri, attachment.filename, attachment.mimeType);
+        uploadedAttachments = [uploaded];
+      }
+      const savedMessage = await api.sendMessage(channel.id, content || '', null, uploadedAttachments);
       setMessages(prev => prev.map(m =>
         m.id === optimisticMessage.id ? savedMessage : m
       ));
     } catch (err) {
-      // Remove optimistic message on error
       setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
       console.error('Failed to send message:', err);
     }
@@ -239,15 +263,95 @@ export default function ChannelScreen({ route }) {
     }
   }, [channel.id, startTyping, stopTyping]);
 
+  // Long-press → action sheet
+  const handleLongPress = useCallback((message) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    setActionMessage(message);
+    setShowActions(true);
+  }, []);
+
+  // Handle action from the sheet
+  const handleAction = useCallback((action) => {
+    if (!actionMessage) return;
+
+    switch (action) {
+      case 'reply':
+        navigation.navigate('Thread', { parentMessage: actionMessage, channelId: channel.id, workspaceId });
+        break;
+      case 'react':
+        setShowEmojiPicker(true);
+        break;
+      case 'copy':
+        if (actionMessage.content) {
+          Clipboard.setStringAsync(actionMessage.content);
+        }
+        break;
+      case 'edit':
+        setEditingMessage(actionMessage);
+        break;
+      case 'delete':
+        Alert.alert(
+          'Delete Message',
+          'Are you sure you want to delete this message?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Delete',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  await api.deleteMessage(actionMessage.id);
+                } catch (err) {
+                  console.error('Failed to delete message:', err);
+                }
+              },
+            },
+          ]
+        );
+        break;
+    }
+  }, [actionMessage, navigation, channel.id, workspaceId]);
+
+  // Add reaction
+  const handleAddReaction = useCallback(async (emoji) => {
+    if (!actionMessage) return;
+    try {
+      await api.addReaction(actionMessage.id, emoji);
+    } catch (err) {
+      console.error('Failed to add reaction:', err);
+    }
+    setActionMessage(null);
+  }, [actionMessage]);
+
+  // Edit message
+  const handleSendEdit = useCallback(async (messageId, content) => {
+    try {
+      await api.updateMessage(messageId, content);
+    } catch (err) {
+      console.error('Failed to edit message:', err);
+    }
+    setEditingMessage(null);
+  }, []);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingMessage(null);
+  }, []);
+
+  // Tap reply count → thread screen
+  const handleReplyPress = useCallback((message) => {
+    navigation.navigate('Thread', { parentMessage: message, channelId: channel.id, workspaceId });
+  }, [navigation, channel.id, workspaceId]);
+
+  // Image viewer
+  const handleImagePress = useCallback((url) => {
+    setViewingImage(url);
+  }, []);
+
   // Prepare data for inverted FlatList
   const invertedMessages = useMemo(() => [...messages].reverse(), [messages]);
 
-  // Check if message should be grouped with the one after it (visually above in inverted list)
   const isGrouped = useCallback((message, index) => {
-    // In inverted list, index 0 is the newest. The next message (index+1) is older.
-    // We want to group with the message that comes BEFORE this one chronologically
-    // (which is index-1 in the inverted array = the visually-below message).
-    const nextIdx = index - 1; // the next message chronologically (newer)
+    const nextIdx = index - 1;
     if (nextIdx < 0) return false;
     const prevMsg = invertedMessages[nextIdx];
     if (!prevMsg || !message.author || !prevMsg.author) return false;
@@ -256,11 +360,9 @@ export default function ChannelScreen({ route }) {
     return Math.abs(timeDiff) < GROUP_THRESHOLD_MS;
   }, [invertedMessages]);
 
-  // Date separator check
   const needsDateSeparator = useCallback((message, index) => {
-    // In inverted list, check the message above (index+1 = older message)
     const olderIdx = index + 1;
-    if (olderIdx >= invertedMessages.length) return true; // first message ever
+    if (olderIdx >= invertedMessages.length) return true;
     const olderMsg = invertedMessages[olderIdx];
     return !isSameDay(new Date(message.createdAt), new Date(olderMsg.createdAt));
   }, [invertedMessages]);
@@ -269,11 +371,15 @@ export default function ChannelScreen({ route }) {
     const grouped = isGrouped(item, index);
     const showDate = needsDateSeparator(item, index);
 
-    // In inverted FlatList, render date separator AFTER the message
-    // so it appears visually above the message group
     return (
       <View>
-        <MessageBubble message={item} isGrouped={grouped} />
+        <MessageBubble
+          message={item}
+          isGrouped={grouped}
+          onLongPress={handleLongPress}
+          onReplyPress={handleReplyPress}
+          onImagePress={handleImagePress}
+        />
         {showDate && (
           <View style={styles.dateSeparator}>
             <View style={[styles.dateLine, { backgroundColor: colors.border }]} />
@@ -285,7 +391,7 @@ export default function ChannelScreen({ route }) {
         )}
       </View>
     );
-  }, [isGrouped, needsDateSeparator, colors]);
+  }, [isGrouped, needsDateSeparator, colors, handleLongPress, handleReplyPress, handleImagePress]);
 
   const renderFooter = useCallback(() => {
     if (!loadingMore) return null;
@@ -339,7 +445,35 @@ export default function ChannelScreen({ route }) {
           </Text>
         </View>
       )}
-      <MessageInput onSend={handleSend} onTyping={handleTyping} />
+      <MessageInput
+        onSend={handleSend}
+        onTyping={handleTyping}
+        editingMessage={editingMessage}
+        onCancelEdit={handleCancelEdit}
+        onSendEdit={handleSendEdit}
+      />
+
+      {/* Action Sheet */}
+      <MessageActionSheet
+        visible={showActions}
+        onClose={() => setShowActions(false)}
+        onAction={handleAction}
+        isOwnMessage={actionMessage?.author?.id === user?.id}
+      />
+
+      {/* Emoji Picker */}
+      <EmojiPicker
+        visible={showEmojiPicker}
+        onClose={() => setShowEmojiPicker(false)}
+        onSelect={handleAddReaction}
+      />
+
+      {/* Image Viewer */}
+      <ImageViewer
+        visible={!!viewingImage}
+        imageUrl={viewingImage}
+        onClose={() => setViewingImage(null)}
+      />
     </KeyboardAvoidingView>
   );
 }
