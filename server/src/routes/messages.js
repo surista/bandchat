@@ -314,7 +314,7 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
         )
       );
 
-      mentionedUsers.forEach(m => {
+      mentionedUsers.filter(m => m.userId !== req.user.id).forEach(m => {
         io.to(`user:${m.userId}`).emit('mention', {
           channelId: req.params.channelId,
           message,
