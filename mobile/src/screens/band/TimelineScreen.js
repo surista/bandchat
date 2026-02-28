@@ -312,9 +312,9 @@ export default function TimelineScreen({ navigation, route }) {
             {item.description}
           </Text>
         ) : null}
-        {item.createdBy ? (
+        {(item.createdBy || item.removedCreatorName) ? (
           <Text style={[styles.eventCreator, { color: colors.textSecondary }]}>
-            Added by {item.createdBy.displayName}
+            Added by {item.createdBy?.displayName || item.removedCreatorName || 'Deleted User'}
           </Text>
         ) : null}
       </TouchableOpacity>

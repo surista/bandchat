@@ -969,4 +969,247 @@ router.get('/verify-reset-token', async (req, res) => {
   }
 });
 
+// Delete account (Discord-style: anonymize messages, preserve content)
+router.delete('/account', authenticate, authLimiter, async (req, res) => {
+  try {
+    const { password } = req.body;
+    const userId = req.user.id;
+
+    // Load full user
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Verify identity
+    if (user.authProvider === 'google' && !user.password) {
+      // Google-only users: we accept the request if they're authenticated (JWT verified)
+      // No additional password check needed since they have no password
+    } else {
+      if (!password) return res.status(400).json({ error: 'Password is required' });
+      const valid = await bcrypt.compare(password, user.password);
+      if (!valid) return res.status(401).json({ error: 'Incorrect password' });
+    }
+
+    // Check sole-admin constraint
+    const adminMemberships = await prisma.workspaceMember.findMany({
+      where: { userId, role: 'ADMIN' },
+      include: { workspace: { select: { id: true, name: true } } }
+    });
+
+    const soleAdminWorkspaces = [];
+    for (const membership of adminMemberships) {
+      const otherAdmins = await prisma.workspaceMember.count({
+        where: {
+          workspaceId: membership.workspaceId,
+          role: 'ADMIN',
+          userId: { not: userId }
+        }
+      });
+      if (otherAdmins === 0) {
+        soleAdminWorkspaces.push(membership.workspace.name);
+      }
+    }
+
+    if (soleAdminWorkspaces.length > 0) {
+      return res.status(400).json({
+        error: 'You are the only admin in these workspaces. Transfer admin role before deleting your account.',
+        workspaces: soleAdminWorkspaces
+      });
+    }
+
+    // Capture display name and workspace IDs for post-deletion notifications
+    const displayName = user.displayName;
+    const workspaceIds = adminMemberships.length > 0
+      ? adminMemberships.map(m => m.workspaceId)
+      : (await prisma.workspaceMember.findMany({
+          where: { userId },
+          select: { workspaceId: true }
+        })).map(m => m.workspaceId);
+
+    // Anonymize and delete in a transaction
+    await prisma.$transaction([
+      // Anonymize messages
+      prisma.message.updateMany({
+        where: { authorId: userId },
+        data: { removedUserName: displayName, authorId: null }
+      }),
+      // Anonymize created content (10 models)
+      prisma.song.updateMany({
+        where: { createdById: userId },
+        data: { removedCreatorName: displayName, createdById: null }
+      }),
+      prisma.setlist.updateMany({
+        where: { createdById: userId },
+        data: { removedCreatorName: displayName, createdById: null }
+      }),
+      prisma.gig.updateMany({
+        where: { createdById: userId },
+        data: { removedCreatorName: displayName, createdById: null }
+      }),
+      prisma.medley.updateMany({
+        where: { createdById: userId },
+        data: { removedCreatorName: displayName, createdById: null }
+      }),
+      prisma.contact.updateMany({
+        where: { createdById: userId },
+        data: { removedCreatorName: displayName, createdById: null }
+      }),
+      prisma.announcement.updateMany({
+        where: { createdById: userId },
+        data: { removedCreatorName: displayName, createdById: null }
+      }),
+      prisma.poll.updateMany({
+        where: { createdById: userId },
+        data: { removedCreatorName: displayName, createdById: null }
+      }),
+      prisma.timelineEvent.updateMany({
+        where: { createdById: userId },
+        data: { removedCreatorName: displayName, createdById: null }
+      }),
+      prisma.recording.updateMany({
+        where: { createdById: userId },
+        data: { removedCreatorName: displayName, createdById: null }
+      }),
+      prisma.kittyTransaction.updateMany({
+        where: { createdById: userId },
+        data: { removedCreatorName: displayName, createdById: null }
+      }),
+      // Nullify pinned messages
+      prisma.pinnedMessage.updateMany({
+        where: { pinnedById: userId },
+        data: { pinnedById: null }
+      }),
+      // Delete user (cascades: WorkspaceMember, ChannelMember, Reaction, ThreadRead,
+      // PushSubscription, RefreshToken, AnnouncementAcknowledgment, PollVote,
+      // MemberAchievement, MemberAvailability, BandMember.linkedUserId -> SetNull)
+      prisma.user.delete({ where: { id: userId } })
+    ]);
+
+    // Notify workspaces about the removed member
+    const io = req.app.get('io');
+    if (io) {
+      workspaceIds.forEach(wsId => {
+        io.to(`workspace:${wsId}`).emit('member:removed', { userId });
+      });
+      // Force-logout the deleted user's active sockets
+      io.to(`user:${userId}`).emit('force:logout');
+    }
+
+    res.json({ message: 'Account deleted successfully' });
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
+// Export user data as JSON download
+router.get('/export', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true, email: true, displayName: true, bio: true, avatarUrl: true,
+        authProvider: true, createdAt: true,
+        workspaces: {
+          include: {
+            workspace: { select: { id: true, name: true } }
+          }
+        },
+        messages: {
+          select: {
+            id: true, content: true, createdAt: true,
+            channel: { select: { name: true, isDirect: true, workspace: { select: { name: true } } } },
+            attachments: { select: { filename: true, url: true, type: true, size: true } }
+          },
+          orderBy: { createdAt: 'desc' }
+        },
+        songs: {
+          select: { id: true, title: true, artist: true, key: true, bpm: true, duration: true, createdAt: true,
+            workspace: { select: { name: true } } }
+        },
+        setlists: {
+          select: { id: true, name: true, performedAt: true, venue: true, createdAt: true,
+            workspace: { select: { name: true } } }
+        },
+        gigs: {
+          select: { id: true, title: true, date: true, venue: true, type: true, status: true, createdAt: true,
+            workspace: { select: { name: true } } }
+        },
+        availability: {
+          select: { date: true, status: true, note: true,
+            workspace: { select: { name: true } } }
+        },
+        memberAchievements: {
+          select: { earnedAt: true, metadata: true,
+            achievement: { select: { name: true, description: true, icon: true } },
+            workspace: { select: { name: true } } }
+        },
+        pollVotes: {
+          select: { createdAt: true,
+            option: { select: { text: true, poll: { select: { question: true } } } } }
+        },
+        reactions: {
+          select: { emoji: true, message: { select: { id: true, content: true } } }
+        }
+      }
+    });
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const exportData = {
+      exportDate: new Date().toISOString(),
+      profile: {
+        id: user.id, email: user.email, displayName: user.displayName,
+        bio: user.bio, avatarUrl: user.avatarUrl, authProvider: user.authProvider,
+        createdAt: user.createdAt
+      },
+      workspaces: user.workspaces.map(m => ({
+        name: m.workspace.name, role: m.role, joinedAt: m.joinedAt
+      })),
+      messages: user.messages.map(m => ({
+        content: m.content, channelName: m.channel.name, isDirect: m.channel.isDirect,
+        workspaceName: m.channel.workspace.name, createdAt: m.createdAt,
+        attachments: m.attachments
+      })),
+      songsCreated: user.songs.map(s => ({
+        title: s.title, artist: s.artist, key: s.key, bpm: s.bpm,
+        duration: s.duration, workspaceName: s.workspace.name, createdAt: s.createdAt
+      })),
+      setlistsCreated: user.setlists.map(s => ({
+        name: s.name, performedAt: s.performedAt, venue: s.venue,
+        workspaceName: s.workspace.name, createdAt: s.createdAt
+      })),
+      gigsCreated: user.gigs.map(g => ({
+        title: g.title, date: g.date, venue: g.venue, type: g.type,
+        status: g.status, workspaceName: g.workspace.name, createdAt: g.createdAt
+      })),
+      availability: user.availability.map(a => ({
+        date: a.date, status: a.status, note: a.note,
+        workspaceName: a.workspace.name
+      })),
+      achievements: user.memberAchievements.map(a => ({
+        name: a.achievement.name, description: a.achievement.description,
+        icon: a.achievement.icon, earnedAt: a.earnedAt,
+        workspaceName: a.workspace.name
+      })),
+      pollVotes: user.pollVotes.map(v => ({
+        question: v.option.poll.question, answer: v.option.text, votedAt: v.createdAt
+      })),
+      reactions: user.reactions.map(r => ({
+        emoji: r.emoji, messageContent: r.message?.content
+      }))
+    };
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    const sanitizedEmail = user.email.replace(/[^a-zA-Z0-9]/g, '_');
+    res.setHeader('Content-Disposition', `attachment; filename="bandchat-export-${sanitizedEmail}-${dateStr}.json"`);
+    res.setHeader('Content-Type', 'application/json');
+    res.json(exportData);
+  } catch (error) {
+    console.error('Export user data error:', error);
+    res.status(500).json({ error: 'Failed to export data' });
+  }
+});
+
 export default router;

@@ -45,18 +45,18 @@ function PinnedMessagesPanel({ pinnedMessages, onUnpin, onClose }) {
                 {/* Author and time */}
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-6 h-6 rounded-full bg-slack-green flex-shrink-0 flex items-center justify-center text-white text-xs font-medium">
-                    {pin.message.author.avatarUrl ? (
+                    {pin.message.author?.avatarUrl ? (
                       <img
                         src={pin.message.author.avatarUrl}
-                        alt={pin.message.author.displayName}
+                        alt={pin.message.author?.displayName || pin.message.removedUserName || 'Deleted User'}
                         className="w-full h-full rounded-full object-cover"
                       />
                     ) : (
-                      pin.message.author.displayName.charAt(0).toUpperCase()
+                      (pin.message.author?.displayName || pin.message.removedUserName || 'Deleted User').charAt(0).toUpperCase()
                     )}
                   </div>
                   <span className="text-white text-sm font-medium">
-                    {pin.message.author.displayName}
+                    {pin.message.author?.displayName || pin.message.removedUserName || 'Deleted User'}
                   </span>
                   <span className="text-gray-500 text-xs">
                     {formatTime(pin.message.createdAt)}
@@ -80,7 +80,7 @@ function PinnedMessagesPanel({ pinnedMessages, onUnpin, onClose }) {
                 {/* Footer: pinned by + unpin button */}
                 <div className="flex items-center justify-between mt-2 pl-8">
                   <span className="text-gray-500 text-xs">
-                    Pinned by {pin.pinnedBy.displayName}
+                    Pinned by {pin.pinnedBy?.displayName || 'Deleted User'}
                   </span>
                   <button
                     onClick={() => onUnpin(pin.messageId)}

@@ -298,7 +298,7 @@ function PollCard({ poll, userId, onVote, onClose, onDelete }) {
       {/* Footer */}
       <div className="flex items-center justify-between text-xs text-gray-500 mt-3 pt-3 border-t border-gray-700">
         <span>
-          Created by {poll.createdBy?.displayName} • {formatDistanceToNow(new Date(poll.createdAt), { addSuffix: true })}
+          Created by {poll.createdBy?.displayName || poll.removedCreatorName || 'Deleted User'} • {formatDistanceToNow(new Date(poll.createdAt), { addSuffix: true })}
         </span>
         <span>{poll.totalVotes} vote{poll.totalVotes !== 1 ? 's' : ''}</span>
       </div>

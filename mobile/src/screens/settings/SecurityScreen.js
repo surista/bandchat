@@ -9,14 +9,18 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
+  Share,
+  Platform,
 } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 
 export default function SecurityScreen() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { colors } = useTheme();
 
   const isGoogleOnly = user?.authProvider === 'google';
@@ -32,6 +36,12 @@ export default function SecurityScreen() {
   const [newEmail, setNewEmail] = useState('');
   const [emailPassword, setEmailPassword] = useState('');
   const [changingEmail, setChangingEmail] = useState(false);
+
+  // Export & Delete
+  const [exporting, setExporting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const handleChangePassword = useCallback(async () => {
     if (!currentPassword || !newPassword) {
@@ -170,6 +180,54 @@ export default function SecurityScreen() {
             <Text style={[styles.infoValue, { color: colors.textPrimary }]}>{getProviderLabel()}</Text>
           </View>
         </View>
+
+        {/* Export My Data */}
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>MY DATA</Text>
+        <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
+          <Text style={[styles.desc, { color: colors.textSecondary }]}>
+            Download all your data as a JSON file including your profile, messages, and content you created.
+          </Text>
+          <TouchableOpacity
+            style={[styles.outlineButton, { borderColor: colors.primary }]}
+            onPress={async () => {
+              setExporting(true);
+              try {
+                const data = await api.exportUserData();
+                const json = JSON.stringify(data, null, 2);
+                const path = `${FileSystem.cacheDirectory}bandchat-export.json`;
+                await FileSystem.writeAsStringAsync(path, json, { encoding: FileSystem.EncodingType.UTF8 });
+                await Sharing.shareAsync(path, { mimeType: 'application/json' });
+              } catch (err) {
+                Alert.alert('Error', err.message || 'Failed to export data');
+              } finally {
+                setExporting(false);
+              }
+            }}
+            disabled={exporting}
+            activeOpacity={0.7}
+          >
+            {exporting ? (
+              <ActivityIndicator color={colors.primary} size="small" />
+            ) : (
+              <Text style={[styles.outlineButtonText, { color: colors.primary }]}>Export My Data</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Delete Account */}
+        <Text style={[styles.sectionHeader, { color: '#ef4444' }]}>DANGER ZONE</Text>
+        <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
+          <Text style={[styles.desc, { color: colors.textSecondary }]}>
+            Permanently delete your account. Your messages will be anonymized and your profile data removed. This cannot be undone.
+          </Text>
+          <TouchableOpacity
+            style={[styles.dangerButton]}
+            onPress={() => setShowDeleteModal(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.dangerButtonText}>Delete My Account</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       {/* Change Email Modal */}
@@ -216,6 +274,59 @@ export default function SecurityScreen() {
                   <ActivityIndicator color="#ffffff" size="small" />
                 ) : (
                   <Text style={styles.modalButtonTextWhite}>Send Verification</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      {/* Delete Account Modal */}
+      <Modal visible={showDeleteModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
+            <Text style={[styles.modalTitle, { color: '#ef4444' }]}>Delete Account</Text>
+            <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
+              This will permanently delete your account. Your messages will show as "Deleted User" and your profile data will be removed.
+            </Text>
+            {!isGoogleOnly && (
+              <TextInput
+                style={[styles.input, styles.lastInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                placeholder="Enter your password to confirm"
+                placeholderTextColor={colors.textSecondary}
+                value={deletePassword}
+                onChangeText={setDeletePassword}
+                secureTextEntry
+                autoCapitalize="none"
+              />
+            )}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
+                onPress={() => { setShowDeleteModal(false); setDeletePassword(''); }}
+                disabled={deleting}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#ef4444' }]}
+                onPress={async () => {
+                  setDeleting(true);
+                  try {
+                    await api.deleteAccount(deletePassword || undefined);
+                    setShowDeleteModal(false);
+                    logout();
+                  } catch (err) {
+                    Alert.alert('Error', err.message || 'Failed to delete account');
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+                disabled={deleting || (!isGoogleOnly && !deletePassword)}
+              >
+                {deleting ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <Text style={styles.modalButtonTextWhite}>Delete Forever</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -286,4 +397,12 @@ const styles = StyleSheet.create({
   modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
   modalButtonText: { fontSize: 15, fontWeight: '600' },
   modalButtonTextWhite: { fontSize: 15, fontWeight: '600', color: '#ffffff' },
+  desc: { fontSize: 14, marginBottom: 12, lineHeight: 20 },
+  dangerButton: {
+    paddingVertical: 13,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: '#ef4444',
+  },
+  dangerButtonText: { color: '#ffffff', fontSize: 15, fontWeight: '600' },
 });

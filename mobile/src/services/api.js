@@ -1201,6 +1201,36 @@ class ApiService {
 
     return response.json();
   }
+
+  // Account Management
+  async deleteAccount(password) {
+    return this.request('/auth/account', {
+      method: 'DELETE',
+      body: JSON.stringify({ password })
+    });
+  }
+
+  async exportUserData() {
+    const url = `${API_URL}/auth/export`;
+    const headers = { Authorization: `Bearer ${this.accessToken}` };
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || 'Export failed');
+    }
+    return response.json();
+  }
+
+  async exportWorkspaceData(workspaceId) {
+    const url = `${API_URL}/workspaces/${workspaceId}/export`;
+    const headers = { Authorization: `Bearer ${this.accessToken}` };
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || 'Export failed');
+    }
+    return response.json();
+  }
 }
 
 export const api = new ApiService();

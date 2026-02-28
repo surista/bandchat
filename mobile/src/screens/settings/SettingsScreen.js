@@ -5,8 +5,11 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
   StyleSheet,
 } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -144,6 +147,23 @@ export default function SettingsScreen({ navigation, route }) {
                 icon={'\uD83D\uDC65'}
                 label="Members"
                 onPress={() => navigation.navigate('WorkspaceMembers', { workspaceId })}
+                colors={colors}
+              />
+              <View style={[styles.separator, { backgroundColor: colors.border }]} />
+              <SettingsRow
+                icon={'\uD83D\uDCE5'}
+                label="Export Workspace"
+                onPress={async () => {
+                  try {
+                    const data = await api.exportWorkspaceData(workspaceId);
+                    const json = JSON.stringify(data, null, 2);
+                    const path = `${FileSystem.cacheDirectory}bandchat-workspace-export.json`;
+                    await FileSystem.writeAsStringAsync(path, json, { encoding: FileSystem.EncodingType.UTF8 });
+                    await Sharing.shareAsync(path, { mimeType: 'application/json' });
+                  } catch (err) {
+                    Alert.alert('Error', err.message || 'Failed to export workspace');
+                  }
+                }}
                 colors={colors}
               />
               <View style={[styles.separator, { backgroundColor: colors.border }]} />

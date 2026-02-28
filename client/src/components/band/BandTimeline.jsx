@@ -342,7 +342,7 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
                       />
                     )}
                     <p className="mt-2 text-xs text-gray-500">
-                      Added by {event.createdBy?.displayName}
+                      Added by {event.createdBy?.displayName || event.removedCreatorName || 'Deleted User'}
                     </p>
                   </div>
                 </div>

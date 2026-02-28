@@ -232,7 +232,7 @@ function AnnouncementCard({ announcement, isAdmin, onAcknowledge, onEdit, onDele
       <div className="flex items-center justify-between text-sm">
         <div className="flex items-center gap-4 text-gray-500">
           <span>
-            By {announcement.createdBy?.displayName} • {formatDistanceToNow(new Date(announcement.createdAt), { addSuffix: true })}
+            By {announcement.createdBy?.displayName || announcement.removedCreatorName || 'Deleted User'} • {formatDistanceToNow(new Date(announcement.createdAt), { addSuffix: true })}
           </span>
           <span className="flex items-center gap-1">
             <span className="text-green-400">{announcement.acknowledgmentCount || 0}</span>

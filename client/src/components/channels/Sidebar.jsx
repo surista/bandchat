@@ -237,6 +237,10 @@ function Sidebar({
   const [showAllMembers, setShowAllMembers] = useState(false);
   // Bio editing
   const [editBio, setEditBio] = useState('');
+  // Account deletion
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
   // Admin member editing
   const [editingMemberId, setEditingMemberId] = useState(null);
   const [editMemberName, setEditMemberName] = useState('');
@@ -1725,6 +1729,97 @@ function Sidebar({
                       </button>
                     </div>
                   </form>
+
+                  {/* Divider */}
+                  <div className="border-t border-[var(--color-modal-border)]" />
+
+                  {/* Export My Data */}
+                  <div>
+                    <h4 className="text-lg font-medium text-white mb-2">Export My Data</h4>
+                    <p className="text-sm text-gray-400 mb-3">
+                      Download all your data as a JSON file including your profile, messages, and content you created.
+                    </p>
+                    <button
+                      onClick={async () => {
+                        setSettingsLoading(true);
+                        setSettingsError('');
+                        try {
+                          await api.exportUserData();
+                          setSettingsSuccess('Export downloaded');
+                        } catch (err) {
+                          setSettingsError(err.message);
+                        } finally {
+                          setSettingsLoading(false);
+                        }
+                      }}
+                      disabled={settingsLoading}
+                      className="btn bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                    >
+                      {settingsLoading ? 'Exporting...' : 'Download My Data'}
+                    </button>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-[var(--color-modal-border)]" />
+
+                  {/* Delete Account */}
+                  <div>
+                    <h4 className="text-lg font-medium text-red-400 mb-2">Delete Account</h4>
+                    <p className="text-sm text-gray-400 mb-3">
+                      Permanently delete your account. Your messages will be anonymized and your profile data removed. This cannot be undone.
+                    </p>
+                    {!deleteConfirmOpen ? (
+                      <button
+                        onClick={() => setDeleteConfirmOpen(true)}
+                        className="btn bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        Delete My Account
+                      </button>
+                    ) : (
+                      <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 space-y-3">
+                        <p className="text-sm text-red-300 font-medium">
+                          Are you sure? Enter your password to confirm.
+                        </p>
+                        <input
+                          type="password"
+                          value={deletePassword}
+                          onChange={(e) => setDeletePassword(e.target.value)}
+                          className="modal-input"
+                          placeholder={user?.authProvider === 'google' && !user?.password ? 'No password needed for Google accounts' : 'Enter your password'}
+                          disabled={user?.authProvider === 'google' && !user?.password}
+                        />
+                        {deleteError && (
+                          <p className="text-sm text-red-400">{deleteError}</p>
+                        )}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={async () => {
+                              setDeleteError('');
+                              setSettingsLoading(true);
+                              try {
+                                await api.deleteAccount(deletePassword || undefined);
+                                onLogout();
+                              } catch (err) {
+                                setDeleteError(err.message);
+                              } finally {
+                                setSettingsLoading(false);
+                              }
+                            }}
+                            disabled={settingsLoading || (user?.authProvider !== 'google' && !deletePassword)}
+                            className="btn bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                          >
+                            {settingsLoading ? 'Deleting...' : 'Permanently Delete'}
+                          </button>
+                          <button
+                            onClick={() => { setDeleteConfirmOpen(false); setDeletePassword(''); setDeleteError(''); }}
+                            className="btn btn-secondary"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -1800,6 +1895,30 @@ function Sidebar({
               {/* Members Tab (Admin only) */}
               {settingsTab === 'members' && (
                 <div className="space-y-2">
+                  {/* Export Workspace Data (Admin) */}
+                  <div className="p-3 bg-[var(--color-modal-card)] rounded-lg mb-4">
+                    <h4 className="text-sm font-medium text-white mb-1">Export Workspace Data</h4>
+                    <p className="text-xs text-gray-400 mb-2">Download all workspace data as JSON (channels, messages, songs, gigs, etc.)</p>
+                    <button
+                      onClick={async () => {
+                        setSettingsLoading(true);
+                        setSettingsError('');
+                        try {
+                          await api.exportWorkspaceData(workspace.id);
+                          setSettingsSuccess('Workspace export downloaded');
+                        } catch (err) {
+                          setSettingsError(err.message);
+                        } finally {
+                          setSettingsLoading(false);
+                        }
+                      }}
+                      disabled={settingsLoading}
+                      className="btn bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-50"
+                    >
+                      {settingsLoading ? 'Exporting...' : 'Download Workspace Data'}
+                    </button>
+                  </div>
+
                   {workspace.members?.map((member) => (
                     <div
                       key={member.user.id}

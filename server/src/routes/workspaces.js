@@ -1162,4 +1162,267 @@ router.get('/:workspaceId/members/:userId/events', authenticate, isWorkspaceMemb
   }
 });
 
+// Export full workspace data as JSON download (admin only)
+router.get('/:workspaceId/export', authenticate, isWorkspaceAdmin, async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      include: {
+        members: {
+          include: { user: { select: { id: true, displayName: true, email: true, avatarUrl: true, bio: true, createdAt: true } } }
+        },
+        channels: {
+          where: { isDirect: false },
+          include: {
+            members: { include: { user: { select: { id: true, displayName: true } } } },
+            messages: {
+              orderBy: { createdAt: 'asc' },
+              include: {
+                author: { select: { id: true, displayName: true } },
+                attachments: { select: { filename: true, url: true, type: true, size: true } },
+                reactions: { include: { user: { select: { id: true, displayName: true } } } }
+              }
+            }
+          }
+        },
+        songs: {
+          include: {
+            createdBy: { select: { displayName: true } },
+            attachments: { select: { filename: true, url: true, type: true, size: true } }
+          }
+        },
+        setlists: {
+          include: {
+            createdBy: { select: { displayName: true } },
+            songs: { include: { song: { select: { title: true, artist: true } } }, orderBy: { position: 'asc' } },
+            performers: { include: { bandMember: { select: { name: true } } } }
+          }
+        },
+        gigs: {
+          include: {
+            createdBy: { select: { displayName: true } },
+            setlists: { include: { setlist: { select: { name: true } } }, orderBy: { setNumber: 'asc' } },
+            attendees: { include: { bandMember: { select: { name: true } } } },
+            media: true,
+            songsPlayed: { include: { song: { select: { title: true, artist: true } } } }
+          }
+        },
+        bandMembers: {
+          include: { instruments: true }
+        },
+        contacts: {
+          include: { createdBy: { select: { displayName: true } } }
+        },
+        announcements: {
+          include: {
+            createdBy: { select: { displayName: true } },
+            acknowledgments: { include: { user: { select: { displayName: true } } } }
+          }
+        },
+        polls: {
+          include: {
+            createdBy: { select: { displayName: true } },
+            options: { include: { votes: { include: { user: { select: { displayName: true } } } } } }
+          }
+        },
+        timelineEvents: {
+          include: { createdBy: { select: { displayName: true } } },
+          orderBy: { eventDate: 'asc' }
+        },
+        recordings: {
+          include: {
+            createdBy: { select: { displayName: true } },
+            song: { select: { title: true, artist: true } }
+          }
+        },
+        medleys: {
+          include: {
+            createdBy: { select: { displayName: true } },
+            songs: { include: { song: { select: { title: true, artist: true } } }, orderBy: { position: 'asc' } }
+          }
+        },
+        kitty: {
+          include: { transactions: { orderBy: { date: 'desc' } } }
+        },
+        memberAchievements: {
+          include: {
+            user: { select: { displayName: true } },
+            achievement: { select: { name: true, description: true, icon: true, category: true } }
+          }
+        },
+        bandAchievements: {
+          include: {
+            achievement: { select: { name: true, description: true, icon: true, category: true } }
+          }
+        },
+        availability: {
+          include: { user: { select: { displayName: true } } },
+          orderBy: { date: 'asc' }
+        }
+      }
+    });
+
+    if (!workspace) return res.status(404).json({ error: 'Workspace not found' });
+
+    // Also export DM channels with messages
+    const dmChannels = await prisma.channel.findMany({
+      where: { workspaceId, isDirect: true },
+      include: {
+        members: { include: { user: { select: { id: true, displayName: true } } } },
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          include: {
+            author: { select: { id: true, displayName: true } },
+            attachments: { select: { filename: true, url: true, type: true, size: true } },
+            reactions: { include: { user: { select: { id: true, displayName: true } } } }
+          }
+        }
+      }
+    });
+
+    const exportData = {
+      exportDate: new Date().toISOString(),
+      workspace: {
+        name: workspace.name, createdAt: workspace.createdAt,
+        inviteCode: workspace.inviteCode
+      },
+      members: workspace.members.map(m => ({
+        displayName: m.user.displayName, email: m.user.email,
+        role: m.role, joinedAt: m.joinedAt
+      })),
+      channels: workspace.channels.map(ch => ({
+        name: ch.name, description: ch.description, isPrivate: ch.isPrivate,
+        createdAt: ch.createdAt,
+        members: ch.members.map(m => m.user.displayName),
+        messages: ch.messages.map(msg => ({
+          author: msg.author?.displayName || msg.removedUserName || 'Deleted User',
+          content: msg.content, createdAt: msg.createdAt,
+          attachments: msg.attachments,
+          reactions: msg.reactions.map(r => ({ emoji: r.emoji, user: r.user?.displayName }))
+        }))
+      })),
+      directMessages: dmChannels.map(ch => ({
+        participants: ch.members.map(m => m.user.displayName),
+        messages: ch.messages.map(msg => ({
+          author: msg.author?.displayName || msg.removedUserName || 'Deleted User',
+          content: msg.content, createdAt: msg.createdAt,
+          attachments: msg.attachments,
+          reactions: msg.reactions.map(r => ({ emoji: r.emoji, user: r.user?.displayName }))
+        }))
+      })),
+      songs: workspace.songs.map(s => ({
+        title: s.title, shortName: s.shortName, artist: s.artist,
+        duration: s.duration, key: s.key, bpm: s.bpm,
+        notes: s.notes, lyrics: s.lyrics, arrangement: s.arrangement,
+        youtubeUrl: s.youtubeUrl, spotifyUrl: s.spotifyUrl,
+        createdBy: s.createdBy?.displayName || s.removedCreatorName || 'Deleted User',
+        createdAt: s.createdAt,
+        attachments: s.attachments
+      })),
+      setlists: workspace.setlists.map(s => ({
+        name: s.name, description: s.description, performedAt: s.performedAt,
+        venue: s.venue, startTime: s.startTime,
+        createdBy: s.createdBy?.displayName || s.removedCreatorName || 'Deleted User',
+        songs: s.songs.map(ss => ({
+          position: ss.position, type: ss.type, label: ss.label,
+          song: ss.song ? `${ss.song.title}${ss.song.artist ? ` - ${ss.song.artist}` : ''}` : null
+        })),
+        performers: s.performers.map(p => p.bandMember.name)
+      })),
+      gigs: workspace.gigs.map(g => ({
+        title: g.title, type: g.type, date: g.date, endDate: g.endDate,
+        venue: g.venue, address: g.address, notes: g.notes,
+        pay: g.pay, status: g.status,
+        createdBy: g.createdBy?.displayName || g.removedCreatorName || 'Deleted User',
+        setlists: g.setlists.map(gs => ({ setNumber: gs.setNumber, name: gs.setlist.name })),
+        attendees: g.attendees.map(a => ({ name: a.bandMember.name, status: a.status })),
+        media: g.media,
+        songsPlayed: g.songsPlayed.map(gs => `${gs.song.title}${gs.song.artist ? ` - ${gs.song.artist}` : ''}`)
+      })),
+      bandMembers: workspace.bandMembers.map(bm => ({
+        name: bm.name, imageUrl: bm.imageUrl, notes: bm.notes,
+        instruments: bm.instruments.map(i => ({
+          instrument: i.instrument, startDate: i.startDate, endDate: i.endDate
+        }))
+      })),
+      contacts: workspace.contacts.map(c => ({
+        name: c.name, category: c.category, email: c.email,
+        phone: c.phone, website: c.website, address: c.address, notes: c.notes,
+        createdBy: c.createdBy?.displayName || c.removedCreatorName || 'Deleted User'
+      })),
+      announcements: workspace.announcements.map(a => ({
+        title: a.title, content: a.content, priority: a.priority,
+        isPinned: a.isPinned, expiresAt: a.expiresAt,
+        createdBy: a.createdBy?.displayName || a.removedCreatorName || 'Deleted User',
+        createdAt: a.createdAt,
+        acknowledgedBy: a.acknowledgments.map(ack => ({
+          user: ack.user?.displayName || 'Deleted User', at: ack.acknowledgedAt
+        }))
+      })),
+      polls: workspace.polls.map(p => ({
+        question: p.question, description: p.description,
+        allowMultiple: p.allowMultiple, isAnonymous: p.isAnonymous, isClosed: p.isClosed,
+        createdBy: p.createdBy?.displayName || p.removedCreatorName || 'Deleted User',
+        createdAt: p.createdAt,
+        options: p.options.map(o => ({
+          text: o.text, position: o.position,
+          votes: p.isAnonymous ? o.votes.length : o.votes.map(v => v.user?.displayName || 'Deleted User')
+        }))
+      })),
+      timeline: workspace.timelineEvents.map(t => ({
+        title: t.title, description: t.description, eventType: t.eventType,
+        eventDate: t.eventDate, imageUrl: t.imageUrl,
+        createdBy: t.createdBy?.displayName || t.removedCreatorName || 'Deleted User'
+      })),
+      recordings: workspace.recordings.map(r => ({
+        title: r.title, description: r.description, url: r.url,
+        type: r.type, duration: r.duration,
+        song: r.song ? `${r.song.title}${r.song.artist ? ` - ${r.song.artist}` : ''}` : null,
+        createdBy: r.createdBy?.displayName || r.removedCreatorName || 'Deleted User',
+        createdAt: r.createdAt
+      })),
+      medleys: workspace.medleys.map(m => ({
+        name: m.name, description: m.description,
+        createdBy: m.createdBy?.displayName || m.removedCreatorName || 'Deleted User',
+        songs: m.songs.map(ms => `${ms.song.title}${ms.song.artist ? ` - ${ms.song.artist}` : ''}`)
+      })),
+      kitty: workspace.kitty ? {
+        startingBalance: workspace.kitty.startingBalance,
+        currency: workspace.kitty.currency,
+        transactions: workspace.kitty.transactions.map(t => ({
+          type: t.type, category: t.category, amount: t.amount,
+          description: t.description, date: t.date,
+          createdBy: t.createdBy?.displayName || t.removedCreatorName || 'Deleted User'
+        }))
+      } : null,
+      achievements: {
+        band: workspace.bandAchievements.map(a => ({
+          name: a.achievement.name, icon: a.achievement.icon,
+          category: a.achievement.category, earnedAt: a.earnedAt
+        })),
+        member: workspace.memberAchievements.map(a => ({
+          user: a.user?.displayName || 'Deleted User',
+          name: a.achievement.name, icon: a.achievement.icon,
+          category: a.achievement.category, earnedAt: a.earnedAt
+        }))
+      },
+      availability: workspace.availability.map(a => ({
+        user: a.user?.displayName || 'Deleted User',
+        date: a.date, status: a.status, note: a.note
+      }))
+    };
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    const sanitizedName = workspace.name.replace(/[^a-zA-Z0-9]/g, '_');
+    res.setHeader('Content-Disposition', `attachment; filename="bandchat-workspace-${sanitizedName}-${dateStr}.json"`);
+    res.setHeader('Content-Type', 'application/json');
+    res.json(exportData);
+  } catch (error) {
+    console.error('Export workspace error:', error);
+    res.status(500).json({ error: 'Failed to export workspace data' });
+  }
+});
+
 export default router;

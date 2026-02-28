@@ -465,7 +465,7 @@ export default function RecordingsList({ workspaceId }) {
                 )}
                 <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-700">
                   <div className="text-xs text-gray-500">
-                    <span>{recording.createdBy?.displayName}</span>
+                    <span>{recording.createdBy?.displayName || recording.removedCreatorName || 'Deleted User'}</span>
                     <span className="mx-2">·</span>
                     <span>{formatDate(recording.createdAt)}</span>
                   </div>

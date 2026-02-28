@@ -365,14 +365,14 @@ function MessageList({
           >
             {/* Avatar */}
             <div className="w-9 h-9 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white font-medium">
-              {message.author.avatarUrl ? (
+              {message.author?.avatarUrl ? (
                 <img
                   src={message.author.avatarUrl}
-                  alt={message.author.displayName}
+                  alt={message.author?.displayName || message.removedUserName || 'Deleted User'}
                   className="w-full h-full rounded object-cover"
                 />
               ) : (
-                message.author.displayName.charAt(0).toUpperCase()
+                (message.author?.displayName || message.removedUserName || 'Deleted User').charAt(0).toUpperCase()
               )}
             </div>
 
@@ -380,7 +380,7 @@ function MessageList({
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-2">
                 <span className="font-semibold text-white">
-                  {message.author.displayName}
+                  {message.author?.displayName || message.removedUserName || 'Deleted User'}
                 </span>
                 <span className="text-xs text-gray-400">
                   {formatMessageTime(message.createdAt)}

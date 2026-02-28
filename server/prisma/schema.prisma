@@ -161,15 +161,15 @@ model ChannelMember {
 model Message {
   id              String   @id @default(uuid())
   content         String
-  authorId        String
+  authorId        String?
   channelId       String
   parentId        String?
   isHidden        Boolean  @default(false)
-  removedUserName String?  // Set when user is removed with 'anonymize' option
+  removedUserName String?  // Set when user is removed/deleted (preserves display name)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author      User?        @relation(fields: [authorId], references: [id], onDelete: SetNull)
   channel     Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
   parent      Message?     @relation("Threads", fields: [parentId], references: [id], onDelete: SetNull)
   replies     Message[]    @relation("Threads")
@@ -248,12 +248,12 @@ model PinnedMessage {
   id         String   @id @default(uuid())
   messageId  String
   channelId  String
-  pinnedById String
+  pinnedById String?
   createdAt  DateTime @default(now())
 
   message    Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
   channel    Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  pinnedBy   User     @relation(fields: [pinnedById], references: [id])
+  pinnedBy   User?    @relation(fields: [pinnedById], references: [id], onDelete: SetNull)
 
   @@unique([messageId, channelId])
   @@index([channelId])
@@ -274,13 +274,14 @@ model Song {
   arrangement String?  // Custom arrangement notes (intro, solo, ending, etc.)
   youtubeUrl  String?
   spotifyUrl  String?
-  workspaceId String
-  createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  workspaceId        String
+  createdById        String?
+  removedCreatorName String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   workspace    Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy    User             @relation(fields: [createdById], references: [id])
+  createdBy    User?            @relation(fields: [createdById], references: [id], onDelete: SetNull)
   setlistSongs SetlistSong[]
   gigSongs     GigSong[]
   attachments  SongAttachment[]
@@ -315,13 +316,14 @@ model Setlist {
   venue         String?   // Venue name for the performance
   startTime     String?   // "HH:mm" format e.g. "19:30"
   isAutoCreated Boolean   @default(false) // True if auto-created with a gig
-  workspaceId   String
-  createdById   String
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  workspaceId        String
+  createdById        String?
+  removedCreatorName String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy   User                @relation(fields: [createdById], references: [id])
+  createdBy   User?               @relation(fields: [createdById], references: [id], onDelete: SetNull)
   songs       SetlistSong[]
   gigs        Gig[]               // Legacy single-setlist relation
   gigSetlists GigSetlist[]        // Multi-set support
@@ -368,13 +370,14 @@ model Gig {
   isLocked    Boolean   @default(false) // Admin-only: non-admins cannot edit/delete
   isPersonal  Boolean   @default(false) // Personal entry: only visible to creator
   setlistId   String?   // Legacy single setlist - kept for backward compatibility
-  workspaceId String
-  createdById String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  workspaceId        String
+  createdById        String?
+  removedCreatorName String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   workspace         Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy         User               @relation(fields: [createdById], references: [id])
+  createdBy         User?              @relation(fields: [createdById], references: [id], onDelete: SetNull)
   setlist           Setlist?           @relation(fields: [setlistId], references: [id], onDelete: SetNull)
   setlists          GigSetlist[]       // Multi-set support
   songsPlayed       GigSong[]
@@ -532,13 +535,14 @@ model Medley {
   id          String   @id @default(uuid())
   name        String
   description String?
-  workspaceId String
-  createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  workspaceId        String
+  createdById        String?
+  removedCreatorName String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy User         @relation(fields: [createdById], references: [id])
+  createdBy User?        @relation(fields: [createdById], references: [id], onDelete: SetNull)
   songs     MedleySong[]
 
   @@unique([workspaceId, name])
@@ -568,13 +572,14 @@ model Contact {
   website     String?
   address     String?
   notes       String?
-  workspaceId String
-  createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  workspaceId        String
+  createdById        String?
+  removedCreatorName String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy User      @relation(fields: [createdById], references: [id])
+  createdBy User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([workspaceId])
   @@index([workspaceId, category])
@@ -587,14 +592,15 @@ model Announcement {
   content     String
   priority    String   @default("normal") // 'low', 'normal', 'high', 'urgent'
   isPinned    Boolean  @default(true)
-  workspaceId String
-  createdById String
-  expiresAt   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  workspaceId        String
+  createdById        String?
+  removedCreatorName String?
+  expiresAt          DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   workspace        Workspace                     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy        User                          @relation(fields: [createdById], references: [id])
+  createdBy        User?                         @relation(fields: [createdById], references: [id], onDelete: SetNull)
   acknowledgments  AnnouncementAcknowledgment[]
 
   @@index([workspaceId])
@@ -623,15 +629,16 @@ model Poll {
   isAnonymous Boolean   @default(false)
   isClosed    Boolean   @default(false)
   workspaceId String
-  channelId   String?   // Optional: poll can be in a channel
-  createdById String
-  expiresAt   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  channelId          String?   // Optional: poll can be in a channel
+  createdById        String?
+  removedCreatorName String?
+  expiresAt          DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   channel   Channel?     @relation(fields: [channelId], references: [id], onDelete: SetNull)
-  createdBy User         @relation(fields: [createdById], references: [id])
+  createdBy User?        @relation(fields: [createdById], references: [id], onDelete: SetNull)
   options   PollOption[]
 
   @@index([workspaceId])
@@ -671,13 +678,14 @@ model TimelineEvent {
   eventType   String   // 'formation', 'first_gig', 'member_joined', 'member_left', 'album_release', 'milestone', 'custom'
   eventDate   DateTime
   imageUrl    String?
-  workspaceId String
-  createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  workspaceId        String
+  createdById        String?
+  removedCreatorName String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy User      @relation(fields: [createdById], references: [id])
+  createdBy User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, eventDate])
 }
@@ -739,14 +747,15 @@ model Recording {
   type        String   // 'audio', 'video'
   duration    Int?     // Duration in seconds
   songId      String?  // Optional link to a song
-  workspaceId String
-  createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  workspaceId        String
+  createdById        String?
+  removedCreatorName String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   song      Song?     @relation(fields: [songId], references: [id], onDelete: SetNull)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy User      @relation(fields: [createdById], references: [id])
+  createdBy User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([workspaceId])
   @@index([songId])
@@ -775,13 +784,14 @@ model KittyTransaction {
   description String
   date        DateTime             @default(now())
   gigId       String?              // Link to gig if auto-created from gig completion
-  createdById String
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  createdById        String?
+  removedCreatorName String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
 
   kitty     BandKitty @relation(fields: [kittyId], references: [id], onDelete: Cascade)
   gig       Gig?      @relation(fields: [gigId], references: [id], onDelete: SetNull)
-  createdBy User      @relation(fields: [createdById], references: [id])
+  createdBy User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([kittyId, date])
   @@index([gigId])

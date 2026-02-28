@@ -28,7 +28,7 @@ function formatTimestamp(dateStr) {
 function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress }) {
   const { colors } = useTheme();
   const author = message.author || {};
-  const displayName = author.displayName || 'Unknown';
+  const displayName = author.displayName || message.removedUserName || 'Deleted User';
   const initial = displayName.charAt(0).toUpperCase();
   const avatarColor = getAvatarColor(displayName);
   const isPending = message.pending;

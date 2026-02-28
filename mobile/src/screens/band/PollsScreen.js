@@ -249,7 +249,7 @@ export default function PollsScreen({ navigation, route }) {
         ) : null}
 
         <Text style={[styles.pollMeta, { color: colors.textSecondary }]}>
-          By {poll.createdBy?.displayName || 'Unknown'} {'\u00B7'} {timeAgo(poll.createdAt)}
+          By {poll.createdBy?.displayName || poll.removedCreatorName || 'Deleted User'} {'\u00B7'} {timeAgo(poll.createdAt)}
           {poll.allowMultiple ? ' \u00B7 Multi-select' : ''}
         </Text>
 

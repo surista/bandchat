@@ -1246,6 +1246,48 @@ class ApiService {
   async getLinkPreview(url) {
     return this.request(`/link-preview?url=${encodeURIComponent(url)}`);
   }
+
+  // Account Management
+  async deleteAccount(password) {
+    return this.request('/auth/account', {
+      method: 'DELETE',
+      body: JSON.stringify({ password })
+    });
+  }
+
+  async exportUserData() {
+    const url = `${API_URL}/auth/export`;
+    const headers = { Authorization: `Bearer ${this.accessToken}` };
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Export failed');
+    }
+    const blob = await response.blob();
+    const filename = response.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || 'bandchat-export.json';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  async exportWorkspaceData(workspaceId) {
+    const url = `${API_URL}/workspaces/${workspaceId}/export`;
+    const headers = { Authorization: `Bearer ${this.accessToken}` };
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Export failed');
+    }
+    const blob = await response.blob();
+    const filename = response.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || 'bandchat-workspace-export.json';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
 }
 
 export const api = new ApiService();

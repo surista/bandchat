@@ -193,7 +193,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
 
         // Check if this is confirming an optimistic message we sent
         const optimisticIndex = prev.findIndex(
-          m => m.pending && m.author.id === message.author.id && m.content === message.content
+          m => m.pending && m.author?.id === message.author?.id && m.content === message.content
         );
 
         if (optimisticIndex !== -1) {
@@ -209,7 +209,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       scrollToBottom();
 
       // Mark as read if it's not our message
-      if (message.author.id !== userIdRef.current) {
+      if (message.author?.id !== userIdRef.current) {
         api.markChannelRead(channelIdRef.current);
       }
     }
@@ -232,7 +232,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
           ? {
               ...m,
               _count: { replies: (m._count?.replies || 0) + 1 },
-              unreadReplies: (reply.author.id !== userIdRef.current && openThreadIdRef.current !== parentId)
+              unreadReplies: (reply.author?.id !== userIdRef.current && openThreadIdRef.current !== parentId)
                 ? (m.unreadReplies || 0) + 1
                 : m.unreadReplies || 0
             }

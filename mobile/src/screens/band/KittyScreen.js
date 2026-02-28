@@ -311,9 +311,9 @@ export default function KittyScreen({ navigation, route }) {
             {item.category ? ` \u00B7 ${item.category}` : ''}
             {item.gig ? ` \u00B7 ${item.gig.title}` : ''}
           </Text>
-          {item.createdBy ? (
+          {(item.createdBy || item.removedCreatorName) ? (
             <Text style={[styles.txCreator, { color: colors.textSecondary }]}>
-              by {item.createdBy.displayName}
+              by {item.createdBy?.displayName || item.removedCreatorName || 'Deleted User'}
             </Text>
           ) : null}
         </View>

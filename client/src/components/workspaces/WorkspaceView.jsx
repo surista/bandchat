@@ -118,7 +118,7 @@ function WorkspaceView() {
 
       // Handle thread replies for unread counts
       const handleReplyUnread = ({ parentId, message: reply }) => {
-        if (reply.author.id === user.id) return;
+        if (reply.author?.id === user.id) return;
         const isThreadOpen = selectedThreadRef.current?.id === parentId;
         // If the thread is open, ThreadView will mark it as read
         if (isThreadOpen) return;

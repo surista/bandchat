@@ -205,7 +205,7 @@ export default function AnnouncementsScreen({ navigation, route }) {
   const renderAnnouncement = useCallback(({ item }) => {
     const prioColor = PRIORITY_COLORS[item.priority] || PRIORITY_COLORS.normal;
     const needsAck = item.isPinned && !item.isAcknowledged;
-    const authorName = item.createdBy?.displayName || 'Unknown';
+    const authorName = item.createdBy?.displayName || item.removedCreatorName || 'Deleted User';
 
     return (
       <TouchableOpacity
