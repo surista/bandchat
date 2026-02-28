@@ -9,6 +9,12 @@ import SetlistListScreen from '../screens/band/SetlistListScreen';
 import SetlistDetailScreen from '../screens/band/SetlistDetailScreen';
 import GigListScreen from '../screens/band/GigListScreen';
 import GigDetailScreen from '../screens/band/GigDetailScreen';
+import StatsScreen from '../screens/band/StatsScreen';
+import BandMembersScreen from '../screens/band/BandMembersScreen';
+import AvailabilityScreen from '../screens/band/AvailabilityScreen';
+import ContactsScreen from '../screens/band/ContactsScreen';
+import AnnouncementsScreen from '../screens/band/AnnouncementsScreen';
+import PollsScreen from '../screens/band/PollsScreen';
 import { useTheme } from '../context/ThemeContext';
 
 const Stack = createNativeStackNavigator();
@@ -61,6 +67,12 @@ export default function AppStack() {
       <Stack.Screen name="SetlistDetail" component={SetlistDetailScreen} options={{ title: 'Setlist' }} />
       <Stack.Screen name="GigList" component={GigListScreen} options={{ title: 'Calendar' }} />
       <Stack.Screen name="GigDetail" component={GigDetailScreen} options={{ title: 'Event' }} />
+      <Stack.Screen name="Stats" component={StatsScreen} options={{ title: 'Stats' }} />
+      <Stack.Screen name="BandMembers" component={BandMembersScreen} options={{ title: 'Members' }} />
+      <Stack.Screen name="Availability" component={AvailabilityScreen} options={{ title: 'Availability' }} />
+      <Stack.Screen name="Contacts" component={ContactsScreen} options={{ title: 'Contacts' }} />
+      <Stack.Screen name="Announcements" component={AnnouncementsScreen} options={{ title: 'Announcements' }} />
+      <Stack.Screen name="Polls" component={PollsScreen} options={{ title: 'Polls' }} />
     </Stack.Navigator>
   );
 }

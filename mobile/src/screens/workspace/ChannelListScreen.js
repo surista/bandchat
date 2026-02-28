@@ -23,6 +23,12 @@ const BAND_ITEMS = [
   { id: 'band-songs', key: 'songs', label: 'Songs', icon: '\uD83C\uDFB5', _type: 'band' },
   { id: 'band-setlists', key: 'setlists', label: 'Setlists', icon: '\uD83C\uDFB6', _type: 'band' },
   { id: 'band-calendar', key: 'calendar', label: 'Calendar', icon: '\uD83D\uDCC5', _type: 'band' },
+  { id: 'band-stats', key: 'stats', label: 'Stats', icon: '\uD83D\uDCCA', _type: 'band' },
+  { id: 'band-members', key: 'members', label: 'Members', icon: '\uD83D\uDC65', _type: 'band' },
+  { id: 'band-availability', key: 'availability', label: 'Availability', icon: '\uD83D\uDDD3\uFE0F', _type: 'band' },
+  { id: 'band-contacts', key: 'contacts', label: 'Contacts', icon: '\uD83D\uDCD2', _type: 'band' },
+  { id: 'band-announcements', key: 'announcements', label: 'Announcements', icon: '\uD83D\uDCE2', _type: 'band' },
+  { id: 'band-polls', key: 'polls', label: 'Polls', icon: '\uD83D\uDDF3\uFE0F', _type: 'band' },
 ];
 
 export default function ChannelListScreen({ navigation, route }) {
@@ -279,6 +285,12 @@ export default function ChannelListScreen({ navigation, route }) {
       songs: 'SongList',
       setlists: 'SetlistList',
       calendar: 'GigList',
+      stats: 'Stats',
+      members: 'BandMembers',
+      availability: 'Availability',
+      contacts: 'Contacts',
+      announcements: 'Announcements',
+      polls: 'Polls',
     };
     navigation.navigate(screenMap[key], { workspaceId });
   }, [navigation, workspaceId]);

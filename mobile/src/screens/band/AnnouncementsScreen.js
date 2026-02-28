@@ -1,0 +1,517 @@
+import { useState, useEffect, useCallback, useMemo, useLayoutEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  SectionList,
+  TextInput,
+  TouchableOpacity,
+  Modal,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+  RefreshControl,
+  StyleSheet,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { formatDistanceToNow, parseISO } from 'date-fns';
+import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
+
+const PRIORITY_COLORS = {
+  low: '#6b7280',
+  normal: '#3b82f6',
+  high: '#eab308',
+  urgent: '#ef4444',
+};
+
+const PRIORITY_OPTIONS = [
+  { value: 'low', label: 'Low' },
+  { value: 'normal', label: 'Normal' },
+  { value: 'high', label: 'High' },
+  { value: 'urgent', label: 'Urgent' },
+];
+
+function timeAgo(dateStr) {
+  try {
+    return formatDistanceToNow(parseISO(dateStr), { addSuffix: true });
+  } catch {
+    return '';
+  }
+}
+
+export default function AnnouncementsScreen({ navigation, route }) {
+  const { workspaceId } = route.params;
+  const { colors } = useTheme();
+  const { user } = useAuth();
+
+  const [announcements, setAnnouncements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Create/Edit modal
+  const [showModal, setShowModal] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState(null);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [priority, setPriority] = useState('normal');
+  const [isPinned, setIsPinned] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Action sheet
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+  const [showActions, setShowActions] = useState(false);
+
+  const loadingRef = useRef(loading);
+  useEffect(() => { loadingRef.current = loading; }, [loading]);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => openCreateModal()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors.primary]);
+
+  const loadAnnouncements = useCallback(async () => {
+    try {
+      const data = await api.getAnnouncements(workspaceId);
+      setAnnouncements(data);
+    } catch (err) {
+      console.error('Failed to load announcements:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [workspaceId]);
+
+  useEffect(() => {
+    loadAnnouncements();
+  }, [loadAnnouncements]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (!loadingRef.current) loadAnnouncements();
+    });
+    return unsubscribe;
+  }, [navigation, loadAnnouncements]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadAnnouncements();
+  }, [loadAnnouncements]);
+
+  const openCreateModal = useCallback(() => {
+    setEditingAnnouncement(null);
+    setTitle('');
+    setContent('');
+    setPriority('normal');
+    setIsPinned(true);
+    setShowModal(true);
+  }, []);
+
+  const openEditModal = useCallback((ann) => {
+    setEditingAnnouncement(ann);
+    setTitle(ann.title || '');
+    setContent(ann.content || '');
+    setPriority(ann.priority || 'normal');
+    setIsPinned(ann.isPinned ?? true);
+    setShowModal(true);
+    setShowActions(false);
+    setSelectedAnnouncement(null);
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    if (!title.trim()) {
+      Alert.alert('Required', 'Title is required');
+      return;
+    }
+    if (!content.trim()) {
+      Alert.alert('Required', 'Content is required');
+      return;
+    }
+    setSaving(true);
+    try {
+      const data = {
+        title: title.trim(),
+        content: content.trim(),
+        priority,
+        isPinned,
+      };
+      if (editingAnnouncement) {
+        await api.updateAnnouncement(editingAnnouncement.id, data);
+      } else {
+        await api.createAnnouncement(workspaceId, data);
+      }
+      setShowModal(false);
+      loadAnnouncements();
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to save announcement');
+    } finally {
+      setSaving(false);
+    }
+  }, [title, content, priority, isPinned, editingAnnouncement, workspaceId, loadAnnouncements]);
+
+  const handleAcknowledge = useCallback(async (id) => {
+    try {
+      await api.acknowledgeAnnouncement(id);
+      setAnnouncements(prev =>
+        prev.map(a => a.id === id ? { ...a, isAcknowledged: true, acknowledgmentCount: (a.acknowledgmentCount || 0) + 1 } : a)
+      );
+    } catch (err) {
+      Alert.alert('Error', 'Failed to acknowledge');
+    }
+  }, []);
+
+  const handleDelete = useCallback(() => {
+    if (!selectedAnnouncement) return;
+    Alert.alert('Delete Announcement', `Delete "${selectedAnnouncement.title}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.deleteAnnouncement(selectedAnnouncement.id);
+            setAnnouncements(prev => prev.filter(a => a.id !== selectedAnnouncement.id));
+          } catch (err) {
+            Alert.alert('Error', 'Failed to delete announcement');
+          }
+          setShowActions(false);
+          setSelectedAnnouncement(null);
+        },
+      },
+    ]);
+  }, [selectedAnnouncement]);
+
+  const sections = useMemo(() => {
+    const requiresAck = announcements.filter(a => a.isPinned && !a.isAcknowledged);
+    const others = announcements.filter(a => !a.isPinned || a.isAcknowledged);
+    const result = [];
+    if (requiresAck.length > 0) {
+      result.push({ title: `Requires Acknowledgment (${requiresAck.length})`, data: requiresAck, isUrgent: true });
+    }
+    if (others.length > 0) {
+      result.push({ title: 'Previous Announcements', data: others });
+    }
+    return result;
+  }, [announcements]);
+
+  const renderAnnouncement = useCallback(({ item }) => {
+    const prioColor = PRIORITY_COLORS[item.priority] || PRIORITY_COLORS.normal;
+    const needsAck = item.isPinned && !item.isAcknowledged;
+    const authorName = item.createdBy?.displayName || 'Unknown';
+
+    return (
+      <TouchableOpacity
+        style={[styles.annCard, { backgroundColor: colors.bgSecondary }]}
+        onLongPress={() => { setSelectedAnnouncement(item); setShowActions(true); }}
+        delayLongPress={400}
+        activeOpacity={0.7}
+      >
+        {/* Priority stripe */}
+        <View style={[styles.priorityStripe, { backgroundColor: prioColor }]} />
+        <View style={styles.annContent}>
+          <View style={styles.annHeaderRow}>
+            {item.isPinned && <Text style={styles.pinIcon}>{'\uD83D\uDCCC'}</Text>}
+            <Text style={[styles.annTitle, { color: colors.textPrimary }]} numberOfLines={2}>
+              {item.title}
+            </Text>
+          </View>
+          <Text style={[styles.annText, { color: colors.textSecondary }]} numberOfLines={3}>
+            {item.content}
+          </Text>
+          <View style={styles.annFooter}>
+            <Text style={[styles.annMeta, { color: colors.textSecondary }]}>
+              By {authorName} {'\u00B7'} {timeAgo(item.createdAt)}
+            </Text>
+            {item.acknowledgmentCount > 0 && (
+              <Text style={[styles.ackCount, { color: colors.textSecondary }]}>
+                {item.acknowledgmentCount} acknowledged
+              </Text>
+            )}
+          </View>
+          {needsAck && (
+            <TouchableOpacity
+              style={[styles.ackButton, { backgroundColor: '#22c55e' }]}
+              onPress={() => handleAcknowledge(item.id)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.ackButtonText}>Acknowledge</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  }, [colors, handleAcknowledge]);
+
+  const renderSectionHeader = useCallback(({ section }) => (
+    <View style={[styles.sectionHeader, section.isUrgent && styles.urgentSection]}>
+      <Text style={[styles.sectionTitle, { color: section.isUrgent ? '#ef4444' : colors.textSecondary }]}>
+        {section.title}
+      </Text>
+    </View>
+  ), [colors]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SectionList
+        sections={sections}
+        keyExtractor={(item) => item.id}
+        renderItem={renderAnnouncement}
+        renderSectionHeader={renderSectionHeader}
+        stickySectionHeadersEnabled={false}
+        contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+        ListEmptyComponent={
+          <View style={styles.centered}>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No announcements</Text>
+          </View>
+        }
+      />
+
+      {/* Create/Edit Modal */}
+      <Modal visible={showModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
+                {editingAnnouncement ? 'Edit Announcement' : 'New Announcement'}
+              </Text>
+
+              <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Title *</Text>
+              <TextInput
+                style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                value={title}
+                onChangeText={setTitle}
+                placeholder="Announcement title"
+                placeholderTextColor={colors.textSecondary}
+                autoFocus
+              />
+
+              <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Content *</Text>
+              <TextInput
+                style={[styles.modalInput, styles.contentInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                value={content}
+                onChangeText={setContent}
+                placeholder="Announcement content"
+                placeholderTextColor={colors.textSecondary}
+                multiline
+              />
+
+              <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Priority</Text>
+              <View style={styles.priorityPicker}>
+                {PRIORITY_OPTIONS.map(opt => {
+                  const active = priority === opt.value;
+                  const pColor = PRIORITY_COLORS[opt.value];
+                  return (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[styles.priorityChip, { backgroundColor: active ? pColor + '30' : colors.bgTertiary, borderColor: active ? pColor : 'transparent', borderWidth: 1 }]}
+                      onPress={() => setPriority(opt.value)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.priorityChipText, { color: active ? pColor : colors.textSecondary }]}>
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <TouchableOpacity
+                style={styles.checkboxRow}
+                onPress={() => setIsPinned(prev => !prev)}
+                activeOpacity={0.6}
+              >
+                <View style={[styles.checkbox, { borderColor: colors.border }, isPinned && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+                  {isPinned && <Text style={styles.checkmark}>{'\u2713'}</Text>}
+                </View>
+                <Text style={[styles.checkboxLabel, { color: colors.textPrimary }]}>Pin & require acknowledgment</Text>
+              </TouchableOpacity>
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
+                onPress={() => setShowModal(false)}
+                disabled={saving}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.primary }]}
+                onPress={handleSave}
+                disabled={saving || !title.trim() || !content.trim()}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <Text style={styles.modalButtonTextWhite}>{editingAnnouncement ? 'Save' : 'Post'}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Action Sheet */}
+      <Modal visible={showActions} transparent animationType="slide">
+        <TouchableOpacity
+          style={styles.actionOverlay}
+          activeOpacity={1}
+          onPress={() => { setShowActions(false); setSelectedAnnouncement(null); }}
+        >
+          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
+            <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
+            <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+              {selectedAnnouncement?.title}
+            </Text>
+            <TouchableOpacity style={styles.actionItem} onPress={() => openEditModal(selectedAnnouncement)}>
+              <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionItem} onPress={handleDelete}>
+              <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionItem, styles.actionCancel]}
+              onPress={() => { setShowActions(false); setSelectedAnnouncement(null); }}
+            >
+              <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
+  emptyText: { fontSize: 15 },
+  listContent: { padding: 12, paddingBottom: 20 },
+  // Section header
+  sectionHeader: { paddingVertical: 8, paddingHorizontal: 4 },
+  urgentSection: { },
+  sectionTitle: { fontSize: 14, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  // Announcement card
+  annCard: {
+    flexDirection: 'row',
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  priorityStripe: { width: 4 },
+  annContent: { flex: 1, padding: 12 },
+  annHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  pinIcon: { fontSize: 14, marginRight: 6 },
+  annTitle: { fontSize: 16, fontWeight: '700', flex: 1 },
+  annText: { fontSize: 14, lineHeight: 20, marginBottom: 6 },
+  annFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  annMeta: { fontSize: 12 },
+  ackCount: { fontSize: 12 },
+  ackButton: {
+    marginTop: 10,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  ackButtonText: { color: '#ffffff', fontSize: 15, fontWeight: '600' },
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    borderRadius: 12,
+    padding: 24,
+    maxHeight: '80%',
+  },
+  modalTitle: { fontSize: 20, fontWeight: '700', marginBottom: 20 },
+  modalLabel: { fontSize: 14, fontWeight: '500', marginBottom: 6 },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  contentInput: { height: 100, textAlignVertical: 'top' },
+  priorityPicker: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 16 },
+  priorityChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 14 },
+  priorityChipText: { fontSize: 14, fontWeight: '600' },
+  checkboxRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  checkmark: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  checkboxLabel: { fontSize: 15 },
+  modalActions: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  modalButtonText: { fontSize: 15, fontWeight: '600' },
+  modalButtonTextWhite: { fontSize: 15, fontWeight: '600', color: '#ffffff' },
+  // Action sheet
+  actionOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  actionSheet: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 40,
+    paddingTop: 12,
+  },
+  actionHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  actionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 16, textAlign: 'center' },
+  actionItem: { paddingVertical: 16, alignItems: 'center' },
+  actionText: { fontSize: 17 },
+  actionCancel: { marginTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.1)' },
+});
