@@ -36,5 +36,12 @@ tmpclaude*
 *.gif
 !client/public/**
 
+# Capacitor native build artifacts
+client/ios/App/App/public/
+client/ios/App/Pods/
+client/ios/capacitor-cordova-ios-plugins/
+client/android/app/build/
+client/android/capacitor-cordova-android-plugins/
+
 # Claude Code
 CLAUDE.md
