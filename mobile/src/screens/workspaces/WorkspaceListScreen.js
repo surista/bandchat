@@ -1,0 +1,425 @@
+import { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  TextInput,
+  Modal,
+  ActivityIndicator,
+  RefreshControl,
+  Platform,
+  StyleSheet,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
+import api from '../../services/api';
+
+export default function WorkspaceListScreen({ navigation }) {
+  const { user, logout } = useAuth();
+  const { colors } = useTheme();
+  const toast = useToast();
+  const [workspaces, setWorkspaces] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [showJoin, setShowJoin] = useState(false);
+  const [newWorkspaceName, setNewWorkspaceName] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const loadWorkspaces = useCallback(async () => {
+    try {
+      const data = await api.getWorkspaces();
+      setWorkspaces(data);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    loadWorkspaces();
+  }, [loadWorkspaces]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadWorkspaces();
+  }, [loadWorkspaces]);
+
+  const handleCreateWorkspace = async () => {
+    if (!newWorkspaceName.trim()) return;
+    setSubmitting(true);
+    try {
+      const workspace = await api.createWorkspace(newWorkspaceName.trim());
+      setWorkspaces(prev => [...prev, workspace]);
+      setShowCreate(false);
+      setNewWorkspaceName('');
+      toast.success('Workspace created!');
+      navigation.navigate('Workspace', { id: workspace.id, name: workspace.name });
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleJoinWorkspace = async () => {
+    if (!inviteCode.trim()) return;
+    setSubmitting(true);
+    try {
+      const workspace = await api.joinWorkspace(inviteCode.trim());
+      setWorkspaces(prev => [...prev, workspace]);
+      setShowJoin(false);
+      setInviteCode('');
+      toast.success('Joined workspace!');
+      navigation.navigate('Workspace', { id: workspace.id, name: workspace.name });
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const renderWorkspace = ({ item }) => (
+    <TouchableOpacity
+      style={[styles.workspaceItem, { backgroundColor: colors.bgSecondary }]}
+      onPress={() => navigation.navigate('Workspace', { id: item.id, name: item.name })}
+      activeOpacity={0.7}
+    >
+      <View style={[styles.workspaceAvatar, { backgroundColor: colors.primary }]}>
+        <Text style={styles.workspaceAvatarText}>
+          {item.name.charAt(0).toUpperCase()}
+        </Text>
+      </View>
+      <View style={styles.workspaceInfo}>
+        <Text style={[styles.workspaceName, { color: colors.textPrimary }]}>
+          {item.name}
+        </Text>
+        <Text style={[styles.workspaceMeta, { color: colors.textSecondary }]}>
+          {item._count?.members || 0} members
+        </Text>
+      </View>
+      <Text style={[styles.chevron, { color: colors.textSecondary }]}>{'\u203a'}</Text>
+    </TouchableOpacity>
+  );
+
+  const renderEmpty = () => (
+    <View style={[styles.emptyContainer, { backgroundColor: colors.bgSecondary }]}>
+      <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>
+        No workspaces yet
+      </Text>
+      <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+        Create a new workspace for your band or join one with an invite code.
+      </Text>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      {/* Header */}
+      <View style={[styles.header, { backgroundColor: colors.sidebar }]}>
+        <View>
+          <Text style={styles.headerTitle}>BandChat</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+            {user?.displayName}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={logout} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Text style={[styles.signOut, { color: colors.textSecondary }]}>Sign out</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Action Buttons */}
+      <View style={styles.actions}>
+        <TouchableOpacity
+          style={[styles.actionButton, { backgroundColor: colors.bgTertiary }]}
+          onPress={() => setShowJoin(true)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.actionButtonText, { color: colors.textPrimary }]}>Join Workspace</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionButton, { backgroundColor: colors.primary }]}
+          onPress={() => setShowCreate(true)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.actionButtonTextWhite}>Create Workspace</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Workspace List */}
+      <FlatList
+        data={workspaces}
+        keyExtractor={(item) => item.id}
+        renderItem={renderWorkspace}
+        ListEmptyComponent={renderEmpty}
+        contentContainerStyle={workspaces.length === 0 ? styles.emptyList : styles.listContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      />
+
+      {/* Create Workspace Modal */}
+      <Modal visible={showCreate} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Create a Workspace</Text>
+            <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Workspace Name</Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+              placeholder="e.g., The Rockers"
+              placeholderTextColor={colors.textSecondary}
+              value={newWorkspaceName}
+              onChangeText={setNewWorkspaceName}
+              autoFocus
+              editable={!submitting}
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
+                onPress={() => { setShowCreate(false); setNewWorkspaceName(''); }}
+                disabled={submitting}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.primary }]}
+                onPress={handleCreateWorkspace}
+                disabled={submitting || !newWorkspaceName.trim()}
+              >
+                {submitting ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <Text style={styles.modalButtonTextWhite}>Create</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Join Workspace Modal */}
+      <Modal visible={showJoin} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Join a Workspace</Text>
+            <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Invite Code</Text>
+            <TextInput
+              style={[styles.modalInput, styles.codeInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+              placeholder="ABC123"
+              placeholderTextColor={colors.textSecondary}
+              value={inviteCode}
+              onChangeText={(text) => setInviteCode(text.toUpperCase())}
+              autoCapitalize="characters"
+              maxLength={8}
+              autoFocus
+              editable={!submitting}
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
+                onPress={() => { setShowJoin(false); setInviteCode(''); }}
+                disabled={submitting}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.primary }]}
+                onPress={handleJoinWorkspace}
+                disabled={submitting || !inviteCode.trim()}
+              >
+                {submitting ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <Text style={styles.modalButtonTextWhite}>Join</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  signOut: {
+    fontSize: 14,
+  },
+  actions: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  actionButtonTextWhite: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  listContent: {
+    padding: 20,
+    gap: 10,
+  },
+  emptyList: {
+    flexGrow: 1,
+    padding: 20,
+  },
+  workspaceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 10,
+  },
+  workspaceAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  workspaceAvatarText: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  workspaceInfo: {
+    flex: 1,
+  },
+  workspaceName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  workspaceMeta: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  chevron: {
+    fontSize: 24,
+    fontWeight: '300',
+    marginLeft: 8,
+  },
+  emptyContainer: {
+    borderRadius: 12,
+    padding: 32,
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    borderRadius: 12,
+    padding: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 20,
+  },
+  modalLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 6,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  codeInput: {
+    fontFamily: Platform?.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontSize: 18,
+    letterSpacing: 4,
+    textAlign: 'center',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  modalButtonTextWhite: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+});
