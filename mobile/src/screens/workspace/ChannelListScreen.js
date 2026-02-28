@@ -19,6 +19,12 @@ import { useSocket } from '../../context/SocketContext';
 import api from '../../services/api';
 import ChannelItem from '../../components/ChannelItem';
 
+const BAND_ITEMS = [
+  { id: 'band-songs', key: 'songs', label: 'Songs', icon: '\uD83C\uDFB5', _type: 'band' },
+  { id: 'band-setlists', key: 'setlists', label: 'Setlists', icon: '\uD83C\uDFB6', _type: 'band' },
+  { id: 'band-calendar', key: 'calendar', label: 'Calendar', icon: '\uD83D\uDCC5', _type: 'band' },
+];
+
 export default function ChannelListScreen({ navigation, route }) {
   const { id: workspaceId, name: workspaceName } = route.params;
   const { user } = useAuth();
@@ -268,6 +274,15 @@ export default function ChannelListScreen({ navigation, route }) {
     );
   }, []);
 
+  const handleBandItemPress = useCallback((key) => {
+    const screenMap = {
+      songs: 'SongList',
+      setlists: 'SetlistList',
+      calendar: 'GigList',
+    };
+    navigation.navigate(screenMap[key], { workspaceId });
+  }, [navigation, workspaceId]);
+
   // Organize channels into groups
   const sections = useMemo(() => {
     const sortedGroups = [...channelGroups].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
@@ -305,10 +320,28 @@ export default function ChannelListScreen({ navigation, route }) {
       data: directMessages.map(dm => ({ ...dm, _type: 'dm' })),
     };
 
-    return [...channelSections, dmSection];
+    const bandSection = {
+      title: 'Band',
+      data: BAND_ITEMS,
+    };
+
+    return [...channelSections, dmSection, bandSection];
   }, [channels, channelGroups, directMessages, collapsedGroups]);
 
   const renderItem = useCallback(({ item }) => {
+    if (item._type === 'band') {
+      return (
+        <TouchableOpacity
+          style={styles.bandItem}
+          onPress={() => handleBandItemPress(item.key)}
+          activeOpacity={0.6}
+        >
+          <Text style={styles.bandItemIcon}>{item.icon}</Text>
+          <Text style={[styles.bandItemLabel, { color: colors.textPrimary }]}>{item.label}</Text>
+          <Text style={[styles.bandItemArrow, { color: colors.textSecondary }]}>{'\u203A'}</Text>
+        </TouchableOpacity>
+      );
+    }
     const isDM = item._type === 'dm';
     return (
       <ChannelItem
@@ -319,7 +352,7 @@ export default function ChannelListScreen({ navigation, route }) {
         unreadCount={item.unreadCount || 0}
       />
     );
-  }, [getDMDisplayName, handleChannelPress]);
+  }, [getDMDisplayName, handleChannelPress, handleBandItemPress, colors]);
 
   const renderSectionHeader = useCallback(({ section }) => {
     const isCollapsed = section.isGroup && collapsedGroups[section.groupId];
@@ -649,5 +682,25 @@ const styles = StyleSheet.create({
   selectedCheck: {
     fontSize: 18,
     fontWeight: '700',
+  },
+  // Band items
+  bandItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  bandItemIcon: {
+    fontSize: 16,
+    width: 28,
+    textAlign: 'center',
+  },
+  bandItemLabel: {
+    fontSize: 15,
+    flex: 1,
+  },
+  bandItemArrow: {
+    fontSize: 22,
+    fontWeight: '300',
   },
 });

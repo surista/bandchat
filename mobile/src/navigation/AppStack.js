@@ -3,6 +3,12 @@ import WorkspaceListScreen from '../screens/workspaces/WorkspaceListScreen';
 import ChannelListScreen from '../screens/workspace/ChannelListScreen';
 import ChannelScreen from '../screens/workspace/ChannelScreen';
 import ThreadScreen from '../screens/workspace/ThreadScreen';
+import SongListScreen from '../screens/band/SongListScreen';
+import SongDetailScreen from '../screens/band/SongDetailScreen';
+import SetlistListScreen from '../screens/band/SetlistListScreen';
+import SetlistDetailScreen from '../screens/band/SetlistDetailScreen';
+import GigListScreen from '../screens/band/GigListScreen';
+import GigDetailScreen from '../screens/band/GigDetailScreen';
 import { useTheme } from '../context/ThemeContext';
 
 const Stack = createNativeStackNavigator();
@@ -47,6 +53,14 @@ export default function AppStack() {
         component={ThreadScreen}
         options={{ title: 'Thread' }}
       />
+
+      {/* Band Features */}
+      <Stack.Screen name="SongList" component={SongListScreen} options={{ title: 'Songs' }} />
+      <Stack.Screen name="SongDetail" component={SongDetailScreen} options={{ title: 'Song' }} />
+      <Stack.Screen name="SetlistList" component={SetlistListScreen} options={{ title: 'Setlists' }} />
+      <Stack.Screen name="SetlistDetail" component={SetlistDetailScreen} options={{ title: 'Setlist' }} />
+      <Stack.Screen name="GigList" component={GigListScreen} options={{ title: 'Calendar' }} />
+      <Stack.Screen name="GigDetail" component={GigDetailScreen} options={{ title: 'Event' }} />
     </Stack.Navigator>
   );
 }
