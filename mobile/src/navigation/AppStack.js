@@ -15,6 +15,10 @@ import AvailabilityScreen from '../screens/band/AvailabilityScreen';
 import ContactsScreen from '../screens/band/ContactsScreen';
 import AnnouncementsScreen from '../screens/band/AnnouncementsScreen';
 import PollsScreen from '../screens/band/PollsScreen';
+import MedleyListScreen from '../screens/band/MedleyListScreen';
+import MedleyDetailScreen from '../screens/band/MedleyDetailScreen';
+import RecordingListScreen from '../screens/band/RecordingListScreen';
+import RecordingDetailScreen from '../screens/band/RecordingDetailScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
 import EditProfileScreen from '../screens/settings/EditProfileScreen';
 import SecurityScreen from '../screens/settings/SecurityScreen';
@@ -82,6 +86,10 @@ export default function AppStack() {
       <Stack.Screen name="Contacts" component={ContactsScreen} options={{ title: 'Contacts' }} />
       <Stack.Screen name="Announcements" component={AnnouncementsScreen} options={{ title: 'Announcements' }} />
       <Stack.Screen name="Polls" component={PollsScreen} options={{ title: 'Polls' }} />
+      <Stack.Screen name="MedleyList" component={MedleyListScreen} options={{ title: 'Medleys' }} />
+      <Stack.Screen name="MedleyDetail" component={MedleyDetailScreen} options={{ title: 'Medley' }} />
+      <Stack.Screen name="RecordingList" component={RecordingListScreen} options={{ title: 'Recordings' }} />
+      <Stack.Screen name="RecordingDetail" component={RecordingDetailScreen} options={{ title: 'Recording' }} />
 
       {/* Settings */}
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
