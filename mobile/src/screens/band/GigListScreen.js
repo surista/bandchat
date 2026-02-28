@@ -58,6 +58,8 @@ export default function GigListScreen({ navigation, route }) {
   const { colors } = useTheme();
 
   const [gigs, setGigs] = useState([]);
+  const [otherGigs, setOtherGigs] = useState([]);
+  const [showAllBands, setShowAllBands] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [typeFilter, setTypeFilter] = useState('all');
@@ -86,15 +88,19 @@ export default function GigListScreen({ navigation, route }) {
   const loadGigs = useCallback(async () => {
     try {
       const filters = typeFilter !== 'all' ? { type: typeFilter } : {};
-      const data = await api.getGigs(workspaceId, filters);
+      const [data, other] = await Promise.all([
+        api.getGigs(workspaceId, filters),
+        showAllBands ? api.getGigsFromAllWorkspaces(workspaceId).catch(() => []) : Promise.resolve([]),
+      ]);
       setGigs(data);
+      setOtherGigs(showAllBands ? other : []);
     } catch (err) {
       console.error('Failed to load gigs:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [workspaceId, typeFilter]);
+  }, [workspaceId, typeFilter, showAllBands]);
 
   useEffect(() => {
     loadGigs();
@@ -114,7 +120,11 @@ export default function GigListScreen({ navigation, route }) {
 
   // Group by month
   const sections = useMemo(() => {
-    const sorted = [...gigs].sort((a, b) => {
+    const allGigs = [
+      ...gigs,
+      ...otherGigs.map(g => ({ ...g, _otherWorkspace: true, _workspaceName: g.workspace?.name })),
+    ];
+    const sorted = allGigs.sort((a, b) => {
       const da = a.date ? new Date(a.date) : new Date(0);
       const db = b.date ? new Date(b.date) : new Date(0);
       return da - db;
@@ -135,7 +145,7 @@ export default function GigListScreen({ navigation, route }) {
     }
 
     return Object.entries(monthMap).map(([title, data]) => ({ title, data }));
-  }, [gigs]);
+  }, [gigs, otherGigs]);
 
   const handleDuplicate = useCallback(async () => {
     if (!selectedGig) return;
@@ -197,18 +207,33 @@ export default function GigListScreen({ navigation, route }) {
     const isCompleted = item.status === 'COMPLETED';
     const timeStr = formatTimeRange(item.startTime, item.endTime);
     const setlistNames = (item.setlists || []).map(gs => gs.setlist?.name).filter(Boolean);
+    const isOther = item._otherWorkspace;
 
     return (
       <TouchableOpacity
-        style={[styles.gigCard, { backgroundColor: colors.bgSecondary }, isCancelled && styles.cancelledCard]}
-        onPress={() => navigation.navigate('GigDetail', { gigId: item.id, workspaceId })}
-        onLongPress={() => { mediumImpact(); setSelectedGig(item); setShowActions(true); }}
+        style={[
+          styles.gigCard,
+          { backgroundColor: colors.bgSecondary },
+          isCancelled && styles.cancelledCard,
+          isOther && styles.otherWorkspaceCard,
+        ]}
+        onPress={() => {
+          if (!isOther) navigation.navigate('GigDetail', { gigId: item.id, workspaceId });
+        }}
+        onLongPress={() => {
+          if (!isOther) { mediumImpact(); setSelectedGig(item); setShowActions(true); }
+        }}
         delayLongPress={400}
-        activeOpacity={0.7}
+        activeOpacity={isOther ? 1 : 0.7}
       >
         {/* Color stripe */}
         <View style={[styles.typeStripe, { backgroundColor: typeColor }]} />
         <View style={styles.gigContent}>
+          {isOther && item._workspaceName && (
+            <View style={[styles.workspaceBadge, { backgroundColor: '#6366f120' }]}>
+              <Text style={[styles.workspaceBadgeText, { color: '#6366f1' }]}>{item._workspaceName}</Text>
+            </View>
+          )}
           <View style={styles.gigHeaderRow}>
             <Text
               style={[
@@ -301,6 +326,19 @@ export default function GigListScreen({ navigation, route }) {
             </TouchableOpacity>
           );
         })}
+        <View style={[styles.filterDivider, { backgroundColor: colors.border }]} />
+        <TouchableOpacity
+          style={[
+            styles.filterChip,
+            { backgroundColor: showAllBands ? '#6366f1' : colors.bgTertiary },
+          ]}
+          onPress={() => setShowAllBands(prev => !prev)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.filterChipText, { color: showAllBands ? '#ffffff' : colors.textSecondary }]}>
+            All Bands
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
 
       <SectionList
@@ -443,4 +481,8 @@ const styles = StyleSheet.create({
   actionItem: { paddingVertical: 16, alignItems: 'center' },
   actionText: { fontSize: 17 },
   actionCancel: { marginTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.1)' },
+  filterDivider: { width: 1, height: 20, alignSelf: 'center' },
+  otherWorkspaceCard: { borderLeftWidth: 0, borderWidth: 1, borderColor: 'rgba(99,102,241,0.3)' },
+  workspaceBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, marginBottom: 4 },
+  workspaceBadgeText: { fontSize: 11, fontWeight: '700' },
 });

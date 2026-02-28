@@ -6,6 +6,7 @@ export default {
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'dark',
+    description: 'Real-time communication and management app for bands. Channels, messaging, song management, setlists, calendar, and more.',
     splash: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',
@@ -14,15 +15,35 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.bandchat.mobile',
+      buildNumber: '1',
+      infoPlist: {
+        NSCameraUsageDescription: 'BandChat needs camera access to take photos for your profile and messages.',
+        NSPhotoLibraryUsageDescription: 'BandChat needs photo library access to share images in messages and set your profile picture.',
+        NSMicrophoneUsageDescription: 'BandChat needs microphone access to record audio for band recordings.',
+        NSCalendarsUsageDescription: 'BandChat can add gigs and rehearsals to your device calendar.',
+        NSCalendarsFullAccessUsageDescription: 'BandChat can add gigs and rehearsals to your device calendar.',
+      },
     },
     android: {
       package: 'com.bandchat.mobile',
+      versionCode: 1,
       adaptiveIcon: {
         backgroundColor: '#1f2937',
         foregroundImage: './assets/android-icon-foreground.png',
         backgroundImage: './assets/android-icon-background.png',
         monochromeImage: './assets/android-icon-monochrome.png',
       },
+      permissions: [
+        'CAMERA',
+        'READ_EXTERNAL_STORAGE',
+        'WRITE_EXTERNAL_STORAGE',
+        'RECORD_AUDIO',
+        'READ_CALENDAR',
+        'WRITE_CALENDAR',
+        'VIBRATE',
+        'INTERNET',
+        'ACCESS_NETWORK_STATE',
+      ],
     },
     web: {
       favicon: './assets/favicon.png',
@@ -31,6 +52,14 @@ export default {
       apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api',
       socketUrl: process.env.EXPO_PUBLIC_SOCKET_URL || 'http://localhost:3001',
     },
-    plugins: ['expo-secure-store', 'expo-asset', 'expo-font', '@react-native-community/datetimepicker'],
+    plugins: [
+      'expo-secure-store',
+      'expo-asset',
+      'expo-font',
+      'expo-haptics',
+      'expo-calendar',
+      '@react-native-community/datetimepicker',
+      '@react-native-community/netinfo',
+    ],
   },
 };

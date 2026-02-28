@@ -52,10 +52,21 @@ export default function SetlistDetailScreen({ navigation, route }) {
   const [editVenue, setEditVenue] = useState('');
   const [savingDetails, setSavingDetails] = useState(false);
 
+  // Performers
+  const [performers, setPerformers] = useState([]);
+  const [bandMembers, setBandMembers] = useState([]);
+  const [showPerformerPicker, setShowPerformerPicker] = useState(false);
+  const [selectedPerformerIds, setSelectedPerformerIds] = useState([]);
+  const [savingPerformers, setSavingPerformers] = useState(false);
+
   const loadSetlist = useCallback(async () => {
     try {
-      const data = await api.getSetlist(setlistId);
+      const [data, perfs] = await Promise.all([
+        api.getSetlist(setlistId),
+        api.getSetlistPerformers(setlistId).catch(() => []),
+      ]);
       setSetlist(data);
+      setPerformers(perfs);
     } catch (err) {
       console.error('Failed to load setlist:', err);
       Alert.alert('Error', 'Failed to load setlist');
@@ -194,6 +205,38 @@ export default function SetlistDetailScreen({ navigation, route }) {
       setSavingDetails(false);
     }
   }, [setlistId, editName, editVenue]);
+
+  // Performers
+  const openPerformerPicker = useCallback(async () => {
+    setSelectedPerformerIds(performers.map(p => p.bandMemberId || p.id));
+    setShowPerformerPicker(true);
+    try {
+      const members = await api.getBandMembers(workspaceId);
+      setBandMembers(members.filter(m => m.status === 'CURRENT'));
+    } catch (err) {
+      console.error('Failed to load band members:', err);
+    }
+  }, [performers, workspaceId]);
+
+  const togglePerformer = useCallback((memberId) => {
+    setSelectedPerformerIds(prev =>
+      prev.includes(memberId) ? prev.filter(id => id !== memberId) : [...prev, memberId]
+    );
+  }, []);
+
+  const savePerformers = useCallback(async () => {
+    setSavingPerformers(true);
+    try {
+      await api.updateSetlistPerformers(setlistId, selectedPerformerIds);
+      const perfs = await api.getSetlistPerformers(setlistId);
+      setPerformers(perfs);
+      setShowPerformerPicker(false);
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to update performers');
+    } finally {
+      setSavingPerformers(false);
+    }
+  }, [setlistId, selectedPerformerIds]);
 
   // Songs already in setlist (for filtering picker)
   const existingSongIds = useMemo(
@@ -335,6 +378,35 @@ export default function SetlistDetailScreen({ navigation, route }) {
         )}
       </View>
 
+      {/* Performers */}
+      {(performers.length > 0 || editing) && (
+        <View style={styles.performersSection}>
+          <View style={styles.performersHeader}>
+            <Text style={[styles.performersLabel, { color: colors.textSecondary }]}>Performers</Text>
+            {editing && (
+              <TouchableOpacity onPress={openPerformerPicker}>
+                <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>
+                  {performers.length > 0 ? 'Edit' : '+ Add'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          {performers.length > 0 ? (
+            <View style={styles.performerChips}>
+              {performers.map(p => (
+                <View key={p.bandMemberId || p.id} style={[styles.performerChip, { backgroundColor: colors.bgSecondary }]}>
+                  <Text style={[styles.performerName, { color: colors.textPrimary }]}>
+                    {p.bandMember?.name || p.name || 'Unknown'}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : editing ? (
+            <Text style={[styles.noPerformers, { color: colors.textSecondary }]}>No performers assigned</Text>
+          ) : null}
+        </View>
+      )}
+
       {/* Setlist items */}
       <FlatList
         data={items}
@@ -423,6 +495,62 @@ export default function SetlistDetailScreen({ navigation, route }) {
             />
           )}
         </SafeAreaView>
+      </Modal>
+
+      {/* Performer Picker Modal */}
+      <Modal visible={showPerformerPicker} transparent animationType="fade">
+        <View style={styles.detailsOverlay}>
+          <View style={[styles.detailsContent, { backgroundColor: colors.modalBg }]}>
+            <Text style={[styles.detailsTitle, { color: colors.textPrimary }]}>Select Performers</Text>
+            <ScrollView style={{ maxHeight: 300 }}>
+              {bandMembers.map(member => {
+                const selected = selectedPerformerIds.includes(member.id);
+                return (
+                  <TouchableOpacity
+                    key={member.id}
+                    style={[styles.performerPickerRow, selected && { backgroundColor: colors.bgTertiary }]}
+                    onPress={() => togglePerformer(member.id)}
+                    activeOpacity={0.6}
+                  >
+                    <View style={[styles.performerCheckbox, { borderColor: colors.border, backgroundColor: selected ? colors.primary : 'transparent' }]}>
+                      {selected && <Text style={styles.performerCheckmark}>{'\u2713'}</Text>}
+                    </View>
+                    <Text style={[styles.performerPickerName, { color: colors.textPrimary }]}>{member.name}</Text>
+                    {member.instruments && member.instruments.length > 0 && (
+                      <Text style={[styles.performerInstrument, { color: colors.textSecondary }]}>
+                        {member.instruments.join(', ')}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+              {bandMembers.length === 0 && (
+                <Text style={[styles.noPerformers, { color: colors.textSecondary, textAlign: 'center', paddingVertical: 20 }]}>
+                  No band members found
+                </Text>
+              )}
+            </ScrollView>
+            <View style={styles.detailsActions}>
+              <TouchableOpacity
+                style={[styles.detailsButton, { backgroundColor: colors.bgTertiary }]}
+                onPress={() => setShowPerformerPicker(false)}
+              >
+                <Text style={[styles.detailsButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.detailsButton, { backgroundColor: colors.primary }]}
+                onPress={savePerformers}
+                disabled={savingPerformers}
+              >
+                {savingPerformers ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <Text style={styles.detailsButtonTextWhite}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
 
       {/* Edit Details Modal */}
@@ -588,8 +716,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 16,
   },
-  detailsActions: { flexDirection: 'row', gap: 10 },
+  detailsActions: { flexDirection: 'row', gap: 10, marginTop: 16 },
   detailsButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
   detailsButtonText: { fontSize: 15, fontWeight: '600' },
   detailsButtonTextWhite: { fontSize: 15, fontWeight: '600', color: '#ffffff' },
+  // Performers
+  performersSection: { paddingHorizontal: 14, paddingBottom: 8 },
+  performersHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  performersLabel: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  performerChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  performerChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 },
+  performerName: { fontSize: 13, fontWeight: '600' },
+  noPerformers: { fontSize: 13 },
+  performerPickerRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 8, borderRadius: 8, gap: 10 },
+  performerCheckbox: { width: 22, height: 22, borderRadius: 4, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
+  performerCheckmark: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  performerPickerName: { fontSize: 15, fontWeight: '600', flex: 1 },
+  performerInstrument: { fontSize: 13 },
 });

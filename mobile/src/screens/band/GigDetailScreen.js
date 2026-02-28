@@ -14,6 +14,7 @@ import {
   Platform,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as Calendar from 'expo-calendar';
 import { format, parseISO } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -199,6 +200,67 @@ export default function GigDetailScreen({ navigation, route }) {
     Linking.openURL(url).catch(() => {
       Linking.openURL(`https://maps.google.com/maps?q=${query}`);
     });
+  }, [gig]);
+
+  const addToCalendar = useCallback(async () => {
+    try {
+      const { status } = await Calendar.requestCalendarPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Calendar access is needed to add events.');
+        return;
+      }
+
+      // Get a writable calendar
+      let calendarId;
+      if (Platform.OS === 'ios') {
+        const defaultCal = await Calendar.getDefaultCalendarAsync();
+        calendarId = defaultCal.id;
+      } else {
+        const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+        const writable = calendars.find(c => c.accessLevel === 'owner' || c.allowsModifications);
+        if (!writable) {
+          Alert.alert('Error', 'No writable calendar found on this device.');
+          return;
+        }
+        calendarId = writable.id;
+      }
+
+      // Parse date + time
+      const gigDate = gig.date ? parseISO(gig.date) : new Date();
+      let startDate = new Date(gigDate);
+      let endDate = new Date(gigDate);
+
+      if (gig.startTime) {
+        const [h, m] = gig.startTime.split(':').map(Number);
+        startDate.setHours(h || 0, m || 0, 0);
+      } else {
+        startDate.setHours(19, 0, 0); // default 7pm
+      }
+
+      if (gig.endTime) {
+        const [h, m] = gig.endTime.split(':').map(Number);
+        endDate.setHours(h || 0, m || 0, 0);
+      } else {
+        endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // +2 hours
+      }
+
+      const location = [gig.venue, gig.address].filter(Boolean).join(', ');
+
+      await Calendar.createEventAsync(calendarId, {
+        title: gig.title,
+        startDate,
+        endDate,
+        location: location || undefined,
+        notes: gig.notes || undefined,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      });
+
+      successNotification();
+      Alert.alert('Added', `"${gig.title}" has been added to your calendar.`);
+    } catch (err) {
+      console.error('Calendar error:', err);
+      Alert.alert('Error', 'Failed to add event to calendar.');
+    }
   }, [gig]);
 
   const onDateChange = useCallback((event, selectedDate) => {
@@ -523,6 +585,15 @@ export default function GigDetailScreen({ navigation, route }) {
         </View>
       ) : null}
 
+      {/* Add to Calendar */}
+      <TouchableOpacity
+        style={[styles.calendarButton, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
+        onPress={addToCalendar}
+        activeOpacity={0.7}
+      >
+        <Text style={[styles.calendarButtonText, { color: colors.primary }]}>Add to Calendar</Text>
+      </TouchableOpacity>
+
       {/* Mark Complete */}
       {gig?.status === 'SCHEDULED' && (
         <TouchableOpacity
@@ -575,6 +646,8 @@ const styles = StyleSheet.create({
   attendeeName: { flex: 1, fontSize: 15 },
   attendeeStatusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   attendeeStatusText: { fontSize: 12, fontWeight: '600' },
+  calendarButton: { paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 8, borderWidth: 1 },
+  calendarButtonText: { fontSize: 16, fontWeight: '600' },
   completeButton: { paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 8, marginBottom: 20 },
   completeButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
   // Form
