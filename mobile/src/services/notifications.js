@@ -22,8 +22,14 @@ class NotificationService {
   }
 
   async register() {
+    // Push tokens only work on physical devices with a native build (not Expo Go)
     if (!Device.isDevice) {
-      console.log('Push notifications require a physical device');
+      return null;
+    }
+
+    // Detect Expo Go — push tokens require a standalone/dev build
+    const isExpoGo = Constants.appOwnership === 'expo';
+    if (isExpoGo) {
       return null;
     }
 
@@ -36,7 +42,6 @@ class NotificationService {
     }
 
     if (finalStatus !== 'granted') {
-      console.log('Push notification permission not granted');
       return null;
     }
 
@@ -53,9 +58,8 @@ class NotificationService {
           method: 'POST',
           body: JSON.stringify({ token: this.expoPushToken, platform: Platform.OS }),
         });
-      } catch (err) {
-        // Server may not have this endpoint yet — that's fine
-        console.log('Could not register push token with server:', err.message);
+      } catch {
+        // Server may not have this endpoint yet
       }
 
       // Android notification channel
@@ -68,8 +72,8 @@ class NotificationService {
       }
 
       return this.expoPushToken;
-    } catch (err) {
-      console.error('Failed to get push token:', err);
+    } catch {
+      // Expected to fail in development — silently skip
       return null;
     }
   }
