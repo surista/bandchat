@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 
 const MAX_HEIGHT = 120;
 
-export default function MessageInput({ onSend, onTyping, editingMessage, onCancelEdit, onSendEdit, onPickImage }) {
+export default function MessageInput({ onSend, onTyping, editingMessage, onCancelEdit, onSendEdit }) {
   const { colors } = useTheme();
   const [text, setText] = useState('');
   const [inputHeight, setInputHeight] = useState(40);
