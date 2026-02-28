@@ -9,14 +9,22 @@ import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { pushService } from './services/push';
+import { isNative } from './services/platform';
+import { initNativeApp } from './services/nativeApp';
 import '../styles/main.css';
 
-// Initialize service worker for PWA and push notifications
-pushService.init().then((registered) => {
-  if (registered) {
-    console.log('Push notifications ready');
-  }
-});
+// Initialize platform-specific services
+if (isNative) {
+  // Native iOS/Android — set up status bar, keyboard, lifecycle
+  initNativeApp();
+} else {
+  // Web — service worker for PWA and web push notifications
+  pushService.init().then((registered) => {
+    if (registered) {
+      console.log('Push notifications ready');
+    }
+  });
+}
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

@@ -29,6 +29,12 @@
 
 html {
   height: 100%;
+  /* iOS safe areas — no-op on web, applies padding on notched devices */
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --keyboard-height: 0px;
 }
 
 body {
@@ -879,5 +885,27 @@ body.context-menu-open {
 /* Light mode toast overrides */
 [data-mode="light"] .toast {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* ── Native iOS / Capacitor safe areas ── */
+
+/* Top bar padding for notch/dynamic island */
+.native-safe-top {
+  padding-top: var(--sat);
+}
+
+/* Bottom padding for home indicator */
+.native-safe-bottom {
+  padding-bottom: var(--sab);
+}
+
+/* Adjust message input when keyboard is open */
+body.keyboard-open .message-input-container {
+  padding-bottom: 0; /* keyboard pushes content up, no need for safe area */
+}
+
+/* Adjust bottom nav/toast position when keyboard is open */
+body.keyboard-open .toast-container {
+  bottom: calc(var(--keyboard-height) + 8px);
 }
 

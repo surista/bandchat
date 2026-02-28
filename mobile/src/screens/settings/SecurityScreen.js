@@ -1,0 +1,289 @@
+import { useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  ScrollView,
+  TouchableOpacity,
+  Modal,
+  Alert,
+  ActivityIndicator,
+  StyleSheet,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import api from '../../services/api';
+
+export default function SecurityScreen() {
+  const { user } = useAuth();
+  const { colors } = useTheme();
+
+  const isGoogleOnly = user?.authProvider === 'google';
+
+  // Change password
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  // Change email modal
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [emailPassword, setEmailPassword] = useState('');
+  const [changingEmail, setChangingEmail] = useState(false);
+
+  const handleChangePassword = useCallback(async () => {
+    if (!currentPassword || !newPassword) {
+      Alert.alert('Required', 'Please fill in all password fields');
+      return;
+    }
+    if (newPassword.length < 8) {
+      Alert.alert('Invalid', 'New password must be at least 8 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Mismatch', 'New passwords do not match');
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      await api.changePassword(currentPassword, newPassword);
+      Alert.alert('Success', 'Password changed successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to change password');
+    } finally {
+      setChangingPassword(false);
+    }
+  }, [currentPassword, newPassword, confirmPassword]);
+
+  const handleChangeEmail = useCallback(async () => {
+    if (!newEmail.trim() || !emailPassword) {
+      Alert.alert('Required', 'Please fill in all fields');
+      return;
+    }
+
+    setChangingEmail(true);
+    try {
+      await api.requestEmailChange(newEmail.trim(), emailPassword);
+      Alert.alert('Check Your Email', 'A verification link has been sent to your new email address.');
+      setShowEmailModal(false);
+      setNewEmail('');
+      setEmailPassword('');
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to request email change');
+    } finally {
+      setChangingEmail(false);
+    }
+  }, [newEmail, emailPassword]);
+
+  const getProviderLabel = () => {
+    if (user?.authProvider === 'google') return 'Google';
+    if (user?.authProvider === 'both') return 'Local + Google';
+    return 'Local';
+  };
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        {/* Change Password */}
+        {!isGoogleOnly && (
+          <>
+            <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>CHANGE PASSWORD</Text>
+            <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                placeholder="Current password"
+                placeholderTextColor={colors.textSecondary}
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                secureTextEntry
+                autoCapitalize="none"
+              />
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                placeholder="New password"
+                placeholderTextColor={colors.textSecondary}
+                value={newPassword}
+                onChangeText={setNewPassword}
+                secureTextEntry
+                autoCapitalize="none"
+              />
+              <TextInput
+                style={[styles.input, styles.lastInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                placeholder="Confirm new password"
+                placeholderTextColor={colors.textSecondary}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: colors.primary }]}
+                onPress={handleChangePassword}
+                disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
+                activeOpacity={0.7}
+              >
+                {changingPassword ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <Text style={styles.buttonText}>Update Password</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+
+        {/* Email */}
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>EMAIL</Text>
+        <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
+          <View style={styles.infoRow}>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Current</Text>
+            <Text style={[styles.infoValue, { color: colors.textPrimary }]}>{user?.email || 'N/A'}</Text>
+          </View>
+          {user?.pendingEmail && (
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Pending</Text>
+              <Text style={[styles.infoValue, { color: '#f59e0b' }]}>{user.pendingEmail}</Text>
+            </View>
+          )}
+          {!isGoogleOnly && (
+            <TouchableOpacity
+              style={[styles.outlineButton, { borderColor: colors.primary }]}
+              onPress={() => setShowEmailModal(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.outlineButtonText, { color: colors.primary }]}>Change Email</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Auth Provider */}
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>AUTH PROVIDER</Text>
+        <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
+          <View style={styles.infoRow}>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Type</Text>
+            <Text style={[styles.infoValue, { color: colors.textPrimary }]}>{getProviderLabel()}</Text>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Change Email Modal */}
+      <Modal visible={showEmailModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Change Email</Text>
+            <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
+              A verification link will be sent to your new email address.
+            </Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+              placeholder="New email address"
+              placeholderTextColor={colors.textSecondary}
+              value={newEmail}
+              onChangeText={setNewEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoFocus
+            />
+            <TextInput
+              style={[styles.input, styles.lastInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+              placeholder="Current password"
+              placeholderTextColor={colors.textSecondary}
+              value={emailPassword}
+              onChangeText={setEmailPassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
+                onPress={() => { setShowEmailModal(false); setNewEmail(''); setEmailPassword(''); }}
+                disabled={changingEmail}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.primary }]}
+                onPress={handleChangeEmail}
+                disabled={changingEmail || !newEmail.trim() || !emailPassword}
+              >
+                {changingEmail ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <Text style={styles.modalButtonTextWhite}>Send Verification</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  content: { padding: 16, paddingBottom: 40 },
+  sectionHeader: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginTop: 24,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  card: {
+    borderRadius: 12,
+    padding: 16,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  lastInput: { marginBottom: 16 },
+  button: {
+    paddingVertical: 13,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  buttonText: { color: '#ffffff', fontSize: 15, fontWeight: '600' },
+  outlineButton: {
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    marginTop: 4,
+  },
+  outlineButtonText: { fontSize: 15, fontWeight: '600' },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  infoLabel: { fontSize: 14 },
+  infoValue: { fontSize: 14, fontWeight: '600' },
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalContent: { borderRadius: 12, padding: 24 },
+  modalTitle: { fontSize: 20, fontWeight: '700', marginBottom: 8 },
+  modalDesc: { fontSize: 14, marginBottom: 20 },
+  modalActions: { flexDirection: 'row', gap: 10 },
+  modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  modalButtonText: { fontSize: 15, fontWeight: '600' },
+  modalButtonTextWhite: { fontSize: 15, fontWeight: '600', color: '#ffffff' },
+});
