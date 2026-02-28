@@ -5,7 +5,7 @@ import prisma from '../lib/prisma.js';
 
 const router = express.Router();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'surista@gmail.com';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@bandchat.app';
 
 // Report a message
 router.post('/', authenticate, async (req, res) => {

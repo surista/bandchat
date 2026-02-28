@@ -56,7 +56,7 @@ function Footer({ theme = 'dark' }) {
                 Terms
               </Link>
               <a
-                href="mailto:surista@gmail.com?subject=BandChat Feedback"
+                href="mailto:admin@bandchat.app?subject=BandChat Feedback"
                 className={`${hoverColor} transition-colors`}
               >
                 Feedback

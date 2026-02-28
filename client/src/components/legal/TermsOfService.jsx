@@ -130,8 +130,8 @@ export default function TermsOfService() {
                 <h2 className="text-xl font-semibold text-gray-900 mb-2">11. Contact</h2>
                 <p>
                   If you have questions about these Terms of Service, please contact us at{' '}
-                  <a href="mailto:surista@gmail.com" className="text-slack-purple hover:underline">
-                    surista@gmail.com
+                  <a href="mailto:admin@bandchat.app" className="text-slack-purple hover:underline">
+                    admin@bandchat.app
                   </a>.
                 </p>
               </section>
