@@ -6,6 +6,7 @@ import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { ToastProvider } from './context/ToastContext';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { pushService } from './services/push';
 import '../styles/main.css';
@@ -25,7 +26,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <ThemeProvider>
             <AuthProvider>
               <SocketProvider>
-                <App />
+                <ToastProvider>
+                  <App />
+                </ToastProvider>
               </SocketProvider>
             </AuthProvider>
           </ThemeProvider>

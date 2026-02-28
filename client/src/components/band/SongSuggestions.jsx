@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 import Skeleton from '../common/Skeleton';
 
 export default function SongSuggestions({ workspaceId }) {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState('recommendations');
   const [songs, setSongs] = useState([]);
   const [recommendations, setRecommendations] = useState(null);
@@ -61,7 +63,7 @@ export default function SongSuggestions({ workspaceId }) {
 
   async function optimizeSelectedSongs() {
     if (selectedSongIds.length < 2) {
-      alert('Select at least 2 songs to optimize');
+      toast.warning('Select at least 2 songs to optimize');
       return;
     }
     try {

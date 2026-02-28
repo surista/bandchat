@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
 import api from '../../../services/api';
+import { useToast } from '../../../context/ToastContext';
 
 const INSTRUMENTS = [
   'Vocals',
@@ -61,6 +62,7 @@ const createImage = (url) =>
   });
 
 function BandMemberForm({ member, onSave, onCancel, loading, workspaceMembers = [] }) {
+  const toast = useToast();
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
   const [imageUrl, setImageUrl] = useState('');
@@ -118,7 +120,7 @@ function BandMemberForm({ member, onSave, onCancel, loading, workspaceMembers = 
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      alert('File size must be less than 10MB');
+      toast.warning('File size must be less than 10MB');
       return;
     }
 
@@ -158,7 +160,7 @@ function BandMemberForm({ member, onSave, onCancel, loading, workspaceMembers = 
       setShowCropper(false);
       setImageToCrop(null);
     } catch (err) {
-      alert(err.message || 'Failed to upload image');
+      toast.error(err.message || 'Failed to upload image');
     } finally {
       setImageUploading(false);
     }

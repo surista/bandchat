@@ -1,13 +1,128 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, subDays, addDays, isToday } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
 import GigForm from './GigForm';
 import ConfirmDialog from '../common/ConfirmDialog';
+import ContextMenu from '../common/ContextMenu';
+import useLongPress from '../../hooks/useLongPress';
 import Skeleton from '../common/Skeleton';
+
+function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRange, onEdit, onDuplicate, onComplete, onDelete, onContextMenu, getGoogleCalendarUrl }) {
+  const canEdit = !gig.isExternal && (!gig.isLocked || isAdmin);
+  const longPress = useLongPress({
+    onLongPress: (pos) => onContextMenu(pos),
+    onTap: canEdit ? onEdit : undefined,
+  });
+
+  return (
+    <div
+      className={`bg-gray-800 rounded-lg p-4 group ${gig.isExternal ? 'border-2 border-dashed border-gray-600' : 'border border-gray-700'}`}
+      {...longPress}
+    >
+      <div className="flex items-start gap-4">
+        <div className={`w-2 h-full rounded ${getTypeColor(gig.type, gig.isExternal, gig.workspaceId)}`} />
+        <div className="flex-1">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="text-white font-medium">
+                {gig.isLocked && <span className="mr-1">🔒</span>}
+                {gig.isPersonal && <span className="mr-1">👤</span>}
+                {gig.title}
+                {gig.isExternal && (
+                  <span className="ml-2 text-xs text-gray-400 font-normal">
+                    ({gig.workspace?.name || 'Other band'})
+                  </span>
+                )}
+              </h3>
+              <p className="text-gray-400 text-sm">
+                {format(new Date(gig.date), 'EEEE, MMMM d, yyyy')} {formatTimeRange(gig.date, gig.endDate)}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {getStatusBadge(gig.status)}
+              <span className={`text-xs px-2 py-1 rounded ${getTypeColor(gig.type, gig.isExternal, gig.workspaceId)} text-white`}>
+                {gig.type}
+              </span>
+            </div>
+          </div>
+
+          {(gig.venue || gig.address) && (
+            <p className="text-gray-400 text-sm mt-2">
+              📍 {gig.venue}{gig.address && ` - ${gig.address}`}
+            </p>
+          )}
+
+          {gig.setlists && gig.setlists.length > 0 ? (
+            <div className="text-gray-400 text-sm mt-1">
+              <span className="text-indigo-400">🎵 {gig.setlists.length} Sets:</span>
+              <span className="ml-2">
+                {gig.setlists
+                  .sort((a, b) => a.setNumber - b.setNumber)
+                  .map(gs => gs.setlist?.name || `Set ${gs.setNumber}`)
+                  .join(' → ')}
+              </span>
+            </div>
+          ) : gig.setlist && (
+            <p className="text-gray-400 text-sm mt-1">
+              🎵 Setlist: {gig.setlist.name}
+            </p>
+          )}
+
+          {gig.pay && (
+            <p className="text-green-400 text-sm mt-1">
+              💰 ¥{gig.pay}
+            </p>
+          )}
+
+          {gig.notes && (
+            <p className="text-gray-500 text-sm mt-2 italic">{gig.notes}</p>
+          )}
+
+          {/* Action buttons - hidden on mobile, visible on hover on desktop */}
+          <div className="hidden sm:flex gap-2 mt-3 flex-wrap opacity-0 group-hover:opacity-100 transition-opacity">
+            <a
+              href={getGoogleCalendarUrl(gig)}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-sm text-orange-400 hover:text-orange-300"
+            >
+              + Google Cal
+            </a>
+            {!gig.isExternal && (
+              <>
+                {canEdit && (
+                  <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="text-sm text-gray-400 hover:text-white">
+                    Edit
+                  </button>
+                )}
+                <button onClick={(e) => { e.stopPropagation(); onDuplicate(); }} className="text-sm text-blue-400 hover:text-blue-300">
+                  Copy
+                </button>
+                {gig.status === 'SCHEDULED' && canEdit && (
+                  <button onClick={(e) => { e.stopPropagation(); onComplete(); }} className="text-sm text-green-400 hover:text-green-300">
+                    Mark Complete
+                  </button>
+                )}
+                {canEdit && (
+                  <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-sm text-red-400 hover:text-red-300">
+                    Delete
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function GigCalendar({ workspaceId, workspace }) {
   const { user } = useAuth();
+  const toast = useToast();
 
   // Determine if current user is an admin
   const isAdmin = useMemo(() => {
@@ -37,6 +152,7 @@ function GigCalendar({ workspaceId, workspace }) {
   const [view, setView] = useState(() => window.innerWidth < 768 ? 'list' : 'calendar');
   const [filterType, setFilterType] = useState('');
   const [deleteGigId, setDeleteGigId] = useState(null);
+  const [gigContextMenu, setGigContextMenu] = useState(null); // { gigId, x, y }
 
   // Drag and drop state
   const [draggingGig, setDraggingGig] = useState(null);
@@ -142,19 +258,17 @@ function GigCalendar({ workspaceId, workspace }) {
       const updated = await api.completeGig(gig.id, []);
       setGigs(prev => prev.map(g => g.id === updated.id ? updated : g));
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
   const handleDuplicateGig = async (gig) => {
-    const dateStr = prompt('Enter date for the copy (YYYY-MM-DD):', format(new Date(), 'yyyy-MM-dd'));
-    if (!dateStr) return;
-
+    const dateStr = format(new Date(), 'yyyy-MM-dd');
     try {
       const duplicated = await api.duplicateGig(gig.id, dateStr);
       setGigs(prev => [...prev, duplicated].sort((a, b) => new Date(a.date) - new Date(b.date)));
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -263,7 +377,7 @@ function GigCalendar({ workspaceId, workspace }) {
         setGigs(prev => [...prev, duplicated].sort((a, b) => new Date(a.date) - new Date(b.date)));
       }
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
 
     setShowMoveOrCopy(null);
@@ -644,126 +758,20 @@ function GigCalendar({ workspaceId, workspace }) {
               </div>
             ) : (
               upcomingGigs.map(gig => (
-                <div
+                <GigListCard
                   key={gig.id}
-                  className={`bg-gray-800 rounded-lg p-4 ${gig.isExternal ? 'border-2 border-dashed border-gray-600' : 'border border-gray-700'}`}
-                >
-                  <div className="flex items-start gap-4">
-                    <div className={`w-2 h-full rounded ${getTypeColor(gig.type, gig.isExternal, gig.workspaceId)}`} />
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="text-white font-medium">
-                            {gig.isLocked && <span className="mr-1">🔒</span>}
-                            {gig.isPersonal && <span className="mr-1">👤</span>}
-                            {gig.title}
-                            {gig.isExternal && (
-                              <span className="ml-2 text-xs text-gray-400 font-normal">
-                                ({gig.workspace?.name || 'Other band'})
-                              </span>
-                            )}
-                          </h3>
-                          <p className="text-gray-400 text-sm">
-                            {format(new Date(gig.date), 'EEEE, MMMM d, yyyy')} {formatTimeRange(gig.date, gig.endDate)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {getStatusBadge(gig.status)}
-                          <span className={`text-xs px-2 py-1 rounded ${getTypeColor(gig.type, gig.isExternal, gig.workspaceId)} text-white`}>
-                            {gig.type}
-                          </span>
-                        </div>
-                      </div>
-
-                      {(gig.venue || gig.address) && (
-                        <p className="text-gray-400 text-sm mt-2">
-                          📍 {gig.venue}{gig.address && ` - ${gig.address}`}
-                        </p>
-                      )}
-
-                      {/* Multi-set display */}
-                      {gig.setlists && gig.setlists.length > 0 ? (
-                        <div className="text-gray-400 text-sm mt-1">
-                          <span className="text-indigo-400">🎵 {gig.setlists.length} Sets:</span>
-                          <span className="ml-2">
-                            {gig.setlists
-                              .sort((a, b) => a.setNumber - b.setNumber)
-                              .map(gs => gs.setlist?.name || `Set ${gs.setNumber}`)
-                              .join(' → ')}
-                          </span>
-                        </div>
-                      ) : gig.setlist && (
-                        <p className="text-gray-400 text-sm mt-1">
-                          🎵 Setlist: {gig.setlist.name}
-                        </p>
-                      )}
-
-                      {gig.pay && (
-                        <p className="text-green-400 text-sm mt-1">
-                          💰 ¥{gig.pay}
-                        </p>
-                      )}
-
-                      {gig.notes && (
-                        <p className="text-gray-500 text-sm mt-2 italic">{gig.notes}</p>
-                      )}
-
-                      {/* Action buttons */}
-                      <div className="flex gap-2 mt-3 flex-wrap">
-                        {/* Google Calendar - available for all events */}
-                        <a
-                          href={getGoogleCalendarUrl(gig)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-sm text-orange-400 hover:text-orange-300"
-                        >
-                          + Google Cal
-                        </a>
-                        {/* Other actions only for non-external events */}
-                        {!gig.isExternal && (
-                          <>
-                            {/* Edit only if not locked, or if user is admin */}
-                            {(!gig.isLocked || isAdmin) && (
-                              <button
-                                onClick={() => {
-                                  setEditingGig(gig);
-                                  setShowForm(true);
-                                }}
-                                className="text-sm text-gray-400 hover:text-white"
-                              >
-                                Edit
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleDuplicateGig(gig)}
-                              className="text-sm text-blue-400 hover:text-blue-300"
-                            >
-                              Copy
-                            </button>
-                            {gig.status === 'SCHEDULED' && (!gig.isLocked || isAdmin) && (
-                              <button
-                                onClick={() => handleCompleteGig(gig)}
-                                className="text-sm text-green-400 hover:text-green-300"
-                              >
-                                Mark Complete
-                              </button>
-                            )}
-                            {/* Delete only if not locked, or if user is admin */}
-                            {(!gig.isLocked || isAdmin) && (
-                              <button
-                                onClick={() => setDeleteGigId(gig.id)}
-                                className="text-sm text-red-400 hover:text-red-300"
-                              >
-                                Delete
-                              </button>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  gig={gig}
+                  isAdmin={isAdmin}
+                  getTypeColor={getTypeColor}
+                  getStatusBadge={getStatusBadge}
+                  formatTimeRange={formatTimeRange}
+                  onEdit={() => { setEditingGig(gig); setShowForm(true); }}
+                  onDuplicate={() => handleDuplicateGig(gig)}
+                  onComplete={() => handleCompleteGig(gig)}
+                  onDelete={() => setDeleteGigId(gig.id)}
+                  onContextMenu={(pos) => setGigContextMenu({ gigId: gig.id, ...pos })}
+                  getGoogleCalendarUrl={getGoogleCalendarUrl}
+                />
               ))
             )}
           </div>
@@ -836,6 +844,25 @@ function GigCalendar({ workspaceId, workspace }) {
           </div>
         </div>
       )}
+
+      <ContextMenu
+        isOpen={gigContextMenu !== null}
+        position={gigContextMenu || { x: 0, y: 0 }}
+        onClose={() => setGigContextMenu(null)}
+        items={(() => {
+          const gig = allGigs.find(g => g.id === gigContextMenu?.gigId);
+          if (!gig) return [];
+          const canEdit = !gig.isExternal && (!gig.isLocked || isAdmin);
+          return [
+            { label: 'Edit', icon: '✏️', onClick: () => { setEditingGig(gig); setShowForm(true); }, show: canEdit },
+            { label: 'Duplicate to Today', icon: '📋', onClick: () => handleDuplicateGig(gig), show: !gig.isExternal },
+            { label: 'Add to Google Calendar', icon: '📅', onClick: () => window.open(getGoogleCalendarUrl(gig), '_blank') },
+            { label: 'Mark Complete', icon: '✅', onClick: () => handleCompleteGig(gig), show: gig.status === 'SCHEDULED' && canEdit },
+            { divider: true, label: 'divider', onClick: () => {} },
+            { label: 'Delete', icon: '🗑️', variant: 'danger', onClick: () => setDeleteGigId(gig.id), show: canEdit },
+          ];
+        })()}
+      />
     </div>
   );
 }

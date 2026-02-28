@@ -126,7 +126,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
             setHasMore(data.hasMore);
             setNextCursor(data.nextCursor);
           }
-        }).catch(() => {});
+        }).catch(err => console.warn('Failed to refresh messages on reconnect:', err.message));
       };
       socket.on('connect', handleReconnect);
       return () => socket.off('connect', handleReconnect);

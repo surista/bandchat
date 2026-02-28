@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { formatDistanceToNow } from 'date-fns';
+import ConfirmDialog from '../common/ConfirmDialog';
 import Skeleton from '../common/Skeleton';
 
 const PRIORITIES = [
@@ -17,6 +18,7 @@ function AnnouncementsList({ workspaceId, workspace }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState(null);
+  const [deleteAnnouncementId, setDeleteAnnouncementId] = useState(null);
 
   const isAdmin = workspace?.members?.find(m => m.user.id === user?.id)?.role === 'ADMIN';
 
@@ -67,12 +69,13 @@ function AnnouncementsList({ workspaceId, workspace }) {
   };
 
   const handleDelete = async (announcementId) => {
-    if (!confirm('Delete this announcement?')) return;
     try {
       await api.deleteAnnouncement(announcementId);
       setAnnouncements(prev => prev.filter(a => a.id !== announcementId));
+      setDeleteAnnouncementId(null);
     } catch (err) {
       console.error('Failed to delete announcement:', err);
+      setDeleteAnnouncementId(null);
     }
   };
 
@@ -130,7 +133,7 @@ function AnnouncementsList({ workspaceId, workspace }) {
                       isAdmin={isAdmin}
                       onAcknowledge={() => handleAcknowledge(announcement.id)}
                       onEdit={() => { setEditingAnnouncement(announcement); setShowForm(true); }}
-                      onDelete={() => handleDelete(announcement.id)}
+                      onDelete={() => setDeleteAnnouncementId(announcement.id)}
                       memberCount={workspace?.members?.length || 0}
                     />
                   ))}
@@ -152,7 +155,7 @@ function AnnouncementsList({ workspaceId, workspace }) {
                       isAdmin={isAdmin}
                       onAcknowledge={() => handleAcknowledge(announcement.id)}
                       onEdit={() => { setEditingAnnouncement(announcement); setShowForm(true); }}
-                      onDelete={() => handleDelete(announcement.id)}
+                      onDelete={() => setDeleteAnnouncementId(announcement.id)}
                       memberCount={workspace?.members?.length || 0}
                     />
                   ))}
@@ -171,6 +174,16 @@ function AnnouncementsList({ workspaceId, workspace }) {
           onClose={() => { setShowForm(false); setEditingAnnouncement(null); }}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={deleteAnnouncementId !== null}
+        title="Delete Announcement"
+        message="Delete this announcement?"
+        confirmText="Delete"
+        confirmVariant="danger"
+        onConfirm={() => handleDelete(deleteAnnouncementId)}
+        onCancel={() => setDeleteAnnouncementId(null)}
+      />
     </div>
   );
 }

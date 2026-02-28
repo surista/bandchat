@@ -79,50 +79,84 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
     });
     const threadReadMap = Object.fromEntries(allThreadReads.map(tr => [tr.messageId, tr.lastRead]));
 
-    // Parallel: compute unread counts and thread reply counts for all channels
-    const channelsWithUnread = await Promise.all(
-      channels.map(async (channel) => {
-        const meta = channelMeta.get(channel.id);
-        const { lastRead, isMuted } = meta;
+    // Batch unread counts: one query with groupBy instead of N per-channel queries
+    // Build per-channel lastRead conditions for a single raw approach
+    // We group unmuted channels by lastRead to minimize queries
+    const lastReadGroups = new Map(); // lastRead ISO string → channelId[]
+    for (const chId of unmutedChannelIds) {
+      const lr = channelMeta.get(chId).lastRead.toISOString();
+      if (!lastReadGroups.has(lr)) lastReadGroups.set(lr, []);
+      lastReadGroups.get(lr).push(chId);
+    }
 
-        const unreadCount = isMuted ? 0 : await prisma.message.count({
+    // Run one count query per unique lastRead value (typically far fewer than N channels)
+    const unreadCountMap = new Map(); // channelId → count
+    await Promise.all(
+      [...lastReadGroups.entries()].map(async ([lastReadISO, chIds]) => {
+        const counts = await prisma.message.groupBy({
+          by: ['channelId'],
           where: {
-            channelId: channel.id,
+            channelId: { in: chIds },
             parentId: null,
-            createdAt: { gt: lastRead },
+            createdAt: { gt: new Date(lastReadISO) },
             authorId: { not: req.user.id }
-          }
+          },
+          _count: true
         });
-
-        let unreadThreadReplies = 0;
-        if (!isMuted) {
-          const parentIds = threadParentsByChannel.get(channel.id) || [];
-          if (parentIds.length > 0) {
-            const counts = await Promise.all(parentIds.map(async (parentId) => {
-              const threadLastRead = threadReadMap[parentId] || lastRead;
-              return prisma.message.count({
-                where: {
-                  parentId,
-                  createdAt: { gt: threadLastRead },
-                  authorId: { not: req.user.id }
-                }
-              });
-            }));
-            unreadThreadReplies = counts.reduce((sum, c) => sum + c, 0);
-          }
+        for (const row of counts) {
+          unreadCountMap.set(row.channelId, row._count);
         }
-
-        return {
-          ...channel,
-          groupId: channel.group?.id || null,
-          muted: isMuted,
-          unreadCount,
-          unreadThreadReplies,
-          lastRead: lastRead.toISOString(),
-          members: undefined
-        };
       })
     );
+
+    // Batch thread reply counts similarly
+    const allThreadParentIds = allThreadParents.map(tp => tp.id);
+    const threadUnreadMap = new Map(); // channelId → total unread replies
+    if (allThreadParentIds.length > 0) {
+      // Build per-thread lastRead conditions
+      const threadLastReadGroups = new Map(); // lastRead ISO → parentId[]
+      for (const tp of allThreadParents) {
+        const channelLastRead = channelMeta.get(tp.channelId).lastRead;
+        const tlr = (threadReadMap[tp.id] || channelLastRead).toISOString();
+        if (!threadLastReadGroups.has(tlr)) threadLastReadGroups.set(tlr, []);
+        threadLastReadGroups.get(tlr).push(tp);
+      }
+
+      await Promise.all(
+        [...threadLastReadGroups.entries()].map(async ([lastReadISO, tps]) => {
+          const parentIds = tps.map(tp => tp.id);
+          const counts = await prisma.message.groupBy({
+            by: ['parentId'],
+            where: {
+              parentId: { in: parentIds },
+              createdAt: { gt: new Date(lastReadISO) },
+              authorId: { not: req.user.id }
+            },
+            _count: true
+          });
+          for (const row of counts) {
+            // Find which channel this thread belongs to
+            const tp = tps.find(t => t.id === row.parentId);
+            if (tp) {
+              threadUnreadMap.set(tp.channelId, (threadUnreadMap.get(tp.channelId) || 0) + row._count);
+            }
+          }
+        })
+      );
+    }
+
+    const channelsWithUnread = channels.map(channel => {
+      const meta = channelMeta.get(channel.id);
+      return {
+        ...channel,
+        groupId: channel.group?.id || null,
+        muted: meta.isMuted,
+        unreadCount: meta.isMuted ? 0 : (unreadCountMap.get(channel.id) || 0),
+        unreadThreadReplies: meta.isMuted ? 0 : (threadUnreadMap.get(channel.id) || 0),
+        lastRead: meta.lastRead.toISOString(),
+        members: undefined
+      };
+    });
 
     res.json(channelsWithUnread);
   } catch (error) {
@@ -574,56 +608,97 @@ router.get('/workspace/:workspaceId/dms', authenticate, isWorkspaceMember, async
     });
     const dmThreadReadMap = Object.fromEntries(allDmThreadReads.map(tr => [tr.messageId, tr.lastRead]));
 
-    // Add unread counts and format for frontend
-    const dmsWithUnread = await Promise.all(
-      dms.map(async (dm) => {
-        // Use the already-included membership data instead of a separate query
-        const userMembership = dm.members.find(m => m.user.id === req.user.id);
-        const lastRead = userMembership?.lastRead || new Date(0);
-        const isMuted = userMembership?.muted || false;
+    // Build per-DM metadata
+    const dmMeta = new Map();
+    dms.forEach(dm => {
+      const userMembership = dm.members.find(m => m.user.id === req.user.id);
+      dmMeta.set(dm.id, {
+        lastRead: userMembership?.lastRead || new Date(0),
+        isMuted: userMembership?.muted || false
+      });
+    });
 
-        const unreadCount = isMuted ? 0 : await prisma.message.count({
+    const unmutedDmIds = dms
+      .filter(dm => !dmMeta.get(dm.id).isMuted)
+      .map(dm => dm.id);
+
+    // Batch unread counts: group DMs by lastRead to minimize queries
+    const dmLastReadGroups = new Map();
+    for (const dmId of unmutedDmIds) {
+      const lr = dmMeta.get(dmId).lastRead.toISOString();
+      if (!dmLastReadGroups.has(lr)) dmLastReadGroups.set(lr, []);
+      dmLastReadGroups.get(lr).push(dmId);
+    }
+
+    const dmUnreadCountMap = new Map();
+    await Promise.all(
+      [...dmLastReadGroups.entries()].map(async ([lastReadISO, dmIds]) => {
+        const counts = await prisma.message.groupBy({
+          by: ['channelId'],
           where: {
-            channelId: dm.id,
+            channelId: { in: dmIds },
             parentId: null,
-            createdAt: { gt: lastRead },
+            createdAt: { gt: new Date(lastReadISO) },
             authorId: { not: req.user.id }
-          }
+          },
+          _count: true
         });
-
-        let unreadThreadReplies = 0;
-        if (!isMuted) {
-          const parentIds = dmThreadParentsByChannel.get(dm.id) || [];
-          if (parentIds.length > 0) {
-            const counts = await Promise.all(parentIds.map(async (parentId) => {
-              const threadLastRead = dmThreadReadMap[parentId] || lastRead;
-              return prisma.message.count({
-                where: {
-                  parentId,
-                  createdAt: { gt: threadLastRead },
-                  authorId: { not: req.user.id }
-                }
-              });
-            }));
-            unreadThreadReplies = counts.reduce((sum, c) => sum + c, 0);
-          }
+        for (const row of counts) {
+          dmUnreadCountMap.set(row.channelId, row._count);
         }
-
-        // Get the other user(s) in the DM - only if they're still workspace members
-        const otherMembers = dm.members
-          .filter(m => m.user.id !== req.user.id)
-          .filter(m => currentMemberIds.has(m.user.id));
-
-        return {
-          ...dm,
-          otherMembers: otherMembers.map(m => m.user),
-          lastMessage: dm.messages[0] || null,
-          unreadCount,
-          unreadThreadReplies,
-          messages: undefined
-        };
       })
     );
+
+    // Batch thread reply counts
+    const dmThreadUnreadMap = new Map();
+    const allDmThreadParentIds = allDmThreadParents.map(tp => tp.id);
+    if (allDmThreadParentIds.length > 0) {
+      const dmThreadLastReadGroups = new Map();
+      for (const tp of allDmThreadParents) {
+        const channelLastRead = dmMeta.get(tp.channelId).lastRead;
+        const tlr = (dmThreadReadMap[tp.id] || channelLastRead).toISOString();
+        if (!dmThreadLastReadGroups.has(tlr)) dmThreadLastReadGroups.set(tlr, []);
+        dmThreadLastReadGroups.get(tlr).push(tp);
+      }
+
+      await Promise.all(
+        [...dmThreadLastReadGroups.entries()].map(async ([lastReadISO, tps]) => {
+          const parentIds = tps.map(tp => tp.id);
+          const counts = await prisma.message.groupBy({
+            by: ['parentId'],
+            where: {
+              parentId: { in: parentIds },
+              createdAt: { gt: new Date(lastReadISO) },
+              authorId: { not: req.user.id }
+            },
+            _count: true
+          });
+          for (const row of counts) {
+            const tp = tps.find(t => t.id === row.parentId);
+            if (tp) {
+              dmThreadUnreadMap.set(tp.channelId, (dmThreadUnreadMap.get(tp.channelId) || 0) + row._count);
+            }
+          }
+        })
+      );
+    }
+
+    // Assemble results synchronously from Maps
+    const dmsWithUnread = dms.map(dm => {
+      const meta = dmMeta.get(dm.id);
+      const otherMembers = dm.members
+        .filter(m => m.user.id !== req.user.id)
+        .filter(m => currentMemberIds.has(m.user.id));
+
+      return {
+        ...dm,
+        otherMembers: otherMembers.map(m => m.user),
+        lastMessage: dm.messages[0] || null,
+        unreadCount: meta.isMuted ? 0 : (dmUnreadCountMap.get(dm.id) || 0),
+        unreadThreadReplies: meta.isMuted ? 0 : (dmThreadUnreadMap.get(dm.id) || 0),
+        messages: undefined
+      };
+    });
 
     // Filter out DMs where there are no valid other members (they all left)
     const validDms = dmsWithUnread.filter(dm => dm.otherMembers.length > 0);

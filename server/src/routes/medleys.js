@@ -184,18 +184,19 @@ router.put('/:medleyId', authenticate, async (req, res) => {
         return res.status(400).json({ error: 'At least 2 songs are required for a medley' });
       }
 
-      // Delete existing songs and recreate
-      await prisma.medleySong.deleteMany({
-        where: { medleyId: req.params.medleyId }
-      });
-
-      await prisma.medleySong.createMany({
-        data: songIds.map((songId, index) => ({
-          medleyId: req.params.medleyId,
-          songId,
-          position: index
-        }))
-      });
+      // Delete existing songs and recreate atomically
+      await prisma.$transaction([
+        prisma.medleySong.deleteMany({
+          where: { medleyId: req.params.medleyId }
+        }),
+        prisma.medleySong.createMany({
+          data: songIds.map((songId, index) => ({
+            medleyId: req.params.medleyId,
+            songId,
+            position: index
+          }))
+        })
+      ]);
     }
 
     const medley = await prisma.medley.update({
@@ -269,16 +270,18 @@ router.put('/:medleyId/reorder', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
-    // Update positions
-    for (let i = 0; i < songIds.length; i++) {
-      await prisma.medleySong.updateMany({
-        where: {
-          medleyId: req.params.medleyId,
-          songId: songIds[i]
-        },
-        data: { position: i }
-      });
-    }
+    // Update positions atomically
+    await prisma.$transaction(
+      songIds.map((songId, i) =>
+        prisma.medleySong.updateMany({
+          where: {
+            medleyId: req.params.medleyId,
+            songId
+          },
+          data: { position: i }
+        })
+      )
+    );
 
     const updatedMedley = await prisma.medley.findUnique({
       where: { id: req.params.medleyId },

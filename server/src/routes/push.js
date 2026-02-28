@@ -152,7 +152,7 @@ export const sendPushToUser = async (userId, payload) => {
         if (error.statusCode === 404 || error.statusCode === 410) {
           await prisma.pushSubscription.delete({
             where: { id: sub.id }
-          }).catch(() => {});
+          }).catch(err => console.warn('Failed to remove invalid push subscription:', err.message));
         }
       }
     });

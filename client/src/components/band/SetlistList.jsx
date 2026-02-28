@@ -1,11 +1,117 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import api from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 import { escapeHtml } from '../../utils/escapeHtml';
 import SetlistBuilder from './SetlistBuilder';
+import ConfirmDialog from '../common/ConfirmDialog';
+import ContextMenu from '../common/ContextMenu';
+import useLongPress from '../../hooks/useLongPress';
 import Skeleton from '../common/Skeleton';
 
+function SetlistCard({ setlist, onTap, onEdit, onDuplicate, onDelete, onContextMenu, calculateDuration, formatTime12h }) {
+  const longPress = useLongPress({
+    onLongPress: (pos) => onContextMenu(pos),
+    onTap,
+  });
+
+  return (
+    <div
+      className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors border border-gray-700 cursor-pointer group"
+      {...longPress}
+    >
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-white font-medium truncate">{setlist.name}</h3>
+          {(setlist.performedAt || setlist.venue) && (
+            <p className="text-gray-500 text-xs truncate">
+              {setlist.performedAt && new Date(setlist.performedAt).toLocaleDateString()}
+              {setlist.performedAt && setlist.venue && ' · '}
+              {setlist.venue}
+            </p>
+          )}
+          {setlist.description && (
+            <p className="text-gray-400 text-sm truncate">{setlist.description}</p>
+          )}
+        </div>
+        <div className="hidden sm:flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="p-1 text-gray-400 hover:text-white" title="Edit">✏️</button>
+          <button onClick={(e) => { e.stopPropagation(); onDuplicate(); }} className="p-1 text-gray-400 hover:text-blue-400" title="Copy">📋</button>
+          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1 text-gray-400 hover:text-red-400" title="Delete">🗑️</button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 text-xs mb-3">
+        {(() => {
+          const actualSongs = setlist.songs?.filter(s => s.type !== 'SET_BREAK' && s.type !== 'MC') || [];
+          const setBreaks = setlist.songs?.filter(s => s.type === 'SET_BREAK') || [];
+          return (
+            <>
+              <span className="px-2 py-1 bg-blue-900/50 text-blue-300 rounded">
+                {actualSongs.length} songs
+              </span>
+              {setBreaks.length > 1 && (
+                <span className="px-2 py-1 bg-purple-900/50 text-purple-300 rounded">
+                  {setBreaks.length} sets
+                </span>
+              )}
+            </>
+          );
+        })()}
+        {setlist.startTime && (
+          <span className="px-2 py-1 bg-cyan-900/50 text-cyan-300 rounded">
+            {formatTime12h(setlist.startTime)}
+          </span>
+        )}
+        {setlist.songs?.length > 0 && (
+          <span className="px-2 py-1 bg-gray-700 text-gray-300 rounded">
+            {calculateDuration(setlist.songs)}
+          </span>
+        )}
+      </div>
+
+      {/* Song Preview */}
+      <div className="space-y-1">
+        {(() => {
+          const previewItems = setlist.songs?.filter(s => s.type !== 'MC') || [];
+          let songNum = 0;
+          return previewItems.slice(0, 4).map((ss) => {
+            if (ss.type === 'SET_BREAK') {
+              return (
+                <div key={ss.id} className="text-sm text-blue-400 font-medium truncate">
+                  📋 {ss.label || 'Set Break'}
+                </div>
+              );
+            }
+            songNum++;
+            return (
+              <div key={ss.id} className="text-sm text-gray-400 truncate">
+                {songNum}. {ss.song?.title}
+              </div>
+            );
+          });
+        })()}
+        {(() => {
+          const actualSongs = setlist.songs?.filter(s => s.type !== 'SET_BREAK' && s.type !== 'MC') || [];
+          return actualSongs.length > 3 && (
+            <div className="text-sm text-gray-500">
+              +{actualSongs.length - 3} more...
+            </div>
+          );
+        })()}
+      </div>
+
+      {setlist._count?.gigs > 0 && (
+        <div className="mt-3 pt-3 border-t border-gray-700 text-xs text-gray-500">
+          Used in {setlist._count.gigs} gig{setlist._count.gigs !== 1 ? 's' : ''}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SetlistList({ workspaceId, workspaceName }) {
+  const toast = useToast();
   const [setlists, setSetlists] = useState([]);
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,6 +140,10 @@ function SetlistList({ workspaceId, workspaceName }) {
   const [editVenue, setEditVenue] = useState('');
   const [editStartTime, setEditStartTime] = useState('');
   const [editLoading, setEditLoading] = useState(false);
+  const [deleteSetlistId, setDeleteSetlistId] = useState(null);
+  const [duplicateSetlistId, setDuplicateSetlistId] = useState(null);
+  const [duplicateName, setDuplicateName] = useState('');
+  const [contextMenu, setContextMenu] = useState(null); // { setlistId, x, y }
 
   useEffect(() => {
     loadData();
@@ -96,30 +206,32 @@ function SetlistList({ workspaceId, workspaceName }) {
       setEditingSetlist(created);
       setShowBuilder(true);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setCreateLoading(false);
     }
   };
 
   const handleDeleteSetlist = async (setlistId) => {
-    if (!confirm('Delete this setlist?')) return;
     try {
       await api.deleteSetlist(setlistId);
       setSetlists(prev => prev.filter(s => s.id !== setlistId));
+      setDeleteSetlistId(null);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
+      setDeleteSetlistId(null);
     }
   };
 
-  const handleDuplicateSetlist = async (setlist) => {
-    const newName = prompt('Name for the copy:', `Copy of ${setlist.name}`);
-    if (!newName) return;
+  const handleDuplicateSetlist = async () => {
+    if (!duplicateSetlistId || !duplicateName.trim()) return;
     try {
-      const duplicated = await api.duplicateSetlist(setlist.id, newName);
+      const duplicated = await api.duplicateSetlist(duplicateSetlistId, duplicateName);
       setSetlists(prev => [duplicated, ...prev]);
+      setDuplicateSetlistId(null);
+      setDuplicateName('');
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -151,7 +263,7 @@ function SetlistList({ workspaceId, workspaceName }) {
       }
       setEditingDetails(null);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setEditLoading(false);
     }
@@ -229,7 +341,7 @@ function SetlistList({ workspaceId, workspaceName }) {
     const totalSongs = sets.reduce((sum, s) => sum + s.songs.length, 0);
 
     if (totalSongs === 0) {
-      alert('No songs found. Enter one song per line.');
+      toast.warning('No songs found. Enter one song per line.');
       return;
     }
 
@@ -285,7 +397,7 @@ function SetlistList({ workspaceId, workspaceName }) {
         }
       }
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setImportLoading(false);
     }
@@ -321,7 +433,7 @@ function SetlistList({ workspaceId, workspaceName }) {
   const handlePrintSetlist = (setlist) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-      alert('Please allow popups for this site to print the setlist');
+      toast.warning('Please allow popups for this site to print the setlist');
       return;
     }
 
@@ -633,126 +745,23 @@ function SetlistList({ workspaceId, workspaceName }) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {setlists.map(setlist => (
-              <div
+              <SetlistCard
                 key={setlist.id}
-                onClick={() => setViewingSetlist(setlist)}
-                className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors border border-gray-700 cursor-pointer"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-white font-medium truncate">{setlist.name}</h3>
-                    {(setlist.performedAt || setlist.venue) && (
-                      <p className="text-gray-500 text-xs truncate">
-                        {setlist.performedAt && new Date(setlist.performedAt).toLocaleDateString()}
-                        {setlist.performedAt && setlist.venue && ' · '}
-                        {setlist.venue}
-                      </p>
-                    )}
-                    {setlist.description && (
-                      <p className="text-gray-400 text-sm truncate">{setlist.description}</p>
-                    )}
-                  </div>
-                  <div className="flex gap-1 ml-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingSetlist(setlist);
-                        setShowBuilder(true);
-                      }}
-                      className="p-1 text-gray-400 hover:text-white"
-                      title="Edit"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDuplicateSetlist(setlist);
-                      }}
-                      className="p-1 text-gray-400 hover:text-blue-400"
-                      title="Copy"
-                    >
-                      📋
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteSetlist(setlist.id);
-                      }}
-                      className="p-1 text-gray-400 hover:text-red-400"
-                      title="Delete"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2 text-xs mb-3">
-                  {(() => {
-                    const actualSongs = setlist.songs?.filter(s => s.type !== 'SET_BREAK' && s.type !== 'MC') || [];
-                    const setBreaks = setlist.songs?.filter(s => s.type === 'SET_BREAK') || [];
-                    return (
-                      <>
-                        <span className="px-2 py-1 bg-blue-900/50 text-blue-300 rounded">
-                          {actualSongs.length} songs
-                        </span>
-                        {setBreaks.length > 1 && (
-                          <span className="px-2 py-1 bg-purple-900/50 text-purple-300 rounded">
-                            {setBreaks.length} sets
-                          </span>
-                        )}
-                      </>
-                    );
-                  })()}
-                  {setlist.startTime && (
-                    <span className="px-2 py-1 bg-cyan-900/50 text-cyan-300 rounded">
-                      {formatTime12h(setlist.startTime)}
-                    </span>
-                  )}
-                  {setlist.songs?.length > 0 && (
-                    <span className="px-2 py-1 bg-gray-700 text-gray-300 rounded">
-                      {calculateDuration(setlist.songs)}
-                    </span>
-                  )}
-                </div>
-
-                {/* Song Preview */}
-                <div className="space-y-1">
-                  {(() => {
-                    const previewItems = setlist.songs?.filter(s => s.type !== 'MC') || [];
-                    let songNum = 0;
-                    return previewItems.slice(0, 4).map((ss) => {
-                      if (ss.type === 'SET_BREAK') {
-                        return (
-                          <div key={ss.id} className="text-sm text-blue-400 font-medium truncate">
-                            📋 {ss.label || 'Set Break'}
-                          </div>
-                        );
-                      }
-                      songNum++;
-                      return (
-                        <div key={ss.id} className="text-sm text-gray-400 truncate">
-                          {songNum}. {ss.song?.title}
-                        </div>
-                      );
-                    });
-                  })()}
-                  {(() => {
-                    const actualSongs = setlist.songs?.filter(s => s.type !== 'SET_BREAK' && s.type !== 'MC') || [];
-                    return actualSongs.length > 3 && (
-                      <div className="text-sm text-gray-500">
-                        +{actualSongs.length - 3} more...
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {setlist._count?.gigs > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-700 text-xs text-gray-500">
-                    Used in {setlist._count.gigs} gig{setlist._count.gigs !== 1 ? 's' : ''}
-                  </div>
-                )}
-              </div>
+                setlist={setlist}
+                onTap={() => setViewingSetlist(setlist)}
+                onEdit={() => {
+                  setEditingSetlist(setlist);
+                  setShowBuilder(true);
+                }}
+                onDuplicate={() => {
+                  setDuplicateSetlistId(setlist.id);
+                  setDuplicateName(`Copy of ${setlist.name}`);
+                }}
+                onDelete={() => setDeleteSetlistId(setlist.id)}
+                onContextMenu={(pos) => setContextMenu({ setlistId: setlist.id, ...pos })}
+                calculateDuration={calculateDuration}
+                formatTime12h={formatTime12h}
+              />
             ))}
           </div>
         )}
@@ -1254,6 +1263,78 @@ function SetlistList({ workspaceId, workspaceName }) {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        isOpen={deleteSetlistId !== null}
+        title="Delete Setlist"
+        message="Delete this setlist? This cannot be undone."
+        confirmText="Delete"
+        confirmVariant="danger"
+        onConfirm={() => handleDeleteSetlist(deleteSetlistId)}
+        onCancel={() => setDeleteSetlistId(null)}
+      />
+
+      {/* Duplicate Name Dialog */}
+      {duplicateSetlistId && (
+        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) { setDuplicateSetlistId(null); setDuplicateName(''); } }}>
+          <div className="modal-content max-w-sm">
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-white mb-4">Duplicate Setlist</h3>
+              <input
+                type="text"
+                value={duplicateName}
+                onChange={(e) => setDuplicateName(e.target.value)}
+                className="modal-input mb-4"
+                placeholder="Name for the copy"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleDuplicateSetlist();
+                  if (e.key === 'Escape') { setDuplicateSetlistId(null); setDuplicateName(''); }
+                }}
+              />
+              <div className="flex gap-3 justify-end">
+                <button onClick={() => { setDuplicateSetlistId(null); setDuplicateName(''); }} className="btn btn-secondary">Cancel</button>
+                <button onClick={handleDuplicateSetlist} disabled={!duplicateName.trim()} className="btn bg-green-600 hover:bg-green-700 text-white disabled:opacity-50">Duplicate</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ContextMenu
+        isOpen={contextMenu !== null}
+        position={contextMenu || { x: 0, y: 0 }}
+        onClose={() => setContextMenu(null)}
+        items={[
+          {
+            label: 'Edit Setlist',
+            icon: '✏️',
+            onClick: () => {
+              const setlist = setlists.find(s => s.id === contextMenu?.setlistId);
+              if (setlist) {
+                setEditingSetlist(setlist);
+                setShowBuilder(true);
+              }
+            }
+          },
+          {
+            label: 'Duplicate Setlist',
+            icon: '📋',
+            onClick: () => {
+              const setlist = setlists.find(s => s.id === contextMenu?.setlistId);
+              if (setlist) {
+                setDuplicateSetlistId(setlist.id);
+                setDuplicateName(`Copy of ${setlist.name}`);
+              }
+            }
+          },
+          {
+            label: 'Delete Setlist',
+            icon: '🗑️',
+            variant: 'danger',
+            onClick: () => setDeleteSetlistId(contextMenu?.setlistId)
+          }
+        ]}
+      />
     </div>
   );
 }

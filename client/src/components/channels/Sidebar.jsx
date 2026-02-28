@@ -27,11 +27,14 @@ import { CSS } from '@dnd-kit/utilities';
 import { pushService } from '../../services/push';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
 import BandMemberForm from '../band/BandMembers/BandMemberForm';
 import MemberProfile from '../common/MemberProfile';
 import MemberHoverCard from '../common/MemberHoverCard';
 import ConfirmDialog from '../common/ConfirmDialog';
+import ContextMenu from '../common/ContextMenu';
+import useLongPress from '../../hooks/useLongPress';
 import NewMessageModal from './NewMessageModal';
 import Skeleton from '../common/Skeleton';
 import { hapticMedium } from '../../services/haptic';
@@ -103,6 +106,36 @@ function SortableGroupWrapper({ group, children, disabled }) {
   );
 }
 
+/** Channel item with long-press support for mobile context menus */
+function ChannelItem({ channel, isSelected, onSelect, onLongPress, isAdmin }) {
+  const longPress = useLongPress({
+    onLongPress: isAdmin ? (pos) => onLongPress(pos) : undefined,
+    onTap: onSelect,
+    disabled: !isAdmin,
+  });
+
+  // For non-admin, just render a simple button
+  const handlers = isAdmin ? longPress : {};
+
+  return (
+    <button
+      onClick={isAdmin ? undefined : onSelect}
+      className={`channel-item w-full ${isSelected ? 'active' : ''}`}
+      {...handlers}
+    >
+      <span className="text-gray-400">
+        {channel.isPrivate ? '🔒' : '#'}
+      </span>
+      <span className="flex-1 truncate">{channel.name}</span>
+      {channel.unreadCount > 0 && (
+        <span className="bg-slack-red text-white text-xs px-1.5 py-0.5 rounded-full">
+          {channel.unreadCount}
+        </span>
+      )}
+    </button>
+  );
+}
+
 /**
  * Main sidebar navigation component.
  * Contains workspace header, channels, DMs, band features, members, and settings.
@@ -151,6 +184,7 @@ function Sidebar({
   const navigate = useNavigate();
   const { updateUser } = useAuth();
   const { currentTheme, setTheme, themes, mode, toggleMode } = useTheme();
+  const toast = useToast();
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showNewMessage, setShowNewMessage] = useState(false);
@@ -194,6 +228,10 @@ function Sidebar({
   const [bandMembersLoading, setBandMembersLoading] = useState(false);
   const [editingBandMember, setEditingBandMember] = useState(null);
   const [showBandMemberForm, setShowBandMemberForm] = useState(false);
+  const [deleteBandMemberId, setDeleteBandMemberId] = useState(null);
+  const [passwordResetMember, setPasswordResetMember] = useState(null);
+  const [resetAdminPassword, setResetAdminPassword] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
   const [removingMember, setRemovingMember] = useState(null);
   const [removePostAction, setRemovePostAction] = useState('keep');
   const [removeMergeUserId, setRemoveMergeUserId] = useState('');
@@ -283,12 +321,13 @@ function Sidebar({
   };
 
   const handleDeleteBandMember = async (memberId) => {
-    if (!confirm('Delete this band member?')) return;
     try {
       await api.deleteBandMember(memberId);
       await loadBandMembers();
+      setDeleteBandMemberId(null);
     } catch (err) {
       setSettingsError(err.message);
+      setDeleteBandMemberId(null);
     }
   };
 
@@ -305,7 +344,7 @@ function Sidebar({
       }
     } catch (error) {
       console.error('Notification toggle error:', error);
-      alert(error.message || 'Failed to toggle notifications');
+      toast.error(error.message || 'Failed to toggle notifications');
     } finally {
       setNotificationsLoading(false);
     }
@@ -544,7 +583,7 @@ function Sidebar({
       setRenameModal(null);
       setRenameValue('');
     } catch (err) {
-      alert(err.message || 'Failed to rename');
+      toast.error(err.message || 'Failed to rename');
     } finally {
       setRenameLoading(false);
     }
@@ -562,52 +601,27 @@ function Sidebar({
       }
       setDeleteConfirm(null);
     } catch (err) {
-      alert(err.message || 'Failed to delete');
+      toast.error(err.message || 'Failed to delete');
       setDeleteLoading(false);
     }
   };
 
-  // Close context menu on click outside or escape
-  useEffect(() => {
-    if (!contextMenu) return;
-
-    const handleClick = () => closeContextMenu();
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') closeContextMenu();
-    };
-    const handleScroll = () => closeContextMenu();
-
-    document.addEventListener('click', handleClick);
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('scroll', handleScroll, true);
-
-    return () => {
-      document.removeEventListener('click', handleClick);
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('scroll', handleScroll, true);
-    };
-  }, [contextMenu]);
+  // handleLongPress for channel items (enables mobile context menu)
+  const handleChannelLongPress = (channel, pos) => {
+    if (!isAdmin) return;
+    setContextMenu({ type: 'channel', id: channel.id, name: channel.name, x: pos.x, y: pos.y });
+  };
 
   const renderChannel = (channel) => {
     const channelButton = (
-      <button
+      <ChannelItem
         key={channel.id}
-        onClick={() => onSelectChannel(channel)}
-        onContextMenu={(e) => handleContextMenu(e, 'channel', channel.id, channel.name)}
-        className={`channel-item w-full ${
-          selectedChannel?.id === channel.id ? 'active' : ''
-        }`}
-      >
-        <span className="text-gray-400">
-          {channel.isPrivate ? '🔒' : '#'}
-        </span>
-        <span className="flex-1 truncate">{channel.name}</span>
-        {channel.unreadCount > 0 && (
-          <span className="bg-slack-red text-white text-xs px-1.5 py-0.5 rounded-full">
-            {channel.unreadCount}
-          </span>
-        )}
-      </button>
+        channel={channel}
+        isSelected={selectedChannel?.id === channel.id}
+        onSelect={() => onSelectChannel(channel)}
+        onLongPress={(pos) => handleChannelLongPress(channel, pos)}
+        isAdmin={isAdmin}
+      />
     );
 
     // Wrap with draggable for admins
@@ -1815,7 +1829,7 @@ function Sidebar({
                                 setEditingMemberId(null);
                               }
                             } catch (err) {
-                              alert(err.message);
+                              toast.error(err.message);
                             } finally {
                               setEditMemberLoading(false);
                             }
@@ -1896,21 +1910,10 @@ function Sidebar({
                                   Edit
                                 </button>
                                 <button
-                                  onClick={async () => {
-                                    const adminPassword = prompt('Enter YOUR password to confirm:');
-                                    if (!adminPassword) return;
-                                    const newPassword = prompt(`Enter new password for ${member.user.displayName} (min 6 characters):`);
-                                    if (!newPassword) return;
-                                    if (newPassword.length < 6) {
-                                      alert('Password must be at least 6 characters');
-                                      return;
-                                    }
-                                    try {
-                                      await api.adminResetPassword(workspace.id, member.user.id, newPassword, adminPassword);
-                                      alert(`Password reset for ${member.user.displayName}`);
-                                    } catch (err) {
-                                      alert(err.message);
-                                    }
+                                  onClick={() => {
+                                    setPasswordResetMember(member);
+                                    setResetAdminPassword('');
+                                    setResetNewPassword('');
                                   }}
                                   className="text-xs text-blue-400 hover:text-blue-300 px-2 py-1"
                                 >
@@ -1939,7 +1942,7 @@ function Sidebar({
                                   );
                                   window.location.reload();
                                 } catch (err) {
-                                  alert(err.message);
+                                  toast.error(err.message);
                                 }
                               }}
                               className="modal-input w-auto"
@@ -2043,7 +2046,7 @@ function Sidebar({
                             <button
                               onClick={async () => {
                                 if (removePostAction === 'merge' && !removeMergeUserId) {
-                                  alert('Please select a member to transfer messages to');
+                                  toast.warning('Please select a member to transfer messages to');
                                   return;
                                 }
                                 setRemoveLoading(true);
@@ -2057,7 +2060,7 @@ function Sidebar({
                                   setRemovingMember(null);
                                   window.location.reload();
                                 } catch (err) {
-                                  alert(err.message);
+                                  toast.error(err.message);
                                 } finally {
                                   setRemoveLoading(false);
                                 }
@@ -2171,7 +2174,7 @@ function Sidebar({
                                               Edit
                                             </button>
                                             <button
-                                              onClick={() => handleDeleteBandMember(member.id)}
+                                              onClick={() => setDeleteBandMemberId(member.id)}
                                               className="text-red-400 hover:text-red-300 text-sm"
                                             >
                                               Delete
@@ -2231,7 +2234,7 @@ function Sidebar({
                                               Edit
                                             </button>
                                             <button
-                                              onClick={() => handleDeleteBandMember(member.id)}
+                                              onClick={() => setDeleteBandMemberId(member.id)}
                                               className="text-red-400 hover:text-red-300 text-sm"
                                             >
                                               Delete
@@ -2284,7 +2287,7 @@ function Sidebar({
                                               Edit
                                             </button>
                                             <button
-                                              onClick={() => handleDeleteBandMember(member.id)}
+                                              onClick={() => setDeleteBandMemberId(member.id)}
                                               className="text-red-400 hover:text-red-300 text-sm"
                                             >
                                               Delete
@@ -2334,7 +2337,7 @@ function Sidebar({
                                               Edit
                                             </button>
                                             <button
-                                              onClick={() => handleDeleteBandMember(member.id)}
+                                              onClick={() => setDeleteBandMemberId(member.id)}
                                               className="text-red-400 hover:text-red-300 text-sm"
                                             >
                                               Delete
@@ -2488,30 +2491,24 @@ function Sidebar({
       )}
 
       {/* Context Menu for Channels/Sections (Admin Only) */}
-      {contextMenu && createPortal(
-        <div
-          className="fixed bg-gray-800 rounded-lg shadow-xl border border-gray-700 py-1 z-[100] min-w-[160px]"
-          style={{
-            top: Math.min(contextMenu.y, window.innerHeight - 100),
-            left: Math.min(contextMenu.x, window.innerWidth - 180)
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={openRenameModal}
-            className="w-full px-4 py-2 text-left text-gray-200 hover:bg-gray-700 transition-colors flex items-center gap-2"
-          >
-            <span>Rename {contextMenu.type}</span>
-          </button>
-          <button
-            onClick={openDeleteConfirm}
-            className="w-full px-4 py-2 text-left text-red-400 hover:bg-gray-700 transition-colors flex items-center gap-2"
-          >
-            <span>Delete {contextMenu.type}</span>
-          </button>
-        </div>,
-        document.body
-      )}
+      <ContextMenu
+        isOpen={contextMenu !== null}
+        position={contextMenu || { x: 0, y: 0 }}
+        onClose={closeContextMenu}
+        items={[
+          {
+            label: `Rename ${contextMenu?.type || ''}`,
+            icon: '✏️',
+            onClick: openRenameModal
+          },
+          {
+            label: `Delete ${contextMenu?.type || ''}`,
+            icon: '🗑️',
+            variant: 'danger',
+            onClick: openDeleteConfirm
+          }
+        ]}
+      />
 
       {/* Rename Modal */}
       {renameModal && createPortal(
@@ -2586,6 +2583,78 @@ function Sidebar({
         onCancel={() => setDeleteConfirm(null)}
         loading={deleteLoading}
       />
+
+      <ConfirmDialog
+        isOpen={deleteBandMemberId !== null}
+        title="Delete Band Member"
+        message="Delete this band member?"
+        confirmText="Delete"
+        confirmVariant="danger"
+        onConfirm={() => handleDeleteBandMember(deleteBandMemberId)}
+        onCancel={() => setDeleteBandMemberId(null)}
+      />
+
+      {/* Password Reset Modal */}
+      {passwordResetMember && createPortal(
+        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setPasswordResetMember(null); }}>
+          <div className="modal-content max-w-sm">
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-white mb-4">Reset Password for {passwordResetMember.user.displayName}</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm text-gray-400 mb-1 block">Your password (confirm)</label>
+                  <input
+                    type="password"
+                    value={resetAdminPassword}
+                    onChange={(e) => setResetAdminPassword(e.target.value)}
+                    className="modal-input w-full"
+                    placeholder="Your admin password"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-gray-400 mb-1 block">New password (min 6 characters)</label>
+                  <input
+                    type="password"
+                    value={resetNewPassword}
+                    onChange={(e) => setResetNewPassword(e.target.value)}
+                    className="modal-input w-full"
+                    placeholder="New password"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 justify-end mt-6">
+                <button
+                  onClick={() => setPasswordResetMember(null)}
+                  className="btn btn-secondary min-h-[44px] px-4"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!resetAdminPassword || !resetNewPassword) return;
+                    if (resetNewPassword.length < 6) {
+                      toast.warning('Password must be at least 6 characters');
+                      return;
+                    }
+                    try {
+                      await api.adminResetPassword(workspace.id, passwordResetMember.user.id, resetNewPassword, resetAdminPassword);
+                      toast.success(`Password reset for ${passwordResetMember.user.displayName}`);
+                      setPasswordResetMember(null);
+                    } catch (err) {
+                      toast.error(err.message);
+                    }
+                  }}
+                  disabled={!resetAdminPassword || !resetNewPassword}
+                  className="btn bg-blue-600 hover:bg-blue-700 text-white min-h-[44px] px-4 disabled:opacity-50"
+                >
+                  Reset Password
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

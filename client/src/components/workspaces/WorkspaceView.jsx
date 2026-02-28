@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useParams, useNavigate, Routes, Route } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
@@ -8,25 +8,39 @@ import Sidebar from '../channels/Sidebar';
 import ChannelView from '../channels/ChannelView';
 import ThreadView from '../threads/ThreadView';
 import MobileNav from '../navigation/MobileNav';
-import SongList from '../band/SongList';
-import SetlistList from '../band/SetlistList';
-import GigCalendar from '../band/GigCalendar';
-import AvailabilityCalendar from '../band/AvailabilityCalendar';
-import GigStats from '../band/GigStats';
-import GigArchive from '../band/GigArchive';
-import BandMembersList from '../band/BandMembers/BandMembersList';
-import ContactsList from '../band/ContactsList';
-import AnnouncementsList from '../band/AnnouncementsList';
-import PollsList from '../band/PollsList';
-import MedleyList from '../band/MedleyList';
-import BandTimeline from '../band/BandTimeline';
-import Achievements from '../band/Achievements';
-import RecordingsList from '../band/RecordingsList';
-import SongSuggestions from '../band/SongSuggestions';
-import BandKitty from '../band/BandKitty';
-import AudioAnalyzer from '../band/AudioAnalyzer';
 import Skeleton from '../common/Skeleton';
 import useSwipeGesture from '../../hooks/useSwipeGesture';
+
+// Lazy-loaded band components (only loaded when user navigates to band view)
+const SongList = lazy(() => import('../band/SongList'));
+const SetlistList = lazy(() => import('../band/SetlistList'));
+const GigCalendar = lazy(() => import('../band/GigCalendar'));
+const AvailabilityCalendar = lazy(() => import('../band/AvailabilityCalendar'));
+const GigStats = lazy(() => import('../band/GigStats'));
+const GigArchive = lazy(() => import('../band/GigArchive'));
+const BandMembersList = lazy(() => import('../band/BandMembers/BandMembersList'));
+const ContactsList = lazy(() => import('../band/ContactsList'));
+const AnnouncementsList = lazy(() => import('../band/AnnouncementsList'));
+const PollsList = lazy(() => import('../band/PollsList'));
+const MedleyList = lazy(() => import('../band/MedleyList'));
+const BandTimeline = lazy(() => import('../band/BandTimeline'));
+const Achievements = lazy(() => import('../band/Achievements'));
+const RecordingsList = lazy(() => import('../band/RecordingsList'));
+const SongSuggestions = lazy(() => import('../band/SongSuggestions'));
+const BandKitty = lazy(() => import('../band/BandKitty'));
+const AudioAnalyzer = lazy(() => import('../band/AudioAnalyzer'));
+
+/** Safe search-highlight renderer — no dangerouslySetInnerHTML */
+function HighlightedText({ text, query }) {
+  if (!query) return text;
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+  return parts.map((part, i) =>
+    part.toLowerCase() === query.toLowerCase()
+      ? <mark key={i}>{part}</mark>
+      : part
+  );
+}
 
 function WorkspaceView() {
   const { workspaceId } = useParams();
@@ -589,40 +603,44 @@ function WorkspaceView() {
         <div className="flex-1 flex min-h-0">
           {/* Channel View or Band View */}
           <div className={`flex-1 flex flex-col min-h-0 ${selectedThread ? 'hidden md:flex' : ''}`}>
-            {activeBandView === 'songs' ? (
-              <SongList key={bandViewKey} workspaceId={workspaceId} />
-            ) : activeBandView === 'setlists' ? (
-              <SetlistList key={bandViewKey} workspaceId={workspaceId} workspaceName={workspace?.name} />
-            ) : activeBandView === 'calendar' ? (
-              <GigCalendar workspaceId={workspaceId} workspace={workspace} />
-            ) : activeBandView === 'availability' ? (
-              <AvailabilityCalendar workspaceId={workspaceId} workspace={workspace} />
-            ) : activeBandView === 'stats' ? (
-              <GigStats workspaceId={workspaceId} />
-            ) : activeBandView === 'archive' ? (
-              <GigArchive workspaceId={workspaceId} />
-            ) : activeBandView === 'members' ? (
-              <BandMembersList key={bandViewKey} workspaceId={workspaceId} workspace={workspace} />
-            ) : activeBandView === 'contacts' ? (
-              <ContactsList workspaceId={workspaceId} />
-            ) : activeBandView === 'announcements' ? (
-              <AnnouncementsList workspaceId={workspaceId} workspace={workspace} />
-            ) : activeBandView === 'polls' ? (
-              <PollsList workspaceId={workspaceId} />
-            ) : activeBandView === 'medleys' ? (
-              <MedleyList workspaceId={workspaceId} />
-            ) : activeBandView === 'timeline' ? (
-              <BandTimeline workspaceId={workspaceId} isAdmin={isAdmin} />
-            ) : activeBandView === 'achievements' ? (
-              <Achievements workspaceId={workspaceId} />
-            ) : activeBandView === 'recordings' ? (
-              <RecordingsList workspaceId={workspaceId} />
-            ) : activeBandView === 'suggestions' ? (
-              <SongSuggestions workspaceId={workspaceId} />
-            ) : activeBandView === 'kitty' ? (
-              <BandKitty workspaceId={workspaceId} isAdmin={isAdmin} />
-            ) : activeBandView === 'analyzer' ? (
-              <AudioAnalyzer workspaceId={workspaceId} />
+            {activeBandView ? (
+              <Suspense fallback={<div className="flex-1 flex items-center justify-center"><Skeleton type="channel" /></div>}>
+                {activeBandView === 'songs' ? (
+                  <SongList key={bandViewKey} workspaceId={workspaceId} />
+                ) : activeBandView === 'setlists' ? (
+                  <SetlistList key={bandViewKey} workspaceId={workspaceId} workspaceName={workspace?.name} />
+                ) : activeBandView === 'calendar' ? (
+                  <GigCalendar workspaceId={workspaceId} workspace={workspace} />
+                ) : activeBandView === 'availability' ? (
+                  <AvailabilityCalendar workspaceId={workspaceId} workspace={workspace} />
+                ) : activeBandView === 'stats' ? (
+                  <GigStats workspaceId={workspaceId} />
+                ) : activeBandView === 'archive' ? (
+                  <GigArchive workspaceId={workspaceId} />
+                ) : activeBandView === 'members' ? (
+                  <BandMembersList key={bandViewKey} workspaceId={workspaceId} workspace={workspace} />
+                ) : activeBandView === 'contacts' ? (
+                  <ContactsList workspaceId={workspaceId} />
+                ) : activeBandView === 'announcements' ? (
+                  <AnnouncementsList workspaceId={workspaceId} workspace={workspace} />
+                ) : activeBandView === 'polls' ? (
+                  <PollsList workspaceId={workspaceId} />
+                ) : activeBandView === 'medleys' ? (
+                  <MedleyList workspaceId={workspaceId} />
+                ) : activeBandView === 'timeline' ? (
+                  <BandTimeline workspaceId={workspaceId} isAdmin={isAdmin} />
+                ) : activeBandView === 'achievements' ? (
+                  <Achievements workspaceId={workspaceId} />
+                ) : activeBandView === 'recordings' ? (
+                  <RecordingsList workspaceId={workspaceId} />
+                ) : activeBandView === 'suggestions' ? (
+                  <SongSuggestions workspaceId={workspaceId} />
+                ) : activeBandView === 'kitty' ? (
+                  <BandKitty workspaceId={workspaceId} isAdmin={isAdmin} />
+                ) : activeBandView === 'analyzer' ? (
+                  <AudioAnalyzer workspaceId={workspaceId} />
+                ) : null}
+              </Suspense>
             ) : selectedChannel ? (
               <ChannelView
                 channel={selectedChannel}
@@ -944,12 +962,9 @@ function WorkspaceView() {
                       <span>•</span>
                       <span>{result.author?.displayName}</span>
                     </div>
-                    <div className="text-white search-highlight" dangerouslySetInnerHTML={{
-                      __html: result.content.replace(
-                        new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
-                        '<mark>$1</mark>'
-                      )
-                    }} />
+                    <div className="text-white search-highlight">
+                      <HighlightedText text={result.content} query={searchQuery} />
+                    </div>
                   </button>
                 ))}
               </div>

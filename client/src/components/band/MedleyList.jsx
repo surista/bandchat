@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
+import ConfirmDialog from '../common/ConfirmDialog';
 import Skeleton from '../common/Skeleton';
 
 function MedleyList({ workspaceId }) {
@@ -8,6 +9,7 @@ function MedleyList({ workspaceId }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingMedley, setEditingMedley] = useState(null);
+  const [deleteMedleyId, setDeleteMedleyId] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -45,12 +47,13 @@ function MedleyList({ workspaceId }) {
   };
 
   const handleDelete = async (medleyId) => {
-    if (!confirm('Delete this medley?')) return;
     try {
       await api.deleteMedley(medleyId);
       setMedleys(prev => prev.filter(m => m.id !== medleyId));
+      setDeleteMedleyId(null);
     } catch (err) {
       console.error('Failed to delete medley:', err);
+      setDeleteMedleyId(null);
     }
   };
 
@@ -106,7 +109,7 @@ function MedleyList({ workspaceId }) {
                 key={medley.id}
                 medley={medley}
                 onEdit={() => { setEditingMedley(medley); setShowForm(true); }}
-                onDelete={() => handleDelete(medley.id)}
+                onDelete={() => setDeleteMedleyId(medley.id)}
                 onReorder={(songIds) => handleReorder(medley.id, songIds)}
               />
             ))}
@@ -123,6 +126,16 @@ function MedleyList({ workspaceId }) {
           onClose={() => { setShowForm(false); setEditingMedley(null); }}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={deleteMedleyId !== null}
+        title="Delete Medley"
+        message="Delete this medley?"
+        confirmText="Delete"
+        confirmVariant="danger"
+        onConfirm={() => handleDelete(deleteMedleyId)}
+        onCancel={() => setDeleteMedleyId(null)}
+      />
     </div>
   );
 }

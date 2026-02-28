@@ -3,12 +3,14 @@
  * Handles message rendering, editing, reactions, and thread navigation.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { format, isToday, isYesterday } from 'date-fns';
 import ReactionDisplay from './ReactionDisplay';
 import ReactionPicker from './ReactionPicker';
 import ConfirmDialog from '../common/ConfirmDialog';
+import ContextMenu from '../common/ContextMenu';
 import ImageLightbox from '../common/ImageLightbox';
+import useLongPress from '../../hooks/useLongPress';
 import { hapticLight } from '../../services/haptic';
 import LinkPreviewCard from './LinkPreviewCard';
 
@@ -176,11 +178,10 @@ function MessageList({
 }) {
   const [editingId, setEditingId] = useState(null);
   const [editContent, setEditContent] = useState('');
-  const [menuOpenId, setMenuOpenId] = useState(null);
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState(null);
-  const [activeMessageId, setActiveMessageId] = useState(null); // For mobile tap-to-reveal actions
   const [deleteMessageId, setDeleteMessageId] = useState(null); // For delete confirmation dialog
   const [lightboxData, setLightboxData] = useState(null); // { images: [{src, alt}], index }
+  const [msgContextMenu, setMsgContextMenu] = useState(null); // { messageId, x, y }
 
   /** Collect all images from a message (inline URLs + IMAGE attachments) */
   const getMessageImages = (message) => {
@@ -231,7 +232,6 @@ function MessageList({
   const handleStartEdit = (message) => {
     setEditingId(message.id);
     setEditContent(message.content);
-    setMenuOpenId(null);
   };
 
   const handleSaveEdit = async () => {
@@ -261,6 +261,13 @@ function MessageList({
     setReactionPickerMessageId(null);
   };
 
+  const handleCopyText = useCallback((messageId) => {
+    const message = messages.find(m => m.id === messageId);
+    if (message?.content) {
+      navigator.clipboard.writeText(message.content).catch(() => {});
+    }
+  }, [messages]);
+
   const handleDownload = async (url, filename) => {
     try {
       const response = await fetch(url);
@@ -289,6 +296,22 @@ function MessageList({
     );
   }, [messages, lastReadAt, currentUser?.id]);
 
+  // Long-press handler for mobile — uses event delegation via data-message-id
+  const messageLongPress = useLongPress({
+    onLongPress: ({ x, y }) => {
+      // The touch target is captured from the event, but useLongPress
+      // gives us coordinates. We need to find the message element under those coords.
+      const el = document.elementFromPoint(x, y);
+      const msgEl = el?.closest?.('[data-message-id]');
+      if (msgEl) {
+        const messageId = msgEl.getAttribute('data-message-id');
+        if (messageId) {
+          setMsgContextMenu({ messageId, x, y });
+        }
+      }
+    },
+  });
+
   if (messages.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-gray-400 p-8">
@@ -302,13 +325,13 @@ function MessageList({
 
   return (
     <>
-    <div className="px-4 py-2" onClick={(e) => {
-      // Dismiss active message actions when tapping empty space
-      if (e.target === e.currentTarget) {
-        setActiveMessageId(null);
-        setReactionPickerMessageId(null);
-      }
-    }}>
+    <div
+      className="px-4 py-2"
+      onTouchStart={messageLongPress.onTouchStart}
+      onTouchMove={messageLongPress.onTouchMove}
+      onTouchEnd={messageLongPress.onTouchEnd}
+      onTouchCancel={messageLongPress.onTouchCancel}
+    >
       {messages.map((message, index) => (
         <div key={message.id}>
           {/* Date Header */}
@@ -333,14 +356,11 @@ function MessageList({
 
           {/* Message */}
           <div
-            className={`group flex gap-3 py-2 hover:bg-gray-700/30 rounded px-2 -mx-2 relative ${message.pending ? 'opacity-60' : ''} ${activeMessageId === message.id ? 'bg-gray-700/30' : ''}`}
-            onMouseLeave={() => setMenuOpenId(null)}
-            onClick={(e) => {
-              // On mobile, tap to reveal actions (but not if clicking on buttons/links)
-              if (e.target.closest('button') || e.target.closest('a') || e.target.closest('textarea')) return;
-              const newId = activeMessageId === message.id ? null : message.id;
-              setActiveMessageId(newId);
-              if (!newId) setReactionPickerMessageId(null);
+            data-message-id={message.id}
+            className={`group flex gap-3 py-2 hover:bg-gray-700/30 rounded px-2 -mx-2 relative ${message.pending ? 'opacity-60' : ''}`}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setMsgContextMenu({ messageId: message.id, x: e.clientX, y: e.clientY });
             }}
           >
             {/* Avatar */}
@@ -526,12 +546,8 @@ function MessageList({
               )}
             </div>
 
-            {/* Actions - visible on hover (desktop) or tap (mobile) */}
-            <div className={`absolute right-2 -top-3 transition-opacity ${
-              activeMessageId === message.id
-                ? 'opacity-100'
-                : 'opacity-0 group-hover:opacity-100'
-            }`}>
+            {/* Actions - visible on hover (desktop only), hidden on mobile (use long-press context menu) */}
+            <div className="absolute right-2 -top-3 transition-opacity opacity-0 group-hover:opacity-100 hidden sm:block">
               {reactionPickerMessageId === message.id && (
                 <div className="absolute right-0 bottom-full mb-1 z-10">
                   <ReactionPicker
@@ -626,9 +642,29 @@ function MessageList({
       onConfirm={() => {
         onDeleteMessage(deleteMessageId);
         setDeleteMessageId(null);
-        setActiveMessageId(null);
       }}
       onCancel={() => setDeleteMessageId(null)}
+    />
+
+    <ContextMenu
+      isOpen={msgContextMenu !== null}
+      position={msgContextMenu || { x: 0, y: 0 }}
+      onClose={() => setMsgContextMenu(null)}
+      items={(() => {
+        const msg = messages.find(m => m.id === msgContextMenu?.messageId);
+        if (!msg) return [];
+        const isOwn = msg.author?.id === currentUser?.id;
+        const isPinned = pinnedMessageIds?.has(msg.id);
+        return [
+          { label: 'Reply in Thread', icon: '💬', onClick: () => onOpenThread(msg) },
+          { label: 'Add Reaction', icon: '😀', onClick: () => setReactionPickerMessageId(msg.id) },
+          { label: 'Copy Text', icon: '📋', onClick: () => handleCopyText(msg.id) },
+          { label: isPinned ? 'Unpin Message' : 'Pin Message', icon: '📌', onClick: () => isPinned ? onUnpinMessage?.(msg.id) : onPinMessage?.(msg.id), show: !!(onPinMessage && onUnpinMessage) },
+          { divider: true, label: 'divider', onClick: () => {}, show: isOwn },
+          { label: 'Edit Message', icon: '✏️', onClick: () => handleStartEdit(msg), show: isOwn },
+          { label: 'Delete Message', icon: '🗑️', variant: 'danger', onClick: () => setDeleteMessageId(msg.id), show: isOwn },
+        ];
+      })()}
     />
     {lightboxData && (
       <ImageLightbox

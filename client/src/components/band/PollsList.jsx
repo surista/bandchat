@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { formatDistanceToNow } from 'date-fns';
+import ConfirmDialog from '../common/ConfirmDialog';
 import Skeleton from '../common/Skeleton';
 
 function PollsList({ workspaceId }) {
   const { user } = useAuth();
   const [polls, setPolls] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deletePollId, setDeletePollId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [showClosed, setShowClosed] = useState(false);
 
@@ -72,12 +74,13 @@ function PollsList({ workspaceId }) {
   };
 
   const handleDelete = async (pollId) => {
-    if (!confirm('Delete this poll?')) return;
     try {
       await api.deletePoll(pollId);
       setPolls(prev => prev.filter(p => p.id !== pollId));
+      setDeletePollId(null);
     } catch (err) {
       console.error('Failed to delete poll:', err);
+      setDeletePollId(null);
     }
   };
 
@@ -128,7 +131,7 @@ function PollsList({ workspaceId }) {
                 userId={user?.id}
                 onVote={(optionIds) => handleVote(poll.id, optionIds)}
                 onClose={() => handleClose(poll.id)}
-                onDelete={() => handleDelete(poll.id)}
+                onDelete={() => setDeletePollId(poll.id)}
               />
             ))}
           </div>
@@ -142,6 +145,16 @@ function PollsList({ workspaceId }) {
           onClose={() => setShowForm(false)}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={deletePollId !== null}
+        title="Delete Poll"
+        message="Delete this poll?"
+        confirmText="Delete"
+        confirmVariant="danger"
+        onConfirm={() => handleDelete(deletePollId)}
+        onCancel={() => setDeletePollId(null)}
+      />
     </div>
   );
 }

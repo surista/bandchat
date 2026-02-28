@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
+import ConfirmDialog from '../common/ConfirmDialog';
 import Skeleton from '../common/Skeleton';
 
 const CATEGORIES = [
@@ -15,6 +16,7 @@ function ContactsList({ workspaceId }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
+  const [deleteContactId, setDeleteContactId] = useState(null);
   const [filterCategory, setFilterCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -50,12 +52,13 @@ function ContactsList({ workspaceId }) {
   };
 
   const handleDelete = async (contactId) => {
-    if (!confirm('Delete this contact?')) return;
     try {
       await api.deleteContact(contactId);
       setContacts(prev => prev.filter(c => c.id !== contactId));
+      setDeleteContactId(null);
     } catch (err) {
       console.error('Failed to delete contact:', err);
+      setDeleteContactId(null);
     }
   };
 
@@ -144,7 +147,7 @@ function ContactsList({ workspaceId }) {
                         key={contact.id}
                         contact={contact}
                         onEdit={() => { setEditingContact(contact); setShowForm(true); }}
-                        onDelete={() => handleDelete(contact.id)}
+                        onDelete={() => setDeleteContactId(contact.id)}
                       />
                     ))}
                   </div>
@@ -160,7 +163,7 @@ function ContactsList({ workspaceId }) {
                 key={contact.id}
                 contact={contact}
                 onEdit={() => { setEditingContact(contact); setShowForm(true); }}
-                onDelete={() => handleDelete(contact.id)}
+                onDelete={() => setDeleteContactId(contact.id)}
               />
             ))}
           </div>
@@ -175,6 +178,16 @@ function ContactsList({ workspaceId }) {
           onClose={() => { setShowForm(false); setEditingContact(null); }}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={deleteContactId !== null}
+        title="Delete Contact"
+        message="Delete this contact?"
+        confirmText="Delete"
+        confirmVariant="danger"
+        onConfirm={() => handleDelete(deleteContactId)}
+        onCancel={() => setDeleteContactId(null)}
+      />
     </div>
   );
 }

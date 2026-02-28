@@ -1,11 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
+import ConfirmDialog from '../common/ConfirmDialog';
 import Skeleton from '../common/Skeleton';
 
 export default function RecordingsList({ workspaceId }) {
+  const toast = useToast();
   const [recordings, setRecordings] = useState([]);
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleteRecordingId, setDeleteRecordingId] = useState(null);
   const [showRecorder, setShowRecorder] = useState(false);
   const [recordingType, setRecordingType] = useState('audio');
   const [isRecording, setIsRecording] = useState(false);
@@ -113,7 +117,7 @@ export default function RecordingsList({ workspaceId }) {
       setIsRecording(true);
     } catch (error) {
       console.error('Failed to start recording:', error);
-      alert('Could not access microphone/camera. Please check permissions.');
+      toast.error('Could not access microphone/camera. Please check permissions.');
     }
   }
 
@@ -127,7 +131,7 @@ export default function RecordingsList({ workspaceId }) {
 
   async function saveRecording() {
     if (!recordedBlob || !formData.title) {
-      alert('Please provide a title');
+      toast.warning('Please provide a title');
       return;
     }
 
@@ -154,7 +158,7 @@ export default function RecordingsList({ workspaceId }) {
       resetRecorder();
     } catch (error) {
       console.error('Failed to save recording:', error);
-      alert('Failed to save recording');
+      toast.error('Failed to save recording');
     } finally {
       setUploading(false);
     }
@@ -175,12 +179,13 @@ export default function RecordingsList({ workspaceId }) {
   }
 
   async function deleteRecording(id) {
-    if (!confirm('Delete this recording?')) return;
     try {
       await api.deleteRecording(id);
       setRecordings(recordings.filter(r => r.id !== id));
+      setDeleteRecordingId(null);
     } catch (error) {
       console.error('Failed to delete recording:', error);
+      setDeleteRecordingId(null);
     }
   }
 
@@ -465,7 +470,7 @@ export default function RecordingsList({ workspaceId }) {
                     <span>{formatDate(recording.createdAt)}</span>
                   </div>
                   <button
-                    onClick={() => deleteRecording(recording.id)}
+                    onClick={() => setDeleteRecordingId(recording.id)}
                     className="text-gray-400 hover:text-red-400 text-sm"
                   >
                     Delete
@@ -478,6 +483,16 @@ export default function RecordingsList({ workspaceId }) {
       )}
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={deleteRecordingId !== null}
+        title="Delete Recording"
+        message="Delete this recording?"
+        confirmText="Delete"
+        confirmVariant="danger"
+        onConfirm={() => deleteRecording(deleteRecordingId)}
+        onCancel={() => setDeleteRecordingId(null)}
+      />
     </div>
   );
 }

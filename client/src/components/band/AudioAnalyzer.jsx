@@ -43,7 +43,7 @@ export default function AudioAnalyzer({ workspaceId }) {
 
   // Load songs for "Apply to Song" dropdown
   useEffect(() => {
-    api.getSongs(workspaceId).then(setSongs).catch(console.error);
+    api.getSongs(workspaceId).then(setSongs).catch(err => console.warn('Failed to load songs:', err.message));
   }, [workspaceId]);
 
   const formatDuration = (seconds) => {

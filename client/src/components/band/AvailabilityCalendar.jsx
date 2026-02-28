@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, subDays, addDays, isSameMonth, isToday, isSameDay } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
 
 const STATUS_COLORS = {
@@ -19,6 +20,7 @@ const STATUS_LABELS = {
 
 function AvailabilityCalendar({ workspaceId, workspace }) {
   const { user } = useAuth();
+  const toast = useToast();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [availability, setAvailability] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -95,7 +97,7 @@ function AvailabilityCalendar({ workspaceId, workspace }) {
       }
       setSelectedDate(null);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setSaving(false);
     }

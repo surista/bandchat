@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
+import ConfirmDialog from '../common/ConfirmDialog';
 import Skeleton from '../common/Skeleton';
 
 const EVENT_TYPES = [
@@ -15,12 +17,15 @@ const EVENT_TYPES = [
 ];
 
 export default function BandTimeline({ workspaceId, isAdmin = false }) {
+  const toast = useToast();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [deleteEventId, setDeleteEventId] = useState(null);
+  const [showRegenConfirm, setShowRegenConfirm] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -61,12 +66,13 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
   }
 
   async function handleDelete(eventId) {
-    if (!confirm('Delete this timeline event?')) return;
     try {
       await api.deleteTimelineEvent(eventId);
       setEvents(events.filter(e => e.id !== eventId));
+      setDeleteEventId(null);
     } catch (error) {
       console.error('Failed to delete event:', error);
+      setDeleteEventId(null);
     }
   }
 
@@ -76,30 +82,28 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
       const result = await api.generateTimeline(workspaceId);
       setEvents(result.events);
       if (result.created > 0) {
-        alert(`Generated ${result.created} timeline events from your band history!`);
+        toast.success(`Generated ${result.created} timeline events from your band history!`);
       } else {
-        alert('No new events to generate. Your timeline is up to date!');
+        toast('No new events to generate. Your timeline is up to date!');
       }
     } catch (error) {
       console.error('Failed to generate timeline:', error);
-      alert('Failed to generate timeline: ' + (error.message || 'Unknown error'));
+      toast.error('Failed to generate timeline: ' + (error.message || 'Unknown error'));
     } finally {
       setGenerating(false);
     }
   }
 
   async function handleRegenerate() {
-    if (!confirm('This will delete all auto-generated timeline events and recreate them from current band data. Custom events will be kept. Continue?')) {
-      return;
-    }
+    setShowRegenConfirm(false);
     setRegenerating(true);
     try {
       const result = await api.regenerateTimeline(workspaceId);
       setEvents(result.events);
-      alert(`Regenerated timeline: deleted ${result.deleted} old events, created ${result.created} new events.`);
+      toast.success(`Regenerated timeline: deleted ${result.deleted} old events, created ${result.created} new events.`);
     } catch (error) {
       console.error('Failed to regenerate timeline:', error);
-      alert('Failed to regenerate timeline: ' + (error.message || 'Unknown error'));
+      toast.error('Failed to regenerate timeline: ' + (error.message || 'Unknown error'));
     } finally {
       setRegenerating(false);
     }
@@ -170,7 +174,7 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
               {isAdmin && (
                 <>
                   <button
-                    onClick={handleRegenerate}
+                    onClick={() => setShowRegenConfirm(true)}
                     disabled={regenerating || generating}
                     className="text-sm text-gray-400 hover:text-white disabled:opacity-50"
                     title="Delete auto-generated events and recreate from current data"
@@ -320,7 +324,7 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
                           Edit
                         </button>
                         <button
-                          onClick={() => handleDelete(event.id)}
+                          onClick={() => setDeleteEventId(event.id)}
                           className="text-gray-400 hover:text-red-400"
                         >
                           Delete
@@ -349,6 +353,26 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
       )}
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={!!deleteEventId}
+        title="Delete Event"
+        message="Delete this timeline event?"
+        confirmText="Delete"
+        confirmVariant="danger"
+        onConfirm={() => handleDelete(deleteEventId)}
+        onCancel={() => setDeleteEventId(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={showRegenConfirm}
+        title="Regenerate Timeline"
+        message="This will delete all auto-generated timeline events and recreate them from current band data. Custom events will be kept. Continue?"
+        confirmText="Regenerate"
+        confirmVariant="danger"
+        onConfirm={handleRegenerate}
+        onCancel={() => setShowRegenConfirm(false)}
+      />
     </div>
   );
 }

@@ -1,9 +1,94 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 import SongForm from './SongForm';
+import ConfirmDialog from '../common/ConfirmDialog';
+import ContextMenu from '../common/ContextMenu';
+import useLongPress from '../../hooks/useLongPress';
 import Skeleton from '../common/Skeleton';
 
+function SongCard({ song, onEdit, onDelete, onContextMenu }) {
+  const longPress = useLongPress({
+    onLongPress: (pos) => onContextMenu(pos),
+  });
+
+  return (
+    <div
+      className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors border border-gray-700 group"
+      {...longPress}
+    >
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-white font-medium truncate">{song.title}</h3>
+          {song.artist && (
+            <p className="text-gray-400 text-sm truncate">{song.artist}</p>
+          )}
+          {song.shortName && (
+            <p className="text-gray-500 text-xs truncate">aka "{song.shortName}"</p>
+          )}
+        </div>
+        <div className="hidden sm:flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            className="p-1 text-gray-400 hover:text-white"
+            title="Edit"
+          >
+            ✏️
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="p-1 text-gray-400 hover:text-red-400"
+            title="Delete"
+          >
+            🗑️
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 text-xs">
+        {song.key && (
+          <span className="px-2 py-1 bg-purple-900/50 text-purple-300 rounded">
+            Key: {song.key}
+          </span>
+        )}
+        {song.bpm && (
+          <span className="px-2 py-1 bg-blue-900/50 text-blue-300 rounded">
+            {song.bpm} BPM
+          </span>
+        )}
+        {song.duration && (
+          <span className="px-2 py-1 bg-gray-700 text-gray-300 rounded">
+            {Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}
+          </span>
+        )}
+      </div>
+
+      {(song.youtubeUrl || song.spotifyUrl) && (
+        <div className="flex gap-2 mt-3">
+          {song.youtubeUrl && (
+            <a href={song.youtubeUrl} target="_blank" rel="noopener noreferrer" className="text-red-400 hover:text-red-300 text-sm">
+              YouTube
+            </a>
+          )}
+          {song.spotifyUrl && (
+            <a href={song.spotifyUrl} target="_blank" rel="noopener noreferrer" className="text-green-400 hover:text-green-300 text-sm">
+              Spotify
+            </a>
+          )}
+        </div>
+      )}
+
+      {song._count && song._count.setlistSongs > 0 && (
+        <div className="mt-3 pt-3 border-t border-gray-700 text-xs text-gray-500">
+          In {song._count.setlistSongs} setlist{song._count.setlistSongs !== 1 ? 's' : ''}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SongList({ workspaceId, onSelectSong }) {
+  const toast = useToast();
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,6 +104,9 @@ function SongList({ workspaceId, onSelectSong }) {
   const [fetchMetadata, setFetchMetadata] = useState(true);
   const [enriching, setEnriching] = useState(false);
   const [enrichResults, setEnrichResults] = useState(null);
+  const [deleteSongId, setDeleteSongId] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null); // { songId, x, y }
+  const [showEnrichConfirm, setShowEnrichConfirm] = useState(null); // count of songs needing data
 
   useEffect(() => {
     loadSongs();
@@ -53,12 +141,13 @@ function SongList({ workspaceId, onSelectSong }) {
   };
 
   const handleDeleteSong = async (songId) => {
-    if (!confirm('Delete this song? It will be removed from all setlists.')) return;
     try {
       await api.deleteSong(songId);
       setSongs(prev => prev.filter(s => s.id !== songId));
+      setDeleteSongId(null);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
+      setDeleteSongId(null);
     }
   };
 
@@ -111,7 +200,7 @@ function SongList({ workspaceId, onSelectSong }) {
     const songsToImport = parseBulkText(bulkText);
 
     if (songsToImport.length === 0) {
-      alert('No valid songs found. Enter one song per line in format: "Title - Artist"');
+      toast.warning('No valid songs found. Enter one song per line in format: "Title - Artist"');
       return;
     }
 
@@ -127,7 +216,7 @@ function SongList({ workspaceId, onSelectSong }) {
         setSongs(prev => [...prev, ...results.created]);
       }
     } catch (err) {
-      alert('Import failed: ' + err.message);
+      toast.error('Import failed: ' + err.message);
     } finally {
       setBulkImporting(false);
     }
@@ -140,14 +229,15 @@ function SongList({ workspaceId, onSelectSong }) {
     );
 
     if (songsNeedingData.length === 0) {
-      alert('All songs already have complete metadata!');
+      toast('All songs already have complete metadata!');
       return;
     }
 
-    if (!confirm(`Fetch missing metadata for ${songsNeedingData.length} songs? This may take a while.`)) {
-      return;
-    }
+    setShowEnrichConfirm(songsNeedingData.length);
+  };
 
+  const doEnrichSongs = async () => {
+    setShowEnrichConfirm(null);
     setEnriching(true);
     setEnrichResults(null);
 
@@ -160,7 +250,7 @@ function SongList({ workspaceId, onSelectSong }) {
         await loadSongs();
       }
     } catch (err) {
-      alert('Enrich failed: ' + err.message);
+      toast.error('Enrich failed: ' + err.message);
     } finally {
       setEnriching(false);
     }
@@ -309,90 +399,16 @@ function SongList({ workspaceId, onSelectSong }) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredSongs.map(song => (
-              <div
+              <SongCard
                 key={song.id}
-                className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors border border-gray-700"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-white font-medium truncate">{song.title}</h3>
-                    {song.artist && (
-                      <p className="text-gray-400 text-sm truncate">{song.artist}</p>
-                    )}
-                    {song.shortName && (
-                      <p className="text-gray-500 text-xs truncate">aka "{song.shortName}"</p>
-                    )}
-                  </div>
-                  <div className="flex gap-1 ml-2">
-                    <button
-                      onClick={() => {
-                        setEditingSong(song);
-                        setShowForm(true);
-                      }}
-                      className="p-1 text-gray-400 hover:text-white"
-                      title="Edit"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={() => handleDeleteSong(song.id)}
-                      className="p-1 text-gray-400 hover:text-red-400"
-                      title="Delete"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2 text-xs">
-                  {song.key && (
-                    <span className="px-2 py-1 bg-purple-900/50 text-purple-300 rounded">
-                      Key: {song.key}
-                    </span>
-                  )}
-                  {song.bpm && (
-                    <span className="px-2 py-1 bg-blue-900/50 text-blue-300 rounded">
-                      {song.bpm} BPM
-                    </span>
-                  )}
-                  {song.duration && (
-                    <span className="px-2 py-1 bg-gray-700 text-gray-300 rounded">
-                      {Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}
-                    </span>
-                  )}
-                </div>
-
-                {(song.youtubeUrl || song.spotifyUrl) && (
-                  <div className="flex gap-2 mt-3">
-                    {song.youtubeUrl && (
-                      <a
-                        href={song.youtubeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-red-400 hover:text-red-300 text-sm"
-                      >
-                        YouTube
-                      </a>
-                    )}
-                    {song.spotifyUrl && (
-                      <a
-                        href={song.spotifyUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-green-400 hover:text-green-300 text-sm"
-                      >
-                        Spotify
-                      </a>
-                    )}
-                  </div>
-                )}
-
-                {song._count && song._count.setlistSongs > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-700 text-xs text-gray-500">
-                    In {song._count.setlistSongs} setlist{song._count.setlistSongs !== 1 ? 's' : ''}
-                  </div>
-                )}
-              </div>
+                song={song}
+                onEdit={() => {
+                  setEditingSong(song);
+                  setShowForm(true);
+                }}
+                onDelete={() => setDeleteSongId(song.id)}
+                onContextMenu={(pos) => setContextMenu({ songId: song.id, ...pos })}
+              />
             ))}
           </div>
         )}
@@ -563,6 +579,50 @@ Hotel California - Eagles"
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={deleteSongId !== null}
+        title="Delete Song"
+        message="Delete this song? It will be removed from all setlists."
+        confirmText="Delete"
+        confirmVariant="danger"
+        onConfirm={() => handleDeleteSong(deleteSongId)}
+        onCancel={() => setDeleteSongId(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={showEnrichConfirm !== null}
+        title="Fetch Metadata"
+        message={`Fetch missing metadata for ${showEnrichConfirm} songs? This may take a while.`}
+        confirmText="Fetch"
+        onConfirm={doEnrichSongs}
+        onCancel={() => setShowEnrichConfirm(null)}
+      />
+
+      <ContextMenu
+        isOpen={contextMenu !== null}
+        position={contextMenu || { x: 0, y: 0 }}
+        onClose={() => setContextMenu(null)}
+        items={[
+          {
+            label: 'Edit Song',
+            icon: '✏️',
+            onClick: () => {
+              const song = songs.find(s => s.id === contextMenu?.songId);
+              if (song) {
+                setEditingSong(song);
+                setShowForm(true);
+              }
+            }
+          },
+          {
+            label: 'Delete Song',
+            icon: '🗑️',
+            variant: 'danger',
+            onClick: () => setDeleteSongId(contextMenu?.songId)
+          }
+        ]}
+      />
     </div>
   );
 }

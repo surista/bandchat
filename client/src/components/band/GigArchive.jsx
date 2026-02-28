@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
+import ConfirmDialog from '../common/ConfirmDialog';
 
 function GigArchive({ workspaceId }) {
   const [setlists, setSetlists] = useState([]);
@@ -8,6 +9,8 @@ function GigArchive({ workspaceId }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedGig, setSelectedGig] = useState(null);
+  const [deleteMediaId, setDeleteMediaId] = useState(null); // { gigId, mediaId }
+  const [showDeleteGigConfirm, setShowDeleteGigConfirm] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [showAddMedia, setShowAddMedia] = useState(false);
   const [showAddGig, setShowAddGig] = useState(false);
@@ -318,9 +321,9 @@ function GigArchive({ workspaceId }) {
   };
 
   const handleDeleteMedia = async (gigId, mediaId) => {
-    if (!confirm('Delete this media?')) return;
     try {
       await api.deleteGigMedia(gigId, mediaId);
+      setDeleteMediaId(null);
       // Update selectedEntry immediately by removing the deleted media
       setSelectedEntry(prev => {
         if (!prev?.gig) return prev;
@@ -336,6 +339,7 @@ function GigArchive({ workspaceId }) {
       loadData();
     } catch (err) {
       setError(err.message);
+      setDeleteMediaId(null);
     }
   };
 
@@ -415,7 +419,7 @@ function GigArchive({ workspaceId }) {
   // Delete gig
   const handleDeleteGig = async () => {
     if (!selectedGig) return;
-    if (!confirm('Are you sure you want to delete this gig? This cannot be undone.')) return;
+    setShowDeleteGigConfirm(false);
 
     setUploading(true);
     try {
@@ -1033,7 +1037,7 @@ function GigArchive({ workspaceId }) {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 e.preventDefault();
-                                handleDeleteMedia(selectedEntry.gig.id, item.id);
+                                setDeleteMediaId({ gigId: selectedEntry.gig.id, mediaId: item.id });
                               }}
                               className="absolute top-2 right-2 w-7 h-7 bg-red-600 hover:bg-red-700 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-sm flex items-center justify-center shadow-lg"
                             >
@@ -1410,7 +1414,7 @@ function GigArchive({ workspaceId }) {
               <div className="flex gap-2 justify-between pt-2">
                 <button
                   type="button"
-                  onClick={handleDeleteGig}
+                  onClick={() => setShowDeleteGigConfirm(true)}
                   disabled={uploading}
                   className="btn bg-red-600 hover:bg-red-700 text-white"
                 >
@@ -1477,6 +1481,26 @@ function GigArchive({ workspaceId }) {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={deleteMediaId !== null}
+        title="Delete Media"
+        message="Delete this media?"
+        confirmText="Delete"
+        confirmVariant="danger"
+        onConfirm={() => handleDeleteMedia(deleteMediaId?.gigId, deleteMediaId?.mediaId)}
+        onCancel={() => setDeleteMediaId(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={showDeleteGigConfirm}
+        title="Delete Gig"
+        message="Are you sure you want to delete this gig? This cannot be undone."
+        confirmText="Delete"
+        confirmVariant="danger"
+        onConfirm={handleDeleteGig}
+        onCancel={() => setShowDeleteGigConfirm(false)}
+      />
     </div>
   );
 }

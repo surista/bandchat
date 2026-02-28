@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
+import { useToast } from '../../context/ToastContext';
 import { hapticMedium } from '../../services/haptic';
 import { format } from 'date-fns';
 import {
@@ -434,6 +435,7 @@ const BREAK_DURATION_OPTIONS = [
 ];
 
 function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) {
+  const toast = useToast();
   const [setlistItems, setSetlistItems] = useState(setlist.songs || []);
   const [searchQuery, setSearchQuery] = useState('');
   const [saving, setSaving] = useState(false);
@@ -520,7 +522,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
       const result = await api.addSongToSetlist(setlist.id, songId);
       setSetlistItems(prev => [...prev, result]);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -529,7 +531,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
       const result = await api.addMCToSetlist(setlist.id, 60, 'MC');
       setSetlistItems(prev => [...prev, result]);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -540,7 +542,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
       const result = await api.addSetBreakToSetlist(setlist.id, label, 900);
       setSetlistItems(prev => [...prev, result]);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -549,7 +551,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
       await api.removeSetlistItem(setlist.id, item.id);
       setSetlistItems(prev => prev.filter(i => i.id !== item.id));
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 
@@ -569,7 +571,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
         const itemIds = newList.map(item => item.id);
         await api.reorderSetlistItems(setlist.id, itemIds);
       } catch (err) {
-        alert('Failed to save order: ' + err.message);
+        toast.error('Failed to save order: ' + err.message);
       } finally {
         setSaving(false);
       }
@@ -588,7 +590,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
       const itemIds = newList.map(i => i.id);
       await api.reorderSetlistItems(setlist.id, itemIds);
     } catch (err) {
-      alert('Failed to save order');
+      toast.error('Failed to save order');
     } finally {
       setSaving(false);
     }
@@ -729,7 +731,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-      alert('Please allow popups for this site to print the setlist');
+      toast.warning('Please allow popups for this site to print the setlist');
       return;
     }
 

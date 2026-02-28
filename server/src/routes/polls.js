@@ -242,23 +242,23 @@ router.post('/:pollId/vote', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Invalid option selected' });
     }
 
-    // Remove existing votes for this user
-    await prisma.pollVote.deleteMany({
-      where: {
-        userId: req.user.id,
-        option: {
-          pollId: req.params.pollId
+    // Remove existing votes and create new ones atomically
+    await prisma.$transaction([
+      prisma.pollVote.deleteMany({
+        where: {
+          userId: req.user.id,
+          option: {
+            pollId: req.params.pollId
+          }
         }
-      }
-    });
-
-    // Create new votes
-    await prisma.pollVote.createMany({
-      data: optionIds.map(optionId => ({
-        optionId,
-        userId: req.user.id
-      }))
-    });
+      }),
+      prisma.pollVote.createMany({
+        data: optionIds.map(optionId => ({
+          optionId,
+          userId: req.user.id
+        }))
+      })
+    ]);
 
     // Fetch updated poll
     const updatedPoll = await prisma.poll.findUnique({

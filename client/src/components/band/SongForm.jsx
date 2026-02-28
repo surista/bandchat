@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
+import ConfirmDialog from '../common/ConfirmDialog';
 
 function SongForm({ song, onSave, onClose }) {
   // Parse existing key into root and mode
@@ -96,13 +97,16 @@ function SongForm({ song, onSave, onClose }) {
     }
   };
 
+  const [deleteAttachmentId, setDeleteAttachmentId] = useState(null);
+
   const handleDeleteAttachment = async (attachmentId) => {
-    if (!confirm('Delete this attachment?')) return;
     try {
       await api.deleteSongAttachment(song.id, attachmentId);
       setAttachments(prev => prev.filter(a => a.id !== attachmentId));
+      setDeleteAttachmentId(null);
     } catch (err) {
       console.error('Failed to delete attachment:', err);
+      setDeleteAttachmentId(null);
     }
   };
 
@@ -436,7 +440,7 @@ Example:
                       </div>
                       <button
                         type="button"
-                        onClick={() => handleDeleteAttachment(attachment.id)}
+                        onClick={() => setDeleteAttachmentId(attachment.id)}
                         className="p-1.5 text-gray-400 hover:text-red-400"
                         title="Delete"
                       >
@@ -473,6 +477,15 @@ Example:
           </form>
         </div>
       </div>
+      <ConfirmDialog
+        isOpen={deleteAttachmentId !== null}
+        title="Delete Attachment"
+        message="Delete this attachment?"
+        confirmText="Delete"
+        confirmVariant="danger"
+        onConfirm={() => handleDeleteAttachment(deleteAttachmentId)}
+        onCancel={() => setDeleteAttachmentId(null)}
+      />
     </div>
   );
 }

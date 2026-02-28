@@ -2,12 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import ConfirmDialog from '../common/ConfirmDialog';
 
 function ChannelMembersPanel({ channel, workspace, onClose }) {
   const { user } = useAuth();
   const { socket } = useSocket();
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [removeMemberId, setRemoveMemberId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [addLoading, setAddLoading] = useState(null);
@@ -76,11 +78,12 @@ function ChannelMembersPanel({ channel, workspace, onClose }) {
   };
 
   const handleRemoveMember = async (userId) => {
-    if (!confirm('Remove this member from the channel?')) return;
     try {
       await api.removeChannelMember(channel.id, userId);
+      setRemoveMemberId(null);
     } catch (err) {
       console.error('Failed to remove member:', err);
+      setRemoveMemberId(null);
     }
   };
 
@@ -212,7 +215,7 @@ function ChannelMembersPanel({ channel, workspace, onClose }) {
                   {/* Remove button - shown for admins, but not for self or in DMs */}
                   {isAdmin && !isCurrentUser && !channel.isDirect && (
                     <button
-                      onClick={() => handleRemoveMember(memberUser.id)}
+                      onClick={() => setRemoveMemberId(memberUser.id)}
                       className="hidden group-hover:block text-gray-500 hover:text-red-400 p-1"
                       title="Remove from channel"
                     >
@@ -227,6 +230,16 @@ function ChannelMembersPanel({ channel, workspace, onClose }) {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        isOpen={removeMemberId !== null}
+        title="Remove Member"
+        message="Remove this member from the channel?"
+        confirmText="Remove"
+        confirmVariant="danger"
+        onConfirm={() => handleRemoveMember(removeMemberId)}
+        onCancel={() => setRemoveMemberId(null)}
+      />
     </div>
   );
 }

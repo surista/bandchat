@@ -63,7 +63,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
     loadReplies();
     // Mark thread as read on open (only if there are unread replies)
     if (message.unreadReplies > 0) {
-      api.markThreadRead(message.id).catch(() => {});
+      api.markThreadRead(message.id).catch(err => console.warn('markThreadRead failed:', err.message));
       if (onThreadRead) onThreadRead(message.id);
     }
   }, [message.id]);
@@ -105,7 +105,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
       scrollToBottom();
       // Mark thread as read when new replies arrive from others
       if (newReply.author.id !== user.id) {
-        api.markThreadRead(message.id).catch(() => {});
+        api.markThreadRead(message.id).catch(err => console.warn('markThreadRead failed:', err.message));
       }
     }
   };

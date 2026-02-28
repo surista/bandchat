@@ -521,47 +521,74 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
     const memberAchievementDefs = allAchievements.filter(a => !a.isBandWide);
     const gigCount = allGigs.length;
 
+    // Batch-load all member data in 5 queries instead of 5*N
+    const memberIds = allMembers.map(m => m.userId);
+
+    const [allMemberAchievements, allMemberSongs, allMemberSetlists, allMemberMessages, allMemberReactions] = await Promise.all([
+      prisma.memberAchievement.findMany({
+        where: { workspaceId, userId: { in: memberIds } },
+        select: { achievementId: true, userId: true }
+      }),
+      prisma.song.findMany({
+        where: { workspaceId, createdById: { in: memberIds } },
+        orderBy: { createdAt: 'asc' },
+        select: { createdAt: true, createdById: true }
+      }),
+      prisma.setlist.findMany({
+        where: { workspaceId, createdById: { in: memberIds } },
+        orderBy: { createdAt: 'asc' },
+        select: { createdAt: true, createdById: true }
+      }),
+      prisma.message.findMany({
+        where: { channel: { workspaceId }, authorId: { in: memberIds } },
+        orderBy: { createdAt: 'asc' },
+        select: { createdAt: true, authorId: true }
+      }),
+      prisma.reaction.findMany({
+        where: { message: { channel: { workspaceId } }, userId: { in: memberIds } },
+        orderBy: { createdAt: 'asc' },
+        select: { createdAt: true, userId: true }
+      })
+    ]);
+
+    // Group by userId for fast lookup
+    const achievementsByUser = new Map();
+    const songsByUser = new Map();
+    const setlistsByUser = new Map();
+    const messagesByUser = new Map();
+    const reactionsByUser = new Map();
+
+    for (const a of allMemberAchievements) {
+      if (!achievementsByUser.has(a.userId)) achievementsByUser.set(a.userId, []);
+      achievementsByUser.get(a.userId).push(a);
+    }
+    for (const s of allMemberSongs) {
+      if (!songsByUser.has(s.createdById)) songsByUser.set(s.createdById, []);
+      songsByUser.get(s.createdById).push(s);
+    }
+    for (const s of allMemberSetlists) {
+      if (!setlistsByUser.has(s.createdById)) setlistsByUser.set(s.createdById, []);
+      setlistsByUser.get(s.createdById).push(s);
+    }
+    for (const m of allMemberMessages) {
+      if (!messagesByUser.has(m.authorId)) messagesByUser.set(m.authorId, []);
+      messagesByUser.get(m.authorId).push(m);
+    }
+    for (const r of allMemberReactions) {
+      if (!reactionsByUser.has(r.userId)) reactionsByUser.set(r.userId, []);
+      reactionsByUser.get(r.userId).push(r);
+    }
+
     for (const member of allMembers) {
       const userId = member.userId;
 
-      // Get existing achievements for this member
-      const existingMemberAchievements = await prisma.memberAchievement.findMany({
-        where: { workspaceId, userId },
-        select: { achievementId: true }
-      });
-      const existingMemberIds = new Set(existingMemberAchievements.map(a => a.achievementId));
-
-      // Get member's songs ordered by date
-      const memberSongs = await prisma.song.findMany({
-        where: { workspaceId, createdById: userId },
-        orderBy: { createdAt: 'asc' }
-      });
-
-      // Get member's setlists ordered by date
-      const memberSetlists = await prisma.setlist.findMany({
-        where: { workspaceId, createdById: userId },
-        orderBy: { createdAt: 'asc' }
-      });
-
-      // Get member's messages ordered by date
-      const memberMessages = await prisma.message.findMany({
-        where: {
-          channel: { workspaceId },
-          authorId: userId
-        },
-        orderBy: { createdAt: 'asc' },
-        select: { createdAt: true }
-      });
-
-      // Get member's reactions
-      const memberReactions = await prisma.reaction.findMany({
-        where: {
-          message: { channel: { workspaceId } },
-          userId
-        },
-        orderBy: { createdAt: 'asc' },
-        select: { createdAt: true }
-      });
+      const existingMemberIds = new Set(
+        (achievementsByUser.get(userId) || []).map(a => a.achievementId)
+      );
+      const memberSongs = songsByUser.get(userId) || [];
+      const memberSetlists = setlistsByUser.get(userId) || [];
+      const memberMessages = messagesByUser.get(userId) || [];
+      const memberReactions = reactionsByUser.get(userId) || [];
 
       // Calculate months as member and anniversary dates
       const joinDate = member.joinedAt ? new Date(member.joinedAt) : null;
