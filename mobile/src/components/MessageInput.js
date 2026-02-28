@@ -66,21 +66,24 @@ export default function MessageInput({ onSend, onTyping, editingMessage, onCance
     setInputHeight(Math.min(Math.max(40, height), MAX_HEIGHT));
   }, []);
 
-  const pickImage = useCallback(async () => {
+  const pickMedia = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ['images', 'videos'],
       quality: 0.8,
       allowsMultipleSelection: false,
+      videoMaxDuration: 300,
     });
 
     if (!result.canceled && result.assets?.[0]) {
       const asset = result.assets[0];
+      const isVideo = asset.type === 'video';
       setAttachment({
         uri: asset.uri,
-        filename: asset.fileName || `image-${Date.now()}.jpg`,
-        mimeType: asset.mimeType || 'image/jpeg',
+        filename: asset.fileName || (isVideo ? `video-${Date.now()}.mp4` : `image-${Date.now()}.jpg`),
+        mimeType: asset.mimeType || (isVideo ? 'video/mp4' : 'image/jpeg'),
         width: asset.width,
         height: asset.height,
+        isVideo,
       });
     }
   }, []);
@@ -113,6 +116,11 @@ export default function MessageInput({ onSend, onTyping, editingMessage, onCance
       {attachment && (
         <View style={styles.attachmentPreview}>
           <Image source={{ uri: attachment.uri }} style={styles.attachmentThumb} />
+          {attachment.isVideo && (
+            <View style={styles.videoIndicator}>
+              <Text style={styles.videoIndicatorText}>{'\u25B6'}</Text>
+            </View>
+          )}
           <TouchableOpacity style={styles.removeAttachment} onPress={removeAttachment}>
             <Text style={styles.removeAttachmentText}>{'\u2715'}</Text>
           </TouchableOpacity>
@@ -122,7 +130,7 @@ export default function MessageInput({ onSend, onTyping, editingMessage, onCance
       <View style={styles.inputRow}>
         {/* Attachment button */}
         {!editingMessage && (
-          <TouchableOpacity style={styles.attachButton} onPress={pickImage} activeOpacity={0.6}>
+          <TouchableOpacity style={styles.attachButton} onPress={pickMedia} activeOpacity={0.6}>
             <Text style={[styles.attachIcon, { color: colors.textSecondary }]}>+</Text>
           </TouchableOpacity>
         )}
@@ -192,6 +200,21 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 8,
+  },
+  videoIndicator: {
+    position: 'absolute',
+    top: 32,
+    left: 28,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  videoIndicatorText: {
+    color: '#ffffff',
+    fontSize: 10,
   },
   removeAttachment: {
     position: 'absolute',

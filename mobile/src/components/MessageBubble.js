@@ -1,5 +1,6 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { View, Text, Image, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
+import { Video, ResizeMode } from 'expo-av';
 import { format, isToday, isYesterday } from 'date-fns';
 import { useTheme } from '../context/ThemeContext';
 
@@ -104,22 +105,90 @@ function renderAttachments(attachments, onImagePress) {
   if (!attachments || attachments.length === 0) return null;
   return (
     <View>
-      {attachments
-        .filter(att => att.type === 'IMAGE' && att.url)
-        .map(att => (
-          <TouchableOpacity
-            key={att.id}
-            onPress={() => onImagePress?.(att.url)}
-            activeOpacity={0.8}
-          >
-            <Image
-              source={{ uri: att.url }}
-              style={styles.attachmentImage}
-              resizeMode="cover"
-            />
-          </TouchableOpacity>
-        ))}
+      {attachments.filter(att => att.url).map(att => {
+        if (att.type === 'IMAGE') {
+          return (
+            <TouchableOpacity
+              key={att.id}
+              onPress={() => onImagePress?.(att.url)}
+              activeOpacity={0.8}
+            >
+              <Image
+                source={{ uri: att.url }}
+                style={styles.attachmentImage}
+                resizeMode="cover"
+              />
+            </TouchableOpacity>
+          );
+        }
+        if (att.type === 'VIDEO') {
+          return <VideoAttachment key={att.id} url={att.url} />;
+        }
+        if (att.type === 'AUDIO') {
+          return <AudioAttachment key={att.id} url={att.url} filename={att.filename} />;
+        }
+        return null;
+      })}
     </View>
+  );
+}
+
+function VideoAttachment({ url }) {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.videoContainer}>
+      <Video
+        source={{ uri: url }}
+        style={styles.videoPlayer}
+        useNativeControls
+        resizeMode={ResizeMode.CONTAIN}
+        isLooping={false}
+      />
+    </View>
+  );
+}
+
+function AudioAttachment({ url, filename }) {
+  const { colors } = useTheme();
+  const [playing, setPlaying] = useState(false);
+  const [sound, setSound] = useState(null);
+
+  const togglePlay = async () => {
+    if (playing && sound) {
+      await sound.pauseAsync();
+      setPlaying(false);
+    } else if (sound) {
+      await sound.playAsync();
+      setPlaying(true);
+    } else {
+      try {
+        const { Audio } = require('expo-av');
+        const { sound: newSound } = await Audio.Sound.createAsync(
+          { uri: url },
+          { shouldPlay: true },
+          (status) => {
+            if (status.didJustFinish) setPlaying(false);
+          }
+        );
+        setSound(newSound);
+        setPlaying(true);
+      } catch (err) {
+        console.error('Failed to play audio:', err);
+      }
+    }
+  };
+
+  return (
+    <TouchableOpacity
+      style={[styles.audioContainer, { backgroundColor: colors.bgTertiary }]}
+      onPress={togglePlay}
+      activeOpacity={0.7}
+    >
+      <Text style={styles.audioIcon}>{playing ? '\u23F8' : '\u25B6\uFE0F'}</Text>
+      <Text style={[styles.audioFilename, { color: colors.textPrimary }]} numberOfLines={1}>
+        {filename || 'Audio'}
+      </Text>
+    </TouchableOpacity>
   );
 }
 
@@ -213,6 +282,34 @@ const styles = StyleSheet.create({
     height: 150,
     borderRadius: 8,
     marginTop: 6,
+  },
+  videoContainer: {
+    width: 260,
+    height: 180,
+    borderRadius: 8,
+    marginTop: 6,
+    overflow: 'hidden',
+  },
+  videoPlayer: {
+    width: '100%',
+    height: '100%',
+  },
+  audioContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 6,
+    maxWidth: 260,
+  },
+  audioIcon: {
+    fontSize: 18,
+    marginRight: 10,
+  },
+  audioFilename: {
+    fontSize: 14,
+    flex: 1,
   },
   reactionsRow: {
     flexDirection: 'row',

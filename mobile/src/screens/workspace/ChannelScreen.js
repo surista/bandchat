@@ -231,7 +231,7 @@ export default function ChannelScreen({ navigation, route }) {
       channelId: channel.id,
       createdAt: new Date().toISOString(),
       reactions: [],
-      attachments: attachment ? [{ id: `temp-att-${Date.now()}`, type: 'IMAGE', url: attachment.uri, pending: true }] : [],
+      attachments: attachment ? [{ id: `temp-att-${Date.now()}`, type: attachment.isVideo ? 'VIDEO' : 'IMAGE', url: attachment.uri, pending: true }] : [],
       _count: { replies: 0 },
       pending: true,
     };
