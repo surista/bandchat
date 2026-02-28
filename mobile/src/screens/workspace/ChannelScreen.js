@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from 'react';
 import {
   View,
   Text,
   FlatList,
   Alert,
+  TouchableOpacity,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -53,6 +54,21 @@ export default function ChannelScreen({ navigation, route }) {
     channelIdRef.current = channel.id;
     userIdRef.current = user?.id;
   }, [channel.id, user?.id]);
+
+  // Header: info/settings button (hidden for DMs)
+  useLayoutEffect(() => {
+    if (channel.isDM) return;
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => navigation.navigate('ChannelSettings', { channel, workspaceId })}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={{ fontSize: 20 }}>{'\u2139\uFE0F'}</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, channel, workspaceId]);
 
   // Load messages → mark read → join socket (exact order from web)
   useEffect(() => {

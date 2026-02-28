@@ -3,6 +3,7 @@ import { View, Text, Image, TouchableOpacity, Pressable, StyleSheet } from 'reac
 import { Video, ResizeMode } from 'expo-av';
 import { format, isToday, isYesterday } from 'date-fns';
 import { useTheme } from '../context/ThemeContext';
+import LinkPreview from './LinkPreview';
 
 const AVATAR_COLORS = [
   '#E91E63', '#9C27B0', '#673AB7', '#3F51B5', '#2196F3',
@@ -52,6 +53,7 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
               {isEdited && <Text style={[styles.edited, { color: colors.textSecondary }]}> (edited)</Text>}
             </Text>
           ) : null}
+          {message.content ? <LinkPreview content={message.content} /> : null}
           {renderAttachments(message.attachments, onImagePress)}
           {renderReactions(message.reactions, colors)}
         </View>
@@ -87,6 +89,7 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
             {isEdited && <Text style={[styles.edited, { color: colors.textSecondary }]}> (edited)</Text>}
           </Text>
         ) : null}
+        {message.content ? <LinkPreview content={message.content} /> : null}
         {renderAttachments(message.attachments, onImagePress)}
         {renderReactions(message.reactions, colors)}
         {message._count?.replies > 0 && (

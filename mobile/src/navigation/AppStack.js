@@ -22,6 +22,8 @@ import AppearanceScreen from '../screens/settings/AppearanceScreen';
 import NotificationsScreen from '../screens/settings/NotificationsScreen';
 import WorkspaceMembersScreen from '../screens/settings/WorkspaceMembersScreen';
 import InviteScreen from '../screens/settings/InviteScreen';
+import SearchScreen from '../screens/workspace/SearchScreen';
+import ChannelSettingsScreen from '../screens/workspace/ChannelSettingsScreen';
 import { useTheme } from '../context/ThemeContext';
 
 const Stack = createNativeStackNavigator();
@@ -89,6 +91,10 @@ export default function AppStack() {
       <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
       <Stack.Screen name="WorkspaceMembers" component={WorkspaceMembersScreen} options={{ title: 'Members' }} />
       <Stack.Screen name="Invite" component={InviteScreen} options={{ title: 'Invite People' }} />
+
+      {/* Search & Channel Management */}
+      <Stack.Screen name="Search" component={SearchScreen} options={{ title: 'Search' }} />
+      <Stack.Screen name="ChannelSettings" component={ChannelSettingsScreen} options={{ title: 'Channel Settings' }} />
     </Stack.Navigator>
   );
 }
