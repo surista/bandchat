@@ -19,9 +19,11 @@ export default {
       infoPlist: {
         NSCameraUsageDescription: 'BandChat needs camera access to take photos for your profile and messages.',
         NSPhotoLibraryUsageDescription: 'BandChat needs photo library access to share images in messages and set your profile picture.',
+        NSPhotoLibraryAddUsageDescription: 'BandChat needs permission to save images to your photo library.',
         NSMicrophoneUsageDescription: 'BandChat needs microphone access to record audio for band recordings.',
         NSCalendarsUsageDescription: 'BandChat can add gigs and rehearsals to your device calendar.',
         NSCalendarsFullAccessUsageDescription: 'BandChat can add gigs and rehearsals to your device calendar.',
+        UIBackgroundModes: ['remote-notification'],
       },
     },
     android: {
@@ -35,8 +37,9 @@ export default {
       },
       permissions: [
         'CAMERA',
-        'READ_EXTERNAL_STORAGE',
-        'WRITE_EXTERNAL_STORAGE',
+        'READ_MEDIA_IMAGES',
+        'READ_MEDIA_VIDEO',
+        'READ_MEDIA_AUDIO',
         'RECORD_AUDIO',
         'READ_CALENDAR',
         'WRITE_CALENDAR',
@@ -58,6 +61,8 @@ export default {
       'expo-font',
       'expo-haptics',
       'expo-calendar',
+      'expo-image-picker',
+      'expo-notifications',
       '@react-native-community/datetimepicker',
       '@react-native-community/netinfo',
     ],

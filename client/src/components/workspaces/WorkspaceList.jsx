@@ -3,15 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import Footer from '../common/Footer';
+import OnboardingWizard from './OnboardingWizard';
 
 function WorkspaceList() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [workspaces, setWorkspaces] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
-  const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState('');
 
@@ -27,21 +27,6 @@ function WorkspaceList() {
       setError(err.message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleCreateWorkspace = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    try {
-      const workspace = await api.createWorkspace(newWorkspaceName);
-      setWorkspaces([...workspaces, workspace]);
-      setShowCreate(false);
-      setNewWorkspaceName('');
-      navigate(`/workspace/${workspace.id}`);
-    } catch (err) {
-      setError(err.message);
     }
   };
 
@@ -97,7 +82,7 @@ function WorkspaceList() {
               Join Workspace
             </button>
             <button
-              onClick={() => setShowCreate(true)}
+              onClick={() => setShowOnboarding(true)}
               className="btn bg-green-600 hover:bg-green-700 text-white"
             >
               Create Workspace
@@ -142,45 +127,6 @@ function WorkspaceList() {
           </div>
         )}
 
-        {/* Create Workspace Modal */}
-        {showCreate && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-xl font-bold mb-4">Create a Workspace</h3>
-              <form onSubmit={handleCreateWorkspace}>
-                <div className="mb-4">
-                  <label className="block text-gray-700 font-medium mb-2">
-                    Workspace Name
-                  </label>
-                  <input
-                    type="text"
-                    value={newWorkspaceName}
-                    onChange={(e) => setNewWorkspaceName(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded"
-                    placeholder="e.g., The Rockers"
-                    required
-                  />
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowCreate(false);
-                      setNewWorkspaceName('');
-                    }}
-                    className="btn btn-secondary"
-                  >
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn bg-green-600 hover:bg-green-700 text-white">
-                    Create
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
         {/* Join Workspace Modal */}
         {showJoin && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
@@ -222,6 +168,17 @@ function WorkspaceList() {
         )}
       </main>
       <Footer theme="dark" />
+
+      {showOnboarding && (
+        <OnboardingWizard
+          onComplete={(workspace) => {
+            setWorkspaces(prev => [...prev, workspace]);
+            setShowOnboarding(false);
+            navigate(`/workspace/${workspace.id}`);
+          }}
+          onClose={() => setShowOnboarding(false)}
+        />
+      )}
     </div>
   );
 }

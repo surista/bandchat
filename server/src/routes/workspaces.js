@@ -487,17 +487,9 @@ router.put('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, asyn
         userData.displayName = trimmed;
       }
 
+      // Admins cannot change another user's email — users must change their own
       if (email !== undefined) {
-        const trimmedEmail = email.trim().toLowerCase();
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-          return res.status(400).json({ error: 'Invalid email address' });
-        }
-        // Check uniqueness
-        const existing = await prisma.user.findUnique({ where: { email: trimmedEmail } });
-        if (existing && existing.id !== userId) {
-          return res.status(400).json({ error: 'Email already in use' });
-        }
-        userData.email = trimmedEmail;
+        return res.status(403).json({ error: 'Email can only be changed by the account owner' });
       }
 
       await prisma.user.update({
@@ -569,14 +561,19 @@ router.post('/:workspaceId/members/:userId/reset-password', authenticate, isWork
       return res.status(404).json({ error: 'User is not a member of this workspace' });
     }
 
-    // Hash and update password
+    // Hash and update password, and revoke all refresh tokens for the user
     const hashedPassword = await bcrypt.hash(newPassword, 12);
-    await prisma.user.update({
-      where: { id: userId },
-      data: { password: hashedPassword }
-    });
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: userId },
+        data: { password: hashedPassword }
+      }),
+      prisma.refreshToken.deleteMany({
+        where: { userId }
+      })
+    ]);
 
-    res.json({ message: 'Password reset successfully' });
+    res.json({ message: 'Password reset successfully. User has been logged out of all sessions.' });
   } catch (error) {
     console.error('Admin password reset error:', error);
     res.status(500).json({ error: 'Failed to reset password' });

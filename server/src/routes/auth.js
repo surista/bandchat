@@ -358,11 +358,15 @@ router.post('/google', authLimiter, async (req, res) => {
       });
     }
 
-    // Create new user via Google
+    // Create new user via Google — validate display name
+    const googleDisplayName = name ? name.trim().substring(0, 50) : email.split('@')[0];
+    const googleNameCheck = validateDisplayName(googleDisplayName);
+    const safeDisplayName = googleNameCheck.valid ? googleDisplayName : email.split('@')[0];
+
     user = await prisma.user.create({
       data: {
         email: email.toLowerCase(),
-        displayName: name,
+        displayName: safeDisplayName,
         avatarUrl: picture,
         googleId,
         authProvider: 'google',
@@ -582,11 +586,23 @@ router.put('/me', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Bio must be 500 characters or less' });
     }
 
+    // Validate avatarUrl if provided
+    if (avatarUrl !== undefined && avatarUrl !== null && avatarUrl !== '') {
+      try {
+        const url = new URL(avatarUrl);
+        if (!['http:', 'https:'].includes(url.protocol)) {
+          return res.status(400).json({ error: 'Avatar URL must use HTTP or HTTPS' });
+        }
+      } catch {
+        return res.status(400).json({ error: 'Invalid avatar URL' });
+      }
+    }
+
     const user = await prisma.user.update({
       where: { id: req.user.id },
       data: {
         ...(displayName && { displayName: displayName.trim() }),
-        ...(avatarUrl !== undefined && { avatarUrl }),
+        ...(avatarUrl !== undefined && { avatarUrl: avatarUrl || null }),
         ...(bio !== undefined && { bio })
       },
       select: {
