@@ -36,19 +36,21 @@ export default function useLongPress({ onLongPress, onTap, disabled = false } = 
   useEffect(() => clear, [clear]);
 
   const onTouchStart = useCallback((e) => {
-    if (disabled) return;
     isTouchRef.current = true;
     triggeredRef.current = false;
 
     const touch = e.touches[0];
     startPos.current = { x: touch.clientX, y: touch.clientY };
 
-    clear();
-    timerRef.current = setTimeout(() => {
-      triggeredRef.current = true;
-      hapticMedium();
-      onLongPressRef.current?.({ x: touch.clientX, y: touch.clientY });
-    }, LONG_PRESS_DELAY);
+    // Only start long-press timer if not disabled
+    if (!disabled) {
+      clear();
+      timerRef.current = setTimeout(() => {
+        triggeredRef.current = true;
+        hapticMedium();
+        onLongPressRef.current?.({ x: touch.clientX, y: touch.clientY });
+      }, LONG_PRESS_DELAY);
+    }
   }, [disabled, clear]);
 
   const onTouchMove = useCallback((e) => {
@@ -72,15 +74,22 @@ export default function useLongPress({ onLongPress, onTap, disabled = false } = 
       return;
     }
     isTouchRef.current = false;
-    // Normal tap
-    if (!disabled) {
-      onTapRef.current?.();
-    }
-  }, [disabled, clear]);
+    // Normal tap — always fires regardless of disabled
+    onTapRef.current?.();
+  }, [clear]);
 
   const onTouchCancel = useCallback(() => {
     clear();
   }, [clear]);
+
+  const onClick = useCallback(() => {
+    // Ignore clicks that came from touch (onTouchEnd already handled them)
+    if (isTouchRef.current) return;
+    // If long-press triggered (shouldn't happen on desktop, but guard anyway)
+    if (triggeredRef.current) return;
+    // Desktop click — always fires regardless of disabled
+    onTapRef.current?.();
+  }, []);
 
   const onContextMenu = useCallback((e) => {
     if (disabled) return;
@@ -99,6 +108,7 @@ export default function useLongPress({ onLongPress, onTap, disabled = false } = 
   }, [disabled]);
 
   return {
+    onClick,
     onTouchStart,
     onTouchMove,
     onTouchEnd,
