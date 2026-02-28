@@ -243,6 +243,12 @@ function Sidebar({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
+  // Workspace leave/delete
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+  const [deleteWsConfirmOpen, setDeleteWsConfirmOpen] = useState(false);
+  const [deleteWsName, setDeleteWsName] = useState('');
+  const [wsActionLoading, setWsActionLoading] = useState(false);
+  const [wsActionError, setWsActionError] = useState('');
   // Admin member editing
   const [editingMemberId, setEditingMemberId] = useState(null);
   const [editMemberName, setEditMemberName] = useState('');
@@ -1201,45 +1207,26 @@ function Sidebar({
       <div className="flex-shrink-0 border-t border-white/10 px-4 py-2">
         <div className="flex items-center justify-between text-xs text-gray-500">
           <span>v{__APP_VERSION__}</span>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                setSettingsTab('about');
-                setShowSettings(true);
-              }}
-              className="hover:text-gray-300 transition-colors"
-            >
-              About
-            </button>
-            <button
-              onClick={() => {
-                setSettingsTab('whatsnew');
-                setShowSettings(true);
-              }}
-              className="hover:text-gray-300 transition-colors"
-            >
-              What's New
-            </button>
-            <button
-              onClick={() => {
-                setEditDisplayName(user?.displayName || '');
-                setEditAvatarUrl(user?.avatarUrl || '');
-                setEditBio(user?.bio || '');
-                setSettingsError('');
-                setSettingsSuccess('');
-                setCurrentPassword('');
-                setNewPassword('');
-                setConfirmPassword('');
-                setNewEmail('');
-                setEmailPassword('');
-                setSettingsTab('profile');
-                setShowSettings(true);
-              }}
-              className="hover:text-gray-300 transition-colors"
-            >
-              Settings
-            </button>
-          </div>
+          <button
+            onClick={() => {
+              setEditDisplayName(user?.displayName || '');
+              setEditAvatarUrl(user?.avatarUrl || '');
+              setEditBio(user?.bio || '');
+              setSettingsError('');
+              setSettingsSuccess('');
+              setCurrentPassword('');
+              setNewPassword('');
+              setConfirmPassword('');
+              setNewEmail('');
+              setEmailPassword('');
+              setSettingsTab('profile');
+              setShowSettings(true);
+            }}
+            className="hover:text-gray-300 transition-colors flex items-center gap-1"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            Settings
+          </button>
         </div>
       </div>
 
@@ -1399,7 +1386,7 @@ function Sidebar({
 
       {/* Settings Modal - Portal to body to escape sidebar transform */}
       {showSettings && createPortal(
-        <div className="modal-backdrop">
+        <div className="modal-backdrop !items-start !pt-12">
           <div className="modal-content max-w-3xl max-h-modal flex flex-col">
             <div className="modal-header">
               <h3>Settings</h3>
@@ -1412,86 +1399,89 @@ function Sidebar({
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-[var(--color-modal-border)] overflow-x-auto">
+            <div className="flex border-b border-[var(--color-modal-border)] justify-center">
               <button
                 onClick={() => setSettingsTab('profile')}
-                className={`px-4 py-3 font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 text-sm ${
+                className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'profile'
                     ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
                     : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                 Profile
               </button>
               <button
+                onClick={() => setSettingsTab('workspace')}
+                className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
+                  settingsTab === 'workspace'
+                    ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
+                    : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                Workspace
+              </button>
+              <button
                 onClick={() => setSettingsTab('theme')}
-                className={`px-4 py-3 font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 text-sm ${
+                className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'theme'
                     ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
                     : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
                 Theme
               </button>
               {workspace.members?.find(m => m.user.id === user?.id)?.role === 'ADMIN' && (
                 <>
                   <button
                     onClick={() => setSettingsTab('members')}
-                    className={`px-4 py-3 font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 text-sm ${
+                    className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                       settingsTab === 'members'
                         ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
                         : 'text-gray-400 hover:text-gray-200'
                     }`}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
                     Members
                   </button>
                   <button
                     onClick={() => setSettingsTab('bandmembers')}
-                    className={`px-4 py-3 font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 text-sm ${
+                    className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                       settingsTab === 'bandmembers'
                         ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
                         : 'text-gray-400 hover:text-gray-200'
                     }`}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" /></svg>
-                    Band Members
+                    Band
                   </button>
                   <button
                     onClick={() => setSettingsTab('import')}
-                    className={`px-4 py-3 font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 text-sm ${
+                    className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                       settingsTab === 'import'
                         ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
                         : 'text-gray-400 hover:text-gray-200'
                     }`}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                     Import
                   </button>
                 </>
               )}
               <button
                 onClick={() => setSettingsTab('whatsnew')}
-                className={`px-4 py-3 font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 text-sm ${
+                className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'whatsnew'
                     ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
                     : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
-                What's New
+                New
               </button>
               <button
                 onClick={() => setSettingsTab('about')}
-                className={`px-4 py-3 font-medium whitespace-nowrap transition-colors flex items-center gap-1.5 text-sm ${
+                className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'about'
                     ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
                     : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 About
               </button>
             </div>
@@ -2483,6 +2473,132 @@ function Sidebar({
                               </>
                             );
                           })()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Workspace Tab */}
+              {settingsTab === 'workspace' && (
+                <div className="space-y-4">
+                  {/* Workspace Info */}
+                  <div className="bg-[var(--color-modal-card)] rounded-lg p-5 border border-[var(--color-modal-border)]">
+                    <h4 className="text-lg font-medium text-white mb-1">Workspace</h4>
+                    <p className="text-sm text-gray-400">{workspace.name}</p>
+                    <p className="text-xs text-gray-500 mt-2">{workspace.members?.length || 0} members</p>
+                  </div>
+
+                  {wsActionError && (
+                    <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded-lg">
+                      {wsActionError}
+                    </div>
+                  )}
+
+                  {/* Leave Workspace */}
+                  <div className="bg-[var(--color-modal-card)] rounded-lg p-5 border border-[var(--color-modal-border)]">
+                    <h4 className="text-lg font-medium text-white mb-2">Leave Workspace</h4>
+                    <p className="text-sm text-gray-400 mb-4">
+                      You will lose access to all channels and messages in this workspace. You can rejoin later with an invite code.
+                    </p>
+                    {!leaveConfirmOpen ? (
+                      <button
+                        onClick={() => { setLeaveConfirmOpen(true); setWsActionError(''); }}
+                        className="btn bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        Leave Workspace
+                      </button>
+                    ) : (
+                      <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 space-y-3">
+                        <p className="text-sm text-red-300 font-medium">
+                          Are you sure you want to leave {workspace.name}?
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={async () => {
+                              setWsActionLoading(true);
+                              setWsActionError('');
+                              try {
+                                await api.leaveWorkspace(workspace.id);
+                                setShowSettings(false);
+                                navigate('/');
+                              } catch (err) {
+                                setWsActionError(err.message);
+                              } finally {
+                                setWsActionLoading(false);
+                              }
+                            }}
+                            disabled={wsActionLoading}
+                            className="btn bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                          >
+                            {wsActionLoading ? 'Leaving...' : 'Confirm Leave'}
+                          </button>
+                          <button
+                            onClick={() => { setLeaveConfirmOpen(false); setWsActionError(''); }}
+                            className="btn btn-secondary"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Delete Workspace (Admin only) */}
+                  {workspace.members?.find(m => m.user.id === user?.id)?.role === 'ADMIN' && (
+                    <div className="bg-[var(--color-modal-card)] rounded-lg p-5 border border-red-900/50">
+                      <h4 className="text-lg font-medium text-red-400 mb-2">Delete Workspace</h4>
+                      <p className="text-sm text-gray-400 mb-4">
+                        Permanently delete this workspace and all its data including channels, messages, songs, setlists, and gigs. This cannot be undone.
+                      </p>
+                      {!deleteWsConfirmOpen ? (
+                        <button
+                          onClick={() => { setDeleteWsConfirmOpen(true); setDeleteWsName(''); setWsActionError(''); }}
+                          className="btn bg-red-600 hover:bg-red-700 text-white"
+                        >
+                          Delete Workspace
+                        </button>
+                      ) : (
+                        <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 space-y-3">
+                          <p className="text-sm text-red-300 font-medium">
+                            Type <span className="font-bold text-white">{workspace.name}</span> to confirm deletion:
+                          </p>
+                          <input
+                            type="text"
+                            value={deleteWsName}
+                            onChange={(e) => setDeleteWsName(e.target.value)}
+                            className="modal-input"
+                            placeholder={workspace.name}
+                            autoFocus
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={async () => {
+                                setWsActionLoading(true);
+                                setWsActionError('');
+                                try {
+                                  await api.deleteWorkspace(workspace.id);
+                                  setShowSettings(false);
+                                  navigate('/');
+                                } catch (err) {
+                                  setWsActionError(err.message);
+                                } finally {
+                                  setWsActionLoading(false);
+                                }
+                              }}
+                              disabled={wsActionLoading || deleteWsName !== workspace.name}
+                              className="btn bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                            >
+                              {wsActionLoading ? 'Deleting...' : 'Permanently Delete'}
+                            </button>
+                            <button
+                              onClick={() => { setDeleteWsConfirmOpen(false); setDeleteWsName(''); setWsActionError(''); }}
+                              className="btn btn-secondary"
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>

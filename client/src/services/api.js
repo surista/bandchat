@@ -281,6 +281,12 @@ class ApiService {
     });
   }
 
+  async leaveWorkspace(id) {
+    return this.request(`/workspaces/${id}/leave`, {
+      method: 'POST'
+    });
+  }
+
   async joinWorkspace(inviteCode) {
     return this.request(`/workspaces/join/${inviteCode}`, {
       method: 'POST'

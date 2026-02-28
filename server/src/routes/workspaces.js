@@ -175,6 +175,47 @@ router.delete('/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) 
   }
 });
 
+// Leave workspace
+router.post('/:workspaceId/leave', authenticate, isWorkspaceMember, async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const userId = req.user.id;
+
+    // Check if user is the only member
+    const memberCount = await prisma.workspaceMember.count({
+      where: { workspaceId }
+    });
+
+    if (memberCount === 1) {
+      return res.status(400).json({ error: 'You are the only member. Delete the workspace instead.' });
+    }
+
+    // Check if user is the last admin
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId, workspaceId } }
+    });
+
+    if (membership.role === 'ADMIN') {
+      const adminCount = await prisma.workspaceMember.count({
+        where: { workspaceId, role: 'ADMIN' }
+      });
+
+      if (adminCount === 1) {
+        return res.status(400).json({ error: 'You are the last admin. Transfer the admin role to another member before leaving.' });
+      }
+    }
+
+    await prisma.workspaceMember.delete({
+      where: { userId_workspaceId: { userId, workspaceId } }
+    });
+
+    res.json({ message: 'Left workspace' });
+  } catch (error) {
+    console.error('Leave workspace error:', error);
+    res.status(500).json({ error: 'Failed to leave workspace' });
+  }
+});
+
 // Join workspace via invite code
 router.post('/join/:inviteCode', authenticate, async (req, res) => {
   try {
