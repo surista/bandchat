@@ -14,21 +14,31 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
-export default function LoginScreen({ navigation }) {
-  const { login } = useAuth();
+export default function SignupScreen({ navigation }) {
+  const { signup } = useAuth();
   const { colors } = useTheme();
+  const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!email.trim() || !password) return;
+    if (!displayName.trim() || !email.trim() || !password) return;
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
     setError('');
     setLoading(true);
 
     try {
-      await login(email.trim(), password);
+      await signup(email.trim(), password, displayName.trim());
     } catch (err) {
       setError(err.message);
     } finally {
@@ -49,7 +59,7 @@ export default function LoginScreen({ navigation }) {
           <View style={styles.header}>
             <Text style={styles.title}>BandChat</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              Sign in to your workspace
+              Create your account
             </Text>
           </View>
 
@@ -59,6 +69,19 @@ export default function LoginScreen({ navigation }) {
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             ) : null}
+
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Display Name</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+              placeholder="Your name"
+              placeholderTextColor={colors.textSecondary}
+              value={displayName}
+              onChangeText={setDisplayName}
+              autoCapitalize="words"
+              autoComplete="name"
+              textContentType="name"
+              editable={!loading}
+            />
 
             <Text style={[styles.label, { color: colors.textSecondary }]}>Email</Text>
             <TextInput
@@ -78,13 +101,26 @@ export default function LoginScreen({ navigation }) {
             <Text style={[styles.label, { color: colors.textSecondary }]}>Password</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-              placeholder="Your password"
+              placeholder="At least 6 characters"
               placeholderTextColor={colors.textSecondary}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
-              autoComplete="password"
-              textContentType="password"
+              autoComplete="new-password"
+              textContentType="newPassword"
+              editable={!loading}
+            />
+
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Confirm Password</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+              placeholder="Repeat password"
+              placeholderTextColor={colors.textSecondary}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              autoComplete="new-password"
+              textContentType="newPassword"
               editable={!loading}
               onSubmitEditing={handleSubmit}
               returnKeyType="go"
@@ -99,24 +135,17 @@ export default function LoginScreen({ navigation }) {
               {loading ? (
                 <ActivityIndicator color="#ffffff" size="small" />
               ) : (
-                <Text style={styles.buttonText}>Sign In</Text>
+                <Text style={styles.buttonText}>Create Account</Text>
               )}
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.linkButton}
-              onPress={() => navigation.navigate('ForgotPassword')}
-            >
-              <Text style={[styles.linkText, { color: colors.primary }]}>Forgot password?</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.linkButton}
-              onPress={() => navigation.navigate('Signup')}
+              onPress={() => navigation.navigate('Login')}
             >
               <Text style={[styles.linkText, { color: colors.textSecondary }]}>
-                Don't have an account?{' '}
-                <Text style={{ color: colors.primary, fontWeight: '600' }}>Sign Up</Text>
+                Already have an account?{' '}
+                <Text style={{ color: colors.primary, fontWeight: '600' }}>Sign In</Text>
               </Text>
             </TouchableOpacity>
           </View>
@@ -127,12 +156,8 @@ export default function LoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  flex: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  flex: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
@@ -148,9 +173,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 16,
-  },
+  subtitle: { fontSize: 16 },
   card: {
     borderRadius: 12,
     padding: 24,
@@ -163,10 +186,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 16,
   },
-  errorText: {
-    color: '#fca5a5',
-    fontSize: 14,
-  },
+  errorText: { color: '#fca5a5', fontSize: 14 },
   label: {
     fontSize: 14,
     fontWeight: '500',
@@ -186,9 +206,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 4,
   },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
+  buttonDisabled: { opacity: 0.6 },
   buttonText: {
     color: '#ffffff',
     fontSize: 16,

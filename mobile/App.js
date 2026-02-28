@@ -9,6 +9,8 @@ import { AuthProvider } from './src/context/AuthContext';
 import { SocketProvider } from './src/context/SocketContext';
 import { ToastProvider } from './src/context/ToastContext';
 import RootNavigator from './src/navigation/RootNavigator';
+import ErrorBoundary from './src/components/ErrorBoundary';
+import OfflineBanner from './src/components/OfflineBanner';
 import notificationService from './src/services/notifications';
 
 function AppContent() {
@@ -43,6 +45,7 @@ function AppContent() {
   return (
     <NavigationContainer ref={navigationRef}>
       <ToastProvider>
+        <OfflineBanner />
         <RootNavigator />
       </ToastProvider>
     </NavigationContainer>
@@ -51,15 +54,17 @@ function AppContent() {
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <SocketProvider>
-            <AppContent />
-            <StatusBar style="light" />
-          </SocketProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <SocketProvider>
+              <AppContent />
+              <StatusBar style="light" />
+            </SocketProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

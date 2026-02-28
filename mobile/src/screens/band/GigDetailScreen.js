@@ -15,8 +15,14 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format, parseISO } from 'date-fns';
+import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { successNotification } from '../../utils/haptics';
 import api from '../../services/api';
+
+const ATTENDEE_STATUSES = ['ATTENDING', 'MAYBE', 'NOT_ATTENDING'];
+const ATTENDEE_LABELS = { ATTENDING: 'Going', MAYBE: 'Maybe', NOT_ATTENDING: 'Not Going' };
+const ATTENDEE_COLORS = { ATTENDING: '#22c55e', MAYBE: '#eab308', NOT_ATTENDING: '#ef4444' };
 
 const GIG_TYPES = ['GIG', 'REHEARSAL', 'RECORDING', 'OTHER'];
 const GIG_STATUSES = ['SCHEDULED', 'COMPLETED', 'CANCELLED'];
@@ -37,6 +43,7 @@ const STATUS_COLORS = {
 export default function GigDetailScreen({ navigation, route }) {
   const { gigId, workspaceId, editing: startEditing } = route.params;
   const isNew = !gigId;
+  const { user } = useAuth();
   const { colors } = useTheme();
 
   const [gig, setGig] = useState(null);
@@ -482,6 +489,32 @@ export default function GigDetailScreen({ navigation, route }) {
         </View>
       )}
 
+      {/* Attendees */}
+      {gig?.attendees?.length > 0 && (
+        <View style={styles.viewSection}>
+          <Text style={[styles.viewLabel, { color: colors.textSecondary }]}>Attendees</Text>
+          {gig.attendees.map(a => {
+            const statusColor = ATTENDEE_COLORS[a.status] || '#6b7280';
+            const statusLabel = ATTENDEE_LABELS[a.status] || a.status;
+            return (
+              <View key={a.id || a.bandMember?.id} style={[styles.attendeeRow, { backgroundColor: colors.bgSecondary }]}>
+                <View style={[styles.attendeeAvatar, { backgroundColor: statusColor + '30' }]}>
+                  <Text style={[styles.attendeeInitial, { color: statusColor }]}>
+                    {(a.bandMember?.name || '?')[0].toUpperCase()}
+                  </Text>
+                </View>
+                <Text style={[styles.attendeeName, { color: colors.textPrimary }]} numberOfLines={1}>
+                  {a.bandMember?.name || 'Unknown'}
+                </Text>
+                <View style={[styles.attendeeStatusBadge, { backgroundColor: statusColor + '20' }]}>
+                  <Text style={[styles.attendeeStatusText, { color: statusColor }]}>{statusLabel}</Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
       {/* Notes */}
       {gig?.notes ? (
         <View style={styles.viewSection}>
@@ -489,6 +522,34 @@ export default function GigDetailScreen({ navigation, route }) {
           <Text style={[styles.viewValue, { color: colors.textPrimary }]}>{gig.notes}</Text>
         </View>
       ) : null}
+
+      {/* Mark Complete */}
+      {gig?.status === 'SCHEDULED' && (
+        <TouchableOpacity
+          style={[styles.completeButton, { backgroundColor: '#22c55e' }]}
+          onPress={() => {
+            Alert.alert('Mark Complete', `Mark "${gig.title}" as completed?`, [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Complete',
+                onPress: async () => {
+                  try {
+                    const updated = await api.completeGig(gig.id);
+                    successNotification();
+                    setGig(updated);
+                    populateForm(updated);
+                  } catch (err) {
+                    Alert.alert('Error', 'Failed to mark event as complete');
+                  }
+                },
+              },
+            ]);
+          }}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.completeButtonText}>{'\u2713'} Mark Complete</Text>
+        </TouchableOpacity>
+      )}
     </ScrollView>
   );
 }
@@ -508,6 +569,14 @@ const styles = StyleSheet.create({
   payValue: { color: '#22c55e', fontSize: 20, fontWeight: '700' },
   setlistLink: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, marginBottom: 6 },
   setlistLinkText: { fontSize: 15, fontWeight: '600' },
+  attendeeRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, marginBottom: 6, gap: 10 },
+  attendeeAvatar: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  attendeeInitial: { fontSize: 14, fontWeight: '700' },
+  attendeeName: { flex: 1, fontSize: 15 },
+  attendeeStatusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  attendeeStatusText: { fontSize: 12, fontWeight: '600' },
+  completeButton: { paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 8, marginBottom: 20 },
+  completeButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
   // Form
   formContent: { padding: 16, paddingBottom: 40 },
   label: { fontSize: 13, fontWeight: '600', marginBottom: 4, marginTop: 12 },

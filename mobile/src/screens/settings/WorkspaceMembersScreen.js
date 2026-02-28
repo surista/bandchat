@@ -13,13 +13,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { mediumImpact } from '../../utils/haptics';
 import api from '../../services/api';
 
 function getInitial(name) {
   return (name || '?').charAt(0).toUpperCase();
 }
 
-export default function WorkspaceMembersScreen({ route }) {
+export default function WorkspaceMembersScreen({ route, navigation }) {
   const { workspaceId } = route.params;
   const { user } = useAuth();
   const { colors } = useTheme();
@@ -102,15 +103,20 @@ export default function WorkspaceMembersScreen({ route }) {
     return (
       <TouchableOpacity
         style={[styles.memberCard, { backgroundColor: colors.bgSecondary }]}
+        onPress={() => navigation.navigate('MemberProfile', {
+          workspaceId,
+          userId: item.userId,
+          displayName: item.user?.displayName,
+        })}
         onLongPress={() => {
           if (!isCurrentUser) {
+            mediumImpact();
             setSelectedMember(item);
             setShowActions(true);
           }
         }}
         delayLongPress={400}
         activeOpacity={0.7}
-        disabled={isCurrentUser}
       >
         <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
           <Text style={styles.avatarText}>{getInitial(displayName)}</Text>

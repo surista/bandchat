@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
+import { mediumImpact, successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 
 const TYPE_FILTERS = [
@@ -148,6 +149,27 @@ export default function GigListScreen({ navigation, route }) {
     setSelectedGig(null);
   }, [selectedGig, loadGigs]);
 
+  const handleComplete = useCallback(() => {
+    if (!selectedGig) return;
+    Alert.alert('Mark Complete', `Mark "${selectedGig.title}" as completed?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Complete',
+        onPress: async () => {
+          try {
+            await api.completeGig(selectedGig.id);
+            successNotification();
+            loadGigs();
+          } catch (err) {
+            Alert.alert('Error', 'Failed to mark event as complete');
+          }
+          setShowActions(false);
+          setSelectedGig(null);
+        },
+      },
+    ]);
+  }, [selectedGig, loadGigs]);
+
   const handleDelete = useCallback(() => {
     if (!selectedGig) return;
     Alert.alert('Delete Event', `Delete "${selectedGig.title}"?`, [
@@ -180,7 +202,7 @@ export default function GigListScreen({ navigation, route }) {
       <TouchableOpacity
         style={[styles.gigCard, { backgroundColor: colors.bgSecondary }, isCancelled && styles.cancelledCard]}
         onPress={() => navigation.navigate('GigDetail', { gigId: item.id, workspaceId })}
-        onLongPress={() => { setSelectedGig(item); setShowActions(true); }}
+        onLongPress={() => { mediumImpact(); setSelectedGig(item); setShowActions(true); }}
         delayLongPress={400}
         activeOpacity={0.7}
       >
@@ -328,6 +350,11 @@ export default function GigListScreen({ navigation, route }) {
             <TouchableOpacity style={styles.actionItem} onPress={handleDuplicate}>
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Duplicate</Text>
             </TouchableOpacity>
+            {selectedGig?.status === 'SCHEDULED' && (
+              <TouchableOpacity style={styles.actionItem} onPress={handleComplete}>
+                <Text style={[styles.actionText, { color: '#22c55e' }]}>{'\u2713'} Mark Complete</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={styles.actionItem} onPress={handleDelete}>
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
             </TouchableOpacity>
