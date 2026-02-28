@@ -356,7 +356,11 @@ function WorkspaceView() {
     setDirectMessages(prev => {
       // Don't add if already exists
       if (prev.some(d => d.id === dm.id)) return prev;
-      return [{ ...dm, unreadCount: 0 }, ...prev];
+      // Socket event may not include otherMembers — derive from members
+      const otherMembers = dm.otherMembers
+        || dm.members?.filter(m => m.user.id !== user.id).map(m => m.user)
+        || [];
+      return [{ ...dm, otherMembers, unreadCount: 0 }, ...prev];
     });
   };
 
@@ -364,11 +368,11 @@ function WorkspaceView() {
     try {
       const userIds = Array.isArray(userIdOrIds) ? userIdOrIds : [userIdOrIds];
       const dm = await api.createOrGetDM(workspaceId, userIds);
-      // Check if DM already exists in state
-      const existingDM = directMessages.find(d => d.id === dm.id);
-      if (!existingDM) {
-        setDirectMessages(prev => [{ ...dm, unreadCount: 0 }, ...prev]);
-      }
+      // Use functional updater to avoid race with socket dm:created event
+      setDirectMessages(prev => {
+        if (prev.some(d => d.id === dm.id)) return prev;
+        return [{ ...dm, unreadCount: 0 }, ...prev];
+      });
       // Select the DM channel
       setSelectedChannel(dm);
       setSelectedThread(null);
