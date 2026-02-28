@@ -170,6 +170,13 @@ function Signup() {
             {loading ? 'Creating account...' : 'Create Account'}
           </button>
 
+          <p className="text-center mt-3 text-xs text-gray-400">
+            By creating an account, you agree to our{' '}
+            <Link to="/terms" className="text-slack-purple hover:underline">Terms of Service</Link>
+            {' '}and{' '}
+            <Link to="/privacy" className="text-slack-purple hover:underline">Privacy Policy</Link>.
+          </p>
+
           <p className="text-center mt-6 text-gray-600">
             Already have an account?{' '}
             <Link to="/login" className="text-slack-purple font-medium hover:underline">

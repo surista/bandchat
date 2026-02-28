@@ -2,12 +2,17 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 export default function MemberProfile({ userId, workspaceId, onClose, onStartDM }) {
+  const { user: currentUser } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [eventsModal, setEventsModal] = useState(null); // { type: 'GIG' | 'REHEARSAL', events: [], loading: boolean }
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false);
 
   async function loadEvents(type) {
     setEventsModal({ type, events: [], loading: true });
@@ -22,6 +27,7 @@ export default function MemberProfile({ userId, workspaceId, onClose, onStartDM 
 
   useEffect(() => {
     loadProfile();
+    checkBlockStatus();
   }, [userId, workspaceId]);
 
   async function loadProfile() {
@@ -32,6 +38,34 @@ export default function MemberProfile({ userId, workspaceId, onClose, onStartDM 
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function checkBlockStatus() {
+    if (userId === currentUser?.id) return;
+    try {
+      const blocks = await api.getBlockedUsers();
+      setIsBlocked(blocks.some(b => b.blockedUserId === userId));
+    } catch {
+      // Ignore - block status is supplementary
+    }
+  }
+
+  async function handleToggleBlock() {
+    setBlockLoading(true);
+    try {
+      if (isBlocked) {
+        await api.unblockUser(userId);
+        setIsBlocked(false);
+      } else {
+        await api.blockUser(userId);
+        setIsBlocked(true);
+      }
+      setShowBlockConfirm(false);
+    } catch (err) {
+      console.error('Block/unblock error:', err);
+    } finally {
+      setBlockLoading(false);
     }
   }
 
@@ -180,6 +214,46 @@ export default function MemberProfile({ userId, workspaceId, onClose, onStartDM 
                 >
                   Send Message
                 </button>
+              )}
+
+              {/* Block/Unblock */}
+              {userId !== currentUser?.id && (
+                <div className="mt-2">
+                  {showBlockConfirm ? (
+                    <div className="bg-red-900/20 border border-red-900/50 rounded-lg p-3">
+                      <p className="text-sm text-gray-300 mb-3">
+                        {isBlocked
+                          ? `Unblock ${profile.user.displayName}? Their messages will be visible again.`
+                          : `Block ${profile.user.displayName}? Their messages will be hidden from you.`}
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setShowBlockConfirm(false)}
+                          className="btn btn-secondary flex-1"
+                          style={{ padding: '6px 12px', fontSize: '13px' }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleToggleBlock}
+                          disabled={blockLoading}
+                          className="btn flex-1"
+                          style={{ padding: '6px 12px', fontSize: '13px', backgroundColor: isBlocked ? '#2563eb' : '#dc2626', color: 'white' }}
+                        >
+                          {blockLoading ? '...' : isBlocked ? 'Unblock' : 'Block'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowBlockConfirm(true)}
+                      className="w-full py-2 text-sm rounded-lg transition"
+                      style={{ color: isBlocked ? '#60a5fa' : '#f87171', backgroundColor: 'transparent' }}
+                    >
+                      {isBlocked ? 'Unblock User' : 'Block User'}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </>

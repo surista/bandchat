@@ -26,10 +26,18 @@ router.get('/channel/:channelId', authenticate, isChannelMember, async (req, res
     const { cursor, limit = 50 } = req.query;
     const take = Math.min(parseInt(limit), 100);
 
+    // Get blocked user IDs for filtering
+    const blockedUsers = await prisma.blockedUser.findMany({
+      where: { blockerId: req.user.id },
+      select: { blockedUserId: true }
+    });
+    const blockedIds = blockedUsers.map(b => b.blockedUserId);
+
     const messages = await prisma.message.findMany({
       where: {
         channelId: req.params.channelId,
-        parentId: null // Only get top-level messages
+        parentId: null, // Only get top-level messages
+        ...(blockedIds.length > 0 && { authorId: { notIn: blockedIds } })
       },
       take: take + 1, // Get one extra to check if there are more
       ...(cursor && {
@@ -180,8 +188,18 @@ router.get('/:messageId/replies', authenticate, async (req, res) => {
       }
     }
 
+    // Get blocked user IDs for filtering
+    const blockedUsers = await prisma.blockedUser.findMany({
+      where: { blockerId: req.user.id },
+      select: { blockedUserId: true }
+    });
+    const blockedIds = blockedUsers.map(b => b.blockedUserId);
+
     const replies = await prisma.message.findMany({
-      where: { parentId: req.params.messageId },
+      where: {
+        parentId: req.params.messageId,
+        ...(blockedIds.length > 0 && { authorId: { notIn: blockedIds } })
+      },
       orderBy: { createdAt: 'asc' },
       include: {
         author: {
@@ -480,12 +498,20 @@ router.get('/search/:workspaceId', authenticate, async (req, res) => {
       select: { id: true }
     });
 
+    // Get blocked user IDs for filtering
+    const blockedUsers = await prisma.blockedUser.findMany({
+      where: { blockerId: req.user.id },
+      select: { blockedUserId: true }
+    });
+    const blockedIds = blockedUsers.map(b => b.blockedUserId);
+
     const messages = await prisma.message.findMany({
       where: {
         channelId: { in: accessibleChannels.map(c => c.id) },
         content: { contains: q.trim(), mode: 'insensitive' },
         ...(channelId && { channelId }),
-        ...(authorId && { authorId })
+        ...(authorId && { authorId }),
+        ...(blockedIds.length > 0 && { authorId: { notIn: blockedIds } })
       },
       take: parseInt(limit),
       orderBy: { createdAt: 'desc' },

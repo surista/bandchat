@@ -29,6 +29,8 @@ import suggestionRoutes from './routes/suggestions.js';
 import kittyRoutes from './routes/kitty.js';
 import linkPreviewRoutes from './routes/linkPreview.js';
 import slackImportRoutes from './routes/slackImport.js';
+import reportRoutes from './routes/reports.js';
+import blockRoutes from './routes/blocks.js';
 import { setupSocketHandlers } from './socket/handlers.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import prisma from './lib/prisma.js';
@@ -113,6 +115,8 @@ app.use('/api/suggestions', suggestionRoutes);
 app.use('/api/kitty', kittyRoutes);
 app.use('/api/link-preview', linkPreviewRoutes);
 app.use('/api/slack-import', slackImportRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/blocks', blockRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

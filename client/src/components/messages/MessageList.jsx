@@ -13,6 +13,7 @@ import ImageLightbox from '../common/ImageLightbox';
 import useLongPress from '../../hooks/useLongPress';
 import { hapticLight } from '../../services/haptic';
 import LinkPreviewCard from './LinkPreviewCard';
+import api from '../../services/api';
 
 /**
  * Memoized component for rendering message content with URL detection,
@@ -180,6 +181,10 @@ function MessageList({
   const [editContent, setEditContent] = useState('');
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState(null);
   const [deleteMessageId, setDeleteMessageId] = useState(null); // For delete confirmation dialog
+  const [reportMessageId, setReportMessageId] = useState(null); // For report dialog
+  const [reportReason, setReportReason] = useState('');
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState('');
   const [lightboxData, setLightboxData] = useState(null); // { images: [{src, alt}], index }
   const [msgContextMenu, setMsgContextMenu] = useState(null); // { messageId, x, y }
 
@@ -663,6 +668,8 @@ function MessageList({
           { divider: true, label: 'divider', onClick: () => {}, show: isOwn },
           { label: 'Edit Message', icon: '✏️', onClick: () => handleStartEdit(msg), show: isOwn },
           { label: 'Delete Message', icon: '🗑️', variant: 'danger', onClick: () => setDeleteMessageId(msg.id), show: isOwn },
+          { divider: true, label: 'divider2', onClick: () => {}, show: !isOwn },
+          { label: 'Report Message', icon: '⚠️', variant: 'danger', onClick: () => { setReportMessageId(msg.id); setReportReason(''); setReportError(''); }, show: !isOwn },
         ];
       })()}
     />
@@ -672,6 +679,61 @@ function MessageList({
         initialIndex={lightboxData.index}
         onClose={() => setLightboxData(null)}
       />
+    )}
+
+    {/* Report Message Dialog */}
+    {reportMessageId && (
+      <div className="modal-backdrop" style={{ zIndex: 10001 }} onClick={(e) => { if (e.target === e.currentTarget) { setReportMessageId(null); } }}>
+        <div className="modal-content" style={{ maxWidth: '28rem', width: '100%' }}>
+          <div className="modal-header">
+            <h3>Report Message</h3>
+            <button onClick={() => setReportMessageId(null)} className="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+          </div>
+          <div className="modal-body" style={{ padding: '16px 24px' }}>
+            <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)', marginBottom: '12px' }}>
+              This message will be reported to the BandChat team for review.
+            </p>
+            <textarea
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              className="modal-input"
+              style={{ width: '100%', padding: '10px 12px', fontSize: '14px', minHeight: '80px', resize: 'vertical' }}
+              placeholder="Why are you reporting this message?"
+              autoFocus
+            />
+            {reportError && (
+              <p style={{ fontSize: '13px', color: '#ef4444', marginTop: '8px' }}>{reportError}</p>
+            )}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '12px 24px', borderTop: '1px solid var(--color-modal-border)' }}>
+            <button onClick={() => setReportMessageId(null)} className="btn btn-secondary">Cancel</button>
+            <button
+              onClick={async () => {
+                if (!reportReason.trim()) {
+                  setReportError('Please provide a reason');
+                  return;
+                }
+                setReportLoading(true);
+                setReportError('');
+                try {
+                  await api.reportMessage(reportMessageId, reportReason.trim());
+                  setReportMessageId(null);
+                  setReportReason('');
+                } catch (err) {
+                  setReportError(err.message);
+                } finally {
+                  setReportLoading(false);
+                }
+              }}
+              className="btn btn-primary"
+              disabled={reportLoading || !reportReason.trim()}
+              style={{ backgroundColor: '#dc2626' }}
+            >
+              {reportLoading ? 'Submitting...' : 'Submit Report'}
+            </button>
+          </div>
+        </div>
+      </div>
     )}
     </>
   );

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 
 function Footer({ theme = 'dark' }) {
   const [showAbout, setShowAbout] = useState(false);
@@ -42,6 +43,18 @@ function Footer({ theme = 'dark' }) {
               >
                 What's New
               </button>
+              <Link
+                to="/privacy"
+                className={`${hoverColor} transition-colors`}
+              >
+                Privacy
+              </Link>
+              <Link
+                to="/terms"
+                className={`${hoverColor} transition-colors`}
+              >
+                Terms
+              </Link>
               <a
                 href="mailto:surista@gmail.com?subject=BandChat Feedback"
                 className={`${hoverColor} transition-colors`}
