@@ -31,6 +31,8 @@ const BAND_ITEMS = [
   { id: 'band-polls', key: 'polls', label: 'Polls', icon: '\uD83D\uDDF3\uFE0F', _type: 'band' },
   { id: 'band-medleys', key: 'medleys', label: 'Medleys', icon: '\uD83C\uDFB6', _type: 'band' },
   { id: 'band-recordings', key: 'recordings', label: 'Recordings', icon: '\uD83C\uDFA4', _type: 'band' },
+  { id: 'band-timeline', key: 'timeline', label: 'Timeline', icon: '\uD83D\uDCDC', _type: 'band' },
+  { id: 'band-achievements', key: 'achievements', label: 'Achievements', icon: '\uD83C\uDFC6', _type: 'band' },
 ];
 
 export default function ChannelListScreen({ navigation, route }) {
@@ -316,6 +318,8 @@ export default function ChannelListScreen({ navigation, route }) {
       polls: 'Polls',
       medleys: 'MedleyList',
       recordings: 'RecordingList',
+      timeline: 'Timeline',
+      achievements: 'Achievements',
     };
     navigation.navigate(screenMap[key], { workspaceId });
   }, [navigation, workspaceId]);

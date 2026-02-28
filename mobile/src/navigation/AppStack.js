@@ -19,6 +19,8 @@ import MedleyListScreen from '../screens/band/MedleyListScreen';
 import MedleyDetailScreen from '../screens/band/MedleyDetailScreen';
 import RecordingListScreen from '../screens/band/RecordingListScreen';
 import RecordingDetailScreen from '../screens/band/RecordingDetailScreen';
+import TimelineScreen from '../screens/band/TimelineScreen';
+import AchievementsScreen from '../screens/band/AchievementsScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
 import EditProfileScreen from '../screens/settings/EditProfileScreen';
 import SecurityScreen from '../screens/settings/SecurityScreen';
@@ -90,6 +92,8 @@ export default function AppStack() {
       <Stack.Screen name="MedleyDetail" component={MedleyDetailScreen} options={{ title: 'Medley' }} />
       <Stack.Screen name="RecordingList" component={RecordingListScreen} options={{ title: 'Recordings' }} />
       <Stack.Screen name="RecordingDetail" component={RecordingDetailScreen} options={{ title: 'Recording' }} />
+      <Stack.Screen name="Timeline" component={TimelineScreen} options={{ title: 'Timeline' }} />
+      <Stack.Screen name="Achievements" component={AchievementsScreen} options={{ title: 'Achievements' }} />
 
       {/* Settings */}
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
