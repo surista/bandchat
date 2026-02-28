@@ -15,6 +15,13 @@ import AvailabilityScreen from '../screens/band/AvailabilityScreen';
 import ContactsScreen from '../screens/band/ContactsScreen';
 import AnnouncementsScreen from '../screens/band/AnnouncementsScreen';
 import PollsScreen from '../screens/band/PollsScreen';
+import SettingsScreen from '../screens/settings/SettingsScreen';
+import EditProfileScreen from '../screens/settings/EditProfileScreen';
+import SecurityScreen from '../screens/settings/SecurityScreen';
+import AppearanceScreen from '../screens/settings/AppearanceScreen';
+import NotificationsScreen from '../screens/settings/NotificationsScreen';
+import WorkspaceMembersScreen from '../screens/settings/WorkspaceMembersScreen';
+import InviteScreen from '../screens/settings/InviteScreen';
 import { useTheme } from '../context/ThemeContext';
 
 const Stack = createNativeStackNavigator();
@@ -73,6 +80,15 @@ export default function AppStack() {
       <Stack.Screen name="Contacts" component={ContactsScreen} options={{ title: 'Contacts' }} />
       <Stack.Screen name="Announcements" component={AnnouncementsScreen} options={{ title: 'Announcements' }} />
       <Stack.Screen name="Polls" component={PollsScreen} options={{ title: 'Polls' }} />
+
+      {/* Settings */}
+      <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile' }} />
+      <Stack.Screen name="Security" component={SecurityScreen} options={{ title: 'Security' }} />
+      <Stack.Screen name="Appearance" component={AppearanceScreen} options={{ title: 'Appearance' }} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
+      <Stack.Screen name="WorkspaceMembers" component={WorkspaceMembersScreen} options={{ title: 'Members' }} />
+      <Stack.Screen name="Invite" component={InviteScreen} options={{ title: 'Invite People' }} />
     </Stack.Navigator>
   );
 }

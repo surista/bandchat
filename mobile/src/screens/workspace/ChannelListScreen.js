@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -57,6 +57,19 @@ export default function ChannelListScreen({ navigation, route }) {
   const [selectedMemberIds, setSelectedMemberIds] = useState([]);
 
   const activeChannelRef = useRef(null);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Settings', { workspaceId })}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={{ fontSize: 22 }}>{'\u2699\uFE0F'}</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, workspaceId]);
 
   const loadData = useCallback(async () => {
     try {
