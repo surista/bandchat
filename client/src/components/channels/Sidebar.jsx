@@ -114,14 +114,10 @@ function ChannelItem({ channel, isSelected, onSelect, onLongPress, isAdmin }) {
     disabled: !isAdmin,
   });
 
-  // For non-admin, just render a simple button
-  const handlers = isAdmin ? longPress : {};
-
   return (
     <button
-      onClick={isAdmin ? undefined : onSelect}
       className={`channel-item w-full ${isSelected ? 'active' : ''}`}
-      {...handlers}
+      {...longPress}
     >
       <span className="text-gray-400">
         {channel.isPrivate ? '🔒' : '#'}
