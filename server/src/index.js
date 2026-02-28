@@ -28,6 +28,7 @@ import recordingRoutes from './routes/recordings.js';
 import suggestionRoutes from './routes/suggestions.js';
 import kittyRoutes from './routes/kitty.js';
 import linkPreviewRoutes from './routes/linkPreview.js';
+import slackImportRoutes from './routes/slackImport.js';
 import { setupSocketHandlers } from './socket/handlers.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import prisma from './lib/prisma.js';
@@ -111,6 +112,7 @@ app.use('/api/recordings', recordingRoutes);
 app.use('/api/suggestions', suggestionRoutes);
 app.use('/api/kitty', kittyRoutes);
 app.use('/api/link-preview', linkPreviewRoutes);
+app.use('/api/slack-import', slackImportRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

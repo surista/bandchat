@@ -36,6 +36,7 @@ import ConfirmDialog from '../common/ConfirmDialog';
 import ContextMenu from '../common/ContextMenu';
 import useLongPress from '../../hooks/useLongPress';
 import NewMessageModal from './NewMessageModal';
+import SlackImportWizard from '../workspaces/SlackImportWizard';
 import Skeleton from '../common/Skeleton';
 import { hapticMedium } from '../../services/haptic';
 
@@ -206,6 +207,7 @@ function Sidebar({
     } catch { return {}; }
   });
   const [showSettings, setShowSettings] = useState(false);
+  const [showSlackImport, setShowSlackImport] = useState(false);
   const [settingsTab, setSettingsTab] = useState('profile');
   const [editDisplayName, setEditDisplayName] = useState('');
   const [editAvatarUrl, setEditAvatarUrl] = useState('');
@@ -1453,6 +1455,16 @@ function Sidebar({
                   >
                     Band Members
                   </button>
+                  <button
+                    onClick={() => setSettingsTab('import')}
+                    className={`px-4 py-3 font-medium whitespace-nowrap transition-colors ${
+                      settingsTab === 'import'
+                        ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
+                        : 'text-gray-400 hover:text-gray-200'
+                    }`}
+                  >
+                    Import
+                  </button>
                 </>
               )}
               <button
@@ -2589,10 +2601,39 @@ function Sidebar({
                   </div>
                 </div>
               )}
+
+              {settingsTab === 'import' && (
+                <div className="space-y-6">
+                  <div className="bg-[var(--color-modal-card)] rounded-lg p-6 text-center">
+                    <div className="text-4xl mb-3">📦</div>
+                    <h3 className="text-lg font-bold text-white mb-2">Import from Slack</h3>
+                    <p className="text-gray-400 text-sm mb-4 leading-relaxed">
+                      Import your Slack workspace history into BandChat. Upload a Slack export ZIP file and
+                      choose how to map users, channels, and gigs.
+                    </p>
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => {
+                        setShowSettings(false);
+                        setShowSlackImport(true);
+                      }}
+                    >
+                      Start Import Wizard
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>,
         document.body
+      )}
+
+      {showSlackImport && (
+        <SlackImportWizard
+          workspace={workspace}
+          onClose={() => setShowSlackImport(false)}
+        />
       )}
 
       {/* Member Profile Modal */}

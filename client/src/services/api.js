@@ -1288,6 +1288,38 @@ class ApiService {
     a.click();
     URL.revokeObjectURL(a.href);
   }
+
+  // Slack Import
+  async parseSlackExport(workspaceId, file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const url = `${API_URL}/slack-import/workspace/${workspaceId}/parse`;
+    const headers = {};
+    if (this.accessToken) {
+      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || 'Failed to parse Slack export');
+    }
+
+    return response.json();
+  }
+
+  async importSlackData(workspaceId, config) {
+    return this.request(`/slack-import/workspace/${workspaceId}/import`, {
+      method: 'POST',
+      body: JSON.stringify(config)
+    });
+  }
 }
 
 export const api = new ApiService();
