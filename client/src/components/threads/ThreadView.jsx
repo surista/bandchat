@@ -282,7 +282,11 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
       <div className="p-4 border-b border-[var(--color-border)] group relative">
         <div className="flex gap-3">
           <div className="w-9 h-9 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white font-medium">
-            {(message.author?.displayName || message.removedUserName || 'Deleted User').charAt(0).toUpperCase()}
+            {message.author?.avatarUrl ? (
+              <img src={message.author.avatarUrl} alt={message.author.displayName} className="w-full h-full rounded object-cover" />
+            ) : (
+              (message.author?.displayName || message.removedUserName || 'Deleted User').charAt(0).toUpperCase()
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2">
@@ -343,7 +347,11 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
             {replies.map((reply) => (
               <div key={reply.id} className="flex gap-3 group relative">
                 <div className="w-8 h-8 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white text-sm font-medium">
-                  {(reply.author?.displayName || reply.removedUserName || 'Deleted User').charAt(0).toUpperCase()}
+                  {reply.author?.avatarUrl ? (
+                    <img src={reply.author.avatarUrl} alt={reply.author.displayName} className="w-full h-full rounded object-cover" />
+                  ) : (
+                    (reply.author?.displayName || reply.removedUserName || 'Deleted User').charAt(0).toUpperCase()
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2">
