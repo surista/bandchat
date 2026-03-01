@@ -19,22 +19,42 @@ import { useSocket } from '../../context/SocketContext';
 import api from '../../services/api';
 import ChannelItem from '../../components/ChannelItem';
 
-const BAND_ITEMS = [
-  { id: 'band-songs', key: 'songs', label: 'Songs', icon: '\uD83C\uDFB5', _type: 'band' },
-  { id: 'band-setlists', key: 'setlists', label: 'Setlists', icon: '\uD83C\uDFB6', _type: 'band' },
-  { id: 'band-calendar', key: 'calendar', label: 'Calendar', icon: '\uD83D\uDCC5', _type: 'band' },
-  { id: 'band-stats', key: 'stats', label: 'Stats', icon: '\uD83D\uDCCA', _type: 'band' },
-  { id: 'band-members', key: 'members', label: 'Members', icon: '\uD83D\uDC65', _type: 'band' },
-  { id: 'band-availability', key: 'availability', label: 'Availability', icon: '\uD83D\uDDD3\uFE0F', _type: 'band' },
-  { id: 'band-contacts', key: 'contacts', label: 'Contacts', icon: '\uD83D\uDCD2', _type: 'band' },
-  { id: 'band-announcements', key: 'announcements', label: 'Announcements', icon: '\uD83D\uDCE2', _type: 'band' },
-  { id: 'band-polls', key: 'polls', label: 'Polls', icon: '\uD83D\uDDF3\uFE0F', _type: 'band' },
-  { id: 'band-medleys', key: 'medleys', label: 'Medleys', icon: '\uD83C\uDFB6', _type: 'band' },
-  { id: 'band-recordings', key: 'recordings', label: 'Recordings', icon: '\uD83C\uDFA4', _type: 'band' },
-  { id: 'band-timeline', key: 'timeline', label: 'Timeline', icon: '\uD83D\uDCDC', _type: 'band' },
-  { id: 'band-achievements', key: 'achievements', label: 'Achievements', icon: '\uD83C\uDFC6', _type: 'band' },
-  { id: 'band-kitty', key: 'kitty', label: 'Band Kitty', icon: '\uD83D\uDCB0', _type: 'band' },
-  { id: 'band-intelligence', key: 'intelligence', label: 'Song Intelligence', icon: '\uD83E\uDDE0', _type: 'band' },
+const BAND_CATEGORIES = [
+  {
+    key: 'band-music', label: 'Music', icon: '\uD83C\uDFB5',
+    items: [
+      { id: 'band-songs', key: 'songs', label: 'Songs', icon: '\uD83C\uDFB5' },
+      { id: 'band-setlists', key: 'setlists', label: 'Setlists', icon: '\uD83C\uDFB6' },
+      { id: 'band-medleys', key: 'medleys', label: 'Medleys', icon: '\uD83C\uDFB6' },
+      { id: 'band-recordings', key: 'recordings', label: 'Recordings', icon: '\uD83C\uDFA4' },
+      { id: 'band-intelligence', key: 'intelligence', label: 'Song Intelligence', icon: '\uD83E\uDDE0' },
+    ],
+  },
+  {
+    key: 'band-gigs', label: 'Gigs', icon: '\uD83D\uDCC5',
+    items: [
+      { id: 'band-calendar', key: 'calendar', label: 'Calendar', icon: '\uD83D\uDCC5' },
+      { id: 'band-availability', key: 'availability', label: 'Availability', icon: '\uD83D\uDDD3\uFE0F' },
+      { id: 'band-stats', key: 'stats', label: 'Stats', icon: '\uD83D\uDCCA' },
+    ],
+  },
+  {
+    key: 'band-people', label: 'People', icon: '\uD83D\uDC65',
+    items: [
+      { id: 'band-members', key: 'members', label: 'Members', icon: '\uD83D\uDC65' },
+      { id: 'band-contacts', key: 'contacts', label: 'Contacts', icon: '\uD83D\uDCD2' },
+      { id: 'band-achievements', key: 'achievements', label: 'Achievements', icon: '\uD83C\uDFC6' },
+      { id: 'band-timeline', key: 'timeline', label: 'Timeline', icon: '\uD83D\uDCDC' },
+    ],
+  },
+  {
+    key: 'band-community', label: 'Community', icon: '\uD83D\uDCE2',
+    items: [
+      { id: 'band-announcements', key: 'announcements', label: 'Announcements', icon: '\uD83D\uDCE2' },
+      { id: 'band-polls', key: 'polls', label: 'Polls', icon: '\uD83D\uDDF3\uFE0F' },
+      { id: 'band-kitty', key: 'kitty', label: 'Band Kitty', icon: '\uD83D\uDCB0' },
+    ],
+  },
 ];
 
 export default function ChannelListScreen({ navigation, route }) {
@@ -50,6 +70,8 @@ export default function ChannelListScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState({});
+  const [collapsedBand, setCollapsedBand] = useState(false);
+  const [collapsedBandCats, setCollapsedBandCats] = useState({});
 
   // Create channel modal
   const [showCreateChannel, setShowCreateChannel] = useState(false);
@@ -365,21 +387,59 @@ export default function ChannelListScreen({ navigation, route }) {
       data: directMessages.map(dm => ({ ...dm, _type: 'dm' })),
     };
 
+    // Build band items: category headers + their items (if not collapsed)
+    const bandData = [];
+    if (!collapsedBand) {
+      for (const cat of BAND_CATEGORIES) {
+        bandData.push({ id: cat.key, _type: 'band-category', label: cat.label, icon: cat.icon, catKey: cat.key });
+        if (!collapsedBandCats[cat.key]) {
+          for (const item of cat.items) {
+            bandData.push({ ...item, _type: 'band' });
+          }
+        }
+      }
+    }
+
     const bandSection = {
       title: 'Band',
-      data: BAND_ITEMS,
+      isBand: true,
+      data: bandData,
     };
 
     return [...channelSections, dmSection, bandSection];
-  }, [channels, channelGroups, directMessages, collapsedGroups]);
+  }, [channels, channelGroups, directMessages, collapsedGroups, collapsedBand, collapsedBandCats]);
+
+  const toggleBandCat = useCallback((catKey) => {
+    setCollapsedBandCats(prev => ({ ...prev, [catKey]: !prev[catKey] }));
+  }, []);
 
   const renderItem = useCallback(({ item }) => {
+    if (item._type === 'band-category') {
+      const isCollapsed = collapsedBandCats[item.catKey];
+      return (
+        <TouchableOpacity
+          style={styles.bandCategoryHeader}
+          onPress={() => toggleBandCat(item.catKey)}
+          activeOpacity={0.6}
+          accessibilityRole="button"
+          accessibilityLabel={`${item.label}, ${isCollapsed ? 'collapsed' : 'expanded'}`}
+        >
+          <Text style={styles.bandCategoryIcon}>{item.icon}</Text>
+          <Text style={[styles.bandCategoryLabel, { color: colors.textSecondary }]}>{item.label}</Text>
+          <Text style={[styles.bandCategoryArrow, { color: colors.textSecondary }]}>
+            {isCollapsed ? '\u25B6' : '\u25BC'}
+          </Text>
+        </TouchableOpacity>
+      );
+    }
     if (item._type === 'band') {
       return (
         <TouchableOpacity
           style={styles.bandItem}
           onPress={() => handleBandItemPress(item.key)}
           activeOpacity={0.6}
+          accessibilityRole="button"
+          accessibilityLabel={item.label}
         >
           <Text style={styles.bandItemIcon}>{item.icon}</Text>
           <Text style={[styles.bandItemLabel, { color: colors.textPrimary }]}>{item.label}</Text>
@@ -397,19 +457,25 @@ export default function ChannelListScreen({ navigation, route }) {
         unreadCount={item.unreadCount || 0}
       />
     );
-  }, [getDMDisplayName, handleChannelPress, handleBandItemPress, colors]);
+  }, [getDMDisplayName, handleChannelPress, handleBandItemPress, colors, collapsedBandCats, toggleBandCat]);
 
   const renderSectionHeader = useCallback(({ section }) => {
-    const isCollapsed = section.isGroup && collapsedGroups[section.groupId];
+    const isCollapsible = section.isGroup || section.isBand;
+    const isCollapsed = section.isGroup ? collapsedGroups[section.groupId] : section.isBand ? collapsedBand : false;
+    const handlePress = section.isGroup
+      ? () => toggleGroup(section.groupId)
+      : section.isBand
+        ? () => setCollapsedBand(prev => !prev)
+        : undefined;
     return (
       <View style={styles.sectionHeaderRow}>
         <TouchableOpacity
           style={styles.sectionHeader}
-          onPress={section.isGroup ? () => toggleGroup(section.groupId) : undefined}
-          activeOpacity={section.isGroup ? 0.6 : 1}
-          disabled={!section.isGroup}
+          onPress={handlePress}
+          activeOpacity={isCollapsible ? 0.6 : 1}
+          disabled={!isCollapsible}
         >
-          {section.isGroup && (
+          {isCollapsible && (
             <Text style={[styles.collapseIcon, { color: colors.textSecondary }]}>
               {isCollapsed ? '\u25B6' : '\u25BC'}
             </Text>
@@ -438,7 +504,7 @@ export default function ChannelListScreen({ navigation, route }) {
         )}
       </View>
     );
-  }, [collapsedGroups, toggleGroup, colors, openNewDM]);
+  }, [collapsedGroups, collapsedBand, toggleGroup, colors, openNewDM]);
 
   if (loading) {
     return (
@@ -728,12 +794,35 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
   },
+  // Band categories
+  bandCategoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginTop: 4,
+  },
+  bandCategoryIcon: {
+    fontSize: 14,
+    width: 24,
+    textAlign: 'center',
+  },
+  bandCategoryLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    flex: 1,
+  },
+  bandCategoryArrow: {
+    fontSize: 10,
+  },
   // Band items
   bandItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 28,
   },
   bandItemIcon: {
     fontSize: 16,
