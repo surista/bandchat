@@ -42,7 +42,7 @@ function JoinWorkspace() {
           <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={() => navigate('/')}
-            className="btn bg-green-600 hover:bg-green-700 text-white"
+            className="btn btn-primary"
           >
             Go to Workspaces
           </button>

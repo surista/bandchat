@@ -176,7 +176,8 @@ function Sidebar({
   onSelectBandView,
   width = 256,
   onResizeStart,
-  onReorderGroups
+  onReorderGroups,
+  onRefreshWorkspace
 }) {
   const navigate = useNavigate();
   const { updateUser } = useAuth();
@@ -1312,7 +1313,7 @@ function Sidebar({
                   >
                     Cancel
                   </button>
-                  <button type="submit" className="btn bg-green-600 hover:bg-green-700 text-white">
+                  <button type="submit" className="btn btn-primary">
                     Create
                   </button>
                 </div>
@@ -1363,7 +1364,7 @@ function Sidebar({
                   >
                     Cancel
                   </button>
-                  <button type="submit" className="btn bg-green-600 hover:bg-green-700 text-white">
+                  <button type="submit" className="btn btn-primary">
                     Create
                   </button>
                 </div>
@@ -1599,7 +1600,7 @@ function Sidebar({
                       <button
                         type="submit"
                         disabled={settingsLoading}
-                        className="btn bg-green-600 hover:bg-green-700 text-white"
+                        className="btn btn-primary"
                       >
                         {settingsLoading ? 'Saving...' : 'Update Profile'}
                       </button>
@@ -1939,7 +1940,8 @@ function Sidebar({
                               }
                               if (Object.keys(updates).length > 0) {
                                 await api.adminUpdateMember(workspace.id, member.user.id, updates);
-                                window.location.reload();
+                                setEditingMemberId(null);
+                                if (onRefreshWorkspace) onRefreshWorkspace();
                               } else {
                                 setEditingMemberId(null);
                               }
@@ -2055,7 +2057,7 @@ function Sidebar({
                                     member.user.id,
                                     e.target.value
                                   );
-                                  window.location.reload();
+                                  if (onRefreshWorkspace) onRefreshWorkspace();
                                 } catch (err) {
                                   toast.error(err.message);
                                 }
@@ -2173,7 +2175,7 @@ function Sidebar({
                                     removeMergeUserId || null
                                   );
                                   setRemovingMember(null);
-                                  window.location.reload();
+                                  if (onRefreshWorkspace) onRefreshWorkspace();
                                 } catch (err) {
                                   toast.error(err.message);
                                 } finally {
@@ -2219,7 +2221,7 @@ function Sidebar({
                         <p className="text-gray-400">Manage band member history for the timeline</p>
                         <button
                           onClick={() => setShowBandMemberForm(true)}
-                          className="btn bg-green-600 hover:bg-green-700 text-white"
+                          className="btn btn-primary"
                         >
                           + Add Member
                         </button>
@@ -2825,7 +2827,7 @@ function Sidebar({
                   </button>
                   <button
                     type="submit"
-                    className="btn bg-green-600 hover:bg-green-700 text-white"
+                    className="btn btn-primary"
                     disabled={renameLoading || !renameValue.trim()}
                   >
                     {renameLoading ? 'Saving...' : 'Save'}

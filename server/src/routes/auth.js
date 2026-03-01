@@ -1150,7 +1150,8 @@ router.get('/export', authenticate, async (req, res) => {
             channel: { select: { name: true, isDirect: true, workspace: { select: { name: true } } } },
             attachments: { select: { filename: true, url: true, type: true, size: true } }
           },
-          orderBy: { createdAt: 'desc' }
+          orderBy: { createdAt: 'desc' },
+          take: 10000
         },
         songs: {
           select: { id: true, title: true, artist: true, key: true, bpm: true, duration: true, createdAt: true,
@@ -1185,8 +1186,10 @@ router.get('/export', authenticate, async (req, res) => {
 
     if (!user) return res.status(404).json({ error: 'User not found' });
 
+    const messagesTruncated = user.messages.length >= 10000;
     const exportData = {
       exportDate: new Date().toISOString(),
+      ...(messagesTruncated && { note: 'Messages limited to most recent 10,000. Contact support for full export.' }),
       profile: {
         id: user.id, email: user.email, displayName: user.displayName,
         bio: user.bio, avatarUrl: user.avatarUrl, authProvider: user.authProvider,

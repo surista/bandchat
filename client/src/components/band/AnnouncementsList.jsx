@@ -99,7 +99,7 @@ function AnnouncementsList({ workspaceId, workspace }) {
           {isAdmin && (
             <button
               onClick={() => { setEditingAnnouncement(null); setShowForm(true); }}
-              className="btn bg-green-600 hover:bg-green-700 text-white"
+              className="btn btn-primary"
             >
               + New Announcement
             </button>
@@ -243,7 +243,7 @@ function AnnouncementCard({ announcement, isAdmin, onAcknowledge, onEdit, onDele
         {!announcement.isAcknowledged && announcement.isPinned && (
           <button
             onClick={onAcknowledge}
-            className="btn bg-green-600 hover:bg-green-700 text-white text-sm py-1"
+            className="btn btn-primary text-sm py-1"
           >
             Acknowledge
           </button>
@@ -358,7 +358,7 @@ function AnnouncementForm({ announcement, onSave, onClose }) {
               <button
                 type="submit"
                 disabled={loading || !formData.title.trim() || !formData.content.trim()}
-                className="btn bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                className="btn btn-primary disabled:opacity-50"
               >
                 {loading ? 'Saving...' : announcement ? 'Update' : 'Post Announcement'}
               </button>

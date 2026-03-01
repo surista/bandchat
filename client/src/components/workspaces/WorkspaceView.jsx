@@ -553,6 +553,7 @@ function WorkspaceView() {
         width={sidebarWidth}
         onResizeStart={() => setIsResizing(true)}
         onReorderGroups={(newGroups) => setChannelGroups(newGroups)}
+        onRefreshWorkspace={loadWorkspace}
       />
 
       {/* Main Content */}
@@ -870,7 +871,7 @@ function WorkspaceView() {
                   setInviteMessage('');
                   setInviteEmail('');
                 }}
-                className="w-full btn bg-green-600 hover:bg-green-700 text-white"
+                className="w-full btn btn-primary"
               >
                 Done
               </button>

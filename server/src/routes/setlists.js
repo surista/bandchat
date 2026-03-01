@@ -526,6 +526,13 @@ router.put('/:setlistId/reorder', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
+    // Validate all itemIds belong to this setlist
+    const validIds = new Set(setlist.songs.map(s => s.id));
+    const invalidIds = itemIds.filter(id => !validIds.has(id));
+    if (invalidIds.length > 0) {
+      return res.status(400).json({ error: 'Some item IDs do not belong to this setlist' });
+    }
+
     // Update positions in a transaction
     await prisma.$transaction(
       itemIds.map((itemId, index) =>

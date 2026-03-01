@@ -83,7 +83,7 @@ function WorkspaceList() {
             </button>
             <button
               onClick={() => setShowOnboarding(true)}
-              className="btn bg-green-600 hover:bg-green-700 text-white"
+              className="btn btn-primary"
             >
               Create Workspace
             </button>
@@ -158,7 +158,7 @@ function WorkspaceList() {
                   >
                     Cancel
                   </button>
-                  <button type="submit" className="btn bg-green-600 hover:bg-green-700 text-white">
+                  <button type="submit" className="btn btn-primary">
                     Join
                   </button>
                 </div>

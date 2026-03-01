@@ -600,7 +600,7 @@ function GigArchive({ workspaceId }) {
           </div>
           <button
             onClick={() => setShowAddGig(true)}
-            className="btn bg-green-600 hover:bg-green-700 text-white"
+            className="btn btn-primary"
           >
             + Add Gig
           </button>
@@ -1141,7 +1141,7 @@ function GigArchive({ workspaceId }) {
                 <button
                   type="submit"
                   disabled={uploading || !newGigTitle || !newGigDate}
-                  className="btn bg-green-600 hover:bg-green-700 text-white"
+                  className="btn btn-primary"
                 >
                   {uploading ? 'Adding...' : 'Add Gig'}
                 </button>
