@@ -11,6 +11,7 @@ import JoinWorkspace from './components/workspaces/JoinWorkspace';
 import UpdatePrompt from './components/common/UpdatePrompt';
 import PrivacyPolicy from './components/legal/PrivacyPolicy';
 import TermsOfService from './components/legal/TermsOfService';
+import Support from './components/legal/Support';
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -83,6 +84,7 @@ function App() {
       />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfService />} />
+      <Route path="/support" element={<Support />} />
       <Route
         path="/join/:inviteCode"
         element={

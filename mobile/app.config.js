@@ -13,7 +13,7 @@ export default {
       backgroundColor: '#1f2937',
     },
     ios: {
-      supportsTablet: true,
+      supportsTablet: false,
       bundleIdentifier: 'com.bandchat.mobile',
       buildNumber: '1',
       infoPlist: {

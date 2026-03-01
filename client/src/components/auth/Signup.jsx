@@ -12,6 +12,7 @@ function Signup() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -134,32 +135,44 @@ function Signup() {
             <label htmlFor="password" className="block text-gray-700 font-medium mb-2">
               Password
             </label>
-            <input
-              type="password"
-              id="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple text-base"
-              placeholder="At least 6 characters"
-              required
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                id="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple text-base pr-12"
+                placeholder="At least 6 characters"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
+                tabIndex={-1}
+              >
+                {showPassword ? 'Hide' : 'Show'}
+              </button>
+            </div>
           </div>
 
           <div className="mb-6">
             <label htmlFor="confirmPassword" className="block text-gray-700 font-medium mb-2">
               Confirm Password
             </label>
-            <input
-              type="password"
-              id="confirmPassword"
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple text-base"
-              placeholder="Confirm your password"
-              required
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                id="confirmPassword"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple text-base pr-12"
+                placeholder="Confirm your password"
+                required
+              />
+            </div>
           </div>
 
           <button

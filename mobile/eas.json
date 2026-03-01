@@ -15,13 +15,10 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "",
-        "ascAppId": "",
-        "appleTeamId": ""
+        "appleId": "surista@gmail.com",
+        "appleTeamId": "N7TWCNBX6C"
       },
-      "android": {
-        "serviceAccountKeyPath": ""
-      }
+      "android": {}
     }
   }
 }

@@ -55,6 +55,12 @@ function Footer({ theme = 'dark' }) {
               >
                 Terms
               </Link>
+              <Link
+                to="/support"
+                className={`${hoverColor} transition-colors`}
+              >
+                Support
+              </Link>
               <a
                 href="mailto:admin@bandchat.app?subject=BandChat Feedback"
                 className={`${hoverColor} transition-colors`}

@@ -15,6 +15,7 @@ function ResetPassword() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [tokenValid, setTokenValid] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -130,31 +131,43 @@ function ResetPassword() {
                   <label htmlFor="password" className="block text-gray-700 font-medium mb-2">
                     New Password
                   </label>
-                  <input
-                    type="password"
-                    id="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple focus:border-transparent"
-                    placeholder="At least 6 characters"
-                    minLength={6}
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      id="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple focus:border-transparent pr-12"
+                      placeholder="At least 6 characters"
+                      minLength={6}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mb-6">
                   <label htmlFor="confirmPassword" className="block text-gray-700 font-medium mb-2">
                     Confirm Password
                   </label>
-                  <input
-                    type="password"
-                    id="confirmPassword"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple focus:border-transparent"
-                    placeholder="Confirm your new password"
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      id="confirmPassword"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple focus:border-transparent pr-12"
+                      placeholder="Confirm your new password"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <button
