@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const themes = {
@@ -182,8 +183,9 @@ const structuralColors = {
 const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
+  const systemColorScheme = useColorScheme();
   const [currentTheme, setCurrentTheme] = useState('default');
-  const [mode, setMode] = useState('dark');
+  const [mode, setMode] = useState(systemColorScheme === 'light' ? 'light' : 'dark');
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -192,7 +194,9 @@ export function ThemeProvider({ children }) {
         const savedTheme = await AsyncStorage.getItem('bandchat-theme');
         const savedMode = await AsyncStorage.getItem('bandchat-mode');
         if (savedTheme && themes[savedTheme]) setCurrentTheme(savedTheme);
-        if (savedMode) setMode(savedMode);
+        if (savedMode) {
+          setMode(savedMode);
+        }
       } catch {
         // Use defaults
       } finally {

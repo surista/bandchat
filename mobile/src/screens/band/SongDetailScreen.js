@@ -361,7 +361,7 @@ export default function SongDetailScreen({ navigation, route }) {
         </ScrollView>
 
         {/* Key Picker Modal */}
-        <Modal visible={showKeyPicker} transparent animationType="fade">
+        <Modal visible={showKeyPicker} transparent animationType="fade" onRequestClose={() => setShowKeyPicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowKeyPicker(false)}>
             <View style={[styles.keyPickerContent, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.keyPickerTitle, { color: colors.textPrimary }]}>Select Key</Text>

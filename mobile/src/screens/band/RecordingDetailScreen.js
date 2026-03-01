@@ -416,7 +416,7 @@ export default function RecordingDetailScreen({ navigation, route }) {
         </ScrollView>
 
         {/* Song Picker Modal */}
-        <Modal visible={showSongPicker} transparent animationType="fade">
+        <Modal visible={showSongPicker} transparent animationType="fade" onRequestClose={() => setShowSongPicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowSongPicker(false)}>
             <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.pickerTitle, { color: colors.textPrimary }]}>Select Song</Text>

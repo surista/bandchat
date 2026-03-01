@@ -231,7 +231,7 @@ export default function SecurityScreen() {
       </ScrollView>
 
       {/* Change Email Modal */}
-      <Modal visible={showEmailModal} transparent animationType="fade">
+      <Modal visible={showEmailModal} transparent animationType="fade" onRequestClose={() => setShowEmailModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Change Email</Text>
@@ -281,7 +281,7 @@ export default function SecurityScreen() {
         </View>
       </Modal>
       {/* Delete Account Modal */}
-      <Modal visible={showDeleteModal} transparent animationType="fade">
+      <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: '#ef4444' }]}>Delete Account</Text>

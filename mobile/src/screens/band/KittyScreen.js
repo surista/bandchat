@@ -411,7 +411,7 @@ export default function KittyScreen({ navigation, route }) {
         </ScrollView>
 
         {/* Type Picker */}
-        <Modal visible={showTypePicker} transparent animationType="fade">
+        <Modal visible={showTypePicker} transparent animationType="fade" onRequestClose={() => setShowTypePicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowTypePicker(false)}>
             <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.pickerTitle, { color: colors.textPrimary }]}>Transaction Type</Text>
@@ -431,7 +431,7 @@ export default function KittyScreen({ navigation, route }) {
         </Modal>
 
         {/* Category Picker */}
-        <Modal visible={showCategoryPicker} transparent animationType="fade">
+        <Modal visible={showCategoryPicker} transparent animationType="fade" onRequestClose={() => setShowCategoryPicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowCategoryPicker(false)}>
             <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.pickerTitle, { color: colors.textPrimary }]}>Expense Category</Text>
@@ -509,7 +509,7 @@ export default function KittyScreen({ navigation, route }) {
       />
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide">
+      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => { setShowActions(false); setSelectedTx(null); }}>
         <TouchableOpacity style={styles.actionOverlay} activeOpacity={1} onPress={() => { setShowActions(false); setSelectedTx(null); }}>
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
@@ -542,7 +542,7 @@ export default function KittyScreen({ navigation, route }) {
       </Modal>
 
       {/* Settings Modal */}
-      <Modal visible={showSettings} transparent animationType="fade">
+      <Modal visible={showSettings} transparent animationType="fade" onRequestClose={() => setShowSettings(false)}>
         <View style={styles.settingsOverlay}>
           <View style={[styles.settingsContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.settingsTitle, { color: colors.textPrimary }]}>Kitty Settings</Text>

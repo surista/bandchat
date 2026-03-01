@@ -304,7 +304,7 @@ export default function SongListScreen({ navigation, route }) {
       />
 
       {/* Sort Modal */}
-      <Modal visible={showSortModal} transparent animationType="fade">
+      <Modal visible={showSortModal} transparent animationType="fade" onRequestClose={() => setShowSortModal(false)}>
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
@@ -335,7 +335,7 @@ export default function SongListScreen({ navigation, route }) {
       )}
 
       {/* More Menu */}
-      <Modal visible={showMoreMenu} transparent animationType="fade">
+      <Modal visible={showMoreMenu} transparent animationType="fade" onRequestClose={() => setShowMoreMenu(false)}>
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
@@ -368,7 +368,7 @@ export default function SongListScreen({ navigation, route }) {
       </Modal>
 
       {/* Bulk Import Modal */}
-      <Modal visible={showBulkImport} animationType="slide">
+      <Modal visible={showBulkImport} animationType="slide" onRequestClose={() => setShowBulkImport(false)}>
         <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
           <View style={[styles.bulkHeader, { backgroundColor: colors.bgSecondary }]}>
             <TouchableOpacity onPress={() => setShowBulkImport(false)}>
@@ -457,7 +457,7 @@ export default function SongListScreen({ navigation, route }) {
       </Modal>
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide">
+      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => setShowActions(false)}>
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}

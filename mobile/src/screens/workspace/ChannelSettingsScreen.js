@@ -349,7 +349,7 @@ export default function ChannelSettingsScreen({ navigation, route }) {
       </ScrollView>
 
       {/* Add Member Modal */}
-      <Modal visible={showAddMember} transparent animationType="fade">
+      <Modal visible={showAddMember} transparent animationType="fade" onRequestClose={() => setShowAddMember(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Add Member</Text>

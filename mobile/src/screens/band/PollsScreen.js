@@ -384,7 +384,7 @@ export default function PollsScreen({ navigation, route }) {
       />
 
       {/* Create Modal */}
-      <Modal visible={showCreate} transparent animationType="fade">
+      <Modal visible={showCreate} transparent animationType="fade" onRequestClose={() => setShowCreate(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -480,7 +480,7 @@ export default function PollsScreen({ navigation, route }) {
       </Modal>
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide">
+      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => setShowActions(false)}>
         <TouchableOpacity
           style={styles.actionOverlay}
           activeOpacity={1}

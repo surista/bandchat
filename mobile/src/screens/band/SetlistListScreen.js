@@ -230,7 +230,7 @@ export default function SetlistListScreen({ navigation, route }) {
       />
 
       {/* Create Setlist Modal */}
-      <Modal visible={showCreate} transparent animationType="fade">
+      <Modal visible={showCreate} transparent animationType="fade" onRequestClose={() => setShowCreate(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>New Setlist</Text>
@@ -276,7 +276,7 @@ export default function SetlistListScreen({ navigation, route }) {
       </Modal>
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide">
+      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => setShowActions(false)}>
         <TouchableOpacity
           style={styles.actionOverlay}
           activeOpacity={1}

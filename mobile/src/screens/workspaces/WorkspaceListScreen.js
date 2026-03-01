@@ -180,7 +180,7 @@ export default function WorkspaceListScreen({ navigation }) {
       />
 
       {/* Create Workspace Modal */}
-      <Modal visible={showCreate} transparent animationType="fade">
+      <Modal visible={showCreate} transparent animationType="fade" onRequestClose={() => setShowCreate(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Create a Workspace</Text>
@@ -219,7 +219,7 @@ export default function WorkspaceListScreen({ navigation }) {
       </Modal>
 
       {/* Join Workspace Modal */}
-      <Modal visible={showJoin} transparent animationType="fade">
+      <Modal visible={showJoin} transparent animationType="fade" onRequestClose={() => setShowJoin(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Join a Workspace</Text>

@@ -234,7 +234,7 @@ function MashupsTab({ workspaceId, colors }) {
       )}
 
       {/* Song Picker */}
-      <Modal visible={showPicker} transparent animationType="fade">
+      <Modal visible={showPicker} transparent animationType="fade" onRequestClose={() => setShowPicker(false)}>
         <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowPicker(false)}>
           <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.pickerTitle, { color: colors.textPrimary }]}>Select Song</Text>

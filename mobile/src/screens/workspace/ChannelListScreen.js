@@ -470,7 +470,7 @@ export default function ChannelListScreen({ navigation, route }) {
       />
 
       {/* Create Channel Modal */}
-      <Modal visible={showCreateChannel} transparent animationType="fade">
+      <Modal visible={showCreateChannel} transparent animationType="fade" onRequestClose={() => setShowCreateChannel(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Create Channel</Text>
@@ -520,7 +520,7 @@ export default function ChannelListScreen({ navigation, route }) {
       </Modal>
 
       {/* New DM Modal */}
-      <Modal visible={showNewDM} transparent animationType="fade">
+      <Modal visible={showNewDM} transparent animationType="fade" onRequestClose={() => setShowNewDM(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>New Message</Text>

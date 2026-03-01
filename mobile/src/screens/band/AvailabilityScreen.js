@@ -307,7 +307,7 @@ export default function AvailabilityScreen({ navigation, route }) {
       />
 
       {/* Status Modal (Personal) */}
-      <Modal visible={showStatusModal} transparent animationType="slide">
+      <Modal visible={showStatusModal} transparent animationType="slide" onRequestClose={() => setShowStatusModal(false)}>
         <TouchableOpacity
           style={styles.actionOverlay}
           activeOpacity={1}
@@ -351,7 +351,7 @@ export default function AvailabilityScreen({ navigation, route }) {
       </Modal>
 
       {/* Team Detail Modal */}
-      <Modal visible={showTeamModal} transparent animationType="slide">
+      <Modal visible={showTeamModal} transparent animationType="slide" onRequestClose={() => setShowTeamModal(false)}>
         <TouchableOpacity
           style={styles.actionOverlay}
           activeOpacity={1}

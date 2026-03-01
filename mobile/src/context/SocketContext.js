@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import Constants from 'expo-constants';
 import { useAuth } from './AuthContext';
@@ -16,25 +16,25 @@ export function SocketProvider({ children }) {
   useEffect(() => {
     if (isAuthenticated && api.accessToken) {
       const newSocket = io(SOCKET_URL, {
-        auth: {
-          token: api.accessToken,
+        auth: (cb) => {
+          cb({ token: api.accessToken });
         },
         transports: ['websocket', 'polling'],
       });
 
       newSocket.on('connect', () => {
-        console.log('Socket connected');
         setConnected(true);
       });
 
       newSocket.on('disconnect', () => {
-        console.log('Socket disconnected');
         setConnected(false);
       });
 
-      newSocket.on('connect_error', (error) => {
-        console.error('Socket connection error:', error);
+      newSocket.on('connect_error', async (error) => {
         setConnected(false);
+        if (error.message?.includes('Authentication') || error.message?.includes('token')) {
+          try { await api.refreshAccessToken(); } catch (e) {}
+        }
       });
 
       setSocket(newSocket);
@@ -46,25 +46,25 @@ export function SocketProvider({ children }) {
     }
   }, [isAuthenticated]);
 
-  const joinChannel = (channelId) => {
+  const joinChannel = useCallback((channelId) => {
     if (socket) socket.emit('channel:join', channelId);
-  };
+  }, [socket]);
 
-  const leaveChannel = (channelId) => {
+  const leaveChannel = useCallback((channelId) => {
     if (socket) socket.emit('channel:leave', channelId);
-  };
+  }, [socket]);
 
-  const startTyping = (channelId) => {
+  const startTyping = useCallback((channelId) => {
     if (socket) socket.emit('typing:start', channelId);
-  };
+  }, [socket]);
 
-  const stopTyping = (channelId) => {
+  const stopTyping = useCallback((channelId) => {
     if (socket) socket.emit('typing:stop', channelId);
-  };
+  }, [socket]);
 
-  const joinWorkspace = (workspaceId) => {
+  const joinWorkspace = useCallback((workspaceId) => {
     if (socket) socket.emit('workspace:join', workspaceId);
-  };
+  }, [socket]);
 
   const value = useMemo(() => ({
     socket,
@@ -74,7 +74,7 @@ export function SocketProvider({ children }) {
     startTyping,
     stopTyping,
     joinWorkspace,
-  }), [socket, connected]);
+  }), [socket, connected, joinChannel, leaveChannel, startTyping, stopTyping, joinWorkspace]);
 
   return (
     <SocketContext.Provider value={value}>

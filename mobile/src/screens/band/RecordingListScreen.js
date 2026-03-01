@@ -339,7 +339,7 @@ export default function RecordingListScreen({ navigation, route }) {
       />
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide">
+      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => setShowActions(false)}>
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}

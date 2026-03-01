@@ -319,7 +319,7 @@ export default function ContactsScreen({ navigation, route }) {
       />
 
       {/* Create/Edit Modal */}
-      <Modal visible={showModal} transparent animationType="fade">
+      <Modal visible={showModal} transparent animationType="fade" onRequestClose={() => setShowModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -432,7 +432,7 @@ export default function ContactsScreen({ navigation, route }) {
       </Modal>
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide">
+      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => setShowActions(false)}>
         <TouchableOpacity
           style={styles.actionOverlay}
           activeOpacity={1}

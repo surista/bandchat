@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -155,6 +155,14 @@ function AudioAttachment({ url, filename }) {
   const { colors } = useTheme();
   const [playing, setPlaying] = useState(false);
   const [sound, setSound] = useState(null);
+
+  useEffect(() => {
+    return () => {
+      if (sound) {
+        sound.unloadAsync().catch(() => {});
+      }
+    };
+  }, [sound]);
 
   const togglePlay = async () => {
     if (playing && sound) {

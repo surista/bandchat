@@ -121,7 +121,7 @@ export default function MessageInput({ onSend, onTyping, editingMessage, onCance
               <Text style={styles.videoIndicatorText}>{'\u25B6'}</Text>
             </View>
           )}
-          <TouchableOpacity style={styles.removeAttachment} onPress={removeAttachment}>
+          <TouchableOpacity style={styles.removeAttachment} onPress={removeAttachment} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Text style={styles.removeAttachmentText}>{'\u2715'}</Text>
           </TouchableOpacity>
         </View>
@@ -130,7 +130,7 @@ export default function MessageInput({ onSend, onTyping, editingMessage, onCance
       <View style={styles.inputRow}>
         {/* Attachment button */}
         {!editingMessage && (
-          <TouchableOpacity style={styles.attachButton} onPress={pickMedia} activeOpacity={0.6}>
+          <TouchableOpacity style={styles.attachButton} onPress={pickMedia} activeOpacity={0.6} hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}>
             <Text style={[styles.attachIcon, { color: colors.textSecondary }]}>+</Text>
           </TouchableOpacity>
         )}
@@ -239,9 +239,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   attachButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 4,
@@ -262,9 +262,9 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   sendButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Platform.OS === 'ios' ? 2 : 0,

@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
+  RefreshControl,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -46,6 +47,7 @@ export default function ChannelScreen({ navigation, route }) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [editingMessage, setEditingMessage] = useState(null);
   const [viewingImage, setViewingImage] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportSubmitting, setReportSubmitting] = useState(false);
@@ -252,6 +254,22 @@ export default function ChannelScreen({ navigation, route }) {
       setLoadingMore(false);
     }
   }, [hasMore, nextCursor, channel.id]);
+
+  // Pull-to-refresh (re-fetch latest messages)
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const data = await api.getMessages(channel.id);
+      setMessages(data.messages);
+      setHasMore(data.hasMore);
+      setNextCursor(data.nextCursor);
+      await api.markChannelRead(channel.id);
+    } catch (err) {
+      console.error('Failed to refresh messages:', err);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [channel.id]);
 
   // Send message with optimistic update + optional attachment
   const handleSend = useCallback(async (content, attachment) => {
@@ -496,6 +514,15 @@ export default function ChannelScreen({ navigation, route }) {
         contentContainerStyle={styles.messageList}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+            progressViewOffset={0}
+          />
+        }
       />
       {typingText && (
         <View style={[styles.typingBar, { backgroundColor: colors.bgSecondary }]}>

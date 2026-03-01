@@ -466,7 +466,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
       )}
 
       {/* Song Picker Modal */}
-      <Modal visible={showSongPicker} animationType="slide">
+      <Modal visible={showSongPicker} animationType="slide" onRequestClose={() => setShowSongPicker(false)}>
         <SafeAreaView style={[styles.pickerContainer, { backgroundColor: colors.bgPrimary }]}>
           <View style={[styles.pickerHeader, { backgroundColor: colors.bgSecondary }]}>
             <TouchableOpacity onPress={() => setShowSongPicker(false)}>
@@ -526,7 +526,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
       </Modal>
 
       {/* Performer Picker Modal */}
-      <Modal visible={showPerformerPicker} transparent animationType="fade">
+      <Modal visible={showPerformerPicker} transparent animationType="fade" onRequestClose={() => setShowPerformerPicker(false)}>
         <View style={styles.detailsOverlay}>
           <View style={[styles.detailsContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.detailsTitle, { color: colors.textPrimary }]}>Select Performers</Text>
@@ -582,7 +582,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
       </Modal>
 
       {/* Edit Details Modal */}
-      <Modal visible={showEditDetails} transparent animationType="fade">
+      <Modal visible={showEditDetails} transparent animationType="fade" onRequestClose={() => setShowEditDetails(false)}>
         <View style={styles.detailsOverlay}>
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View style={[styles.detailsContent, { backgroundColor: colors.modalBg }]}>

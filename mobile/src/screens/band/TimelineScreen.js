@@ -426,7 +426,7 @@ export default function TimelineScreen({ navigation, route }) {
         </ScrollView>
 
         {/* Type Picker Modal */}
-        <Modal visible={showTypePicker} transparent animationType="fade">
+        <Modal visible={showTypePicker} transparent animationType="fade" onRequestClose={() => setShowTypePicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowTypePicker(false)}>
             <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.pickerTitle, { color: colors.textPrimary }]}>Event Type</Text>
@@ -503,7 +503,7 @@ export default function TimelineScreen({ navigation, route }) {
       />
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide">
+      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => setShowActions(false)}>
         <TouchableOpacity
           style={styles.actionOverlay}
           activeOpacity={1}

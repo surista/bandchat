@@ -432,7 +432,7 @@ export default function GigDetailScreen({ navigation, route }) {
         </ScrollView>
 
         {/* Type Picker */}
-        <Modal visible={showTypePicker} transparent animationType="fade">
+        <Modal visible={showTypePicker} transparent animationType="fade" onRequestClose={() => setShowTypePicker(false)}>
           <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowTypePicker(false)}>
             <View style={[styles.pickerModal, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.pickerModalTitle, { color: colors.textPrimary }]}>Event Type</Text>
@@ -452,7 +452,7 @@ export default function GigDetailScreen({ navigation, route }) {
         </Modal>
 
         {/* Status Picker */}
-        <Modal visible={showStatusPicker} transparent animationType="fade">
+        <Modal visible={showStatusPicker} transparent animationType="fade" onRequestClose={() => setShowStatusPicker(false)}>
           <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowStatusPicker(false)}>
             <View style={[styles.pickerModal, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.pickerModalTitle, { color: colors.textPrimary }]}>Status</Text>

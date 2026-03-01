@@ -7,6 +7,7 @@ import {
   Alert,
   ActivityIndicator,
   Linking,
+  Image,
   StyleSheet,
 } from 'react-native';
 import * as FileSystem from 'expo-file-system';
@@ -85,9 +86,7 @@ export default function SettingsScreen({ navigation, route }) {
           activeOpacity={0.6}
         >
           {user?.avatarUrl ? (
-            <View style={[styles.avatarImg, { backgroundColor: colors.bgTertiary }]}>
-              <Text style={styles.avatarText}>{getInitial(user?.displayName)}</Text>
-            </View>
+            <Image source={{ uri: user.avatarUrl }} style={styles.avatarImg} />
           ) : (
             <View style={[styles.avatarImg, { backgroundColor: colors.primary }]}>
               <Text style={styles.avatarText}>{getInitial(user?.displayName)}</Text>

@@ -177,7 +177,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
       />
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide">
+      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => { setShowActions(false); setSelectedMember(null); }}>
         <TouchableOpacity
           style={styles.actionOverlay}
           activeOpacity={1}
@@ -218,7 +218,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
       </Modal>
 
       {/* Remove Confirmation Modal */}
-      <Modal visible={showRemoveConfirm} transparent animationType="fade">
+      <Modal visible={showRemoveConfirm} transparent animationType="fade" onRequestClose={() => setShowRemoveConfirm(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Remove Member</Text>
