@@ -75,6 +75,34 @@ export default function ChannelListScreen({ navigation, route }) {
   const [collapsedBand, setCollapsedBand] = useState(false);
   const [collapsedBandCats, setCollapsedBandCats] = useState({});
 
+  // Load persisted collapse state
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [savedGroups, savedBand, savedBandCats] = await Promise.all([
+          AsyncStorage.getItem(`collapsedGroups:${workspaceId}`),
+          AsyncStorage.getItem(`collapsedBand:${workspaceId}`),
+          AsyncStorage.getItem(`collapsedBandCats:${workspaceId}`),
+        ]);
+        if (savedGroups) setCollapsedGroups(JSON.parse(savedGroups));
+        if (savedBand) setCollapsedBand(JSON.parse(savedBand));
+        if (savedBandCats) setCollapsedBandCats(JSON.parse(savedBandCats));
+      } catch {}
+    };
+    load();
+  }, [workspaceId]);
+
+  // Persist collapse state on change
+  useEffect(() => {
+    AsyncStorage.setItem(`collapsedGroups:${workspaceId}`, JSON.stringify(collapsedGroups)).catch(() => {});
+  }, [collapsedGroups, workspaceId]);
+  useEffect(() => {
+    AsyncStorage.setItem(`collapsedBand:${workspaceId}`, JSON.stringify(collapsedBand)).catch(() => {});
+  }, [collapsedBand, workspaceId]);
+  useEffect(() => {
+    AsyncStorage.setItem(`collapsedBandCats:${workspaceId}`, JSON.stringify(collapsedBandCats)).catch(() => {});
+  }, [collapsedBandCats, workspaceId]);
+
   // Create channel modal
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');

@@ -2,7 +2,7 @@ export default {
   expo: {
     name: 'BandChat',
     slug: 'bandchat',
-    version: '1.03.76',
+    version: '1.03.77',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'dark',
@@ -15,7 +15,7 @@ export default {
     ios: {
       supportsTablet: false,
       bundleIdentifier: 'com.bandchat.mobile',
-      buildNumber: '10376',
+      buildNumber: '10377',
       infoPlist: {
         NSCameraUsageDescription: 'BandChat needs camera access to take photos for your profile and messages.',
         NSPhotoLibraryUsageDescription: 'BandChat needs photo library access to share images in messages and set your profile picture.',
@@ -28,7 +28,7 @@ export default {
     },
     android: {
       package: 'com.bandchat.mobile',
-      versionCode: 10376,
+      versionCode: 10377,
       adaptiveIcon: {
         backgroundColor: '#1f2937',
         foregroundImage: './assets/android-icon-foreground.png',
