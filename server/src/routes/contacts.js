@@ -41,6 +41,11 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       return res.status(400).json({ error: 'Name is required' });
     }
 
+    if (name.length > 200) return res.status(400).json({ error: 'Name must be 200 characters or less' });
+    if (phone && phone.length > 50) return res.status(400).json({ error: 'Phone must be 50 characters or less' });
+    if (email && email.length > 255) return res.status(400).json({ error: 'Email must be 255 characters or less' });
+    if (notes && notes.length > 2000) return res.status(400).json({ error: 'Notes must be 2,000 characters or less' });
+
     const contact = await prisma.contact.create({
       data: {
         name,

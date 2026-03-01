@@ -54,6 +54,7 @@ export default function WorkspaceListScreen({ navigation }) {
 
   const handleCreateWorkspace = async () => {
     if (!newWorkspaceName.trim()) return;
+    if (submitting) return;
     setSubmitting(true);
     try {
       const workspace = await api.createWorkspace(newWorkspaceName.trim());
@@ -71,6 +72,7 @@ export default function WorkspaceListScreen({ navigation }) {
 
   const handleJoinWorkspace = async () => {
     if (!inviteCode.trim()) return;
+    if (submitting) return;
     setSubmitting(true);
     try {
       const workspace = await api.joinWorkspace(inviteCode.trim());

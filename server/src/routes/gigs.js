@@ -1,10 +1,13 @@
 import express from 'express';
 import crypto from 'crypto';
+import rateLimit from 'express-rate-limit';
 import { authenticate } from '../middleware/auth.js';
 import { isWorkspaceMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 
 const router = express.Router();
+
+const calendarLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, message: { error: 'Too many requests' } });
 
 // Get all gigs for a workspace
 router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
@@ -1566,7 +1569,7 @@ router.get('/workspace/:workspaceId/calendar-token', authenticate, isWorkspaceMe
 });
 
 // Public iCal feed (no auth, uses token)
-router.get('/workspace/:workspaceId/calendar.ics', async (req, res) => {
+router.get('/workspace/:workspaceId/calendar.ics', calendarLimiter, async (req, res) => {
   try {
     const { token } = req.query;
     if (!token) {
@@ -1578,7 +1581,7 @@ router.get('/workspace/:workspaceId/calendar.ics', async (req, res) => {
       select: { calendarToken: true, name: true }
     });
 
-    if (!workspace || workspace.calendarToken !== token) {
+    if (!workspace || !workspace.calendarToken || !crypto.timingSafeEqual(Buffer.from(workspace.calendarToken), Buffer.from(token))) {
       return res.status(403).json({ error: 'Invalid token' });
     }
 

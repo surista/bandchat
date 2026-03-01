@@ -3,7 +3,7 @@
  * Handles real-time message updates, typing indicators, and reactions.
  */
 
-import { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
@@ -320,7 +320,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
     }
   };
 
-  const pinnedMessageIds = new Set(pinnedMessages.map(p => p.messageId));
+  const pinnedMessageIds = useMemo(() => new Set(pinnedMessages.map(p => p.messageId)), [pinnedMessages]);
 
   const scrollToBottom = (instant = false) => {
     // Use requestAnimationFrame to ensure DOM is updated
@@ -411,14 +411,14 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   };
 
   const handleTyping = () => {
-    startTyping(channel.id);
+    startTyping(channelIdRef.current);
 
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
     typingTimeoutRef.current = setTimeout(() => {
-      stopTyping(channel.id);
+      stopTyping(channelIdRef.current);
     }, 2000);
   };
 
@@ -576,9 +576,9 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       {typingUsers.length > 0 && (
         <div className="px-4 py-2 text-[var(--color-text-muted)] text-sm">
           <span className="inline-flex items-center gap-1">
-            <span className="typing-dot w-1.5 h-1.5 bg-gray-400 rounded-full" />
-            <span className="typing-dot w-1.5 h-1.5 bg-gray-400 rounded-full" />
-            <span className="typing-dot w-1.5 h-1.5 bg-gray-400 rounded-full" />
+            <span className="typing-dot w-1.5 h-1.5 bg-[var(--color-text-muted)] rounded-full" />
+            <span className="typing-dot w-1.5 h-1.5 bg-[var(--color-text-muted)] rounded-full" />
+            <span className="typing-dot w-1.5 h-1.5 bg-[var(--color-text-muted)] rounded-full" />
           </span>
           <span className="ml-2">
             {typingUsers.map(u => u.displayName).join(', ')}{' '}

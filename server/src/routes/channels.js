@@ -318,7 +318,7 @@ router.put('/:channelId', authenticate, isChannelMember, async (req, res) => {
       }
     });
 
-    if (membership.role !== 'ADMIN' && req.user.id !== existingChannel.createdById) {
+    if (!membership || (membership.role !== 'ADMIN' && req.user.id !== existingChannel.createdById)) {
       return res.status(403).json({ error: 'Only admins or the channel creator can update this channel' });
     }
 

@@ -554,6 +554,10 @@ router.post('/:workspaceId/members/:userId/reset-password', authenticate, isWork
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
 
+    if (newPassword.length > 128) {
+      return res.status(400).json({ error: 'Password must be 128 characters or less' });
+    }
+
     // Verify admin's password before allowing reset
     const admin = await prisma.user.findUnique({
       where: { id: req.user.id }

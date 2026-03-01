@@ -234,6 +234,9 @@ router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceAdmin, as
     if (sessionWrapper.data.workspaceId !== workspaceId) {
       return res.status(403).json({ error: 'Session does not belong to this workspace' });
     }
+    if (sessionWrapper.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Session does not belong to this user' });
+    }
 
     // Remove session immediately to prevent duplicate imports
     const session = sessionWrapper.data;

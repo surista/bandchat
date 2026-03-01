@@ -55,6 +55,12 @@ export default function SearchScreen({ navigation, route }) {
     loadFilters();
   }, [workspaceId]);
 
+  useEffect(() => {
+    return () => {
+      if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    };
+  }, []);
+
   // Auto-focus search input
   useEffect(() => {
     const timeout = setTimeout(() => inputRef.current?.focus(), 300);

@@ -401,7 +401,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
   }, []);
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 border-t border-gray-700 safe-area-bottom">
+    <form onSubmit={handleSubmit} className="p-4 border-t border-[var(--color-border)] safe-area-bottom">
       {/* Error message */}
       {error && (
         <div className="mb-2 text-red-400 text-sm bg-red-900/20 px-3 py-2 rounded">
@@ -489,7 +489,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
         </div>
       )}
 
-      <div className="bg-gray-700 rounded-lg relative">
+      <div className="bg-[var(--color-bg-tertiary)] rounded-lg relative">
         {/* @Mention dropdown */}
         {showMentions && filteredMembers.length > 0 && (
           <div

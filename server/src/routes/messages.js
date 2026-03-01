@@ -24,7 +24,7 @@ const reactionsInclude = {
 router.get('/channel/:channelId', authenticate, isChannelMember, async (req, res) => {
   try {
     const { cursor, limit = 50 } = req.query;
-    const take = Math.min(parseInt(limit), 100);
+    const take = Math.min(parseInt(limit) || 50, 100);
 
     // Get blocked user IDs for filtering
     const blockedUsers = await prisma.blockedUser.findMany({
@@ -676,11 +676,24 @@ router.delete('/:messageId/reactions/:emoji', authenticate, async (req, res) => 
     // Get the message to find the channel for socket broadcast
     const message = await prisma.message.findUnique({
       where: { id: req.params.messageId },
-      select: { channelId: true }
+      include: { channel: { select: { id: true, workspaceId: true } } }
     });
 
     if (!message) {
       return res.status(404).json({ error: 'Message not found' });
+    }
+
+    const workspaceMember = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: message.channel.workspaceId
+        }
+      }
+    });
+
+    if (!workspaceMember) {
+      return res.status(403).json({ error: 'Not a member of this workspace' });
     }
 
     // Find and delete the user's reaction

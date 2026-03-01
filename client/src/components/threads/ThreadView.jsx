@@ -244,10 +244,10 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
       if (selectedFiles.length > 0) {
         if (selectedFiles.length === 1) {
           const uploaded = await api.uploadFile(selectedFiles[0]);
-          attachments = [uploaded];
+          attachments = [{ type: uploaded.type, url: uploaded.url, filename: uploaded.filename, size: uploaded.size }];
         } else {
           const result = await api.uploadFiles(selectedFiles);
-          attachments = result.files;
+          attachments = result.files.map(f => ({ type: f.type, url: f.url, filename: f.filename, size: f.size }));
         }
       }
 
@@ -354,7 +354,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
                       {formatTime(reply.createdAt)}
                     </span>
                   </div>
-                  <div className="text-gray-200 text-sm break-words whitespace-pre-wrap">
+                  <div className="text-[var(--color-text-secondary)] text-sm break-words whitespace-pre-wrap">
                     {reply.content}
                   </div>
                   {/* Attachments */}

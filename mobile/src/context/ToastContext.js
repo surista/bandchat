@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Animated, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -104,11 +104,14 @@ export function ToastProvider({ children }) {
     return id;
   }, [removeToast]);
 
-  const toast = useCallback((message) => addToast(message, 'info'), [addToast]);
-  toast.success = useCallback((message) => addToast(message, 'success'), [addToast]);
-  toast.error = useCallback((message, duration = 6000) => addToast(message, 'error', duration), [addToast]);
-  toast.warning = useCallback((message) => addToast(message, 'warning'), [addToast]);
-  toast.info = useCallback((message) => addToast(message, 'info'), [addToast]);
+  const toast = useMemo(() => {
+    const fn = (message) => addToast(message, 'info');
+    fn.success = (message) => addToast(message, 'success');
+    fn.error = (message, duration = 6000) => addToast(message, 'error', duration);
+    fn.warning = (message) => addToast(message, 'warning');
+    fn.info = (message) => addToast(message, 'info');
+    return fn;
+  }, [addToast]);
 
   return (
     <ToastContext.Provider value={toast}>

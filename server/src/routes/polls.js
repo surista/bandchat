@@ -80,6 +80,8 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       return res.status(400).json({ error: 'Question is required' });
     }
 
+    if (question.length > 500) return res.status(400).json({ error: 'Question must be 500 characters or less' });
+
     if (!options || options.length < 2) {
       return res.status(400).json({ error: 'At least 2 options are required' });
     }
@@ -321,20 +323,21 @@ router.post('/:pollId/close', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Poll not found' });
     }
 
-    // Check if user is creator or admin
-    if (poll.createdById !== req.user.id) {
-      const member = await prisma.workspaceMember.findUnique({
-        where: {
-          userId_workspaceId: {
-            userId: req.user.id,
-            workspaceId: poll.workspaceId
-          }
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: poll.workspaceId
         }
-      });
-
-      if (member?.role !== 'ADMIN') {
-        return res.status(403).json({ error: 'Only the poll creator or admin can close this poll' });
       }
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    if (poll.createdById !== req.user.id && member.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only the poll creator or admin can close this poll' });
     }
 
     const updatedPoll = await prisma.poll.update({
@@ -364,20 +367,21 @@ router.delete('/:pollId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Poll not found' });
     }
 
-    // Check if user is creator or admin
-    if (poll.createdById !== req.user.id) {
-      const member = await prisma.workspaceMember.findUnique({
-        where: {
-          userId_workspaceId: {
-            userId: req.user.id,
-            workspaceId: poll.workspaceId
-          }
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: poll.workspaceId
         }
-      });
-
-      if (member?.role !== 'ADMIN') {
-        return res.status(403).json({ error: 'Only the poll creator or admin can delete this poll' });
       }
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    if (poll.createdById !== req.user.id && member.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only the poll creator or admin can delete this poll' });
     }
 
     await prisma.poll.delete({

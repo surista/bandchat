@@ -561,6 +561,13 @@ class ApiService {
 
   // File uploads
   async uploadFile(file) {
+    if (this.refreshToken && this.isTokenExpiringSoon()) {
+      if (!this._refreshPromise) {
+        this._refreshPromise = this.refreshAccessToken().finally(() => { this._refreshPromise = null; });
+      }
+      await this._refreshPromise;
+    }
+
     const formData = new FormData();
     formData.append('file', file);
 
@@ -586,6 +593,13 @@ class ApiService {
   }
 
   async uploadFiles(files) {
+    if (this.refreshToken && this.isTokenExpiringSoon()) {
+      if (!this._refreshPromise) {
+        this._refreshPromise = this.refreshAccessToken().finally(() => { this._refreshPromise = null; });
+      }
+      await this._refreshPromise;
+    }
+
     const formData = new FormData();
     files.forEach(file => formData.append('files', file));
 

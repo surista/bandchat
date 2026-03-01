@@ -92,18 +92,17 @@ export default function ChannelListScreen({ navigation, route }) {
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
+    let timer;
     const checkOnboarding = async () => {
       try {
         const done = await AsyncStorage.getItem('onboarding_complete');
         if (!done) {
-          const timer = setTimeout(() => setShowOnboarding(true), 500);
-          return () => clearTimeout(timer);
+          timer = setTimeout(() => setShowOnboarding(true), 500);
         }
-      } catch {
-        // Ignore errors
-      }
+      } catch { }
     };
     checkOnboarding();
+    return () => { if (timer) clearTimeout(timer); };
   }, []);
 
   const handleOnboardingComplete = useCallback(async () => {

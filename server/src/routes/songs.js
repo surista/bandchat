@@ -26,7 +26,8 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
           select: { setlistSongs: true, gigSongs: true }
         }
       },
-      orderBy: { title: 'asc' }
+      orderBy: { title: 'asc' },
+      take: 500
     });
 
     res.json(songs);
@@ -44,6 +45,9 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
     }
+
+    if (youtubeUrl && !youtubeUrl.startsWith('https://')) return res.status(400).json({ error: 'YouTube URL must use HTTPS' });
+    if (spotifyUrl && !spotifyUrl.startsWith('https://')) return res.status(400).json({ error: 'Spotify URL must use HTTPS' });
 
     const song = await prisma.song.create({
       data: {
@@ -321,6 +325,9 @@ router.put('/:songId', authenticate, async (req, res) => {
     if (!membership) {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
+
+    if (youtubeUrl && !youtubeUrl.startsWith('https://')) return res.status(400).json({ error: 'YouTube URL must use HTTPS' });
+    if (spotifyUrl && !spotifyUrl.startsWith('https://')) return res.status(400).json({ error: 'Spotify URL must use HTTPS' });
 
     const song = await prisma.song.update({
       where: { id: req.params.songId },

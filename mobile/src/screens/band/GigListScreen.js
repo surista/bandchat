@@ -79,6 +79,29 @@ export default function GigListScreen({ navigation, route }) {
   const loadingRef = useRef(loading);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
 
+  const handleSubscribeCalendar = useCallback(async () => {
+    setCalendarLoading(true);
+    try {
+      let tokenData;
+      try {
+        tokenData = await api.getCalendarToken(workspaceId);
+      } catch {
+        tokenData = await api.generateCalendarToken(workspaceId);
+      }
+      const token = tokenData.token;
+      const Constants = require('expo-constants').default;
+      const apiUrl = Constants.expoConfig?.extra?.apiUrl || 'http://localhost:3001/api';
+      const baseUrl = apiUrl.replace(/\/api\/?$/, '');
+      const icalUrl = `${baseUrl}/api/gigs/workspace/${workspaceId}/calendar.ics?token=${token}`;
+      setCalendarUrl(icalUrl);
+      setShowCalendarModal(true);
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to get calendar link');
+    } finally {
+      setCalendarLoading(false);
+    }
+  }, [workspaceId]);
+
   // Header buttons
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -142,31 +165,6 @@ export default function GigListScreen({ navigation, route }) {
     setRefreshing(true);
     loadGigs();
   }, [loadGigs]);
-
-  const handleSubscribeCalendar = useCallback(async () => {
-    setCalendarLoading(true);
-    try {
-      // Try to get existing token first, generate if not found
-      let tokenData;
-      try {
-        tokenData = await api.getCalendarToken(workspaceId);
-      } catch {
-        tokenData = await api.generateCalendarToken(workspaceId);
-      }
-      const token = tokenData.token;
-      // Build base URL without /api suffix
-      const Constants = require('expo-constants').default;
-      const apiUrl = Constants.expoConfig?.extra?.apiUrl || 'http://localhost:3001/api';
-      const baseUrl = apiUrl.replace(/\/api\/?$/, '');
-      const icalUrl = `${baseUrl}/api/gigs/workspace/${workspaceId}/calendar.ics?token=${token}`;
-      setCalendarUrl(icalUrl);
-      setShowCalendarModal(true);
-    } catch (err) {
-      Alert.alert('Error', err.message || 'Failed to get calendar link');
-    } finally {
-      setCalendarLoading(false);
-    }
-  }, [workspaceId]);
 
   // Group by month
   const sections = useMemo(() => {

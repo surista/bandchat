@@ -29,12 +29,12 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
     }
 
     // Calculate current balance
-    const balance = kitty.startingBalance + kitty.transactions.reduce((sum, t) => {
+    const balance = Math.round((kitty.startingBalance + kitty.transactions.reduce((sum, t) => {
       if (t.type === 'GIG_PAY' || t.type === 'OTHER_INCOME' || t.type === 'FEE') {
         return sum + t.amount;
       }
       return sum - Math.abs(t.amount); // EXPENSE subtracts
-    }, 0);
+    }, 0)) * 100) / 100;
 
     res.json({ ...kitty, currentBalance: balance });
   } catch (error) {
@@ -81,6 +81,8 @@ router.post('/workspace/:workspaceId/transactions', authenticate, isWorkspaceMem
     if (!type || amount === undefined) {
       return res.status(400).json({ error: 'Type and amount are required' });
     }
+
+    if (description && description.length > 500) return res.status(400).json({ error: 'Description must be 500 characters or less' });
 
     // Validate type
     const validTypes = ['GIG_PAY', 'FEE', 'EXPENSE', 'OTHER_INCOME'];

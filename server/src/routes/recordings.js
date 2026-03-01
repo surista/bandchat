@@ -23,7 +23,8 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
           select: { id: true, title: true, artist: true }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: 200
     });
 
     res.json(recordings);

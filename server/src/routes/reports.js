@@ -3,6 +3,11 @@ import { Resend } from 'resend';
 import { authenticate } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
 const router = express.Router();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@bandchat.app';
@@ -58,19 +63,19 @@ router.post('/', authenticate, async (req, res) => {
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #dc2626;">Content Report</h2>
         <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
-          <tr><td style="padding: 8px 0; color: #6b7280; width: 120px;">Workspace</td><td style="padding: 8px 0; font-weight: 600;">${message.channel.workspace.name}</td></tr>
-          <tr><td style="padding: 8px 0; color: #6b7280;">Channel</td><td style="padding: 8px 0;">#${message.channel.name}</td></tr>
-          <tr><td style="padding: 8px 0; color: #6b7280;">Reported by</td><td style="padding: 8px 0;">${reporter.displayName} (${reporter.email})</td></tr>
-          <tr><td style="padding: 8px 0; color: #6b7280;">Message author</td><td style="padding: 8px 0;">${message.author?.displayName || 'Deleted User'} (${message.author?.email || 'N/A'})</td></tr>
+          <tr><td style="padding: 8px 0; color: #6b7280; width: 120px;">Workspace</td><td style="padding: 8px 0; font-weight: 600;">${escapeHtml(message.channel.workspace.name)}</td></tr>
+          <tr><td style="padding: 8px 0; color: #6b7280;">Channel</td><td style="padding: 8px 0;">#${escapeHtml(message.channel.name)}</td></tr>
+          <tr><td style="padding: 8px 0; color: #6b7280;">Reported by</td><td style="padding: 8px 0;">${escapeHtml(reporter.displayName)} (${escapeHtml(reporter.email)})</td></tr>
+          <tr><td style="padding: 8px 0; color: #6b7280;">Message author</td><td style="padding: 8px 0;">${escapeHtml(message.author?.displayName) || 'Deleted User'} (${escapeHtml(message.author?.email) || 'N/A'})</td></tr>
           <tr><td style="padding: 8px 0; color: #6b7280;">Message date</td><td style="padding: 8px 0;">${new Date(message.createdAt).toLocaleString()}</td></tr>
         </table>
         <div style="background: #f3f4f6; border-radius: 8px; padding: 16px; margin: 16px 0;">
           <div style="color: #6b7280; font-size: 12px; margin-bottom: 4px;">Message content:</div>
-          <div style="color: #111827;">${message.content}</div>
+          <div style="color: #111827;">${escapeHtml(message.content)}</div>
         </div>
         <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin: 16px 0;">
           <div style="color: #6b7280; font-size: 12px; margin-bottom: 4px;">Reason for report:</div>
-          <div style="color: #991b1b;">${reason.trim()}</div>
+          <div style="color: #991b1b;">${escapeHtml(reason.trim())}</div>
         </div>
       </div>
     `;
@@ -79,7 +84,7 @@ router.post('/', authenticate, async (req, res) => {
       await resend.emails.send({
         from: `BandChat <noreply@${process.env.RESEND_DOMAIN || 'resend.dev'}>`,
         to: ADMIN_EMAIL,
-        subject: `[BandChat] Content Report — ${message.channel.workspace.name}`,
+        subject: `[BandChat] Content Report — ${escapeHtml(message.channel.workspace.name)}`,
         html: emailHtml
       }).catch(err => console.error('Failed to send report email:', err));
     } else {

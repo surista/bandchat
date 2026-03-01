@@ -634,7 +634,7 @@ function MessageList({
                     📌
                   </button>
                 )}
-                {message.author.id === currentUser.id && (
+                {message.author?.id === currentUser.id && (
                   <>
                     <button
                       onClick={(e) => {

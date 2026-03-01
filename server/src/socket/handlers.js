@@ -108,8 +108,8 @@ export const setupSocketHandlers = (io) => {
   });
 
   io.on('connection', async (socket) => {
+    try {
     const user = socket.user;
-    console.log(`User connected: ${user.id}`);
 
     // Join user's personal room for direct notifications
     socket.join(`user:${user.id}`);
@@ -186,7 +186,6 @@ export const setupSocketHandlers = (io) => {
         }
 
         socket.join(`channel:${channelId}`);
-        console.log(`User ${user.id} joined channel ${channelId}`);
       } catch (error) {
         console.error('Channel join error:', error);
       }
@@ -198,7 +197,6 @@ export const setupSocketHandlers = (io) => {
         return;
       }
       socket.leave(`channel:${channelId}`);
-      console.log(`User ${user.id} left channel ${channelId}`);
     });
 
     // Handle typing indicator (verify socket is in the channel room)
@@ -292,8 +290,6 @@ export const setupSocketHandlers = (io) => {
 
     // Handle disconnection
     socket.on('disconnect', () => {
-      console.log(`User disconnected: ${user.id}`);
-
       // Notify workspaces about offline status (from socket rooms, not stale closure)
       const workspaceIds = getWorkspaceRooms();
       workspaceIds.forEach(workspaceId => {
@@ -303,5 +299,9 @@ export const setupSocketHandlers = (io) => {
         });
       });
     });
+    } catch (error) {
+      console.error('Socket connection handler error:', error);
+      socket.disconnect(true);
+    }
   });
 };

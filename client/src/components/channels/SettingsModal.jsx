@@ -24,7 +24,11 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
   const [settingsTab, setSettingsTab] = useState('profile');
   const [editDisplayName, setEditDisplayName] = useState('');
   const [editAvatarUrl, setEditAvatarUrl] = useState('');
-  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [settingsError, setSettingsError] = useState('');
   const [settingsSuccess, setSettingsSuccess] = useState('');
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -136,7 +140,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
   };
 
   const handleSaveBandMember = async (data) => {
-    setSettingsLoading(true);
+    setProfileLoading(true);
     setSettingsError('');
     try {
       if (editingBandMember) {
@@ -150,7 +154,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
     } catch (err) {
       setSettingsError(err.message);
     } finally {
-      setSettingsLoading(false);
+      setProfileLoading(false);
     }
   };
 
@@ -197,7 +201,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
               <h3>Settings</h3>
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-white text-2xl leading-none"
+                className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl leading-none"
               >
                 &times;
               </button>
@@ -212,7 +216,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'profile'
                     ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                    : 'text-gray-400 hover:text-gray-200'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                 }`}
               >
                 Profile
@@ -224,7 +228,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'workspace'
                     ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                    : 'text-gray-400 hover:text-gray-200'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                 }`}
               >
                 Workspace
@@ -236,7 +240,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'theme'
                     ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                    : 'text-gray-400 hover:text-gray-200'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                 }`}
               >
                 Theme
@@ -248,7 +252,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'notifications'
                     ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                    : 'text-gray-400 hover:text-gray-200'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                 }`}
               >
                 Notifications
@@ -262,7 +266,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                       settingsTab === 'members'
                         ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                        : 'text-gray-400 hover:text-gray-200'
+                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                     }`}
                   >
                     Members
@@ -274,7 +278,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                       settingsTab === 'bandmembers'
                         ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                        : 'text-gray-400 hover:text-gray-200'
+                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                     }`}
                   >
                     Band
@@ -286,7 +290,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                       settingsTab === 'import'
                         ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                        : 'text-gray-400 hover:text-gray-200'
+                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                     }`}
                   >
                     Import
@@ -300,7 +304,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'whatsnew'
                     ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                    : 'text-gray-400 hover:text-gray-200'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                 }`}
               >
                 New
@@ -312,7 +316,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'about'
                     ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                    : 'text-gray-400 hover:text-gray-200'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                 }`}
               >
                 About
@@ -339,7 +343,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     className="bg-[var(--color-modal-card)] rounded-lg p-5 border border-[var(--color-modal-border)]"
                     onSubmit={async (e) => {
                       e.preventDefault();
-                      setSettingsLoading(true);
+                      setProfileLoading(true);
                       setSettingsError('');
                       setSettingsSuccess('');
                       try {
@@ -353,11 +357,11 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                       } catch (err) {
                         setSettingsError(err.message);
                       } finally {
-                        setSettingsLoading(false);
+                        setProfileLoading(false);
                       }
                     }}
                   >
-                    <h4 className="text-lg font-medium text-white mb-4">Profile Information</h4>
+                    <h4 className="text-lg font-medium text-[var(--color-text-primary)] mb-4">Profile Information</h4>
                     <div className="mb-4">
                       <label className="modal-label">Display Name</label>
                       <input
@@ -397,7 +401,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                               className="hidden"
                             />
                           </label>
-                          <p className="text-xs text-gray-400 mt-2">
+                          <p className="text-xs text-[var(--color-text-muted)] mt-2">
                             Max 10MB. JPG, PNG, GIF, WebP.
                           </p>
                           {editAvatarUrl && (
@@ -413,28 +417,28 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
                         Bio
                       </label>
                       <textarea
                         value={editBio}
                         onChange={(e) => setEditBio(e.target.value)}
-                        className="w-full bg-[var(--color-modal-input)] border border-[var(--color-modal-border)] rounded px-3 py-2 text-white placeholder-gray-400"
+                        className="w-full bg-[var(--color-modal-input)] border border-[var(--color-modal-border)] rounded px-3 py-2 text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)]"
                         placeholder="Tell others about yourself..."
                         rows={3}
                         maxLength={500}
                       />
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-[var(--color-text-muted)] mt-1">
                         {editBio.length}/500 characters
                       </p>
                     </div>
                     <div className="flex justify-end">
                       <button
                         type="submit"
-                        disabled={settingsLoading}
+                        disabled={profileLoading}
                         className="btn btn-primary"
                       >
-                        {settingsLoading ? 'Saving...' : 'Update Profile'}
+                        {profileLoading ? 'Saving...' : 'Update Profile'}
                       </button>
                     </div>
                   </form>
@@ -444,7 +448,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     className="bg-[var(--color-modal-card)] rounded-lg p-5 border border-[var(--color-modal-border)]"
                     onSubmit={async (e) => {
                       e.preventDefault();
-                      setSettingsLoading(true);
+                      setEmailLoading(true);
                       setSettingsError('');
                       setSettingsSuccess('');
                       try {
@@ -455,13 +459,13 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                       } catch (err) {
                         setSettingsError(err.message);
                       } finally {
-                        setSettingsLoading(false);
+                        setEmailLoading(false);
                       }
                     }}
                   >
-                    <h4 className="text-lg font-medium text-white mb-4">Change Email</h4>
-                    <p className="text-sm text-gray-400 mb-4">
-                      Current email: <span className="text-white">{user?.email}</span>
+                    <h4 className="text-lg font-medium text-[var(--color-text-primary)] mb-4">Change Email</h4>
+                    <p className="text-sm text-[var(--color-text-muted)] mb-4">
+                      Current email: <span className="text-[var(--color-text-primary)]">{user?.email}</span>
                     </p>
                     <div className="mb-4">
                       <label className="modal-label">New Email Address</label>
@@ -488,10 +492,10 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     <div className="flex justify-end">
                       <button
                         type="submit"
-                        disabled={settingsLoading || !newEmail}
+                        disabled={emailLoading || !newEmail}
                         className="btn btn-blue"
                       >
-                        {settingsLoading ? 'Sending...' : 'Send Verification Email'}
+                        {emailLoading ? 'Sending...' : 'Send Verification Email'}
                       </button>
                     </div>
                   </form>
@@ -505,7 +509,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                         setSettingsError('New passwords do not match');
                         return;
                       }
-                      setSettingsLoading(true);
+                      setPasswordLoading(true);
                       setSettingsError('');
                       setSettingsSuccess('');
                       try {
@@ -517,11 +521,11 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                       } catch (err) {
                         setSettingsError(err.message);
                       } finally {
-                        setSettingsLoading(false);
+                        setPasswordLoading(false);
                       }
                     }}
                   >
-                    <h4 className="text-lg font-medium text-white mb-4">Change Password</h4>
+                    <h4 className="text-lg font-medium text-[var(--color-text-primary)] mb-4">Change Password</h4>
                     <div className="mb-4">
                       <label className="modal-label">Current Password</label>
                       <input
@@ -531,7 +535,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                         className="modal-input"
                         placeholder="Enter current password"
                       />
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-[var(--color-text-muted)] mt-1">
                         Leave blank if you signed up with Google and haven't set a password
                       </p>
                     </div>
@@ -544,6 +548,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                         className="modal-input"
                         placeholder="At least 6 characters"
                         minLength={6}
+                        maxLength={128}
                         required
                       />
                     </div>
@@ -555,29 +560,30 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         className="modal-input"
                         placeholder="Confirm new password"
+                        maxLength={128}
                         required
                       />
                     </div>
                     <div className="flex justify-end">
                       <button
                         type="submit"
-                        disabled={settingsLoading || !newPassword || !confirmPassword}
+                        disabled={passwordLoading || !newPassword || !confirmPassword}
                         className="btn btn-blue"
                       >
-                        {settingsLoading ? 'Changing...' : 'Change Password'}
+                        {passwordLoading ? 'Changing...' : 'Change Password'}
                       </button>
                     </div>
                   </form>
 
                   {/* Export My Data */}
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-5 border border-[var(--color-modal-border)]">
-                    <h4 className="text-lg font-medium text-white mb-2">Export My Data</h4>
-                    <p className="text-sm text-gray-400 mb-3">
+                    <h4 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">Export My Data</h4>
+                    <p className="text-sm text-[var(--color-text-muted)] mb-3">
                       Download all your data as a JSON file including your profile, messages, and content you created.
                     </p>
                     <button
                       onClick={async () => {
-                        setSettingsLoading(true);
+                        setExportLoading(true);
                         setSettingsError('');
                         try {
                           await api.exportUserData();
@@ -585,20 +591,20 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                         } catch (err) {
                           setSettingsError(err.message);
                         } finally {
-                          setSettingsLoading(false);
+                          setExportLoading(false);
                         }
                       }}
-                      disabled={settingsLoading}
+                      disabled={exportLoading}
                       className="btn btn-blue"
                     >
-                      {settingsLoading ? 'Exporting...' : 'Download My Data'}
+                      {exportLoading ? 'Exporting...' : 'Download My Data'}
                     </button>
                   </div>
 
                   {/* Delete Account */}
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-5 border border-red-900/50">
                     <h4 className="text-lg font-medium text-red-400 mb-2">Delete Account</h4>
-                    <p className="text-sm text-gray-400 mb-3">
+                    <p className="text-sm text-[var(--color-text-muted)] mb-3">
                       Permanently delete your account. Your messages will be anonymized and your profile data removed. This cannot be undone.
                     </p>
                     {!deleteConfirmOpen ? (
@@ -628,20 +634,20 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                           <button
                             onClick={async () => {
                               setDeleteError('');
-                              setSettingsLoading(true);
+                              setDeleteLoading(true);
                               try {
                                 await api.deleteAccount(deletePassword || undefined);
                                 onLogout();
                               } catch (err) {
                                 setDeleteError(err.message);
                               } finally {
-                                setSettingsLoading(false);
+                                setDeleteLoading(false);
                               }
                             }}
-                            disabled={settingsLoading || (user?.authProvider !== 'google' && !deletePassword)}
+                            disabled={deleteLoading || (user?.authProvider !== 'google' && !deletePassword)}
                             className="btn btn-danger"
                           >
-                            {settingsLoading ? 'Deleting...' : 'Permanently Delete'}
+                            {deleteLoading ? 'Deleting...' : 'Permanently Delete'}
                           </button>
                           <button
                             onClick={() => { setDeleteConfirmOpen(false); setDeletePassword(''); setDeleteError(''); }}
@@ -660,13 +666,13 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
               {settingsTab === 'theme' && (
                 <div>
                   {/* Dark/Light Mode Toggle */}
-                  <div className="flex items-center justify-between mb-6 p-3 bg-gray-800 rounded-lg">
-                    <span className="text-gray-300 text-sm font-medium">Appearance</span>
-                    <div className="flex rounded-lg bg-gray-900 p-0.5">
+                  <div className="flex items-center justify-between mb-6 p-3 bg-[var(--color-bg-secondary)] rounded-lg">
+                    <span className="text-[var(--color-text-secondary)] text-sm font-medium">Appearance</span>
+                    <div className="flex rounded-lg bg-[var(--color-bg-primary)] p-0.5">
                       <button
                         onClick={() => mode !== 'dark' && toggleMode()}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
-                          mode === 'dark' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-gray-300'
+                          mode === 'dark' ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
                         }`}
                       >
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -677,7 +683,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                       <button
                         onClick={() => mode !== 'light' && toggleMode()}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
-                          mode === 'light' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-gray-300'
+                          mode === 'light' ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
                         }`}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -687,7 +693,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                       </button>
                     </div>
                   </div>
-                  <p className="text-gray-400 mb-4">Choose a theme for your sidebar</p>
+                  <p className="text-[var(--color-text-muted)] mb-4">Choose a theme for your sidebar</p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                     {Object.entries(themes).map(([id, theme]) => (
                       <button
@@ -696,7 +702,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                         className={`p-3 rounded-lg border-2 transition-all ${
                           currentTheme === id
                             ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/30'
-                            : 'border-[var(--color-modal-border)] hover:border-gray-500'
+                            : 'border-[var(--color-modal-border)] hover:border-[var(--color-border)]'
                         }`}
                       >
                         <div className="flex gap-1 mb-2">
@@ -713,7 +719,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                             style={{ backgroundColor: theme.primary }}
                           />
                         </div>
-                        <div className="text-xs font-medium text-gray-300">
+                        <div className="text-xs font-medium text-[var(--color-text-secondary)]">
                           {theme.name}
                         </div>
                         {currentTheme === id && (
@@ -730,11 +736,11 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 <div className="space-y-2">
                   {/* Export Workspace Data (Admin) */}
                   <div className="p-3 bg-[var(--color-modal-card)] rounded-lg mb-4">
-                    <h4 className="text-sm font-medium text-white mb-1">Export Workspace Data</h4>
-                    <p className="text-xs text-gray-400 mb-2">Download all workspace data as JSON (channels, messages, songs, gigs, etc.)</p>
+                    <h4 className="text-sm font-medium text-[var(--color-text-primary)] mb-1">Export Workspace Data</h4>
+                    <p className="text-xs text-[var(--color-text-muted)] mb-2">Download all workspace data as JSON (channels, messages, songs, gigs, etc.)</p>
                     <button
                       onClick={async () => {
-                        setSettingsLoading(true);
+                        setExportLoading(true);
                         setSettingsError('');
                         try {
                           await api.exportWorkspaceData(workspace.id);
@@ -742,13 +748,13 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                         } catch (err) {
                           setSettingsError(err.message);
                         } finally {
-                          setSettingsLoading(false);
+                          setExportLoading(false);
                         }
                       }}
-                      disabled={settingsLoading}
+                      disabled={exportLoading}
                       className="btn btn-blue text-sm"
                     >
-                      {settingsLoading ? 'Exporting...' : 'Download Workspace Data'}
+                      {exportLoading ? 'Exporting...' : 'Download Workspace Data'}
                     </button>
                   </div>
 
@@ -836,13 +842,13 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                               {member.user.displayName?.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <div className="font-medium text-white">
+                              <div className="font-medium text-[var(--color-text-primary)]">
                                 {member.user.displayName}
                                 {member.user.id === user?.id && (
-                                  <span className="text-gray-400 ml-1">(you)</span>
+                                  <span className="text-[var(--color-text-muted)] ml-1">(you)</span>
                                 )}
                               </div>
-                              <div className="text-sm text-gray-400">{member.user.email}</div>
+                              <div className="text-sm text-[var(--color-text-muted)]">{member.user.email}</div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -910,10 +916,10 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     <div className="modal-backdrop">
                       <div className="modal-content max-w-md mx-4">
                         <div className="p-6">
-                          <h3 className="text-lg font-bold text-white mb-4">
+                          <h3 className="text-lg font-bold text-[var(--color-text-primary)] mb-4">
                             Remove {removingMember.user.displayName}?
                           </h3>
-                          <p className="text-gray-400 text-sm mb-4">
+                          <p className="text-[var(--color-text-muted)] text-sm mb-4">
                             What should happen to their messages?
                           </p>
                           <div className="space-y-2 mb-4">
@@ -925,7 +931,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                                 checked={removePostAction === 'keep'}
                                 onChange={(e) => setRemovePostAction(e.target.value)}
                               />
-                              <span className="text-gray-200">Keep messages as-is</span>
+                              <span className="text-[var(--color-text-primary)]">Keep messages as-is</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer">
                               <input
@@ -935,7 +941,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                                 checked={removePostAction === 'hide'}
                                 onChange={(e) => setRemovePostAction(e.target.value)}
                               />
-                              <span className="text-gray-200">Hide all messages</span>
+                              <span className="text-[var(--color-text-primary)]">Hide all messages</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer">
                               <input
@@ -945,7 +951,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                                 checked={removePostAction === 'delete'}
                                 onChange={(e) => setRemovePostAction(e.target.value)}
                               />
-                              <span className="text-gray-200">Delete all messages</span>
+                              <span className="text-[var(--color-text-primary)]">Delete all messages</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer">
                               <input
@@ -955,7 +961,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                                 checked={removePostAction === 'anonymize'}
                                 onChange={(e) => setRemovePostAction(e.target.value)}
                               />
-                              <span className="text-gray-200">Show as "Removed User"</span>
+                              <span className="text-[var(--color-text-primary)]">Show as "Removed User"</span>
                             </label>
                             <label className="flex items-center gap-2 cursor-pointer">
                               <input
@@ -965,7 +971,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                                 checked={removePostAction === 'merge'}
                                 onChange={(e) => setRemovePostAction(e.target.value)}
                               />
-                              <span className="text-gray-200">Transfer messages to another member</span>
+                              <span className="text-[var(--color-text-primary)]">Transfer messages to another member</span>
                             </label>
                             {removePostAction === 'merge' && (
                               <select
@@ -1033,7 +1039,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 <div>
                   {showBandMemberForm ? (
                     <div>
-                      <h4 className="text-lg font-medium text-white mb-4">
+                      <h4 className="text-lg font-medium text-[var(--color-text-primary)] mb-4">
                         {editingBandMember ? 'Edit Band Member' : 'Add Band Member'}
                       </h4>
                       <BandMemberForm
@@ -1043,14 +1049,14 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                           setShowBandMemberForm(false);
                           setEditingBandMember(null);
                         }}
-                        loading={settingsLoading}
+                        loading={profileLoading}
                         workspaceMembers={workspace?.members || []}
                       />
                     </div>
                   ) : (
                     <div>
                       <div className="flex items-center justify-between mb-4">
-                        <p className="text-gray-400">Manage band member history for the timeline</p>
+                        <p className="text-[var(--color-text-muted)]">Manage band member history for the timeline</p>
                         <button
                           onClick={() => setShowBandMemberForm(true)}
                           className="btn btn-primary"
@@ -1113,8 +1119,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                                 incomplete: 'bg-red-700'
                               };
                               const subtitleClasses = {
-                                current: 'text-gray-400',
-                                former: 'text-gray-400',
+                                current: 'text-[var(--color-text-muted)]',
+                                former: 'text-[var(--color-text-muted)]',
                                 guest: 'text-purple-300',
                                 incomplete: 'text-red-300'
                               };
@@ -1130,7 +1136,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                                       </div>
                                     )}
                                     <div>
-                                      <div className="font-medium text-white">{member.name}</div>
+                                      <div className="font-medium text-[var(--color-text-primary)]">{member.name}</div>
                                       <div className={`text-sm ${subtitleClasses[variant] || subtitleClasses.current}`}>
                                         {subtitle}
                                       </div>
@@ -1161,7 +1167,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                               <>
                                 {currentRegular.length > 0 && (
                                   <div>
-                                    <h5 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-2">
+                                    <h5 className="text-sm font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2">
                                       Current Members ({currentRegular.length})
                                     </h5>
                                     <div className="space-y-2">
@@ -1171,7 +1177,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                                 )}
                                 {formerRegular.length > 0 && (
                                   <div>
-                                    <h5 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-2">
+                                    <h5 className="text-sm font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-2">
                                       Former Members ({formerRegular.length})
                                     </h5>
                                     <div className="space-y-2">
@@ -1194,14 +1200,14 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                                     <h5 className="text-sm font-medium text-red-400 uppercase tracking-wide mb-2">
                                       Incomplete Members ({incomplete.length})
                                     </h5>
-                                    <p className="text-xs text-gray-500 mb-2">These members have no instruments/dates. Edit or delete them.</p>
+                                    <p className="text-xs text-[var(--color-text-muted)] mb-2">These members have no instruments/dates. Edit or delete them.</p>
                                     <div className="space-y-2">
                                       {incomplete.map(m => renderMemberCard(m, 'incomplete'))}
                                     </div>
                                   </div>
                                 )}
                                 {!hasMembers && (
-                                  <div className="text-center py-8 text-gray-400">
+                                  <div className="text-center py-8 text-[var(--color-text-muted)]">
                                     <p className="mb-2">No band members added yet</p>
                                     <p className="text-sm">Add members to see them on the Band Members timeline</p>
                                   </div>
@@ -1220,9 +1226,9 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
               {settingsTab === 'workspace' && (
                 <div className="space-y-4">
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-5 border border-[var(--color-modal-border)]">
-                    <h4 className="text-lg font-medium text-white mb-1">Workspace</h4>
-                    <p className="text-sm text-gray-400">{workspace.name}</p>
-                    <p className="text-xs text-gray-500 mt-2">{workspace.members?.length || 0} members</p>
+                    <h4 className="text-lg font-medium text-[var(--color-text-primary)] mb-1">Workspace</h4>
+                    <p className="text-sm text-[var(--color-text-muted)]">{workspace.name}</p>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-2">{workspace.members?.length || 0} members</p>
                   </div>
 
                   {wsActionError && (
@@ -1233,8 +1239,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
 
                   {/* Leave Workspace */}
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-5 border border-[var(--color-modal-border)]">
-                    <h4 className="text-lg font-medium text-white mb-2">Leave Workspace</h4>
-                    <p className="text-sm text-gray-400 mb-4">
+                    <h4 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">Leave Workspace</h4>
+                    <p className="text-sm text-[var(--color-text-muted)] mb-4">
                       You will lose access to all channels and messages in this workspace. You can rejoin later with an invite code.
                     </p>
                     {!leaveConfirmOpen ? (
@@ -1284,7 +1290,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                   {isAdmin && (
                     <div className="bg-[var(--color-modal-card)] rounded-lg p-5 border border-red-900/50">
                       <h4 className="text-lg font-medium text-red-400 mb-2">Delete Workspace</h4>
-                      <p className="text-sm text-gray-400 mb-4">
+                      <p className="text-sm text-[var(--color-text-muted)] mb-4">
                         Permanently delete this workspace and all its data including channels, messages, songs, setlists, and gigs. This cannot be undone.
                       </p>
                       {!deleteWsConfirmOpen ? (
@@ -1297,7 +1303,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                       ) : (
                         <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 space-y-3">
                           <p className="text-sm text-red-300 font-medium">
-                            Type <span className="font-bold text-white">{workspace.name}</span> to confirm deletion:
+                            Type <span className="font-bold text-[var(--color-text-primary)]">{workspace.name}</span> to confirm deletion:
                           </p>
                           <input
                             type="text"
@@ -1347,37 +1353,37 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-4 border border-[var(--color-modal-border)]">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded">NEW</span>
-                      <span className="text-sm text-gray-500">v1.01.22</span>
+                      <span className="text-sm text-[var(--color-text-muted)]">v1.01.22</span>
                     </div>
-                    <h4 className="font-medium text-white mb-1">Bulk Song Import with Metadata</h4>
-                    <p className="text-sm text-gray-400">
+                    <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Bulk Song Import with Metadata</h4>
+                    <p className="text-sm text-[var(--color-text-muted)]">
                       Import multiple songs at once! Paste a list of songs and we'll automatically fetch BPM, key, and duration.
                     </p>
                   </div>
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-4 border border-[var(--color-modal-border)]">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm text-gray-500">v1.01.20</span>
+                      <span className="text-sm text-[var(--color-text-muted)]">v1.01.20</span>
                     </div>
-                    <h4 className="font-medium text-white mb-1">MC Sections in Setlists</h4>
-                    <p className="text-sm text-gray-400">
+                    <h4 className="font-medium text-[var(--color-text-primary)] mb-1">MC Sections in Setlists</h4>
+                    <p className="text-sm text-[var(--color-text-muted)]">
                       Add talking/banter breaks between songs in your setlists with customizable durations.
                     </p>
                   </div>
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-4 border border-[var(--color-modal-border)]">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm text-gray-500">v1.01.18</span>
+                      <span className="text-sm text-[var(--color-text-muted)]">v1.01.18</span>
                     </div>
-                    <h4 className="font-medium text-white mb-1">12 New Themes</h4>
-                    <p className="text-sm text-gray-400">
+                    <h4 className="font-medium text-[var(--color-text-primary)] mb-1">12 New Themes</h4>
+                    <p className="text-sm text-[var(--color-text-muted)]">
                       Customize your sidebar with 12 beautiful color themes including Aubergine, Ocean, Forest, and more.
                     </p>
                   </div>
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-4 border border-[var(--color-modal-border)]">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm text-gray-500">v1.01.15</span>
+                      <span className="text-sm text-[var(--color-text-muted)]">v1.01.15</span>
                     </div>
-                    <h4 className="font-medium text-white mb-1">Band Features</h4>
-                    <p className="text-sm text-gray-400">
+                    <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Band Features</h4>
+                    <p className="text-sm text-[var(--color-text-muted)]">
                       Songs, Setlists, Calendar, and Stats - everything you need to organize your band.
                     </p>
                   </div>
@@ -1393,20 +1399,20 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                       alt="BandChat"
                       className="w-20 h-20 mx-auto mb-3 rounded-xl shadow-lg"
                     />
-                    <h3 className="text-xl font-bold text-white">BandChat</h3>
-                    <p className="text-gray-400">v{__APP_VERSION__}</p>
+                    <h3 className="text-xl font-bold text-[var(--color-text-primary)]">BandChat</h3>
+                    <p className="text-[var(--color-text-muted)]">v{__APP_VERSION__}</p>
                   </div>
 
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-4">
-                    <p className="text-gray-300 text-sm leading-relaxed">
+                    <p className="text-[var(--color-text-secondary)] text-sm leading-relaxed">
                       BandChat is a communication and organization app built specifically for bands.
                       Chat with your bandmates, manage your song library, create setlists, and track your gigs - all in one place.
                     </p>
                   </div>
 
                   <div className="space-y-3">
-                    <h4 className="font-medium text-white">Features</h4>
-                    <ul className="text-sm text-gray-300 space-y-2">
+                    <h4 className="font-medium text-[var(--color-text-primary)]">Features</h4>
+                    <ul className="text-sm text-[var(--color-text-secondary)] space-y-2">
                       <li className="flex items-center gap-2">
                         <span className="text-[var(--color-primary)]">✓</span>
                         Real-time messaging with threads and reactions
@@ -1431,8 +1437,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                   </div>
 
                   <div className="border-t border-[var(--color-modal-border)] pt-4">
-                    <h4 className="font-medium text-white mb-2">Credits</h4>
-                    <p className="text-sm text-gray-400">
+                    <h4 className="font-medium text-[var(--color-text-primary)] mb-2">Credits</h4>
+                    <p className="text-sm text-[var(--color-text-muted)]">
                       Song metadata (BPM, key) provided by{' '}
                       <a
                         href="https://getsongbpm.com"
@@ -1445,7 +1451,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     </p>
                   </div>
 
-                  <div className="text-center text-xs text-gray-500 pt-4">
+                  <div className="text-center text-xs text-[var(--color-text-muted)] pt-4">
                     Made with ♥ for musicians everywhere
                   </div>
                 </div>
@@ -1509,8 +1515,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 <div className="space-y-6">
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-6 text-center">
                     <div className="text-4xl mb-3">📦</div>
-                    <h3 className="text-lg font-bold text-white mb-2">Import from Slack</h3>
-                    <p className="text-gray-400 text-sm mb-4 leading-relaxed">
+                    <h3 className="text-lg font-bold text-[var(--color-text-primary)] mb-2">Import from Slack</h3>
+                    <p className="text-[var(--color-text-muted)] text-sm mb-4 leading-relaxed">
                       Import your Slack workspace history into BandChat. Upload a Slack export ZIP file and
                       choose how to map users, channels, and gigs.
                     </p>
@@ -1547,10 +1553,10 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
         <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setPasswordResetMember(null); }}>
           <div className="modal-content max-w-sm">
             <div className="p-6">
-              <h3 className="text-lg font-bold text-white mb-4">Reset Password for {passwordResetMember.user.displayName}</h3>
+              <h3 className="text-lg font-bold text-[var(--color-text-primary)] mb-4">Reset Password for {passwordResetMember.user.displayName}</h3>
               <div className="space-y-3">
                 <div>
-                  <label className="text-sm text-gray-400 mb-1 block">Your password (confirm)</label>
+                  <label className="text-sm text-[var(--color-text-muted)] mb-1 block">Your password (confirm)</label>
                   <input
                     type="password"
                     value={resetAdminPassword}
@@ -1560,7 +1566,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-gray-400 mb-1 block">New password (min 6 characters)</label>
+                  <label className="text-sm text-[var(--color-text-muted)] mb-1 block">New password (min 6 characters)</label>
                   <input
                     type="password"
                     value={resetNewPassword}

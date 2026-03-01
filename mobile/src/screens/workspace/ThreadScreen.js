@@ -47,7 +47,7 @@ export default function ThreadScreen({ route }) {
       try {
         const data = await api.getReplies(parentMessage.id);
         if (cancelled) return;
-        setReplies(data);
+        setReplies(data.replies || []);
         await api.markThreadRead(parentMessage.id);
       } catch (err) {
         console.error('Failed to load thread:', err);

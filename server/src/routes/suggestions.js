@@ -17,7 +17,7 @@ function normalizeKey(key) {
   // Convert minor keys to relative major
   if (MINOR_MAP[cleaned]) return MINOR_MAP[cleaned];
   // Handle variations
-  const normalized = cleaned.replace('b', 'b').replace('#', '#');
+  const normalized = cleaned.replace('\u266D', 'b').replace('\u266F', '#');
   // Map enharmonic equivalents
   const enharmonics = { 'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb' };
   return enharmonics[normalized] || normalized;

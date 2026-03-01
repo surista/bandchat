@@ -60,6 +60,8 @@ export default function ChannelScreen({ navigation, route }) {
   const flatListRef = useRef(null);
   const loadingMoreRef = useRef(false);
   const blockedIdsRef = useRef(new Set());
+  const messagesRef = useRef(messages);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   useEffect(() => {
     channelIdRef.current = channel.id;
@@ -242,16 +244,19 @@ export default function ChannelScreen({ navigation, route }) {
     };
   }, [socket, joinChannel]);
 
-  // Fetch "seen by" count for the last message by the current user
-  useEffect(() => {
-    if (!messages.length || !user?.id) return;
+  const lastOwnMsgId = useMemo(() => {
+    if (!messages.length || !user?.id) return null;
     const lastOwn = [...messages].reverse().find(m => m.author?.id === user.id && !m.pending);
-    if (!lastOwn || lastOwn.id === lastOwnMessageId) return;
-    setLastOwnMessageId(lastOwn.id);
-    api.getMessageSeenBy(lastOwn.id)
+    return lastOwn?.id || null;
+  }, [messages, user?.id]);
+
+  useEffect(() => {
+    if (!lastOwnMsgId) return;
+    setLastOwnMessageId(lastOwnMsgId);
+    api.getMessageSeenBy(lastOwnMsgId)
       .then(data => setSeenByCount(data.count ?? data.length ?? 0))
       .catch(() => setSeenByCount(null));
-  }, [messages, user?.id]);
+  }, [lastOwnMsgId]);
 
   // Load older messages (pagination)
   const loadMore = useCallback(async () => {
@@ -468,7 +473,7 @@ export default function ChannelScreen({ navigation, route }) {
   // Tap reaction to toggle
   const handleReactionPress = useCallback(async (messageId, emoji) => {
     try {
-      const msg = messages.find(m => m.id === messageId);
+      const msg = messagesRef.current.find(m => m.id === messageId);
       const hasReacted = msg?.reactions?.some(r => r.emoji === emoji && r.userId === user?.id);
       if (hasReacted) {
         await api.removeReaction(messageId, emoji);
@@ -478,7 +483,7 @@ export default function ChannelScreen({ navigation, route }) {
     } catch (err) {
       console.error('Failed to toggle reaction:', err);
     }
-  }, [messages, user?.id]);
+  }, [user?.id]);
 
   // Image viewer
   const handleImagePress = useCallback((url) => {
@@ -582,15 +587,6 @@ export default function ChannelScreen({ navigation, route }) {
         contentContainerStyle={styles.messageList}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-            progressViewOffset={0}
-          />
-        }
       />
       {typingText && (
         <View style={[styles.typingBar, { backgroundColor: colors.bgSecondary }]}>

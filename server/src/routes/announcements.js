@@ -32,7 +32,8 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
       orderBy: [
         { priority: 'desc' },
         { createdAt: 'desc' }
-      ]
+      ],
+      take: 100
     });
 
     // Get total workspace member count
@@ -64,12 +65,15 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (re
       return res.status(400).json({ error: 'Title and content are required' });
     }
 
+    if (title.length > 200) return res.status(400).json({ error: 'Title must be 200 characters or less' });
+    if (content.length > 10000) return res.status(400).json({ error: 'Content must be 10,000 characters or less' });
+
     const announcement = await prisma.announcement.create({
       data: {
         title,
         content,
         priority: priority || 'normal',
-        isPinned: isPinned !== false,
+        isPinned: isPinned === true,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         workspaceId: req.params.workspaceId,
         createdById: req.user.id

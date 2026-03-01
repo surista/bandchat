@@ -76,6 +76,7 @@ export default function ChannelSettingsScreen({ navigation, route }) {
 
   // Edit channel name
   const handleSaveName = useCallback(async () => {
+    if (saving) return;
     const name = newName.trim().toLowerCase().replace(/\s+/g, '-');
     if (!name || name === channelData.name) {
       setEditingName(false);
@@ -92,7 +93,7 @@ export default function ChannelSettingsScreen({ navigation, route }) {
     } finally {
       setSaving(false);
     }
-  }, [newName, channelData.name, channel.id]);
+  }, [saving, newName, channelData.name, channel.id]);
 
   // Leave channel
   const handleLeave = useCallback(() => {

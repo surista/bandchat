@@ -34,7 +34,8 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
       orderBy: [
         { performedAt: { sort: 'desc', nulls: 'last' } },
         { updatedAt: 'desc' }
-      ]
+      ],
+      take: 100
     });
 
     // Transform performers to just the bandMember objects

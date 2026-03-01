@@ -613,7 +613,7 @@ router.put('/me', authenticate, async (req, res) => {
 });
 
 // Change password
-router.put('/password', authenticate, async (req, res) => {
+router.put('/password', authenticate, authLimiter, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 

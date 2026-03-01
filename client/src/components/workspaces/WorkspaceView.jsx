@@ -1006,7 +1006,7 @@ function WorkspaceView() {
                   <button
                     key={result.id}
                     onClick={() => {
-                      const channel = channels.find(c => c.id === result.channelId);
+                      const channel = channels.find(c => c.id === result.channelId) || directMessages.find(d => d.id === result.channelId);
                       if (channel) {
                         setSelectedChannel(channel);
                         setShowSearch(false);

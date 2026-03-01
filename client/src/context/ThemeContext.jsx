@@ -228,6 +228,17 @@ export function ThemeProvider({ children }) {
     localStorage.setItem('bandchat-mode', mode);
   }, [currentTheme, mode]);
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
+    const handleChange = (e) => {
+      if (!localStorage.getItem('bandchat-mode')) {
+        setMode(e.matches ? 'light' : 'dark');
+      }
+    };
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
   const setTheme = (themeId) => {
     if (themes[themeId]) {
       setCurrentTheme(themeId);

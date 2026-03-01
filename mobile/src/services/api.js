@@ -40,6 +40,17 @@ class ApiService {
     await storage.removeItem('refreshToken');
   }
 
+  async ensureFreshToken() {
+    if (this.refreshToken && this.isTokenExpiringSoon()) {
+      if (!this._refreshPromise) {
+        this._refreshPromise = this.refreshAccessToken().finally(() => {
+          this._refreshPromise = null;
+        });
+      }
+      await this._refreshPromise;
+    }
+  }
+
   async request(endpoint, options = {}) {
     if (this.refreshToken && this.isTokenExpiringSoon()) {
       if (!this._refreshPromise) {
@@ -1230,6 +1241,7 @@ class ApiService {
 
   // File uploads
   async uploadFile(uri, filename, mimeType) {
+    await this.ensureFreshToken();
     const formData = new FormData();
     formData.append('file', { uri, name: filename, type: mimeType });
 
@@ -1262,6 +1274,7 @@ class ApiService {
   }
 
   async exportUserData() {
+    await this.ensureFreshToken();
     const url = `${API_URL}/auth/export`;
     const headers = { Authorization: `Bearer ${this.accessToken}` };
     const response = await fetch(url, { headers });
@@ -1273,6 +1286,7 @@ class ApiService {
   }
 
   async exportWorkspaceData(workspaceId) {
+    await this.ensureFreshToken();
     const url = `${API_URL}/workspaces/${workspaceId}/export`;
     const headers = { Authorization: `Bearer ${this.accessToken}` };
     const response = await fetch(url, { headers });

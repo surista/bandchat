@@ -79,7 +79,7 @@ export default function MemberProfileScreen({ route, navigation }) {
     if (userId !== currentUser?.id) {
       checkBlockStatus();
     }
-  }, [loadProfile, userId, currentUser?.id]);
+  }, [loadProfile, userId, currentUser?.id, checkBlockStatus]);
 
   const checkBlockStatus = useCallback(async () => {
     try {
