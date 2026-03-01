@@ -23,6 +23,7 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async () => {
     if (!email.trim() || !password) return;
@@ -79,20 +80,33 @@ export default function LoginScreen({ navigation }) {
             />
 
             <Text style={[styles.label, { color: colors.textSecondary }]}>Password</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-              placeholder="Your password"
-              placeholderTextColor={colors.textSecondary}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoComplete="password"
-              textContentType="password"
-              editable={!loading}
-              onSubmitEditing={handleSubmit}
-              returnKeyType="go"
-              accessibilityLabel="Password"
-            />
+            <View style={styles.passwordWrapper}>
+              <TextInput
+                style={[styles.input, styles.passwordInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                placeholder="Your password"
+                placeholderTextColor={colors.textSecondary}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoComplete="password"
+                textContentType="password"
+                editable={!loading}
+                onSubmitEditing={handleSubmit}
+                returnKeyType="go"
+                accessibilityLabel="Password"
+              />
+              <TouchableOpacity
+                style={styles.showHideButton}
+                onPress={() => setShowPassword(!showPassword)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+              >
+                <Text style={[styles.showHideText, { color: colors.textSecondary }]}>
+                  {showPassword ? 'Hide' : 'Show'}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
               style={[styles.button, { backgroundColor: colors.primary }, loading && styles.buttonDisabled]}
@@ -228,6 +242,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   linkText: { fontSize: 14 },
+  passwordWrapper: { position: 'relative' },
+  passwordInput: { paddingRight: 56 },
+  showHideButton: {
+    position: 'absolute',
+    right: 14,
+    top: 0,
+    bottom: 16,
+    justifyContent: 'center',
+  },
+  showHideText: { fontSize: 14, fontWeight: '500' },
   footer: {
     alignItems: 'center',
     marginTop: 24,

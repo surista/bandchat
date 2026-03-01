@@ -25,6 +25,7 @@ export default function SignupScreen({ navigation }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async () => {
     if (!displayName.trim() || !email.trim() || !password) return;
@@ -103,18 +104,31 @@ export default function SignupScreen({ navigation }) {
             />
 
             <Text style={[styles.label, { color: colors.textSecondary }]}>Password</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-              placeholder="At least 8 characters"
-              placeholderTextColor={colors.textSecondary}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoComplete="new-password"
-              textContentType="newPassword"
-              editable={!loading}
-              accessibilityLabel="Password"
-            />
+            <View style={styles.passwordWrapper}>
+              <TextInput
+                style={[styles.input, styles.passwordInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                placeholder="At least 8 characters"
+                placeholderTextColor={colors.textSecondary}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoComplete="new-password"
+                textContentType="newPassword"
+                editable={!loading}
+                accessibilityLabel="Password"
+              />
+              <TouchableOpacity
+                style={styles.showHideButton}
+                onPress={() => setShowPassword(!showPassword)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+              >
+                <Text style={[styles.showHideText, { color: colors.textSecondary }]}>
+                  {showPassword ? 'Hide' : 'Show'}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             <Text style={[styles.label, { color: colors.textSecondary }]}>Confirm Password</Text>
             <TextInput
@@ -123,7 +137,7 @@ export default function SignupScreen({ navigation }) {
               placeholderTextColor={colors.textSecondary}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              secureTextEntry
+              secureTextEntry={!showPassword}
               autoComplete="new-password"
               textContentType="newPassword"
               editable={!loading}
@@ -246,6 +260,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   linkText: { fontSize: 14 },
+  passwordWrapper: { position: 'relative' },
+  passwordInput: { paddingRight: 56 },
+  showHideButton: {
+    position: 'absolute',
+    right: 14,
+    top: 0,
+    bottom: 16,
+    justifyContent: 'center',
+  },
+  showHideText: { fontSize: 14, fontWeight: '500' },
   footer: {
     alignItems: 'center',
     marginTop: 24,
