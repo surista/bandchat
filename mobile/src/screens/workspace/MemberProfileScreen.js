@@ -74,13 +74,6 @@ export default function MemberProfileScreen({ route, navigation }) {
     }
   }, [workspaceId, userId, navigation]);
 
-  useEffect(() => {
-    loadProfile();
-    if (userId !== currentUser?.id) {
-      checkBlockStatus();
-    }
-  }, [loadProfile, userId, currentUser?.id, checkBlockStatus]);
-
   const checkBlockStatus = useCallback(async () => {
     try {
       const blocks = await api.getBlockedUsers();
@@ -89,6 +82,13 @@ export default function MemberProfileScreen({ route, navigation }) {
       // Block status is supplementary
     }
   }, [userId]);
+
+  useEffect(() => {
+    loadProfile();
+    if (userId !== currentUser?.id) {
+      checkBlockStatus();
+    }
+  }, [loadProfile, userId, currentUser?.id, checkBlockStatus]);
 
   const handleToggleBlock = useCallback(() => {
     const action = isBlocked ? 'Unblock' : 'Block';
