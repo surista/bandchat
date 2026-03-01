@@ -62,7 +62,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
     setLoading(true);
     try {
       const data = await api.getReplies(message.id);
-      setReplies(data);
+      setReplies(data.replies || []);
       scrollToBottom();
     } catch (err) {
       console.error('Failed to load replies:', err);
