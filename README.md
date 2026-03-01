@@ -9,19 +9,24 @@ A real-time communication and management app for bands. Think Slack, but built s
 - **Direct Messages** — Private 1-on-1 and group conversations
 - **Threads** — Reply to specific messages in-line
 - **Reactions** — Emoji reactions on messages
-- **File Sharing** — Upload images and files up to 10MB via Cloudinary
+- **File Sharing** — Upload images, audio, and files up to 10MB via Cloudinary
+- **Voice Messages** — Record and send audio messages
 - **Link Previews** — Automatic rich previews for shared URLs
-- **Search** — Full-text search across all channels and messages
+- **Search** — Full-text search across all channels, DMs, and messages
 - **Push Notifications** — Web push for mentions, DMs, and replies
-- **Announcements** — Pin important messages for the whole workspace
+- **Quick Reactions** — Fast emoji reactions on messages
+- **Seen By** — See who has read your messages
+- **Announcements** — Pin important messages with optional expiry
 - **Polls** — Create polls for band decisions
+- **Photo Gallery** — Browse all shared images in a channel
 
 ### Band Management
-- **Songs** — Track your repertoire with title, artist, key, BPM, duration, YouTube/Spotify links, notes, and bulk import with metadata enrichment
-- **Setlists** — Drag-and-drop song ordering with automatic duration calculation and MC sections
+- **Songs** — Track your repertoire with title, artist, key, BPM, duration, lyrics, YouTube/Spotify links, notes, and bulk import with async metadata enrichment
+- **Setlists** — Drag-and-drop song ordering with automatic duration calculation, MC sections, and PDF export
 - **Medleys** — Group songs into medleys within setlists
-- **Calendar** — Schedule gigs, rehearsals, and recording sessions with venue, address, pay tracking, and device calendar sync
-- **Gig Management** — Track attendance, mark gigs complete, view gig history
+- **Calendar** — Schedule gigs, rehearsals, and recording sessions with venue, address, pay tracking, device calendar sync, and iCal feed
+- **Gig Management** — Track attendance, mark gigs complete, view gig history, live mode during performances
+- **Practice Tracker** — Log practice sessions with streaks, timezone-aware calculations
 - **Stats** — Gigs played, total revenue, most played songs, songs never performed, band achievements
 - **Band Members** — Timeline of current, former, and guest musicians with instrument tracking
 - **Availability** — Members can mark their availability for upcoming dates
@@ -38,7 +43,8 @@ A real-time communication and management app for bands. Think Slack, but built s
 - **Multiple Workspaces** — Create and join multiple band workspaces
 - **Workspace Onboarding** — Guided wizard for new workspaces (name, channels, invites, Slack import)
 - **Role-Based Access** — Admin and member roles
-- **Workspace Settings** — Theme customization (20+ themes, dark/light mode), leave/delete workspace
+- **Workspace Settings** — Theme customization (20+ themes, dark/light mode, system theme sync), leave/delete workspace
+- **Notification Controls** — Per-workspace preferences, snooze notifications
 - **Slack Import** — Import channels, messages, threads, reactions, and gigs from a Slack export
 - **Data Export** — Export user data or full workspace data as JSON
 - **Account Deletion** — GDPR-compliant account deletion with data anonymization
@@ -73,12 +79,13 @@ See `mobile/ROADMAP.md` for detailed feature breakdown.
 
 ### Server
 - Node.js / Express 4
-- Prisma ORM with PostgreSQL
+- Prisma ORM with PostgreSQL (30+ models)
 - Socket.IO (real-time messaging)
-- JWT Authentication (access + refresh tokens)
-- Cloudinary (image/file uploads)
+- JWT Authentication (access tokens + httpOnly cookie refresh tokens)
+- Cloudinary (image/file uploads with magic byte validation)
 - Web Push (VAPID)
 - Resend (transactional email)
+- Helmet + CSP, rate limiting, SSRF protection
 
 ## Environment Variables
 
