@@ -18,11 +18,12 @@ const ACTIONS = [
   { key: 'report', label: 'Report Message', icon: '\u{26A0}\u{FE0F}', notOwn: true, destructive: true },
 ];
 
-function MessageActionSheet({ visible, onClose, onAction, isOwnMessage }) {
+function MessageActionSheet({ visible, onClose, onAction, isOwnMessage, hideReply }) {
   const { colors } = useTheme();
 
   const filteredActions = ACTIONS.filter(a =>
-    (!a.ownOnly || isOwnMessage) && (!a.notOwn || !isOwnMessage)
+    (!a.ownOnly || isOwnMessage) && (!a.notOwn || !isOwnMessage) &&
+    !(hideReply && a.key === 'reply')
   );
 
   return (

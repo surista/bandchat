@@ -8,6 +8,7 @@ import {
   Modal,
   ActivityIndicator,
   RefreshControl,
+  Alert,
   Platform,
   StyleSheet,
 } from 'react-native';
@@ -139,7 +140,15 @@ export default function WorkspaceListScreen({ navigation }) {
             {user?.displayName}
           </Text>
         </View>
-        <TouchableOpacity onPress={logout} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <TouchableOpacity
+          onPress={() => {
+            Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Sign Out', style: 'destructive', onPress: logout },
+            ]);
+          }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <Text style={[styles.signOut, { color: colors.textSecondary }]}>Sign out</Text>
         </TouchableOpacity>
       </View>

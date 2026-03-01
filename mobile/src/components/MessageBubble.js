@@ -25,7 +25,7 @@ function formatTimestamp(dateStr) {
   return format(date, 'MMM d, h:mm a');
 }
 
-function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress }) {
+function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress }) {
   const { colors } = useTheme();
   const author = message.author || {};
   const displayName = author.displayName || message.removedUserName || 'Deleted User';
@@ -55,7 +55,7 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
           ) : null}
           {message.content ? <LinkPreview content={message.content} /> : null}
           {renderAttachments(message.attachments, onImagePress)}
-          {renderReactions(message.reactions, colors)}
+          {renderReactions(message.reactions, colors, message.id, onReactionPress)}
         </View>
       </Pressable>
     );
@@ -91,7 +91,7 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
         ) : null}
         {message.content ? <LinkPreview content={message.content} /> : null}
         {renderAttachments(message.attachments, onImagePress)}
-        {renderReactions(message.reactions, colors)}
+        {renderReactions(message.reactions, colors, message.id, onReactionPress)}
         {message._count?.replies > 0 && (
           <TouchableOpacity onPress={() => onReplyPress?.(message)} activeOpacity={0.6}>
             <Text style={[styles.replyCount, { color: colors.primary }]}>
@@ -203,7 +203,7 @@ function AudioAttachment({ url, filename }) {
   );
 }
 
-function renderReactions(reactions, colors) {
+function renderReactions(reactions, colors, messageId, onReactionPress) {
   if (!reactions || reactions.length === 0) return null;
 
   const grouped = {};
@@ -215,10 +215,15 @@ function renderReactions(reactions, colors) {
   return (
     <View style={styles.reactionsRow}>
       {Object.entries(grouped).map(([emoji, count]) => (
-        <View key={emoji} style={[styles.reactionBadge, { backgroundColor: colors.bgTertiary }]}>
+        <TouchableOpacity
+          key={emoji}
+          style={[styles.reactionBadge, { backgroundColor: colors.bgTertiary }]}
+          onPress={() => onReactionPress?.(messageId, emoji)}
+          activeOpacity={0.6}
+        >
           <Text style={styles.reactionEmoji}>{emoji}</Text>
           <Text style={[styles.reactionCount, { color: colors.textSecondary }]}>{count}</Text>
-        </View>
+        </TouchableOpacity>
       ))}
     </View>
   );

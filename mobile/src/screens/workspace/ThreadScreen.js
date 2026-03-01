@@ -3,17 +3,23 @@ import {
   View,
   Text,
   FlatList,
+  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
 import api from '../../services/api';
 import MessageBubble from '../../components/MessageBubble';
 import MessageInput from '../../components/MessageInput';
+import MessageActionSheet from '../../components/MessageActionSheet';
+import EmojiPicker from '../../components/EmojiPicker';
+import ImageViewer from '../../components/ImageViewer';
 
 export default function ThreadScreen({ route }) {
   const { parentMessage, channelId, workspaceId } = route.params;
@@ -24,6 +30,13 @@ export default function ThreadScreen({ route }) {
   const [parent, setParent] = useState(parentMessage);
   const [replies, setReplies] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Action sheet / picker state
+  const [actionMessage, setActionMessage] = useState(null);
+  const [showActions, setShowActions] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [editingMessage, setEditingMessage] = useState(null);
+  const [viewingImage, setViewingImage] = useState(null);
 
   const parentIdRef = useRef(parentMessage.id);
 
@@ -149,6 +162,98 @@ export default function ThreadScreen({ route }) {
     else stopTyping(channelId);
   }, [channelId, startTyping, stopTyping]);
 
+  // Long-press → action sheet
+  const handleLongPress = useCallback((message) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    setActionMessage(message);
+    setShowActions(true);
+  }, []);
+
+  // Handle action from the sheet
+  const handleAction = useCallback((action) => {
+    if (!actionMessage) return;
+
+    switch (action) {
+      case 'react':
+        setShowEmojiPicker(true);
+        break;
+      case 'copy':
+        if (actionMessage.content) {
+          Clipboard.setStringAsync(actionMessage.content);
+        }
+        break;
+      case 'edit':
+        setEditingMessage(actionMessage);
+        break;
+      case 'delete':
+        Alert.alert(
+          'Delete Message',
+          'Are you sure you want to delete this message?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Delete',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  await api.deleteMessage(actionMessage.id);
+                } catch (err) {
+                  console.error('Failed to delete message:', err);
+                }
+              },
+            },
+          ]
+        );
+        break;
+    }
+  }, [actionMessage]);
+
+  // Add reaction
+  const handleAddReaction = useCallback(async (emoji) => {
+    if (!actionMessage) return;
+    try {
+      await api.addReaction(actionMessage.id, emoji);
+    } catch (err) {
+      console.error('Failed to add reaction:', err);
+    }
+    setActionMessage(null);
+  }, [actionMessage]);
+
+  // Edit message
+  const handleSendEdit = useCallback(async (messageId, content) => {
+    try {
+      await api.updateMessage(messageId, content);
+    } catch (err) {
+      console.error('Failed to edit message:', err);
+    }
+    setEditingMessage(null);
+  }, []);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingMessage(null);
+  }, []);
+
+  // Tap reaction to toggle
+  const handleReactionPress = useCallback(async (messageId, emoji) => {
+    try {
+      const allMessages = [parent, ...replies];
+      const msg = allMessages.find(m => m.id === messageId);
+      const hasReacted = msg?.reactions?.some(r => r.emoji === emoji && r.userId === user?.id);
+      if (hasReacted) {
+        await api.removeReaction(messageId, emoji);
+      } else {
+        await api.addReaction(messageId, emoji);
+      }
+    } catch (err) {
+      console.error('Failed to toggle reaction:', err);
+    }
+  }, [parent, replies, user?.id]);
+
+  // Image viewer
+  const handleImagePress = useCallback((url) => {
+    setViewingImage(url);
+  }, []);
+
   // Build list: parent message + separator + replies
   const listData = useMemo(() => {
     const items = [
@@ -169,8 +274,16 @@ export default function ThreadScreen({ route }) {
         </View>
       );
     }
-    return <MessageBubble message={item} isGrouped={false} />;
-  }, [colors]);
+    return (
+      <MessageBubble
+        message={item}
+        isGrouped={false}
+        onLongPress={handleLongPress}
+        onImagePress={handleImagePress}
+        onReactionPress={handleReactionPress}
+      />
+    );
+  }, [colors, handleLongPress, handleImagePress, handleReactionPress]);
 
   if (loading) {
     return (
@@ -196,7 +309,36 @@ export default function ThreadScreen({ route }) {
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
       />
-      <MessageInput onSend={handleSend} onTyping={handleTyping} />
+      <MessageInput
+        onSend={handleSend}
+        onTyping={handleTyping}
+        editingMessage={editingMessage}
+        onCancelEdit={handleCancelEdit}
+        onSendEdit={handleSendEdit}
+      />
+
+      {/* Action Sheet */}
+      <MessageActionSheet
+        visible={showActions}
+        onClose={() => setShowActions(false)}
+        onAction={handleAction}
+        isOwnMessage={actionMessage?.author?.id === user?.id}
+        hideReply
+      />
+
+      {/* Emoji Picker */}
+      <EmojiPicker
+        visible={showEmojiPicker}
+        onClose={() => setShowEmojiPicker(false)}
+        onSelect={handleAddReaction}
+      />
+
+      {/* Image Viewer */}
+      <ImageViewer
+        visible={!!viewingImage}
+        imageUrl={viewingImage}
+        onClose={() => setViewingImage(null)}
+      />
     </KeyboardAvoidingView>
   );
 }

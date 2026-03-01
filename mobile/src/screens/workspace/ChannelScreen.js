@@ -419,6 +419,21 @@ export default function ChannelScreen({ navigation, route }) {
     navigation.navigate('Thread', { parentMessage: message, channelId: channel.id, workspaceId });
   }, [navigation, channel.id, workspaceId]);
 
+  // Tap reaction to toggle
+  const handleReactionPress = useCallback(async (messageId, emoji) => {
+    try {
+      const msg = messages.find(m => m.id === messageId);
+      const hasReacted = msg?.reactions?.some(r => r.emoji === emoji && r.userId === user?.id);
+      if (hasReacted) {
+        await api.removeReaction(messageId, emoji);
+      } else {
+        await api.addReaction(messageId, emoji);
+      }
+    } catch (err) {
+      console.error('Failed to toggle reaction:', err);
+    }
+  }, [messages, user?.id]);
+
   // Image viewer
   const handleImagePress = useCallback((url) => {
     setViewingImage(url);
@@ -456,6 +471,7 @@ export default function ChannelScreen({ navigation, route }) {
           onLongPress={handleLongPress}
           onReplyPress={handleReplyPress}
           onImagePress={handleImagePress}
+          onReactionPress={handleReactionPress}
         />
         {showDate && (
           <View style={styles.dateSeparator}>
@@ -468,7 +484,7 @@ export default function ChannelScreen({ navigation, route }) {
         )}
       </View>
     );
-  }, [isGrouped, needsDateSeparator, colors, handleLongPress, handleReplyPress, handleImagePress]);
+  }, [isGrouped, needsDateSeparator, colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress]);
 
   const renderFooter = useCallback(() => {
     if (!loadingMore) return null;
