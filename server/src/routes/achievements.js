@@ -694,24 +694,27 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
         let earnedAt = now;
 
         // Get per-member gig attendance count from GigAttendee data
+        // Fall back to all workspace gigs if no attendance records exist
         const memberGigAttendance = memberGigAttendanceMap.get(userId) || { count: 0, gigs: [] };
+        const effectiveGigCount = memberGigAttendance.count > 0 ? memberGigAttendance.count : allGigs.length;
+        const effectiveGigs = memberGigAttendance.count > 0 ? memberGigAttendance.gigs : allGigs.map(g => ({ date: g.date }));
 
         switch (achievement.code) {
           case 'member_first_gig':
-            shouldAward = memberGigAttendance.count >= 1;
-            earnedAt = memberGigAttendance.gigs[0]?.date || now;
+            shouldAward = effectiveGigCount >= 1;
+            earnedAt = effectiveGigs[0]?.date || now;
             break;
           case 'member_ten_gigs':
-            shouldAward = memberGigAttendance.count >= 10;
-            earnedAt = memberGigAttendance.gigs[9]?.date || now;
+            shouldAward = effectiveGigCount >= 10;
+            earnedAt = effectiveGigs[9]?.date || now;
             break;
           case 'member_fifty_gigs':
-            shouldAward = memberGigAttendance.count >= 50;
-            earnedAt = memberGigAttendance.gigs[49]?.date || now;
+            shouldAward = effectiveGigCount >= 50;
+            earnedAt = effectiveGigs[49]?.date || now;
             break;
           case 'member_hundred_gigs':
-            shouldAward = memberGigAttendance.count >= 100;
-            earnedAt = memberGigAttendance.gigs[99]?.date || now;
+            shouldAward = effectiveGigCount >= 100;
+            earnedAt = effectiveGigs[99]?.date || now;
             break;
           case 'song_master':
             shouldAward = userSongCount >= 25;

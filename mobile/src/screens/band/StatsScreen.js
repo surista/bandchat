@@ -14,6 +14,33 @@ import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { formatTotalDuration } from '../../utils/formatDuration';
 
+const CURRENCIES = [
+  { code: 'USD', symbol: '$' },
+  { code: 'EUR', symbol: '\u20AC' },
+  { code: 'GBP', symbol: '\u00A3' },
+  { code: 'JPY', symbol: '\u00A5' },
+  { code: 'CAD', symbol: 'C$' },
+  { code: 'AUD', symbol: 'A$' },
+  { code: 'CHF', symbol: 'CHF' },
+  { code: 'CNY', symbol: '\u00A5' },
+  { code: 'KRW', symbol: '\u20A9' },
+  { code: 'INR', symbol: '\u20B9' },
+  { code: 'BRL', symbol: 'R$' },
+  { code: 'MXN', symbol: 'MX$' },
+  { code: 'SEK', symbol: 'kr' },
+  { code: 'NOK', symbol: 'kr' },
+  { code: 'DKK', symbol: 'kr' },
+  { code: 'NZD', symbol: 'NZ$' },
+  { code: 'SGD', symbol: 'S$' },
+  { code: 'HKD', symbol: 'HK$' },
+  { code: 'THB', symbol: '\u0E3F' },
+  { code: 'PHP', symbol: '\u20B1' },
+];
+
+function getCurrencySymbol(code) {
+  return CURRENCIES.find(c => c.code === code)?.symbol || '$';
+}
+
 function formatDateShort(dateStr) {
   if (!dateStr) return '';
   try {
@@ -151,7 +178,7 @@ export default function StatsScreen({ navigation, route }) {
           <StatBox label="Gigs Played" value={stats.totalGigs || 0} color="#22c55e" bgColor="rgba(34,197,94,0.12)" />
           <StatBox label="Stage Time" value={stageTime} color="#3b82f6" bgColor="rgba(59,130,246,0.12)" />
           <StatBox label="Unique Songs" value={stats.uniqueSongsPlayed || 0} color="#a855f7" bgColor="rgba(168,85,247,0.12)" />
-          <StatBox label="Revenue" value={`$${(stats.totalRevenue || 0).toLocaleString()}`} color="#eab308" bgColor="rgba(234,179,8,0.12)" />
+          <StatBox label="Revenue" value={`${getCurrencySymbol(stats.currency)}${(stats.totalRevenue || 0).toLocaleString()}`} color="#eab308" bgColor="rgba(234,179,8,0.12)" />
         </View>
 
         {/* Secondary Stats */}

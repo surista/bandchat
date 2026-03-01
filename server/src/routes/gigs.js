@@ -461,10 +461,13 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
     });
 
     // Total revenue (all gigs with pay, regardless of status)
-    const revenue = await prisma.gig.aggregate({
-      where: { workspaceId, pay: { not: null } },
-      _sum: { pay: true }
-    });
+    const [revenue, kitty] = await Promise.all([
+      prisma.gig.aggregate({
+        where: { workspaceId, pay: { not: null } },
+        _sum: { pay: true }
+      }),
+      prisma.bandKitty.findUnique({ where: { workspaceId }, select: { currency: true } })
+    ]);
 
     // Calculate total time in hours and minutes
     const totalHours = Math.floor(totalTimeSeconds / 3600);
@@ -480,6 +483,7 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
       totalGigs,
       totalRehearsals,
       totalRevenue: revenue._sum.pay || 0,
+      currency: kitty?.currency || 'USD',
       mostPlayedSongs: mostPlayedWithDetails,
       songsNeverPlayed: neverPlayed,
       upcomingGigs,

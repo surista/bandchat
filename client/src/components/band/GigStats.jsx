@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 
+const CURRENCY_SYMBOLS = {
+  USD: '$', EUR: '\u20AC', GBP: '\u00A3', JPY: '\u00A5', CAD: 'C$', AUD: 'A$',
+  CHF: 'CHF', CNY: '\u00A5', KRW: '\u20A9', INR: '\u20B9', BRL: 'R$', MXN: 'MX$',
+  SEK: 'kr', NOK: 'kr', DKK: 'kr', NZD: 'NZ$', SGD: 'S$', HKD: 'HK$', THB: '\u0E3F', PHP: '\u20B1',
+};
+
 function GigStats({ workspaceId }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -98,7 +104,7 @@ function GigStats({ workspaceId }) {
           </div>
           <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4 border border-[var(--color-border)]">
             <div className="text-3xl font-bold text-yellow-400">
-              ¥{stats.totalRevenue?.toLocaleString() || 0}
+              {CURRENCY_SYMBOLS[stats.currency] || '$'}{stats.totalRevenue?.toLocaleString() || 0}
             </div>
             <div className="text-[var(--color-text-muted)] text-sm">Total Revenue</div>
           </div>
