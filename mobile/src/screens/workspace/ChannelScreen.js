@@ -49,6 +49,7 @@ export default function ChannelScreen({ navigation, route }) {
   const userIdRef = useRef(user?.id);
   const flatListRef = useRef(null);
   const loadingMoreRef = useRef(false);
+  const blockedIdsRef = useRef(new Set());
 
   useEffect(() => {
     channelIdRef.current = channel.id;
@@ -69,6 +70,13 @@ export default function ChannelScreen({ navigation, route }) {
       ),
     });
   }, [navigation, channel, workspaceId]);
+
+  // Load blocked user IDs for socket filtering
+  useEffect(() => {
+    api.getBlockedUsers().then(blocks => {
+      blockedIdsRef.current = new Set(blocks.map(b => b.blockedUserId));
+    }).catch(() => {});
+  }, []);
 
   // Load messages → mark read → join socket (exact order from web)
   useEffect(() => {
@@ -112,6 +120,8 @@ export default function ChannelScreen({ navigation, route }) {
       if (message.channelId !== channelIdRef.current) return;
       // Ignore replies (they go to threads)
       if (message.parentId) return;
+      // Filter blocked users
+      if (blockedIdsRef.current.has(message.author?.id)) return;
 
       setMessages(prev => {
         if (prev.some(m => m.id === message.id)) return prev;
@@ -323,6 +333,38 @@ export default function ChannelScreen({ navigation, route }) {
               },
             },
           ]
+        );
+        break;
+      case 'report':
+        Alert.prompt(
+          'Report Message',
+          'Why are you reporting this message?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Report',
+              style: 'destructive',
+              onPress: async (reason) => {
+                if (!reason?.trim()) {
+                  Alert.alert('Error', 'Please provide a reason for your report.');
+                  return;
+                }
+                try {
+                  await api.reportMessage(actionMessage.id, reason.trim());
+                  Alert.alert('Report Submitted', "We'll review it shortly. Thank you.");
+                } catch (err) {
+                  if (err.message?.includes('already reported')) {
+                    Alert.alert('Already Reported', "You've already reported this message.");
+                  } else {
+                    Alert.alert('Error', 'Failed to submit report. Please try again.');
+                  }
+                }
+              },
+            },
+          ],
+          'plain-text',
+          '',
+          'default'
         );
         break;
     }

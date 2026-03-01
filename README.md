@@ -42,6 +42,9 @@ A real-time communication and management app for bands. Think Slack, but built s
 - **Slack Import** — Import channels, messages, threads, reactions, and gigs from a Slack export
 - **Data Export** — Export user data or full workspace data as JSON
 - **Account Deletion** — GDPR-compliant account deletion with data anonymization
+- **Content Reporting** — Report objectionable messages (sent to admin via email)
+- **User Blocking** — Block users to hide their messages from your view
+- **Privacy Policy & Terms** — Accessible at /privacy and /terms
 
 ## Platforms
 

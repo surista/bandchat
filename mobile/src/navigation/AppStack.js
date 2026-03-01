@@ -30,6 +30,7 @@ import AppearanceScreen from '../screens/settings/AppearanceScreen';
 import NotificationsScreen from '../screens/settings/NotificationsScreen';
 import WorkspaceMembersScreen from '../screens/settings/WorkspaceMembersScreen';
 import InviteScreen from '../screens/settings/InviteScreen';
+import BlockedUsersScreen from '../screens/settings/BlockedUsersScreen';
 import MemberProfileScreen from '../screens/workspace/MemberProfileScreen';
 import SearchScreen from '../screens/workspace/SearchScreen';
 import ChannelSettingsScreen from '../screens/workspace/ChannelSettingsScreen';
@@ -108,6 +109,7 @@ export default function AppStack() {
       <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
       <Stack.Screen name="WorkspaceMembers" component={WorkspaceMembersScreen} options={{ title: 'Members' }} />
       <Stack.Screen name="Invite" component={InviteScreen} options={{ title: 'Invite People' }} />
+      <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} options={{ title: 'Blocked Users' }} />
 
       {/* Members */}
       <Stack.Screen name="MemberProfile" component={MemberProfileScreen} options={{ title: 'Member' }} />

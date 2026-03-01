@@ -2,7 +2,7 @@
 
 Comprehensive technical reference for the BandChat platform — a real-time communication and management app for bands.
 
-**Version:** v1.03.49
+**Version:** v1.03.50
 **Last updated:** March 2026
 
 ---

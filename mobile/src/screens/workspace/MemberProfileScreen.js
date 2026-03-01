@@ -5,10 +5,13 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  TouchableOpacity,
+  Alert,
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
+import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 
@@ -41,11 +44,14 @@ const ACHIEVEMENT_ICONS = {
 
 export default function MemberProfileScreen({ route, navigation }) {
   const { workspaceId, userId, displayName } = route.params;
+  const { user: currentUser } = useAuth();
   const { colors } = useTheme();
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
 
   useEffect(() => {
     if (displayName) {
@@ -70,7 +76,50 @@ export default function MemberProfileScreen({ route, navigation }) {
 
   useEffect(() => {
     loadProfile();
-  }, [loadProfile]);
+    if (userId !== currentUser?.id) {
+      checkBlockStatus();
+    }
+  }, [loadProfile, userId, currentUser?.id]);
+
+  const checkBlockStatus = useCallback(async () => {
+    try {
+      const blocks = await api.getBlockedUsers();
+      setIsBlocked(blocks.some(b => b.blockedUserId === userId));
+    } catch {
+      // Block status is supplementary
+    }
+  }, [userId]);
+
+  const handleToggleBlock = useCallback(() => {
+    const action = isBlocked ? 'Unblock' : 'Block';
+    const message = isBlocked
+      ? `Unblock ${profile?.user?.displayName || 'this user'}? Their messages will be visible again.`
+      : `Block ${profile?.user?.displayName || 'this user'}? Their messages will be hidden from you.`;
+
+    Alert.alert(action, message, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: action,
+        style: isBlocked ? 'default' : 'destructive',
+        onPress: async () => {
+          setBlockLoading(true);
+          try {
+            if (isBlocked) {
+              await api.unblockUser(userId);
+              setIsBlocked(false);
+            } else {
+              await api.blockUser(userId);
+              setIsBlocked(true);
+            }
+          } catch (err) {
+            Alert.alert('Error', `Failed to ${action.toLowerCase()} user.`);
+          } finally {
+            setBlockLoading(false);
+          }
+        },
+      },
+    ]);
+  }, [isBlocked, userId, profile]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -219,6 +268,20 @@ export default function MemberProfileScreen({ route, navigation }) {
           </View>
         </>
       )}
+
+      {/* Block/Unblock */}
+      {userId !== currentUser?.id && (
+        <TouchableOpacity
+          style={[styles.blockButton, { backgroundColor: colors.bgSecondary }]}
+          onPress={handleToggleBlock}
+          disabled={blockLoading}
+          activeOpacity={0.6}
+        >
+          <Text style={[styles.blockButtonText, { color: isBlocked ? '#3b82f6' : '#ef4444' }]}>
+            {blockLoading ? '...' : isBlocked ? 'Unblock User' : 'Block User'}
+          </Text>
+        </TouchableOpacity>
+      )}
     </ScrollView>
   );
 }
@@ -293,4 +356,12 @@ const styles = StyleSheet.create({
   achievementDate: { fontSize: 12, marginTop: 4 },
   achievementTypeBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   achievementTypeText: { fontSize: 11, fontWeight: '600' },
+  // Block button
+  blockButton: {
+    borderRadius: 10,
+    padding: 14,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  blockButtonText: { fontSize: 15, fontWeight: '600' },
 });

@@ -1,37 +1,63 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <defs>
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#5B2D5E"/>
-      <stop offset="50%" style="stop-color:#4A154B"/>
-      <stop offset="100%" style="stop-color:#3A0E3C"/>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f0c29"/>
+      <stop offset="50%" stop-color="#302b63"/>
+      <stop offset="100%" stop-color="#24243e"/>
     </linearGradient>
-    <linearGradient id="noteGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#2BAC76"/>
-      <stop offset="100%" style="stop-color:#36C5F0"/>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f5d4"/>
+      <stop offset="50%" stop-color="#00bbf9"/>
+      <stop offset="100%" stop-color="#9b5de5"/>
     </linearGradient>
-    <filter id="shadow" x="-5%" y="-5%" width="120%" height="130%">
-      <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#000" flood-opacity="0.25"/>
+    <linearGradient id="pink" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9b5de5"/>
+      <stop offset="100%" stop-color="#f15bb5"/>
+    </linearGradient>
+    <filter id="neon">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softglow">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
 
-  <!-- Background -->
-  <rect width="100" height="100" rx="22" fill="url(#bgGrad)"/>
+  <rect width="100" height="100" rx="22" fill="url(#bg)"/>
 
-  <!-- Chat bubble -->
-  <path d="M18 24 h58 a9 9 0 0 1 9 9 v28 a9 9 0 0 1 -9 9 h-36 l-11 11 v-11 h-11 a9 9 0 0 1 -9 -9 v-28 a9 9 0 0 1 9 -9z"
-        fill="white" opacity="0.95" filter="url(#shadow)"/>
+  <!-- Large centered B where the bowls contain waveform bars -->
+  <g filter="url(#neon)">
+    <!-- B vertical stroke -->
+    <rect x="18" y="12" width="9" height="76" rx="4.5" fill="url(#glow)"/>
 
-  <!-- Music notes -->
-  <g transform="translate(35, 31)">
-    <!-- Note head 1 -->
-    <ellipse cx="7" cy="27" rx="7.5" ry="5.5" fill="url(#noteGrad)" transform="rotate(-20, 7, 27)"/>
-    <!-- Note head 2 -->
-    <ellipse cx="29" cy="21" rx="7.5" ry="5.5" fill="url(#noteGrad)" transform="rotate(-20, 29, 21)"/>
-    <!-- Stems -->
-    <rect x="13" y="3" width="3" height="26" rx="1.5" fill="url(#noteGrad)"/>
-    <rect x="34.5" y="-3" width="3" height="26" rx="1.5" fill="url(#noteGrad)"/>
-    <!-- Beams -->
-    <polygon points="13,3 16,3 37.5,-3 37.5,1 16,7 13,7" fill="url(#noteGrad)"/>
-    <polygon points="13,10 16,10 37.5,4 37.5,8 16,14 13,14" fill="url(#noteGrad)"/>
+    <!-- B upper bowl outline -->
+    <path d="M27 12 L50 12 Q66 12, 66 28 Q66 42, 50 42 L27 42"
+          fill="none" stroke="url(#glow)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- B lower bowl outline -->
+    <path d="M27 42 L54 42 Q72 42, 72 58 Q72 76, 54 76 L27 76"
+          fill="none" stroke="url(#glow)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
+
+  <!-- Waveform bars inside the lower bowl of the B -->
+  <g filter="url(#neon)">
+    <rect x="35" y="56" width="4" height="12" rx="2" fill="url(#pink)" opacity="0.6"/>
+    <rect x="42" y="50" width="4" height="18" rx="2" fill="url(#pink)" opacity="0.75"/>
+    <rect x="49" y="47" width="4" height="21" rx="2" fill="url(#pink)" opacity="0.9"/>
+    <rect x="56" y="51" width="4" height="17" rx="2" fill="url(#pink)"/>
+    <rect x="63" y="55" width="4" height="13" rx="2" fill="url(#pink)" opacity="0.7"/>
+  </g>
+
+  <!-- Small waveform bars inside the upper bowl -->
+  <g filter="url(#neon)">
+    <rect x="35" y="23" width="3.5" height="8" rx="1.75" fill="url(#pink)" opacity="0.45"/>
+    <rect x="41" y="19" width="3.5" height="12" rx="1.75" fill="url(#pink)" opacity="0.6"/>
+    <rect x="47" y="17" width="3.5" height="14" rx="1.75" fill="url(#pink)" opacity="0.75"/>
+    <rect x="53" y="20" width="3.5" height="11" rx="1.75" fill="url(#pink)" opacity="0.55"/>
+  </g>
+
+  <!-- Sound ripples off the right -->
+  <path d="M74 50 Q82 56, 74 62" fill="none" stroke="url(#glow)" stroke-width="2" stroke-linecap="round" opacity="0.6" filter="url(#neon)"/>
+  <path d="M79 44 Q90 56, 79 68" fill="none" stroke="url(#glow)" stroke-width="2" stroke-linecap="round" opacity="0.35" filter="url(#neon)"/>
 </svg>

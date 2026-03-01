@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Linking,
   StyleSheet,
 } from 'react-native';
 import * as FileSystem from 'expo-file-system';
@@ -118,6 +119,13 @@ export default function SettingsScreen({ navigation, route }) {
             onPress={() => navigation.navigate('Security')}
             colors={colors}
           />
+          <View style={[styles.separator, { backgroundColor: colors.border }]} />
+          <SettingsRow
+            icon={'\uD83D\uDEAB'}
+            label="Blocked Users"
+            onPress={() => navigation.navigate('BlockedUsers')}
+            colors={colors}
+          />
         </View>
 
         {/* Preferences */}
@@ -177,6 +185,24 @@ export default function SettingsScreen({ navigation, route }) {
           />
         </View>
 
+        {/* Legal */}
+        <SectionHeader title="LEGAL" colors={colors} />
+        <View style={styles.group}>
+          <SettingsRow
+            icon={'\uD83D\uDD12'}
+            label="Privacy Policy"
+            onPress={() => Linking.openURL('https://bandchat.app/privacy')}
+            colors={colors}
+          />
+          <View style={[styles.separator, { backgroundColor: colors.border }]} />
+          <SettingsRow
+            icon={'\uD83D\uDCC4'}
+            label="Terms of Service"
+            onPress={() => Linking.openURL('https://bandchat.app/terms')}
+            colors={colors}
+          />
+        </View>
+
         {/* App */}
         <SectionHeader title="APP" colors={colors} />
         <View style={styles.group}>
@@ -191,7 +217,7 @@ export default function SettingsScreen({ navigation, route }) {
         </View>
 
         <Text style={[styles.version, { color: colors.textSecondary }]}>
-          BandChat Mobile v1.0.0
+          BandChat Mobile v1.0.1
         </Text>
       </ScrollView>
     </SafeAreaView>

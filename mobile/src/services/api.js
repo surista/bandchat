@@ -1231,6 +1231,31 @@ class ApiService {
     }
     return response.json();
   }
+
+  // Content Reporting & User Blocking
+  async reportMessage(messageId, reason) {
+    return this.request('/reports', {
+      method: 'POST',
+      body: JSON.stringify({ messageId, reason }),
+    });
+  }
+
+  async blockUser(blockedUserId) {
+    return this.request('/blocks', {
+      method: 'POST',
+      body: JSON.stringify({ blockedUserId }),
+    });
+  }
+
+  async unblockUser(blockedUserId) {
+    return this.request(`/blocks/${blockedUserId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getBlockedUsers() {
+    return this.request('/blocks');
+  }
 }
 
 export const api = new ApiService();

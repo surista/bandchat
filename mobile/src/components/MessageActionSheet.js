@@ -15,12 +15,15 @@ const ACTIONS = [
   { key: 'copy', label: 'Copy Text', icon: '\u{1F4CB}' },
   { key: 'edit', label: 'Edit Message', icon: '\u{270F}\u{FE0F}', ownOnly: true },
   { key: 'delete', label: 'Delete Message', icon: '\u{1F5D1}\u{FE0F}', ownOnly: true, destructive: true },
+  { key: 'report', label: 'Report Message', icon: '\u{26A0}\u{FE0F}', notOwn: true, destructive: true },
 ];
 
 function MessageActionSheet({ visible, onClose, onAction, isOwnMessage }) {
   const { colors } = useTheme();
 
-  const filteredActions = ACTIONS.filter(a => !a.ownOnly || isOwnMessage);
+  const filteredActions = ACTIONS.filter(a =>
+    (!a.ownOnly || isOwnMessage) && (!a.notOwn || !isOwnMessage)
+  );
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>

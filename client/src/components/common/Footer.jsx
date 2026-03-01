@@ -176,38 +176,56 @@ function Footer({ theme = 'dark' }) {
               <div className="border-b border-[var(--color-modal-border)] pb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded">NEW</span>
-                  <span className="text-sm text-gray-500">v1.01.22</span>
+                  <span className="text-sm text-gray-500">v1.03.50</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">Bulk Song Import with Metadata</h4>
+                <h4 className="font-medium text-white mb-1">Safety & Privacy</h4>
                 <p className="text-sm text-gray-400">
-                  Import multiple songs at once! Paste a list of songs and we'll automatically fetch BPM, key, and duration.
+                  Report messages, block users, and new Privacy Policy & Terms of Service pages for a safer community.
                 </p>
               </div>
               <div className="border-b border-[var(--color-modal-border)] pb-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm text-gray-500">v1.01.20</span>
+                  <span className="text-sm text-gray-500">v1.03.48</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">MC Sections in Setlists</h4>
+                <h4 className="font-medium text-white mb-1">Onboarding Wizard</h4>
                 <p className="text-sm text-gray-400">
-                  Add talking/banter breaks between songs in your setlists with customizable durations.
+                  New 5-step workspace setup with channel suggestions, email invites, and optional Slack import.
                 </p>
               </div>
               <div className="border-b border-[var(--color-modal-border)] pb-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm text-gray-500">v1.01.18</span>
+                  <span className="text-sm text-gray-500">v1.03.45</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">12 New Themes</h4>
+                <h4 className="font-medium text-white mb-1">Slack Import</h4>
                 <p className="text-sm text-gray-400">
-                  Customize your sidebar with 12 beautiful color themes including Aubergine, Ocean, Forest, and more.
+                  Import your entire Slack workspace — channels, messages, and history — with the admin import wizard.
+                </p>
+              </div>
+              <div className="border-b border-[var(--color-modal-border)] pb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm text-gray-500">v1.03.40</span>
+                </div>
+                <h4 className="font-medium text-white mb-1">Account Management</h4>
+                <p className="text-sm text-gray-400">
+                  Delete your account, export your personal data, and export full workspace data as JSON.
+                </p>
+              </div>
+              <div className="border-b border-[var(--color-modal-border)] pb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm text-gray-500">v1.02</span>
+                </div>
+                <h4 className="font-medium text-white mb-1">Band Kitty</h4>
+                <p className="text-sm text-gray-400">
+                  Track shared band finances with expenses, contributions, and balance tracking for each member.
                 </p>
               </div>
               <div className="pb-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm text-gray-500">v1.01.15</span>
+                  <span className="text-sm text-gray-500">v1.01</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">Band Features</h4>
+                <h4 className="font-medium text-white mb-1">Bulk Song Import & Band Features</h4>
                 <p className="text-sm text-gray-400">
-                  Songs, Setlists, Calendar, and Stats - everything you need to organize your band.
+                  Import multiple songs with automatic metadata, 20+ themes, MC sections in setlists, and full band management tools.
                 </p>
               </div>
             </div>
