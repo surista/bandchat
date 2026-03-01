@@ -1225,11 +1225,11 @@ router.post('/:gigId/media', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
-    // Validate that URL is a valid Cloudinary URL
+    // Validate URL format and require HTTPS
     try {
       const parsedUrl = new URL(url);
-      if (!parsedUrl.hostname.endsWith('cloudinary.com')) {
-        return res.status(400).json({ error: 'Invalid attachment URL' });
+      if (!['https:', 'http:'].includes(parsedUrl.protocol)) {
+        return res.status(400).json({ error: 'Invalid URL' });
       }
     } catch {
       return res.status(400).json({ error: 'Invalid URL' });

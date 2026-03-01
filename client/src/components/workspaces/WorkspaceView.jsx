@@ -12,24 +12,34 @@ import Skeleton from '../common/Skeleton';
 import ErrorMessage from '../common/ErrorMessage';
 import useSwipeGesture from '../../hooks/useSwipeGesture';
 
+// Retry dynamic import on failure (handles stale chunks after deploy)
+function lazyRetry(importFn) {
+  return lazy(() =>
+    importFn().catch(() => {
+      window.location.reload();
+      return new Promise(() => {}); // never resolves — page is reloading
+    })
+  );
+}
+
 // Lazy-loaded band components (only loaded when user navigates to band view)
-const SongList = lazy(() => import('../band/SongList'));
-const SetlistList = lazy(() => import('../band/SetlistList'));
-const GigCalendar = lazy(() => import('../band/GigCalendar'));
-const AvailabilityCalendar = lazy(() => import('../band/AvailabilityCalendar'));
-const GigStats = lazy(() => import('../band/GigStats'));
-const GigArchive = lazy(() => import('../band/GigArchive'));
-const BandMembersList = lazy(() => import('../band/BandMembers/BandMembersList'));
-const ContactsList = lazy(() => import('../band/ContactsList'));
-const AnnouncementsList = lazy(() => import('../band/AnnouncementsList'));
-const PollsList = lazy(() => import('../band/PollsList'));
-const MedleyList = lazy(() => import('../band/MedleyList'));
-const BandTimeline = lazy(() => import('../band/BandTimeline'));
-const Achievements = lazy(() => import('../band/Achievements'));
-const RecordingsList = lazy(() => import('../band/RecordingsList'));
-const SongSuggestions = lazy(() => import('../band/SongSuggestions'));
-const BandKitty = lazy(() => import('../band/BandKitty'));
-const AudioAnalyzer = lazy(() => import('../band/AudioAnalyzer'));
+const SongList = lazyRetry(() => import('../band/SongList'));
+const SetlistList = lazyRetry(() => import('../band/SetlistList'));
+const GigCalendar = lazyRetry(() => import('../band/GigCalendar'));
+const AvailabilityCalendar = lazyRetry(() => import('../band/AvailabilityCalendar'));
+const GigStats = lazyRetry(() => import('../band/GigStats'));
+const GigArchive = lazyRetry(() => import('../band/GigArchive'));
+const BandMembersList = lazyRetry(() => import('../band/BandMembers/BandMembersList'));
+const ContactsList = lazyRetry(() => import('../band/ContactsList'));
+const AnnouncementsList = lazyRetry(() => import('../band/AnnouncementsList'));
+const PollsList = lazyRetry(() => import('../band/PollsList'));
+const MedleyList = lazyRetry(() => import('../band/MedleyList'));
+const BandTimeline = lazyRetry(() => import('../band/BandTimeline'));
+const Achievements = lazyRetry(() => import('../band/Achievements'));
+const RecordingsList = lazyRetry(() => import('../band/RecordingsList'));
+const SongSuggestions = lazyRetry(() => import('../band/SongSuggestions'));
+const BandKitty = lazyRetry(() => import('../band/BandKitty'));
+const AudioAnalyzer = lazyRetry(() => import('../band/AudioAnalyzer'));
 
 /** Safe search-highlight renderer — no dangerouslySetInnerHTML */
 function HighlightedText({ text, query }) {
