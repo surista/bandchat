@@ -71,6 +71,8 @@ export default function AnnouncementsScreen({ navigation, route }) {
         <TouchableOpacity
           onPress={() => openCreateModal()}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Create announcement"
         >
           <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
         </TouchableOpacity>
@@ -213,6 +215,8 @@ export default function AnnouncementsScreen({ navigation, route }) {
         onLongPress={() => { setSelectedAnnouncement(item); setShowActions(true); }}
         delayLongPress={400}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`Announcement: ${item.title}. Long press for options`}
       >
         {/* Priority stripe */}
         <View style={[styles.priorityStripe, { backgroundColor: prioColor }]} />
@@ -241,6 +245,8 @@ export default function AnnouncementsScreen({ navigation, route }) {
               style={[styles.ackButton, { backgroundColor: '#22c55e' }]}
               onPress={() => handleAcknowledge(item.id)}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Acknowledge ${item.title}`}
             >
               <Text style={styles.ackButtonText}>Acknowledge</Text>
             </TouchableOpacity>
@@ -252,7 +258,7 @@ export default function AnnouncementsScreen({ navigation, route }) {
 
   const renderSectionHeader = useCallback(({ section }) => (
     <View style={[styles.sectionHeader, section.isUrgent && styles.urgentSection]}>
-      <Text style={[styles.sectionTitle, { color: section.isUrgent ? '#ef4444' : colors.textSecondary }]}>
+      <Text style={[styles.sectionTitle, { color: section.isUrgent ? '#ef4444' : colors.textSecondary }]} accessibilityRole="header">
         {section.title}
       </Text>
     </View>
@@ -309,6 +315,7 @@ export default function AnnouncementsScreen({ navigation, route }) {
                 placeholder="Announcement title"
                 placeholderTextColor={colors.textSecondary}
                 autoFocus
+                accessibilityLabel="Announcement title"
               />
 
               <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Content *</Text>
@@ -319,6 +326,7 @@ export default function AnnouncementsScreen({ navigation, route }) {
                 placeholder="Announcement content"
                 placeholderTextColor={colors.textSecondary}
                 multiline
+                accessibilityLabel="Announcement content"
               />
 
               <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Priority</Text>
@@ -332,6 +340,8 @@ export default function AnnouncementsScreen({ navigation, route }) {
                       style={[styles.priorityChip, { backgroundColor: active ? pColor + '30' : colors.bgTertiary, borderColor: active ? pColor : 'transparent', borderWidth: 1 }]}
                       onPress={() => setPriority(opt.value)}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${opt.label} priority${active ? ', selected' : ''}`}
                     >
                       <Text style={[styles.priorityChipText, { color: active ? pColor : colors.textSecondary }]}>
                         {opt.label}
@@ -345,6 +355,8 @@ export default function AnnouncementsScreen({ navigation, route }) {
                 style={styles.checkboxRow}
                 onPress={() => setIsPinned(prev => !prev)}
                 activeOpacity={0.6}
+                accessibilityRole="button"
+                accessibilityLabel={`Pin and require acknowledgment, ${isPinned ? 'checked' : 'unchecked'}`}
               >
                 <View style={[styles.checkbox, { borderColor: colors.border }, isPinned && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
                   {isPinned && <Text style={styles.checkmark}>{'\u2713'}</Text>}
@@ -358,6 +370,8 @@ export default function AnnouncementsScreen({ navigation, route }) {
                 style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
                 onPress={() => setShowModal(false)}
                 disabled={saving}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel"
               >
                 <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
               </TouchableOpacity>
@@ -365,6 +379,8 @@ export default function AnnouncementsScreen({ navigation, route }) {
                 style={[styles.modalButton, { backgroundColor: colors.primary }]}
                 onPress={handleSave}
                 disabled={saving || !title.trim() || !content.trim()}
+                accessibilityRole="button"
+                accessibilityLabel={editingAnnouncement ? 'Save announcement' : 'Post announcement'}
               >
                 {saving ? (
                   <ActivityIndicator color="#ffffff" size="small" />
@@ -383,21 +399,25 @@ export default function AnnouncementsScreen({ navigation, route }) {
           style={styles.actionOverlay}
           activeOpacity={1}
           onPress={() => { setShowActions(false); setSelectedAnnouncement(null); }}
+          accessibilityRole="button"
+          accessibilityLabel="Close action sheet"
         >
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
               {selectedAnnouncement?.title}
             </Text>
-            <TouchableOpacity style={styles.actionItem} onPress={() => openEditModal(selectedAnnouncement)}>
+            <TouchableOpacity style={styles.actionItem} onPress={() => openEditModal(selectedAnnouncement)} accessibilityRole="button" accessibilityLabel="Edit announcement">
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem} onPress={handleDelete}>
+            <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete announcement">
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionItem, styles.actionCancel]}
               onPress={() => { setShowActions(false); setSelectedAnnouncement(null); }}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>

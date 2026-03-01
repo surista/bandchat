@@ -86,6 +86,8 @@ function InlineAudioPlayer({ url, colors }) {
       style={[styles.audioPlayer, { backgroundColor: colors.bgTertiary }]}
       onPress={toggle}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={playing ? "Pause" : "Play"}
     >
       {loading ? (
         <ActivityIndicator size="small" color={colors.primary} />
@@ -126,6 +128,8 @@ export default function RecordingListScreen({ navigation, route }) {
         <TouchableOpacity
           onPress={() => navigation.navigate('RecordingDetail', { workspaceId })}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Add recording"
         >
           <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
         </TouchableOpacity>
@@ -202,6 +206,8 @@ export default function RecordingListScreen({ navigation, route }) {
       onLongPress={() => handleLongPress(item)}
       delayLongPress={400}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`${item.title}. Long press for options`}
     >
       <View style={styles.cardHeader}>
         <TypeBadge type={item.type} />
@@ -260,6 +266,8 @@ export default function RecordingListScreen({ navigation, route }) {
             ]}
             onPress={() => setTypeFilter(f.key)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`${f.label}${typeFilter === f.key ? ", selected" : ""}`}
           >
             <Text style={[
               styles.filterChipText,
@@ -285,6 +293,8 @@ export default function RecordingListScreen({ navigation, route }) {
             ]}
             onPress={() => setSongFilter('all')}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`All Songs${songFilter === "all" ? ", selected" : ""}`}
           >
             <Text style={[
               styles.filterChipText,
@@ -302,6 +312,8 @@ export default function RecordingListScreen({ navigation, route }) {
               ]}
               onPress={() => setSongFilter(s.id)}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`${s.title}${songFilter === s.id ? ", selected" : ""}`}
             >
               <Text
                 style={[
@@ -344,18 +356,22 @@ export default function RecordingListScreen({ navigation, route }) {
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => { setShowActions(false); setSelectedRecording(null); }}
+          accessibilityRole="button"
+          accessibilityLabel="Close action sheet"
         >
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
               {selectedRecording?.title}
             </Text>
-            <TouchableOpacity style={styles.actionItem} onPress={handleDelete}>
+            <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete recording">
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionItem, styles.actionCancel]}
               onPress={() => { setShowActions(false); setSelectedRecording(null); }}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>

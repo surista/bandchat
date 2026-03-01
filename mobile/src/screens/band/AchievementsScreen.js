@@ -63,6 +63,8 @@ export default function AchievementsScreen({ navigation, route }) {
           onPress={handleCheck}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           disabled={checking}
+          accessibilityRole="button"
+          accessibilityLabel="Check for new achievements"
         >
           {checking ? (
             <ActivityIndicator size="small" color={colors.primary} />
@@ -201,7 +203,7 @@ export default function AchievementsScreen({ navigation, route }) {
                 </View>
               ))}
             </View>
-            <TouchableOpacity onPress={() => setNewAchievements([])} style={styles.dismissButton}>
+            <TouchableOpacity onPress={() => setNewAchievements([])} style={styles.dismissButton} accessibilityRole="button" accessibilityLabel="Dismiss new achievements">
               <Text style={styles.dismissText}>Dismiss</Text>
             </TouchableOpacity>
           </View>
@@ -231,6 +233,8 @@ export default function AchievementsScreen({ navigation, route }) {
               style={[styles.tab, activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
               onPress={() => setActiveTab(tab)}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`${TAB_LABELS[tab]} tab`}
             >
               <Text style={[styles.tabText, { color: activeTab === tab ? colors.primary : colors.textSecondary }]}>
                 {TAB_LABELS[tab]}
@@ -287,7 +291,7 @@ function AchievementGrid({ groups, earnedIds, earnedMap, accentColor, accentBg, 
     <View>
       {groups.map(group => (
         <View key={group.category} style={styles.categorySection}>
-          <Text style={[styles.categoryTitle, { color: colors.textSecondary }]}>{group.label}</Text>
+          <Text style={[styles.categoryTitle, { color: colors.textSecondary }]} accessibilityRole="header">{group.label}</Text>
           <View style={styles.badgeGrid}>
             {group.items.map(def => {
               const earned = earnedIds.has(def.id);

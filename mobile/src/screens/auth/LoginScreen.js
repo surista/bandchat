@@ -47,7 +47,7 @@ export default function LoginScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <Text style={styles.title}>BandChat</Text>
+            <Text style={styles.title} accessibilityRole="header">BandChat</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
               Sign in to your workspace
             </Text>
@@ -73,6 +73,7 @@ export default function LoginScreen({ navigation }) {
               autoComplete="email"
               textContentType="emailAddress"
               editable={!loading}
+              accessibilityLabel="Email address"
             />
 
             <Text style={[styles.label, { color: colors.textSecondary }]}>Password</Text>
@@ -88,6 +89,7 @@ export default function LoginScreen({ navigation }) {
               editable={!loading}
               onSubmitEditing={handleSubmit}
               returnKeyType="go"
+              accessibilityLabel="Password"
             />
 
             <TouchableOpacity
@@ -95,6 +97,8 @@ export default function LoginScreen({ navigation }) {
               onPress={handleSubmit}
               disabled={loading}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Sign in"
             >
               {loading ? (
                 <ActivityIndicator color="#ffffff" size="small" />
@@ -106,6 +110,8 @@ export default function LoginScreen({ navigation }) {
             <TouchableOpacity
               style={styles.linkButton}
               onPress={() => navigation.navigate('ForgotPassword')}
+              accessibilityRole="button"
+              accessibilityLabel="Forgot password"
             >
               <Text style={[styles.linkText, { color: colors.primary }]}>Forgot password?</Text>
             </TouchableOpacity>
@@ -113,6 +119,8 @@ export default function LoginScreen({ navigation }) {
             <TouchableOpacity
               style={styles.linkButton}
               onPress={() => navigation.navigate('Signup')}
+              accessibilityRole="button"
+              accessibilityLabel="Go to sign up"
             >
               <Text style={[styles.linkText, { color: colors.textSecondary }]}>
                 Don't have an account?{' '}

@@ -96,7 +96,7 @@ function AudioPlayer({ url, colors }) {
 
   return (
     <View style={[styles.playerContainer, { backgroundColor: colors.bgTertiary }]}>
-      <TouchableOpacity onPress={toggle} style={styles.playButton} activeOpacity={0.7}>
+      <TouchableOpacity onPress={toggle} style={styles.playButton} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={playing ? "Pause" : "Play"}>
         {loading ? (
           <ActivityIndicator size="small" color={colors.primary} />
         ) : (
@@ -204,7 +204,7 @@ export default function RecordingDetailScreen({ navigation, route }) {
     if (!isNew && !editing && !loading) {
       navigation.setOptions({
         headerRight: () => (
-          <TouchableOpacity onPress={() => setEditing(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <TouchableOpacity onPress={() => setEditing(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Edit recording">
             <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>Edit</Text>
           </TouchableOpacity>
         ),
@@ -341,6 +341,7 @@ export default function RecordingDetailScreen({ navigation, route }) {
             onChangeText={setTitle}
             placeholder="Recording title"
             placeholderTextColor={colors.textSecondary}
+            accessibilityLabel="Recording title"
           />
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Description</Text>
@@ -352,12 +353,15 @@ export default function RecordingDetailScreen({ navigation, route }) {
             placeholderTextColor={colors.textSecondary}
             multiline
             textAlignVertical="top"
+            accessibilityLabel="Description"
           />
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Link to Song</Text>
           <TouchableOpacity
             style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
             onPress={() => setShowSongPicker(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`Link to song: ${selectedSong ? selectedSong.title : "None selected"}`}
           >
             <Text style={{ color: selectedSong ? colors.textPrimary : colors.textSecondary, fontSize: 15 }}>
               {selectedSong ? selectedSong.title : 'Select song (optional)'}
@@ -371,6 +375,8 @@ export default function RecordingDetailScreen({ navigation, route }) {
               <TouchableOpacity
                 style={[styles.filePickerButton, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
                 onPress={pickFile}
+                accessibilityRole="button"
+                accessibilityLabel={fileName ? `Selected file: ${fileName}` : "Pick audio or video file"}
               >
                 <Text style={{ color: fileName ? colors.textPrimary : colors.textSecondary, fontSize: 15 }}>
                   {fileName || 'Pick audio or video file'}
@@ -392,6 +398,8 @@ export default function RecordingDetailScreen({ navigation, route }) {
               style={[styles.formButton, { backgroundColor: colors.bgTertiary }]}
               onPress={handleCancel}
               disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
             >
               <Text style={[styles.formButtonText, { color: colors.textPrimary }]}>Cancel</Text>
             </TouchableOpacity>
@@ -399,6 +407,8 @@ export default function RecordingDetailScreen({ navigation, route }) {
               style={[styles.formButton, { backgroundColor: colors.primary }]}
               onPress={handleSave}
               disabled={saving || !title.trim() || (isNew && !fileUri)}
+              accessibilityRole="button"
+              accessibilityLabel={isNew ? "Create recording" : "Save recording"}
             >
               {saving ? (
                 <ActivityIndicator color="#ffffff" size="small" />
@@ -409,7 +419,7 @@ export default function RecordingDetailScreen({ navigation, route }) {
           </View>
 
           {!isNew && (
-            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete recording">
               <Text style={styles.deleteButtonText}>Delete Recording</Text>
             </TouchableOpacity>
           )}
@@ -417,12 +427,14 @@ export default function RecordingDetailScreen({ navigation, route }) {
 
         {/* Song Picker Modal */}
         <Modal visible={showSongPicker} transparent animationType="fade" onRequestClose={() => setShowSongPicker(false)}>
-          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowSongPicker(false)}>
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowSongPicker(false)} accessibilityRole="button" accessibilityLabel="Close song picker">
             <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
-              <Text style={[styles.pickerTitle, { color: colors.textPrimary }]}>Select Song</Text>
+              <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Select Song</Text>
               <TouchableOpacity
                 style={[styles.pickerOption, !songId && { backgroundColor: colors.bgTertiary }]}
                 onPress={() => { setSongId(null); setSelectedSong(null); setShowSongPicker(false); }}
+                accessibilityRole="button"
+                accessibilityLabel="None"
               >
                 <Text style={[styles.pickerOptionText, { color: colors.textSecondary }]}>None</Text>
               </TouchableOpacity>
@@ -434,6 +446,8 @@ export default function RecordingDetailScreen({ navigation, route }) {
                   <TouchableOpacity
                     style={[styles.pickerOption, songId === item.id && { backgroundColor: colors.bgTertiary }]}
                     onPress={() => { setSongId(item.id); setSelectedSong(item); setShowSongPicker(false); }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${item.title}${songId === item.id ? ", selected" : ""}`}
                   >
                     <Text style={[styles.pickerOptionText, { color: colors.textPrimary }]}>{item.title}</Text>
                     {item.artist ? (

@@ -43,6 +43,8 @@ function MessageActionSheet({ visible, onClose, onAction, isOwnMessage, hideRepl
                 onAction(action.key);
               }}
               activeOpacity={0.6}
+              accessibilityRole="button"
+              accessibilityLabel={action.label}
             >
               <Text style={styles.actionIcon}>{action.icon}</Text>
               <Text
@@ -59,6 +61,8 @@ function MessageActionSheet({ visible, onClose, onAction, isOwnMessage, hideRepl
             style={[styles.cancelButton, { backgroundColor: colors.bgTertiary }]}
             onPress={onClose}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel"
           >
             <Text style={[styles.cancelText, { color: colors.textPrimary }]}>Cancel</Text>
           </TouchableOpacity>

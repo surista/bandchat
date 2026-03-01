@@ -91,6 +91,8 @@ export default function WorkspaceListScreen({ navigation }) {
       style={[styles.workspaceItem, { backgroundColor: colors.bgSecondary }]}
       onPress={() => navigation.navigate('Workspace', { id: item.id, name: item.name })}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${item.name} workspace, ${item._count?.members || 0} members`}
     >
       <View style={[styles.workspaceAvatar, { backgroundColor: colors.primary }]}>
         <Text style={styles.workspaceAvatarText}>
@@ -135,7 +137,7 @@ export default function WorkspaceListScreen({ navigation }) {
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.sidebar }]}>
         <View>
-          <Text style={styles.headerTitle}>BandChat</Text>
+          <Text style={styles.headerTitle} accessibilityRole="header">BandChat</Text>
           <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
             {user?.displayName}
           </Text>
@@ -148,6 +150,8 @@ export default function WorkspaceListScreen({ navigation }) {
             ]);
           }}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Sign out"
         >
           <Text style={[styles.signOut, { color: colors.textSecondary }]}>Sign out</Text>
         </TouchableOpacity>
@@ -159,6 +163,8 @@ export default function WorkspaceListScreen({ navigation }) {
           style={[styles.actionButton, { backgroundColor: colors.bgTertiary }]}
           onPress={() => setShowJoin(true)}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Join workspace"
         >
           <Text style={[styles.actionButtonText, { color: colors.textPrimary }]}>Join Workspace</Text>
         </TouchableOpacity>
@@ -166,6 +172,8 @@ export default function WorkspaceListScreen({ navigation }) {
           style={[styles.actionButton, { backgroundColor: colors.primary }]}
           onPress={() => setShowCreate(true)}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Create workspace"
         >
           <Text style={styles.actionButtonTextWhite}>Create Workspace</Text>
         </TouchableOpacity>
@@ -192,7 +200,7 @@ export default function WorkspaceListScreen({ navigation }) {
       <Modal visible={showCreate} transparent animationType="fade" onRequestClose={() => setShowCreate(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Create a Workspace</Text>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Create a Workspace</Text>
             <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Workspace Name</Text>
             <TextInput
               style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
@@ -202,12 +210,15 @@ export default function WorkspaceListScreen({ navigation }) {
               onChangeText={setNewWorkspaceName}
               autoFocus
               editable={!submitting}
+              accessibilityLabel="Workspace name"
             />
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
                 onPress={() => { setShowCreate(false); setNewWorkspaceName(''); }}
                 disabled={submitting}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel creating workspace"
               >
                 <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
               </TouchableOpacity>
@@ -215,6 +226,8 @@ export default function WorkspaceListScreen({ navigation }) {
                 style={[styles.modalButton, { backgroundColor: colors.primary }]}
                 onPress={handleCreateWorkspace}
                 disabled={submitting || !newWorkspaceName.trim()}
+                accessibilityRole="button"
+                accessibilityLabel="Create workspace"
               >
                 {submitting ? (
                   <ActivityIndicator color="#ffffff" size="small" />
@@ -231,7 +244,7 @@ export default function WorkspaceListScreen({ navigation }) {
       <Modal visible={showJoin} transparent animationType="fade" onRequestClose={() => setShowJoin(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Join a Workspace</Text>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Join a Workspace</Text>
             <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Invite Code</Text>
             <TextInput
               style={[styles.modalInput, styles.codeInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
@@ -243,12 +256,15 @@ export default function WorkspaceListScreen({ navigation }) {
               maxLength={8}
               autoFocus
               editable={!submitting}
+              accessibilityLabel="Invite code"
             />
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
                 onPress={() => { setShowJoin(false); setInviteCode(''); }}
                 disabled={submitting}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel joining workspace"
               >
                 <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
               </TouchableOpacity>
@@ -256,6 +272,8 @@ export default function WorkspaceListScreen({ navigation }) {
                 style={[styles.modalButton, { backgroundColor: colors.primary }]}
                 onPress={handleJoinWorkspace}
                 disabled={submitting || !inviteCode.trim()}
+                accessibilityRole="button"
+                accessibilityLabel="Join workspace"
               >
                 {submitting ? (
                   <ActivityIndicator color="#ffffff" size="small" />

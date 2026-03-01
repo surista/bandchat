@@ -4,19 +4,7 @@ import { Video, ResizeMode } from 'expo-av';
 import { format, isToday, isYesterday } from 'date-fns';
 import { useTheme } from '../context/ThemeContext';
 import LinkPreview from './LinkPreview';
-
-const AVATAR_COLORS = [
-  '#E91E63', '#9C27B0', '#673AB7', '#3F51B5', '#2196F3',
-  '#009688', '#4CAF50', '#FF9800', '#FF5722', '#795548',
-];
-
-function getAvatarColor(name) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
+import getAvatarColor from '../utils/getAvatarColor';
 
 function formatTimestamp(dateStr) {
   const date = new Date(dateStr);
@@ -44,6 +32,8 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
         style={[styles.groupedContainer, isPending && styles.pending]}
         onLongPress={handleLongPress}
         delayLongPress={400}
+        accessibilityRole="button"
+        accessibilityLabel={`Message: ${message.content || 'attachment'}`}
       >
         <View style={styles.groupedSpacer} />
         <View style={styles.contentContainer}>
@@ -66,10 +56,12 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
       style={[styles.container, isPending && styles.pending]}
       onLongPress={handleLongPress}
       delayLongPress={400}
+      accessibilityRole="button"
+      accessibilityLabel={`${displayName}: ${message.content || 'attachment'}`}
     >
       <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
         {author.avatarUrl ? (
-          <Image source={{ uri: author.avatarUrl }} style={styles.avatarImage} />
+          <Image source={{ uri: author.avatarUrl }} style={styles.avatarImage} accessibilityLabel={`${displayName} avatar`} />
         ) : (
           <Text style={styles.avatarText}>{initial}</Text>
         )}
@@ -93,7 +85,7 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
         {renderAttachments(message.attachments, onImagePress)}
         {renderReactions(message.reactions, colors, message.id, onReactionPress)}
         {message._count?.replies > 0 && (
-          <TouchableOpacity onPress={() => onReplyPress?.(message)} activeOpacity={0.6}>
+          <TouchableOpacity onPress={() => onReplyPress?.(message)} activeOpacity={0.6} accessibilityRole="button" accessibilityLabel={`${message._count.replies} ${message._count.replies === 1 ? 'reply' : 'replies'}, view thread`}>
             <Text style={[styles.replyCount, { color: colors.primary }]}>
               {message._count.replies} {message._count.replies === 1 ? 'reply' : 'replies'}
             </Text>
@@ -115,11 +107,14 @@ function renderAttachments(attachments, onImagePress) {
               key={att.id}
               onPress={() => onImagePress?.(att.url)}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="View attached image"
             >
               <Image
                 source={{ uri: att.url }}
                 style={styles.attachmentImage}
                 resizeMode="cover"
+                accessibilityLabel="Attached image"
               />
             </TouchableOpacity>
           );
@@ -194,6 +189,8 @@ function AudioAttachment({ url, filename }) {
       style={[styles.audioContainer, { backgroundColor: colors.bgTertiary }]}
       onPress={togglePlay}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`${playing ? 'Pause' : 'Play'} audio ${filename || ''}`}
     >
       <Text style={styles.audioIcon}>{playing ? '\u23F8' : '\u25B6\uFE0F'}</Text>
       <Text style={[styles.audioFilename, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -220,6 +217,8 @@ function renderReactions(reactions, colors, messageId, onReactionPress) {
           style={[styles.reactionBadge, { backgroundColor: colors.bgTertiary }]}
           onPress={() => onReactionPress?.(messageId, emoji)}
           activeOpacity={0.6}
+          accessibilityRole="button"
+          accessibilityLabel={`${emoji} reaction, ${count} ${count === 1 ? 'person' : 'people'}`}
         >
           <Text style={styles.reactionEmoji}>{emoji}</Text>
           <Text style={[styles.reactionCount, { color: colors.textSecondary }]}>{count}</Text>

@@ -79,7 +79,7 @@ function RecommendationsTab({ workspaceId, colors }) {
       {/* Analysis */}
       {analysis && (
         <View style={styles.analysisSection}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Repertoire Analysis</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]} accessibilityRole="header">Repertoire Analysis</Text>
           <View style={styles.analysisGrid}>
             <View style={[styles.analysisCard, { backgroundColor: 'rgba(168,85,247,0.12)' }]}>
               <Text style={[styles.analysisValue, { color: '#a855f7' }]}>{analysis.totalSongs || 0}</Text>
@@ -116,7 +116,7 @@ function RecommendationsTab({ workspaceId, colors }) {
       )}
 
       {/* Recommendations */}
-      <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginTop: 16 }]}>Suggestions</Text>
+      <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginTop: 16 }]} accessibilityRole="header">Suggestions</Text>
       {recommendations?.length > 0 ? (
         recommendations.map((rec, i) => (
           <View key={i} style={[styles.recCard, { backgroundColor: colors.bgSecondary }]}>
@@ -132,6 +132,8 @@ function RecommendationsTab({ workspaceId, colors }) {
               <TouchableOpacity
                 onPress={() => Linking.openURL(`https://www.google.com/search?q=${encodeURIComponent(rec.searchTerm + ' cover songs')}`)}
                 style={styles.searchLink}
+                accessibilityRole="button"
+                accessibilityLabel={`Search for ${rec.searchTerm}`}
               >
                 <Text style={[styles.searchLinkText, { color: colors.primary }]}>Search</Text>
               </TouchableOpacity>
@@ -183,6 +185,8 @@ function MashupsTab({ workspaceId, colors }) {
       <TouchableOpacity
         style={[styles.songSelector, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
         onPress={() => setShowPicker(true)}
+        accessibilityRole="button"
+        accessibilityLabel={selectedSong ? `Selected: ${selectedSong.title}. Tap to change` : 'Select a song to find mashups'}
       >
         <Text style={{ color: selectedSong ? colors.textPrimary : colors.textSecondary, fontSize: 15 }}>
           {selectedSong ? `${selectedSong.title}${selectedSong.artist ? ` - ${selectedSong.artist}` : ''}` : 'Select a song to find mashups...'}
@@ -235,9 +239,9 @@ function MashupsTab({ workspaceId, colors }) {
 
       {/* Song Picker */}
       <Modal visible={showPicker} transparent animationType="fade" onRequestClose={() => setShowPicker(false)}>
-        <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowPicker(false)}>
+        <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowPicker(false)} accessibilityRole="button" accessibilityLabel="Dismiss song picker">
           <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
-            <Text style={[styles.pickerTitle, { color: colors.textPrimary }]}>Select Song</Text>
+            <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Select Song</Text>
             <FlatList
               data={songs}
               keyExtractor={(item) => item.id}
@@ -246,6 +250,8 @@ function MashupsTab({ workspaceId, colors }) {
                 <TouchableOpacity
                   style={[styles.pickerOption, selectedSong?.id === item.id && { backgroundColor: colors.bgTertiary }]}
                   onPress={() => { loadSuggestions(item); setShowPicker(false); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.title}${item.artist ? ` by ${item.artist}` : ''}`}
                 >
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.pickerOptionText, { color: colors.textPrimary }]}>{item.title}</Text>
@@ -395,7 +401,7 @@ function OptimizerTab({ workspaceId, colors }) {
               </View>
             </View>
           ))}
-          <TouchableOpacity style={styles.clearButton} onPress={() => setResult(null)}>
+          <TouchableOpacity style={styles.clearButton} onPress={() => setResult(null)} accessibilityRole="button" accessibilityLabel="Clear and reselect songs">
             <Text style={[styles.clearText, { color: colors.primary }]}>Clear & Reselect</Text>
           </TouchableOpacity>
         </View>
@@ -412,6 +418,8 @@ function OptimizerTab({ workspaceId, colors }) {
                 style={[styles.songCheckRow, { backgroundColor: isSelected ? colors.primary + '15' : colors.bgSecondary }]}
                 onPress={() => toggleSong(song.id)}
                 activeOpacity={0.6}
+                accessibilityRole="button"
+                accessibilityLabel={`${song.title}${isSelected ? ', selected' : ''}`}
               >
                 <View style={[styles.checkbox, { borderColor: isSelected ? colors.primary : colors.border }, isSelected && { backgroundColor: colors.primary }]}>
                   {isSelected && <Text style={styles.checkmark}>{'\u2713'}</Text>}
@@ -431,6 +439,8 @@ function OptimizerTab({ workspaceId, colors }) {
             style={[styles.optimizeButton, { backgroundColor: selected.size >= 2 ? colors.primary : colors.bgTertiary }]}
             onPress={optimize}
             disabled={loading || selected.size < 2}
+            accessibilityRole="button"
+            accessibilityLabel="Optimize order"
           >
             {loading ? (
               <ActivityIndicator color="#ffffff" size="small" />
@@ -462,6 +472,8 @@ export default function SongIntelligenceScreen({ navigation, route }) {
             style={[styles.tab, activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
             onPress={() => setActiveTab(tab)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`${TAB_LABELS[tab]} tab${activeTab === tab ? ', selected' : ''}`}
           >
             <Text style={[styles.tabText, { color: activeTab === tab ? colors.primary : colors.textSecondary }]}>
               {TAB_LABELS[tab]}

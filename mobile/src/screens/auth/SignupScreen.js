@@ -57,7 +57,7 @@ export default function SignupScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <Text style={styles.title}>BandChat</Text>
+            <Text style={styles.title} accessibilityRole="header">BandChat</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
               Create your account
             </Text>
@@ -81,6 +81,7 @@ export default function SignupScreen({ navigation }) {
               autoComplete="name"
               textContentType="name"
               editable={!loading}
+              accessibilityLabel="Display name"
             />
 
             <Text style={[styles.label, { color: colors.textSecondary }]}>Email</Text>
@@ -96,6 +97,7 @@ export default function SignupScreen({ navigation }) {
               autoComplete="email"
               textContentType="emailAddress"
               editable={!loading}
+              accessibilityLabel="Email address"
             />
 
             <Text style={[styles.label, { color: colors.textSecondary }]}>Password</Text>
@@ -109,6 +111,7 @@ export default function SignupScreen({ navigation }) {
               autoComplete="new-password"
               textContentType="newPassword"
               editable={!loading}
+              accessibilityLabel="Password"
             />
 
             <Text style={[styles.label, { color: colors.textSecondary }]}>Confirm Password</Text>
@@ -124,6 +127,7 @@ export default function SignupScreen({ navigation }) {
               editable={!loading}
               onSubmitEditing={handleSubmit}
               returnKeyType="go"
+              accessibilityLabel="Confirm password"
             />
 
             <TouchableOpacity
@@ -131,6 +135,8 @@ export default function SignupScreen({ navigation }) {
               onPress={handleSubmit}
               disabled={loading}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Create account"
             >
               {loading ? (
                 <ActivityIndicator color="#ffffff" size="small" />
@@ -142,6 +148,8 @@ export default function SignupScreen({ navigation }) {
             <TouchableOpacity
               style={styles.linkButton}
               onPress={() => navigation.navigate('Login')}
+              accessibilityRole="button"
+              accessibilityLabel="Go to sign in"
             >
               <Text style={[styles.linkText, { color: colors.textSecondary }]}>
                 Already have an account?{' '}

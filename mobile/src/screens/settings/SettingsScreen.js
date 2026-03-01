@@ -28,6 +28,8 @@ function SettingsRow({ icon, label, onPress, color, colors, showArrow = true }) 
       style={[styles.row, { backgroundColor: colors.bgSecondary }]}
       onPress={onPress}
       activeOpacity={0.6}
+      accessibilityRole="button"
+      accessibilityLabel={label}
     >
       <Text style={styles.rowIcon}>{icon}</Text>
       <Text style={[styles.rowLabel, { color: color || colors.textPrimary }]}>{label}</Text>
@@ -40,7 +42,7 @@ function SettingsRow({ icon, label, onPress, color, colors, showArrow = true }) 
 
 function SectionHeader({ title, colors }) {
   return (
-    <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>{title}</Text>
+    <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">{title}</Text>
   );
 }
 
@@ -84,9 +86,11 @@ export default function SettingsScreen({ navigation, route }) {
           style={[styles.userCard, { backgroundColor: colors.bgSecondary }]}
           onPress={() => navigation.navigate('EditProfile')}
           activeOpacity={0.6}
+          accessibilityRole="button"
+          accessibilityLabel="Edit profile"
         >
           {user?.avatarUrl ? (
-            <Image source={{ uri: user.avatarUrl }} style={styles.avatarImg} />
+            <Image source={{ uri: user.avatarUrl }} style={styles.avatarImg} accessibilityLabel={`${user?.displayName || 'User'} avatar`} />
           ) : (
             <View style={[styles.avatarImg, { backgroundColor: colors.primary }]}>
               <Text style={styles.avatarText}>{getInitial(user?.displayName)}</Text>
@@ -216,7 +220,7 @@ export default function SettingsScreen({ navigation, route }) {
           />
         </View>
 
-        <Text style={[styles.version, { color: colors.textSecondary }]}>
+        <Text style={[styles.version, { color: colors.textSecondary }]} accessibilityRole="text">
           BandChat Mobile v{Constants.expoConfig?.version || '1.0.0'}
         </Text>
       </ScrollView>

@@ -189,6 +189,8 @@ export default function AvailabilityScreen({ navigation, route }) {
           style={[styles.dayRow, { backgroundColor: colors.bgSecondary }, today && styles.todayRow]}
           onPress={() => handleDatePress(dateObj)}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={`${format(dateObj, 'EEEE, MMMM d')}, ${STATUS_LABELS[status]}`}
         >
           <View style={styles.dayInfo}>
             <Text style={[styles.dayName, { color: today ? colors.primary : colors.textSecondary }]}>
@@ -214,6 +216,8 @@ export default function AvailabilityScreen({ navigation, route }) {
         style={[styles.dayRow, { backgroundColor: colors.bgSecondary }, today && styles.todayRow]}
         onPress={() => handleDatePress(dateObj)}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`${format(dateObj, 'EEEE, MMMM d')}, ${total > 0 ? `${summary.available} of ${total} available` : 'No responses'}`}
       >
         <View style={styles.dayInfo}>
           <Text style={[styles.dayName, { color: today ? colors.primary : colors.textSecondary }]}>
@@ -266,12 +270,16 @@ export default function AvailabilityScreen({ navigation, route }) {
         <TouchableOpacity
           style={[styles.tab, tab === 'personal' && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
           onPress={() => setTab('personal')}
+          accessibilityRole="button"
+          accessibilityLabel="Personal tab"
         >
           <Text style={[styles.tabText, { color: tab === 'personal' ? colors.primary : colors.textSecondary }]}>Personal</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, tab === 'team' && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
           onPress={() => setTab('team')}
+          accessibilityRole="button"
+          accessibilityLabel="Team tab"
         >
           <Text style={[styles.tabText, { color: tab === 'team' ? colors.primary : colors.textSecondary }]}>Team</Text>
         </TouchableOpacity>
@@ -279,13 +287,13 @@ export default function AvailabilityScreen({ navigation, route }) {
 
       {/* Month navigation */}
       <View style={[styles.monthNav, { backgroundColor: colors.bgPrimary }]}>
-        <TouchableOpacity onPress={prevMonth} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <TouchableOpacity onPress={prevMonth} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Previous month">
           <Text style={[styles.navArrow, { color: colors.primary }]}>{'\u2039'}</Text>
         </TouchableOpacity>
-        <Text style={[styles.monthLabel, { color: colors.textPrimary }]}>
+        <Text style={[styles.monthLabel, { color: colors.textPrimary }]} accessibilityRole="header">
           {format(currentMonth, 'MMMM yyyy')}
         </Text>
-        <TouchableOpacity onPress={nextMonth} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <TouchableOpacity onPress={nextMonth} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Next month">
           <Text style={[styles.navArrow, { color: colors.primary }]}>{'\u203A'}</Text>
         </TouchableOpacity>
       </View>
@@ -312,6 +320,8 @@ export default function AvailabilityScreen({ navigation, route }) {
           style={styles.actionOverlay}
           activeOpacity={1}
           onPress={() => { setShowStatusModal(false); setSelectedDate(null); }}
+          accessibilityRole="button"
+          accessibilityLabel="Close status picker"
         >
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
@@ -322,19 +332,19 @@ export default function AvailabilityScreen({ navigation, route }) {
               <ActivityIndicator color={colors.primary} style={{ padding: 20 }} />
             ) : (
               <>
-                <TouchableOpacity style={styles.statusOption} onPress={() => setStatus('AVAILABLE')}>
+                <TouchableOpacity style={styles.statusOption} onPress={() => setStatus('AVAILABLE')} accessibilityRole="button" accessibilityLabel="Set as available">
                   <View style={[styles.statusOptionDot, { backgroundColor: STATUS_COLORS.AVAILABLE }]} />
                   <Text style={[styles.statusOptionText, { color: colors.textPrimary }]}>Available</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.statusOption} onPress={() => setStatus('MAYBE')}>
+                <TouchableOpacity style={styles.statusOption} onPress={() => setStatus('MAYBE')} accessibilityRole="button" accessibilityLabel="Set as maybe">
                   <View style={[styles.statusOptionDot, { backgroundColor: STATUS_COLORS.MAYBE }]} />
                   <Text style={[styles.statusOptionText, { color: colors.textPrimary }]}>Maybe</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.statusOption} onPress={() => setStatus('UNAVAILABLE')}>
+                <TouchableOpacity style={styles.statusOption} onPress={() => setStatus('UNAVAILABLE')} accessibilityRole="button" accessibilityLabel="Set as unavailable">
                   <View style={[styles.statusOptionDot, { backgroundColor: STATUS_COLORS.UNAVAILABLE }]} />
                   <Text style={[styles.statusOptionText, { color: colors.textPrimary }]}>Unavailable</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.statusOption} onPress={() => setStatus('CLEAR')}>
+                <TouchableOpacity style={styles.statusOption} onPress={() => setStatus('CLEAR')} accessibilityRole="button" accessibilityLabel="Clear availability">
                   <View style={[styles.statusOptionDot, { backgroundColor: STATUS_COLORS.UNKNOWN }]} />
                   <Text style={[styles.statusOptionText, { color: colors.textSecondary }]}>Clear</Text>
                 </TouchableOpacity>
@@ -343,6 +353,8 @@ export default function AvailabilityScreen({ navigation, route }) {
             <TouchableOpacity
               style={[styles.statusOption, styles.statusCancel]}
               onPress={() => { setShowStatusModal(false); setSelectedDate(null); }}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
             >
               <Text style={[styles.statusOptionText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
@@ -356,6 +368,8 @@ export default function AvailabilityScreen({ navigation, route }) {
           style={styles.actionOverlay}
           activeOpacity={1}
           onPress={() => { setShowTeamModal(false); setSelectedDate(null); setTeamDetail(null); }}
+          accessibilityRole="button"
+          accessibilityLabel="Close team detail"
         >
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
@@ -385,6 +399,8 @@ export default function AvailabilityScreen({ navigation, route }) {
             <TouchableOpacity
               style={[styles.statusOption, styles.statusCancel]}
               onPress={() => { setShowTeamModal(false); setSelectedDate(null); setTeamDetail(null); }}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
             >
               <Text style={[styles.statusOptionText, { color: colors.textSecondary }]}>Close</Text>
             </TouchableOpacity>

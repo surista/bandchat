@@ -116,7 +116,7 @@ export default function GigDetailScreen({ navigation, route }) {
     if (!isNew && !editing && !loading) {
       navigation.setOptions({
         headerRight: () => (
-          <TouchableOpacity onPress={() => setEditing(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <TouchableOpacity onPress={() => setEditing(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Edit event">
             <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>Edit</Text>
           </TouchableOpacity>
         ),
@@ -293,12 +293,15 @@ export default function GigDetailScreen({ navigation, route }) {
             onChangeText={setTitle}
             placeholder="Event title"
             placeholderTextColor={colors.textSecondary}
+            accessibilityLabel="Event title"
           />
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Type</Text>
           <TouchableOpacity
             style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
             onPress={() => setShowTypePicker(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`Event type: ${type}`}
           >
             <View style={[styles.typeDot, { backgroundColor: TYPE_COLORS[type] }]} />
             <Text style={{ color: colors.textPrimary, fontSize: 15 }}>{type}</Text>
@@ -310,6 +313,8 @@ export default function GigDetailScreen({ navigation, route }) {
               <TouchableOpacity
                 style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
                 onPress={() => setShowStatusPicker(true)}
+                accessibilityRole="button"
+                accessibilityLabel={`Status: ${status}`}
               >
                 <View style={[styles.typeDot, { backgroundColor: STATUS_COLORS[status] }]} />
                 <Text style={{ color: colors.textPrimary, fontSize: 15 }}>{status}</Text>
@@ -321,6 +326,8 @@ export default function GigDetailScreen({ navigation, route }) {
           <TouchableOpacity
             style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
             onPress={() => setShowDatePicker(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`Date: ${format(date, 'EEEE, MMM d, yyyy')}`}
           >
             <Text style={{ color: colors.textPrimary, fontSize: 15 }}>
               {format(date, 'EEEE, MMM d, yyyy')}
@@ -346,6 +353,7 @@ export default function GigDetailScreen({ navigation, route }) {
                 onChangeText={setStartTime}
                 placeholder="19:00"
                 placeholderTextColor={colors.textSecondary}
+                accessibilityLabel="Start time"
               />
             </View>
             <View style={styles.rowField}>
@@ -356,6 +364,7 @@ export default function GigDetailScreen({ navigation, route }) {
                 onChangeText={setEndTime}
                 placeholder="21:00"
                 placeholderTextColor={colors.textSecondary}
+                accessibilityLabel="End time"
               />
             </View>
           </View>
@@ -367,6 +376,7 @@ export default function GigDetailScreen({ navigation, route }) {
             onChangeText={setVenue}
             placeholder="Venue name"
             placeholderTextColor={colors.textSecondary}
+            accessibilityLabel="Venue name"
           />
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Address</Text>
@@ -376,6 +386,7 @@ export default function GigDetailScreen({ navigation, route }) {
             onChangeText={setAddress}
             placeholder="Full address"
             placeholderTextColor={colors.textSecondary}
+            accessibilityLabel="Address"
           />
 
           {(type === 'GIG') && (
@@ -388,6 +399,7 @@ export default function GigDetailScreen({ navigation, route }) {
                 placeholder="0"
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="numeric"
+                accessibilityLabel="Pay amount"
               />
             </>
           )}
@@ -401,6 +413,7 @@ export default function GigDetailScreen({ navigation, route }) {
             placeholderTextColor={colors.textSecondary}
             multiline
             textAlignVertical="top"
+            accessibilityLabel="Notes"
           />
 
           <View style={styles.formActions}>
@@ -408,6 +421,8 @@ export default function GigDetailScreen({ navigation, route }) {
               style={[styles.formButton, { backgroundColor: colors.bgTertiary }]}
               onPress={handleCancel}
               disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
             >
               <Text style={[styles.formButtonText, { color: colors.textPrimary }]}>Cancel</Text>
             </TouchableOpacity>
@@ -415,6 +430,8 @@ export default function GigDetailScreen({ navigation, route }) {
               style={[styles.formButton, { backgroundColor: colors.primary }]}
               onPress={handleSave}
               disabled={saving || !title.trim()}
+              accessibilityRole="button"
+              accessibilityLabel={isNew ? 'Create event' : 'Save event'}
             >
               {saving ? (
                 <ActivityIndicator color="#ffffff" size="small" />
@@ -425,7 +442,7 @@ export default function GigDetailScreen({ navigation, route }) {
           </View>
 
           {!isNew && (
-            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete event">
               <Text style={styles.deleteButtonText}>Delete Event</Text>
             </TouchableOpacity>
           )}
@@ -433,14 +450,16 @@ export default function GigDetailScreen({ navigation, route }) {
 
         {/* Type Picker */}
         <Modal visible={showTypePicker} transparent animationType="fade" onRequestClose={() => setShowTypePicker(false)}>
-          <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowTypePicker(false)}>
+          <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowTypePicker(false)} accessibilityRole="button" accessibilityLabel="Close type picker">
             <View style={[styles.pickerModal, { backgroundColor: colors.modalBg }]}>
-              <Text style={[styles.pickerModalTitle, { color: colors.textPrimary }]}>Event Type</Text>
+              <Text style={[styles.pickerModalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Event Type</Text>
               {GIG_TYPES.map(t => (
                 <TouchableOpacity
                   key={t}
                   style={[styles.pickerOption, type === t && { backgroundColor: colors.bgTertiary }]}
                   onPress={() => { setType(t); setShowTypePicker(false); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t}${type === t ? ', selected' : ''}`}
                 >
                   <View style={[styles.typeDot, { backgroundColor: TYPE_COLORS[t] }]} />
                   <Text style={[styles.pickerOptionText, { color: colors.textPrimary }]}>{t}</Text>
@@ -453,14 +472,16 @@ export default function GigDetailScreen({ navigation, route }) {
 
         {/* Status Picker */}
         <Modal visible={showStatusPicker} transparent animationType="fade" onRequestClose={() => setShowStatusPicker(false)}>
-          <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowStatusPicker(false)}>
+          <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowStatusPicker(false)} accessibilityRole="button" accessibilityLabel="Close status picker">
             <View style={[styles.pickerModal, { backgroundColor: colors.modalBg }]}>
-              <Text style={[styles.pickerModalTitle, { color: colors.textPrimary }]}>Status</Text>
+              <Text style={[styles.pickerModalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Status</Text>
               {GIG_STATUSES.map(s => (
                 <TouchableOpacity
                   key={s}
                   style={[styles.pickerOption, status === s && { backgroundColor: colors.bgTertiary }]}
                   onPress={() => { setStatus(s); setShowStatusPicker(false); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${s}${status === s ? ', selected' : ''}`}
                 >
                   <View style={[styles.typeDot, { backgroundColor: STATUS_COLORS[s] }]} />
                   <Text style={[styles.pickerOptionText, { color: colors.textPrimary }]}>{s}</Text>
@@ -513,7 +534,7 @@ export default function GigDetailScreen({ navigation, route }) {
 
       {/* Venue */}
       {(gig?.venue || gig?.address) && (
-        <TouchableOpacity style={styles.viewSection} onPress={openMaps} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.viewSection} onPress={openMaps} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Open venue in maps">
           <Text style={[styles.viewLabel, { color: colors.textSecondary }]}>Venue</Text>
           {gig.venue && <Text style={[styles.viewValue, { color: colors.textPrimary }]}>{gig.venue}</Text>}
           {gig.address && <Text style={[styles.viewValueSecondary, { color: colors.primary }]}>{gig.address} {'\u2197'}</Text>}
@@ -542,6 +563,8 @@ export default function GigDetailScreen({ navigation, route }) {
                 }
               }}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`View setlist: ${gs.setlist?.name || 'Untitled Setlist'}`}
             >
               <Text style={[styles.setlistLinkText, { color: colors.primary }]}>
                 {gs.setlist?.name || 'Untitled Setlist'}
@@ -590,6 +613,8 @@ export default function GigDetailScreen({ navigation, route }) {
         style={[styles.calendarButton, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
         onPress={addToCalendar}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Add to calendar"
       >
         <Text style={[styles.calendarButtonText, { color: colors.primary }]}>Add to Calendar</Text>
       </TouchableOpacity>
@@ -598,6 +623,8 @@ export default function GigDetailScreen({ navigation, route }) {
       {gig?.status === 'SCHEDULED' && (
         <TouchableOpacity
           style={[styles.completeButton, { backgroundColor: '#22c55e' }]}
+          accessibilityRole="button"
+          accessibilityLabel="Mark event as complete"
           onPress={() => {
             Alert.alert('Mark Complete', `Mark "${gig.title}" as completed?`, [
               { text: 'Cancel', style: 'cancel' },

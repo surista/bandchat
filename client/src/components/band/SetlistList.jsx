@@ -10,6 +10,7 @@ import useLongPress from '../../hooks/useLongPress';
 import Skeleton from '../common/Skeleton';
 
 function SetlistCard({ setlist, onTap, onEdit, onDuplicate, onDelete, onContextMenu, calculateDuration, formatTime12h }) {
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const longPress = useLongPress({
     onLongPress: (pos) => onContextMenu(pos),
     onTap,
@@ -38,6 +39,40 @@ function SetlistCard({ setlist, onTap, onEdit, onDuplicate, onDelete, onContextM
           <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="p-1 text-gray-400 hover:text-white" title="Edit">✏️</button>
           <button onClick={(e) => { e.stopPropagation(); onDuplicate(); }} className="p-1 text-gray-400 hover:text-blue-400" title="Copy">📋</button>
           <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1 text-gray-400 hover:text-red-400" title="Delete">🗑️</button>
+        </div>
+        <div className="relative sm:hidden ml-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowMobileMenu(!showMobileMenu); }}
+            className="p-1 text-gray-400 hover:text-white text-lg"
+            aria-label="More actions"
+          >
+            ...
+          </button>
+          {showMobileMenu && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); }} />
+              <div className="absolute right-0 top-full mt-1 bg-gray-800 rounded-lg shadow-xl border border-gray-700 py-1 z-50 min-w-[140px]">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onEdit(); }}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+                >
+                  ✏️ Edit
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onDuplicate(); }}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-blue-300"
+                >
+                  📋 Copy
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onDelete(); }}
+                  className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-gray-700 hover:text-red-300"
+                >
+                  🗑️ Delete
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

@@ -47,7 +47,7 @@ export default function ForgotPasswordScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <Text style={styles.title}>BandChat</Text>
+            <Text style={styles.title} accessibilityRole="header">BandChat</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
               Reset your password
             </Text>
@@ -65,6 +65,8 @@ export default function ForgotPasswordScreen({ navigation }) {
                   style={[styles.button, { backgroundColor: colors.primary }]}
                   onPress={() => navigation.navigate('Login')}
                   activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Back to sign in"
                 >
                   <Text style={styles.buttonText}>Back to Sign In</Text>
                 </TouchableOpacity>
@@ -97,6 +99,7 @@ export default function ForgotPasswordScreen({ navigation }) {
                   onSubmitEditing={handleSubmit}
                   returnKeyType="go"
                   autoFocus
+                  accessibilityLabel="Email address"
                 />
 
                 <TouchableOpacity
@@ -104,6 +107,8 @@ export default function ForgotPasswordScreen({ navigation }) {
                   onPress={handleSubmit}
                   disabled={loading || !email.trim()}
                   activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Send reset link"
                 >
                   {loading ? (
                     <ActivityIndicator color="#ffffff" size="small" />
@@ -115,6 +120,8 @@ export default function ForgotPasswordScreen({ navigation }) {
                 <TouchableOpacity
                   style={styles.linkButton}
                   onPress={() => navigation.goBack()}
+                  accessibilityRole="button"
+                  accessibilityLabel="Back to sign in"
                 >
                   <Text style={[styles.linkText, { color: colors.primary }]}>Back to Sign In</Text>
                 </TouchableOpacity>

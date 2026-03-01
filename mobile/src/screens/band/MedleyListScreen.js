@@ -13,13 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
-
-function formatDuration(seconds) {
-  if (!seconds) return null;
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
+import { formatDuration } from '../../utils/formatDuration';
 
 function Badge({ label, color, bgColor }) {
   return (
@@ -52,6 +46,8 @@ export default function MedleyListScreen({ navigation, route }) {
         <TouchableOpacity
           onPress={() => navigation.navigate('MedleyDetail', { workspaceId })}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Create medley"
         >
           <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
         </TouchableOpacity>
@@ -144,6 +140,8 @@ export default function MedleyListScreen({ navigation, route }) {
         onLongPress={() => handleLongPress(item)}
         delayLongPress={400}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.name}, ${songCount} songs. Long press for options`}
       >
         <Text style={[styles.cardName, { color: colors.textPrimary }]} numberOfLines={1}>
           {item.name}
@@ -241,6 +239,8 @@ export default function MedleyListScreen({ navigation, route }) {
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => { setShowActions(false); setSelectedMedley(null); }}
+          accessibilityRole="button"
+          accessibilityLabel="Close action sheet"
         >
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
@@ -254,15 +254,19 @@ export default function MedleyListScreen({ navigation, route }) {
                 navigation.navigate('MedleyDetail', { medleyId: selectedMedley?.id, workspaceId, editing: true });
                 setSelectedMedley(null);
               }}
+              accessibilityRole="button"
+              accessibilityLabel="Edit medley"
             >
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem} onPress={handleDelete}>
+            <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete medley">
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionItem, styles.actionCancel]}
               onPress={() => { setShowActions(false); setSelectedMedley(null); }}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>

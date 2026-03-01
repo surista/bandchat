@@ -84,6 +84,8 @@ export default function ContactsScreen({ navigation, route }) {
         <TouchableOpacity
           onPress={() => openCreateModal()}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Add contact"
         >
           <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
         </TouchableOpacity>
@@ -218,6 +220,8 @@ export default function ContactsScreen({ navigation, route }) {
         onLongPress={() => { setSelectedContact(item); setShowActions(true); }}
         delayLongPress={400}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.name}. Long press for options`}
       >
         <View style={styles.contactHeader}>
           <Text style={[styles.contactName, { color: colors.textPrimary }]}>{item.name}</Text>
@@ -228,21 +232,21 @@ export default function ContactsScreen({ navigation, route }) {
         </View>
 
         {item.email && (
-          <TouchableOpacity style={styles.contactRow} onPress={() => openLink('email', item.email)}>
+          <TouchableOpacity style={styles.contactRow} onPress={() => openLink('email', item.email)} accessibilityRole="button" accessibilityLabel={`Email ${item.email}`}>
             <Text style={styles.contactRowIcon}>{'\u2709\uFE0F'}</Text>
             <Text style={[styles.contactRowText, { color: colors.primary }]}>{item.email}</Text>
           </TouchableOpacity>
         )}
 
         {item.phone && (
-          <TouchableOpacity style={styles.contactRow} onPress={() => openLink('phone', item.phone)}>
+          <TouchableOpacity style={styles.contactRow} onPress={() => openLink('phone', item.phone)} accessibilityRole="button" accessibilityLabel={`Call ${item.phone}`}>
             <Text style={styles.contactRowIcon}>{'\uD83D\uDCDE'}</Text>
             <Text style={[styles.contactRowText, { color: colors.primary }]}>{item.phone}</Text>
           </TouchableOpacity>
         )}
 
         {item.website && (
-          <TouchableOpacity style={styles.contactRow} onPress={() => openLink('website', item.website)}>
+          <TouchableOpacity style={styles.contactRow} onPress={() => openLink('website', item.website)} accessibilityRole="button" accessibilityLabel={`Open website ${item.website}`}>
             <Text style={styles.contactRowIcon}>{'\uD83C\uDF10'}</Text>
             <Text style={[styles.contactRowText, { color: colors.primary }]} numberOfLines={1}>{item.website}</Text>
           </TouchableOpacity>
@@ -289,6 +293,8 @@ export default function ContactsScreen({ navigation, route }) {
               style={[styles.filterChip, { backgroundColor: active ? colors.primary : colors.bgTertiary }]}
               onPress={() => setCategoryFilter(f.key)}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Filter by ${f.label}${active ? ', selected' : ''}`}
             >
               <Text style={[styles.filterChipText, { color: active ? '#ffffff' : colors.textSecondary }]}>
                 {f.label}
@@ -335,6 +341,7 @@ export default function ContactsScreen({ navigation, route }) {
                 placeholder="Contact name"
                 placeholderTextColor={colors.textSecondary}
                 autoFocus
+                accessibilityLabel="Contact name"
               />
 
               <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Category</Text>
@@ -347,6 +354,8 @@ export default function ContactsScreen({ navigation, route }) {
                       style={[styles.categoryChip, { backgroundColor: active ? colors.primary : colors.bgTertiary }]}
                       onPress={() => setCategory(opt.value)}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${opt.label}${active ? ', selected' : ''}`}
                     >
                       <Text style={[styles.categoryChipText, { color: active ? '#ffffff' : colors.textSecondary }]}>
                         {opt.label}
@@ -365,6 +374,7 @@ export default function ContactsScreen({ navigation, route }) {
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                accessibilityLabel="Email"
               />
 
               <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Phone</Text>
@@ -375,6 +385,7 @@ export default function ContactsScreen({ navigation, route }) {
                 placeholder="Phone number"
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="phone-pad"
+                accessibilityLabel="Phone number"
               />
 
               <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Website</Text>
@@ -385,6 +396,7 @@ export default function ContactsScreen({ navigation, route }) {
                 placeholder="www.example.com"
                 placeholderTextColor={colors.textSecondary}
                 autoCapitalize="none"
+                accessibilityLabel="Website"
               />
 
               <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Address</Text>
@@ -394,6 +406,7 @@ export default function ContactsScreen({ navigation, route }) {
                 onChangeText={setAddress}
                 placeholder="Address"
                 placeholderTextColor={colors.textSecondary}
+                accessibilityLabel="Address"
               />
 
               <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Notes</Text>
@@ -404,6 +417,7 @@ export default function ContactsScreen({ navigation, route }) {
                 placeholder="Optional notes"
                 placeholderTextColor={colors.textSecondary}
                 multiline
+                accessibilityLabel="Notes"
               />
             </ScrollView>
 
@@ -412,6 +426,8 @@ export default function ContactsScreen({ navigation, route }) {
                 style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
                 onPress={() => setShowModal(false)}
                 disabled={saving}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel"
               >
                 <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
               </TouchableOpacity>
@@ -419,6 +435,8 @@ export default function ContactsScreen({ navigation, route }) {
                 style={[styles.modalButton, { backgroundColor: colors.primary }]}
                 onPress={handleSave}
                 disabled={saving || !name.trim()}
+                accessibilityRole="button"
+                accessibilityLabel={editingContact ? 'Save contact' : 'Create contact'}
               >
                 {saving ? (
                   <ActivityIndicator color="#ffffff" size="small" />
@@ -437,21 +455,25 @@ export default function ContactsScreen({ navigation, route }) {
           style={styles.actionOverlay}
           activeOpacity={1}
           onPress={() => { setShowActions(false); setSelectedContact(null); }}
+          accessibilityRole="button"
+          accessibilityLabel="Close action sheet"
         >
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
               {selectedContact?.name}
             </Text>
-            <TouchableOpacity style={styles.actionItem} onPress={() => openEditModal(selectedContact)}>
+            <TouchableOpacity style={styles.actionItem} onPress={() => openEditModal(selectedContact)} accessibilityRole="button" accessibilityLabel="Edit contact">
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem} onPress={handleDelete}>
+            <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete contact">
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionItem, styles.actionCancel]}
               onPress={() => { setShowActions(false); setSelectedContact(null); }}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>

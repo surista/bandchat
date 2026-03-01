@@ -106,7 +106,7 @@ export default function MessageInput({ onSend, onTyping, editingMessage, onCance
       {editingMessage && (
         <View style={[styles.editBanner, { backgroundColor: colors.bgTertiary }]}>
           <Text style={[styles.editBannerText, { color: colors.primary }]}>Editing message</Text>
-          <TouchableOpacity onPress={handleCancelEdit}>
+          <TouchableOpacity onPress={handleCancelEdit} accessibilityRole="button" accessibilityLabel="Cancel editing">
             <Text style={[styles.editCancel, { color: colors.textSecondary }]}>{'\u2715'}</Text>
           </TouchableOpacity>
         </View>
@@ -115,13 +115,13 @@ export default function MessageInput({ onSend, onTyping, editingMessage, onCance
       {/* Attachment preview */}
       {attachment && (
         <View style={styles.attachmentPreview}>
-          <Image source={{ uri: attachment.uri }} style={styles.attachmentThumb} />
+          <Image source={{ uri: attachment.uri }} style={styles.attachmentThumb} accessibilityLabel="Attachment preview" />
           {attachment.isVideo && (
             <View style={styles.videoIndicator}>
               <Text style={styles.videoIndicatorText}>{'\u25B6'}</Text>
             </View>
           )}
-          <TouchableOpacity style={styles.removeAttachment} onPress={removeAttachment} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <TouchableOpacity style={styles.removeAttachment} onPress={removeAttachment} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Remove attachment">
             <Text style={styles.removeAttachmentText}>{'\u2715'}</Text>
           </TouchableOpacity>
         </View>
@@ -130,7 +130,7 @@ export default function MessageInput({ onSend, onTyping, editingMessage, onCance
       <View style={styles.inputRow}>
         {/* Attachment button */}
         {!editingMessage && (
-          <TouchableOpacity style={styles.attachButton} onPress={pickMedia} activeOpacity={0.6} hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}>
+          <TouchableOpacity style={styles.attachButton} onPress={pickMedia} activeOpacity={0.6} hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }} accessibilityRole="button" accessibilityLabel="Attach media">
             <Text style={[styles.attachIcon, { color: colors.textSecondary }]}>+</Text>
           </TouchableOpacity>
         )}
@@ -154,6 +154,7 @@ export default function MessageInput({ onSend, onTyping, editingMessage, onCance
           textAlignVertical="center"
           returnKeyType={Platform.OS === 'ios' ? 'default' : 'send'}
           blurOnSubmit={false}
+          accessibilityLabel={editingMessage ? 'Edit message' : 'Type a message'}
         />
         <TouchableOpacity
           style={[
@@ -163,6 +164,8 @@ export default function MessageInput({ onSend, onTyping, editingMessage, onCance
           onPress={handleSend}
           disabled={!canSend}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={editingMessage ? 'Save edit' : 'Send message'}
         >
           <Text style={[styles.sendIcon, { color: canSend ? '#ffffff' : colors.textSecondary }]}>
             {editingMessage ? '\u2713' : '\u2191'}

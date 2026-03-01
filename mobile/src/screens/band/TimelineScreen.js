@@ -90,6 +90,8 @@ export default function TimelineScreen({ navigation, route }) {
             setShowForm(true);
           }}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Add timeline event"
         >
           <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
         </TouchableOpacity>
@@ -295,6 +297,8 @@ export default function TimelineScreen({ navigation, route }) {
         onLongPress={() => handleLongPress(item)}
         delayLongPress={400}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.title}, ${formatEventDate(item.eventDate)}. Long press for options`}
       >
         <View style={styles.eventHeader}>
           <Text style={styles.eventIcon}>{getEventIcon(item.eventType)}</Text>
@@ -347,6 +351,8 @@ export default function TimelineScreen({ navigation, route }) {
           <TouchableOpacity
             style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
             onPress={() => setShowTypePicker(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`Event type: ${getEventLabel(formEventType)}`}
           >
             <Text style={{ fontSize: 16, marginRight: 8 }}>{getEventIcon(formEventType)}</Text>
             <Text style={{ color: colors.textPrimary, fontSize: 15 }}>{getEventLabel(formEventType)}</Text>
@@ -356,6 +362,8 @@ export default function TimelineScreen({ navigation, route }) {
           <TouchableOpacity
             style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
             onPress={() => setShowDatePicker(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`Date: ${format(formDate, 'EEEE, MMM d, yyyy')}`}
           >
             <Text style={{ color: colors.textPrimary, fontSize: 15 }}>
               {format(formDate, 'EEEE, MMM d, yyyy')}
@@ -379,6 +387,7 @@ export default function TimelineScreen({ navigation, route }) {
             onChangeText={setFormTitle}
             placeholder="Event title"
             placeholderTextColor={colors.textSecondary}
+            accessibilityLabel="Event title"
           />
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Description</Text>
@@ -390,6 +399,7 @@ export default function TimelineScreen({ navigation, route }) {
             placeholderTextColor={colors.textSecondary}
             multiline
             textAlignVertical="top"
+            accessibilityLabel="Event description"
           />
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Image URL</Text>
@@ -401,6 +411,7 @@ export default function TimelineScreen({ navigation, route }) {
             placeholderTextColor={colors.textSecondary}
             autoCapitalize="none"
             keyboardType="url"
+            accessibilityLabel="Image URL"
           />
 
           <View style={styles.formActions}>
@@ -408,6 +419,8 @@ export default function TimelineScreen({ navigation, route }) {
               style={[styles.formButton, { backgroundColor: colors.bgTertiary }]}
               onPress={() => { setShowForm(false); resetForm(); }}
               disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
             >
               <Text style={[styles.formButtonText, { color: colors.textPrimary }]}>Cancel</Text>
             </TouchableOpacity>
@@ -415,6 +428,8 @@ export default function TimelineScreen({ navigation, route }) {
               style={[styles.formButton, { backgroundColor: colors.primary }]}
               onPress={handleSave}
               disabled={saving || !formTitle.trim()}
+              accessibilityRole="button"
+              accessibilityLabel={editingEvent ? 'Save event' : 'Create event'}
             >
               {saving ? (
                 <ActivityIndicator color="#ffffff" size="small" />
@@ -427,14 +442,16 @@ export default function TimelineScreen({ navigation, route }) {
 
         {/* Type Picker Modal */}
         <Modal visible={showTypePicker} transparent animationType="fade" onRequestClose={() => setShowTypePicker(false)}>
-          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowTypePicker(false)}>
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowTypePicker(false)} accessibilityRole="button" accessibilityLabel="Dismiss event type picker">
             <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
-              <Text style={[styles.pickerTitle, { color: colors.textPrimary }]}>Event Type</Text>
+              <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Event Type</Text>
               {EVENT_TYPES.map(t => (
                 <TouchableOpacity
                   key={t.key}
                   style={[styles.pickerOption, formEventType === t.key && { backgroundColor: colors.bgTertiary }]}
                   onPress={() => { setFormEventType(t.key); setShowTypePicker(false); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t.label}${formEventType === t.key ? ', selected' : ''}`}
                 >
                   <Text style={{ fontSize: 18, marginRight: 10 }}>{t.icon}</Text>
                   <Text style={[styles.pickerOptionText, { color: colors.textPrimary }]}>{t.label}</Text>
@@ -458,6 +475,8 @@ export default function TimelineScreen({ navigation, route }) {
             onPress={handleAutoGenerate}
             disabled={generating}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Auto-generate timeline"
           >
             {generating ? (
               <ActivityIndicator size="small" color={colors.textSecondary} />
@@ -470,6 +489,8 @@ export default function TimelineScreen({ navigation, route }) {
             onPress={handleRegenerate}
             disabled={generating}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Regenerate timeline"
           >
             <Text style={[styles.adminButtonText, { color: colors.textSecondary }]}>Regenerate</Text>
           </TouchableOpacity>
@@ -508,6 +529,8 @@ export default function TimelineScreen({ navigation, route }) {
           style={styles.actionOverlay}
           activeOpacity={1}
           onPress={() => { setShowActions(false); setSelectedEvent(null); }}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss action sheet"
         >
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
@@ -521,15 +544,19 @@ export default function TimelineScreen({ navigation, route }) {
                 startEdit(selectedEvent);
                 setSelectedEvent(null);
               }}
+              accessibilityRole="button"
+              accessibilityLabel="Edit event"
             >
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem} onPress={handleDelete}>
+            <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete event">
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionItem, styles.actionCancel]}
               onPress={() => { setShowActions(false); setSelectedEvent(null); }}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>

@@ -93,6 +93,8 @@ export default function BandMembersScreen({ navigation, route }) {
         <TouchableOpacity
           onPress={() => openCreateModal()}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Add member"
         >
           <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
         </TouchableOpacity>
@@ -226,6 +228,8 @@ export default function BandMembersScreen({ navigation, route }) {
         onLongPress={() => { setSelectedMember(item); setShowActions(true); }}
         delayLongPress={400}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.name}. Long press for options`}
       >
         <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
           <Text style={styles.avatarText}>{getInitial(item.name)}</Text>
@@ -251,7 +255,7 @@ export default function BandMembersScreen({ navigation, route }) {
 
   const renderSectionHeader = useCallback(({ section }) => (
     <View style={styles.sectionHeader}>
-      <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{section.title}</Text>
+      <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">{section.title}</Text>
     </View>
   ), [colors]);
 
@@ -306,6 +310,7 @@ export default function BandMembersScreen({ navigation, route }) {
                 placeholder="Member name"
                 placeholderTextColor={colors.textSecondary}
                 autoFocus
+                accessibilityLabel="Member name"
               />
 
               <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Instruments</Text>
@@ -322,6 +327,8 @@ export default function BandMembersScreen({ navigation, route }) {
                       ]}
                       onPress={() => toggleInstrument(inst)}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${inst}${active ? ', selected' : ''}`}
                     >
                       <Text style={[styles.instrumentChipText, { color: active ? instColor : colors.textSecondary }]}>{inst}</Text>
                     </TouchableOpacity>
@@ -333,6 +340,8 @@ export default function BandMembersScreen({ navigation, route }) {
                 style={styles.checkboxRow}
                 onPress={() => setIsGuest(prev => !prev)}
                 activeOpacity={0.6}
+                accessibilityRole="button"
+                accessibilityLabel={`Guest musician, ${isGuest ? 'checked' : 'unchecked'}`}
               >
                 <View style={[styles.checkbox, { borderColor: colors.border }, isGuest && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
                   {isGuest && <Text style={styles.checkmark}>{'\u2713'}</Text>}
@@ -348,6 +357,7 @@ export default function BandMembersScreen({ navigation, route }) {
                 placeholder="Optional notes"
                 placeholderTextColor={colors.textSecondary}
                 multiline
+                accessibilityLabel="Notes"
               />
             </ScrollView>
 
@@ -356,6 +366,8 @@ export default function BandMembersScreen({ navigation, route }) {
                 style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
                 onPress={() => setShowModal(false)}
                 disabled={saving}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel"
               >
                 <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
               </TouchableOpacity>
@@ -363,6 +375,8 @@ export default function BandMembersScreen({ navigation, route }) {
                 style={[styles.modalButton, { backgroundColor: colors.primary }]}
                 onPress={handleSave}
                 disabled={saving || !name.trim()}
+                accessibilityRole="button"
+                accessibilityLabel={editingMember ? 'Save member' : 'Add member'}
               >
                 {saving ? (
                   <ActivityIndicator color="#ffffff" size="small" />
@@ -381,21 +395,25 @@ export default function BandMembersScreen({ navigation, route }) {
           style={styles.actionOverlay}
           activeOpacity={1}
           onPress={() => { setShowActions(false); setSelectedMember(null); }}
+          accessibilityRole="button"
+          accessibilityLabel="Close action sheet"
         >
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
               {selectedMember?.name}
             </Text>
-            <TouchableOpacity style={styles.actionItem} onPress={() => openEditModal(selectedMember)}>
+            <TouchableOpacity style={styles.actionItem} onPress={() => openEditModal(selectedMember)} accessibilityRole="button" accessibilityLabel="Edit member">
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem} onPress={handleDelete}>
+            <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete member">
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionItem, styles.actionCancel]}
               onPress={() => { setShowActions(false); setSelectedMember(null); }}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>

@@ -15,13 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
-
-function formatDuration(seconds) {
-  if (!seconds) return null;
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
+import { formatDuration } from '../../utils/formatDuration';
 
 function Badge({ label, color, bgColor }) {
   return (
@@ -59,6 +53,8 @@ export default function SetlistListScreen({ navigation, route }) {
         <TouchableOpacity
           onPress={() => setShowCreate(true)}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Create setlist"
         >
           <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
         </TouchableOpacity>
@@ -163,6 +159,8 @@ export default function SetlistListScreen({ navigation, route }) {
         onLongPress={() => { setSelectedSetlist(item); setShowActions(true); }}
         delayLongPress={400}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.name}${songCount > 0 ? `, ${songCount} songs` : ''}. Long press for options`}
       >
         <Text style={[styles.setlistName, { color: colors.textPrimary }]} numberOfLines={1}>
           {item.name}
@@ -233,7 +231,7 @@ export default function SetlistListScreen({ navigation, route }) {
       <Modal visible={showCreate} transparent animationType="fade" onRequestClose={() => setShowCreate(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>New Setlist</Text>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">New Setlist</Text>
             <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Name *</Text>
             <TextInput
               style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
@@ -242,6 +240,7 @@ export default function SetlistListScreen({ navigation, route }) {
               placeholder="Setlist name"
               placeholderTextColor={colors.textSecondary}
               autoFocus
+              accessibilityLabel="Setlist name"
             />
             <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Description</Text>
             <TextInput
@@ -250,12 +249,15 @@ export default function SetlistListScreen({ navigation, route }) {
               onChangeText={setNewDescription}
               placeholder="Optional description"
               placeholderTextColor={colors.textSecondary}
+              accessibilityLabel="Setlist description"
             />
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
                 onPress={() => { setShowCreate(false); setNewName(''); setNewDescription(''); }}
                 disabled={creating}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel"
               >
                 <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
               </TouchableOpacity>
@@ -263,6 +265,8 @@ export default function SetlistListScreen({ navigation, route }) {
                 style={[styles.modalButton, { backgroundColor: colors.primary }]}
                 onPress={handleCreate}
                 disabled={creating || !newName.trim()}
+                accessibilityRole="button"
+                accessibilityLabel="Create setlist"
               >
                 {creating ? (
                   <ActivityIndicator color="#ffffff" size="small" />
@@ -281,6 +285,8 @@ export default function SetlistListScreen({ navigation, route }) {
           style={styles.actionOverlay}
           activeOpacity={1}
           onPress={() => { setShowActions(false); setSelectedSetlist(null); }}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss action sheet"
         >
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
@@ -294,18 +300,22 @@ export default function SetlistListScreen({ navigation, route }) {
                 navigation.navigate('SetlistDetail', { setlistId: selectedSetlist?.id, workspaceId, editing: true });
                 setSelectedSetlist(null);
               }}
+              accessibilityRole="button"
+              accessibilityLabel="Edit setlist"
             >
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem} onPress={handleDuplicate}>
+            <TouchableOpacity style={styles.actionItem} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate setlist">
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Duplicate</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem} onPress={handleDelete}>
+            <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete setlist">
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionItem, styles.actionCancel]}
               onPress={() => { setShowActions(false); setSelectedSetlist(null); }}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>

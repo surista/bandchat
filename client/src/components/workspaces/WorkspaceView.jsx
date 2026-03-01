@@ -9,6 +9,7 @@ import ChannelView from '../channels/ChannelView';
 import ThreadView from '../threads/ThreadView';
 import MobileNav from '../navigation/MobileNav';
 import Skeleton from '../common/Skeleton';
+import ErrorMessage from '../common/ErrorMessage';
 import useSwipeGesture from '../../hooks/useSwipeGesture';
 
 // Lazy-loaded band components (only loaded when user navigates to band view)
@@ -53,6 +54,7 @@ function WorkspaceView() {
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [selectedThread, setSelectedThread] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [showInvite, setShowInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteExpiresIn, setInviteExpiresIn] = useState(24);
@@ -94,6 +96,18 @@ function WorkspaceView() {
   useEffect(() => {
     setPendingChannelId(localStorage.getItem(`selectedChannel:${workspaceId}`) || null);
   }, [workspaceId]);
+
+  // Cmd+K / Ctrl+K to open search
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowSearch(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     if (socket) {
@@ -303,7 +317,7 @@ function WorkspaceView() {
       }
     } catch (err) {
       console.error('Failed to load workspace:', err);
-      navigate('/');
+      setLoadError(err.message || 'Failed to load workspace');
     } finally {
       setLoading(false);
     }
@@ -504,6 +518,22 @@ function WorkspaceView() {
             {Array.from({length: 8}).map((_, i) => <Skeleton.Message key={i} />)}
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="h-screen-safe flex items-center justify-center bg-gray-900">
+        <ErrorMessage
+          title="Failed to load workspace"
+          message={loadError}
+          onRetry={() => {
+            setLoadError(null);
+            setLoading(true);
+            loadWorkspace();
+          }}
+        />
       </div>
     );
   }

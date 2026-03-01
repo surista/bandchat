@@ -16,19 +16,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
+import { formatDuration } from '../../utils/formatDuration';
 
 const SORT_OPTIONS = [
   { key: 'title', label: 'Title' },
   { key: 'artist', label: 'Artist' },
   { key: 'recent', label: 'Recent' },
 ];
-
-function formatDuration(seconds) {
-  if (!seconds) return null;
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
 
 function Badge({ label, color, bgColor }) {
   return (
@@ -77,12 +71,16 @@ export default function SongListScreen({ navigation, route }) {
           <TouchableOpacity
             onPress={() => setShowMoreMenu(true)}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="More options"
           >
             <Text style={{ color: colors.primary, fontSize: 20, fontWeight: '700' }}>{'\u22EF'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('SongDetail', { workspaceId })}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Add song"
           >
             <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
           </TouchableOpacity>
@@ -221,6 +219,8 @@ export default function SongListScreen({ navigation, route }) {
       onLongPress={() => handleLongPress(item)}
       delayLongPress={400}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`${item.title}${item.artist ? ` by ${item.artist}` : ''}. Long press for options`}
     >
       <Text style={[styles.songTitle, { color: colors.textPrimary }]} numberOfLines={1}>
         {item.title}
@@ -269,11 +269,14 @@ export default function SongListScreen({ navigation, route }) {
           value={search}
           onChangeText={setSearch}
           autoCapitalize="none"
+          accessibilityLabel="Search songs"
         />
         <TouchableOpacity
           style={[styles.sortButton, { backgroundColor: colors.bgTertiary }]}
           onPress={() => setShowSortModal(true)}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={`Sort by ${SORT_OPTIONS.find(o => o.key === sortBy)?.label}`}
         >
           <Text style={[styles.sortButtonText, { color: colors.textSecondary }]}>
             {SORT_OPTIONS.find(o => o.key === sortBy)?.label}
@@ -309,14 +312,18 @@ export default function SongListScreen({ navigation, route }) {
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setShowSortModal(false)}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss sort options"
         >
           <View style={[styles.sortModalContent, { backgroundColor: colors.modalBg }]}>
-            <Text style={[styles.sortModalTitle, { color: colors.textPrimary }]}>Sort by</Text>
+            <Text style={[styles.sortModalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Sort by</Text>
             {SORT_OPTIONS.map(opt => (
               <TouchableOpacity
                 key={opt.key}
                 style={[styles.sortOption, sortBy === opt.key && { backgroundColor: colors.bgTertiary }]}
                 onPress={() => { setSortBy(opt.key); setShowSortModal(false); }}
+                accessibilityRole="button"
+                accessibilityLabel={`Sort by ${opt.label}${sortBy === opt.key ? ', selected' : ''}`}
               >
                 <Text style={[styles.sortOptionText, { color: colors.textPrimary }]}>{opt.label}</Text>
                 {sortBy === opt.key && <Text style={{ color: colors.primary }}>{'\u2713'}</Text>}
@@ -340,6 +347,8 @@ export default function SongListScreen({ navigation, route }) {
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setShowMoreMenu(false)}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss menu"
         >
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
@@ -351,15 +360,19 @@ export default function SongListScreen({ navigation, route }) {
                 setImportResult(null);
                 setShowBulkImport(true);
               }}
+              accessibilityRole="button"
+              accessibilityLabel="Bulk import songs"
             >
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Bulk Import</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem} onPress={handleEnrich}>
+            <TouchableOpacity style={styles.actionItem} onPress={handleEnrich} accessibilityRole="button" accessibilityLabel="Fetch missing metadata">
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Fetch Missing Data</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionItem, styles.actionCancel]}
               onPress={() => setShowMoreMenu(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
@@ -371,10 +384,10 @@ export default function SongListScreen({ navigation, route }) {
       <Modal visible={showBulkImport} animationType="slide" onRequestClose={() => setShowBulkImport(false)}>
         <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
           <View style={[styles.bulkHeader, { backgroundColor: colors.bgSecondary }]}>
-            <TouchableOpacity onPress={() => setShowBulkImport(false)}>
+            <TouchableOpacity onPress={() => setShowBulkImport(false)} accessibilityRole="button" accessibilityLabel="Cancel bulk import">
               <Text style={{ color: colors.primary, fontSize: 16 }}>Cancel</Text>
             </TouchableOpacity>
-            <Text style={[styles.bulkTitle, { color: colors.textPrimary }]}>Bulk Import</Text>
+            <Text style={[styles.bulkTitle, { color: colors.textPrimary }]} accessibilityRole="header">Bulk Import</Text>
             <View style={{ width: 60 }} />
           </View>
 
@@ -404,6 +417,8 @@ export default function SongListScreen({ navigation, route }) {
               <TouchableOpacity
                 style={[styles.bulkButton, { backgroundColor: colors.primary }]}
                 onPress={() => setShowBulkImport(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Done"
               >
                 <Text style={styles.bulkButtonText}>Done</Text>
               </TouchableOpacity>
@@ -422,6 +437,7 @@ export default function SongListScreen({ navigation, route }) {
                 onChangeText={setBulkText}
                 textAlignVertical="top"
                 autoFocus
+                accessibilityLabel="Song list, one per line"
               />
               {bulkText.trim() ? (
                 <Text style={[styles.bulkCount, { color: colors.primary }]}>
@@ -432,6 +448,8 @@ export default function SongListScreen({ navigation, route }) {
                 style={styles.metadataToggle}
                 onPress={() => setFetchMetadata(prev => !prev)}
                 activeOpacity={0.6}
+                accessibilityRole="button"
+                accessibilityLabel={`Auto-fetch metadata${fetchMetadata ? ', enabled' : ', disabled'}`}
               >
                 <View style={[styles.checkbox, { borderColor: colors.border, backgroundColor: fetchMetadata ? colors.primary : 'transparent' }]}>
                   {fetchMetadata && <Text style={styles.checkmark}>{'\u2713'}</Text>}
@@ -444,6 +462,8 @@ export default function SongListScreen({ navigation, route }) {
                 style={[styles.bulkButton, { backgroundColor: colors.primary }, (importing || parsedSongs.length === 0) && { opacity: 0.5 }]}
                 onPress={handleBulkImport}
                 disabled={importing || parsedSongs.length === 0}
+                accessibilityRole="button"
+                accessibilityLabel={`Import ${parsedSongs.length} songs`}
               >
                 {importing ? (
                   <ActivityIndicator color="#ffffff" size="small" />
@@ -462,6 +482,8 @@ export default function SongListScreen({ navigation, route }) {
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => { setShowActions(false); setSelectedSong(null); }}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss action sheet"
         >
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
@@ -475,15 +497,19 @@ export default function SongListScreen({ navigation, route }) {
                 navigation.navigate('SongDetail', { songId: selectedSong?.id, workspaceId, editing: true });
                 setSelectedSong(null);
               }}
+              accessibilityRole="button"
+              accessibilityLabel="Edit song"
             >
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem} onPress={handleDelete}>
+            <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete song">
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionItem, styles.actionCancel]}
               onPress={() => { setShowActions(false); setSelectedSong(null); }}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>

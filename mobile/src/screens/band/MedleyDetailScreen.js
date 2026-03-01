@@ -14,13 +14,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
-
-function formatDuration(seconds) {
-  if (!seconds) return '';
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
+import { formatDuration } from '../../utils/formatDuration';
 
 function Badge({ label, color, bgColor }) {
   return (
@@ -111,7 +105,7 @@ export default function MedleyDetailScreen({ navigation, route }) {
     if (!isNew && !editing && !loading) {
       navigation.setOptions({
         headerRight: () => (
-          <TouchableOpacity onPress={() => setEditing(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <TouchableOpacity onPress={() => setEditing(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Edit medley">
             <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>Edit</Text>
           </TouchableOpacity>
         ),
@@ -214,6 +208,7 @@ export default function MedleyDetailScreen({ navigation, route }) {
             onChangeText={setName}
             placeholder="Medley name"
             placeholderTextColor={colors.textSecondary}
+            accessibilityLabel="Medley name"
           />
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Description</Text>
@@ -225,10 +220,11 @@ export default function MedleyDetailScreen({ navigation, route }) {
             placeholderTextColor={colors.textSecondary}
             multiline
             textAlignVertical="top"
+            accessibilityLabel="Description"
           />
 
           {/* Songs in Medley */}
-          <Text style={[styles.sectionHeader, { color: colors.textPrimary }]}>
+          <Text style={[styles.sectionHeader, { color: colors.textPrimary }]} accessibilityRole="header">
             Songs in Medley ({selectedSongs.length})
           </Text>
           {selectedSongs.length < 2 && (
@@ -254,6 +250,8 @@ export default function MedleyDetailScreen({ navigation, route }) {
                   onPress={() => moveSong(idx, -1)}
                   disabled={idx === 0}
                   hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Move ${song.title} up`}
                 >
                   <Text style={[styles.reorderIcon, { color: idx === 0 ? colors.border : colors.textSecondary }]}>
                     {'\u25B2'}
@@ -263,6 +261,8 @@ export default function MedleyDetailScreen({ navigation, route }) {
                   onPress={() => moveSong(idx, 1)}
                   disabled={idx === selectedSongs.length - 1}
                   hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Move ${song.title} down`}
                 >
                   <Text style={[styles.reorderIcon, { color: idx === selectedSongs.length - 1 ? colors.border : colors.textSecondary }]}>
                     {'\u25BC'}
@@ -272,6 +272,8 @@ export default function MedleyDetailScreen({ navigation, route }) {
               <TouchableOpacity
                 onPress={() => removeSong(song.id)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Remove ${song.title}`}
               >
                 <Text style={styles.removeIcon}>{'\u2715'}</Text>
               </TouchableOpacity>
@@ -279,7 +281,7 @@ export default function MedleyDetailScreen({ navigation, route }) {
           ))}
 
           {/* Available Songs */}
-          <Text style={[styles.sectionHeader, { color: colors.textPrimary, marginTop: 20 }]}>
+          <Text style={[styles.sectionHeader, { color: colors.textPrimary, marginTop: 20 }]} accessibilityRole="header">
             Available Songs
           </Text>
           {loadingSongs ? (
@@ -295,6 +297,8 @@ export default function MedleyDetailScreen({ navigation, route }) {
                 style={[styles.availableSongRow, { backgroundColor: colors.bgSecondary }]}
                 onPress={() => addSong(song)}
                 activeOpacity={0.6}
+                accessibilityRole="button"
+                accessibilityLabel={`Add ${song.title}`}
               >
                 <View style={styles.availableSongInfo}>
                   <Text style={[styles.availableSongTitle, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -322,6 +326,8 @@ export default function MedleyDetailScreen({ navigation, route }) {
               style={[styles.formButton, { backgroundColor: colors.bgTertiary }]}
               onPress={handleCancel}
               disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
             >
               <Text style={[styles.formButtonText, { color: colors.textPrimary }]}>Cancel</Text>
             </TouchableOpacity>
@@ -329,6 +335,8 @@ export default function MedleyDetailScreen({ navigation, route }) {
               style={[styles.formButton, { backgroundColor: colors.primary }]}
               onPress={handleSave}
               disabled={saving || !name.trim() || selectedSongs.length < 2}
+              accessibilityRole="button"
+              accessibilityLabel={isNew ? "Create medley" : "Save medley"}
             >
               {saving ? (
                 <ActivityIndicator color="#ffffff" size="small" />

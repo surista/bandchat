@@ -12,14 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
-
-function formatDuration(totalSeconds) {
-  if (!totalSeconds) return '0m';
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}
+import { formatTotalDuration } from '../../utils/formatDuration';
 
 function formatDateShort(dateStr) {
   if (!dateStr) return '';
@@ -38,7 +31,7 @@ function StatBox({ label, value, color, bgColor, onPress }) {
     </View>
   );
   if (onPress) {
-    return <TouchableOpacity style={styles.statBoxWrapper} onPress={onPress} activeOpacity={0.7}>{content}</TouchableOpacity>;
+    return <TouchableOpacity style={styles.statBoxWrapper} onPress={onPress} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={`${label}: ${value}`}>{content}</TouchableOpacity>;
   }
   return <View style={styles.statBoxWrapper}>{content}</View>;
 }
@@ -199,13 +192,13 @@ export default function StatsScreen({ navigation, route }) {
         {/* Most Played Songs */}
         {stats.mostPlayedSongs?.length > 0 && (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Most Played Songs</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]} accessibilityRole="header">Most Played Songs</Text>
             {stats.mostPlayedSongs.slice(0, 10).map((song, i) => (
               <RankedItem
                 key={song.id}
                 rank={i + 1}
                 title={song.title}
-                subtitle={`${song.playCount} plays${song.artist ? ` \u00B7 ${song.artist}` : ''}${song.totalTime ? ` \u00B7 ${formatDuration(song.totalTime)}` : ''}`}
+                subtitle={`${song.playCount} plays${song.artist ? ` \u00B7 ${song.artist}` : ''}${song.totalTime ? ` \u00B7 ${formatTotalDuration(song.totalTime)}` : ''}`}
                 colors={colors}
               />
             ))}
@@ -215,7 +208,7 @@ export default function StatsScreen({ navigation, route }) {
         {/* Top Venues */}
         {stats.topVenues?.length > 0 && (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Top Venues</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]} accessibilityRole="header">Top Venues</Text>
             {stats.topVenues.slice(0, 8).map((venue, i) => (
               <RankedItem
                 key={venue.venue}
@@ -230,13 +223,13 @@ export default function StatsScreen({ navigation, route }) {
 
         {/* Fun Facts */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Fun Facts</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]} accessibilityRole="header">Fun Facts</Text>
 
           {stats.mostTimeSong && (
             <FunFactCard
               label="Most Time on One Song"
               value={stats.mostTimeSong.title}
-              detail={`${formatDuration(stats.mostTimeSong.totalTime)} total (${stats.mostTimeSong.playCount} plays)`}
+              detail={`${formatTotalDuration(stats.mostTimeSong.totalTime)} total (${stats.mostTimeSong.playCount} plays)`}
               colors={colors}
             />
           )}

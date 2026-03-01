@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
+import { formatDuration } from '../../utils/formatDuration';
 
 const KEY_ROOTS = ['C', 'C#/Db', 'D', 'D#/Eb', 'E', 'F', 'F#/Gb', 'G', 'G#/Ab', 'A', 'A#/Bb', 'B'];
 const KEY_SUFFIXES = ['major', 'minor'];
@@ -29,13 +30,6 @@ function parseDuration(str) {
   const s = parseInt(parts[1], 10);
   if (isNaN(m) || isNaN(s)) return null;
   return m * 60 + s;
-}
-
-function formatDuration(seconds) {
-  if (!seconds) return '';
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 function Badge({ label, color, bgColor }) {
@@ -95,7 +89,7 @@ export default function SongDetailScreen({ navigation, route }) {
     setArtist(data.artist || '');
     setKey(data.key || '');
     setBpm(data.bpm ? String(data.bpm) : '');
-    setDuration(formatDuration(data.duration));
+    setDuration(formatDuration(data.duration) || '');
     setYoutubeUrl(data.youtubeUrl || '');
     setSpotifyUrl(data.spotifyUrl || '');
     setNotes(data.notes || '');
@@ -118,7 +112,7 @@ export default function SongDetailScreen({ navigation, route }) {
     if (!isNew && !editing && !loading) {
       navigation.setOptions({
         headerRight: () => (
-          <TouchableOpacity onPress={() => setEditing(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <TouchableOpacity onPress={() => setEditing(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Edit song">
             <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>Edit</Text>
           </TouchableOpacity>
         ),
@@ -221,6 +215,7 @@ export default function SongDetailScreen({ navigation, route }) {
             onChangeText={setTitle}
             placeholder="Song title"
             placeholderTextColor={colors.textSecondary}
+            accessibilityLabel="Song title"
           />
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Short Name</Text>
@@ -230,6 +225,7 @@ export default function SongDetailScreen({ navigation, route }) {
             onChangeText={setShortName}
             placeholder="Abbreviated name for setlists"
             placeholderTextColor={colors.textSecondary}
+            accessibilityLabel="Short name"
           />
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Artist</Text>
@@ -239,6 +235,7 @@ export default function SongDetailScreen({ navigation, route }) {
             onChangeText={setArtist}
             placeholder="Artist name"
             placeholderTextColor={colors.textSecondary}
+            accessibilityLabel="Artist"
           />
 
           <View style={styles.row}>
@@ -247,6 +244,8 @@ export default function SongDetailScreen({ navigation, route }) {
               <TouchableOpacity
                 style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
                 onPress={() => setShowKeyPicker(true)}
+                accessibilityRole="button"
+                accessibilityLabel={`Key: ${key || 'not set'}`}
               >
                 <Text style={{ color: key ? colors.textPrimary : colors.textSecondary, fontSize: 15 }}>
                   {key || 'Select key'}
@@ -262,6 +261,7 @@ export default function SongDetailScreen({ navigation, route }) {
                 placeholder="120"
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="numeric"
+                accessibilityLabel="BPM"
               />
             </View>
             <View style={styles.rowField}>
@@ -272,6 +272,7 @@ export default function SongDetailScreen({ navigation, route }) {
                 onChangeText={setDuration}
                 placeholder="3:30"
                 placeholderTextColor={colors.textSecondary}
+                accessibilityLabel="Duration"
               />
             </View>
           </View>
@@ -285,6 +286,7 @@ export default function SongDetailScreen({ navigation, route }) {
             placeholderTextColor={colors.textSecondary}
             autoCapitalize="none"
             keyboardType="url"
+            accessibilityLabel="YouTube URL"
           />
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Spotify URL</Text>
@@ -296,6 +298,7 @@ export default function SongDetailScreen({ navigation, route }) {
             placeholderTextColor={colors.textSecondary}
             autoCapitalize="none"
             keyboardType="url"
+            accessibilityLabel="Spotify URL"
           />
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Notes</Text>
@@ -307,6 +310,7 @@ export default function SongDetailScreen({ navigation, route }) {
             placeholderTextColor={colors.textSecondary}
             multiline
             textAlignVertical="top"
+            accessibilityLabel="Notes"
           />
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Lyrics / Chord Chart</Text>
@@ -318,6 +322,7 @@ export default function SongDetailScreen({ navigation, route }) {
             placeholderTextColor={colors.textSecondary}
             multiline
             textAlignVertical="top"
+            accessibilityLabel="Lyrics or chord chart"
           />
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Arrangement</Text>
@@ -329,6 +334,7 @@ export default function SongDetailScreen({ navigation, route }) {
             placeholderTextColor={colors.textSecondary}
             multiline
             textAlignVertical="top"
+            accessibilityLabel="Arrangement"
           />
 
           {/* Actions */}
@@ -337,6 +343,8 @@ export default function SongDetailScreen({ navigation, route }) {
               style={[styles.formButton, { backgroundColor: colors.bgTertiary }]}
               onPress={handleCancel}
               disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
             >
               <Text style={[styles.formButtonText, { color: colors.textPrimary }]}>Cancel</Text>
             </TouchableOpacity>
@@ -344,6 +352,8 @@ export default function SongDetailScreen({ navigation, route }) {
               style={[styles.formButton, { backgroundColor: colors.primary }]}
               onPress={handleSave}
               disabled={saving || !title.trim()}
+              accessibilityRole="button"
+              accessibilityLabel={isNew ? 'Create song' : 'Save song'}
             >
               {saving ? (
                 <ActivityIndicator color="#ffffff" size="small" />
@@ -354,7 +364,7 @@ export default function SongDetailScreen({ navigation, route }) {
           </View>
 
           {!isNew && (
-            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete song">
               <Text style={styles.deleteButtonText}>Delete Song</Text>
             </TouchableOpacity>
           )}
@@ -362,12 +372,14 @@ export default function SongDetailScreen({ navigation, route }) {
 
         {/* Key Picker Modal */}
         <Modal visible={showKeyPicker} transparent animationType="fade" onRequestClose={() => setShowKeyPicker(false)}>
-          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowKeyPicker(false)}>
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowKeyPicker(false)} accessibilityRole="button" accessibilityLabel="Dismiss key picker">
             <View style={[styles.keyPickerContent, { backgroundColor: colors.modalBg }]}>
-              <Text style={[styles.keyPickerTitle, { color: colors.textPrimary }]}>Select Key</Text>
+              <Text style={[styles.keyPickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Select Key</Text>
               <TouchableOpacity
                 style={[styles.keyOption, !key && { backgroundColor: colors.bgTertiary }]}
                 onPress={() => { setKey(''); setShowKeyPicker(false); }}
+                accessibilityRole="button"
+                accessibilityLabel="No key"
               >
                 <Text style={[styles.keyOptionText, { color: colors.textSecondary }]}>None</Text>
               </TouchableOpacity>
@@ -379,6 +391,8 @@ export default function SongDetailScreen({ navigation, route }) {
                   <TouchableOpacity
                     style={[styles.keyOption, styles.keyOptionGrid, key === item && { backgroundColor: colors.bgTertiary }]}
                     onPress={() => { setKey(item); setShowKeyPicker(false); }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${item}${key === item ? ', selected' : ''}`}
                   >
                     <Text style={[styles.keyOptionText, { color: colors.textPrimary }]}>{item}</Text>
                     {key === item && <Text style={{ color: colors.primary, marginLeft: 4 }}>{'\u2713'}</Text>}
@@ -418,12 +432,12 @@ export default function SongDetailScreen({ navigation, route }) {
       {(song?.youtubeUrl || song?.spotifyUrl) && (
         <View style={styles.linksRow}>
           {song.youtubeUrl ? (
-            <TouchableOpacity style={styles.linkButton} onPress={() => Linking.openURL(song.youtubeUrl)}>
+            <TouchableOpacity style={styles.linkButton} onPress={() => Linking.openURL(song.youtubeUrl)} accessibilityRole="button" accessibilityLabel="Open on YouTube">
               <Text style={styles.youtubeLink}>YouTube</Text>
             </TouchableOpacity>
           ) : null}
           {song.spotifyUrl ? (
-            <TouchableOpacity style={styles.linkButton} onPress={() => Linking.openURL(song.spotifyUrl)}>
+            <TouchableOpacity style={styles.linkButton} onPress={() => Linking.openURL(song.spotifyUrl)} accessibilityRole="button" accessibilityLabel="Open on Spotify">
               <Text style={styles.spotifyLink}>Spotify</Text>
             </TouchableOpacity>
           ) : null}
@@ -433,7 +447,7 @@ export default function SongDetailScreen({ navigation, route }) {
       {/* Notes */}
       {song?.notes ? (
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Notes</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">Notes</Text>
           <Text style={[styles.sectionText, { color: colors.textPrimary }]}>{song.notes}</Text>
         </View>
       ) : null}
@@ -441,7 +455,7 @@ export default function SongDetailScreen({ navigation, route }) {
       {/* Lyrics */}
       {song?.lyrics ? (
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Lyrics / Chord Chart</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">Lyrics / Chord Chart</Text>
           <Text style={[styles.sectionText, styles.monoText, { color: colors.textPrimary, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }]}>
             {song.lyrics}
           </Text>
@@ -451,7 +465,7 @@ export default function SongDetailScreen({ navigation, route }) {
       {/* Arrangement */}
       {song?.arrangement ? (
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Arrangement</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">Arrangement</Text>
           <Text style={[styles.sectionText, { color: colors.textPrimary }]}>{song.arrangement}</Text>
         </View>
       ) : null}

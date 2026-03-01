@@ -78,6 +78,8 @@ export default function GigListScreen({ navigation, route }) {
         <TouchableOpacity
           onPress={() => navigation.navigate('GigDetail', { workspaceId })}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Create event"
         >
           <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
         </TouchableOpacity>
@@ -225,6 +227,8 @@ export default function GigListScreen({ navigation, route }) {
         }}
         delayLongPress={400}
         activeOpacity={isOther ? 1 : 0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.title}, ${item.date ? formatGigDate(item.date) : 'No date'}${item.venue ? `, at ${item.venue}` : ''}`}
       >
         {/* Color stripe */}
         <View style={[styles.typeStripe, { backgroundColor: typeColor }]} />
@@ -285,7 +289,7 @@ export default function GigListScreen({ navigation, route }) {
 
   const renderSectionHeader = useCallback(({ section }) => (
     <View style={styles.monthHeader}>
-      <Text style={[styles.monthText, { color: colors.textSecondary }]}>{section.title}</Text>
+      <Text style={[styles.monthText, { color: colors.textSecondary }]} accessibilityRole="header">{section.title}</Text>
     </View>
   ), [colors]);
 
@@ -319,6 +323,8 @@ export default function GigListScreen({ navigation, route }) {
               ]}
               onPress={() => setTypeFilter(f.key)}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Filter: ${f.label}${active ? ', selected' : ''}`}
             >
               <Text style={[styles.filterChipText, { color: active ? '#ffffff' : colors.textSecondary }]}>
                 {f.label}
@@ -334,6 +340,8 @@ export default function GigListScreen({ navigation, route }) {
           ]}
           onPress={() => setShowAllBands(prev => !prev)}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={`All Bands${showAllBands ? ', selected' : ''}`}
         >
           <Text style={[styles.filterChipText, { color: showAllBands ? '#ffffff' : colors.textSecondary }]}>
             All Bands
@@ -369,6 +377,8 @@ export default function GigListScreen({ navigation, route }) {
           style={styles.actionOverlay}
           activeOpacity={1}
           onPress={() => { setShowActions(false); setSelectedGig(null); }}
+          accessibilityRole="button"
+          accessibilityLabel="Close action sheet"
         >
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
@@ -382,23 +392,27 @@ export default function GigListScreen({ navigation, route }) {
                 navigation.navigate('GigDetail', { gigId: selectedGig?.id, workspaceId, editing: true });
                 setSelectedGig(null);
               }}
+              accessibilityRole="button"
+              accessibilityLabel="Edit event"
             >
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem} onPress={handleDuplicate}>
+            <TouchableOpacity style={styles.actionItem} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate event">
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Duplicate</Text>
             </TouchableOpacity>
             {selectedGig?.status === 'SCHEDULED' && (
-              <TouchableOpacity style={styles.actionItem} onPress={handleComplete}>
+              <TouchableOpacity style={styles.actionItem} onPress={handleComplete} accessibilityRole="button" accessibilityLabel="Mark event as complete">
                 <Text style={[styles.actionText, { color: '#22c55e' }]}>{'\u2713'} Mark Complete</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={styles.actionItem} onPress={handleDelete}>
+            <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete event">
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionItem, styles.actionCancel]}
               onPress={() => { setShowActions(false); setSelectedGig(null); }}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>

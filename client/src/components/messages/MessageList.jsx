@@ -13,6 +13,7 @@ import ImageLightbox from '../common/ImageLightbox';
 import useLongPress from '../../hooks/useLongPress';
 import { hapticLight } from '../../services/haptic';
 import LinkPreviewCard from './LinkPreviewCard';
+import { handleDownload } from '../../utils/download';
 import api from '../../services/api';
 
 /**
@@ -273,24 +274,6 @@ function MessageList({
     }
   }, [messages]);
 
-  const handleDownload = async (url, filename) => {
-    try {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
-    } catch (err) {
-      console.error('Download failed:', err);
-      // Fallback: open in new tab
-      window.open(url, '_blank');
-    }
-  };
 
   const firstUnreadIndex = useMemo(() => {
     if (!lastReadAt) return -1;

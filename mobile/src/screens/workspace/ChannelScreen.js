@@ -71,6 +71,8 @@ export default function ChannelScreen({ navigation, route }) {
         <TouchableOpacity
           onPress={() => navigation.navigate('ChannelSettings', { channel, workspaceId })}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Channel settings"
         >
           <Text style={{ fontSize: 20 }}>{'\u2139\uFE0F'}</Text>
         </TouchableOpacity>
@@ -586,7 +588,7 @@ export default function ChannelScreen({ navigation, route }) {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg || colors.bgSecondary }]}>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Report Message</Text>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Report Message</Text>
             <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
               Why are you reporting this message?
             </Text>
@@ -599,11 +601,14 @@ export default function ChannelScreen({ navigation, route }) {
               multiline
               maxLength={500}
               autoFocus
+              accessibilityLabel="Reason for reporting"
             />
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
                 onPress={() => { setShowReportModal(false); setActionMessage(null); }}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel report"
               >
                 <Text style={{ color: colors.textPrimary }}>Cancel</Text>
               </TouchableOpacity>
@@ -611,6 +616,8 @@ export default function ChannelScreen({ navigation, route }) {
                 style={[styles.modalButton, { backgroundColor: '#dc2626', opacity: reportSubmitting ? 0.6 : 1 }]}
                 onPress={handleSubmitReport}
                 disabled={reportSubmitting}
+                accessibilityRole="button"
+                accessibilityLabel={reportSubmitting ? 'Submitting report' : 'Submit report'}
               >
                 <Text style={{ color: '#fff', fontWeight: '600' }}>
                   {reportSubmitting ? 'Submitting...' : 'Report'}

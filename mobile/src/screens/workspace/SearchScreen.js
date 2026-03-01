@@ -175,6 +175,8 @@ export default function SearchScreen({ navigation, route }) {
         style={[styles.resultItem, { backgroundColor: colors.bgSecondary }]}
         onPress={() => handleResultPress(item)}
         activeOpacity={0.6}
+        accessibilityRole="button"
+        accessibilityLabel={`Message by ${item.author?.displayName || 'Unknown'} in ${channelName}`}
       >
         <View style={styles.resultHeader}>
           <View style={[styles.channelBadge, { backgroundColor: colors.bgTertiary }]}>
@@ -209,9 +211,15 @@ export default function SearchScreen({ navigation, route }) {
           autoCapitalize="none"
           autoCorrect={false}
           returnKeyType="search"
+          accessibilityLabel="Search messages"
         />
         {query.length > 0 && (
-          <TouchableOpacity onPress={handleClear} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <TouchableOpacity
+            onPress={handleClear}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel="Clear search"
+          >
             <Text style={[styles.clearButton, { color: colors.textSecondary }]}>{'\u2715'}</Text>
           </TouchableOpacity>
         )}
@@ -235,6 +243,8 @@ export default function SearchScreen({ navigation, route }) {
                 ]}
                 onPress={() => handleChannelFilter(item.id)}
                 activeOpacity={0.6}
+                accessibilityRole="button"
+                accessibilityLabel={`Filter by ${item.id ? item.name : 'all channels'}${isActive ? ', selected' : ''}`}
               >
                 <Text style={[
                   styles.filterChipText,
@@ -266,6 +276,8 @@ export default function SearchScreen({ navigation, route }) {
                 ]}
                 onPress={() => handleAuthorFilter(item.userId)}
                 activeOpacity={0.6}
+                accessibilityRole="button"
+                accessibilityLabel={`Filter by ${item.user?.displayName || 'all members'}${isActive ? ', selected' : ''}`}
               >
                 <Text style={[
                   styles.filterChipText,

@@ -268,7 +268,7 @@ export default function ThreadScreen({ route }) {
     if (item._itemType === 'separator') {
       return (
         <View style={[styles.separator, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.separatorText, { color: colors.textSecondary }]}>
+          <Text style={[styles.separatorText, { color: colors.textSecondary }]} accessibilityRole="header">
             {item.replyCount} {item.replyCount === 1 ? 'reply' : 'replies'}
           </Text>
         </View>

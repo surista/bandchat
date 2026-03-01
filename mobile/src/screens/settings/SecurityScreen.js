@@ -103,7 +103,7 @@ export default function SecurityScreen() {
         {/* Change Password */}
         {!isGoogleOnly && (
           <>
-            <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>CHANGE PASSWORD</Text>
+            <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">CHANGE PASSWORD</Text>
             <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
@@ -113,6 +113,7 @@ export default function SecurityScreen() {
                 onChangeText={setCurrentPassword}
                 secureTextEntry
                 autoCapitalize="none"
+                accessibilityLabel="Current password"
               />
               <TextInput
                 style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
@@ -122,6 +123,7 @@ export default function SecurityScreen() {
                 onChangeText={setNewPassword}
                 secureTextEntry
                 autoCapitalize="none"
+                accessibilityLabel="New password"
               />
               <TextInput
                 style={[styles.input, styles.lastInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
@@ -131,12 +133,15 @@ export default function SecurityScreen() {
                 onChangeText={setConfirmPassword}
                 secureTextEntry
                 autoCapitalize="none"
+                accessibilityLabel="Confirm new password"
               />
               <TouchableOpacity
                 style={[styles.button, { backgroundColor: colors.primary }]}
                 onPress={handleChangePassword}
                 disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Update password"
               >
                 {changingPassword ? (
                   <ActivityIndicator color="#ffffff" size="small" />
@@ -149,7 +154,7 @@ export default function SecurityScreen() {
         )}
 
         {/* Email */}
-        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>EMAIL</Text>
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">EMAIL</Text>
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Current</Text>
@@ -166,6 +171,8 @@ export default function SecurityScreen() {
               style={[styles.outlineButton, { borderColor: colors.primary }]}
               onPress={() => setShowEmailModal(true)}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Change email"
             >
               <Text style={[styles.outlineButtonText, { color: colors.primary }]}>Change Email</Text>
             </TouchableOpacity>
@@ -173,7 +180,7 @@ export default function SecurityScreen() {
         </View>
 
         {/* Auth Provider */}
-        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>AUTH PROVIDER</Text>
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">AUTH PROVIDER</Text>
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Type</Text>
@@ -182,7 +189,7 @@ export default function SecurityScreen() {
         </View>
 
         {/* Export My Data */}
-        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>MY DATA</Text>
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">MY DATA</Text>
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
           <Text style={[styles.desc, { color: colors.textSecondary }]}>
             Download all your data as a JSON file including your profile, messages, and content you created.
@@ -205,6 +212,8 @@ export default function SecurityScreen() {
             }}
             disabled={exporting}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Export my data"
           >
             {exporting ? (
               <ActivityIndicator color={colors.primary} size="small" />
@@ -215,7 +224,7 @@ export default function SecurityScreen() {
         </View>
 
         {/* Delete Account */}
-        <Text style={[styles.sectionHeader, { color: '#ef4444' }]}>DANGER ZONE</Text>
+        <Text style={[styles.sectionHeader, { color: '#ef4444' }]} accessibilityRole="header">DANGER ZONE</Text>
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
           <Text style={[styles.desc, { color: colors.textSecondary }]}>
             Permanently delete your account. Your messages will be anonymized and your profile data removed. This cannot be undone.
@@ -224,6 +233,8 @@ export default function SecurityScreen() {
             style={[styles.dangerButton]}
             onPress={() => setShowDeleteModal(true)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Delete my account"
           >
             <Text style={styles.dangerButtonText}>Delete My Account</Text>
           </TouchableOpacity>
@@ -234,7 +245,7 @@ export default function SecurityScreen() {
       <Modal visible={showEmailModal} transparent animationType="fade" onRequestClose={() => setShowEmailModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Change Email</Text>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Change Email</Text>
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
               A verification link will be sent to your new email address.
             </Text>
@@ -247,6 +258,7 @@ export default function SecurityScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoFocus
+              accessibilityLabel="New email address"
             />
             <TextInput
               style={[styles.input, styles.lastInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
@@ -256,12 +268,15 @@ export default function SecurityScreen() {
               onChangeText={setEmailPassword}
               secureTextEntry
               autoCapitalize="none"
+              accessibilityLabel="Current password for email change"
             />
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
                 onPress={() => { setShowEmailModal(false); setNewEmail(''); setEmailPassword(''); }}
                 disabled={changingEmail}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel email change"
               >
                 <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
               </TouchableOpacity>
@@ -269,6 +284,8 @@ export default function SecurityScreen() {
                 style={[styles.modalButton, { backgroundColor: colors.primary }]}
                 onPress={handleChangeEmail}
                 disabled={changingEmail || !newEmail.trim() || !emailPassword}
+                accessibilityRole="button"
+                accessibilityLabel="Send verification email"
               >
                 {changingEmail ? (
                   <ActivityIndicator color="#ffffff" size="small" />
@@ -284,7 +301,7 @@ export default function SecurityScreen() {
       <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
-            <Text style={[styles.modalTitle, { color: '#ef4444' }]}>Delete Account</Text>
+            <Text style={[styles.modalTitle, { color: '#ef4444' }]} accessibilityRole="header">Delete Account</Text>
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
               This will permanently delete your account. Your messages will show as "Deleted User" and your profile data will be removed.
             </Text>
@@ -297,6 +314,7 @@ export default function SecurityScreen() {
                 onChangeText={setDeletePassword}
                 secureTextEntry
                 autoCapitalize="none"
+                accessibilityLabel="Password to confirm account deletion"
               />
             )}
             <View style={styles.modalActions}>
@@ -304,11 +322,15 @@ export default function SecurityScreen() {
                 style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
                 onPress={() => { setShowDeleteModal(false); setDeletePassword(''); }}
                 disabled={deleting}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel account deletion"
               >
                 <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: '#ef4444' }]}
+                accessibilityRole="button"
+                accessibilityLabel="Delete account permanently"
                 onPress={async () => {
                   setDeleting(true);
                   try {

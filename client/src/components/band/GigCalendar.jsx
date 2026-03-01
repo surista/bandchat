@@ -10,6 +10,7 @@ import useLongPress from '../../hooks/useLongPress';
 import Skeleton from '../common/Skeleton';
 
 function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRange, onEdit, onDuplicate, onComplete, onDelete, onContextMenu, getGoogleCalendarUrl }) {
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const canEdit = !gig.isExternal && (!gig.isLocked || isAdmin);
   const longPress = useLongPress({
     onLongPress: (pos) => onContextMenu(pos),
@@ -45,6 +46,65 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
               <span className={`text-xs px-2 py-1 rounded ${getTypeColor(gig.type, gig.isExternal, gig.workspaceId)} text-white`}>
                 {gig.type}
               </span>
+              <div className="relative sm:hidden">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowMobileMenu(!showMobileMenu); }}
+                  className="p-1 text-gray-400 hover:text-white text-lg"
+                  aria-label="More actions"
+                >
+                  ...
+                </button>
+                {showMobileMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); }} />
+                    <div className="absolute right-0 top-full mt-1 bg-gray-800 rounded-lg shadow-xl border border-gray-700 py-1 z-50 min-w-[160px]">
+                      <a
+                        href={getGoogleCalendarUrl(gig)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); }}
+                        className="block w-full px-4 py-2 text-left text-sm text-orange-400 hover:bg-gray-700 hover:text-orange-300"
+                      >
+                        📅 + Google Cal
+                      </a>
+                      {!gig.isExternal && (
+                        <>
+                          {canEdit && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onEdit(); }}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+                            >
+                              ✏️ Edit
+                            </button>
+                          )}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onDuplicate(); }}
+                            className="w-full px-4 py-2 text-left text-sm text-blue-400 hover:bg-gray-700 hover:text-blue-300"
+                          >
+                            📋 Copy
+                          </button>
+                          {gig.status === 'SCHEDULED' && canEdit && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onComplete(); }}
+                              className="w-full px-4 py-2 text-left text-sm text-green-400 hover:bg-gray-700 hover:text-green-300"
+                            >
+                              ✅ Mark Complete
+                            </button>
+                          )}
+                          {canEdit && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onDelete(); }}
+                              className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-gray-700 hover:text-red-300"
+                            >
+                              🗑️ Delete
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 

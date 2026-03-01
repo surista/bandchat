@@ -444,6 +444,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
   const [songSortBy, setSongSortBy] = useState('title');
   const [viewingSong, setViewingSong] = useState(null);
   const [setlistPanelWidth, setSetlistPanelWidth] = useState(70); // percentage
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const containerRef = useRef(null);
   const isResizing = useRef(false);
 
@@ -956,6 +957,39 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
               </div>
               <div className="text-gray-400">{durationMins}:{String(durationSecs).padStart(2, '0')}</div>
             </div>
+          </div>
+          <div className="relative sm:hidden">
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowMobileMenu(!showMobileMenu); }}
+              className="p-1 text-gray-400 hover:text-white text-lg"
+              aria-label="More actions"
+            >
+              ...
+            </button>
+            {showMobileMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowMobileMenu(false)} />
+                <div className="absolute right-0 top-full mt-1 bg-gray-800 rounded-lg shadow-xl border border-gray-700 py-1 z-50 min-w-[180px]">
+                  <button
+                    onClick={() => { setShowMobileMenu(false); handlePrint(); }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+                  >
+                    🖨️ Print
+                  </button>
+                  <button
+                    onClick={() => { setShowMobileMenu(false); toggleShortNames(); }}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+                  >
+                    {useShortNames ? '📝 Full Titles' : '📝 Short Names'}
+                  </button>
+                  <div className="px-4 py-2 text-sm text-gray-400 border-t border-gray-700">
+                    {songCount} song{songCount !== 1 ? 's' : ''}
+                    {mcCount > 0 && ` + ${mcCount} MC`}
+                    {' · '}{durationMins}:{String(durationSecs).padStart(2, '0')}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 

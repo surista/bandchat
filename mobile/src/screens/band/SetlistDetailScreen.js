@@ -16,13 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
-
-function formatDuration(seconds) {
-  if (!seconds) return null;
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
+import { formatDuration } from '../../utils/formatDuration';
 
 function Badge({ label, color, bgColor }) {
   return (
@@ -93,6 +87,8 @@ export default function SetlistDetailScreen({ navigation, route }) {
         <TouchableOpacity
           onPress={() => setEditing(prev => !prev)}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel={editing ? 'Done editing' : 'Edit setlist'}
         >
           <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>
             {editing ? 'Done' : 'Edit'}
@@ -280,7 +276,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
             {item.label || 'Break'}
           </Text>
           {editing && (
-            <TouchableOpacity onPress={() => removeItem(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity onPress={() => removeItem(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={`Remove ${item.label || 'break'}`}>
               <Text style={styles.removeText}>{'\u2715'}</Text>
             </TouchableOpacity>
           )}
@@ -295,10 +291,10 @@ export default function SetlistDetailScreen({ navigation, route }) {
           <View style={[styles.itemRow, { backgroundColor: colors.bgSecondary }]}>
             {editing && (
               <View style={styles.reorderButtons}>
-                <TouchableOpacity onPress={() => moveItem(index, -1)} disabled={index === 0}>
+                <TouchableOpacity onPress={() => moveItem(index, -1)} disabled={index === 0} accessibilityRole="button" accessibilityLabel="Move MC up">
                   <Text style={[styles.reorderArrow, { color: index === 0 ? colors.border : colors.textSecondary }]}>{'\u25B2'}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => moveItem(index, 1)} disabled={index === items.length - 1}>
+                <TouchableOpacity onPress={() => moveItem(index, 1)} disabled={index === items.length - 1} accessibilityRole="button" accessibilityLabel="Move MC down">
                   <Text style={[styles.reorderArrow, { color: index === items.length - 1 ? colors.border : colors.textSecondary }]}>{'\u25BC'}</Text>
                 </TouchableOpacity>
               </View>
@@ -315,7 +311,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
               </Text>
             ) : null}
             {editing && (
-              <TouchableOpacity onPress={() => removeItem(item)} style={styles.removeButton}>
+              <TouchableOpacity onPress={() => removeItem(item)} style={styles.removeButton} accessibilityRole="button" accessibilityLabel="Remove MC">
                 <Text style={styles.removeText}>{'\u2715'}</Text>
               </TouchableOpacity>
             )}
@@ -338,10 +334,10 @@ export default function SetlistDetailScreen({ navigation, route }) {
         <View style={[styles.itemRow, { backgroundColor: colors.bgSecondary }]}>
           {editing && (
             <View style={styles.reorderButtons}>
-              <TouchableOpacity onPress={() => moveItem(index, -1)} disabled={index === 0}>
+              <TouchableOpacity onPress={() => moveItem(index, -1)} disabled={index === 0} accessibilityRole="button" accessibilityLabel={`Move ${item.song?.title || 'song'} up`}>
                 <Text style={[styles.reorderArrow, { color: index === 0 ? colors.border : colors.textSecondary }]}>{'\u25B2'}</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => moveItem(index, 1)} disabled={index === items.length - 1}>
+              <TouchableOpacity onPress={() => moveItem(index, 1)} disabled={index === items.length - 1} accessibilityRole="button" accessibilityLabel={`Move ${item.song?.title || 'song'} down`}>
                 <Text style={[styles.reorderArrow, { color: index === items.length - 1 ? colors.border : colors.textSecondary }]}>{'\u25BC'}</Text>
               </TouchableOpacity>
             </View>
@@ -366,7 +362,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
             </Text>
           ) : null}
           {editing && (
-            <TouchableOpacity onPress={() => removeItem(item)} style={styles.removeButton}>
+            <TouchableOpacity onPress={() => removeItem(item)} style={styles.removeButton} accessibilityRole="button" accessibilityLabel={`Remove ${item.song?.title || 'song'}`}>
               <Text style={styles.removeText}>{'\u2715'}</Text>
             </TouchableOpacity>
           )}
@@ -400,7 +396,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
           <Badge label={setlist.venue} color="#fbbf24" bgColor="rgba(251,191,36,0.15)" />
         )}
         {editing && (
-          <TouchableOpacity onPress={openEditDetails}>
+          <TouchableOpacity onPress={openEditDetails} accessibilityRole="button" accessibilityLabel="Edit setlist details">
             <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>Edit Details</Text>
           </TouchableOpacity>
         )}
@@ -412,7 +408,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
           <View style={styles.performersHeader}>
             <Text style={[styles.performersLabel, { color: colors.textSecondary }]}>Performers</Text>
             {editing && (
-              <TouchableOpacity onPress={openPerformerPicker}>
+              <TouchableOpacity onPress={openPerformerPicker} accessibilityRole="button" accessibilityLabel={performers.length > 0 ? 'Edit performers' : 'Add performers'}>
                 <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>
                   {performers.length > 0 ? 'Edit' : '+ Add'}
                 </Text>
@@ -453,13 +449,13 @@ export default function SetlistDetailScreen({ navigation, route }) {
       {/* Edit mode toolbar */}
       {editing && (
         <View style={[styles.editToolbar, { backgroundColor: colors.bgSecondary, borderTopColor: colors.border }]}>
-          <TouchableOpacity style={[styles.toolbarButton, { backgroundColor: colors.primary }]} onPress={openSongPicker}>
+          <TouchableOpacity style={[styles.toolbarButton, { backgroundColor: colors.primary }]} onPress={openSongPicker} accessibilityRole="button" accessibilityLabel="Add song">
             <Text style={styles.toolbarButtonText}>+ Song</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.toolbarButton, { backgroundColor: colors.bgTertiary }]} onPress={addSetBreak}>
+          <TouchableOpacity style={[styles.toolbarButton, { backgroundColor: colors.bgTertiary }]} onPress={addSetBreak} accessibilityRole="button" accessibilityLabel="Add set break">
             <Text style={[styles.toolbarButtonTextDark, { color: colors.textPrimary }]}>+ Set Break</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.toolbarButton, { backgroundColor: colors.bgTertiary }]} onPress={addMC}>
+          <TouchableOpacity style={[styles.toolbarButton, { backgroundColor: colors.bgTertiary }]} onPress={addMC} accessibilityRole="button" accessibilityLabel="Add MC">
             <Text style={[styles.toolbarButtonTextDark, { color: colors.textPrimary }]}>+ MC</Text>
           </TouchableOpacity>
         </View>
@@ -469,10 +465,10 @@ export default function SetlistDetailScreen({ navigation, route }) {
       <Modal visible={showSongPicker} animationType="slide" onRequestClose={() => setShowSongPicker(false)}>
         <SafeAreaView style={[styles.pickerContainer, { backgroundColor: colors.bgPrimary }]}>
           <View style={[styles.pickerHeader, { backgroundColor: colors.bgSecondary }]}>
-            <TouchableOpacity onPress={() => setShowSongPicker(false)}>
+            <TouchableOpacity onPress={() => setShowSongPicker(false)} accessibilityRole="button" accessibilityLabel="Cancel adding song">
               <Text style={{ color: colors.primary, fontSize: 16 }}>Cancel</Text>
             </TouchableOpacity>
-            <Text style={[styles.pickerTitle, { color: colors.textPrimary }]}>Add Song</Text>
+            <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Add Song</Text>
             <View style={{ width: 60 }} />
           </View>
           <TextInput
@@ -482,6 +478,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
             value={songSearch}
             onChangeText={setSongSearch}
             autoFocus
+            accessibilityLabel="Search songs"
           />
           {loadingSongs ? (
             <ActivityIndicator style={{ marginTop: 40 }} size="large" color={colors.primary} />
@@ -494,6 +491,8 @@ export default function SetlistDetailScreen({ navigation, route }) {
                   style={[styles.pickerItem, { borderBottomColor: colors.border }]}
                   onPress={() => addSong(item)}
                   activeOpacity={0.6}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Add ${item.title}${item.artist ? ` by ${item.artist}` : ''}`}
                 >
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.pickerSongTitle, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -529,7 +528,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
       <Modal visible={showPerformerPicker} transparent animationType="fade" onRequestClose={() => setShowPerformerPicker(false)}>
         <View style={styles.detailsOverlay}>
           <View style={[styles.detailsContent, { backgroundColor: colors.modalBg }]}>
-            <Text style={[styles.detailsTitle, { color: colors.textPrimary }]}>Select Performers</Text>
+            <Text style={[styles.detailsTitle, { color: colors.textPrimary }]} accessibilityRole="header">Select Performers</Text>
             <ScrollView style={{ maxHeight: 300 }}>
               {bandMembers.map(member => {
                 const selected = selectedPerformerIds.includes(member.id);
@@ -539,6 +538,8 @@ export default function SetlistDetailScreen({ navigation, route }) {
                     style={[styles.performerPickerRow, selected && { backgroundColor: colors.bgTertiary }]}
                     onPress={() => togglePerformer(member.id)}
                     activeOpacity={0.6}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${member.name}${selected ? ', selected' : ''}`}
                   >
                     <View style={[styles.performerCheckbox, { borderColor: colors.border, backgroundColor: selected ? colors.primary : 'transparent' }]}>
                       {selected && <Text style={styles.performerCheckmark}>{'\u2713'}</Text>}
@@ -562,6 +563,8 @@ export default function SetlistDetailScreen({ navigation, route }) {
               <TouchableOpacity
                 style={[styles.detailsButton, { backgroundColor: colors.bgTertiary }]}
                 onPress={() => setShowPerformerPicker(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel"
               >
                 <Text style={[styles.detailsButtonText, { color: colors.textPrimary }]}>Cancel</Text>
               </TouchableOpacity>
@@ -569,6 +572,8 @@ export default function SetlistDetailScreen({ navigation, route }) {
                 style={[styles.detailsButton, { backgroundColor: colors.primary }]}
                 onPress={savePerformers}
                 disabled={savingPerformers}
+                accessibilityRole="button"
+                accessibilityLabel="Save performers"
               >
                 {savingPerformers ? (
                   <ActivityIndicator color="#ffffff" size="small" />
@@ -586,13 +591,14 @@ export default function SetlistDetailScreen({ navigation, route }) {
         <View style={styles.detailsOverlay}>
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <View style={[styles.detailsContent, { backgroundColor: colors.modalBg }]}>
-              <Text style={[styles.detailsTitle, { color: colors.textPrimary }]}>Edit Details</Text>
+              <Text style={[styles.detailsTitle, { color: colors.textPrimary }]} accessibilityRole="header">Edit Details</Text>
               <Text style={[styles.detailsLabel, { color: colors.textSecondary }]}>Name</Text>
               <TextInput
                 style={[styles.detailsInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
                 value={editName}
                 onChangeText={setEditName}
                 autoFocus
+                accessibilityLabel="Setlist name"
               />
               <Text style={[styles.detailsLabel, { color: colors.textSecondary }]}>Venue</Text>
               <TextInput
@@ -601,11 +607,14 @@ export default function SetlistDetailScreen({ navigation, route }) {
                 onChangeText={setEditVenue}
                 placeholder="Venue name"
                 placeholderTextColor={colors.textSecondary}
+                accessibilityLabel="Venue name"
               />
               <View style={styles.detailsActions}>
                 <TouchableOpacity
                   style={[styles.detailsButton, { backgroundColor: colors.bgTertiary }]}
                   onPress={() => setShowEditDetails(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel"
                 >
                   <Text style={[styles.detailsButtonText, { color: colors.textPrimary }]}>Cancel</Text>
                 </TouchableOpacity>
@@ -613,6 +622,8 @@ export default function SetlistDetailScreen({ navigation, route }) {
                   style={[styles.detailsButton, { backgroundColor: colors.primary }]}
                   onPress={saveDetails}
                   disabled={savingDetails}
+                  accessibilityRole="button"
+                  accessibilityLabel="Save details"
                 >
                   {savingDetails ? (
                     <ActivityIndicator color="#ffffff" size="small" />

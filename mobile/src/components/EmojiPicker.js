@@ -37,6 +37,8 @@ function EmojiPicker({ visible, onClose, onSelect }) {
                   activeCategory === cat && [styles.activeTab, { borderBottomColor: colors.primary }],
                 ]}
                 onPress={() => setActiveCategory(cat)}
+                accessibilityRole="button"
+                accessibilityLabel={`${cat} category${activeCategory === cat ? ', selected' : ''}`}
               >
                 <Text
                   style={[
@@ -61,6 +63,8 @@ function EmojiPicker({ visible, onClose, onSelect }) {
                   onClose();
                 }}
                 activeOpacity={0.5}
+                accessibilityRole="button"
+                accessibilityLabel={`Select ${emoji}`}
               >
                 <Text style={styles.emoji}>{emoji}</Text>
               </TouchableOpacity>

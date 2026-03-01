@@ -8,24 +8,7 @@ import ReactionPicker from '../messages/ReactionPicker';
 import ImageLightbox from '../common/ImageLightbox';
 import Skeleton from '../common/Skeleton';
 import useSwipeGesture from '../../hooks/useSwipeGesture';
-
-const handleDownload = async (url, filename) => {
-  try {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    const downloadUrl = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(downloadUrl);
-  } catch (err) {
-    console.error('Download failed:', err);
-    window.open(url, '_blank');
-  }
-};
+import { handleDownload } from '../../utils/download';
 
 /** File size limits */
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
