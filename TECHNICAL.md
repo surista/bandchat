@@ -2,7 +2,7 @@
 
 Comprehensive technical reference for the BandChat platform — a real-time communication and management app for bands.
 
-**Version:** v1.03.50
+**Version:** v1.03.52
 **Last updated:** March 2026
 
 ---
@@ -517,7 +517,8 @@ prisma generate && prisma db push && node src/index.js
 | Scope | Limit | Window |
 |---|---|---|
 | General API | 1000 requests | 15 minutes |
-| Auth endpoints | 10 attempts | 15 minutes |
+| Auth endpoints (login, signup, etc.) | 10 attempts | 15 minutes |
+| Token verification (email, password reset) | 10 attempts | 15 minutes |
 | Message creation | 30 messages | 1 minute |
 | Socket events | Varies per event | 1-10 seconds |
 

@@ -12,6 +12,7 @@ import {
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Constants from 'expo-constants';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
@@ -217,7 +218,7 @@ export default function SettingsScreen({ navigation, route }) {
         </View>
 
         <Text style={[styles.version, { color: colors.textSecondary }]}>
-          BandChat Mobile v1.0.1
+          BandChat Mobile v{Constants.expoConfig?.version || '1.0.0'}
         </Text>
       </ScrollView>
     </SafeAreaView>

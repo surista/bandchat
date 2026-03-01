@@ -176,6 +176,15 @@ function Footer({ theme = 'dark' }) {
               <div className="border-b border-[var(--color-modal-border)] pb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded">NEW</span>
+                  <span className="text-sm text-gray-500">v1.03.52</span>
+                </div>
+                <h4 className="font-medium text-white mb-1">Mobile App & Security</h4>
+                <p className="text-sm text-gray-400">
+                  Content reporting and user blocking on mobile, new app icon, and security hardening with rate-limited verification endpoints.
+                </p>
+              </div>
+              <div className="border-b border-[var(--color-modal-border)] pb-4">
+                <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.03.50</span>
                 </div>
                 <h4 className="font-medium text-white mb-1">Safety & Privacy</h4>
