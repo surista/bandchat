@@ -306,7 +306,7 @@ router.post('/login', authLimiter, async (req, res) => {
     }
 
     if (!user.password) {
-      return res.status(400).json({ error: 'This account uses Google Sign-In. Please sign in with Google.' });
+      return res.status(400).json({ error: 'This account uses Google Sign-In. Use "Forgot Password" to set a password for mobile login.' });
     }
 
     const validPassword = await bcrypt.compare(password, user.password);
@@ -936,11 +936,6 @@ router.post('/forgot-password', authLimiter, async (req, res) => {
       return res.json({ message: 'If an account exists with this email, a reset link has been sent.' });
     }
 
-    // Check if user signed up with Google only (no password)
-    if (!user.password && user.googleId) {
-      return res.json({ message: 'If an account exists with this email, a reset link has been sent.' });
-    }
-
     // Generate reset token and hash it before storage
     const resetToken = crypto.randomBytes(32).toString('hex');
     const hashedResetToken = hashRefreshToken(resetToken);
@@ -997,13 +992,20 @@ router.post('/reset-password', authLimiter, async (req, res) => {
     // Hash new password and clear reset token
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    const updateData = {
+      password: hashedPassword,
+      passwordResetToken: null,
+      passwordResetExpires: null
+    };
+
+    // If Google-only user is setting a password for the first time, update authProvider
+    if (user.googleId && user.authProvider === 'google') {
+      updateData.authProvider = 'both';
+    }
+
     await prisma.user.update({
       where: { id: user.id },
-      data: {
-        password: hashedPassword,
-        passwordResetToken: null,
-        passwordResetExpires: null
-      }
+      data: updateData
     });
 
     // Revoke all refresh tokens for security

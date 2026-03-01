@@ -154,5 +154,15 @@ Mobile app: EAS Build (Expo Application Services) for iOS/Android.
 - CSS should go in `/client/styles/` CSS files
 - JavaScript code in `/client/src/` and `/server/src/`
 - The Sidebar.jsx component is large (~2700 lines) — contains the settings modal, channel management, and workspace UI
-- Mobile app is standalone in `mobile/` — doesn't affect web client or server
 - Database uses cascade deletes on workspace relations
+
+## Web + Mobile Parity
+
+**IMPORTANT:** The web client (`client/`) and mobile app (`mobile/`) are parallel frontends for the same backend. When making changes, ALWAYS consider whether the change applies to both platforms:
+
+- **UI features** (show/hide password, footer links, currency formatting, etc.) — apply to BOTH web and mobile
+- **Bug fixes** in display logic, formatting, or data handling — check BOTH platforms for the same issue
+- **New API fields** returned by the server — update BOTH web and mobile to use them
+- **Server-side changes** (new endpoints, response shape changes) — update BOTH clients that consume them
+
+Before marking a task as complete, ask yourself: "Does the other platform need this change too?" If the answer is yes or maybe, apply it to both in the same commit.
