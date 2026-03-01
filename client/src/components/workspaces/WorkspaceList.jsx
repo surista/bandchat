@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import Footer from '../common/Footer';
+import Modal from '../common/Modal';
 import OnboardingWizard from './OnboardingWizard';
 
 function WorkspaceList() {
@@ -128,44 +129,43 @@ function WorkspaceList() {
         )}
 
         {/* Join Workspace Modal */}
-        {showJoin && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-xl font-bold mb-4">Join a Workspace</h3>
-              <form onSubmit={handleJoinWorkspace}>
-                <div className="mb-4">
-                  <label className="block text-gray-700 font-medium mb-2">
-                    Invite Code
-                  </label>
-                  <input
-                    type="text"
-                    value={inviteCode}
-                    onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                    className="w-full px-4 py-2 border border-gray-300 rounded font-mono text-lg tracking-wider"
-                    placeholder="ABC123"
-                    maxLength={8}
-                    required
-                  />
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowJoin(false);
-                      setInviteCode('');
-                    }}
-                    className="btn btn-secondary"
-                  >
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn btn-primary">
-                    Join
-                  </button>
-                </div>
-              </form>
+        <Modal
+          isOpen={showJoin}
+          onClose={() => { setShowJoin(false); setInviteCode(''); }}
+          title="Join a Workspace"
+        >
+          <form onSubmit={handleJoinWorkspace} className="p-6">
+            <div className="mb-4">
+              <label className="block text-gray-700 font-medium mb-2">
+                Invite Code
+              </label>
+              <input
+                type="text"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                className="w-full px-4 py-2 border border-gray-300 rounded font-mono text-lg tracking-wider"
+                placeholder="ABC123"
+                maxLength={8}
+                required
+              />
             </div>
-          </div>
-        )}
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowJoin(false);
+                  setInviteCode('');
+                }}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary">
+                Join
+              </button>
+            </div>
+          </form>
+        </Modal>
       </main>
       <Footer theme="dark" />
 

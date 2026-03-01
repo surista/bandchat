@@ -20,7 +20,7 @@ if (isNative) {
 } else {
   // Web — service worker for PWA and web push notifications
   pushService.init().then((registered) => {
-    if (registered) {
+    if (import.meta.env.DEV && registered) {
       console.log('Push notifications ready');
     }
   });

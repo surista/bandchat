@@ -499,7 +499,7 @@ function MedleyForm({ medley, songs, onSave, onClose }) {
               <button
                 type="submit"
                 disabled={loading || !formData.name.trim() || formData.songIds.length < 2}
-                className="btn bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                className="btn bg-green-600 hover:bg-green-700 text-white"
               >
                 {loading ? 'Saving...' : medley ? 'Update Medley' : 'Create Medley'}
               </button>

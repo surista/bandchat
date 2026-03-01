@@ -47,17 +47,17 @@ export function SocketProvider({ children }) {
       });
 
       newSocket.on('connect', () => {
-        console.log('Socket connected');
+        if (import.meta.env.DEV) console.log('Socket connected');
         setConnected(true);
       });
 
       newSocket.on('disconnect', () => {
-        console.log('Socket disconnected');
+        if (import.meta.env.DEV) console.log('Socket disconnected');
         setConnected(false);
       });
 
       newSocket.on('connect_error', async (error) => {
-        console.error('Socket connection error:', error);
+        if (import.meta.env.DEV) console.error('Socket connection error:', error);
         setConnected(false);
         // If auth failed, try refreshing the token before next reconnect
         if (error.message?.includes('Authentication') || error.message?.includes('token')) {

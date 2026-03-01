@@ -20,13 +20,14 @@ export default function AppearanceScreen() {
         {/* Mode Toggle */}
         <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>MODE</Text>
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
-          <View style={styles.modeRow}>
+          <View style={styles.modeRow} accessibilityRole="switch" accessibilityLabel={`Dark Mode, ${mode === 'dark' ? 'on' : 'off'}`}>
             <Text style={[styles.modeLabel, { color: colors.textPrimary }]}>Dark Mode</Text>
             <Switch
               value={mode === 'dark'}
               onValueChange={toggleMode}
               trackColor={{ false: '#767577', true: colors.primary }}
               thumbColor="#ffffff"
+              accessibilityLabel="Toggle dark mode"
             />
           </View>
         </View>
@@ -47,6 +48,8 @@ export default function AppearanceScreen() {
                 ]}
                 onPress={() => setTheme(key)}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`${theme.name} theme${isActive ? ', selected' : ''}`}
               >
                 <View style={[styles.swatch, { backgroundColor: theme.sidebar }]}>
                   <View style={[styles.swatchInner, { backgroundColor: theme.primary }]} />

@@ -833,4 +833,5 @@ model BlockedUser {
 
   @@unique([blockerId, blockedUserId])
   @@index([blockerId])
+  @@index([blockedUserId])
 }

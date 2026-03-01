@@ -43,13 +43,12 @@ const MessageContent = React.memo(({ content, message, onOpenLightbox }) => {
             >
               {part}
             </a>
-            <iframe
-              src={part.replace('/edit', '/preview')}
-              className="w-full h-64 mt-2 rounded border border-gray-600"
-              title="Google Doc"
-              sandbox="allow-scripts allow-same-origin"
-              loading="lazy"
-            />
+            <a href={part} target="_blank" rel="noopener noreferrer" className="block mt-2 p-3 rounded border border-gray-600 hover:bg-gray-700/50 transition-colors">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zm-3 9h4v2h-4v-2zm0-3h4v2h-4V10zm-2 6h8v2H8v-2z"/></svg>
+                <span className="text-blue-400 underline text-sm">Open Google Doc</span>
+              </div>
+            </a>
           </div>
         );
       }
@@ -135,20 +134,27 @@ const MessageContent = React.memo(({ content, message, onOpenLightbox }) => {
       );
     }
 
-    // Convert @mentions
-    const mentionRegex = /@(\w+)/g;
+    // Convert @mentions — use lookbehind to skip email-like patterns (e.g. user@domain)
+    const mentionRegex = /(^|[\s])@(\w+)/g;
     const mentionParts = part.split(mentionRegex);
 
-    return mentionParts.map((p, j) => {
-      if (j % 2 === 1) {
-        return (
+    // split with 2 capture groups produces: [before, whitespace, name, between, whitespace, name, ...]
+    const result = [];
+    for (let j = 0; j < mentionParts.length; j += 3) {
+      const text = mentionParts[j];
+      if (text) result.push(text);
+      if (j + 2 < mentionParts.length) {
+        const ws = mentionParts[j + 1]; // leading whitespace or ''
+        const name = mentionParts[j + 2];
+        if (ws) result.push(ws);
+        result.push(
           <span key={`${i}-${j}`} className="bg-blue-900 text-blue-300 px-1 rounded">
-            @{p}
+            @{name}
           </span>
         );
       }
-      return p;
-    });
+    }
+    return result;
   });
 });
 MessageContent.displayName = 'MessageContent';
@@ -534,8 +540,20 @@ function MessageList({
               )}
             </div>
 
+            {/* Always-visible more button for keyboard/non-hover users */}
+            <button
+              className="absolute right-2 top-2 text-gray-500 hover:text-gray-300 transition-opacity opacity-0 group-hover:opacity-0 focus:opacity-100 hidden sm:block text-sm p-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                setMsgContextMenu({ messageId: message.id, x: e.clientX, y: e.clientY });
+              }}
+              aria-label="Message actions"
+              tabIndex={0}
+            >
+              ...
+            </button>
             {/* Actions - visible on hover (desktop only), hidden on mobile (use long-press context menu) */}
-            <div className="absolute right-2 -top-3 transition-opacity opacity-0 group-hover:opacity-100 hidden sm:block">
+            <div className="absolute right-2 -top-3 transition-opacity opacity-0 group-hover:opacity-100 focus-within:opacity-100 hidden sm:block">
               {reactionPickerMessageId === message.id && (
                 <div className="absolute right-0 bottom-full mb-1 z-10">
                   <ReactionPicker
@@ -666,29 +684,28 @@ function MessageList({
 
     {/* Report Message Dialog */}
     {reportMessageId && (
-      <div className="modal-backdrop" style={{ zIndex: 10001 }} onClick={(e) => { if (e.target === e.currentTarget) { setReportMessageId(null); } }}>
-        <div className="modal-content" style={{ maxWidth: '28rem', width: '100%' }}>
+      <div className="modal-backdrop z-[10001]" onClick={(e) => { if (e.target === e.currentTarget) { setReportMessageId(null); } }}>
+        <div className="modal-content max-w-md w-full">
           <div className="modal-header">
             <h3>Report Message</h3>
             <button onClick={() => setReportMessageId(null)} className="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
           </div>
-          <div className="modal-body" style={{ padding: '16px 24px' }}>
-            <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)', marginBottom: '12px' }}>
+          <div className="modal-body px-6 py-4">
+            <p className="text-sm text-[var(--color-text-secondary)] mb-3">
               This message will be reported to the BandChat team for review.
             </p>
             <textarea
               value={reportReason}
               onChange={(e) => setReportReason(e.target.value)}
-              className="modal-input"
-              style={{ width: '100%', padding: '10px 12px', fontSize: '14px', minHeight: '80px', resize: 'vertical' }}
+              className="modal-input w-full px-3 py-2.5 text-sm min-h-[80px] resize-y"
               placeholder="Why are you reporting this message?"
               autoFocus
             />
             {reportError && (
-              <p style={{ fontSize: '13px', color: '#ef4444', marginTop: '8px' }}>{reportError}</p>
+              <p className="text-[13px] text-red-500 mt-2" role="alert">{reportError}</p>
             )}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '12px 24px', borderTop: '1px solid var(--color-modal-border)' }}>
+          <div className="flex justify-end gap-2 px-6 py-3 border-t border-[var(--color-modal-border)]">
             <button onClick={() => setReportMessageId(null)} className="btn btn-secondary">Cancel</button>
             <button
               onClick={async () => {
@@ -708,9 +725,8 @@ function MessageList({
                   setReportLoading(false);
                 }
               }}
-              className="btn btn-primary"
+              className="btn btn-primary bg-red-600 hover:bg-red-700"
               disabled={reportLoading || !reportReason.trim()}
-              style={{ backgroundColor: '#dc2626' }}
             >
               {reportLoading ? 'Submitting...' : 'Submit Report'}
             </button>

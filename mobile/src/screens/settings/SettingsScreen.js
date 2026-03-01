@@ -16,11 +16,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
-
-function getInitial(name) {
-  return (name || '?').charAt(0).toUpperCase();
-}
 
 function SettingsRow({ icon, label, onPress, color, colors, showArrow = true }) {
   return (

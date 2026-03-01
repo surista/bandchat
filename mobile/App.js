@@ -1,10 +1,9 @@
 import 'react-native-gesture-handler';
 import { useEffect, useRef } from 'react';
-import { AppState } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ThemeProvider } from './src/context/ThemeContext';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { AuthProvider } from './src/context/AuthContext';
 import { SocketProvider } from './src/context/SocketContext';
 import { ToastProvider } from './src/context/ToastContext';
@@ -15,7 +14,7 @@ import notificationService from './src/services/notifications';
 
 function AppContent() {
   const navigationRef = useRef(null);
-  const appStateRef = useRef(AppState.currentState);
+  const { mode } = useTheme();
 
   useEffect(() => {
     // Register push notifications
@@ -24,22 +23,13 @@ function AppContent() {
       // Handle notification tap — navigate to workspace/channel if data provided
       if (data?.workspaceId && data?.channelId && navigationRef.current) {
         navigationRef.current.navigate('Workspace', { id: data.workspaceId, name: data.workspaceName || 'Workspace' });
+        setTimeout(() => {
+          navigationRef.current.navigate('Channel', { channelId: data.channelId, workspaceId: data.workspaceId });
+        }, 300);
       }
     });
 
     return () => notificationService.cleanup();
-  }, []);
-
-  // App state refresh — emit event for screens to listen to
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', (nextState) => {
-      if (appStateRef.current.match(/inactive|background/) && nextState === 'active') {
-        // App came to foreground — screens handle their own refresh via navigation focus
-      }
-      appStateRef.current = nextState;
-    });
-
-    return () => subscription.remove();
   }, []);
 
   return (
@@ -47,6 +37,7 @@ function AppContent() {
       <ToastProvider>
         <OfflineBanner />
         <RootNavigator />
+        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
       </ToastProvider>
     </NavigationContainer>
   );
@@ -60,7 +51,6 @@ export default function App() {
           <AuthProvider>
             <SocketProvider>
               <AppContent />
-              <StatusBar style="light" />
             </SocketProvider>
           </AuthProvider>
         </ThemeProvider>

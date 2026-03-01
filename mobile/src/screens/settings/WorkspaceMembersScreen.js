@@ -14,11 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { mediumImpact } from '../../utils/haptics';
+import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
-
-function getInitial(name) {
-  return (name || '?').charAt(0).toUpperCase();
-}
 
 export default function WorkspaceMembersScreen({ route, navigation }) {
   const { workspaceId } = route.params;

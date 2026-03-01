@@ -193,7 +193,7 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
               )}
               <button
                 onClick={() => setShowForm(true)}
-                className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                className="btn btn-blue text-sm"
               >
                 + Add Event
               </button>

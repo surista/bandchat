@@ -45,7 +45,7 @@ export default function GigDetailScreen({ navigation, route }) {
   const { gigId, workspaceId, editing: startEditing } = route.params;
   const isNew = !gigId;
   const { user } = useAuth();
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
 
   const [gig, setGig] = useState(null);
   const [loading, setLoading] = useState(!isNew);
@@ -340,7 +340,7 @@ export default function GigDetailScreen({ navigation, route }) {
               mode="date"
               display={Platform.OS === 'ios' ? 'inline' : 'default'}
               onChange={onDateChange}
-              themeVariant="dark"
+              themeVariant={mode === 'dark' ? 'dark' : 'light'}
             />
           )}
 
@@ -545,7 +545,7 @@ export default function GigDetailScreen({ navigation, route }) {
       {gig?.pay ? (
         <View style={styles.viewSection}>
           <Text style={[styles.viewLabel, { color: colors.textSecondary }]}>Pay</Text>
-          <Text style={styles.payValue}>{'\u00A5'}{gig.pay.toLocaleString()}</Text>
+          <Text style={styles.payValue}>${gig.pay.toLocaleString()}</Text>
         </View>
       ) : null}
 

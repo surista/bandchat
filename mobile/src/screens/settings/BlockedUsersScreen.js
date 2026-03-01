@@ -10,11 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
+import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
-
-function getInitial(name) {
-  return (name || '?').charAt(0).toUpperCase();
-}
 
 export default function BlockedUsersScreen() {
   const { colors } = useTheme();

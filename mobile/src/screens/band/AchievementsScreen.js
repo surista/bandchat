@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
+import formatDate from '../../utils/formatDate';
 import api from '../../services/api';
 
 const TABS = ['band', 'my', 'leaderboard'];
@@ -24,12 +25,6 @@ const CATEGORY_LABELS = {
   social: 'Social',
   milestones: 'Milestones',
 };
-
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-}
 
 function StatCard({ label, value, color, bgColor }) {
   return (

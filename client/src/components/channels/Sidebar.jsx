@@ -713,7 +713,8 @@ function Sidebar({
               const displayName = dm.otherMembers?.length > 0
                 ? dm.otherMembers.map(m => m.displayName).join(', ')
                 : 'Unknown';
-              const initial = dm.otherMembers?.[0]?.displayName?.charAt(0).toUpperCase() || '?';
+              const dmPartner = dm.otherMembers?.[0];
+              const initial = dmPartner?.displayName?.charAt(0).toUpperCase() || '?';
 
               return (
                 <button
@@ -723,9 +724,17 @@ function Sidebar({
                     selectedChannel?.id === dm.id ? 'active' : ''
                   }`}
                 >
-                  <div className="w-5 h-5 rounded bg-gray-600 flex items-center justify-center text-xs text-white flex-shrink-0">
-                    {initial}
-                  </div>
+                  {dmPartner?.avatarUrl ? (
+                    <img
+                      src={dmPartner.avatarUrl}
+                      alt={displayName}
+                      className="w-5 h-5 rounded-full object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-5 h-5 rounded bg-gray-600 flex items-center justify-center text-xs text-white flex-shrink-0">
+                      {initial}
+                    </div>
+                  )}
                   <span className="flex-1 truncate">{displayName}</span>
                   {dm.unreadCount > 0 && (
                     <span className="bg-slack-red text-white text-xs px-1.5 py-0.5 rounded-full">
@@ -932,8 +941,9 @@ function Sidebar({
           </span>
         </button>
 
+        {showUserMenu && <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />}
         {showUserMenu && (
-          <div className="absolute bottom-full left-0 right-0 mb-1 mx-2 bg-gray-800 rounded-lg shadow-xl border border-gray-700 overflow-hidden">
+          <div className="absolute bottom-full left-0 right-0 mb-1 mx-2 bg-gray-800 rounded-lg shadow-xl border border-gray-700 overflow-hidden z-50">
             {/* Notifications with snooze options */}
             <div className="relative">
               <button

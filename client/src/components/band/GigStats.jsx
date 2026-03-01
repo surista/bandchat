@@ -73,54 +73,54 @@ function GigStats({ workspaceId }) {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex-shrink-0 p-4 border-b border-gray-700">
-        <h2 className="text-xl font-bold text-white">Band Stats</h2>
-        <p className="text-gray-400 text-sm mt-1">Performance history and insights</p>
+      <div className="flex-shrink-0 p-4 border-b border-[var(--color-border)]">
+        <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Band Stats</h2>
+        <p className="text-[var(--color-text-muted)] text-sm mt-1">Performance history and insights</p>
       </div>
 
       {/* Stats Content */}
       <div className="flex-1 overflow-y-auto p-4">
         {/* Primary Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4 border border-[var(--color-border)]">
             <div className="text-3xl font-bold text-green-400">{stats.totalGigs}</div>
-            <div className="text-gray-400 text-sm">Gigs Played</div>
+            <div className="text-[var(--color-text-muted)] text-sm">Gigs Played</div>
           </div>
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4 border border-[var(--color-border)]">
             <div className="text-3xl font-bold text-blue-400">
               {stats.totalTimeGigged?.hours || 0}h {stats.totalTimeGigged?.minutes || 0}m
             </div>
-            <div className="text-gray-400 text-sm">Total Stage Time</div>
+            <div className="text-[var(--color-text-muted)] text-sm">Total Stage Time</div>
           </div>
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4 border border-[var(--color-border)]">
             <div className="text-3xl font-bold text-purple-400">{stats.uniqueSongsPlayed || 0}</div>
-            <div className="text-gray-400 text-sm">Unique Songs Played</div>
+            <div className="text-[var(--color-text-muted)] text-sm">Unique Songs Played</div>
           </div>
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4 border border-[var(--color-border)]">
             <div className="text-3xl font-bold text-yellow-400">
               ¥{stats.totalRevenue?.toLocaleString() || 0}
             </div>
-            <div className="text-gray-400 text-sm">Total Revenue</div>
+            <div className="text-[var(--color-text-muted)] text-sm">Total Revenue</div>
           </div>
         </div>
 
         {/* Secondary Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4 border border-[var(--color-border)]">
             <div className="text-2xl font-bold text-cyan-400">{stats.averageSongsPerGig || 0}</div>
-            <div className="text-gray-400 text-sm">Avg Songs/Gig</div>
+            <div className="text-[var(--color-text-muted)] text-sm">Avg Songs/Gig</div>
           </div>
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4 border border-[var(--color-border)]">
             <div className="text-2xl font-bold text-pink-400">{stats.totalRehearsals}</div>
-            <div className="text-gray-400 text-sm">Rehearsals</div>
+            <div className="text-[var(--color-text-muted)] text-sm">Rehearsals</div>
           </div>
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4 border border-[var(--color-border)]">
             <div className="text-2xl font-bold text-orange-400">{stats.upcomingGigs}</div>
-            <div className="text-gray-400 text-sm">Upcoming Gigs</div>
+            <div className="text-[var(--color-text-muted)] text-sm">Upcoming Gigs</div>
           </div>
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4 border border-[var(--color-border)]">
             <div className="text-2xl font-bold text-red-400">{stats.songsNeverPlayed}</div>
-            <div className="text-gray-400 text-sm">Songs Never Played</div>
+            <div className="text-[var(--color-text-muted)] text-sm">Songs Never Played</div>
           </div>
         </div>
 
@@ -140,7 +140,7 @@ function GigStats({ workspaceId }) {
                 <div className="text-2xl font-bold text-purple-300">
                   {stats.busiestStretch.gigs} gigs in {stats.busiestStretch.days} days
                 </div>
-                <div className="text-gray-400 text-sm mt-1">
+                <div className="text-[var(--color-text-muted)] text-sm mt-1">
                   {formatDate(stats.busiestStretch.startDate)} – {formatDate(stats.busiestStretch.endDate)}
                 </div>
               </div>
@@ -163,7 +163,7 @@ function GigStats({ workspaceId }) {
                 <div className="text-2xl font-bold text-green-300">
                   {stats.longestSetlist.songCount} songs
                 </div>
-                <div className="text-gray-400 text-sm mt-1 truncate">
+                <div className="text-[var(--color-text-muted)] text-sm mt-1 truncate">
                   {stats.longestSetlist.name}
                 </div>
               </div>
@@ -194,8 +194,8 @@ function GigStats({ workspaceId }) {
         {/* Three Column Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Most Played Songs */}
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-            <h3 className="text-lg font-medium text-white mb-4">Most Played Songs</h3>
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4 border border-[var(--color-border)]">
+            <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-4">Most Played Songs</h3>
             {stats.mostPlayedSongs?.length > 0 ? (
               <div className="space-y-2">
                 {stats.mostPlayedSongs.slice(0, 10).map((song, index) => (
@@ -212,9 +212,9 @@ function GigStats({ workspaceId }) {
                       #{index + 1}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <div className="text-white text-sm truncate">{song.title}</div>
+                      <div className="text-[var(--color-text-primary)] text-sm truncate">{song.title}</div>
                       {song.artist && (
-                        <div className="text-gray-400 text-xs truncate">{song.artist}</div>
+                        <div className="text-[var(--color-text-muted)] text-xs truncate">{song.artist}</div>
                       )}
                     </div>
                     <div className="text-right">
@@ -231,17 +231,17 @@ function GigStats({ workspaceId }) {
           </div>
 
           {/* Middle Column - Fun Stats */}
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4 border border-[var(--color-border)]">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-lg">🎯</span>
-              <h3 className="text-lg font-medium text-white">Fun Facts</h3>
+              <h3 className="text-lg font-medium text-[var(--color-text-primary)]">Fun Facts</h3>
             </div>
             <div className="space-y-3">
               {/* Most Time on Song */}
               {stats.mostTimeSong && (
-                <div className="p-3 bg-gray-900 rounded">
+                <div className="p-3 bg-[var(--color-bg-primary)] rounded">
                   <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Most Time on One Song</div>
-                  <div className="text-white font-medium text-sm">{stats.mostTimeSong.title}</div>
+                  <div className="text-[var(--color-text-primary)] font-medium text-sm">{stats.mostTimeSong.title}</div>
                   <div className="text-blue-400 font-bold">
                     {formatDuration(stats.mostTimeSong.totalTime)}
                     <span className="text-gray-500 text-xs font-normal ml-1">({stats.mostTimeSong.playCount} plays)</span>
@@ -251,9 +251,9 @@ function GigStats({ workspaceId }) {
 
               {/* Most Played Artist */}
               {stats.mostPlayedArtist && (
-                <div className="p-3 bg-gray-900 rounded">
+                <div className="p-3 bg-[var(--color-bg-primary)] rounded">
                   <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Most Played Artist</div>
-                  <div className="text-white font-medium text-sm">{stats.mostPlayedArtist.name}</div>
+                  <div className="text-[var(--color-text-primary)] font-medium text-sm">{stats.mostPlayedArtist.name}</div>
                   <div className="text-purple-400 font-bold">
                     {stats.mostPlayedArtist.playCount} song plays
                   </div>
@@ -262,7 +262,7 @@ function GigStats({ workspaceId }) {
 
               {/* Longest Gap */}
               {stats.longestGap && (
-                <div className="p-3 bg-gray-900 rounded">
+                <div className="p-3 bg-[var(--color-bg-primary)] rounded">
                   <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Longest Break</div>
                   <div className="text-orange-400 font-bold">{stats.longestGap.days} days</div>
                   <div className="text-gray-400 text-xs">
@@ -274,11 +274,11 @@ function GigStats({ workspaceId }) {
               {/* Shortest Setlist */}
               {stats.shortestSetlist && stats.longestSetlist && stats.shortestSetlist.songCount !== stats.longestSetlist.songCount && (
                 <div
-                  className="p-3 bg-gray-900 rounded cursor-pointer hover:bg-gray-800 transition-colors"
+                  className="p-3 bg-[var(--color-bg-primary)] rounded cursor-pointer hover:bg-[var(--color-bg-secondary)] transition-colors"
                   onClick={() => handleSetlistClick(stats.shortestSetlist)}
                 >
                   <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Shortest Setlist</div>
-                  <div className="text-white font-medium text-sm truncate">{stats.shortestSetlist.name}</div>
+                  <div className="text-[var(--color-text-primary)] font-medium text-sm truncate">{stats.shortestSetlist.name}</div>
                   <div className="text-teal-400 font-bold">{stats.shortestSetlist.songCount} songs</div>
                 </div>
               )}
@@ -286,11 +286,11 @@ function GigStats({ workspaceId }) {
               {/* Most Songs in Shortest Time */}
               {stats.mostSongsShortestTime && (
                 <div
-                  className="p-3 bg-gray-900 rounded cursor-pointer hover:bg-gray-800 transition-colors"
+                  className="p-3 bg-[var(--color-bg-primary)] rounded cursor-pointer hover:bg-[var(--color-bg-secondary)] transition-colors"
                   onClick={() => setPopup({ type: 'songdensity', data: stats.mostSongsShortestTime })}
                 >
                   <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Song Density Record</div>
-                  <div className="text-white font-medium text-sm">
+                  <div className="text-[var(--color-text-primary)] font-medium text-sm">
                     {stats.mostSongsShortestTime.totalSongs} songs in {stats.mostSongsShortestTime.days} day{stats.mostSongsShortestTime.days !== 1 ? 's' : ''}
                   </div>
                   <div className="text-cyan-400 font-bold">
@@ -301,7 +301,7 @@ function GigStats({ workspaceId }) {
 
               {/* Days Since Last Gig */}
               {stats.daysSinceLastGig !== null && stats.daysSinceLastGig > 0 && (
-                <div className="p-3 bg-gray-900 rounded">
+                <div className="p-3 bg-[var(--color-bg-primary)] rounded">
                   <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Days Since Last Gig</div>
                   <div className={`font-bold ${stats.daysSinceLastGig > 30 ? 'text-red-400' : stats.daysSinceLastGig > 14 ? 'text-orange-400' : 'text-green-400'}`}>
                     {stats.daysSinceLastGig} days
@@ -312,17 +312,17 @@ function GigStats({ workspaceId }) {
           </div>
 
           {/* Top Venues - Clickable */}
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4 border border-[var(--color-border)]">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-lg">🏟️</span>
-              <h3 className="text-lg font-medium text-white">Top Venues</h3>
+              <h3 className="text-lg font-medium text-[var(--color-text-primary)]">Top Venues</h3>
             </div>
             {stats.topVenues?.length > 0 ? (
               <div className="space-y-2">
                 {stats.topVenues.slice(0, 8).map((item, index) => (
                   <div
                     key={item.venue}
-                    className="flex items-center gap-2 p-2 bg-gray-900 rounded cursor-pointer hover:bg-gray-800 transition-colors"
+                    className="flex items-center gap-2 p-2 bg-gray-900 rounded cursor-pointer hover:bg-[var(--color-bg-secondary)] transition-colors"
                     onClick={() => setPopup({ type: 'venue', data: item })}
                   >
                     <span className={`w-5 text-center text-sm ${
@@ -330,7 +330,7 @@ function GigStats({ workspaceId }) {
                     }`}>
                       {index === 0 ? '🏆' : `#${index + 1}`}
                     </span>
-                    <div className="flex-1 text-white text-sm truncate">{item.venue}</div>
+                    <div className="flex-1 text-[var(--color-text-primary)] text-sm truncate">{item.venue}</div>
                     <div className="text-green-400 text-sm font-medium">
                       {item.count} {item.count === 1 ? 'gig' : 'gigs'}
                     </div>
@@ -349,29 +349,29 @@ function GigStats({ workspaceId }) {
       {/* Popup for Busiest Stretch */}
       {popup?.type === 'busiest' && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setPopup(null)}>
-          <div className="bg-gray-800 rounded-lg w-full max-w-md border border-gray-700" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-white flex items-center gap-2">
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg w-full max-w-md border border-[var(--color-border)]" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
+              <h3 className="text-lg font-medium text-[var(--color-text-primary)] flex items-center gap-2">
                 <span>🔥</span> Busiest Stretch
               </h3>
-              <button onClick={() => setPopup(null)} className="text-gray-400 hover:text-white text-2xl">&times;</button>
+              <button onClick={() => setPopup(null)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl">&times;</button>
             </div>
             <div className="p-4">
               <div className="text-purple-300 font-bold text-lg mb-2">
                 {popup.data.gigs} gigs in {popup.data.days} days
               </div>
-              <div className="text-gray-400 text-sm mb-4">
+              <div className="text-[var(--color-text-muted)] text-sm mb-4">
                 {formatDate(popup.data.startDate)} – {formatDate(popup.data.endDate)}
               </div>
               <div className="space-y-2">
                 {popup.data.setlists?.map(setlist => (
                   <div
                     key={setlist.id}
-                    className="p-3 bg-gray-900 rounded cursor-pointer hover:bg-gray-700 transition-colors"
+                    className="p-3 bg-[var(--color-bg-primary)] rounded cursor-pointer hover:bg-[var(--color-bg-tertiary)] transition-colors"
                     onClick={() => handleSetlistClick(setlist)}
                   >
-                    <div className="text-white font-medium">{setlist.name}</div>
-                    <div className="text-gray-400 text-sm">
+                    <div className="text-[var(--color-text-primary)] font-medium">{setlist.name}</div>
+                    <div className="text-[var(--color-text-muted)] text-sm">
                       {formatDate(setlist.performedAt)} {setlist.venue && `• ${setlist.venue}`}
                     </div>
                   </div>
@@ -385,12 +385,12 @@ function GigStats({ workspaceId }) {
       {/* Popup for Venue */}
       {popup?.type === 'venue' && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setPopup(null)}>
-          <div className="bg-gray-800 rounded-lg w-full max-w-md border border-gray-700" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-white flex items-center gap-2">
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg w-full max-w-md border border-[var(--color-border)]" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
+              <h3 className="text-lg font-medium text-[var(--color-text-primary)] flex items-center gap-2">
                 <span>🏟️</span> {popup.data.venue}
               </h3>
-              <button onClick={() => setPopup(null)} className="text-gray-400 hover:text-white text-2xl">&times;</button>
+              <button onClick={() => setPopup(null)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl">&times;</button>
             </div>
             <div className="p-4">
               <div className="text-green-400 font-bold text-lg mb-4">
@@ -400,11 +400,11 @@ function GigStats({ workspaceId }) {
                 {popup.data.setlists?.map(setlist => (
                   <div
                     key={setlist.id}
-                    className="p-3 bg-gray-900 rounded cursor-pointer hover:bg-gray-700 transition-colors"
+                    className="p-3 bg-[var(--color-bg-primary)] rounded cursor-pointer hover:bg-[var(--color-bg-tertiary)] transition-colors"
                     onClick={() => handleSetlistClick(setlist)}
                   >
-                    <div className="text-white font-medium">{setlist.name}</div>
-                    <div className="text-gray-400 text-sm">{formatDate(setlist.performedAt)}</div>
+                    <div className="text-[var(--color-text-primary)] font-medium">{setlist.name}</div>
+                    <div className="text-[var(--color-text-muted)] text-sm">{formatDate(setlist.performedAt)}</div>
                   </div>
                 ))}
               </div>
@@ -416,18 +416,18 @@ function GigStats({ workspaceId }) {
       {/* Popup for Song Density */}
       {popup?.type === 'songdensity' && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setPopup(null)}>
-          <div className="bg-gray-800 rounded-lg w-full max-w-md border border-gray-700" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-white flex items-center gap-2">
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg w-full max-w-md border border-[var(--color-border)]" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
+              <h3 className="text-lg font-medium text-[var(--color-text-primary)] flex items-center gap-2">
                 <span>⚡</span> Song Density Record
               </h3>
-              <button onClick={() => setPopup(null)} className="text-gray-400 hover:text-white text-2xl">&times;</button>
+              <button onClick={() => setPopup(null)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl">&times;</button>
             </div>
             <div className="p-4">
               <div className="text-cyan-300 font-bold text-lg mb-2">
                 {popup.data.totalSongs} songs in {popup.data.days} day{popup.data.days !== 1 ? 's' : ''}
               </div>
-              <div className="text-gray-400 text-sm mb-4">
+              <div className="text-[var(--color-text-muted)] text-sm mb-4">
                 {formatDate(popup.data.startDate)} – {formatDate(popup.data.endDate)}
                 <span className="text-cyan-400 ml-2">({popup.data.songsPerDay.toFixed(1)} songs/day)</span>
               </div>
@@ -435,14 +435,14 @@ function GigStats({ workspaceId }) {
                 {popup.data.setlists?.map(setlist => (
                   <div
                     key={setlist.id}
-                    className="p-3 bg-gray-900 rounded cursor-pointer hover:bg-gray-700 transition-colors"
+                    className="p-3 bg-[var(--color-bg-primary)] rounded cursor-pointer hover:bg-[var(--color-bg-tertiary)] transition-colors"
                     onClick={() => handleSetlistClick(setlist)}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="text-white font-medium">{setlist.name}</div>
+                      <div className="text-[var(--color-text-primary)] font-medium">{setlist.name}</div>
                       <div className="text-cyan-400 font-medium">{setlist.songCount} songs</div>
                     </div>
-                    <div className="text-gray-400 text-sm">
+                    <div className="text-[var(--color-text-muted)] text-sm">
                       {formatDate(setlist.performedAt)} {setlist.venue && `• ${setlist.venue}`}
                     </div>
                   </div>
@@ -456,16 +456,16 @@ function GigStats({ workspaceId }) {
       {/* Popup for Setlist Detail */}
       {setlistDetail && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setSetlistDetail(null)}>
-          <div className="bg-gray-800 rounded-lg w-full max-w-lg border border-gray-700 max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg w-full max-w-lg border border-[var(--color-border)] max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between flex-shrink-0">
               <div>
-                <h3 className="text-lg font-medium text-white">{setlistDetail.name}</h3>
-                <div className="text-gray-400 text-sm">
+                <h3 className="text-lg font-medium text-[var(--color-text-primary)]">{setlistDetail.name}</h3>
+                <div className="text-[var(--color-text-muted)] text-sm">
                   {setlistDetail.performedAt && formatDate(setlistDetail.performedAt)}
                   {setlistDetail.venue && ` • ${setlistDetail.venue}`}
                 </div>
               </div>
-              <button onClick={() => setSetlistDetail(null)} className="text-gray-400 hover:text-white text-2xl">&times;</button>
+              <button onClick={() => setSetlistDetail(null)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl">&times;</button>
             </div>
             <div className="p-4 overflow-y-auto flex-1">
               {setlistDetail.songs?.length > 0 ? (
@@ -477,13 +477,13 @@ function GigStats({ workspaceId }) {
                         <span className="text-gray-500 text-sm w-6 text-right">{index + 1}.</span>
                         {item.type === 'SONG' && item.song ? (
                           <div className="flex-1 min-w-0">
-                            <div className="text-white text-sm truncate">{item.song.title}</div>
+                            <div className="text-[var(--color-text-primary)] text-sm truncate">{item.song.title}</div>
                             {item.song.artist && (
-                              <div className="text-gray-400 text-xs truncate">{item.song.artist}</div>
+                              <div className="text-[var(--color-text-muted)] text-xs truncate">{item.song.artist}</div>
                             )}
                           </div>
                         ) : (
-                          <div className="text-gray-400 text-sm italic">
+                          <div className="text-[var(--color-text-muted)] text-sm italic">
                             {item.type === 'MC' ? `MC${item.label ? `: ${item.label}` : ''}` : 'Set Break'}
                           </div>
                         )}

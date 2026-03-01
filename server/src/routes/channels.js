@@ -65,7 +65,10 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
           })
         : [],
       prisma.threadRead.findMany({
-        where: { userId: req.user.id }
+        where: {
+          userId: req.user.id,
+          message: { channel: { workspaceId: req.params.workspaceId } }
+        }
       })
     ]);
 
@@ -594,7 +597,10 @@ router.get('/workspace/:workspaceId/dms', authenticate, isWorkspaceMember, async
           })
         : [],
       prisma.threadRead.findMany({
-        where: { userId: req.user.id }
+        where: {
+          userId: req.user.id,
+          message: { channel: { workspaceId: req.params.workspaceId } }
+        }
       })
     ]);
 

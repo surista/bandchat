@@ -1,6 +1,9 @@
 import express from 'express';
 import multer from 'multer';
 import { randomUUID } from 'crypto';
+import fs from 'fs/promises';
+import path from 'path';
+import os from 'os';
 import AdmZip from 'adm-zip';
 import prisma from '../lib/prisma.js';
 import { authenticate, isWorkspaceAdmin } from '../middleware/auth.js';
@@ -9,19 +12,40 @@ import slackEmojiMap from '../services/slackEmojiMap.js';
 
 const router = express.Router();
 
-// In-memory session cache for parsed ZIP data (30-min TTL)
+// In-memory session metadata (ZIP stored on disk, not in memory)
 const importSessions = new Map();
 const SESSION_TTL = 30 * 60 * 1000;
 
-function storeSession(id, userId, data) {
+async function storeSession(id, userId, data) {
   // Remove any existing session for this user (limit 1 per user)
   for (const [key, val] of importSessions) {
     if (val.userId === userId) {
+      // Clean up old temp file
+      if (val.data.zipPath) {
+        fs.unlink(val.data.zipPath).catch(() => {});
+      }
       importSessions.delete(key);
     }
   }
-  importSessions.set(id, { data, userId, createdAt: Date.now() });
-  setTimeout(() => importSessions.delete(id), SESSION_TTL);
+
+  // Write ZIP buffer to temp file instead of holding in memory
+  const zipPath = path.join(os.tmpdir(), `bandchat-slack-import-${id}.zip`);
+  await fs.writeFile(zipPath, data.zip);
+
+  // Store metadata with file path instead of buffer
+  const sessionData = { ...data, zipPath };
+  delete sessionData.zip;
+
+  importSessions.set(id, { data: sessionData, userId, createdAt: Date.now() });
+  setTimeout(() => cleanupSession(id), SESSION_TTL);
+}
+
+function cleanupSession(id) {
+  const session = importSessions.get(id);
+  if (session?.data?.zipPath) {
+    fs.unlink(session.data.zipPath).catch(() => {});
+  }
+  importSessions.delete(id);
 }
 
 function getSession(id) {
@@ -154,8 +178,8 @@ router.post('/workspace/:workspaceId/parse', authenticate, isWorkspaceAdmin,
 
       const importSessionId = randomUUID();
 
-      // Store parsed data for the import step
-      storeSession(importSessionId, req.user.id, {
+      // Store parsed data for the import step (ZIP written to temp file)
+      await storeSession(importSessionId, req.user.id, {
         zip: req.file.buffer,
         slackUsers,
         slackChannels,
@@ -212,8 +236,9 @@ router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceAdmin, as
     }
 
     // Remove session immediately to prevent duplicate imports
-    importSessions.delete(importSessionId);
     const session = sessionWrapper.data;
+    const zipPath = session.zipPath;
+    importSessions.delete(importSessionId);
 
     const {
       importBotMessages = false,
@@ -222,8 +247,11 @@ router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceAdmin, as
       createGigs = true
     } = options || {};
 
-    // Re-parse ZIP from stored buffer
-    const zip = new AdmZip(session.zip);
+    // Read ZIP from temp file on disk
+    const zipBuffer = await fs.readFile(zipPath);
+    // Clean up temp file immediately after reading
+    fs.unlink(zipPath).catch(() => {});
+    const zip = new AdmZip(zipBuffer);
     const entries = zip.getEntries();
     const entryMap = new Map(entries.map(e => [e.entryName.replace(/\\/g, '/'), e]));
 

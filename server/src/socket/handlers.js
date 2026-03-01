@@ -84,7 +84,7 @@ export const setupSocketHandlers = (io) => {
         return next(new Error('Authentication required'));
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
 
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId },
@@ -109,7 +109,7 @@ export const setupSocketHandlers = (io) => {
 
   io.on('connection', async (socket) => {
     const user = socket.user;
-    console.log(`User connected: ${user.displayName} (${user.id})`);
+    console.log(`User connected: ${user.id}`);
 
     // Join user's personal room for direct notifications
     socket.join(`user:${user.id}`);
@@ -186,7 +186,7 @@ export const setupSocketHandlers = (io) => {
         }
 
         socket.join(`channel:${channelId}`);
-        console.log(`${user.displayName} joined channel ${channelId}`);
+        console.log(`User ${user.id} joined channel ${channelId}`);
       } catch (error) {
         console.error('Channel join error:', error);
       }
@@ -198,7 +198,7 @@ export const setupSocketHandlers = (io) => {
         return;
       }
       socket.leave(`channel:${channelId}`);
-      console.log(`${user.displayName} left channel ${channelId}`);
+      console.log(`User ${user.id} left channel ${channelId}`);
     });
 
     // Handle typing indicator (verify socket is in the channel room)
@@ -292,7 +292,7 @@ export const setupSocketHandlers = (io) => {
 
     // Handle disconnection
     socket.on('disconnect', () => {
-      console.log(`User disconnected: ${user.displayName}`);
+      console.log(`User disconnected: ${user.id}`);
 
       // Notify workspaces about offline status (from socket rooms, not stale closure)
       const workspaceIds = getWorkspaceRooms();

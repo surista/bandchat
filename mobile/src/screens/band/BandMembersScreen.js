@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
+import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
 
 const INSTRUMENT_OPTIONS = [
@@ -38,10 +39,6 @@ const INSTRUMENT_COLORS = {
   DJ: '#6366f1',
   Other: '#6b7280',
 };
-
-function getInitial(name) {
-  return (name || '?').charAt(0).toUpperCase();
-}
 
 function getInstruments(member) {
   if (member.stints?.length > 0) {

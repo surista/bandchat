@@ -807,7 +807,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
               <button
                 type="submit"
                 disabled={loading}
-                className="btn bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                className="btn bg-green-600 hover:bg-green-700 text-white"
               >
                 {loading ? 'Saving...' : gig ? 'Update' : 'Create'}
               </button>

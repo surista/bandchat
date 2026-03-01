@@ -519,64 +519,136 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
     });
 
     const memberAchievementDefs = allAchievements.filter(a => !a.isBandWide);
-    const gigCount = allGigs.length;
 
-    // Batch-load all member data in 5 queries instead of 5*N
+    // Use aggregation queries instead of loading all records into memory
     const memberIds = allMembers.map(m => m.userId);
 
-    const [allMemberAchievements, allMemberSongs, allMemberSetlists, allMemberMessages, allMemberReactions] = await Promise.all([
-      prisma.memberAchievement.findMany({
-        where: { workspaceId, userId: { in: memberIds } },
-        select: { achievementId: true, userId: true }
-      }),
-      prisma.song.findMany({
-        where: { workspaceId, createdById: { in: memberIds } },
-        orderBy: { createdAt: 'asc' },
-        select: { createdAt: true, createdById: true }
-      }),
-      prisma.setlist.findMany({
-        where: { workspaceId, createdById: { in: memberIds } },
-        orderBy: { createdAt: 'asc' },
-        select: { createdAt: true, createdById: true }
-      }),
-      prisma.message.findMany({
-        where: { channel: { workspaceId }, authorId: { in: memberIds } },
-        orderBy: { createdAt: 'asc' },
-        select: { createdAt: true, authorId: true }
-      }),
-      prisma.reaction.findMany({
-        where: { message: { channel: { workspaceId } }, userId: { in: memberIds } },
-        orderBy: { createdAt: 'asc' },
-        select: { createdAt: true, userId: true }
-      })
-    ]);
+    // Load existing member achievements (small dataset)
+    const allMemberAchievements = await prisma.memberAchievement.findMany({
+      where: { workspaceId, userId: { in: memberIds } },
+      select: { achievementId: true, userId: true }
+    });
 
-    // Group by userId for fast lookup
+    // Group existing achievements by user
     const achievementsByUser = new Map();
-    const songsByUser = new Map();
-    const setlistsByUser = new Map();
-    const messagesByUser = new Map();
-    const reactionsByUser = new Map();
-
     for (const a of allMemberAchievements) {
       if (!achievementsByUser.has(a.userId)) achievementsByUser.set(a.userId, []);
       achievementsByUser.get(a.userId).push(a);
     }
-    for (const s of allMemberSongs) {
-      if (!songsByUser.has(s.createdById)) songsByUser.set(s.createdById, []);
-      songsByUser.get(s.createdById).push(s);
-    }
-    for (const s of allMemberSetlists) {
-      if (!setlistsByUser.has(s.createdById)) setlistsByUser.set(s.createdById, []);
-      setlistsByUser.get(s.createdById).push(s);
-    }
-    for (const m of allMemberMessages) {
-      if (!messagesByUser.has(m.authorId)) messagesByUser.set(m.authorId, []);
-      messagesByUser.get(m.authorId).push(m);
-    }
-    for (const r of allMemberReactions) {
-      if (!reactionsByUser.has(r.userId)) reactionsByUser.set(r.userId, []);
-      reactionsByUser.get(r.userId).push(r);
+
+    // Get counts per user using groupBy (no full record loading)
+    const [songCountsByUser, setlistCountsByUser, messageCountsByUser, reactionCountsByUser] = await Promise.all([
+      prisma.song.groupBy({
+        by: ['createdById'],
+        where: { workspaceId, createdById: { in: memberIds } },
+        _count: { id: true }
+      }),
+      prisma.setlist.groupBy({
+        by: ['createdById'],
+        where: { workspaceId, createdById: { in: memberIds } },
+        _count: { id: true }
+      }),
+      prisma.message.groupBy({
+        by: ['authorId'],
+        where: { channel: { workspaceId }, authorId: { in: memberIds } },
+        _count: { id: true }
+      }),
+      prisma.reaction.groupBy({
+        by: ['userId'],
+        where: { message: { channel: { workspaceId } }, userId: { in: memberIds } },
+        _count: { id: true }
+      })
+    ]);
+
+    // Build count maps
+    const songCounts = new Map(songCountsByUser.map(s => [s.createdById, s._count.id]));
+    const setlistCounts = new Map(setlistCountsByUser.map(s => [s.createdById, s._count.id]));
+    const messageCounts = new Map(messageCountsByUser.map(m => [m.authorId, m._count.id]));
+    const reactionCounts = new Map(reactionCountsByUser.map(r => [r.userId, r._count.id]));
+
+    // Helper to get the Nth item's date using findFirst + skip (avoids loading all records)
+    const getNthSongDate = async (userId, n) => {
+      const item = await prisma.song.findFirst({
+        where: { workspaceId, createdById: userId },
+        orderBy: { createdAt: 'asc' },
+        skip: n - 1,
+        select: { createdAt: true }
+      });
+      return item?.createdAt || now;
+    };
+    const getNthSetlistDate = async (userId, n) => {
+      const item = await prisma.setlist.findFirst({
+        where: { workspaceId, createdById: userId },
+        orderBy: { createdAt: 'asc' },
+        skip: n - 1,
+        select: { createdAt: true }
+      });
+      return item?.createdAt || now;
+    };
+    const getNthMessageDate = async (userId, n) => {
+      const item = await prisma.message.findFirst({
+        where: { channel: { workspaceId }, authorId: userId },
+        orderBy: { createdAt: 'asc' },
+        skip: n - 1,
+        select: { createdAt: true }
+      });
+      return item?.createdAt || now;
+    };
+    const getNthReactionDate = async (userId, n) => {
+      const item = await prisma.reaction.findFirst({
+        where: { message: { channel: { workspaceId } }, userId },
+        orderBy: { createdAt: 'asc' },
+        skip: n - 1,
+        select: { createdAt: true }
+      });
+      return item?.createdAt || now;
+    };
+
+    // Build per-member gig attendance map from GigAttendee data
+    // Maps userId -> { count, gigs: [{ date }] } based on linked BandMember records
+    const memberGigAttendanceMap = new Map();
+
+    // Find band members linked to workspace users
+    const linkedBandMembers = await prisma.bandMember.findMany({
+      where: { workspaceId, linkedUserId: { in: memberIds } },
+      select: { id: true, linkedUserId: true }
+    });
+
+    if (linkedBandMembers.length > 0) {
+      const bandMemberIdToUserId = new Map(
+        linkedBandMembers.map(bm => [bm.id, bm.linkedUserId])
+      );
+      const bandMemberIds = linkedBandMembers.map(bm => bm.id);
+
+      // Get all gig attendances for these band members (only completed/scheduled gigs, not cancelled)
+      const attendances = await prisma.gigAttendee.findMany({
+        where: {
+          bandMemberId: { in: bandMemberIds },
+          status: 'ATTENDING',
+          gig: {
+            workspaceId,
+            type: 'GIG',
+            date: { lt: now },
+            status: { not: 'CANCELLED' }
+          }
+        },
+        include: {
+          gig: { select: { date: true } }
+        },
+        orderBy: { gig: { date: 'asc' } }
+      });
+
+      // Group by userId
+      for (const att of attendances) {
+        const userId = bandMemberIdToUserId.get(att.bandMemberId);
+        if (!userId) continue;
+        if (!memberGigAttendanceMap.has(userId)) {
+          memberGigAttendanceMap.set(userId, { count: 0, gigs: [] });
+        }
+        const entry = memberGigAttendanceMap.get(userId);
+        entry.count++;
+        entry.gigs.push({ date: att.gig.date });
+      }
     }
 
     for (const member of allMembers) {
@@ -585,10 +657,10 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
       const existingMemberIds = new Set(
         (achievementsByUser.get(userId) || []).map(a => a.achievementId)
       );
-      const memberSongs = songsByUser.get(userId) || [];
-      const memberSetlists = setlistsByUser.get(userId) || [];
-      const memberMessages = messagesByUser.get(userId) || [];
-      const memberReactions = reactionsByUser.get(userId) || [];
+      const userSongCount = songCounts.get(userId) || 0;
+      const userSetlistCount = setlistCounts.get(userId) || 0;
+      const userMessageCount = messageCounts.get(userId) || 0;
+      const userReactionCount = reactionCounts.get(userId) || 0;
 
       // Calculate months as member and anniversary dates
       const joinDate = member.joinedAt ? new Date(member.joinedAt) : null;
@@ -603,50 +675,53 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
         let shouldAward = false;
         let earnedAt = now;
 
+        // Get per-member gig attendance count from GigAttendee data
+        const memberGigAttendance = memberGigAttendanceMap.get(userId) || { count: 0, gigs: [] };
+
         switch (achievement.code) {
           case 'member_first_gig':
-            shouldAward = gigCount >= 1;
-            earnedAt = getNthDate(allGigs, 1);
+            shouldAward = memberGigAttendance.count >= 1;
+            earnedAt = memberGigAttendance.gigs[0]?.date || now;
             break;
           case 'member_ten_gigs':
-            shouldAward = gigCount >= 10;
-            earnedAt = getNthDate(allGigs, 10);
+            shouldAward = memberGigAttendance.count >= 10;
+            earnedAt = memberGigAttendance.gigs[9]?.date || now;
             break;
           case 'member_fifty_gigs':
-            shouldAward = gigCount >= 50;
-            earnedAt = getNthDate(allGigs, 50);
+            shouldAward = memberGigAttendance.count >= 50;
+            earnedAt = memberGigAttendance.gigs[49]?.date || now;
             break;
           case 'member_hundred_gigs':
-            shouldAward = gigCount >= 100;
-            earnedAt = getNthDate(allGigs, 100);
+            shouldAward = memberGigAttendance.count >= 100;
+            earnedAt = memberGigAttendance.gigs[99]?.date || now;
             break;
           case 'song_master':
-            shouldAward = memberSongs.length >= 25;
-            earnedAt = memberSongs[24]?.createdAt || now;
+            shouldAward = userSongCount >= 25;
+            if (shouldAward) earnedAt = await getNthSongDate(userId, 25);
             break;
           case 'setlist_architect':
-            shouldAward = memberSetlists.length >= 10;
-            earnedAt = memberSetlists[9]?.createdAt || now;
+            shouldAward = userSetlistCount >= 10;
+            if (shouldAward) earnedAt = await getNthSetlistDate(userId, 10);
             break;
           case 'communicator':
-            shouldAward = memberMessages.length >= 100;
-            earnedAt = memberMessages[99]?.createdAt || now;
+            shouldAward = userMessageCount >= 100;
+            if (shouldAward) earnedAt = await getNthMessageDate(userId, 100);
             break;
           case 'super_communicator':
-            shouldAward = memberMessages.length >= 1000;
-            earnedAt = memberMessages[999]?.createdAt || now;
+            shouldAward = userMessageCount >= 1000;
+            if (shouldAward) earnedAt = await getNthMessageDate(userId, 1000);
             break;
           case 'emoji_fan':
-            shouldAward = memberReactions.length >= 50;
-            earnedAt = memberReactions[49]?.createdAt || now;
+            shouldAward = userReactionCount >= 50;
+            if (shouldAward) earnedAt = await getNthReactionDate(userId, 50);
             break;
           case 'emoji_enthusiast':
-            shouldAward = memberReactions.length >= 250;
-            earnedAt = memberReactions[249]?.createdAt || now;
+            shouldAward = userReactionCount >= 250;
+            if (shouldAward) earnedAt = await getNthReactionDate(userId, 250);
             break;
           case 'emoji_master':
-            shouldAward = memberReactions.length >= 1000;
-            earnedAt = memberReactions[999]?.createdAt || now;
+            shouldAward = userReactionCount >= 1000;
+            if (shouldAward) earnedAt = await getNthReactionDate(userId, 1000);
             break;
           case 'one_year_member':
             shouldAward = memberMonths >= 12;

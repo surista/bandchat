@@ -14,16 +14,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
+import Badge from '../../components/Badge';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
-
-function Badge({ label, color, bgColor }) {
-  return (
-    <View style={[styles.badge, { backgroundColor: bgColor }]}>
-      <Text style={[styles.badgeText, { color }]}>{label}</Text>
-    </View>
-  );
-}
 
 export default function SetlistListScreen({ navigation, route }) {
   const { workspaceId } = route.params;
@@ -338,8 +331,6 @@ const styles = StyleSheet.create({
   setlistName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
   setlistMeta: { fontSize: 13, marginBottom: 6 },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 },
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  badgeText: { fontSize: 12, fontWeight: '600' },
   previewList: { marginTop: 4 },
   previewItem: { fontSize: 13, lineHeight: 20 },
   previewMore: { fontSize: 13, fontStyle: 'italic', marginTop: 2 },

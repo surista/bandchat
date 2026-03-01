@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import {
   View,
   Text,
+  Image,
   TextInput,
   ScrollView,
   TouchableOpacity,
@@ -13,11 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
-
-function getInitial(name) {
-  return (name || '?').charAt(0).toUpperCase();
-}
 
 export default function EditProfileScreen({ navigation }) {
   const { user, updateUser } = useAuth();
@@ -90,6 +88,8 @@ export default function EditProfileScreen({ navigation }) {
           <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
             {uploadingAvatar ? (
               <ActivityIndicator color="#ffffff" />
+            ) : user?.avatarUrl ? (
+              <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} />
             ) : (
               <Text style={styles.avatarText}>{getInitial(user?.displayName)}</Text>
             )}
@@ -166,6 +166,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarText: { color: '#ffffff', fontSize: 36, fontWeight: '700' },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 48 },
   cameraOverlay: {
     position: 'absolute',
     bottom: 0,

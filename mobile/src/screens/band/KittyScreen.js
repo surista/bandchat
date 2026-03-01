@@ -17,6 +17,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import ActionSheet from '../../components/ActionSheet';
+import formatDate from '../../utils/formatDate';
 import api from '../../services/api';
 
 const TRANSACTION_TYPES = [
@@ -57,12 +59,6 @@ function getCurrencySymbol(code) {
 function formatAmount(amount, currency) {
   const sym = getCurrencySymbol(currency);
   return `${sym}${Math.abs(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function formatMonth(dateStr) {
@@ -531,39 +527,27 @@ export default function KittyScreen({ navigation, route }) {
       />
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => { setShowActions(false); setSelectedTx(null); }}>
-        <TouchableOpacity style={styles.actionOverlay} activeOpacity={1} onPress={() => { setShowActions(false); setSelectedTx(null); }} accessibilityRole="button" accessibilityLabel="Close action sheet">
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
-            <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-              {selectedTx?.description}
-            </Text>
-            <TouchableOpacity
-              style={styles.actionItem}
-              onPress={() => {
-                setShowActions(false);
-                setEditingTx(selectedTx);
-                setTxType(selectedTx.type);
-                setTxAmount(String(selectedTx.amount));
-                setTxDescription(selectedTx.description || '');
-                setTxCategory(selectedTx.category || '');
-                setShowForm(true);
-                setSelectedTx(null);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Edit transaction"
-            >
-              <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem} onPress={handleDeleteTransaction} accessibilityRole="button" accessibilityLabel="Delete transaction">
-              <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionItem, styles.actionCancel]} onPress={() => { setShowActions(false); setSelectedTx(null); }} accessibilityRole="button" accessibilityLabel="Cancel">
-              <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      <ActionSheet
+        visible={showActions}
+        title={selectedTx?.description}
+        actions={[
+          {
+            label: 'Edit',
+            onPress: () => {
+              setShowActions(false);
+              setEditingTx(selectedTx);
+              setTxType(selectedTx.type);
+              setTxAmount(String(selectedTx.amount));
+              setTxDescription(selectedTx.description || '');
+              setTxCategory(selectedTx.category || '');
+              setShowForm(true);
+              setSelectedTx(null);
+            },
+          },
+          { label: 'Delete', destructive: true, onPress: handleDeleteTransaction },
+        ]}
+        onClose={() => { setShowActions(false); setSelectedTx(null); }}
+      />
 
       {/* Settings Modal */}
       <Modal visible={showSettings} transparent animationType="fade" onRequestClose={() => setShowSettings(false)}>
@@ -658,14 +642,6 @@ const styles = StyleSheet.create({
   pickerTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
   pickerOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 12, borderRadius: 8 },
   pickerOptionText: { fontSize: 15, flex: 1 },
-  // Action sheet
-  actionOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  actionSheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingHorizontal: 16, paddingBottom: 40, paddingTop: 12 },
-  actionHandle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
-  actionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 16, textAlign: 'center' },
-  actionItem: { paddingVertical: 16, alignItems: 'center' },
-  actionText: { fontSize: 17 },
-  actionCancel: { marginTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.1)' },
   // Settings
   settingsOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 24 },
   settingsContent: { borderRadius: 12, padding: 24 },

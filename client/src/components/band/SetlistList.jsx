@@ -18,32 +18,32 @@ function SetlistCard({ setlist, onTap, onEdit, onDuplicate, onDelete, onContextM
 
   return (
     <div
-      className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors border border-gray-700 cursor-pointer group"
+      className="bg-[var(--color-bg-secondary)] rounded-lg p-4 hover:bg-[var(--color-bg-tertiary)] transition-colors border border-[var(--color-border)] cursor-pointer group"
       {...longPress}
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1 min-w-0">
-          <h3 className="text-white font-medium truncate">{setlist.name}</h3>
+          <h3 className="text-[var(--color-text-primary)] font-medium truncate">{setlist.name}</h3>
           {(setlist.performedAt || setlist.venue) && (
-            <p className="text-gray-500 text-xs truncate">
+            <p className="text-[var(--color-text-muted)] text-xs truncate">
               {setlist.performedAt && new Date(setlist.performedAt).toLocaleDateString()}
               {setlist.performedAt && setlist.venue && ' · '}
               {setlist.venue}
             </p>
           )}
           {setlist.description && (
-            <p className="text-gray-400 text-sm truncate">{setlist.description}</p>
+            <p className="text-[var(--color-text-muted)] text-sm truncate">{setlist.description}</p>
           )}
         </div>
         <div className="hidden sm:flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="p-1 text-gray-400 hover:text-white" title="Edit">✏️</button>
-          <button onClick={(e) => { e.stopPropagation(); onDuplicate(); }} className="p-1 text-gray-400 hover:text-blue-400" title="Copy">📋</button>
-          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1 text-gray-400 hover:text-red-400" title="Delete">🗑️</button>
+          <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]" title="Edit">✏️</button>
+          <button onClick={(e) => { e.stopPropagation(); onDuplicate(); }} className="p-1 text-[var(--color-text-muted)] hover:text-blue-400" title="Copy">📋</button>
+          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1 text-[var(--color-text-muted)] hover:text-red-400" title="Delete">🗑️</button>
         </div>
         <div className="relative sm:hidden ml-2">
           <button
             onClick={(e) => { e.stopPropagation(); setShowMobileMenu(!showMobileMenu); }}
-            className="p-1 text-gray-400 hover:text-white text-lg"
+            className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-lg"
             aria-label="More actions"
           >
             ...
@@ -51,22 +51,22 @@ function SetlistCard({ setlist, onTap, onEdit, onDuplicate, onDelete, onContextM
           {showMobileMenu && (
             <>
               <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); }} />
-              <div className="absolute right-0 top-full mt-1 bg-gray-800 rounded-lg shadow-xl border border-gray-700 py-1 z-50 min-w-[140px]">
+              <div className="absolute right-0 top-full mt-1 bg-[var(--color-bg-secondary)] rounded-lg shadow-xl border border-[var(--color-border)] py-1 z-50 min-w-[140px]">
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onEdit(); }}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+                  className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]"
                 >
                   ✏️ Edit
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onDuplicate(); }}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-blue-300"
+                  className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-blue-300"
                 >
                   📋 Copy
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onDelete(); }}
-                  className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-gray-700 hover:text-red-300"
+                  className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-[var(--color-bg-tertiary)] hover:text-red-300"
                 >
                   🗑️ Delete
                 </button>
@@ -99,7 +99,7 @@ function SetlistCard({ setlist, onTap, onEdit, onDuplicate, onDelete, onContextM
           </span>
         )}
         {setlist.songs?.length > 0 && (
-          <span className="px-2 py-1 bg-gray-700 text-gray-300 rounded">
+          <span className="px-2 py-1 bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] rounded">
             {calculateDuration(setlist.songs)}
           </span>
         )}
@@ -120,7 +120,7 @@ function SetlistCard({ setlist, onTap, onEdit, onDuplicate, onDelete, onContextM
             }
             songNum++;
             return (
-              <div key={ss.id} className="text-sm text-gray-400 truncate">
+              <div key={ss.id} className="text-sm text-[var(--color-text-muted)] truncate">
                 {songNum}. {ss.song?.title}
               </div>
             );
@@ -129,7 +129,7 @@ function SetlistCard({ setlist, onTap, onEdit, onDuplicate, onDelete, onContextM
         {(() => {
           const actualSongs = setlist.songs?.filter(s => s.type !== 'SET_BREAK' && s.type !== 'MC') || [];
           return actualSongs.length > 3 && (
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-[var(--color-text-muted)]">
               +{actualSongs.length - 3} more...
             </div>
           );
@@ -137,7 +137,7 @@ function SetlistCard({ setlist, onTap, onEdit, onDuplicate, onDelete, onContextM
       </div>
 
       {setlist._count?.gigs > 0 && (
-        <div className="mt-3 pt-3 border-t border-gray-700 text-xs text-gray-500">
+        <div className="mt-3 pt-3 border-t border-[var(--color-border)] text-xs text-[var(--color-text-muted)]">
           Used in {setlist._count.gigs} gig{setlist._count.gigs !== 1 ? 's' : ''}
         </div>
       )}
@@ -745,9 +745,9 @@ function SetlistList({ workspaceId, workspaceName }) {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex-shrink-0 p-4 border-b border-gray-700">
+      <div className="flex-shrink-0 p-4 border-b border-[var(--color-border)]">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">Setlists</h2>
+          <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Setlists</h2>
           <div className="flex gap-2">
             <button
               onClick={() => setShowImportModal(true)}
@@ -774,7 +774,7 @@ function SetlistList({ workspaceId, workspaceName }) {
         )}
 
         {setlists.length === 0 ? (
-          <div className="text-center text-gray-400 py-12">
+          <div className="text-center text-[var(--color-text-muted)] py-12">
             No setlists yet. Create your first setlist!
           </div>
         ) : (
@@ -1097,14 +1097,14 @@ function SetlistList({ workspaceId, workspaceName }) {
           onClick={() => setViewingSetlist(null)}
         >
           <div
-            className="bg-gray-800 rounded-xl w-full max-w-2xl max-h-modal overflow-hidden border border-gray-700 shadow-2xl"
+            className="bg-[var(--color-bg-secondary)] rounded-xl w-full max-w-2xl max-h-modal overflow-hidden border border-[var(--color-border)] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+            <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-bold text-white">{viewingSetlist.name}</h3>
+                <h3 className="text-xl font-bold text-[var(--color-text-primary)]">{viewingSetlist.name}</h3>
                 {(viewingSetlist.performedAt || viewingSetlist.venue || viewingSetlist.startTime) && (
-                  <p className="text-gray-500 text-sm">
+                  <p className="text-[var(--color-text-muted)] text-sm">
                     {viewingSetlist.performedAt && new Date(viewingSetlist.performedAt).toLocaleDateString()}
                     {viewingSetlist.startTime && (
                       <span className="text-cyan-400"> at {formatTime12h(viewingSetlist.startTime)}</span>
@@ -1114,7 +1114,7 @@ function SetlistList({ workspaceId, workspaceName }) {
                   </p>
                 )}
                 {viewingSetlist.description && (
-                  <p className="text-gray-400 text-sm">{viewingSetlist.description}</p>
+                  <p className="text-[var(--color-text-muted)] text-sm">{viewingSetlist.description}</p>
                 )}
               </div>
               <div className="flex items-center gap-2">
@@ -1143,7 +1143,7 @@ function SetlistList({ workspaceId, workspaceName }) {
                 </button>
                 <button
                   onClick={() => setViewingSetlist(null)}
-                  className="text-gray-400 hover:text-white text-2xl leading-none"
+                  className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl leading-none"
                 >
                   &times;
                 </button>
@@ -1166,7 +1166,7 @@ function SetlistList({ workspaceId, workspaceName }) {
                           {setBreaks.length} sets
                         </span>
                       )}
-                      <span className="px-2 py-1 bg-gray-700 text-gray-300 rounded">
+                      <span className="px-2 py-1 bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] rounded">
                         {calculateDuration(viewingSetlist.songs || [])}
                       </span>
                     </>
@@ -1190,7 +1190,7 @@ function SetlistList({ workspaceId, workspaceName }) {
                     if (item.type === 'MC') {
                       return (
                         <div key={item.id} className="flex items-center gap-3 py-2 text-yellow-400">
-                          <span className="w-8 text-right text-gray-500">•</span>
+                          <span className="w-8 text-right text-[var(--color-text-muted)]">•</span>
                           <span>🎤 {item.label || 'MC'}</span>
                           <span className="text-yellow-600 text-sm ml-auto">
                             {item.duration ? `${Math.floor(item.duration / 60)}:${String(item.duration % 60).padStart(2, '0')}` : '1:00'}
@@ -1201,15 +1201,15 @@ function SetlistList({ workspaceId, workspaceName }) {
                     songNum++;
                     const song = item.song;
                     return (
-                      <div key={item.id} className="flex items-center gap-3 py-2 hover:bg-gray-700/50 rounded px-2 -mx-2">
-                        <span className="w-8 text-right text-gray-500">{songNum}.</span>
+                      <div key={item.id} className="flex items-center gap-3 py-2 hover:bg-[var(--color-bg-tertiary)]/50 rounded px-2 -mx-2">
+                        <span className="w-8 text-right text-[var(--color-text-muted)]">{songNum}.</span>
                         <div className="flex-1 min-w-0">
-                          <div className="text-white truncate">{song?.title || 'Unknown'}</div>
+                          <div className="text-[var(--color-text-primary)] truncate">{song?.title || 'Unknown'}</div>
                           {song?.artist && (
-                            <div className="text-gray-400 text-sm truncate">{song.artist}</div>
+                            <div className="text-[var(--color-text-muted)] text-sm truncate">{song.artist}</div>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-400">
+                        <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
                           {song?.key && (
                             <span className="px-1.5 py-0.5 bg-purple-900/50 rounded">{song.key}</span>
                           )}
@@ -1328,7 +1328,7 @@ function SetlistList({ workspaceId, workspaceName }) {
               />
               <div className="flex gap-3 justify-end">
                 <button onClick={() => { setDuplicateSetlistId(null); setDuplicateName(''); }} className="btn btn-secondary">Cancel</button>
-                <button onClick={handleDuplicateSetlist} disabled={!duplicateName.trim()} className="btn bg-green-600 hover:bg-green-700 text-white disabled:opacity-50">Duplicate</button>
+                <button onClick={handleDuplicateSetlist} disabled={!duplicateName.trim()} className="btn bg-green-600 hover:bg-green-700 text-white">Duplicate</button>
               </div>
             </div>
           </div>

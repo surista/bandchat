@@ -34,7 +34,14 @@
   --color-bg-tertiary: #374151;
   --color-text-primary: #ffffff;
   --color-text-secondary: #9ca3af;
+  --color-text-muted: #6b7280;
   --color-border: #374151;
+  /* Z-index scale */
+  --z-dropdown: 30;
+  --z-modal: 50;
+  --z-skip: 9999;
+  --z-context: 10000;
+  --z-toast: 10100;
 }
 
 * {
@@ -211,6 +218,11 @@ input:focus, textarea:focus {
   opacity: 0.85;
 }
 
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .btn-primary {
   background-color: var(--color-primary);
   @apply text-white shadow-sm;
@@ -228,6 +240,10 @@ input:focus, textarea:focus {
 
 .btn-secondary:hover {
   @apply bg-gray-500;
+}
+
+.btn-blue {
+  @apply bg-blue-600 hover:bg-blue-700 text-white;
 }
 
 .btn-danger {
@@ -316,10 +332,6 @@ input:focus, textarea:focus {
   max-height: 90dvh; /* Dynamic viewport height - better for mobile */
 }
 
-/* iOS standalone mode adjustments */
-@media (display-mode: standalone) {
-}
-
 /* Smooth view transitions for native feel */
 @media (prefers-reduced-motion: no-preference) {
   .channel-item,
@@ -353,6 +365,9 @@ input:focus, textarea:focus {
   --color-modal-card: #f9fafb;
   --color-modal-border: #e5e7eb;
   --color-modal-input: #f3f4f6;
+  scrollbar-color: rgba(0,0,0,0.2) transparent;
+}
+[data-mode="light"] * {
   scrollbar-color: rgba(0,0,0,0.2) transparent;
 }
 [data-mode="light"] ::-webkit-scrollbar-thumb {

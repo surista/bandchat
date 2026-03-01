@@ -84,6 +84,10 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       return res.status(400).json({ error: 'At least 2 options are required' });
     }
 
+    if (options.length > 20) {
+      return res.status(400).json({ error: 'Maximum 20 options allowed' });
+    }
+
     const poll = await prisma.poll.create({
       data: {
         question,

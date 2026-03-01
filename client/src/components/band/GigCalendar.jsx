@@ -19,7 +19,7 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
 
   return (
     <div
-      className={`bg-gray-800 rounded-lg p-4 group ${gig.isExternal ? 'border-2 border-dashed border-gray-600' : 'border border-gray-700'}`}
+      className={`bg-[var(--color-bg-secondary)] rounded-lg p-4 group ${gig.isExternal ? 'border-2 border-dashed border-[var(--color-border)]' : 'border border-[var(--color-border)]'}`}
       {...longPress}
     >
       <div className="flex items-start gap-4">
@@ -27,17 +27,17 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
         <div className="flex-1">
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="text-white font-medium">
+              <h3 className="text-[var(--color-text-primary)] font-medium">
                 {gig.isLocked && <span className="mr-1">🔒</span>}
                 {gig.isPersonal && <span className="mr-1">👤</span>}
                 {gig.title}
                 {gig.isExternal && (
-                  <span className="ml-2 text-xs text-gray-400 font-normal">
+                  <span className="ml-2 text-xs text-[var(--color-text-muted)] font-normal">
                     ({gig.workspace?.name || 'Other band'})
                   </span>
                 )}
               </h3>
-              <p className="text-gray-400 text-sm">
+              <p className="text-[var(--color-text-muted)] text-sm">
                 {format(new Date(gig.date), 'EEEE, MMMM d, yyyy')} {formatTimeRange(gig.date, gig.endDate)}
               </p>
             </div>
@@ -49,7 +49,7 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
               <div className="relative sm:hidden">
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowMobileMenu(!showMobileMenu); }}
-                  className="p-1 text-gray-400 hover:text-white text-lg"
+                  className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-lg"
                   aria-label="More actions"
                 >
                   ...
@@ -57,7 +57,7 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
                 {showMobileMenu && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); }} />
-                    <div className="absolute right-0 top-full mt-1 bg-gray-800 rounded-lg shadow-xl border border-gray-700 py-1 z-50 min-w-[160px]">
+                    <div className="absolute right-0 top-full mt-1 bg-[var(--color-bg-secondary)] rounded-lg shadow-xl border border-[var(--color-border)] py-1 z-50 min-w-[160px]">
                       <a
                         href={getGoogleCalendarUrl(gig)}
                         target="_blank"
@@ -626,9 +626,9 @@ function GigCalendar({ workspaceId, workspace }) {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex-shrink-0 p-4 border-b border-gray-700">
+      <div className="flex-shrink-0 p-4 border-b border-[var(--color-border)]">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-white">Calendar</h2>
+          <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Calendar</h2>
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
               <input
@@ -643,7 +643,7 @@ function GigCalendar({ workspaceId, workspace }) {
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+              className="px-3 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] text-sm"
             >
               <option value="">All Events</option>
               <option value="GIG">Gigs</option>
@@ -651,16 +651,16 @@ function GigCalendar({ workspaceId, workspace }) {
               <option value="RECORDING">Recording</option>
               <option value="OTHER">Other</option>
             </select>
-            <div className="flex bg-gray-700 rounded overflow-hidden">
+            <div className="flex bg-[var(--color-bg-tertiary)] rounded overflow-hidden">
               <button
                 onClick={() => setView('calendar')}
-                className={`px-3 py-2 text-sm ${view === 'calendar' ? 'bg-slack-purple text-white' : 'text-gray-300'}`}
+                className={`px-3 py-2 text-sm ${view === 'calendar' ? 'bg-slack-purple text-white' : 'text-[var(--color-text-secondary)]'}`}
               >
                 Calendar
               </button>
               <button
                 onClick={() => setView('list')}
-                className={`px-3 py-2 text-sm ${view === 'list' ? 'bg-slack-purple text-white' : 'text-gray-300'}`}
+                className={`px-3 py-2 text-sm ${view === 'list' ? 'bg-slack-purple text-white' : 'text-[var(--color-text-secondary)]'}`}
               >
                 List
               </button>
@@ -717,7 +717,7 @@ function GigCalendar({ workspaceId, workspace }) {
 
         {view === 'calendar' ? (
           /* Calendar View */
-          <div ref={calendarContainerRef} className="bg-gray-800 rounded-lg overflow-hidden relative">
+          <div ref={calendarContainerRef} className="bg-[var(--color-bg-secondary)] rounded-lg overflow-hidden relative">
             {/* Edge zone indicators */}
             {draggingGig && edgeZone === 'left' && (
               <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-blue-500/30 to-transparent pointer-events-none z-10 flex items-center justify-start pl-2">
@@ -730,9 +730,9 @@ function GigCalendar({ workspaceId, workspace }) {
               </div>
             )}
             {/* Day Headers */}
-            <div className="grid grid-cols-7 bg-gray-700">
+            <div className="grid grid-cols-7 bg-[var(--color-bg-tertiary)]">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <div key={day} className="p-2 text-center text-gray-400 text-sm font-medium">
+                <div key={day} className="p-2 text-center text-[var(--color-text-muted)] text-sm font-medium">
                   {day}
                 </div>
               ))}
@@ -759,7 +759,7 @@ function GigCalendar({ workspaceId, workspace }) {
                     onDragOver={(e) => handleDragOver(e, day)}
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(e, day)}
-                    className={`p-2 min-h-[100px] border-t border-gray-700 cursor-pointer hover:bg-gray-700/50 transition-colors ${
+                    className={`p-2 min-h-[100px] border-t border-[var(--color-border)] cursor-pointer hover:bg-[var(--color-bg-tertiary)]/50 transition-colors ${
                       !isCurrentMonth ? 'bg-gray-900/70' : ''
                     } ${isToday(day) ? 'bg-blue-900/20' : ''} ${
                       isDropTarget ? 'bg-green-900/40 ring-2 ring-green-500 ring-inset' : ''
@@ -876,9 +876,9 @@ function GigCalendar({ workspaceId, workspace }) {
       {/* Move or Copy Dialog */}
       {showMoveOrCopy && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-gray-800 rounded-lg p-6 w-full max-w-sm border border-gray-700">
-            <h3 className="text-xl font-bold text-white mb-2">Move or Copy?</h3>
-            <p className="text-gray-400 mb-4">
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-6 w-full max-w-sm border border-[var(--color-border)]">
+            <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">Move or Copy?</h3>
+            <p className="text-[var(--color-text-muted)] mb-4">
               "{showMoveOrCopy.gig.title}" → {format(showMoveOrCopy.targetDate, 'MMM d, yyyy')}
             </p>
             <div className="flex gap-3">
@@ -896,7 +896,7 @@ function GigCalendar({ workspaceId, workspace }) {
               </button>
               <button
                 onClick={() => setShowMoveOrCopy(null)}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded font-medium"
+                className="px-4 py-2 bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-border)] text-[var(--color-text-secondary)] rounded font-medium"
               >
                 Cancel
               </button>

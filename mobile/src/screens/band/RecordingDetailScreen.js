@@ -16,13 +16,8 @@ import {
 import { Audio, Video, ResizeMode } from 'expo-av';
 import * as DocumentPicker from 'expo-document-picker';
 import { useTheme } from '../../context/ThemeContext';
+import formatDate from '../../utils/formatDate';
 import api from '../../services/api';
-
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-}
 
 function TypeBadge({ type }) {
   const isAudio = type === 'audio';

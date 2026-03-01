@@ -463,15 +463,15 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-800 min-h-0">
+    <div className="flex-1 flex flex-col bg-[var(--color-bg-secondary)] min-h-0">
       {/* Channel Header */}
-      <div className="h-14 border-b border-gray-700 px-4 flex items-center shrink-0">
+      <div className="h-14 border-b border-[var(--color-border)] px-4 flex items-center shrink-0">
         {channel.isDirect ? (
           <>
-            <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white font-medium mr-2">
+            <div className="w-8 h-8 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center text-[var(--color-text-primary)] font-medium mr-2">
               {channel.otherMembers?.[0]?.displayName?.charAt(0).toUpperCase() || '?'}
             </div>
-            <h2 className="text-white font-semibold">
+            <h2 className="text-[var(--color-text-primary)] font-semibold">
               {channel.otherMembers?.map(m => m.displayName).join(', ') || 'Direct Message'}
             </h2>
           </>
@@ -480,7 +480,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
             <span className="text-gray-400 mr-2">
               {channel.isPrivate ? '🔒' : '#'}
             </span>
-            <h2 className="text-white font-semibold">{channel.name}</h2>
+            <h2 className="text-[var(--color-text-primary)] font-semibold">{channel.name}</h2>
             {channel.description && (
               <span className="ml-4 text-gray-400 text-sm truncate hidden md:inline">
                 {channel.description}

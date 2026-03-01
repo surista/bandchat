@@ -78,7 +78,7 @@ function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDispla
           ? 'bg-blue-900/40 hover:bg-blue-900/60 border-l-4 border-blue-500'
           : item.type === 'MC'
           ? 'bg-yellow-900/30 hover:bg-yellow-900/50'
-          : 'bg-gray-900 hover:bg-gray-800'
+          : 'bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-secondary)]'
       }`}
     >
       {/* Drag handle and move buttons */}
@@ -86,7 +86,7 @@ function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDispla
         <button
           onClick={() => onMove(index, -1)}
           disabled={index === 0}
-          className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-white hover:bg-gray-700 disabled:opacity-30 rounded touch-manipulation"
+          className="w-8 h-8 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] disabled:opacity-30 rounded touch-manipulation"
           aria-label="Move up"
         >
           ▲
@@ -94,7 +94,7 @@ function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDispla
         <button
           onClick={() => onMove(index, 1)}
           disabled={index === totalItems - 1}
-          className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-white hover:bg-gray-700 disabled:opacity-30 rounded touch-manipulation"
+          className="w-8 h-8 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] disabled:opacity-30 rounded touch-manipulation"
           aria-label="Move down"
         >
           ▼
@@ -108,10 +108,10 @@ function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDispla
         className="cursor-grab active:cursor-grabbing p-2 -m-2 touch-manipulation"
         aria-label="Drag to reorder"
       >
-        <span className="text-gray-500 select-none">⋮⋮</span>
+        <span className="text-[var(--color-text-muted)] select-none">⋮⋮</span>
       </div>
 
-      <span className="text-gray-500 w-6 text-right">{index + 1}.</span>
+      <span className="text-[var(--color-text-muted)] w-6 text-right">{index + 1}.</span>
 
       {item.type === 'SET_BREAK' ? (
         <div className="flex-1 min-w-0 flex items-center gap-3">
@@ -151,10 +151,10 @@ function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDispla
               {getSongDisplayName(item.song)}
             </div>
             {!useShortNames && item.song?.artist && (
-              <div className="text-gray-400 text-sm truncate">{item.song.artist}</div>
+              <div className="text-[var(--color-text-muted)] text-sm truncate">{item.song.artist}</div>
             )}
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-400">
+          <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
             {item.song?.key && (
               <span className="px-1.5 py-0.5 bg-purple-900/50 rounded">{item.song.key}</span>
             )}
@@ -167,7 +167,7 @@ function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDispla
 
       <button
         onClick={() => onRemove(item)}
-        className="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-gray-700 rounded touch-manipulation"
+        className="w-10 h-10 flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-400 hover:bg-[var(--color-bg-tertiary)] rounded touch-manipulation"
         aria-label="Remove item"
       >
         ✕
@@ -202,7 +202,7 @@ function SetColumn({
   const songsMins = Math.ceil(songsDuration / 60);
 
   return (
-    <div className="flex flex-col bg-gray-850 rounded-lg overflow-hidden border border-gray-700">
+    <div className="flex flex-col bg-[var(--color-bg-secondary)] rounded-lg overflow-hidden border border-[var(--color-border)]">
       {/* Set Header */}
       <div className="p-3 bg-blue-900/30 border-b border-blue-800/50">
         <div className="flex items-center justify-between">
@@ -217,7 +217,7 @@ function SetColumn({
             )}
           </div>
           <div className="text-right text-xs">
-            <div className="text-gray-300">
+            <div className="text-[var(--color-text-secondary)]">
               {setSongCount} song{setSongCount !== 1 ? 's' : ''}
               {setMcCount > 0 && ` + ${setMcCount} MC`}
             </div>
@@ -231,7 +231,7 @@ function SetColumn({
       {/* Set Items */}
       <div className="flex-1 overflow-y-auto overscroll-contain min-h-[100px]">
         {set.items.length === 0 ? (
-          <div className="text-center text-gray-500 py-8 text-sm">
+          <div className="text-center text-[var(--color-text-muted)] py-8 text-sm">
             <p>No songs in this set</p>
             <p className="text-xs mt-1">Drag songs here</p>
           </div>
@@ -317,7 +317,7 @@ function SetColumnItem({
       className={`flex items-center gap-2 p-2 ${
         item.type === 'MC'
           ? 'bg-yellow-900/30 hover:bg-yellow-900/50'
-          : 'bg-gray-900 hover:bg-gray-800'
+          : 'bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-secondary)]'
       }`}
     >
       {/* Move buttons */}
@@ -345,10 +345,10 @@ function SetColumnItem({
         className="cursor-grab active:cursor-grabbing p-1 touch-manipulation"
         aria-label="Drag to reorder"
       >
-        <span className="text-gray-500 select-none text-sm">⋮⋮</span>
+        <span className="text-[var(--color-text-muted)] select-none text-sm">⋮⋮</span>
       </div>
 
-      <span className="text-gray-500 w-5 text-right text-sm">{localIndex + 1}.</span>
+      <span className="text-[var(--color-text-muted)] w-5 text-right text-sm">{localIndex + 1}.</span>
 
       {item.type === 'MC' ? (
         <>
@@ -374,7 +374,7 @@ function SetColumnItem({
               <div className="text-gray-400 text-xs truncate">{item.song.artist}</div>
             )}
           </div>
-          <div className="flex items-center gap-1 text-xs text-gray-400">
+          <div className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
             {item.song?.key && (
               <span className="px-1 py-0.5 bg-purple-900/50 rounded text-xs">{item.song.key}</span>
             )}
@@ -387,7 +387,7 @@ function SetColumnItem({
 
       <button
         onClick={() => onRemove(item)}
-        className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-gray-700 rounded touch-manipulation"
+        className="w-8 h-8 flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-400 hover:bg-[var(--color-bg-tertiary)] rounded touch-manipulation"
         aria-label="Remove item"
       >
         ✕
@@ -916,19 +916,19 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex-shrink-0 p-4 border-b border-gray-700">
+      <div className="flex-shrink-0 p-4 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded touch-manipulation"
+            className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] rounded touch-manipulation"
             aria-label="Go back"
           >
             ← Back
           </button>
           <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-bold text-white truncate">{setlist.name}</h2>
+            <h2 className="text-xl font-bold text-[var(--color-text-primary)] truncate">{setlist.name}</h2>
             {setlist.description && (
-              <p className="text-gray-400 text-sm truncate">{setlist.description}</p>
+              <p className="text-[var(--color-text-muted)] text-sm truncate">{setlist.description}</p>
             )}
           </div>
           <div className="hidden sm:flex items-center gap-4">
@@ -944,24 +944,24 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
               className={`px-3 py-2 rounded text-sm touch-manipulation ${
                 useShortNames
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]'
               }`}
               title="Toggle between full song titles and short names"
             >
               {useShortNames ? 'Short Names' : 'Full Titles'}
             </button>
             <div className="text-right text-sm">
-              <div className="text-white font-medium">
+              <div className="text-[var(--color-text-primary)] font-medium">
                 {songCount} song{songCount !== 1 ? 's' : ''}
                 {mcCount > 0 && ` + ${mcCount} MC`}
               </div>
-              <div className="text-gray-400">{durationMins}:{String(durationSecs).padStart(2, '0')}</div>
+              <div className="text-[var(--color-text-muted)]">{durationMins}:{String(durationSecs).padStart(2, '0')}</div>
             </div>
           </div>
           <div className="relative sm:hidden">
             <button
               onClick={(e) => { e.stopPropagation(); setShowMobileMenu(!showMobileMenu); }}
-              className="p-1 text-gray-400 hover:text-white text-lg"
+              className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-lg"
               aria-label="More actions"
             >
               ...
@@ -969,20 +969,20 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
             {showMobileMenu && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowMobileMenu(false)} />
-                <div className="absolute right-0 top-full mt-1 bg-gray-800 rounded-lg shadow-xl border border-gray-700 py-1 z-50 min-w-[180px]">
+                <div className="absolute right-0 top-full mt-1 bg-[var(--color-bg-secondary)] rounded-lg shadow-xl border border-[var(--color-border)] py-1 z-50 min-w-[180px]">
                   <button
                     onClick={() => { setShowMobileMenu(false); handlePrint(); }}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+                    className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]"
                   >
                     🖨️ Print
                   </button>
                   <button
                     onClick={() => { setShowMobileMenu(false); toggleShortNames(); }}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+                    className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]"
                   >
                     {useShortNames ? '📝 Full Titles' : '📝 Short Names'}
                   </button>
-                  <div className="px-4 py-2 text-sm text-gray-400 border-t border-gray-700">
+                  <div className="px-4 py-2 text-sm text-[var(--color-text-muted)] border-t border-[var(--color-border)]">
                     {songCount} song{songCount !== 1 ? 's' : ''}
                     {mcCount > 0 && ` + ${mcCount} MC`}
                     {' · '}{durationMins}:{String(durationSecs).padStart(2, '0')}
@@ -994,14 +994,14 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
         </div>
 
         {/* Timing Row */}
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-700">
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--color-border)]">
           <div className="flex items-center gap-2">
-            <label className="text-gray-400 text-sm">Start</label>
+            <label className="text-[var(--color-text-muted)] text-sm">Start</label>
             <input
               type="time"
               value={startTime}
               onChange={(e) => handleStartTimeChange(e.target.value)}
-              className="px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+              className="px-2 py-1 bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] text-sm"
             />
           </div>
           {startTime && endTime && (
@@ -1009,7 +1009,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
               <span className="text-emerald-300 font-medium">
                 {formatTime12h(startTime)} – {formatTime12h(endTime)}
               </span>
-              <span className="text-gray-400 ml-2">
+              <span className="text-[var(--color-text-muted)] ml-2">
                 ({durationMins}:{String(durationSecs).padStart(2, '0')})
               </span>
             </div>
@@ -1020,10 +1020,10 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
       <div ref={containerRef} className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Setlist Items */}
         <div
-          className="flex-1 flex flex-col border-b md:border-b-0 border-gray-700 min-w-0"
+          className="flex-1 flex flex-col border-b md:border-b-0 border-[var(--color-border)] min-w-0"
           style={{ flex: `0 0 ${setlistPanelWidth}%` }}
         >
-          <div className="p-3 bg-gray-800 text-sm text-gray-400 uppercase tracking-wide flex items-center justify-between">
+          <div className="p-3 bg-[var(--color-bg-secondary)] text-sm text-[var(--color-text-muted)] uppercase tracking-wide flex items-center justify-between">
             <span>Setlist Order {saving && '(saving...)'}</span>
             <div className="flex gap-2">
               <button
@@ -1042,7 +1042,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
           </div>
           <div className="flex-1 overflow-y-auto overscroll-contain">
             {setlistItems.length === 0 ? (
-              <div className="text-center text-gray-500 py-12">
+              <div className="text-center text-[var(--color-text-muted)] py-12">
                 <div className="text-4xl mb-3">📋</div>
                 <p>Add songs from below</p>
                 <p className="text-sm mt-1">Drag to reorder or use arrow buttons</p>
@@ -1089,7 +1089,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
                   items={setlistItems.map(item => item.id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  <div className="divide-y divide-gray-700">
+                  <div className="divide-y divide-[var(--color-border)]">
                     {setlistItems.map((item, index) => (
                       <SortableItem
                         key={item.id}
@@ -1113,9 +1113,9 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
 
           {/* Total Time Footer */}
           {setlistItems.length > 0 && (
-            <div className="flex-shrink-0 p-3 bg-gray-900 border-t border-gray-600">
+            <div className="flex-shrink-0 p-3 bg-[var(--color-bg-primary)] border-t border-[var(--color-border)]">
               <div className="flex items-center justify-between">
-                <span className="text-gray-400 text-sm">
+                <span className="text-[var(--color-text-muted)] text-sm">
                   {songCount} song{songCount !== 1 ? 's' : ''}
                   {mcCount > 0 && ` + ${mcCount} MC`}
                 </span>
@@ -1126,7 +1126,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
                     </span>
                   )}
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-400 text-sm">Total:</span>
+                    <span className="text-[var(--color-text-muted)] text-sm">Total:</span>
                     <span className="text-xl font-bold text-emerald-400">
                       {durationMins}:{String(durationSecs).padStart(2, '0')}
                     </span>
@@ -1139,28 +1139,28 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
 
         {/* Resize Handle */}
         <div
-          className="hidden md:flex w-2 bg-gray-700 hover:bg-blue-600 cursor-col-resize items-center justify-center flex-shrink-0 transition-colors"
+          className="hidden md:flex w-2 bg-[var(--color-bg-tertiary)] hover:bg-blue-600 cursor-col-resize items-center justify-center flex-shrink-0 transition-colors"
           onMouseDown={handleResizeStart}
           title="Drag to resize"
         >
-          <div className="w-0.5 h-8 bg-gray-500 rounded"></div>
+          <div className="w-0.5 h-8 bg-[var(--color-text-muted)] rounded"></div>
         </div>
 
         {/* Available Songs */}
         <div className="flex-1 flex flex-col min-h-[200px] md:min-h-0 min-w-[200px]">
-          <div className="p-3 bg-gray-800 space-y-2">
+          <div className="p-3 bg-[var(--color-bg-secondary)] space-y-2">
             <input
               type="text"
               placeholder="Search songs..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 text-sm"
+              className="w-full px-3 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] placeholder-gray-400 text-sm"
               aria-label="Search songs"
             />
             <select
               value={songSortBy}
               onChange={(e) => setSongSortBy(e.target.value)}
-              className="w-full px-2 py-2 bg-gray-700 border border-gray-600 rounded text-white text-sm"
+              className="w-full px-2 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] text-sm"
               aria-label="Sort songs by"
             >
               <option value="title">Sort by Title</option>
@@ -1171,27 +1171,27 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
           </div>
           <div className="flex-1 overflow-y-auto overscroll-contain">
             {filteredAvailable.length === 0 ? (
-              <div className="text-center text-gray-500 py-8 text-sm">
+              <div className="text-center text-[var(--color-text-muted)] py-8 text-sm">
                 {searchQuery ? 'No matching songs' : 'All songs added'}
               </div>
             ) : (
-              <div className="divide-y divide-gray-700">
+              <div className="divide-y divide-[var(--color-border)]">
                 {filteredAvailable.map(song => (
                   <button
                     key={song.id}
                     onClick={() => handleAddSong(song.id)}
-                    className="w-full flex items-center gap-2 p-3 hover:bg-gray-800 active:bg-gray-700 text-left min-h-[52px] touch-manipulation"
+                    className="w-full flex items-center gap-2 p-3 hover:bg-[var(--color-bg-secondary)] active:bg-[var(--color-bg-tertiary)] text-left min-h-[52px] touch-manipulation"
                   >
                     <span className="text-green-500 text-lg w-8 h-8 flex items-center justify-center">+</span>
                     <div className="flex-1 min-w-0">
-                      <div className="text-white text-sm truncate">{song.title}</div>
+                      <div className="text-[var(--color-text-primary)] text-sm truncate">{song.title}</div>
                       {song.artist && (
-                        <div className="text-gray-400 text-xs truncate">{song.artist}</div>
+                        <div className="text-[var(--color-text-muted)] text-xs truncate">{song.artist}</div>
                       )}
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       {song.bpm && (
-                        <span className="text-xs px-1.5 py-0.5 bg-gray-700 text-gray-300 rounded">
+                        <span className="text-xs px-1.5 py-0.5 bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] rounded">
                           {song.bpm}
                         </span>
                       )}
@@ -1201,7 +1201,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
                         </span>
                       )}
                       {song.duration && (
-                        <span className="text-xs text-gray-500 w-10 text-right">
+                        <span className="text-xs text-[var(--color-text-muted)] w-10 text-right">
                           {formatDuration(song.duration)}
                         </span>
                       )}

@@ -96,7 +96,7 @@ function BandMembersList({ workspaceId, workspace }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-400">
+      <div className="flex items-center justify-center h-64 text-[var(--color-text-muted)]">
         Loading band members...
       </div>
     );
@@ -114,13 +114,13 @@ function BandMembersList({ workspaceId, workspace }) {
 
   if (members.all.length === 0) {
     return (
-      <div className="h-full flex flex-col bg-gray-800">
-        <div className="flex-shrink-0 p-4 border-b border-gray-700">
-          <h2 className="text-xl font-bold text-white">Band Members</h2>
-          <p className="text-gray-400 text-sm mt-1">Member history and timeline</p>
+      <div className="h-full flex flex-col bg-[var(--color-bg-secondary)]">
+        <div className="flex-shrink-0 p-4 border-b border-[var(--color-border)]">
+          <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Band Members</h2>
+          <p className="text-[var(--color-text-muted)] text-sm mt-1">Member history and timeline</p>
         </div>
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center py-12 text-gray-400">
+          <div className="text-center py-12 text-[var(--color-text-muted)]">
             <div className="text-6xl mb-4">👥</div>
             <p className="text-lg mb-2">No band members added yet</p>
             <p className="text-sm">Admins can add members in Settings → Band Members</p>
@@ -149,7 +149,7 @@ function BandMembersList({ workspaceId, workspace }) {
           <img
             src={member.imageUrl}
             alt={member.name}
-            className={`${sizeClasses[size]} rounded-full object-cover ${ringClasses[size]} ring-offset-gray-900 ${isCurrent ? 'ring-emerald-500/50' : 'ring-gray-600/50'} transition-all duration-200 hover:ring-emerald-400 hover:scale-105`}
+            className={`${sizeClasses[size]} rounded-full object-cover ${ringClasses[size]} ring-offset-[var(--color-bg-primary)] ${isCurrent ? 'ring-emerald-500/50' : 'ring-gray-600/50'} transition-all duration-200 hover:ring-emerald-400 hover:scale-105`}
           />
           {/* Instrument indicator dot */}
           <div
@@ -188,13 +188,13 @@ function BandMembersList({ workspaceId, workspace }) {
     return (
       <div
         onClick={hasLinkedUser ? handleClick : undefined}
-        className={`bg-gray-900 rounded-lg p-4 border border-gray-700 transition-all duration-200 hover:border-gray-600 hover:bg-gray-900/80 ${!isCurrent ? 'opacity-75 hover:opacity-90' : ''} ${hasLinkedUser ? 'cursor-pointer' : ''}`}
+        className={`bg-[var(--color-bg-primary)] rounded-lg p-4 border border-[var(--color-border)] transition-all duration-200 hover:border-[var(--color-text-muted)] hover:bg-[var(--color-bg-primary)]/80 ${!isCurrent ? 'opacity-75 hover:opacity-90' : ''} ${hasLinkedUser ? 'cursor-pointer' : ''}`}
       >
         <div className="flex items-start gap-3">
           <MemberAvatar member={member} size="md" isCurrent={isCurrent} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h4 className={`font-medium truncate ${hasLinkedUser ? 'text-blue-400 hover:text-blue-300' : 'text-white'}`}>
+              <h4 className={`font-medium truncate ${hasLinkedUser ? 'text-blue-400 hover:text-blue-300' : 'text-[var(--color-text-primary)]'}`}>
                 {member.name}
               </h4>
               {hasLinkedUser && (
@@ -210,30 +210,30 @@ function BandMembersList({ workspaceId, workspace }) {
             <div className="flex flex-wrap gap-1 mt-1">
               {instruments.length > 0 ? (
                 instruments.map((inst, idx) => (
-                  <span key={idx} className="text-gray-400 text-sm">
+                  <span key={idx} className="text-[var(--color-text-muted)] text-sm">
                     {inst}{idx < instruments.length - 1 ? ',' : ''}
                   </span>
                 ))
               ) : (
-                <span className="text-gray-400 text-sm">
+                <span className="text-[var(--color-text-muted)] text-sm">
                   {member.isGuest ? 'Guest musician' : 'Unknown'}
                 </span>
               )}
             </div>
-            {yearRange && !member.isGuest && <p className="text-gray-500 text-xs mt-1">{yearRange}</p>}
+            {yearRange && !member.isGuest && <p className="text-[var(--color-text-muted)] text-xs mt-1">{yearRange}</p>}
           </div>
         </div>
 
         {/* Show stint details if multiple (not for guests) */}
         {!member.isGuest && member.stints && member.stints.length > 1 && (
-          <div className="mt-3 pt-3 border-t border-gray-700 space-y-1">
+          <div className="mt-3 pt-3 border-t border-[var(--color-border)] space-y-1">
             {member.stints.map((stint, idx) => {
               const stintInstruments = stint.instruments || (stint.instrument ? [stint.instrument] : []);
               return (
                 <div key={stint.id || idx} className="flex items-center gap-2 text-xs">
                   <div className={`w-2 h-2 rounded-full ${getInstrumentColor(stintInstruments[0])}`} />
-                  <span className="text-gray-400">{stintInstruments.join(', ')}</span>
-                  <span className="text-gray-500">
+                  <span className="text-[var(--color-text-muted)]">{stintInstruments.join(', ')}</span>
+                  <span className="text-[var(--color-text-muted)]">
                     {formatYearRange(stint.startDate, stint.endDate)}
                   </span>
                 </div>
@@ -243,7 +243,7 @@ function BandMembersList({ workspaceId, workspace }) {
         )}
 
         {member.notes && (
-          <p className="text-gray-500 text-sm mt-3 pt-3 border-t border-gray-700">
+          <p className="text-[var(--color-text-muted)] text-sm mt-3 pt-3 border-t border-[var(--color-border)]">
             {member.notes}
           </p>
         )}
@@ -252,11 +252,11 @@ function BandMembersList({ workspaceId, workspace }) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-800">
+    <div className="h-full flex flex-col bg-[var(--color-bg-secondary)]">
       {/* Header */}
-      <div className="flex-shrink-0 p-4 border-b border-gray-700">
-        <h2 className="text-xl font-bold text-white">Band Members</h2>
-        <p className="text-gray-400 text-sm mt-1">Member history and timeline</p>
+      <div className="flex-shrink-0 p-4 border-b border-[var(--color-border)]">
+        <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Band Members</h2>
+        <p className="text-[var(--color-text-muted)] text-sm mt-1">Member history and timeline</p>
       </div>
 
       {/* Content */}
@@ -264,10 +264,10 @@ function BandMembersList({ workspaceId, workspace }) {
         {/* Timeline */}
         {members.all.length > 0 && (
           <div className="mb-8">
-            <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-3">
+            <h3 className="text-sm font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-3">
               Timeline
             </h3>
-            <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+            <div className="bg-[var(--color-bg-primary)] rounded-lg p-4 overflow-x-auto">
               <BandTimeline
                 members={members.all}
                 onMemberClick={(userId) => setShowProfileUserId(userId)}
@@ -280,7 +280,7 @@ function BandMembersList({ workspaceId, workspace }) {
         {/* Current Members */}
         {members.current.length > 0 && (
           <div className="mb-8">
-            <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-3">
+            <h3 className="text-sm font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-3">
               Current Members ({members.current.length})
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -294,7 +294,7 @@ function BandMembersList({ workspaceId, workspace }) {
         {/* Former Members */}
         {members.former.length > 0 && (
           <div className="mb-8">
-            <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-3">
+            <h3 className="text-sm font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-3">
               Former Members ({members.former.length})
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -308,7 +308,7 @@ function BandMembersList({ workspaceId, workspace }) {
         {/* Guest Musicians */}
         {members.guests && members.guests.length > 0 && (
           <div className="mb-8">
-            <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-3">
+            <h3 className="text-sm font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-3">
               Guest Musicians ({members.guests.length})
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -320,8 +320,8 @@ function BandMembersList({ workspaceId, workspace }) {
         )}
 
         {/* Legend */}
-        <div className="mt-8 pt-4 border-t border-gray-700">
-          <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-3">
+        <div className="mt-8 pt-4 border-t border-[var(--color-border)]">
+          <h3 className="text-sm font-medium text-[var(--color-text-muted)] uppercase tracking-wide mb-3">
             Instrument Colors
           </h3>
           <div className="flex flex-wrap gap-3">
@@ -335,7 +335,7 @@ function BandMembersList({ workspaceId, workspace }) {
             ].map((item) => (
               <div key={item.name} className="flex items-center gap-2">
                 <div className={`w-3 h-3 rounded ${item.color}`} />
-                <span className="text-sm text-gray-400">{item.name}</span>
+                <span className="text-sm text-[var(--color-text-muted)]">{item.name}</span>
               </div>
             ))}
           </div>

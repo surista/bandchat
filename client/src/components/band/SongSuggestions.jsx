@@ -228,7 +228,7 @@ export default function SongSuggestions({ workspaceId }) {
                       href={`https://www.google.com/search?q=${encodeURIComponent(rec.searchTerm + ' cover songs')}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
+                      className="btn btn-blue text-sm"
                     >
                       Search
                     </a>

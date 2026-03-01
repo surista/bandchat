@@ -145,9 +145,10 @@ router.get('/channel/:channelId', authenticate, isChannelMember, async (req, res
   }
 });
 
-// Get thread replies
+// Get thread replies (paginated, max 200 per page)
 router.get('/:messageId/replies', authenticate, async (req, res) => {
   try {
+    const { cursor } = req.query;
     const message = await prisma.message.findUnique({
       where: { id: req.params.messageId },
       include: { channel: true }
@@ -195,11 +196,17 @@ router.get('/:messageId/replies', authenticate, async (req, res) => {
     });
     const blockedIds = blockedUsers.map(b => b.blockedUserId);
 
+    const take = 200;
     const replies = await prisma.message.findMany({
       where: {
         parentId: req.params.messageId,
         ...(blockedIds.length > 0 && { authorId: { notIn: blockedIds } })
       },
+      take: take + 1,
+      ...(cursor && {
+        cursor: { id: cursor },
+        skip: 1
+      }),
       orderBy: { createdAt: 'asc' },
       include: {
         author: {
@@ -214,7 +221,14 @@ router.get('/:messageId/replies', authenticate, async (req, res) => {
       }
     });
 
-    res.json(replies);
+    const hasMore = replies.length > take;
+    const items = hasMore ? replies.slice(0, take) : replies;
+
+    res.json({
+      replies: items,
+      nextCursor: hasMore ? items[items.length - 1].id : null,
+      hasMore
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to get replies' });
   }
@@ -372,11 +386,26 @@ router.put('/:messageId', authenticate, async (req, res) => {
     }
 
     const message = await prisma.message.findUnique({
-      where: { id: req.params.messageId }
+      where: { id: req.params.messageId },
+      include: { channel: { select: { workspaceId: true } } }
     });
 
     if (!message) {
       return res.status(404).json({ error: 'Message not found' });
+    }
+
+    // Verify workspace membership
+    const wsMember = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: message.channel.workspaceId
+        }
+      }
+    });
+
+    if (!wsMember) {
+      return res.status(403).json({ error: 'Not a member of this workspace' });
     }
 
     if (message.authorId !== req.user.id) {
@@ -424,22 +453,25 @@ router.delete('/:messageId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Message not found' });
     }
 
+    // Verify workspace membership first
+    const membership = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: message.channel.workspaceId
+        }
+      }
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a member of this workspace' });
+    }
+
     // Check if user is author or workspace admin
     const isAuthor = message.authorId === req.user.id;
 
-    if (!isAuthor) {
-      const membership = await prisma.workspaceMember.findUnique({
-        where: {
-          userId_workspaceId: {
-            userId: req.user.id,
-            workspaceId: message.channel.workspaceId
-          }
-        }
-      });
-
-      if (!membership || membership.role !== 'ADMIN') {
-        return res.status(403).json({ error: 'Cannot delete this message' });
-      }
+    if (!isAuthor && membership.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Cannot delete this message' });
     }
 
     await prisma.message.delete({
@@ -550,6 +582,10 @@ router.post('/:messageId/reactions', authenticate, async (req, res) => {
 
     if (!emoji || typeof emoji !== 'string') {
       return res.status(400).json({ error: 'Emoji is required' });
+    }
+
+    if (emoji.length > 32) {
+      return res.status(400).json({ error: 'Invalid emoji' });
     }
 
     // Get the message and verify access
@@ -834,6 +870,22 @@ router.get('/channel/:channelId/pins', authenticate, async (req, res) => {
 
     if (!workspaceMember) {
       return res.status(403).json({ error: 'Not a member of this workspace' });
+    }
+
+    // If channel is private, verify the user is a member of the channel
+    if (channel.isPrivate) {
+      const channelMembership = await prisma.channelMember.findUnique({
+        where: {
+          userId_channelId: {
+            userId: req.user.id,
+            channelId: req.params.channelId
+          }
+        }
+      });
+
+      if (!channelMembership) {
+        return res.status(403).json({ error: 'Not a member of this private channel' });
+      }
     }
 
     const pinnedMessages = await prisma.pinnedMessage.findMany({

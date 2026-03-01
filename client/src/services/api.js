@@ -107,7 +107,8 @@ class ApiService {
 
       return this.handleResponse(response);
     } catch (error) {
-      throw new Error('Network error');
+      if (error instanceof TypeError) throw new Error('Network error');
+      throw error;
     }
   }
 

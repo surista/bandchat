@@ -43,6 +43,62 @@ function HighlightedText({ text, query }) {
   );
 }
 
+/** Lookup for mobile header titles per band view */
+const BAND_VIEW_TITLES = {
+  songs: 'Songs',
+  setlists: 'Setlists',
+  calendar: 'Calendar',
+  availability: 'Availability',
+  stats: 'Stats',
+  archive: 'Gig Archive',
+  members: 'Members',
+  contacts: 'Contacts',
+  announcements: 'Announcements',
+  polls: 'Polls',
+  medleys: 'Medleys',
+  timeline: 'Timeline',
+  achievements: 'Achievements',
+  recordings: 'Recordings',
+  suggestions: 'Song Intelligence',
+  kitty: 'Band Kitty',
+  analyzer: 'Audio Analyzer',
+};
+
+/** Lookup for band view components */
+const BAND_VIEW_COMPONENTS = {
+  songs: SongList,
+  setlists: SetlistList,
+  calendar: GigCalendar,
+  availability: AvailabilityCalendar,
+  stats: GigStats,
+  archive: GigArchive,
+  members: BandMembersList,
+  contacts: ContactsList,
+  announcements: AnnouncementsList,
+  polls: PollsList,
+  medleys: MedleyList,
+  timeline: BandTimeline,
+  achievements: Achievements,
+  recordings: RecordingsList,
+  suggestions: SongSuggestions,
+  kitty: BandKitty,
+  analyzer: AudioAnalyzer,
+};
+
+/** Props that need extra data beyond workspaceId */
+const BAND_VIEW_EXTRA_PROPS = {
+  setlists: (ctx) => ({ workspaceName: ctx.workspace?.name }),
+  calendar: (ctx) => ({ workspace: ctx.workspace }),
+  availability: (ctx) => ({ workspace: ctx.workspace }),
+  members: (ctx) => ({ workspace: ctx.workspace }),
+  announcements: (ctx) => ({ workspace: ctx.workspace }),
+  timeline: (ctx) => ({ isAdmin: ctx.isAdmin }),
+  kitty: (ctx) => ({ isAdmin: ctx.isAdmin }),
+};
+
+/** Views that should use bandViewKey as key prop */
+const KEYED_BAND_VIEWS = new Set(['songs', 'setlists', 'members']);
+
 function WorkspaceView() {
   const { workspaceId } = useParams();
   const navigate = useNavigate();
@@ -66,6 +122,7 @@ function WorkspaceView() {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [searchChannelFilter, setSearchChannelFilter] = useState('');
   const [searchAuthorFilter, setSearchAuthorFilter] = useState('');
   const [directMessages, setDirectMessages] = useState([]);
@@ -475,6 +532,7 @@ function WorkspaceView() {
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
+    setSearchLoading(true);
     try {
       const results = await api.searchMessages(
         workspaceId,
@@ -484,7 +542,9 @@ function WorkspaceView() {
       );
       setSearchResults(results);
     } catch (err) {
-      console.error('Search failed:', err);
+      if (import.meta.env.DEV) console.error('Search failed:', err);
+    } finally {
+      setSearchLoading(false);
     }
   };
 
@@ -602,27 +662,12 @@ function WorkspaceView() {
             </svg>
           </button>
           <span className="text-white font-medium truncate flex-1">
-            {activeBandView === 'songs' ? '🎵 Songs' :
-             activeBandView === 'setlists' ? '📋 Setlists' :
-             activeBandView === 'calendar' ? '📅 Calendar' :
-             activeBandView === 'availability' ? '🗓️ Availability' :
-             activeBandView === 'stats' ? '📊 Stats' :
-             activeBandView === 'archive' ? '📸 Gig Archive' :
-             activeBandView === 'members' ? '👥 Members' :
-             activeBandView === 'contacts' ? '📇 Contacts' :
-             activeBandView === 'announcements' ? '📢 Announcements' :
-             activeBandView === 'polls' ? '🗳️ Polls' :
-             activeBandView === 'medleys' ? '🎶 Medleys' :
-             activeBandView === 'timeline' ? '📜 Timeline' :
-             activeBandView === 'achievements' ? '🏆 Achievements' :
-             activeBandView === 'recordings' ? '🎙️ Recordings' :
-             activeBandView === 'suggestions' ? '💡 Song Intelligence' :
-             activeBandView === 'kitty' ? '💰 Band Kitty' :
-             selectedChannel
+            {BAND_VIEW_TITLES[activeBandView] ||
+             (selectedChannel
               ? selectedChannel.isDirect
                 ? selectedChannel.otherMembers?.map(m => m.displayName).join(', ') || 'Direct Message'
                 : `# ${selectedChannel.name}`
-              : workspace.name}
+              : workspace.name)}
           </span>
           <button
             onClick={() => setShowSearch(true)}
@@ -640,41 +685,13 @@ function WorkspaceView() {
           <div className={`flex-1 flex flex-col min-h-0 ${selectedThread ? 'hidden md:flex' : ''}`}>
             {activeBandView ? (
               <Suspense fallback={<div className="flex-1 flex items-center justify-center"><Skeleton type="channel" /></div>}>
-                {activeBandView === 'songs' ? (
-                  <SongList key={bandViewKey} workspaceId={workspaceId} />
-                ) : activeBandView === 'setlists' ? (
-                  <SetlistList key={bandViewKey} workspaceId={workspaceId} workspaceName={workspace?.name} />
-                ) : activeBandView === 'calendar' ? (
-                  <GigCalendar workspaceId={workspaceId} workspace={workspace} />
-                ) : activeBandView === 'availability' ? (
-                  <AvailabilityCalendar workspaceId={workspaceId} workspace={workspace} />
-                ) : activeBandView === 'stats' ? (
-                  <GigStats workspaceId={workspaceId} />
-                ) : activeBandView === 'archive' ? (
-                  <GigArchive workspaceId={workspaceId} />
-                ) : activeBandView === 'members' ? (
-                  <BandMembersList key={bandViewKey} workspaceId={workspaceId} workspace={workspace} />
-                ) : activeBandView === 'contacts' ? (
-                  <ContactsList workspaceId={workspaceId} />
-                ) : activeBandView === 'announcements' ? (
-                  <AnnouncementsList workspaceId={workspaceId} workspace={workspace} />
-                ) : activeBandView === 'polls' ? (
-                  <PollsList workspaceId={workspaceId} />
-                ) : activeBandView === 'medleys' ? (
-                  <MedleyList workspaceId={workspaceId} />
-                ) : activeBandView === 'timeline' ? (
-                  <BandTimeline workspaceId={workspaceId} isAdmin={isAdmin} />
-                ) : activeBandView === 'achievements' ? (
-                  <Achievements workspaceId={workspaceId} />
-                ) : activeBandView === 'recordings' ? (
-                  <RecordingsList workspaceId={workspaceId} />
-                ) : activeBandView === 'suggestions' ? (
-                  <SongSuggestions workspaceId={workspaceId} />
-                ) : activeBandView === 'kitty' ? (
-                  <BandKitty workspaceId={workspaceId} isAdmin={isAdmin} />
-                ) : activeBandView === 'analyzer' ? (
-                  <AudioAnalyzer workspaceId={workspaceId} />
-                ) : null}
+                {(() => {
+                  const BandComponent = BAND_VIEW_COMPONENTS[activeBandView];
+                  if (!BandComponent) return null;
+                  const extraProps = BAND_VIEW_EXTRA_PROPS[activeBandView]?.({ workspace, isAdmin }) || {};
+                  const keyProp = KEYED_BAND_VIEWS.has(activeBandView) ? bandViewKey : undefined;
+                  return <BandComponent key={keyProp} workspaceId={workspaceId} {...extraProps} />;
+                })()}
               </Suspense>
             ) : selectedChannel ? (
               <ChannelView
@@ -821,7 +838,7 @@ function WorkspaceView() {
                 <button
                   type="submit"
                   disabled={inviteLoading || !inviteEmail.trim()}
-                  className="btn bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                  className="btn btn-blue"
                 >
                   {inviteLoading ? '...' : 'Send'}
                 </button>
@@ -887,7 +904,7 @@ function WorkspaceView() {
                   }
                 }}
                 disabled={inviteLoading}
-                className="w-full btn btn-secondary disabled:opacity-50"
+                className="w-full btn btn-secondary"
               >
                 {inviteLoading ? 'Generating...' : 'Generate New Code'}
               </button>
@@ -940,9 +957,10 @@ function WorkspaceView() {
                 />
                 <button
                   type="submit"
-                  className="bg-slack-blue text-white px-4 py-2 rounded-r-lg"
+                  disabled={searchLoading}
+                  className="bg-slack-blue text-white px-4 py-2 rounded-r-lg disabled:opacity-50"
                 >
-                  Search
+                  {searchLoading ? 'Searching...' : 'Search'}
                 </button>
               </form>
             </div>
@@ -970,7 +988,15 @@ function WorkspaceView() {
             </div>
           </div>
           <div className="flex-1 overflow-y-auto p-4">
-            {searchResults.length === 0 ? (
+            {searchLoading ? (
+              <div className="text-center text-gray-400 mt-8">
+                <svg className="animate-spin h-6 w-6 mx-auto mb-2 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+                Searching...
+              </div>
+            ) : searchResults.length === 0 ? (
               <div className="text-center text-gray-400 mt-8">
                 {searchQuery ? 'No results found' : 'Search for messages across all channels'}
               </div>

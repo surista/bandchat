@@ -119,6 +119,11 @@ router.post('/signup', authLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Email, password, and display name are required' });
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
     // Validate display name
     const displayNameCheck = validateDisplayName(displayName);
     if (!displayNameCheck.valid) {
@@ -335,30 +340,10 @@ router.post('/google', authLimiter, async (req, res) => {
     });
 
     if (existingUserByEmail) {
-      // Link Google account to existing user and sign them in
-      const updatedUser = await prisma.user.update({
-        where: { id: existingUserByEmail.id },
-        data: {
-          googleId,
-          authProvider: existingUserByEmail.password ? 'both' : 'google',
-          emailVerified: true,
-          // Update avatar if they don't have one
-          ...(picture && !existingUserByEmail.avatarUrl && { avatarUrl: picture })
-        },
-        select: {
-          id: true,
-          email: true,
-          displayName: true,
-          avatarUrl: true
-        }
-      });
-
-      const tokens = await generateTokens(updatedUser.id);
-      return res.json({
-        user: updatedUser,
-        ...tokens,
-        isNewUser: false,
-        message: 'Google account linked successfully'
+      // Account exists with this email - require user to log in first and link via Settings
+      return res.status(409).json({
+        error: 'Account exists with this email. Please log in with your password first, then link your Google account in Settings.',
+        code: 'ACCOUNT_EXISTS'
       });
     }
 
@@ -485,7 +470,7 @@ router.post('/refresh', authLimiter, async (req, res) => {
     }
 
     // Verify JWT signature first
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, { algorithms: ['HS256'] });
 
     if (decoded.type !== 'refresh') {
       return res.status(401).json({ error: 'Invalid refresh token' });
@@ -596,6 +581,9 @@ router.put('/me', authenticate, async (req, res) => {
         const url = new URL(avatarUrl);
         if (!['http:', 'https:'].includes(url.protocol)) {
           return res.status(400).json({ error: 'Avatar URL must use HTTP or HTTPS' });
+        }
+        if (!url.hostname.endsWith('cloudinary.com') && !url.hostname.endsWith('googleusercontent.com')) {
+          return res.status(400).json({ error: 'Avatar URL must be from Cloudinary or Google' });
         }
       } catch {
         return res.status(400).json({ error: 'Invalid avatar URL' });

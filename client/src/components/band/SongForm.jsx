@@ -164,7 +164,7 @@ function SongForm({ song, onSave, onClose }) {
           <h3>{song ? 'Edit Song' : 'Add Song'}</h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white text-2xl leading-none"
+            className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl leading-none"
             aria-label="Close"
           >
             &times;
@@ -179,7 +179,7 @@ function SongForm({ song, onSave, onClose }) {
           )}
 
           {/* Tabs */}
-          <div className="flex gap-1 mb-4 border-b border-gray-700">
+          <div className="flex gap-1 mb-4 border-b border-[var(--color-border)]">
             {[
               { id: 'details', label: 'Details' },
               { id: 'lyrics', label: 'Lyrics' },
@@ -193,7 +193,7 @@ function SongForm({ song, onSave, onClose }) {
                 className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
                   activeTab === tab.id
                     ? 'text-blue-400 border-blue-400'
-                    : 'text-gray-400 border-transparent hover:text-white'
+                    : 'text-[var(--color-text-muted)] border-transparent hover:text-[var(--color-text-primary)]'
                 }`}
               >
                 {tab.label}
@@ -270,7 +270,7 @@ function SongForm({ song, onSave, onClose }) {
                       className={`px-3 py-2 rounded font-medium text-sm transition-colors ${
                         formData.keyIsMinor
                           ? 'bg-purple-600 text-white'
-                          : 'bg-[var(--color-modal-border)] text-gray-300 hover:bg-gray-500'
+                          : 'bg-[var(--color-modal-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'
                       }`}
                     >
                       {formData.keyIsMinor ? 'min' : 'Maj'}
@@ -402,14 +402,14 @@ Example:
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="btn bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-50"
+                  className="btn btn-blue text-sm"
                 >
                   {uploading ? 'Uploading...' : '+ Add File'}
                 </button>
               </div>
 
               {attachments.length === 0 ? (
-                <div className="text-center text-gray-400 py-8 border border-dashed border-gray-600 rounded-lg">
+                <div className="text-center text-[var(--color-text-muted)] py-8 border border-dashed border-[var(--color-border)] rounded-lg">
                   <p>No attachments yet</p>
                   <p className="text-sm mt-1">Add chord charts, sheet music, audio files, etc.</p>
                 </div>
@@ -418,7 +418,7 @@ Example:
                   {attachments.map(attachment => (
                     <div
                       key={attachment.id}
-                      className="flex items-center justify-between bg-gray-700 rounded-lg p-3"
+                      className="flex items-center justify-between bg-[var(--color-bg-tertiary)] rounded-lg p-3"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <span className="text-xl">{getFileIcon(attachment.type)}</span>
@@ -441,7 +441,7 @@ Example:
                       <button
                         type="button"
                         onClick={() => setDeleteAttachmentId(attachment.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-400"
+                        className="p-1.5 text-[var(--color-text-muted)] hover:text-red-400"
                         title="Delete"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -458,7 +458,7 @@ Example:
             </div>
             )}
 
-            <div className="flex gap-2 justify-end mt-6 pt-4 border-t border-gray-700">
+            <div className="flex gap-2 justify-end mt-6 pt-4 border-t border-[var(--color-border)]">
               <button
                 type="button"
                 onClick={onClose}
@@ -469,7 +469,7 @@ Example:
               <button
                 type="submit"
                 disabled={loading || !formData.title.trim()}
-                className="btn bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                className="btn bg-green-600 hover:bg-green-700 text-white"
               >
                 {loading ? 'Saving...' : song ? 'Update' : 'Add Song'}
               </button>

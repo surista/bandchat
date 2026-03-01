@@ -274,7 +274,7 @@ export default function GigListScreen({ navigation, route }) {
           ) : null}
 
           {item.pay ? (
-            <Text style={styles.gigPay}>{'\u00A5'}{item.pay.toLocaleString()}</Text>
+            <Text style={styles.gigPay}>${item.pay.toLocaleString()}</Text>
           ) : null}
 
           {setlistNames.length > 0 ? (

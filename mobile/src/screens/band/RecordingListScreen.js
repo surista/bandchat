@@ -14,6 +14,7 @@ import {
 import { Audio } from 'expo-av';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
+import formatDate from '../../utils/formatDate';
 import api from '../../services/api';
 
 const TYPE_FILTERS = [
@@ -21,12 +22,6 @@ const TYPE_FILTERS = [
   { key: 'audio', label: 'Audio' },
   { key: 'video', label: 'Video' },
 ];
-
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-}
 
 function TypeBadge({ type }) {
   const isAudio = type === 'audio';

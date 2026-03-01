@@ -85,11 +85,11 @@ function ContactsList({ workspaceId }) {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-900 min-h-0">
+    <div className="flex-1 flex flex-col bg-[var(--color-bg-primary)] min-h-0">
       {/* Header */}
-      <div className="p-4 border-b border-gray-700">
+      <div className="p-4 border-b border-[var(--color-border)]">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-white">Contacts</h2>
+          <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Contacts</h2>
           <button
             onClick={() => { setEditingContact(null); setShowForm(true); }}
             className="btn bg-green-600 hover:bg-green-700 text-white"
@@ -105,12 +105,12 @@ function ContactsList({ workspaceId }) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search contacts..."
-            className="flex-1 min-w-[200px] bg-gray-800 text-white px-3 py-2 rounded-lg border border-gray-700 focus:border-blue-500 outline-none"
+            className="flex-1 min-w-[200px] bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] px-3 py-2 rounded-lg border border-[var(--color-border)] focus:border-blue-500 outline-none"
           />
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="bg-gray-800 text-white px-3 py-2 rounded-lg border border-gray-700"
+            className="bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] px-3 py-2 rounded-lg border border-[var(--color-border)]"
           >
             <option value="all">All Categories</option>
             {CATEGORIES.map(cat => (
@@ -123,7 +123,7 @@ function ContactsList({ workspaceId }) {
       {/* Contacts List */}
       <div className="flex-1 overflow-y-auto p-4">
         {filteredContacts.length === 0 ? (
-          <div className="text-center text-gray-400 py-12">
+          <div className="text-center text-[var(--color-text-muted)] py-12">
             {contacts.length === 0
               ? 'No contacts yet. Add your first contact!'
               : 'No contacts match your filters.'}
@@ -136,7 +136,7 @@ function ContactsList({ workspaceId }) {
               if (catContacts.length === 0) return null;
               return (
                 <div key={cat.id}>
-                  <h3 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                  <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-2 flex items-center gap-2">
                     <span>{cat.icon}</span>
                     <span>{cat.label}</span>
                     <span className="text-gray-600">({catContacts.length})</span>
@@ -196,16 +196,16 @@ function ContactCard({ contact, onEdit, onDelete }) {
   const category = CATEGORIES.find(c => c.id === contact.category);
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors">
+    <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4 hover:bg-[var(--color-bg-tertiary)] transition-colors">
       <div className="flex items-start justify-between mb-2">
         <div>
-          <h4 className="font-medium text-white">{contact.name}</h4>
-          <span className="text-xs text-gray-500">{category?.icon} {category?.label}</span>
+          <h4 className="font-medium text-[var(--color-text-primary)]">{contact.name}</h4>
+          <span className="text-xs text-[var(--color-text-muted)]">{category?.icon} {category?.label}</span>
         </div>
         <div className="flex gap-1">
           <button
             onClick={onEdit}
-            className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded"
+            className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] rounded"
             title="Edit"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -214,7 +214,7 @@ function ContactCard({ contact, onEdit, onDelete }) {
           </button>
           <button
             onClick={onDelete}
-            className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded"
+            className="p-1.5 text-[var(--color-text-muted)] hover:text-red-400 hover:bg-[var(--color-bg-tertiary)] rounded"
             title="Delete"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -231,7 +231,7 @@ function ContactCard({ contact, onEdit, onDelete }) {
           </a>
         )}
         {contact.phone && (
-          <a href={`tel:${contact.phone}`} className="block text-gray-300 hover:text-white">
+          <a href={`tel:${contact.phone}`} className="block text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
             {contact.phone}
           </a>
         )}
@@ -241,10 +241,10 @@ function ContactCard({ contact, onEdit, onDelete }) {
           </a>
         )}
         {contact.address && (
-          <p className="text-gray-400 truncate">{contact.address}</p>
+          <p className="text-[var(--color-text-muted)] truncate">{contact.address}</p>
         )}
         {contact.notes && (
-          <p className="text-gray-500 text-xs mt-2 line-clamp-2">{contact.notes}</p>
+          <p className="text-[var(--color-text-muted)] text-xs mt-2 line-clamp-2">{contact.notes}</p>
         )}
       </div>
     </div>
@@ -282,7 +282,7 @@ function ContactForm({ contact, onSave, onClose }) {
       <div className="modal-content max-w-lg">
         <div className="modal-header">
           <h3>{contact ? 'Edit Contact' : 'Add Contact'}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl" aria-label="Close">&times;</button>
+          <button onClick={onClose} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl" aria-label="Close">&times;</button>
         </div>
 
         <div className="modal-body">
@@ -374,14 +374,14 @@ function ContactForm({ contact, onSave, onClose }) {
               />
             </div>
 
-            <div className="flex gap-2 justify-end pt-4 border-t border-gray-700">
+            <div className="flex gap-2 justify-end pt-4 border-t border-[var(--color-border)]">
               <button type="button" onClick={onClose} className="btn btn-secondary">
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading || !formData.name.trim()}
-                className="btn bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                className="btn bg-green-600 hover:bg-green-700 text-white"
               >
                 {loading ? 'Saving...' : contact ? 'Update' : 'Add Contact'}
               </button>

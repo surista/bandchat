@@ -13,16 +13,9 @@ import {
   Platform,
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import Badge from '../../components/Badge';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
-
-function Badge({ label, color, bgColor }) {
-  return (
-    <View style={[styles.badge, { backgroundColor: bgColor }]}>
-      <Text style={[styles.badgeText, { color }]}>{label}</Text>
-    </View>
-  );
-}
 
 export default function MedleyDetailScreen({ navigation, route }) {
   const { medleyId, workspaceId, editing: startEditing } = route.params;
@@ -419,8 +412,6 @@ const styles = StyleSheet.create({
   viewContent: { padding: 16 },
   viewDescription: { fontSize: 15, marginBottom: 8 },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 8 },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
-  badgeText: { fontSize: 13, fontWeight: '600' },
   viewSongList: { marginTop: 16 },
   viewSectionTitle: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.5 },
   viewSongRow: {

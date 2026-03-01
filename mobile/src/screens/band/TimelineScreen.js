@@ -53,7 +53,7 @@ function formatEventDate(dateStr) {
 export default function TimelineScreen({ navigation, route }) {
   const { workspaceId } = route.params;
   const { user } = useAuth();
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
 
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -376,7 +376,7 @@ export default function TimelineScreen({ navigation, route }) {
               mode="date"
               display={Platform.OS === 'ios' ? 'inline' : 'default'}
               onChange={onDateChange}
-              themeVariant="dark"
+              themeVariant={mode === 'dark' ? 'dark' : 'light'}
             />
           )}
 

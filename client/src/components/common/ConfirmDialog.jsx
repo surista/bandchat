@@ -123,7 +123,7 @@ function ConfirmDialog({
               ref={confirmButtonRef}
               onClick={onConfirm}
               disabled={loading}
-              className={`${confirmButtonClass} min-h-[44px] px-4 disabled:opacity-50`}
+              className={`${confirmButtonClass} min-h-[44px] px-4`}
             >
               {loading ? 'Loading...' : confirmText}
             </button>

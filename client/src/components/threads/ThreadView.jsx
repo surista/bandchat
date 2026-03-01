@@ -9,19 +9,8 @@ import ImageLightbox from '../common/ImageLightbox';
 import Skeleton from '../common/Skeleton';
 import useSwipeGesture from '../../hooks/useSwipeGesture';
 import { handleDownload } from '../../utils/download';
-
-/** File size limits */
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_AUDIO_SIZE = 30 * 1024 * 1024; // 30MB
-
-const isImageFile = (file) => file.type.startsWith('image/');
-const isAudioFile = (file) => file.type.startsWith('audio/');
-
-const formatFileSize = (bytes) => {
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-};
+import { formatFileSize } from '../../utils/format';
+import { MAX_IMAGE_SIZE, MAX_AUDIO_SIZE, isImageFile, isAudioFile } from '../../utils/fileValidation';
 
 function ThreadView({ message, channelId, onClose, onThreadRead }) {
   const { user } = useAuth();
@@ -476,7 +465,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
           <div className="mb-2 flex flex-wrap gap-2">
             {previews.map((preview, index) => (
               <div
-                key={index}
+                key={preview.name + '-' + preview.size}
                 className="relative bg-gray-700 rounded p-2 flex items-center gap-2"
               >
                 {preview.type === 'audio' ? (

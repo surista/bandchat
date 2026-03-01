@@ -12,16 +12,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
+import Badge from '../../components/Badge';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
-
-function Badge({ label, color, bgColor }) {
-  return (
-    <View style={[styles.badge, { backgroundColor: bgColor }]}>
-      <Text style={[styles.badgeText, { color }]}>{label}</Text>
-    </View>
-  );
-}
 
 export default function MedleyListScreen({ navigation, route }) {
   const { workspaceId } = route.params;
@@ -289,8 +282,6 @@ const styles = StyleSheet.create({
   cardName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
   cardDescription: { fontSize: 14, marginBottom: 6 },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  badgeText: { fontSize: 12, fontWeight: '600' },
   // Expanded song list
   songList: {
     marginTop: 10,

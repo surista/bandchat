@@ -129,7 +129,7 @@ function NewMessageModal({ workspace, user, onStartDM, onClose }) {
         <button
           onClick={handleStartChat}
           disabled={selectedUsers.length === 0 || loading}
-          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="btn btn-blue text-sm"
         >
           {loading ? 'Starting...' : 'Start Chat'}
         </button>

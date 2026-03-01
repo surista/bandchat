@@ -168,209 +168,214 @@ router.delete('/:eventId', authenticate, async (req, res) => {
   }
 });
 
-// Auto-generate timeline from actual band data
-router.post('/workspace/:workspaceId/generate', authenticate, isWorkspaceMember, async (req, res) => {
-  try {
-    const workspaceId = req.params.workspaceId;
-    const now = new Date();
-    const events = [];
+// Shared helper: generate timeline events from band data
+// When checkExisting is true (generate), skip events that already exist by title.
+// When checkExisting is false (regenerate), create all events unconditionally.
+async function generateTimelineEvents(workspaceId, createdById, { checkExisting = true } = {}) {
+  const now = new Date();
+  const events = [];
 
-    // Helper to check if event already exists by exact title
-    async function eventExistsByTitle(title) {
-      return await prisma.timelineEvent.findFirst({
-        where: { workspaceId, title }
-      });
-    }
-
-    // 1. BAND MEMBERS JOINING/LEAVING (dates from InstrumentStint)
-    // Skip guests - they don't "join" the band
-    const members = await prisma.bandMember.findMany({
-      where: { workspaceId, isGuest: false },
-      include: {
-        stints: {
-          orderBy: { startDate: 'asc' }
-        }
-      }
+  // Helper to check if event already exists by exact title
+  async function shouldSkip(title) {
+    if (!checkExisting) return false;
+    return await prisma.timelineEvent.findFirst({
+      where: { workspaceId, title }
     });
+  }
 
-    for (const member of members) {
-      // Get earliest stint as join date
-      const firstStint = member.stints[0];
-      if (firstStint?.startDate) {
-        const joinTitle = `${member.name} Joined`;
-        if (!await eventExistsByTitle(joinTitle)) {
-          // Get instruments from first stint for description
-          const instruments = firstStint.instruments?.join(', ') || '';
-          events.push({
-            title: joinTitle,
-            description: instruments ? `Joined as ${instruments}` : 'Joined the band',
-            eventType: 'member_joined',
-            eventDate: firstStint.startDate,
-            workspaceId,
-            createdById: req.user.id
-          });
-        }
-      }
-
-      // Check if member has left (all stints have endDate, or last stint has endDate)
-      const lastStint = member.stints[member.stints.length - 1];
-      if (lastStint?.endDate) {
-        const leftTitle = `${member.name} Left`;
-        if (!await eventExistsByTitle(leftTitle)) {
-          events.push({
-            title: leftTitle,
-            description: 'Left the band',
-            eventType: 'member_left',
-            eventDate: lastStint.endDate,
-            workspaceId,
-            createdById: req.user.id
-          });
-        }
-      }
+  // 1. BAND MEMBERS JOINING/LEAVING (skip guests)
+  const members = await prisma.bandMember.findMany({
+    where: { workspaceId, isGuest: false },
+    include: {
+      stints: { orderBy: { startDate: 'asc' } }
     }
+  });
 
-    // 2. REHEARSALS
-    const rehearsals = await prisma.gig.findMany({
-      where: {
-        workspaceId,
-        type: 'REHEARSAL',
-        date: { lt: now },
-        status: { not: 'CANCELLED' }
-      },
-      orderBy: { date: 'asc' }
-    });
-
-    // First rehearsal
-    if (rehearsals.length >= 1 && !await eventExistsByTitle('First Rehearsal')) {
-      events.push({
-        title: 'First Rehearsal',
-        description: 'Our first practice session',
-        eventType: 'milestone',
-        eventDate: rehearsals[0].date,
-        workspaceId,
-        createdById: req.user.id
-      });
-    }
-
-    // Rehearsal count milestones: 5, 10, then every 25 (25, 50, 75, 100, etc.)
-    const rehearsalMilestones = [5, 10];
-    for (let i = 25; i <= rehearsals.length; i += 25) {
-      rehearsalMilestones.push(i);
-    }
-
-    for (const milestone of rehearsalMilestones) {
-      if (rehearsals.length >= milestone) {
-        const title = `${milestone} Rehearsals`;
-        if (!await eventExistsByTitle(title)) {
-          events.push({
-            title,
-            description: `We've practiced ${milestone} times!`,
-            eventType: 'milestone',
-            eventDate: rehearsals[milestone - 1].date,
-            workspaceId,
-            createdById: req.user.id
-          });
-        }
-      }
-    }
-
-    // Calculate total rehearsal hours and create hour milestones
-    let totalRehearsalHours = 0;
-    const rehearsalHourMilestones = []; // { hours: number, date: Date }
-
-    for (const rehearsal of rehearsals) {
-      if (rehearsal.endDate) {
-        const hours = (new Date(rehearsal.endDate) - new Date(rehearsal.date)) / (1000 * 60 * 60);
-        if (hours > 0) {
-          const prevHours = totalRehearsalHours;
-          totalRehearsalHours += hours;
-
-          // Check milestones: 10, then every 25 (25, 50, 75, 100, etc.)
-          const checkMilestones = [10];
-          for (let h = 25; h <= totalRehearsalHours; h += 25) {
-            checkMilestones.push(h);
-          }
-
-          for (const milestone of checkMilestones) {
-            if (prevHours < milestone && totalRehearsalHours >= milestone) {
-              rehearsalHourMilestones.push({ hours: milestone, date: rehearsal.date });
-            }
-          }
-        }
-      }
-    }
-
-    // Add rehearsal hour milestone events
-    for (const { hours, date } of rehearsalHourMilestones) {
-      const title = `${hours} Hours of Practice`;
-      if (!await eventExistsByTitle(title)) {
+  for (const member of members) {
+    const firstStint = member.stints[0];
+    if (firstStint?.startDate) {
+      const joinTitle = `${member.name} Joined`;
+      if (!await shouldSkip(joinTitle)) {
+        const instruments = firstStint.instruments?.join(', ') || '';
         events.push({
-          title,
-          description: `We've logged ${hours} hours of rehearsal time!`,
-          eventType: 'milestone',
-          eventDate: date,
+          title: joinTitle,
+          description: instruments ? `Joined as ${instruments}` : 'Joined the band',
+          eventType: 'member_joined',
+          eventDate: firstStint.startDate,
           workspaceId,
-          createdById: req.user.id
+          createdById
         });
       }
     }
 
-    // 3. GIGS
-    const gigs = await prisma.gig.findMany({
-      where: {
-        workspaceId,
-        type: 'GIG',
-        date: { lt: now },
-        status: { not: 'CANCELLED' }
-      },
-      orderBy: { date: 'asc' }
-    });
-
-    // Gig milestones: 1st, 5th, 10th, then every 5th (15, 20, 25, etc.)
-    const gigMilestones = [1, 5, 10];
-    for (let i = 15; i <= gigs.length; i += 5) {
-      gigMilestones.push(i);
+    const lastStint = member.stints[member.stints.length - 1];
+    if (lastStint?.endDate) {
+      const leftTitle = `${member.name} Left`;
+      if (!await shouldSkip(leftTitle)) {
+        events.push({
+          title: leftTitle,
+          description: 'Left the band',
+          eventType: 'member_left',
+          eventDate: lastStint.endDate,
+          workspaceId,
+          createdById
+        });
+      }
     }
+  }
 
-    for (const milestone of gigMilestones) {
-      if (gigs.length >= milestone) {
-        const gig = gigs[milestone - 1];
-        const title = milestone === 1
-          ? 'First Gig'
-          : `${milestone}${milestone === 5 ? 'th' : milestone === 10 ? 'th' : 'th'} Gig: ${gig.title || gig.venue || 'Milestone'}`;
+  // 2. REHEARSALS
+  const rehearsals = await prisma.gig.findMany({
+    where: {
+      workspaceId,
+      type: 'REHEARSAL',
+      date: { lt: now },
+      status: { not: 'CANCELLED' }
+    },
+    orderBy: { date: 'asc' }
+  });
 
-        if (!await eventExistsByTitle(title) && (milestone > 1 || !await eventExistsByTitle('First Gig'))) {
-          events.push({
-            title: milestone === 1 ? 'First Gig' : title,
-            description: milestone === 1
-              ? (gig.venue ? `Our first show at ${gig.venue}` : 'Our first show!')
-              : (gig.venue || ''),
-            eventType: milestone === 1 ? 'first_gig' : 'milestone',
-            eventDate: gig.date,
-            workspaceId,
-            createdById: req.user.id
-          });
+  // First rehearsal
+  if (rehearsals.length >= 1 && !await shouldSkip('First Rehearsal')) {
+    events.push({
+      title: 'First Rehearsal',
+      description: 'Our first practice session',
+      eventType: 'milestone',
+      eventDate: rehearsals[0].date,
+      workspaceId,
+      createdById
+    });
+  }
+
+  // Rehearsal count milestones: 5, 10, then every 25 (25, 50, 75, 100, etc.)
+  const rehearsalMilestones = [5, 10];
+  for (let i = 25; i <= rehearsals.length; i += 25) {
+    rehearsalMilestones.push(i);
+  }
+
+  for (const milestone of rehearsalMilestones) {
+    if (rehearsals.length >= milestone) {
+      const title = `${milestone} Rehearsals`;
+      if (!await shouldSkip(title)) {
+        events.push({
+          title,
+          description: `We've practiced ${milestone} times!`,
+          eventType: 'milestone',
+          eventDate: rehearsals[milestone - 1].date,
+          workspaceId,
+          createdById
+        });
+      }
+    }
+  }
+
+  // Calculate total rehearsal hours and create hour milestones
+  let totalRehearsalHours = 0;
+  const rehearsalHourMilestones = []; // { hours: number, date: Date }
+
+  for (const rehearsal of rehearsals) {
+    if (rehearsal.endDate) {
+      const hours = (new Date(rehearsal.endDate) - new Date(rehearsal.date)) / (1000 * 60 * 60);
+      if (hours > 0) {
+        const prevHours = totalRehearsalHours;
+        totalRehearsalHours += hours;
+
+        // Check milestones: 10, then every 25 (25, 50, 75, 100, etc.)
+        const checkMilestones = [10];
+        for (let h = 25; h <= totalRehearsalHours; h += 25) {
+          checkMilestones.push(h);
+        }
+
+        for (const milestone of checkMilestones) {
+          if (prevHours < milestone && totalRehearsalHours >= milestone) {
+            rehearsalHourMilestones.push({ hours: milestone, date: rehearsal.date });
+          }
         }
       }
     }
+  }
 
-    // First paid gig
-    const firstPaidGig = gigs.find(g => g.pay && g.pay > 0);
-    if (firstPaidGig && !await eventExistsByTitle('First Paid Gig')) {
+  // Add rehearsal hour milestone events
+  for (const { hours, date } of rehearsalHourMilestones) {
+    const title = `${hours} Hours of Practice`;
+    if (!await shouldSkip(title)) {
       events.push({
-        title: 'First Paid Gig',
-        description: `Our first paying gig${firstPaidGig.venue ? ` at ${firstPaidGig.venue}` : ''}!`,
+        title,
+        description: `We've logged ${hours} hours of rehearsal time!`,
         eventType: 'milestone',
-        eventDate: firstPaidGig.date,
+        eventDate: date,
         workspaceId,
-        createdById: req.user.id
+        createdById
       });
     }
+  }
 
-    // Create all events
-    if (events.length > 0) {
-      await prisma.timelineEvent.createMany({ data: events });
+  // 3. GIGS
+  const gigs = await prisma.gig.findMany({
+    where: {
+      workspaceId,
+      type: 'GIG',
+      date: { lt: now },
+      status: { not: 'CANCELLED' }
+    },
+    orderBy: { date: 'asc' }
+  });
+
+  // Gig milestones: 1st, 5th, 10th, then every 5th (15, 20, 25, etc.)
+  const gigMilestones = [1, 5, 10];
+  for (let i = 15; i <= gigs.length; i += 5) {
+    gigMilestones.push(i);
+  }
+
+  for (const milestone of gigMilestones) {
+    if (gigs.length >= milestone) {
+      const gig = gigs[milestone - 1];
+      const title = milestone === 1
+        ? 'First Gig'
+        : `${milestone}th Gig: ${gig.title || gig.venue || 'Milestone'}`;
+
+      if (!await shouldSkip(title) && (milestone > 1 || !await shouldSkip('First Gig'))) {
+        events.push({
+          title: milestone === 1 ? 'First Gig' : title,
+          description: milestone === 1
+            ? (gig.venue ? `Our first show at ${gig.venue}` : 'Our first show!')
+            : (gig.venue || ''),
+          eventType: milestone === 1 ? 'first_gig' : 'milestone',
+          eventDate: gig.date,
+          workspaceId,
+          createdById
+        });
+      }
     }
+  }
+
+  // First paid gig
+  const firstPaidGig = gigs.find(g => g.pay && g.pay > 0);
+  if (firstPaidGig && !await shouldSkip('First Paid Gig')) {
+    events.push({
+      title: 'First Paid Gig',
+      description: `Our first paying gig${firstPaidGig.venue ? ` at ${firstPaidGig.venue}` : ''}!`,
+      eventType: 'milestone',
+      eventDate: firstPaidGig.date,
+      workspaceId,
+      createdById
+    });
+  }
+
+  // Create all events
+  if (events.length > 0) {
+    await prisma.timelineEvent.createMany({ data: events });
+  }
+
+  return events;
+}
+
+// Auto-generate timeline from actual band data
+router.post('/workspace/:workspaceId/generate', authenticate, isWorkspaceMember, async (req, res) => {
+  try {
+    const workspaceId = req.params.workspaceId;
+
+    const events = await generateTimelineEvents(workspaceId, req.user.id, { checkExisting: true });
 
     // Fetch all events
     const allEvents = await prisma.timelineEvent.findMany({
@@ -404,166 +409,7 @@ router.post('/workspace/:workspaceId/regenerate', authenticate, isWorkspaceAdmin
       }
     });
 
-    // Now call the generate logic (redirect internally)
-    // We'll just duplicate the generate logic here for simplicity
-    const now = new Date();
-    const events = [];
-
-    // 1. BAND MEMBERS JOINING/LEAVING (skip guests)
-    const members = await prisma.bandMember.findMany({
-      where: { workspaceId, isGuest: false },
-      include: {
-        stints: { orderBy: { startDate: 'asc' } }
-      }
-    });
-
-    for (const member of members) {
-      const firstStint = member.stints[0];
-      if (firstStint?.startDate) {
-        const instruments = firstStint.instruments?.join(', ') || '';
-        events.push({
-          title: `${member.name} Joined`,
-          description: instruments ? `Joined as ${instruments}` : 'Joined the band',
-          eventType: 'member_joined',
-          eventDate: firstStint.startDate,
-          workspaceId,
-          createdById: req.user.id
-        });
-      }
-
-      const lastStint = member.stints[member.stints.length - 1];
-      if (lastStint?.endDate) {
-        events.push({
-          title: `${member.name} Left`,
-          description: 'Left the band',
-          eventType: 'member_left',
-          eventDate: lastStint.endDate,
-          workspaceId,
-          createdById: req.user.id
-        });
-      }
-    }
-
-    // 2. REHEARSALS
-    const rehearsals = await prisma.gig.findMany({
-      where: {
-        workspaceId,
-        type: 'REHEARSAL',
-        date: { lt: now },
-        status: { not: 'CANCELLED' }
-      },
-      orderBy: { date: 'asc' }
-    });
-
-    if (rehearsals.length >= 1) {
-      events.push({
-        title: 'First Rehearsal',
-        description: 'Our first practice session',
-        eventType: 'milestone',
-        eventDate: rehearsals[0].date,
-        workspaceId,
-        createdById: req.user.id
-      });
-    }
-
-    // Rehearsal count milestones
-    const rehearsalMilestones = [5, 10];
-    for (let i = 25; i <= rehearsals.length; i += 25) {
-      rehearsalMilestones.push(i);
-    }
-    for (const milestone of rehearsalMilestones) {
-      if (rehearsals.length >= milestone) {
-        events.push({
-          title: `${milestone} Rehearsals`,
-          description: `We've practiced ${milestone} times!`,
-          eventType: 'milestone',
-          eventDate: rehearsals[milestone - 1].date,
-          workspaceId,
-          createdById: req.user.id
-        });
-      }
-    }
-
-    // Rehearsal hour milestones
-    let totalRehearsalHours = 0;
-    for (const rehearsal of rehearsals) {
-      if (rehearsal.endDate) {
-        const hours = (new Date(rehearsal.endDate) - new Date(rehearsal.date)) / (1000 * 60 * 60);
-        if (hours > 0) {
-          const prevHours = totalRehearsalHours;
-          totalRehearsalHours += hours;
-          const checkMilestones = [10];
-          for (let h = 25; h <= totalRehearsalHours; h += 25) {
-            checkMilestones.push(h);
-          }
-          for (const milestone of checkMilestones) {
-            if (prevHours < milestone && totalRehearsalHours >= milestone) {
-              events.push({
-                title: `${milestone} Hours of Practice`,
-                description: `We've logged ${milestone} hours of rehearsal time!`,
-                eventType: 'milestone',
-                eventDate: rehearsal.date,
-                workspaceId,
-                createdById: req.user.id
-              });
-            }
-          }
-        }
-      }
-    }
-
-    // 3. GIGS
-    const gigs = await prisma.gig.findMany({
-      where: {
-        workspaceId,
-        type: 'GIG',
-        date: { lt: now },
-        status: { not: 'CANCELLED' }
-      },
-      orderBy: { date: 'asc' }
-    });
-
-    // Gig milestones: 1st, 5th, 10th, then every 5th (15, 20, 25, etc.)
-    const gigMilestones = [1, 5, 10];
-    for (let i = 15; i <= gigs.length; i += 5) {
-      gigMilestones.push(i);
-    }
-
-    for (const milestone of gigMilestones) {
-      if (gigs.length >= milestone) {
-        const gig = gigs[milestone - 1];
-        events.push({
-          title: milestone === 1
-            ? 'First Gig'
-            : `${milestone}th Gig: ${gig.title || gig.venue || 'Milestone'}`,
-          description: milestone === 1
-            ? (gig.venue ? `Our first show at ${gig.venue}` : 'Our first show!')
-            : (gig.venue || ''),
-          eventType: milestone === 1 ? 'first_gig' : 'milestone',
-          eventDate: gig.date,
-          workspaceId,
-          createdById: req.user.id
-        });
-      }
-    }
-
-    // First paid gig
-    const firstPaidGig = gigs.find(g => g.pay && g.pay > 0);
-    if (firstPaidGig) {
-      events.push({
-        title: 'First Paid Gig',
-        description: `Our first paying gig${firstPaidGig.venue ? ` at ${firstPaidGig.venue}` : ''}!`,
-        eventType: 'milestone',
-        eventDate: firstPaidGig.date,
-        workspaceId,
-        createdById: req.user.id
-      });
-    }
-
-    // Create all events
-    if (events.length > 0) {
-      await prisma.timelineEvent.createMany({ data: events });
-    }
+    const events = await generateTimelineEvents(workspaceId, req.user.id, { checkExisting: false });
 
     // Fetch all events
     const allEvents = await prisma.timelineEvent.findMany({

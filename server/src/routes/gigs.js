@@ -10,6 +10,13 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
   try {
     const { type, status, from, to } = req.query;
 
+    if (from && isNaN(Date.parse(from))) {
+      return res.status(400).json({ error: 'Invalid from date' });
+    }
+    if (to && isNaN(Date.parse(to))) {
+      return res.status(400).json({ error: 'Invalid to date' });
+    }
+
     // Filter: show non-personal events OR personal events created by current user
     const where = {
       workspaceId: req.params.workspaceId,
@@ -82,6 +89,13 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 router.get('/all-workspaces', authenticate, async (req, res) => {
   try {
     const { type, status, from, to, excludeWorkspaceId } = req.query;
+
+    if (from && isNaN(Date.parse(from))) {
+      return res.status(400).json({ error: 'Invalid from date' });
+    }
+    if (to && isNaN(Date.parse(to))) {
+      return res.status(400).json({ error: 'Invalid to date' });
+    }
 
     // Get all workspace IDs user belongs to
     const memberships = await prisma.workspaceMember.findMany({

@@ -30,8 +30,8 @@ export default function SignupScreen({ navigation }) {
       setError('Passwords do not match');
       return;
     }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
       return;
     }
     setError('');
@@ -103,7 +103,7 @@ export default function SignupScreen({ navigation }) {
             <Text style={[styles.label, { color: colors.textSecondary }]}>Password</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-              placeholder="At least 6 characters"
+              placeholder="At least 8 characters"
               placeholderTextColor={colors.textSecondary}
               value={password}
               onChangeText={setPassword}

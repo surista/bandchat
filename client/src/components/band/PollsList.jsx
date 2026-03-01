@@ -93,11 +93,11 @@ function PollsList({ workspaceId }) {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-900 min-h-0">
+    <div className="flex-1 flex flex-col bg-[var(--color-bg-primary)] min-h-0">
       {/* Header */}
-      <div className="p-4 border-b border-gray-700">
+      <div className="p-4 border-b border-[var(--color-border)]">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xl font-bold text-white">Polls</h2>
+          <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Polls</h2>
           <button
             onClick={() => setShowForm(true)}
             className="btn bg-green-600 hover:bg-green-700 text-white"
@@ -105,7 +105,7 @@ function PollsList({ workspaceId }) {
             + Create Poll
           </button>
         </div>
-        <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+        <label className="flex items-center gap-2 text-sm text-[var(--color-text-muted)] cursor-pointer">
           <input
             type="checkbox"
             checked={showClosed}
@@ -119,7 +119,7 @@ function PollsList({ workspaceId }) {
       {/* Polls List */}
       <div className="flex-1 overflow-y-auto p-4">
         {polls.length === 0 ? (
-          <div className="text-center text-gray-400 py-12">
+          <div className="text-center text-[var(--color-text-muted)] py-12">
             No {showClosed ? '' : 'active '}polls yet. Create one to get your band's opinion!
           </div>
         ) : (
@@ -185,17 +185,17 @@ function PollCard({ poll, userId, onVote, onClose, onDelete }) {
   };
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4">
+    <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4">
       <div className="flex items-start justify-between mb-3">
         <div>
-          <h4 className="font-medium text-white text-lg">{poll.question}</h4>
+          <h4 className="font-medium text-[var(--color-text-primary)] text-lg">{poll.question}</h4>
           {poll.description && (
-            <p className="text-gray-400 text-sm mt-1">{poll.description}</p>
+            <p className="text-[var(--color-text-muted)] text-sm mt-1">{poll.description}</p>
           )}
         </div>
         <div className="flex items-center gap-2">
           {poll.isClosed && (
-            <span className="text-xs bg-gray-600 text-gray-300 px-2 py-0.5 rounded">Closed</span>
+            <span className="text-xs bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] px-2 py-0.5 rounded">Closed</span>
           )}
           {poll.isAnonymous && (
             <span className="text-xs bg-purple-900 text-purple-300 px-2 py-0.5 rounded">Anonymous</span>
@@ -203,7 +203,7 @@ function PollCard({ poll, userId, onVote, onClose, onDelete }) {
           {isCreator && !poll.isClosed && (
             <button
               onClick={onClose}
-              className="text-xs text-gray-400 hover:text-white"
+              className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
             >
               Close Poll
             </button>
@@ -211,7 +211,7 @@ function PollCard({ poll, userId, onVote, onClose, onDelete }) {
           {isCreator && (
             <button
               onClick={onDelete}
-              className="p-1 text-gray-400 hover:text-red-400"
+              className="p-1 text-[var(--color-text-muted)] hover:text-red-400"
               title="Delete"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -237,8 +237,8 @@ function PollCard({ poll, userId, onVote, onClose, onDelete }) {
                 canVote
                   ? isSelected
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                  : 'bg-gray-700 text-gray-200 cursor-default'
+                    : 'bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)]'
+                  : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] cursor-default'
               }`}
             >
               {/* Progress bar background */}
@@ -253,7 +253,7 @@ function PollCard({ poll, userId, onVote, onClose, onDelete }) {
                 <div className="flex items-center gap-2">
                   {canVote && (
                     <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                      isSelected ? 'border-white bg-white' : 'border-gray-400'
+                      isSelected ? 'border-white bg-white' : 'border-[var(--color-text-muted)]'
                     }`}>
                       {isSelected && (
                         <svg className="w-3 h-3 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
@@ -276,7 +276,7 @@ function PollCard({ poll, userId, onVote, onClose, onDelete }) {
 
               {/* Voters (if not anonymous and voted/closed) */}
               {!poll.isAnonymous && option.voters?.length > 0 && (hasVoted || poll.isClosed) && (
-                <div className="relative mt-1 text-xs text-gray-400">
+                <div className="relative mt-1 text-xs text-[var(--color-text-muted)]">
                   {option.voters.map(v => v.displayName).join(', ')}
                 </div>
               )}
@@ -296,7 +296,7 @@ function PollCard({ poll, userId, onVote, onClose, onDelete }) {
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between text-xs text-gray-500 mt-3 pt-3 border-t border-gray-700">
+      <div className="flex items-center justify-between text-xs text-[var(--color-text-muted)] mt-3 pt-3 border-t border-[var(--color-border)]">
         <span>
           Created by {poll.createdBy?.displayName || poll.removedCreatorName || 'Deleted User'} • {formatDistanceToNow(new Date(poll.createdAt), { addSuffix: true })}
         </span>
@@ -368,7 +368,7 @@ function PollForm({ onSave, onClose }) {
       <div className="modal-content max-w-lg">
         <div className="modal-header">
           <h3>Create Poll</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl" aria-label="Close">&times;</button>
+          <button onClick={onClose} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl" aria-label="Close">&times;</button>
         </div>
 
         <div className="modal-body">
@@ -418,7 +418,7 @@ function PollForm({ onSave, onClose }) {
                       <button
                         type="button"
                         onClick={() => handleRemoveOption(index)}
-                        className="p-2 text-gray-400 hover:text-red-400"
+                        className="p-2 text-[var(--color-text-muted)] hover:text-red-400"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -447,7 +447,7 @@ function PollForm({ onSave, onClose }) {
                   onChange={(e) => setFormData(prev => ({ ...prev, allowMultiple: e.target.checked }))}
                   className="w-4 h-4 rounded"
                 />
-                <span className="text-gray-300">Allow multiple selections</span>
+                <span className="text-[var(--color-text-secondary)]">Allow multiple selections</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -456,18 +456,18 @@ function PollForm({ onSave, onClose }) {
                   onChange={(e) => setFormData(prev => ({ ...prev, isAnonymous: e.target.checked }))}
                   className="w-4 h-4 rounded"
                 />
-                <span className="text-gray-300">Anonymous voting</span>
+                <span className="text-[var(--color-text-secondary)]">Anonymous voting</span>
               </label>
             </div>
 
-            <div className="flex gap-2 justify-end pt-4 border-t border-gray-700">
+            <div className="flex gap-2 justify-end pt-4 border-t border-[var(--color-border)]">
               <button type="button" onClick={onClose} className="btn btn-secondary">
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading || !formData.question.trim()}
-                className="btn bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                className="btn bg-green-600 hover:bg-green-700 text-white"
               >
                 {loading ? 'Creating...' : 'Create Poll'}
               </button>

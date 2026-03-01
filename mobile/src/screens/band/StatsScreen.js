@@ -151,7 +151,7 @@ export default function StatsScreen({ navigation, route }) {
           <StatBox label="Gigs Played" value={stats.totalGigs || 0} color="#22c55e" bgColor="rgba(34,197,94,0.12)" />
           <StatBox label="Stage Time" value={stageTime} color="#3b82f6" bgColor="rgba(59,130,246,0.12)" />
           <StatBox label="Unique Songs" value={stats.uniqueSongsPlayed || 0} color="#a855f7" bgColor="rgba(168,85,247,0.12)" />
-          <StatBox label="Revenue" value={`\u00A5${(stats.totalRevenue || 0).toLocaleString()}`} color="#eab308" bgColor="rgba(234,179,8,0.12)" />
+          <StatBox label="Revenue" value={`$${(stats.totalRevenue || 0).toLocaleString()}`} color="#eab308" bgColor="rgba(234,179,8,0.12)" />
         </View>
 
         {/* Secondary Stats */}

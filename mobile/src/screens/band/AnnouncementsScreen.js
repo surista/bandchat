@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import ActionSheet from '../../components/ActionSheet';
 import api from '../../services/api';
 
 const PRIORITY_COLORS = {
@@ -394,36 +395,15 @@ export default function AnnouncementsScreen({ navigation, route }) {
       </Modal>
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => setShowActions(false)}>
-        <TouchableOpacity
-          style={styles.actionOverlay}
-          activeOpacity={1}
-          onPress={() => { setShowActions(false); setSelectedAnnouncement(null); }}
-          accessibilityRole="button"
-          accessibilityLabel="Close action sheet"
-        >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
-            <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-              {selectedAnnouncement?.title}
-            </Text>
-            <TouchableOpacity style={styles.actionItem} onPress={() => openEditModal(selectedAnnouncement)} accessibilityRole="button" accessibilityLabel="Edit announcement">
-              <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete announcement">
-              <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionItem, styles.actionCancel]}
-              onPress={() => { setShowActions(false); setSelectedAnnouncement(null); }}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel"
-            >
-              <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      <ActionSheet
+        visible={showActions}
+        title={selectedAnnouncement?.title}
+        actions={[
+          { label: 'Edit', onPress: () => openEditModal(selectedAnnouncement) },
+          { label: 'Delete', destructive: true, onPress: handleDelete },
+        ]}
+        onClose={() => { setShowActions(false); setSelectedAnnouncement(null); }}
+      />
     </SafeAreaView>
   );
 }
@@ -510,28 +490,4 @@ const styles = StyleSheet.create({
   modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
   modalButtonText: { fontSize: 15, fontWeight: '600' },
   modalButtonTextWhite: { fontSize: 15, fontWeight: '600', color: '#ffffff' },
-  // Action sheet
-  actionOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  actionSheet: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingHorizontal: 16,
-    paddingBottom: 40,
-    paddingTop: 12,
-  },
-  actionHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  actionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 16, textAlign: 'center' },
-  actionItem: { paddingVertical: 16, alignItems: 'center' },
-  actionText: { fontSize: 17 },
-  actionCancel: { marginTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.1)' },
 });

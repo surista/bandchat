@@ -94,6 +94,12 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
     return () => window.removeEventListener('keydown', handleEsc);
   }, [isOpen, onClose]);
 
+  // Clear error/success messages when switching tabs
+  useEffect(() => {
+    setSettingsError('');
+    setSettingsSuccess('');
+  }, [settingsTab]);
+
   // Load band members when bandmembers tab is selected
   useEffect(() => {
     if (settingsTab === 'bandmembers' && workspace?.id) {
@@ -184,8 +190,10 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-[var(--color-modal-border)] justify-center overflow-x-auto scrollbar-hide">
+            <div className="flex border-b border-[var(--color-modal-border)] justify-center overflow-x-auto" role="tablist">
               <button
+                role="tab"
+                aria-selected={settingsTab === 'profile'}
                 onClick={() => setSettingsTab('profile')}
                 className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'profile'
@@ -196,6 +204,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 Profile
               </button>
               <button
+                role="tab"
+                aria-selected={settingsTab === 'workspace'}
                 onClick={() => setSettingsTab('workspace')}
                 className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'workspace'
@@ -206,6 +216,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 Workspace
               </button>
               <button
+                role="tab"
+                aria-selected={settingsTab === 'theme'}
                 onClick={() => setSettingsTab('theme')}
                 className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'theme'
@@ -218,6 +230,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
               {isAdmin && (
                 <>
                   <button
+                    role="tab"
+                    aria-selected={settingsTab === 'members'}
                     onClick={() => setSettingsTab('members')}
                     className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                       settingsTab === 'members'
@@ -228,6 +242,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     Members
                   </button>
                   <button
+                    role="tab"
+                    aria-selected={settingsTab === 'bandmembers'}
                     onClick={() => setSettingsTab('bandmembers')}
                     className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                       settingsTab === 'bandmembers'
@@ -238,6 +254,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     Band
                   </button>
                   <button
+                    role="tab"
+                    aria-selected={settingsTab === 'import'}
                     onClick={() => setSettingsTab('import')}
                     className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                       settingsTab === 'import'
@@ -250,6 +268,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 </>
               )}
               <button
+                role="tab"
+                aria-selected={settingsTab === 'whatsnew'}
                 onClick={() => setSettingsTab('whatsnew')}
                 className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'whatsnew'
@@ -260,6 +280,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 New
               </button>
               <button
+                role="tab"
+                aria-selected={settingsTab === 'about'}
                 onClick={() => setSettingsTab('about')}
                 className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'about'
@@ -271,14 +293,14 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-6" role="tabpanel">
               {settingsError && (
-                <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded-lg mb-4">
+                <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded-lg mb-4" role="alert">
                   {settingsError}
                 </div>
               )}
               {settingsSuccess && (
-                <div className="bg-green-900/50 border border-green-500 text-green-200 px-4 py-2 rounded-lg mb-4">
+                <div className="bg-green-900/50 border border-green-500 text-green-200 px-4 py-2 rounded-lg mb-4" role="alert">
                   {settingsSuccess}
                 </div>
               )}
@@ -441,7 +463,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                       <button
                         type="submit"
                         disabled={settingsLoading || !newEmail}
-                        className="btn bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                        className="btn btn-blue"
                       >
                         {settingsLoading ? 'Sending...' : 'Send Verification Email'}
                       </button>
@@ -514,7 +536,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                       <button
                         type="submit"
                         disabled={settingsLoading || !newPassword || !confirmPassword}
-                        className="btn bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                        className="btn btn-blue"
                       >
                         {settingsLoading ? 'Changing...' : 'Change Password'}
                       </button>
@@ -541,7 +563,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                         }
                       }}
                       disabled={settingsLoading}
-                      className="btn bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                      className="btn btn-blue"
                     >
                       {settingsLoading ? 'Exporting...' : 'Download My Data'}
                     </button>
@@ -591,7 +613,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                               }
                             }}
                             disabled={settingsLoading || (user?.authProvider !== 'google' && !deletePassword)}
-                            className="btn bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                            className="btn btn-danger"
                           >
                             {settingsLoading ? 'Deleting...' : 'Permanently Delete'}
                           </button>
@@ -698,7 +720,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                         }
                       }}
                       disabled={settingsLoading}
-                      className="btn bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-50"
+                      className="btn btn-blue text-sm"
                     >
                       {settingsLoading ? 'Exporting...' : 'Download Workspace Data'}
                     </button>
@@ -774,7 +796,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                             </button>
                             <button
                               type="submit"
-                              className="btn bg-blue-600 hover:bg-blue-700 text-white text-xs"
+                              className="btn btn-blue text-xs"
                               disabled={editMemberLoading}
                             >
                               {editMemberLoading ? 'Saving...' : 'Save'}
@@ -1217,7 +1239,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                               }
                             }}
                             disabled={wsActionLoading}
-                            className="btn bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                            className="btn btn-danger"
                           >
                             {wsActionLoading ? 'Leaving...' : 'Confirm Leave'}
                           </button>
@@ -1275,7 +1297,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                                 }
                               }}
                               disabled={wsActionLoading || deleteWsName !== workspace.name}
-                              className="btn bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                              className="btn btn-danger"
                             >
                               {wsActionLoading ? 'Deleting...' : 'Permanently Delete'}
                             </button>
@@ -1491,7 +1513,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     }
                   }}
                   disabled={!resetAdminPassword || !resetNewPassword}
-                  className="btn bg-blue-600 hover:bg-blue-700 text-white min-h-[44px] px-4 disabled:opacity-50"
+                  className="btn btn-blue min-h-[44px] px-4"
                 >
                   Reset Password
                 </button>

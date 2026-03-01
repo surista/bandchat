@@ -970,9 +970,17 @@ router.delete('/:setlistId/items/:itemId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
-    await prisma.setlistSong.delete({
-      where: { id: req.params.itemId }
+    // Use deleteMany with both id and setlistId to verify item belongs to this setlist
+    const result = await prisma.setlistSong.deleteMany({
+      where: {
+        id: req.params.itemId,
+        setlistId: req.params.setlistId
+      }
     });
+
+    if (result.count === 0) {
+      return res.status(404).json({ error: 'Item not found in this setlist' });
+    }
 
     const io = req.app.get('io');
     io.to(`workspace:${setlist.workspaceId}`).emit('setlist:itemRemoved', {

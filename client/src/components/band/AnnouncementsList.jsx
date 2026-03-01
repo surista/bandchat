@@ -91,11 +91,11 @@ function AnnouncementsList({ workspaceId, workspace }) {
   const acknowledged = announcements.filter(a => a.isAcknowledged || !a.isPinned);
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-900 min-h-0">
+    <div className="flex-1 flex flex-col bg-[var(--color-bg-primary)] min-h-0">
       {/* Header */}
-      <div className="p-4 border-b border-gray-700">
+      <div className="p-4 border-b border-[var(--color-border)]">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">Announcements</h2>
+          <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Announcements</h2>
           {isAdmin && (
             <button
               onClick={() => { setEditingAnnouncement(null); setShowForm(true); }}
@@ -110,7 +110,7 @@ function AnnouncementsList({ workspaceId, workspace }) {
       {/* Announcements List */}
       <div className="flex-1 overflow-y-auto p-4">
         {announcements.length === 0 ? (
-          <div className="text-center text-gray-400 py-12">
+          <div className="text-center text-[var(--color-text-muted)] py-12">
             No announcements yet.
             {isAdmin && ' Create one to share important updates with your band.'}
           </div>
@@ -145,7 +145,7 @@ function AnnouncementsList({ workspaceId, workspace }) {
             {acknowledged.length > 0 && (
               <div>
                 {unacknowledged.length > 0 && (
-                  <h3 className="text-sm font-medium text-gray-400 mb-3">Previous Announcements</h3>
+                  <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-3">Previous Announcements</h3>
                 )}
                 <div className="space-y-3">
                   {acknowledged.map(announcement => (
@@ -192,13 +192,13 @@ function AnnouncementCard({ announcement, isAdmin, onAcknowledge, onEdit, onDele
   const priority = PRIORITIES.find(p => p.id === announcement.priority) || PRIORITIES[1];
 
   return (
-    <div className={`rounded-lg p-4 ${priority.bg} border border-gray-700`}>
+    <div className={`rounded-lg p-4 ${priority.bg} border border-[var(--color-border)]`}>
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
           {announcement.isPinned && (
             <span className="text-yellow-400" title="Pinned">📌</span>
           )}
-          <h4 className="font-medium text-white">{announcement.title}</h4>
+          <h4 className="font-medium text-[var(--color-text-primary)]">{announcement.title}</h4>
           <span className={`text-xs px-2 py-0.5 rounded ${priority.color} ${priority.bg}`}>
             {priority.label}
           </span>
@@ -207,7 +207,7 @@ function AnnouncementCard({ announcement, isAdmin, onAcknowledge, onEdit, onDele
           <div className="flex gap-1">
             <button
               onClick={onEdit}
-              className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded"
+              className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] rounded"
               title="Edit"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -216,7 +216,7 @@ function AnnouncementCard({ announcement, isAdmin, onAcknowledge, onEdit, onDele
             </button>
             <button
               onClick={onDelete}
-              className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded"
+              className="p-1.5 text-[var(--color-text-muted)] hover:text-red-400 hover:bg-[var(--color-bg-tertiary)] rounded"
               title="Delete"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -227,10 +227,10 @@ function AnnouncementCard({ announcement, isAdmin, onAcknowledge, onEdit, onDele
         )}
       </div>
 
-      <p className="text-gray-300 whitespace-pre-wrap mb-3">{announcement.content}</p>
+      <p className="text-[var(--color-text-secondary)] whitespace-pre-wrap mb-3">{announcement.content}</p>
 
       <div className="flex items-center justify-between text-sm">
-        <div className="flex items-center gap-4 text-gray-500">
+        <div className="flex items-center gap-4 text-[var(--color-text-muted)]">
           <span>
             By {announcement.createdBy?.displayName || announcement.removedCreatorName || 'Deleted User'} • {formatDistanceToNow(new Date(announcement.createdAt), { addSuffix: true })}
           </span>
@@ -290,7 +290,7 @@ function AnnouncementForm({ announcement, onSave, onClose }) {
       <div className="modal-content max-w-lg">
         <div className="modal-header">
           <h3>{announcement ? 'Edit Announcement' : 'New Announcement'}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl" aria-label="Close">&times;</button>
+          <button onClick={onClose} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl" aria-label="Close">&times;</button>
         </div>
 
         <div className="modal-body">
@@ -346,19 +346,19 @@ function AnnouncementForm({ announcement, onSave, onClose }) {
                     onChange={(e) => setFormData(prev => ({ ...prev, isPinned: e.target.checked }))}
                     className="w-4 h-4 rounded"
                   />
-                  <span className="text-gray-300">Pin & require acknowledgment</span>
+                  <span className="text-[var(--color-text-secondary)]">Pin & require acknowledgment</span>
                 </label>
               </div>
             </div>
 
-            <div className="flex gap-2 justify-end pt-4 border-t border-gray-700">
+            <div className="flex gap-2 justify-end pt-4 border-t border-[var(--color-border)]">
               <button type="button" onClick={onClose} className="btn btn-secondary">
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading || !formData.title.trim() || !formData.content.trim()}
-                className="btn btn-primary disabled:opacity-50"
+                className="btn btn-primary"
               >
                 {loading ? 'Saving...' : announcement ? 'Update' : 'Post Announcement'}
               </button>

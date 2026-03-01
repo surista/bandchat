@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
+import Badge from '../../components/Badge';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
 
@@ -30,14 +31,6 @@ function parseDuration(str) {
   const s = parseInt(parts[1], 10);
   if (isNaN(m) || isNaN(s)) return null;
   return m * 60 + s;
-}
-
-function Badge({ label, color, bgColor }) {
-  return (
-    <View style={[styles.badge, { backgroundColor: bgColor }]}>
-      <Text style={[styles.badgeText, { color }]}>{label}</Text>
-    </View>
-  );
 }
 
 export default function SongDetailScreen({ navigation, route }) {
@@ -481,8 +474,6 @@ const styles = StyleSheet.create({
   viewArtist: { fontSize: 16, marginBottom: 4 },
   viewShortName: { fontSize: 14, fontStyle: 'italic', marginBottom: 8 },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 8 },
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
-  badgeText: { fontSize: 13, fontWeight: '600' },
   linksRow: { flexDirection: 'row', gap: 12, marginVertical: 12 },
   linkButton: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 },
   youtubeLink: { color: '#ef4444', fontSize: 15, fontWeight: '600' },

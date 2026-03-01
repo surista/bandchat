@@ -34,7 +34,7 @@ class NativePushService {
       permStatus = await Push.requestPermissions();
     }
     if (permStatus.receive !== 'granted') {
-      console.log('Native push permission not granted');
+      if (import.meta.env.DEV) console.log('Native push permission not granted');
       return false;
     }
 
@@ -43,27 +43,27 @@ class NativePushService {
 
     // Listen for registration success
     const regListener = await Push.addListener('registration', (token) => {
-      console.log('Native push registered, token:', token.value.substring(0, 20) + '...');
+      if (import.meta.env.DEV) console.log('Native push registered, token:', token.value.substring(0, 20) + '...');
       this.deviceToken = token.value;
     });
     this.listeners.push(regListener);
 
     // Listen for registration errors
     const errListener = await Push.addListener('registrationError', (err) => {
-      console.error('Native push registration error:', err);
+      if (import.meta.env.DEV) console.error('Native push registration error:', err);
     });
     this.listeners.push(errListener);
 
     // Listen for incoming notifications while app is in foreground
     const fgListener = await Push.addListener('pushNotificationReceived', (notification) => {
-      console.log('Push received in foreground:', notification);
+      if (import.meta.env.DEV) console.log('Push received in foreground:', notification);
       // Could show an in-app toast here
     });
     this.listeners.push(fgListener);
 
     // Listen for notification taps (app opened from notification)
     const tapListener = await Push.addListener('pushNotificationActionPerformed', (action) => {
-      console.log('Push notification tapped:', action);
+      if (import.meta.env.DEV) console.log('Push notification tapped:', action);
       // TODO: Navigate to the relevant channel/message
     });
     this.listeners.push(tapListener);

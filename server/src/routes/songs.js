@@ -10,6 +10,9 @@ import spotifyService from '../services/spotify.js';
 
 const router = express.Router();
 
+// Per-workspace lock to prevent concurrent enrichment/bulk-import-with-metadata
+const enrichmentLocks = new Set();
+
 // Get all songs for a workspace
 router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
@@ -99,6 +102,15 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 // Enrich songs with missing metadata
 router.post('/workspace/:workspaceId/enrich', authenticate, isWorkspaceMember, async (req, res) => {
   try {
+    const workspaceId = req.params.workspaceId;
+
+    // Prevent concurrent enrichment for the same workspace
+    if (enrichmentLocks.has(workspaceId)) {
+      return res.status(409).json({ error: 'Enrichment is already running for this workspace. Please wait for it to complete.' });
+    }
+    enrichmentLocks.add(workspaceId);
+
+    try {
     const { songIds } = req.body; // Optional: specific song IDs to enrich
 
     // Get songs to enrich
@@ -227,10 +239,13 @@ router.post('/workspace/:workspaceId/enrich', authenticate, isWorkspaceMember, a
     // Broadcast that songs were updated
     if (results.updated > 0) {
       const io = req.app.get('io');
-      io.to(`workspace:${req.params.workspaceId}`).emit('songs:enriched', results);
+      io.to(`workspace:${workspaceId}`).emit('songs:enriched', results);
     }
 
     res.json(results);
+    } finally {
+      enrichmentLocks.delete(workspaceId);
+    }
   } catch (error) {
     console.error('Enrich songs error:', error);
     res.status(500).json({ error: 'Failed to enrich songs' });
@@ -344,6 +359,7 @@ router.put('/:songId', authenticate, async (req, res) => {
 router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, async (req, res) => {
   try {
     const { songs, fetchMetadata = true } = req.body;
+    const workspaceId = req.params.workspaceId;
 
     if (!songs || !Array.isArray(songs) || songs.length === 0) {
       return res.status(400).json({ error: 'Songs array is required' });
@@ -353,6 +369,15 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
       return res.status(400).json({ error: 'Maximum 200 songs per import' });
     }
 
+    // Prevent concurrent metadata fetching for the same workspace
+    if (fetchMetadata) {
+      if (enrichmentLocks.has(workspaceId)) {
+        return res.status(409).json({ error: 'Enrichment is already running for this workspace. Please wait for it to complete.' });
+      }
+      enrichmentLocks.add(workspaceId);
+    }
+
+    try {
     const results = {
       created: [],
       skipped: [],
@@ -480,10 +505,15 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
     // Broadcast all created songs
     if (results.created.length > 0) {
       const io = req.app.get('io');
-      io.to(`workspace:${req.params.workspaceId}`).emit('songs:bulkCreated', results.created);
+      io.to(`workspace:${workspaceId}`).emit('songs:bulkCreated', results.created);
     }
 
     res.status(201).json(results);
+    } finally {
+      if (fetchMetadata) {
+        enrichmentLocks.delete(workspaceId);
+      }
+    }
   } catch (error) {
     console.error('Bulk import error:', error);
     res.status(500).json({ error: 'Failed to import songs' });

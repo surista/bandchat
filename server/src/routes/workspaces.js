@@ -1,6 +1,7 @@
 import express from 'express';
-import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
+import rateLimit from 'express-rate-limit';
 import { Resend } from 'resend';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
@@ -8,9 +9,18 @@ import prisma from '../lib/prisma.js';
 const router = express.Router();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-// Generate a random invite code
+// Rate limiter for invite code join attempts (5 per 15 minutes per IP)
+const inviteJoinLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'Too many join attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// Generate a strong random invite code (10 chars, base64url)
 const generateInviteCode = () => {
-  return uuidv4().split('-')[0].toUpperCase();
+  return crypto.randomBytes(6).toString('base64url').substring(0, 10).toUpperCase();
 };
 
 // Get expiration date based on duration (in hours, null = never expires)
@@ -153,6 +163,10 @@ router.put('/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => 
   try {
     const { name } = req.body;
 
+    if (name && name.trim().length > 100) {
+      return res.status(400).json({ error: 'Workspace name must be 100 characters or less' });
+    }
+
     const workspace = await prisma.workspace.update({
       where: { id: req.params.workspaceId },
       data: {
@@ -221,7 +235,7 @@ router.post('/:workspaceId/leave', authenticate, isWorkspaceMember, async (req, 
 });
 
 // Join workspace via invite code
-router.post('/join/:inviteCode', authenticate, async (req, res) => {
+router.post('/join/:inviteCode', inviteJoinLimiter, authenticate, async (req, res) => {
   try {
     const workspace = await prisma.workspace.findUnique({
       where: { inviteCode: req.params.inviteCode.toUpperCase() }

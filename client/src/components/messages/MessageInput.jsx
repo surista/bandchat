@@ -5,20 +5,9 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { hapticLight } from '../../services/haptic';
+import { formatFileSize } from '../../utils/format';
+import { MAX_IMAGE_SIZE, MAX_AUDIO_SIZE, MAX_VIDEO_SIZE, ALLOWED_IMAGE_TYPES, ALLOWED_AUDIO_TYPES, ALLOWED_VIDEO_TYPES, isImageFile, isAudioFile, isVideoFile } from '../../utils/fileValidation';
 
-/** Maximum file size for uploads */
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
-const MAX_AUDIO_SIZE = 30 * 1024 * 1024; // 30MB
-const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
-
-/** Allowed file types */
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-const ALLOWED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/aac', 'audio/m4a', 'audio/x-m4a', 'audio/mp4'];
-const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo', 'video/x-matroska'];
-
-const isImageFile = (file) => file.type.startsWith('image/') || ALLOWED_IMAGE_TYPES.includes(file.type);
-const isAudioFile = (file) => file.type.startsWith('audio/') || ALLOWED_AUDIO_TYPES.includes(file.type);
-const isVideoFile = (file) => file.type.startsWith('video/') || ALLOWED_VIDEO_TYPES.includes(file.type);
 
 /**
  * Message composition input with file attachments and @mention support.
@@ -269,22 +258,18 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
     setPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Track current previews via ref so unmount cleanup captures latest state
+  const previewsRef = useRef(previews);
+  previewsRef.current = previews;
+
   // Cleanup blob URLs on unmount to prevent memory leaks
   useEffect(() => {
     return () => {
-      previews.forEach(p => {
-        if (p?.url?.startsWith('blob:')) {
-          URL.revokeObjectURL(p.url);
-        }
+      previewsRef.current.forEach(p => {
+        if (p?.url?.startsWith('blob:')) URL.revokeObjectURL(p.url);
       });
     };
-  }, []);  // Empty deps - cleanup on unmount only
-
-  const formatFileSize = (bytes) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
+  }, []);
 
   return (
     <form onSubmit={handleSubmit} className="p-4 border-t border-gray-700 safe-area-bottom">
@@ -300,7 +285,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
         <div className="mb-3 flex flex-wrap gap-2">
           {previews.map((preview, index) => (
             <div
-              key={index}
+              key={preview.name + '-' + preview.size}
               className="relative group bg-gray-700 rounded-lg p-2 flex items-center gap-2"
             >
               {preview.type === 'audio' ? (
