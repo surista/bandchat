@@ -24,6 +24,7 @@ export default {
         NSMicrophoneUsageDescription: 'BandChat needs microphone access to record audio for band recordings.',
         NSCalendarsUsageDescription: 'BandChat can add gigs and rehearsals to your device calendar.',
         NSCalendarsFullAccessUsageDescription: 'BandChat can add gigs and rehearsals to your device calendar.',
+        ITSAppUsesNonExemptEncryption: false,
         UIBackgroundModes: ['remote-notification'],
       },
     },
@@ -55,6 +56,9 @@ export default {
     extra: {
       apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api',
       socketUrl: process.env.EXPO_PUBLIC_SOCKET_URL || 'http://localhost:3001',
+      eas: {
+        projectId: 'd4038ff4-1904-4b0d-98a0-d8bcab2cb00f',
+      },
     },
     plugins: [
       'expo-secure-store',
