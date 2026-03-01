@@ -93,6 +93,19 @@ router.get('/workspace/:workspaceId/summary', authenticate, isWorkspaceMember, a
   try {
     const workspaceId = req.params.workspaceId;
     const userId = req.user.id;
+    const timezone = req.query.timezone || 'UTC';
+
+    // Calculate the offset in milliseconds for the user's timezone
+    // We use a reference date to get the timezone offset
+    let tzOffsetMs = 0;
+    try {
+      const now = new Date();
+      const utcStr = now.toLocaleString('en-US', { timeZone: 'UTC' });
+      const tzStr = now.toLocaleString('en-US', { timeZone: timezone });
+      tzOffsetMs = new Date(tzStr).getTime() - new Date(utcStr).getTime();
+    } catch {
+      // Invalid timezone, fall back to UTC (offset stays 0)
+    }
 
     // Per-song aggregation
     const songStats = await prisma.practiceSession.groupBy({
@@ -120,21 +133,25 @@ router.get('/workspace/:workspaceId/summary', authenticate, isWorkspaceMember, a
 
     let streak = 0;
     if (recentSessions.length > 0) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Helper to get the start of day in the user's timezone
+      const getLocalDayStart = (date) => {
+        // Shift the UTC time by the timezone offset to get "local" time, then truncate to day
+        const localMs = date.getTime() + tzOffsetMs;
+        const localDay = new Date(localMs);
+        localDay.setUTCHours(0, 0, 0, 0);
+        return localDay.getTime();
+      };
+
+      const today = getLocalDayStart(new Date());
       const practiceDays = new Set(
-        recentSessions.map(s => {
-          const d = new Date(s.practicedAt);
-          d.setHours(0, 0, 0, 0);
-          return d.getTime();
-        })
+        recentSessions.map(s => getLocalDayStart(new Date(s.practicedAt)))
       );
 
       const sortedDays = [...practiceDays].sort((a, b) => b - a);
       const oneDay = 24 * 60 * 60 * 1000;
 
-      // Check if practiced today or yesterday
-      if (sortedDays[0] >= today.getTime() - oneDay) {
+      // Check if practiced today or yesterday (in user's timezone)
+      if (sortedDays[0] >= today - oneDay) {
         streak = 1;
         for (let i = 1; i < sortedDays.length; i++) {
           if (sortedDays[i - 1] - sortedDays[i] === oneDay) {

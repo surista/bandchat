@@ -367,6 +367,7 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
   try {
     const { songs, fetchMetadata = true } = req.body;
     const workspaceId = req.params.workspaceId;
+    const userId = req.user.id;
 
     if (!songs || !Array.isArray(songs) || songs.length === 0) {
       return res.status(400).json({ error: 'Songs array is required' });
@@ -381,10 +382,8 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
       if (enrichmentLocks.has(workspaceId)) {
         return res.status(409).json({ error: 'Enrichment is already running for this workspace. Please wait for it to complete.' });
       }
-      enrichmentLocks.add(workspaceId);
     }
 
-    try {
     const results = {
       created: [],
       skipped: [],
@@ -392,6 +391,7 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
       metadataMatches: 0
     };
 
+    // Step 1: Create all songs in DB immediately (without metadata)
     for (const songData of songs) {
       if (!songData.title || !songData.title.trim()) {
         results.errors.push({ song: songData, error: 'Title is required' });
@@ -403,88 +403,13 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
         const shortName = songData.shortName?.trim() || null;
         const artist = songData.artist?.trim() || null;
 
-        let bpm = null;
-        let key = null;
-        let duration = null;
-        let youtubeUrl = null;
-        let spotifyUrl = null;
-        let gotMetadata = false;
-
-        if (fetchMetadata) {
-          // Fetch BPM and Key from SongBPM.com scraper
-          try {
-            const scraperData = await songBPMScraperService.getTrackMetadata(title, artist);
-            if (scraperData?.bpm) {
-              bpm = scraperData.bpm;
-              gotMetadata = true;
-            }
-            if (scraperData?.key) {
-              key = scraperData.key;
-              gotMetadata = true;
-            }
-            await delay(1500); // Rate limit songbpm
-          } catch (err) {
-            console.error('SongBPM scraper failed for:', title, err.message);
-          }
-
-          // Fallback to Deezer for BPM if missing
-          if (!bpm) {
-            try {
-              const deezerData = await deezerService.getTrackMetadata(title, artist);
-              if (deezerData?.bpm) {
-                bpm = deezerData.bpm;
-                gotMetadata = true;
-              }
-              await delay(500); // Rate limit Deezer
-            } catch (err) {
-              console.error('Deezer lookup failed for:', title, err.message);
-            }
-          }
-
-          // Fetch duration from iTunes
-          try {
-            const itunesData = await itunesService.searchTrack(title, artist);
-            if (itunesData?.duration) {
-              duration = itunesData.duration;
-              gotMetadata = true;
-            }
-            await delay(300);
-          } catch (err) {
-            console.error('iTunes lookup failed for:', title, err.message);
-          }
-
-          // Fetch YouTube link
-          try {
-            const ytData = await youtubeService.searchVideo(title, artist);
-            if (ytData?.url) {
-              youtubeUrl = ytData.url;
-              gotMetadata = true;
-            }
-            await delay(500);
-          } catch (err) {
-            console.error('YouTube lookup failed for:', title, err.message);
-          }
-
-          // Generate Spotify search URL
-          spotifyUrl = spotifyService.generateSearchUrl(title, artist);
-
-          if (gotMetadata) {
-            results.metadataMatches++;
-          }
-        }
-
         const song = await prisma.song.create({
           data: {
             title,
             shortName,
             artist,
-            duration,
-            bpm,
-            key,
-            youtubeUrl,
-            spotifyUrl,
-            workspaceId: req.params.workspaceId,
-            createdById: req.user.id
+            workspaceId,
+            createdById: userId
           },
           include: {
             createdBy: {
@@ -510,16 +435,136 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
     }
 
     // Broadcast all created songs
+    const io = req.app.get('io');
     if (results.created.length > 0) {
-      const io = req.app.get('io');
       io.to(`workspace:${workspaceId}`).emit('songs:bulkCreated', results.created);
     }
 
+    // Step 2: Return immediately with the created songs
     res.status(201).json(results);
-    } finally {
-      if (fetchMetadata) {
-        enrichmentLocks.delete(workspaceId);
+
+    // Step 3: Enrich metadata in the background (non-blocking)
+    if (fetchMetadata && results.created.length > 0) {
+      if (enrichmentLocks.has(workspaceId)) {
+        // Another enrichment started between check and here, skip metadata
+        return;
       }
+      enrichmentLocks.add(workspaceId);
+
+      const emitProgress = (current, total, detail) => {
+        io.to(`user:${userId}`).emit('songs:import-progress', {
+          workspaceId, current, total, detail
+        });
+      };
+
+      setImmediate(async () => {
+        try {
+          const songsToEnrich = results.created;
+          let metadataMatches = 0;
+
+          for (let i = 0; i < songsToEnrich.length; i++) {
+            const song = songsToEnrich[i];
+            const updates = {};
+            const fieldsUpdated = [];
+
+            emitProgress(i + 1, songsToEnrich.length, song.title);
+
+            // Fetch BPM and Key from SongBPM.com scraper
+            try {
+              const scraperData = await songBPMScraperService.getTrackMetadata(song.title, song.artist);
+              if (scraperData?.bpm) {
+                updates.bpm = scraperData.bpm;
+                fieldsUpdated.push('bpm');
+              }
+              if (scraperData?.key) {
+                updates.key = scraperData.key;
+                fieldsUpdated.push('key');
+              }
+              await delay(1500);
+            } catch (err) {
+              console.error('SongBPM scraper failed for:', song.title, err.message);
+            }
+
+            // Fallback to Deezer for BPM if missing
+            if (!updates.bpm) {
+              try {
+                const deezerData = await deezerService.getTrackMetadata(song.title, song.artist);
+                if (deezerData?.bpm) {
+                  updates.bpm = deezerData.bpm;
+                  fieldsUpdated.push('bpm');
+                }
+                await delay(500);
+              } catch (err) {
+                console.error('Deezer lookup failed for:', song.title, err.message);
+              }
+            }
+
+            // Fetch duration from iTunes
+            try {
+              const itunesData = await itunesService.searchTrack(song.title, song.artist);
+              if (itunesData?.duration) {
+                updates.duration = itunesData.duration;
+                fieldsUpdated.push('duration');
+              }
+              await delay(300);
+            } catch (err) {
+              console.error('iTunes lookup failed for:', song.title, err.message);
+            }
+
+            // Fetch YouTube link
+            try {
+              const ytData = await youtubeService.searchVideo(song.title, song.artist);
+              if (ytData?.url) {
+                updates.youtubeUrl = ytData.url;
+                fieldsUpdated.push('youtube');
+              }
+              await delay(500);
+            } catch (err) {
+              console.error('YouTube lookup failed for:', song.title, err.message);
+            }
+
+            // Generate Spotify search URL
+            updates.spotifyUrl = spotifyService.generateSearchUrl(song.title, song.artist);
+            fieldsUpdated.push('spotify');
+
+            if (fieldsUpdated.length > 1) { // More than just spotify
+              metadataMatches++;
+            }
+
+            // Update the song with metadata
+            if (Object.keys(updates).length > 0) {
+              try {
+                const updatedSong = await prisma.song.update({
+                  where: { id: song.id },
+                  data: updates,
+                  include: {
+                    createdBy: {
+                      select: { id: true, displayName: true }
+                    }
+                  }
+                });
+                io.to(`workspace:${workspaceId}`).emit('song:updated', updatedSong);
+              } catch (err) {
+                console.error('Failed to update song metadata for:', song.title, err.message);
+              }
+            }
+          }
+
+          // Emit completion event
+          io.to(`user:${userId}`).emit('songs:import-progress', {
+            workspaceId,
+            current: songsToEnrich.length,
+            total: songsToEnrich.length,
+            detail: 'Metadata enrichment complete',
+            done: true,
+            metadataMatches
+          });
+        } catch (err) {
+          console.error('Background metadata enrichment error:', err);
+        } finally {
+          enrichmentLocks.delete(workspaceId);
+        }
+      });
     }
   } catch (error) {
     console.error('Bulk import error:', error);

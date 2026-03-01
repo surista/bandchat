@@ -48,7 +48,31 @@ export function AuthProvider({ children }) {
           const userData = await api.getMe();
           setUser(userData);
         } catch (error) {
-          api.clearTokens();
+          // Access token expired or invalid — try refreshing via httpOnly cookie
+          const refreshed = await api.refreshAccessToken();
+          if (refreshed) {
+            try {
+              const userData = await api.getMe();
+              setUser(userData);
+            } catch {
+              api.clearTokens();
+            }
+          } else {
+            api.clearTokens();
+          }
+        }
+      } else {
+        // No access token in memory, but the httpOnly refresh cookie may still
+        // be valid (e.g. user returned after closing the tab). Attempt a silent
+        // refresh to restore the session.
+        const refreshed = await api.refreshAccessToken();
+        if (refreshed) {
+          try {
+            const userData = await api.getMe();
+            setUser(userData);
+          } catch {
+            api.clearTokens();
+          }
         }
       }
       setLoading(false);

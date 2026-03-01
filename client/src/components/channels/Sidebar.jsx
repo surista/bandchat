@@ -875,7 +875,7 @@ function Sidebar({
 
         {!collapsedSections.members && (
           <div className="space-y-0.5 ml-2">
-            {(showAllMembers ? workspace.members : workspace.members?.slice(0, 10))?.map((member) => (
+            {((showAllMembers ? workspace.members : workspace.members?.slice(0, 10)) || []).map((member) => (
               <MemberHoverCard
                 key={member.user.id}
                 userId={member.user.id}

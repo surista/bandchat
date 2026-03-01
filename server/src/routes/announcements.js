@@ -12,7 +12,12 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
     const announcements = await prisma.announcement.findMany({
       where: {
         workspaceId: req.params.workspaceId,
-        ...(pinnedOnly === 'true' && { isPinned: true })
+        ...(pinnedOnly === 'true' && { isPinned: true }),
+        // Exclude expired announcements
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gte: new Date() } }
+        ]
       },
       include: {
         createdBy: {

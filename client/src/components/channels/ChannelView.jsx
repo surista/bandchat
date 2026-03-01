@@ -176,8 +176,11 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
 
   const loadPinnedMessages = async () => {
     try {
-      const data = await api.getPinnedMessages(channel.id);
-      setPinnedMessages(data);
+      const chId = channelIdRef.current;
+      const data = await api.getPinnedMessages(chId);
+      if (chId === channelIdRef.current) {
+        setPinnedMessages(data);
+      }
     } catch (err) {
       console.error('Failed to load pinned messages:', err);
     }

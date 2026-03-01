@@ -31,6 +31,8 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
   const [mentionStart, setMentionStart] = useState(-1);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
+  const onSendRef = useRef(onSend);
+  useEffect(() => { onSendRef.current = onSend; }, [onSend]);
 
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -106,7 +108,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
           setSending(true);
           hapticLight();
           try {
-            await onSend('', [audioFile]);
+            await onSendRef.current('', [audioFile]);
             setSelectedFiles([]);
             setPreviews([]);
           } catch (err) {
@@ -132,7 +134,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
       }
       console.error('Failed to start recording:', err);
     }
-  }, [onSend]);
+  }, []);
 
   const stopRecording = useCallback(() => {
     if (durationIntervalRef.current) {

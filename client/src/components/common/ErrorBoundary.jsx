@@ -20,28 +20,34 @@ class ErrorBoundary extends Component {
 
   render() {
     if (this.state.hasError) {
+      const styles = getComputedStyle(document.documentElement);
+      const bgColor = styles.getPropertyValue('--color-bg-primary').trim() || '#1a1d21';
+      const textColor = styles.getPropertyValue('--color-text-primary').trim() || '#d1d2d3';
+      const mutedColor = styles.getPropertyValue('--color-text-muted').trim() || '#ababad';
+      const accentColor = styles.getPropertyValue('--color-accent').trim() || '#4A154B';
+
       return (
         <div style={{
           minHeight: '100vh',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: '#1a1d21',
-          color: '#d1d2d3',
+          backgroundColor: bgColor,
+          color: textColor,
           fontFamily: 'system-ui, -apple-system, sans-serif',
           padding: '2rem'
         }}>
           <div style={{ textAlign: 'center', maxWidth: '400px' }}>
-            <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#fff' }}>
+            <h1 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: textColor }}>
               Something went wrong
             </h1>
-            <p style={{ marginBottom: '1.5rem', color: '#ababad' }}>
+            <p style={{ marginBottom: '1.5rem', color: mutedColor }}>
               An unexpected error occurred. Please reload the page.
             </p>
             <button
               onClick={this.handleReload}
               style={{
-                backgroundColor: '#4A154B',
+                backgroundColor: accentColor,
                 color: 'white',
                 border: 'none',
                 padding: '10px 24px',

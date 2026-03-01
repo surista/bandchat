@@ -31,7 +31,12 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 class ApiService {
   constructor() {
     this.accessToken = localStorage.getItem('accessToken');
-    this.refreshToken = localStorage.getItem('refreshToken');
+    // Refresh token is now stored in an httpOnly cookie (set by server).
+    // We no longer store or read it from localStorage.
+    // Clean up legacy refreshToken from localStorage (one-time migration).
+    localStorage.removeItem('refreshToken');
+    // _hasSession indicates we may have a valid cookie-based session.
+    this._hasSession = !!this.accessToken;
     this._refreshPromise = null;
   }
 
@@ -46,23 +51,21 @@ class ApiService {
     }
   }
 
-  setTokens(accessToken, refreshToken) {
+  setTokens(accessToken) {
     this.accessToken = accessToken;
-    this.refreshToken = refreshToken;
+    this._hasSession = true;
     localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
   }
 
   clearTokens() {
     this.accessToken = null;
-    this.refreshToken = null;
+    this._hasSession = false;
     localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
   }
 
   async request(endpoint, options = {}) {
     // Proactively refresh token before it expires to avoid 401 errors
-    if (this.refreshToken && this.isTokenExpiringSoon()) {
+    if (this._hasSession && this.isTokenExpiringSoon()) {
       if (!this._refreshPromise) {
         this._refreshPromise = this.refreshAccessToken().finally(() => {
           this._refreshPromise = null;
@@ -84,11 +87,12 @@ class ApiService {
     try {
       const response = await fetch(url, {
         ...options,
-        headers
+        headers,
+        credentials: 'include' // Send httpOnly cookies (refresh token)
       });
 
       // Handle token expiration with lock to prevent concurrent refreshes
-      if (response.status === 401 && this.refreshToken) {
+      if (response.status === 401 && this._hasSession) {
         if (!this._refreshPromise) {
           this._refreshPromise = this.refreshAccessToken().finally(() => {
             this._refreshPromise = null;
@@ -97,7 +101,7 @@ class ApiService {
         const refreshed = await this._refreshPromise;
         if (refreshed) {
           headers['Authorization'] = `Bearer ${this.accessToken}`;
-          const retryResponse = await fetch(url, { ...options, headers });
+          const retryResponse = await fetch(url, { ...options, headers, credentials: 'include' });
           return this.handleResponse(retryResponse);
         }
         // Refresh failed - redirect to login
@@ -127,12 +131,13 @@ class ApiService {
       const response = await fetch(`${API_URL}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: this.refreshToken })
+        credentials: 'include', // Send httpOnly cookie
+        body: JSON.stringify({}) // Body required for POST, cookie carries the token
       });
 
       if (response.ok) {
         const data = await response.json();
-        this.setTokens(data.accessToken, data.refreshToken);
+        this.setTokens(data.accessToken);
         return true;
       }
 
@@ -150,7 +155,7 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ email, password, displayName })
     });
-    this.setTokens(data.accessToken, data.refreshToken);
+    this.setTokens(data.accessToken);
     return data;
   }
 
@@ -159,22 +164,20 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ email, password })
     });
-    this.setTokens(data.accessToken, data.refreshToken);
+    this.setTokens(data.accessToken);
     return data;
   }
 
   async logout() {
-    // Revoke refresh token on server
-    if (this.refreshToken) {
-      try {
-        await fetch(`${API_URL}/auth/logout`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken: this.refreshToken })
-        });
-      } catch {
-        // Ignore errors - still clear local tokens
-      }
+    // Revoke refresh token on server (cookie sent automatically)
+    try {
+      await fetch(`${API_URL}/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include' // Send httpOnly cookie for server-side revocation
+      });
+    } catch {
+      // Ignore errors - still clear local tokens
     }
     this.clearTokens();
   }
@@ -224,7 +227,7 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ credential })
     });
-    this.setTokens(data.accessToken, data.refreshToken);
+    this.setTokens(data.accessToken);
     return data;
   }
 
@@ -561,7 +564,7 @@ class ApiService {
 
   // File uploads
   async uploadFile(file) {
-    if (this.refreshToken && this.isTokenExpiringSoon()) {
+    if (this._hasSession && this.isTokenExpiringSoon()) {
       if (!this._refreshPromise) {
         this._refreshPromise = this.refreshAccessToken().finally(() => { this._refreshPromise = null; });
       }
@@ -593,7 +596,7 @@ class ApiService {
   }
 
   async uploadFiles(files) {
-    if (this.refreshToken && this.isTokenExpiringSoon()) {
+    if (this._hasSession && this.isTokenExpiringSoon()) {
       if (!this._refreshPromise) {
         this._refreshPromise = this.refreshAccessToken().finally(() => { this._refreshPromise = null; });
       }

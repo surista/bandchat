@@ -26,6 +26,37 @@ const hashRefreshToken = (token) => {
 };
 
 /**
+ * Set the refresh token as an httpOnly cookie on the response.
+ * Used by web clients for secure token storage.
+ * Mobile clients ignore this cookie and use the body-based token.
+ * @param {import("express").Response} res - Express response
+ * @param {string} refreshToken - The refresh token to set
+ */
+const setRefreshTokenCookie = (res, refreshToken) => {
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 14 * 24 * 60 * 60 * 1000, // 14 days
+    path: '/api/auth'
+  });
+};
+
+/**
+ * Clear the refresh token cookie from the response.
+ * @param {import("express").Response} res - Express response
+ */
+const clearRefreshTokenCookie = (res) => {
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/api/auth'
+  });
+};
+
+
+/**
  * Validates a display name for security and usability.
  * @param {string} displayName - The display name to validate
  * @returns {{valid: boolean, error?: string}}
@@ -148,6 +179,7 @@ router.post('/signup', authLimiter, async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const verificationToken = crypto.randomBytes(32).toString('hex');
+    const hashedVerificationToken = hashRefreshToken(verificationToken);
     const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
     const user = await prisma.user.create({
@@ -155,7 +187,7 @@ router.post('/signup', authLimiter, async (req, res) => {
         email: email.toLowerCase(),
         password: hashedPassword,
         displayName,
-        verificationToken,
+        verificationToken: hashedVerificationToken,
         verificationExpires
       },
       select: {
@@ -172,6 +204,9 @@ router.post('/signup', authLimiter, async (req, res) => {
     sendVerificationEmail(email.toLowerCase(), verificationToken).catch(console.error);
 
     const tokens = await generateTokens(user.id);
+
+    // Set refresh token as httpOnly cookie for web clients
+    setRefreshTokenCookie(res, tokens.refreshToken);
 
     res.status(201).json({
       user,
@@ -193,8 +228,10 @@ router.post('/verify-email', tokenLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Verification token required' });
     }
 
+    // Hash the incoming token to compare against stored hash
+    const hashedToken = hashRefreshToken(token);
     const user = await prisma.user.findUnique({
-      where: { verificationToken: token }
+      where: { verificationToken: hashedToken }
     });
 
     if (!user) {
@@ -233,13 +270,15 @@ router.post('/resend-verification', authLimiter, authenticate, async (req, res) 
     }
 
     const verificationToken = crypto.randomBytes(32).toString('hex');
+    const hashedVerificationToken = hashRefreshToken(verificationToken);
     const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { verificationToken, verificationExpires }
+      data: { verificationToken: hashedVerificationToken, verificationExpires }
     });
 
+    // Send unhashed token in the email URL
     await sendVerificationEmail(user.email, verificationToken);
 
     res.json({ message: 'Verification email sent' });
@@ -277,6 +316,9 @@ router.post('/login', authLimiter, async (req, res) => {
     }
 
     const tokens = await generateTokens(user.id);
+
+    // Set refresh token as httpOnly cookie for web clients
+    setRefreshTokenCookie(res, tokens.refreshToken);
 
     res.json({
       user: {
@@ -322,6 +364,8 @@ router.post('/google', authLimiter, async (req, res) => {
     if (user) {
       // Existing Google user - just sign in
       const tokens = await generateTokens(user.id);
+      // Set refresh token as httpOnly cookie for web clients
+      setRefreshTokenCookie(res, tokens.refreshToken);
       return res.json({
         user: {
           id: user.id,
@@ -372,6 +416,9 @@ router.post('/google', authLimiter, async (req, res) => {
     });
 
     const tokens = await generateTokens(user.id);
+
+    // Set refresh token as httpOnly cookie for web clients
+    setRefreshTokenCookie(res, tokens.refreshToken);
 
     res.status(201).json({
       user,
@@ -463,7 +510,8 @@ router.post('/link-google', authenticate, async (req, res) => {
 // Refresh token (rate limited to prevent token enumeration)
 router.post('/refresh', authLimiter, async (req, res) => {
   try {
-    const { refreshToken } = req.body;
+    // Check httpOnly cookie first (web clients), then fall back to body (mobile clients)
+    const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
 
     if (!refreshToken) {
       return res.status(400).json({ error: 'Refresh token required' });
@@ -513,6 +561,9 @@ router.post('/refresh', authLimiter, async (req, res) => {
 
     // Generate new tokens
     const tokens = await generateTokens(user.id);
+
+    // Set new refresh token as httpOnly cookie for web clients
+    setRefreshTokenCookie(res, tokens.refreshToken);
 
     res.json({
       user,
@@ -695,21 +746,22 @@ router.post('/change-email', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Email is already in use' });
     }
 
-    // Generate verification token
+    // Generate verification token and hash before storage
     const verificationToken = crypto.randomBytes(32).toString('hex');
+    const hashedVerificationToken = hashRefreshToken(verificationToken);
     const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    // Store the pending email change
+    // Store the pending email change with hashed token
     await prisma.user.update({
       where: { id: req.user.id },
       data: {
-        verificationToken,
+        verificationToken: hashedVerificationToken,
         verificationExpires,
         pendingEmail: newEmail.toLowerCase()
       }
     });
 
-    // Send verification to NEW email
+    // Send unhashed token to NEW email
     if (resend) {
       const verifyUrl = `${process.env.CLIENT_URL}/verify-email-change?token=${verificationToken}&email=${encodeURIComponent(newEmail.toLowerCase())}`;
 
@@ -748,8 +800,10 @@ router.post('/verify-email-change', tokenLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Token is required' });
     }
 
+    // Hash the incoming token to compare against stored hash
+    const hashedToken = hashRefreshToken(token);
     const user = await prisma.user.findUnique({
-      where: { verificationToken: token }
+      where: { verificationToken: hashedToken }
     });
 
     if (!user) {
@@ -801,7 +855,8 @@ router.post('/verify-email-change', tokenLimiter, async (req, res) => {
 // Logout - revoke refresh token
 router.post('/logout', async (req, res) => {
   try {
-    const { refreshToken } = req.body;
+    // Check cookie first (web clients), then fall back to body (mobile clients)
+    const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
 
     if (refreshToken) {
       // Hash the token to find it in database
@@ -812,8 +867,13 @@ router.post('/logout', async (req, res) => {
       });
     }
 
+    // Clear the httpOnly cookie for web clients
+    clearRefreshTokenCookie(res);
+
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
+    // Clear cookie even on error
+    clearRefreshTokenCookie(res);
     // Still return success even if token deletion fails
     res.json({ message: 'Logged out successfully' });
   }
@@ -1109,6 +1169,9 @@ router.delete('/account', authenticate, authLimiter, async (req, res) => {
       // Force-logout the deleted user's active sockets
       io.to(`user:${userId}`).emit('force:logout');
     }
+
+    // Clear the httpOnly cookie for web clients
+    clearRefreshTokenCookie(res);
 
     res.json({ message: 'Account deleted successfully' });
   } catch (error) {

@@ -506,6 +506,10 @@ function WorkspaceView() {
     );
   };
 
+  const handleUpdateUnread = useCallback((count) => {
+    if (selectedChannel) updateChannelUnread(selectedChannel.id, count);
+  }, [selectedChannel?.id]);
+
   const handleSelectBandView = (view) => {
     setActiveBandView(view);
     setBandViewKey(prev => prev + 1); // Force remount to reset state
@@ -698,7 +702,7 @@ function WorkspaceView() {
                 channel={selectedChannel}
                 workspace={workspace}
                 onOpenThread={setSelectedThread}
-                onUpdateUnread={(count) => updateChannelUnread(selectedChannel.id, count)}
+                onUpdateUnread={handleUpdateUnread}
                 openThreadId={selectedThread?.id || null}
                 onOpenSearch={handleOpenSearch}
               />
@@ -974,6 +978,14 @@ function WorkspaceView() {
                 {channels.map(c => (
                   <option key={c.id} value={c.id}>#{c.name}</option>
                 ))}
+                {directMessages.map(dm => {
+                  const dmLabel = dm.otherMembers?.length > 0
+                    ? dm.otherMembers.map(m => m.displayName).join(', ')
+                    : 'Unknown';
+                  return (
+                    <option key={dm.id} value={dm.id}>{dmLabel}</option>
+                  );
+                })}
               </select>
               <select
                 value={searchAuthorFilter}
