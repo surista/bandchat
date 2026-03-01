@@ -542,13 +542,13 @@ export default function ChannelScreen({ navigation, route }) {
         onRequestClose={() => setShowReportModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Report Message</Text>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg || colors.bgSecondary }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Report Message</Text>
             <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
               Why are you reporting this message?
             </Text>
             <TextInput
-              style={[styles.reportInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+              style={[styles.reportInput, { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.bgTertiary }]}
               placeholder="Reason for reporting..."
               placeholderTextColor={colors.textSecondary}
               value={reportReason}
@@ -559,10 +559,10 @@ export default function ChannelScreen({ navigation, route }) {
             />
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: colors.background }]}
+                style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
                 onPress={() => { setShowReportModal(false); setActionMessage(null); }}
               >
-                <Text style={{ color: colors.text }}>Cancel</Text>
+                <Text style={{ color: colors.textPrimary }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: '#dc2626', opacity: reportSubmitting ? 0.6 : 1 }]}

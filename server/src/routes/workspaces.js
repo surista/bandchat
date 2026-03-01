@@ -54,6 +54,10 @@ router.post('/', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Workspace name is required' });
     }
 
+    if (name.trim().length > 100) {
+      return res.status(400).json({ error: 'Workspace name must be 100 characters or less' });
+    }
+
     const workspace = await prisma.workspace.create({
       data: {
         name: name.trim(),

@@ -59,12 +59,9 @@ export default {
       'expo-secure-store',
       'expo-asset',
       'expo-font',
-      'expo-haptics',
       'expo-calendar',
       'expo-image-picker',
       'expo-notifications',
-      '@react-native-community/datetimepicker',
-      '@react-native-community/netinfo',
     ],
   },
 };

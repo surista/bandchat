@@ -750,42 +750,40 @@ router.put('/:gigId', authenticate, async (req, res) => {
       }
     }
 
+    // Build transaction operations for atomic update
+    const txOps = [];
+
     // If setlistIds provided, handle multi-set update
     if (setlistIds !== undefined) {
-      // Delete existing GigSetlist entries
-      await prisma.gigSetlist.deleteMany({
-        where: { gigId: req.params.gigId }
-      });
-
-      // Create new ones if there are setlistIds
+      txOps.push(prisma.gigSetlist.deleteMany({ where: { gigId: req.params.gigId } }));
       if (setlistIds && setlistIds.length > 0) {
-        await prisma.gigSetlist.createMany({
+        txOps.push(prisma.gigSetlist.createMany({
           data: setlistIds.filter(id => id).map((id, index) => ({
             gigId: req.params.gigId,
             setlistId: id,
             setNumber: index + 1
           }))
-        });
+        }));
       }
     }
 
     // If bandMemberIds provided, handle attendee update
     if (bandMemberIds !== undefined) {
-      // Delete existing attendee entries
-      await prisma.gigAttendee.deleteMany({
-        where: { gigId: req.params.gigId }
-      });
-
-      // Create new ones if there are bandMemberIds
+      txOps.push(prisma.gigAttendee.deleteMany({ where: { gigId: req.params.gigId } }));
       if (bandMemberIds && bandMemberIds.length > 0) {
-        await prisma.gigAttendee.createMany({
+        txOps.push(prisma.gigAttendee.createMany({
           data: bandMemberIds.map(bandMemberId => ({
             gigId: req.params.gigId,
             bandMemberId,
             status: 'ATTENDING'
           }))
-        });
+        }));
       }
+    }
+
+    // Execute related ops in a transaction, then update the gig
+    if (txOps.length > 0) {
+      await prisma.$transaction(txOps);
     }
 
     const gig = await prisma.gig.update({

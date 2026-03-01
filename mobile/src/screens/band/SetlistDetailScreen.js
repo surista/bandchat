@@ -251,11 +251,33 @@ export default function SetlistDetailScreen({ navigation, route }) {
   }), [allSongs, existingSongIds, songSearch]);
 
   const renderItem = useCallback(({ item, index }) => {
+    // Determine if we need a set header above this item
+    let setHeader = null;
+    if (item.type !== 'SET_BREAK') {
+      // Count set breaks before this index to determine the set number
+      let setNumber = 1;
+      for (let i = 0; i < index; i++) {
+        if (items[i].type === 'SET_BREAK') setNumber++;
+      }
+      // Show header if this is the first item, or the previous item was a set break
+      const isFirstItem = index === 0;
+      const prevIsBreak = index > 0 && items[index - 1].type === 'SET_BREAK';
+      if (isFirstItem || prevIsBreak) {
+        setHeader = (
+          <View style={styles.setHeaderRow}>
+            <View style={[styles.setHeaderLine, { backgroundColor: colors.border }]} />
+            <Text style={[styles.setHeaderText, { color: colors.primary }]}>Set {setNumber}</Text>
+            <View style={[styles.setHeaderLine, { backgroundColor: colors.border }]} />
+          </View>
+        );
+      }
+    }
+
     if (item.type === 'SET_BREAK') {
       return (
         <View style={[styles.setBreakRow, { borderColor: colors.border }]}>
-          <Text style={[styles.setBreakText, { color: colors.primary }]}>
-            {item.label || 'Set Break'}
+          <Text style={[styles.setBreakText, { color: colors.textSecondary }]}>
+            {item.label || 'Break'}
           </Text>
           {editing && (
             <TouchableOpacity onPress={() => removeItem(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -268,34 +290,37 @@ export default function SetlistDetailScreen({ navigation, route }) {
 
     if (item.type === 'MC') {
       return (
-        <View style={[styles.itemRow, { backgroundColor: colors.bgSecondary }]}>
-          {editing && (
-            <View style={styles.reorderButtons}>
-              <TouchableOpacity onPress={() => moveItem(index, -1)} disabled={index === 0}>
-                <Text style={[styles.reorderArrow, { color: index === 0 ? colors.border : colors.textSecondary }]}>{'\u25B2'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => moveItem(index, 1)} disabled={index === items.length - 1}>
-                <Text style={[styles.reorderArrow, { color: index === items.length - 1 ? colors.border : colors.textSecondary }]}>{'\u25BC'}</Text>
-              </TouchableOpacity>
+        <>
+          {setHeader}
+          <View style={[styles.itemRow, { backgroundColor: colors.bgSecondary }]}>
+            {editing && (
+              <View style={styles.reorderButtons}>
+                <TouchableOpacity onPress={() => moveItem(index, -1)} disabled={index === 0}>
+                  <Text style={[styles.reorderArrow, { color: index === 0 ? colors.border : colors.textSecondary }]}>{'\u25B2'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => moveItem(index, 1)} disabled={index === items.length - 1}>
+                  <Text style={[styles.reorderArrow, { color: index === items.length - 1 ? colors.border : colors.textSecondary }]}>{'\u25BC'}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            <Text style={styles.mcIcon}>{'\uD83C\uDFA4'}</Text>
+            <View style={styles.itemContent}>
+              <Text style={[styles.mcLabel, { color: colors.textSecondary }]}>
+                {item.label || 'MC'}
+              </Text>
             </View>
-          )}
-          <Text style={styles.mcIcon}>{'\uD83C\uDFA4'}</Text>
-          <View style={styles.itemContent}>
-            <Text style={[styles.mcLabel, { color: colors.textSecondary }]}>
-              {item.label || 'MC'}
-            </Text>
+            {item.duration ? (
+              <Text style={[styles.itemDuration, { color: colors.textSecondary }]}>
+                {formatDuration(item.duration)}
+              </Text>
+            ) : null}
+            {editing && (
+              <TouchableOpacity onPress={() => removeItem(item)} style={styles.removeButton}>
+                <Text style={styles.removeText}>{'\u2715'}</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          {item.duration ? (
-            <Text style={[styles.itemDuration, { color: colors.textSecondary }]}>
-              {formatDuration(item.duration)}
-            </Text>
-          ) : null}
-          {editing && (
-            <TouchableOpacity onPress={() => removeItem(item)} style={styles.removeButton}>
-              <Text style={styles.removeText}>{'\u2715'}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        </>
       );
     }
 
@@ -308,42 +333,45 @@ export default function SetlistDetailScreen({ navigation, route }) {
     }
 
     return (
-      <View style={[styles.itemRow, { backgroundColor: colors.bgSecondary }]}>
-        {editing && (
-          <View style={styles.reorderButtons}>
-            <TouchableOpacity onPress={() => moveItem(index, -1)} disabled={index === 0}>
-              <Text style={[styles.reorderArrow, { color: index === 0 ? colors.border : colors.textSecondary }]}>{'\u25B2'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => moveItem(index, 1)} disabled={index === items.length - 1}>
-              <Text style={[styles.reorderArrow, { color: index === items.length - 1 ? colors.border : colors.textSecondary }]}>{'\u25BC'}</Text>
-            </TouchableOpacity>
+      <>
+        {setHeader}
+        <View style={[styles.itemRow, { backgroundColor: colors.bgSecondary }]}>
+          {editing && (
+            <View style={styles.reorderButtons}>
+              <TouchableOpacity onPress={() => moveItem(index, -1)} disabled={index === 0}>
+                <Text style={[styles.reorderArrow, { color: index === 0 ? colors.border : colors.textSecondary }]}>{'\u25B2'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => moveItem(index, 1)} disabled={index === items.length - 1}>
+                <Text style={[styles.reorderArrow, { color: index === items.length - 1 ? colors.border : colors.textSecondary }]}>{'\u25BC'}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          <Text style={[styles.songNumber, { color: colors.textSecondary }]}>{songNumber}</Text>
+          <View style={styles.itemContent}>
+            <Text style={[styles.songTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+              {item.song?.title || 'Unknown'}
+            </Text>
+            {item.song?.artist ? (
+              <Text style={[styles.songArtist, { color: colors.textSecondary }]} numberOfLines={1}>
+                {item.song.artist}
+              </Text>
+            ) : null}
           </View>
-        )}
-        <Text style={[styles.songNumber, { color: colors.textSecondary }]}>{songNumber}</Text>
-        <View style={styles.itemContent}>
-          <Text style={[styles.songTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-            {item.song?.title || 'Unknown'}
-          </Text>
-          {item.song?.artist ? (
-            <Text style={[styles.songArtist, { color: colors.textSecondary }]} numberOfLines={1}>
-              {item.song.artist}
+          {item.song?.key ? (
+            <Badge label={item.song.key} color="#c084fc" bgColor="rgba(192,132,252,0.15)" />
+          ) : null}
+          {item.song?.duration ? (
+            <Text style={[styles.itemDuration, { color: colors.textSecondary }]}>
+              {formatDuration(item.song.duration)}
             </Text>
           ) : null}
+          {editing && (
+            <TouchableOpacity onPress={() => removeItem(item)} style={styles.removeButton}>
+              <Text style={styles.removeText}>{'\u2715'}</Text>
+            </TouchableOpacity>
+          )}
         </View>
-        {item.song?.key ? (
-          <Badge label={item.song.key} color="#c084fc" bgColor="rgba(192,132,252,0.15)" />
-        ) : null}
-        {item.song?.duration ? (
-          <Text style={[styles.itemDuration, { color: colors.textSecondary }]}>
-            {formatDuration(item.song.duration)}
-          </Text>
-        ) : null}
-        {editing && (
-          <TouchableOpacity onPress={() => removeItem(item)} style={styles.removeButton}>
-            <Text style={styles.removeText}>{'\u2715'}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      </>
     );
   }, [colors, editing, items, moveItem, removeItem]);
 
@@ -642,7 +670,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     gap: 12,
   },
-  setBreakText: { fontSize: 14, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  setBreakText: { fontSize: 13, fontWeight: '600' },
+  // Set header
+  setHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingTop: 12,
+    paddingBottom: 6,
+    gap: 10,
+  },
+  setHeaderLine: { flex: 1, height: 1 },
+  setHeaderText: { fontSize: 14, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   // Reorder
   reorderButtons: { marginRight: 4 },
   reorderArrow: { fontSize: 12, padding: 4 },

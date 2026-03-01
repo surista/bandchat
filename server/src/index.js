@@ -136,6 +136,18 @@ const PORT = process.env.PORT || 3001;
 
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+
+  // Clean up expired refresh tokens every hour
+  setInterval(async () => {
+    try {
+      const { count } = await prisma.refreshToken.deleteMany({
+        where: { expiresAt: { lt: new Date() } }
+      });
+      if (count > 0) console.log(`Cleaned up ${count} expired refresh tokens`);
+    } catch (err) {
+      console.error('Refresh token cleanup error:', err);
+    }
+  }, 60 * 60 * 1000);
 });
 
 // Graceful shutdown

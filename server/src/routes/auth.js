@@ -129,6 +129,10 @@ router.post('/signup', authLimiter, async (req, res) => {
       return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
     }
 
+    if (password.length > 128) {
+      return res.status(400).json({ error: 'Password must be 128 characters or less' });
+    }
+
     const existingUser = await prisma.user.findUnique({
       where: { email: email.toLowerCase() }
     });
@@ -629,6 +633,10 @@ router.put('/password', authenticate, async (req, res) => {
       return res.status(400).json({ error: `New password must be at least ${MIN_PASSWORD_LENGTH} characters` });
     }
 
+    if (newPassword.length > 128) {
+      return res.status(400).json({ error: 'Password must be 128 characters or less' });
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: req.user.id }
     });
@@ -919,6 +927,10 @@ router.post('/reset-password', authLimiter, async (req, res) => {
 
     if (password.length < MIN_PASSWORD_LENGTH) {
       return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
+    }
+
+    if (password.length > 128) {
+      return res.status(400).json({ error: 'Password must be 128 characters or less' });
     }
 
     // Hash the incoming token to compare against stored hash

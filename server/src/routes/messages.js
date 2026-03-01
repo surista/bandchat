@@ -314,8 +314,8 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
     }
 
     // Extract mentions and notify
-    const mentions = content?.match(/@(\w+)/g);
-    if (mentions) {
+    // Check for @mentions by matching against workspace member display names
+    if (content && content.includes('@')) {
       const channel = req.channel;
       const workspaceMembers = await prisma.workspaceMember.findMany({
         where: { workspaceId: channel.workspaceId },
@@ -326,11 +326,11 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
         }
       });
 
-      const mentionedUsers = workspaceMembers.filter(m =>
-        mentions.some(mention =>
-          mention.slice(1).toLowerCase() === m.user.displayName.toLowerCase()
-        )
-      );
+      const contentLower = content.toLowerCase();
+      const mentionedUsers = workspaceMembers.filter(m => {
+        const name = m.user.displayName?.toLowerCase();
+        return name && contentLower.includes(`@${name}`);
+      });
 
       mentionedUsers.filter(m => m.userId !== req.user.id).forEach(m => {
         io.to(`user:${m.userId}`).emit('mention', {
@@ -462,7 +462,8 @@ router.delete('/:messageId', authenticate, async (req, res) => {
 // Search messages in a workspace
 router.get('/search/:workspaceId', authenticate, async (req, res) => {
   try {
-    const { q, channelId, authorId, limit = 20 } = req.query;
+    const { q, channelId, authorId, limit: rawLimit = 20 } = req.query;
+    const limit = Math.min(parseInt(rawLimit), 100);
 
     if (!q || q.trim().length < 2) {
       return res.status(400).json({ error: 'Search query must be at least 2 characters' });
@@ -505,15 +506,19 @@ router.get('/search/:workspaceId', authenticate, async (req, res) => {
     });
     const blockedIds = blockedUsers.map(b => b.blockedUserId);
 
+    // Build authorId filter: combine author filter + blocked users filter without overwriting
+    const authorFilter = [];
+    if (authorId) authorFilter.push({ authorId });
+    if (blockedIds.length > 0) authorFilter.push({ authorId: { notIn: blockedIds } });
+
     const messages = await prisma.message.findMany({
       where: {
         channelId: { in: accessibleChannels.map(c => c.id) },
         content: { contains: q.trim(), mode: 'insensitive' },
         ...(channelId && { channelId }),
-        ...(authorId && { authorId }),
-        ...(blockedIds.length > 0 && { authorId: { notIn: blockedIds } })
+        ...(authorFilter.length > 0 && { AND: authorFilter })
       },
-      take: parseInt(limit),
+      take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
         author: {
@@ -868,25 +873,39 @@ router.post('/:messageId/thread-read', authenticate, async (req, res) => {
   try {
     const message = await prisma.message.findUnique({
       where: { id: req.params.messageId },
-      select: { channelId: true }
+      include: { channel: true }
     });
 
     if (!message) {
       return res.status(404).json({ error: 'Message not found' });
     }
 
-    // Verify user has access to the channel
-    const membership = await prisma.channelMember.findUnique({
-      where: {
-        userId_channelId: {
-          userId: req.user.id,
-          channelId: message.channelId
+    // Verify user has access to the channel (same pattern as replies endpoint)
+    const channel = message.channel;
+    if (channel.isPrivate) {
+      const membership = await prisma.channelMember.findUnique({
+        where: {
+          userId_channelId: {
+            userId: req.user.id,
+            channelId: channel.id
+          }
         }
+      });
+      if (!membership) {
+        return res.status(403).json({ error: 'Not a member of this channel' });
       }
-    });
-
-    if (!membership) {
-      return res.status(403).json({ error: 'Not a member of this channel' });
+    } else {
+      const workspaceMember = await prisma.workspaceMember.findUnique({
+        where: {
+          userId_workspaceId: {
+            userId: req.user.id,
+            workspaceId: channel.workspaceId
+          }
+        }
+      });
+      if (!workspaceMember) {
+        return res.status(403).json({ error: 'Not a member of this workspace' });
+      }
     }
 
     await prisma.threadRead.upsert({
