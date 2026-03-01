@@ -27,9 +27,9 @@ const DEFAULT_ACHIEVEMENTS = [
   { code: 'fifty_rehearsals', name: 'Dedicated', description: 'Logged 50 rehearsals', icon: '💪', category: 'rehearsals', threshold: 50, isBandWide: true },
   { code: 'hundred_rehearsals', name: 'Practice Legends', description: 'Logged 100 rehearsals', icon: '🏆', category: 'rehearsals', threshold: 100, isBandWide: true },
 
-  { code: 'first_revenue', name: 'First Paycheck', description: 'Earned your first dollar', icon: '💵', category: 'milestones', threshold: null, isBandWide: true },
-  { code: 'thousand_revenue', name: 'Making Bank', description: 'Earned $1,000 total', icon: '💰', category: 'milestones', threshold: 1000, isBandWide: true },
-  { code: 'ten_thousand_revenue', name: 'Big Money', description: 'Earned $10,000 total', icon: '🤑', category: 'milestones', threshold: 10000, isBandWide: true },
+  { code: 'first_revenue', name: 'First Paycheck', description: 'Earned revenue from your first gig', icon: '💵', category: 'milestones', threshold: null, isBandWide: true },
+  { code: 'thousand_revenue', name: 'Making Bank', description: 'Earned 1,000 in total revenue', icon: '💰', category: 'milestones', threshold: 1000, isBandWide: true },
+  { code: 'ten_thousand_revenue', name: 'Big Money', description: 'Earned 10,000 in total revenue', icon: '🤑', category: 'milestones', threshold: 10000, isBandWide: true },
 
   { code: 'road_warrior', name: 'Road Warrior', description: 'Played 5 gigs in 7 days', icon: '🛣️', category: 'milestones', threshold: null, isBandWide: true },
   { code: 'marathon', name: 'Marathon', description: 'Played a 3+ hour setlist', icon: '⏱️', category: 'milestones', threshold: null, isBandWide: true },
@@ -248,10 +248,15 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
     });
 
     // Get songs ordered by creation date
-    const allSongs = await prisma.song.findMany({
-      where: { workspaceId },
-      orderBy: { createdAt: 'asc' }
-    });
+    const [allSongs, kitty] = await Promise.all([
+      prisma.song.findMany({ where: { workspaceId }, orderBy: { createdAt: 'asc' } }),
+      prisma.bandKitty.findUnique({ where: { workspaceId }, select: { currency: true } })
+    ]);
+
+    // Scale revenue thresholds for zero-decimal currencies (JPY, KRW, etc.)
+    const currency = kitty?.currency || 'USD';
+    const zeroDecimalCurrencies = ['JPY', 'KRW', 'VND', 'CLP', 'ISK', 'UGX', 'RWF'];
+    const revenueMultiplier = zeroDecimalCurrencies.includes(currency) ? 100 : 1;
 
     // Calculate cumulative hours for each rehearsal
     let cumulativeRehearsalHours = 0;
@@ -342,6 +347,8 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
     const firstPaidGig = allGigs.find(g => g.pay && g.pay > 0);
 
     // Calculate total revenue and track when milestones were hit
+    const scaledThousand = 1000 * revenueMultiplier;
+    const scaledTenThousand = 10000 * revenueMultiplier;
     let cumulativeRevenue = 0;
     const revenueMilestones = {};
     for (const gig of allGigs) {
@@ -351,7 +358,7 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
         if (prevRevenue === 0 && cumulativeRevenue > 0) {
           revenueMilestones['first'] = gig.date;
         }
-        for (const milestone of [1000, 10000]) {
+        for (const milestone of [scaledThousand, scaledTenThousand]) {
           if (prevRevenue < milestone && cumulativeRevenue >= milestone) {
             revenueMilestones[milestone] = gig.date;
           }
@@ -450,12 +457,12 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
           earnedAt = revenueMilestones['first'] || now;
           break;
         case 'thousand_revenue':
-          shouldAward = cumulativeRevenue >= 1000;
-          earnedAt = revenueMilestones[1000] || now;
+          shouldAward = cumulativeRevenue >= scaledThousand;
+          earnedAt = revenueMilestones[scaledThousand] || now;
           break;
         case 'ten_thousand_revenue':
-          shouldAward = cumulativeRevenue >= 10000;
-          earnedAt = revenueMilestones[10000] || now;
+          shouldAward = cumulativeRevenue >= scaledTenThousand;
+          earnedAt = revenueMilestones[scaledTenThousand] || now;
           break;
 
         // Hours gigged
