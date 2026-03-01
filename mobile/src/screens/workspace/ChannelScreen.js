@@ -52,6 +52,7 @@ export default function ChannelScreen({ navigation, route }) {
 
   const [seenByCount, setSeenByCount] = useState(null);
   const [lastOwnMessageId, setLastOwnMessageId] = useState(null);
+  const [workspaceMembers, setWorkspaceMembers] = useState([]);
 
   const channelIdRef = useRef(channel.id);
   const userIdRef = useRef(user?.id);
@@ -89,6 +90,15 @@ export default function ChannelScreen({ navigation, route }) {
       blockedIdsRef.current = new Set(blocks.map(b => b.blockedUserId));
     }).catch(() => {});
   }, []);
+
+  // Load workspace members for @mention highlighting
+  useEffect(() => {
+    if (workspaceId) {
+      api.getWorkspace(workspaceId).then(ws => {
+        setWorkspaceMembers(ws.members || []);
+      }).catch(() => {});
+    }
+  }, [workspaceId]);
 
   // Load messages → mark read → join socket (exact order from web)
   useEffect(() => {
@@ -511,6 +521,7 @@ export default function ChannelScreen({ navigation, route }) {
           onReplyPress={handleReplyPress}
           onImagePress={handleImagePress}
           onReactionPress={handleReactionPress}
+          members={workspaceMembers}
         />
         {showDate && (
           <View style={styles.dateSeparator}>
@@ -523,7 +534,7 @@ export default function ChannelScreen({ navigation, route }) {
         )}
       </View>
     );
-  }, [isGrouped, needsDateSeparator, colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, lastOwnMessageId, seenByCount]);
+  }, [isGrouped, needsDateSeparator, colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, lastOwnMessageId, seenByCount, workspaceMembers]);
 
   const renderFooter = useCallback(() => {
     if (!loadingMore) return null;

@@ -16,6 +16,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { SkeletonList } from '../../components/SkeletonLoader';
+import { successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 
 function timeAgo(dateStr) {
@@ -149,6 +151,7 @@ export default function PollsScreen({ navigation, route }) {
         allowMultiple,
         isAnonymous,
       });
+      successNotification();
       setShowCreate(false);
       loadPolls();
     } catch (err) {
@@ -213,6 +216,7 @@ export default function PollsScreen({ navigation, route }) {
           try {
             await api.deletePoll(selectedPoll.id);
             setPolls(prev => prev.filter(p => p.id !== selectedPoll.id));
+            successNotification();
           } catch (err) {
             Alert.alert('Error', 'Failed to delete poll');
           }
@@ -350,9 +354,7 @@ export default function PollsScreen({ navigation, route }) {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        <SkeletonList count={4} lines={3} />
       </SafeAreaView>
     );
   }
@@ -388,7 +390,11 @@ export default function PollsScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           <View style={styles.centered}>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No polls</Text>
+            <Text style={styles.emptyIcon}>{'\uD83D\uDCCA'}</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No polls yet</Text>
+            <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
+              Create a poll to get the band's input
+            </Text>
           </View>
         }
       />
@@ -540,7 +546,9 @@ export default function PollsScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
+  emptyIcon: { fontSize: 40, marginBottom: 12 },
   emptyText: { fontSize: 15 },
+  emptyHint: { fontSize: 13, marginTop: 6, textAlign: 'center', opacity: 0.7 },
   // Toggle
   toggleRow: {
     flexDirection: 'row',

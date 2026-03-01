@@ -11,8 +11,9 @@ import useSwipeGesture from '../../hooks/useSwipeGesture';
 import { handleDownload } from '../../utils/download';
 import { formatFileSize } from '../../utils/format';
 import { MAX_IMAGE_SIZE, MAX_AUDIO_SIZE, isImageFile, isAudioFile } from '../../utils/fileValidation';
+import { buildMentionRegex } from '../../utils/parseMentions';
 
-function ThreadView({ message, channelId, onClose, onThreadRead }) {
+function ThreadView({ message, channelId, onClose, onThreadRead, members }) {
   const { user } = useAuth();
   const { socket } = useSocket();
   const [replies, setReplies] = useState([]);
@@ -265,6 +266,26 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
 
   const formatTime = (date) => format(new Date(date), 'MMM d, h:mm a');
 
+  const renderMentionContent = (text) => {
+    if (!text) return null;
+    const mentionRegex = buildMentionRegex(members || []);
+    if (!mentionRegex) return text;
+    const parts = text.split(mentionRegex);
+    const result = [];
+    for (let j = 0; j < parts.length; j += 3) {
+      if (parts[j]) result.push(parts[j]);
+      if (j + 2 < parts.length) {
+        if (parts[j + 1]) result.push(parts[j + 1]);
+        result.push(
+          <span key={j} className="bg-blue-900 text-blue-300 px-1 rounded">
+            @{parts[j + 2]}
+          </span>
+        );
+      }
+    }
+    return result;
+  };
+
   return (
     <div ref={swipeRef} className="flex flex-col h-full bg-[var(--color-bg-secondary)]">
       {/* Header */}
@@ -298,7 +319,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
               </span>
             </div>
             <div className="text-[var(--color-text-secondary)] break-words whitespace-pre-wrap">
-              {message.content}
+              {renderMentionContent(message.content)}
             </div>
             <ReactionDisplay
               reactions={parentReactions}
@@ -363,7 +384,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
                     </span>
                   </div>
                   <div className="text-[var(--color-text-secondary)] text-sm break-words whitespace-pre-wrap">
-                    {reply.content}
+                    {renderMentionContent(reply.content)}
                   </div>
                   {/* Attachments */}
                   {reply.attachments?.length > 0 && (

@@ -14,13 +14,14 @@ import useLongPress from '../../hooks/useLongPress';
 import { hapticLight } from '../../services/haptic';
 import LinkPreviewCard from './LinkPreviewCard';
 import { handleDownload } from '../../utils/download';
+import { buildMentionRegex } from '../../utils/parseMentions';
 import api from '../../services/api';
 
 /**
  * Memoized component for rendering message content with URL detection,
  * embeds (Google Docs, YouTube), images, videos, and @mentions.
  */
-const MessageContent = React.memo(({ content, message, onOpenLightbox }) => {
+const MessageContent = React.memo(({ content, message, onOpenLightbox, members }) => {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const parts = content.split(urlRegex);
 
@@ -134,8 +135,8 @@ const MessageContent = React.memo(({ content, message, onOpenLightbox }) => {
       );
     }
 
-    // Convert @mentions — use lookbehind to skip email-like patterns (e.g. user@domain)
-    const mentionRegex = /(^|[\s])@(\w+)/g;
+    // Convert @mentions — use member-aware regex for multi-word name support
+    const mentionRegex = buildMentionRegex(members || []) || /(^|[\s])@(\w+)/g;
     const mentionParts = part.split(mentionRegex);
 
     // split with 2 capture groups produces: [before, whitespace, name, between, whitespace, name, ...]
@@ -182,7 +183,8 @@ function MessageList({
   onPinMessage,
   onUnpinMessage,
   pinnedMessageIds,
-  lastReadAt
+  lastReadAt,
+  members
 }) {
   const [editingId, setEditingId] = useState(null);
   const [editContent, setEditContent] = useState('');
@@ -443,7 +445,7 @@ function MessageList({
                 </div>
               ) : (
                 <div className="text-[var(--color-text-secondary)] break-words whitespace-pre-wrap">
-                  <MessageContent content={message.content} message={message} onOpenLightbox={openLightbox} />
+                  <MessageContent content={message.content} message={message} onOpenLightbox={openLightbox} members={members} />
                 </div>
               )}
 

@@ -5,6 +5,7 @@ import { format, isToday, isYesterday } from 'date-fns';
 import { useTheme } from '../context/ThemeContext';
 import LinkPreview from './LinkPreview';
 import getAvatarColor from '../utils/getAvatarColor';
+import { buildMentionRegex } from '../utils/parseMentions';
 
 function formatTimestamp(dateStr) {
   const date = new Date(dateStr);
@@ -20,7 +21,7 @@ function formatDurationMmSs(ms) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress }) {
+function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress, members }) {
   const { colors } = useTheme();
   const author = message.author || {};
   const displayName = author.displayName || message.removedUserName || 'Deleted User';
@@ -31,6 +32,26 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
 
   const handleLongPress = () => {
     if (!isPending && onLongPress) onLongPress(message);
+  };
+
+  const renderContent = (text) => {
+    if (!text) return null;
+    const mentionRegex = buildMentionRegex(members || []);
+    if (!mentionRegex) return text;
+    const parts = text.split(mentionRegex);
+    const result = [];
+    for (let j = 0; j < parts.length; j += 3) {
+      if (parts[j]) result.push(parts[j]);
+      if (j + 2 < parts.length) {
+        if (parts[j + 1]) result.push(parts[j + 1]);
+        result.push(
+          <Text key={j} style={{ color: colors.primary, fontWeight: '600' }}>
+            @{parts[j + 2]}
+          </Text>
+        );
+      }
+    }
+    return result;
   };
 
   if (isGrouped) {
@@ -46,7 +67,7 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
         <View style={styles.contentContainer}>
           {message.content ? (
             <Text style={[styles.content, { color: colors.textPrimary }]}>
-              {message.content}
+              {renderContent(message.content)}
               {isEdited && <Text style={[styles.edited, { color: colors.textSecondary }]}> (edited)</Text>}
             </Text>
           ) : null}
@@ -84,7 +105,7 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
         </View>
         {message.content ? (
           <Text style={[styles.content, { color: colors.textPrimary }]}>
-            {message.content}
+            {renderContent(message.content)}
             {isEdited && <Text style={[styles.edited, { color: colors.textSecondary }]}> (edited)</Text>}
           </Text>
         ) : null}

@@ -15,6 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
 import Badge from '../../components/Badge';
+import { SkeletonList } from '../../components/SkeletonLoader';
+import { successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
 import { buildSetlistHTML } from '../../utils/buildSetlistHTML';
@@ -95,6 +97,7 @@ export default function SetlistListScreen({ navigation, route }) {
         name,
         description: newDescription.trim() || null,
       });
+      successNotification();
       setShowCreate(false);
       setNewName('');
       setNewDescription('');
@@ -129,6 +132,7 @@ export default function SetlistListScreen({ navigation, route }) {
           try {
             await api.deleteSetlist(selectedSetlist.id);
             setSetlists(prev => prev.filter(s => s.id !== selectedSetlist.id));
+            successNotification();
           } catch (err) {
             Alert.alert('Error', 'Failed to delete setlist');
           }
@@ -215,9 +219,7 @@ export default function SetlistListScreen({ navigation, route }) {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        <SkeletonList count={6} lines={2} />
       </SafeAreaView>
     );
   }
@@ -239,7 +241,11 @@ export default function SetlistListScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           <View style={styles.centered}>
+            <Text style={styles.emptyIcon}>{'\uD83C\uDFBC'}</Text>
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No setlists yet</Text>
+            <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
+              Tap + to create your first setlist
+            </Text>
           </View>
         }
       />
@@ -361,7 +367,9 @@ const styles = StyleSheet.create({
   previewList: { marginTop: 4 },
   previewItem: { fontSize: 13, lineHeight: 20 },
   previewMore: { fontSize: 13, fontStyle: 'italic', marginTop: 2 },
+  emptyIcon: { fontSize: 40, marginBottom: 12 },
   emptyText: { fontSize: 15 },
+  emptyHint: { fontSize: 13, marginTop: 6, textAlign: 'center', opacity: 0.7 },
   // Modal
   modalOverlay: {
     flex: 1,

@@ -730,6 +730,7 @@ function WorkspaceView() {
                 message={selectedThread}
                 channelId={selectedChannel?.id}
                 onClose={() => setSelectedThread(null)}
+                members={workspace?.members || []}
                 onThreadRead={(messageId) => {
                   // Find the message's unreadReplies and subtract from channel thread unread count
                   const msg = selectedThreadRef.current;

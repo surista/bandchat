@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
+import { SkeletonList } from '../../components/SkeletonLoader';
+import { successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
 
@@ -209,6 +211,7 @@ export default function SongListScreen({ navigation, route }) {
           try {
             await api.deleteSong(selectedSong.id);
             setSongs(prev => prev.filter(s => s.id !== selectedSong.id));
+            successNotification();
           } catch (err) {
             Alert.alert('Error', 'Failed to delete song');
           }
@@ -274,9 +277,7 @@ export default function SongListScreen({ navigation, route }) {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        <SkeletonList count={8} lines={2} />
       </SafeAreaView>
     );
   }
@@ -322,9 +323,15 @@ export default function SongListScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           <View style={styles.centered}>
+            <Text style={styles.emptyIcon}>{'\uD83C\uDFB5'}</Text>
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               {search ? 'No matching songs' : 'No songs yet'}
             </Text>
+            {!search && (
+              <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
+                Tap + to add songs or use bulk import
+              </Text>
+            )}
           </View>
         }
       />
@@ -580,7 +587,9 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 12, fontWeight: '600' },
   setlistCount: { fontSize: 12, marginTop: 6 },
   practiceInfo: { fontSize: 11, marginTop: 4 },
+  emptyIcon: { fontSize: 40, marginBottom: 12 },
   emptyText: { fontSize: 15 },
+  emptyHint: { fontSize: 13, marginTop: 6, textAlign: 'center', opacity: 0.7 },
   // Sort modal
   modalOverlay: {
     flex: 1,

@@ -30,6 +30,7 @@ export default function ThreadScreen({ route }) {
   const [parent, setParent] = useState(parentMessage);
   const [replies, setReplies] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [workspaceMembers, setWorkspaceMembers] = useState([]);
 
   // Action sheet / picker state
   const [actionMessage, setActionMessage] = useState(null);
@@ -59,6 +60,15 @@ export default function ThreadScreen({ route }) {
     init();
     return () => { cancelled = true; };
   }, [parentMessage.id]);
+
+  // Load workspace members for @mention highlighting
+  useEffect(() => {
+    if (workspaceId) {
+      api.getWorkspace(workspaceId).then(ws => {
+        setWorkspaceMembers(ws.members || []);
+      }).catch(() => {});
+    }
+  }, [workspaceId]);
 
   // Socket events for thread updates
   useEffect(() => {
@@ -281,9 +291,10 @@ export default function ThreadScreen({ route }) {
         onLongPress={handleLongPress}
         onImagePress={handleImagePress}
         onReactionPress={handleReactionPress}
+        members={workspaceMembers}
       />
     );
-  }, [colors, handleLongPress, handleImagePress, handleReactionPress]);
+  }, [colors, handleLongPress, handleImagePress, handleReactionPress, workspaceMembers]);
 
   if (loading) {
     return (

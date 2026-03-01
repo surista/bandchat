@@ -569,6 +569,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
               onUnpinMessage={handleUnpinMessage}
               pinnedMessageIds={pinnedMessageIds}
               lastReadAt={lastReadAtRef.current}
+              members={workspace?.members || []}
             />
             <div ref={messagesEndRef} />
           </>

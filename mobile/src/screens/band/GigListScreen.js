@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
 import { mediumImpact, successNotification } from '../../utils/haptics';
+import { SkeletonList } from '../../components/SkeletonLoader';
 import api from '../../services/api';
 
 const TYPE_FILTERS = [
@@ -342,9 +343,7 @@ export default function GigListScreen({ navigation, route }) {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        <SkeletonList count={6} lines={3} />
       </SafeAreaView>
     );
   }
@@ -412,7 +411,11 @@ export default function GigListScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           <View style={styles.centered}>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No events</Text>
+            <Text style={styles.emptyIcon}>{'\uD83D\uDCC5'}</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No events scheduled</Text>
+            <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
+              Tap + to add a gig or rehearsal
+            </Text>
           </View>
         }
       />
@@ -573,7 +576,9 @@ const styles = StyleSheet.create({
   gigVenue: { fontSize: 13, marginBottom: 2 },
   gigPay: { color: '#22c55e', fontSize: 14, fontWeight: '600', marginBottom: 2 },
   gigSetlists: { fontSize: 13, marginTop: 2 },
+  emptyIcon: { fontSize: 40, marginBottom: 12 },
   emptyText: { fontSize: 15 },
+  emptyHint: { fontSize: 13, marginTop: 6, textAlign: 'center', opacity: 0.7 },
   // Action sheet
   actionOverlay: {
     flex: 1,
