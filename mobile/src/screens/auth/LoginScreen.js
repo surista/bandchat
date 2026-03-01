@@ -8,9 +8,11 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Linking,
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Constants from 'expo-constants';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -128,6 +130,25 @@ export default function LoginScreen({ navigation }) {
               </Text>
             </TouchableOpacity>
           </View>
+
+          <View style={styles.footer}>
+            <View style={styles.footerLinks}>
+              <TouchableOpacity onPress={() => Linking.openURL('https://bandchat.app/privacy')} accessibilityRole="link" accessibilityLabel="Privacy Policy">
+                <Text style={[styles.footerLink, { color: colors.textSecondary }]}>Privacy</Text>
+              </TouchableOpacity>
+              <Text style={[styles.footerDot, { color: colors.textSecondary }]}>{'\u00B7'}</Text>
+              <TouchableOpacity onPress={() => Linking.openURL('https://bandchat.app/terms')} accessibilityRole="link" accessibilityLabel="Terms of Service">
+                <Text style={[styles.footerLink, { color: colors.textSecondary }]}>Terms</Text>
+              </TouchableOpacity>
+              <Text style={[styles.footerDot, { color: colors.textSecondary }]}>{'\u00B7'}</Text>
+              <TouchableOpacity onPress={() => Linking.openURL('https://bandchat.app/support')} accessibilityRole="link" accessibilityLabel="Support">
+                <Text style={[styles.footerLink, { color: colors.textSecondary }]}>Support</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.footerVersion, { color: colors.textSecondary }]}>
+              v{Constants.expoConfig?.version || '1.0.0'}
+            </Text>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -207,4 +228,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   linkText: { fontSize: 14 },
+  footer: {
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  footerLinks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  footerLink: { fontSize: 13 },
+  footerDot: { fontSize: 13 },
+  footerVersion: { fontSize: 12, marginTop: 8, opacity: 0.6 },
 });
