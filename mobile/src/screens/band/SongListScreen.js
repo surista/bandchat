@@ -43,6 +43,9 @@ export default function SongListScreen({ navigation, route }) {
   const [sortBy, setSortBy] = useState('title');
   const [showSortModal, setShowSortModal] = useState(false);
 
+  // Practice summary
+  const [practiceSummary, setPracticeSummary] = useState(null);
+
   // Action sheet
   const [selectedSong, setSelectedSong] = useState(null);
   const [showActions, setShowActions] = useState(false);
@@ -91,8 +94,12 @@ export default function SongListScreen({ navigation, route }) {
 
   const loadSongs = useCallback(async () => {
     try {
-      const data = await api.getSongs(workspaceId);
+      const [data, summary] = await Promise.all([
+        api.getSongs(workspaceId),
+        api.getPracticeSummary(workspaceId).catch(() => null),
+      ]);
       setSongs(data);
+      if (summary) setPracticeSummary(summary);
     } catch (err) {
       console.error('Failed to load songs:', err);
     } finally {
@@ -245,8 +252,24 @@ export default function SongListScreen({ navigation, route }) {
           In {item._count.setlistSongs} setlist{item._count.setlistSongs !== 1 ? 's' : ''}
         </Text>
       ) : null}
+      {(() => {
+        const stat = practiceSummary?.songStats?.find(s => s.songId === item.id);
+        if (stat?.lastPracticedAt) {
+          const days = Math.floor((Date.now() - new Date(stat.lastPracticedAt).getTime()) / (1000 * 60 * 60 * 24));
+          return (
+            <Text style={[styles.practiceInfo, { color: colors.textSecondary }]}>
+              {days === 0 ? 'Practiced today' : `Practiced ${days}d ago`}
+            </Text>
+          );
+        }
+        return (
+          <Text style={[styles.practiceInfo, { color: colors.textSecondary, opacity: 0.6 }]}>
+            Never practiced
+          </Text>
+        );
+      })()}
     </TouchableOpacity>
-  ), [colors, navigation, workspaceId, handleLongPress]);
+  ), [colors, navigation, workspaceId, handleLongPress, practiceSummary]);
 
   if (loading) {
     return (
@@ -556,6 +579,7 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   badgeText: { fontSize: 12, fontWeight: '600' },
   setlistCount: { fontSize: 12, marginTop: 6 },
+  practiceInfo: { fontSize: 11, marginTop: 4 },
   emptyText: { fontSize: 15 },
   // Sort modal
   modalOverlay: {

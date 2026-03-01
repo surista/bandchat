@@ -17,6 +17,9 @@ import { useTheme } from '../../context/ThemeContext';
 import Badge from '../../components/Badge';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
+import { buildSetlistHTML } from '../../utils/buildSetlistHTML';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 export default function SetlistListScreen({ navigation, route }) {
   const { workspaceId } = route.params;
@@ -134,6 +137,22 @@ export default function SetlistListScreen({ navigation, route }) {
         },
       },
     ]);
+  }, [selectedSetlist]);
+
+  const handleExportPDF = useCallback(async () => {
+    if (!selectedSetlist) return;
+    try {
+      const items = selectedSetlist.songs || [];
+      const html = buildSetlistHTML(selectedSetlist.name, items);
+      const { uri } = await Print.printToFileAsync({ html });
+      await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Export Setlist' });
+    } catch (err) {
+      if (err.message !== 'User canceled') {
+        Alert.alert('Error', 'Failed to export PDF');
+      }
+    }
+    setShowActions(false);
+    setSelectedSetlist(null);
   }, [selectedSetlist]);
 
   const renderSetlist = useCallback(({ item }) => {
@@ -300,6 +319,9 @@ export default function SetlistListScreen({ navigation, route }) {
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionItem} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate setlist">
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Duplicate</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionItem} onPress={handleExportPDF} accessibilityRole="button" accessibilityLabel="Export setlist as PDF">
+              <Text style={[styles.actionText, { color: colors.textPrimary }]}>Export PDF</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete setlist">
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>

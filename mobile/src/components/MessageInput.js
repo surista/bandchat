@@ -1,11 +1,12 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, Text, Image, StyleSheet, Platform } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, Image, StyleSheet, Platform, Animated, PanResponder } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { Audio } from 'expo-av';
 import { useTheme } from '../context/ThemeContext';
 
 const MAX_HEIGHT = 120;
 
-export default function MessageInput({ onSend, onTyping, editingMessage, onCancelEdit, onSendEdit }) {
+export default function MessageInput({ onSend, onSendVoice, onTyping, editingMessage, onCancelEdit, onSendEdit }) {
   const { colors } = useTheme();
   const [text, setText] = useState('');
   const [inputHeight, setInputHeight] = useState(40);
@@ -13,12 +14,70 @@ export default function MessageInput({ onSend, onTyping, editingMessage, onCance
   const typingTimeoutRef = useRef(null);
   const inputRef = useRef(null);
 
+  // Voice recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [recordingCancelled, setRecordingCancelled] = useState(false);
+  const recordingRef = useRef(null);
+  const durationIntervalRef = useRef(null);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const slideX = useRef(new Animated.Value(0)).current;
+  const panStartX = useRef(0);
+
+  // Pan responder for slide-to-cancel
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        panStartX.current = 0;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        const dx = Math.min(0, gestureState.dx);
+        slideX.setValue(dx);
+        if (dx < -100) {
+          setRecordingCancelled(true);
+        } else {
+          setRecordingCancelled(false);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx < -100) {
+          cancelRecording();
+        } else {
+          stopRecording();
+        }
+        slideX.setValue(0);
+      },
+    })
+  ).current;
+
   // Clean up typing timeout on unmount
   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+      if (recordingRef.current) {
+        recordingRef.current.stopAndUnloadAsync().catch(() => {});
+      }
     };
   }, []);
+
+  // Pulse animation for recording indicator
+  useEffect(() => {
+    if (isRecording) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 1.3, duration: 600, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [isRecording, pulseAnim]);
 
   // Pre-fill text when editing
   useEffect(() => {
@@ -98,7 +157,110 @@ export default function MessageInput({ onSend, onTyping, editingMessage, onCance
     if (onCancelEdit) onCancelEdit();
   }, [onCancelEdit]);
 
+  // Voice recording functions
+  const startRecording = useCallback(async () => {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (!permission.granted) {
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const recording = new Audio.Recording();
+      await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      await recording.startAsync();
+
+      recordingRef.current = recording;
+      setIsRecording(true);
+      setRecordingDuration(0);
+      setRecordingCancelled(false);
+
+      // Start timer
+      durationIntervalRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error('Failed to start recording:', err);
+    }
+  }, []);
+
+  const stopRecording = useCallback(async () => {
+    if (!recordingRef.current) return;
+
+    try {
+      if (durationIntervalRef.current) {
+        clearInterval(durationIntervalRef.current);
+        durationIntervalRef.current = null;
+      }
+
+      await recordingRef.current.stopAndUnloadAsync();
+      const uri = recordingRef.current.getURI();
+      recordingRef.current = null;
+      setIsRecording(false);
+      setRecordingDuration(0);
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+      });
+
+      if (uri && onSendVoice) {
+        onSendVoice(uri);
+      } else if (uri) {
+        // Fallback: send as attachment through normal onSend
+        const filename = `voice-${Date.now()}.m4a`;
+        onSend('', {
+          uri,
+          filename,
+          mimeType: 'audio/m4a',
+          isAudio: true,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to stop recording:', err);
+      setIsRecording(false);
+      setRecordingDuration(0);
+    }
+  }, [onSendVoice, onSend]);
+
+  const cancelRecording = useCallback(async () => {
+    if (!recordingRef.current) return;
+
+    try {
+      if (durationIntervalRef.current) {
+        clearInterval(durationIntervalRef.current);
+        durationIntervalRef.current = null;
+      }
+
+      await recordingRef.current.stopAndUnloadAsync();
+      recordingRef.current = null;
+      setIsRecording(false);
+      setRecordingDuration(0);
+      setRecordingCancelled(false);
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+      });
+    } catch (err) {
+      console.error('Failed to cancel recording:', err);
+      setIsRecording(false);
+      setRecordingDuration(0);
+    }
+  }, []);
+
+  const formatDuration = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
   const canSend = text.trim().length > 0 || attachment;
+  const showMic = !editingMessage && !canSend;
 
   return (
     <View style={[styles.outerContainer, { backgroundColor: colors.bgSecondary, borderTopColor: colors.border }]}>
@@ -112,8 +274,34 @@ export default function MessageInput({ onSend, onTyping, editingMessage, onCance
         </View>
       )}
 
+      {/* Recording overlay */}
+      {isRecording && (
+        <Animated.View
+          style={[
+            styles.recordingOverlay,
+            { backgroundColor: colors.bgSecondary, transform: [{ translateX: slideX }] },
+          ]}
+          {...panResponder.panHandlers}
+        >
+          <View style={styles.recordingLeft}>
+            <Animated.View
+              style={[
+                styles.recordingDot,
+                { transform: [{ scale: pulseAnim }] },
+              ]}
+            />
+            <Text style={[styles.recordingTimer, { color: colors.textPrimary }]}>
+              {formatDuration(recordingDuration)}
+            </Text>
+          </View>
+          <Text style={[styles.slideToCancel, { color: recordingCancelled ? '#EF4444' : colors.textSecondary }]}>
+            {recordingCancelled ? 'Release to cancel' : '\u2190 Slide to cancel'}
+          </Text>
+        </Animated.View>
+      )}
+
       {/* Attachment preview */}
-      {attachment && (
+      {attachment && !isRecording && (
         <View style={styles.attachmentPreview}>
           <Image source={{ uri: attachment.uri }} style={styles.attachmentThumb} accessibilityLabel="Attachment preview" />
           {attachment.isVideo && (
@@ -127,51 +315,87 @@ export default function MessageInput({ onSend, onTyping, editingMessage, onCance
         </View>
       )}
 
-      <View style={styles.inputRow}>
-        {/* Attachment button */}
-        {!editingMessage && (
-          <TouchableOpacity style={styles.attachButton} onPress={pickMedia} activeOpacity={0.6} hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }} accessibilityRole="button" accessibilityLabel="Attach media">
-            <Text style={[styles.attachIcon, { color: colors.textSecondary }]}>+</Text>
-          </TouchableOpacity>
-        )}
+      {!isRecording && (
+        <View style={styles.inputRow}>
+          {/* Attachment button */}
+          {!editingMessage && (
+            <TouchableOpacity style={styles.attachButton} onPress={pickMedia} activeOpacity={0.6} hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }} accessibilityRole="button" accessibilityLabel="Attach media">
+              <Text style={[styles.attachIcon, { color: colors.textSecondary }]}>+</Text>
+            </TouchableOpacity>
+          )}
 
-        <TextInput
-          ref={inputRef}
-          style={[
-            styles.input,
-            {
-              backgroundColor: colors.bgTertiary,
-              color: colors.textPrimary,
-              height: inputHeight,
-            },
-          ]}
-          placeholder={editingMessage ? 'Edit message...' : 'Message...'}
-          placeholderTextColor={colors.textSecondary}
-          value={text}
-          onChangeText={handleChangeText}
-          onContentSizeChange={handleContentSizeChange}
-          multiline
-          textAlignVertical="center"
-          returnKeyType={Platform.OS === 'ios' ? 'default' : 'send'}
-          blurOnSubmit={false}
-          accessibilityLabel={editingMessage ? 'Edit message' : 'Type a message'}
-        />
-        <TouchableOpacity
-          style={[
-            styles.sendButton,
-            { backgroundColor: canSend ? colors.primary : colors.bgTertiary },
-          ]}
-          onPress={handleSend}
-          disabled={!canSend}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel={editingMessage ? 'Save edit' : 'Send message'}
-        >
-          <Text style={[styles.sendIcon, { color: canSend ? '#ffffff' : colors.textSecondary }]}>
-            {editingMessage ? '\u2713' : '\u2191'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+          <TextInput
+            ref={inputRef}
+            style={[
+              styles.input,
+              {
+                backgroundColor: colors.bgTertiary,
+                color: colors.textPrimary,
+                height: inputHeight,
+              },
+            ]}
+            placeholder={editingMessage ? 'Edit message...' : 'Message...'}
+            placeholderTextColor={colors.textSecondary}
+            value={text}
+            onChangeText={handleChangeText}
+            onContentSizeChange={handleContentSizeChange}
+            multiline
+            textAlignVertical="center"
+            returnKeyType={Platform.OS === 'ios' ? 'default' : 'send'}
+            blurOnSubmit={false}
+            accessibilityLabel={editingMessage ? 'Edit message' : 'Type a message'}
+          />
+
+          {showMic ? (
+            <TouchableOpacity
+              style={[styles.sendButton, { backgroundColor: colors.bgTertiary }]}
+              onLongPress={startRecording}
+              delayLongPress={200}
+              onPress={() => {
+                // Short press also starts recording for easier usage
+                startRecording();
+              }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Record voice message"
+            >
+              <Text style={[styles.micIcon, { color: colors.textSecondary }]}>{'\uD83C\uDF99'}</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                { backgroundColor: canSend ? colors.primary : colors.bgTertiary },
+              ]}
+              onPress={handleSend}
+              disabled={!canSend}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={editingMessage ? 'Save edit' : 'Send message'}
+            >
+              <Text style={[styles.sendIcon, { color: canSend ? '#ffffff' : colors.textSecondary }]}>
+                {editingMessage ? '\u2713' : '\u2191'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* Recording input row: stop button */}
+      {isRecording && (
+        <View style={styles.inputRow}>
+          <View style={{ flex: 1 }} />
+          <TouchableOpacity
+            style={[styles.sendButton, { backgroundColor: '#EF4444' }]}
+            onPress={stopRecording}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Stop recording and send"
+          >
+            <Text style={[styles.sendIcon, { color: '#ffffff' }]}>{'\u2191'}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -194,6 +418,32 @@ const styles = StyleSheet.create({
   editCancel: {
     fontSize: 16,
     padding: 4,
+  },
+  recordingOverlay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  recordingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  recordingDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#EF4444',
+    marginRight: 10,
+  },
+  recordingTimer: {
+    fontSize: 16,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+  },
+  slideToCancel: {
+    fontSize: 14,
   },
   attachmentPreview: {
     paddingHorizontal: 12,
@@ -275,5 +525,8 @@ const styles = StyleSheet.create({
   sendIcon: {
     fontSize: 20,
     fontWeight: '700',
+  },
+  micIcon: {
+    fontSize: 20,
   },
 });

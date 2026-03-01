@@ -214,6 +214,12 @@ function GigCalendar({ workspaceId, workspace }) {
   const [deleteGigId, setDeleteGigId] = useState(null);
   const [gigContextMenu, setGigContextMenu] = useState(null); // { gigId, x, y }
 
+  // iCal subscribe
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false);
+  const [icalUrl, setIcalUrl] = useState('');
+  const [icalLoading, setIcalLoading] = useState(false);
+  const [icalCopied, setIcalCopied] = useState(false);
+
   // Drag and drop state
   const [draggingGig, setDraggingGig] = useState(null);
   const [dropTargetDate, setDropTargetDate] = useState(null);
@@ -329,6 +335,46 @@ function GigCalendar({ workspaceId, workspace }) {
       setGigs(prev => [...prev, duplicated].sort((a, b) => new Date(a.date) - new Date(b.date)));
     } catch (err) {
       toast.error(err.message);
+    }
+  };
+
+  const handleSubscribe = async () => {
+    setIcalLoading(true);
+    try {
+      let tokenData;
+      try {
+        tokenData = await api.getCalendarToken(workspaceId);
+      } catch {
+        tokenData = await api.generateCalendarToken(workspaceId);
+      }
+      const token = tokenData.token;
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const baseUrl = API_URL.replace(/\/api\/?$/, '');
+      const url = `${baseUrl}/api/gigs/workspace/${workspaceId}/calendar.ics?token=${token}`;
+      setIcalUrl(url);
+      setShowSubscribeModal(true);
+    } catch (err) {
+      toast.error(err.message || 'Failed to get calendar link');
+    } finally {
+      setIcalLoading(false);
+    }
+  };
+
+  const handleCopyIcalUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(icalUrl);
+      setIcalCopied(true);
+      setTimeout(() => setIcalCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const input = document.createElement('input');
+      input.value = icalUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      setIcalCopied(true);
+      setTimeout(() => setIcalCopied(false), 2000);
     }
   };
 
@@ -666,6 +712,14 @@ function GigCalendar({ workspaceId, workspace }) {
               </button>
             </div>
             <button
+              onClick={handleSubscribe}
+              disabled={icalLoading}
+              className="btn bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-border)] text-[var(--color-text-secondary)] text-sm"
+              title="Subscribe to calendar feed"
+            >
+              {icalLoading ? '...' : 'Subscribe'}
+            </button>
+            <button
               onClick={() => {
                 setEditingGig(null);
                 setSelectedDate(null);
@@ -923,6 +977,46 @@ function GigCalendar({ workspaceId, workspace }) {
           ];
         })()}
       />
+
+      {/* Subscribe Modal */}
+      {showSubscribeModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowSubscribeModal(false)}>
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-6 w-full max-w-md border border-[var(--color-border)]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-[var(--color-text-primary)]">Subscribe to Calendar</h3>
+              <button
+                onClick={() => setShowSubscribeModal(false)}
+                className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl"
+              >
+                &times;
+              </button>
+            </div>
+            <p className="text-[var(--color-text-muted)] text-sm mb-4">
+              Add this URL to your calendar app (Apple Calendar, Google Calendar, Outlook, etc.) to automatically sync all band events.
+            </p>
+            <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded p-3 mb-4 break-all">
+              <code className="text-[var(--color-text-primary)] text-xs">{icalUrl}</code>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleCopyIcalUrl}
+                className="flex-1 btn bg-blue-600 hover:bg-blue-500 text-white"
+              >
+                {icalCopied ? 'Copied!' : 'Copy URL'}
+              </button>
+              <a
+                href={icalUrl.replace(/^https?:\/\//, 'webcal://')}
+                className="flex-1 btn bg-green-600 hover:bg-green-500 text-white text-center"
+              >
+                Open in Calendar
+              </a>
+            </div>
+            <p className="text-[var(--color-text-muted)] text-xs mt-3">
+              Most calendar apps support webcal:// links. If it does not open automatically, paste the URL manually in your calendar app's "subscribe" feature.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

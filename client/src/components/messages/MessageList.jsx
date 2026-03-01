@@ -3,7 +3,7 @@
  * Handles message rendering, editing, reactions, and thread navigation.
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, isToday, isYesterday } from 'date-fns';
 import ReactionDisplay from './ReactionDisplay';
 import ReactionPicker from './ReactionPicker';
@@ -194,6 +194,27 @@ function MessageList({
   const [reportError, setReportError] = useState('');
   const [lightboxData, setLightboxData] = useState(null); // { images: [{src, alt}], index }
   const [msgContextMenu, setMsgContextMenu] = useState(null); // { messageId, x, y }
+  const [seenByCount, setSeenByCount] = useState(null);
+  const [seenByMessageId, setSeenByMessageId] = useState(null);
+
+  // Find the last message by the current user and fetch seen-by count
+  const lastOwnMessage = useMemo(() => {
+    if (!currentUser?.id || !messages.length) return null;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].author?.id === currentUser.id && !messages[i].pending) {
+        return messages[i];
+      }
+    }
+    return null;
+  }, [messages, currentUser?.id]);
+
+  useEffect(() => {
+    if (!lastOwnMessage || lastOwnMessage.id === seenByMessageId) return;
+    setSeenByMessageId(lastOwnMessage.id);
+    api.getMessageSeenBy(lastOwnMessage.id)
+      .then(data => setSeenByCount(data.count ?? data.length ?? 0))
+      .catch(() => setSeenByCount(null));
+  }, [lastOwnMessage]);
 
   /** Collect all images from a message (inline URLs + IMAGE attachments) */
   const getMessageImages = (message) => {
@@ -331,11 +352,11 @@ function MessageList({
           {/* Date Header */}
           {shouldShowDateHeader(message, index) && (
             <div className="flex items-center my-4">
-              <div className="flex-1 border-t border-gray-700" />
-              <span className="px-4 text-xs text-gray-400 font-medium">
+              <div className="flex-1 border-t border-[var(--color-border)]" />
+              <span className="px-4 text-xs text-[var(--color-text-muted)] font-medium">
                 {formatDateHeader(message.createdAt)}
               </span>
-              <div className="flex-1 border-t border-gray-700" />
+              <div className="flex-1 border-t border-[var(--color-border)]" />
             </div>
           )}
 
@@ -351,7 +372,7 @@ function MessageList({
           {/* Message */}
           <div
             data-message-id={message.id}
-            className={`group flex gap-3 py-2 hover:bg-gray-700/30 rounded px-2 -mx-2 relative ${message.pending ? 'opacity-60' : ''}`}
+            className={`group flex gap-3 py-2 hover:bg-[var(--color-bg-tertiary)]/30 rounded px-2 -mx-2 relative ${message.pending ? 'opacity-60' : ''}`}
             onContextMenu={(e) => {
               e.preventDefault();
               setMsgContextMenu({ messageId: message.id, x: e.clientX, y: e.clientY });
@@ -373,10 +394,10 @@ function MessageList({
             {/* Content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-2">
-                <span className="font-semibold text-white">
+                <span className="font-semibold text-[var(--color-text-primary)]">
                   {message.author?.displayName || message.removedUserName || 'Deleted User'}
                 </span>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-[var(--color-text-muted)]">
                   {formatMessageTime(message.createdAt)}
                 </span>
                 {message.pending && (
@@ -392,7 +413,7 @@ function MessageList({
                   <textarea
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
-                    className="w-full bg-gray-700 text-white rounded p-2 resize-none"
+                    className="w-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded p-2 resize-none"
                     rows={2}
                     autoFocus
                     onKeyDown={(e) => {
@@ -408,7 +429,7 @@ function MessageList({
                   <div className="flex gap-2 mt-1 text-xs">
                     <button
                       onClick={handleCancelEdit}
-                      className="text-gray-400 hover:text-white"
+                      className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
                     >
                       Cancel
                     </button>
@@ -421,7 +442,7 @@ function MessageList({
                   </div>
                 </div>
               ) : (
-                <div className="text-gray-200 break-words whitespace-pre-wrap">
+                <div className="text-[var(--color-text-secondary)] break-words whitespace-pre-wrap">
                   <MessageContent content={message.content} message={message} onOpenLightbox={openLightbox} />
                 </div>
               )}
@@ -464,24 +485,24 @@ function MessageList({
                         <video src={att.url} controls className="max-w-full md:max-w-md rounded" />
                       )}
                       {att.type === 'AUDIO' && (
-                        <div className="bg-gray-700 rounded-lg p-3 max-w-full md:max-w-md">
+                        <div className="bg-[var(--color-bg-tertiary)] rounded-lg p-3 max-w-full md:max-w-md">
                           <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 bg-gray-600 rounded flex items-center justify-center flex-shrink-0">
-                              <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="w-10 h-10 bg-[var(--color-bg-secondary)] rounded flex items-center justify-center flex-shrink-0">
+                              <svg className="w-5 h-5 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                               </svg>
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="text-sm text-white truncate">{att.filename}</div>
+                              <div className="text-sm text-[var(--color-text-primary)] truncate">{att.filename}</div>
                               {att.size && (
-                                <div className="text-xs text-gray-400">
+                                <div className="text-xs text-[var(--color-text-muted)]">
                                   {(att.size / (1024 * 1024)).toFixed(1)} MB
                                 </div>
                               )}
                             </div>
                             <button
                               onClick={() => handleDownload(att.url, att.filename)}
-                              className="p-2 text-gray-400 hover:text-white transition-colors"
+                              className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
                               title="Download"
                             >
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -538,6 +559,13 @@ function MessageList({
                   <span className="text-gray-400">→</span>
                 </button>
               )}
+
+              {/* Seen by indicator */}
+              {message.id === seenByMessageId && seenByCount > 0 && (
+                <div className="mt-1 text-xs text-[var(--color-text-muted)]">
+                  Seen by {seenByCount}
+                </div>
+              )}
             </div>
 
             {/* Always-visible more button for keyboard/non-hover users */}
@@ -562,7 +590,7 @@ function MessageList({
                   />
                 </div>
               )}
-              <div className="flex items-center gap-1 bg-gray-700 rounded border border-gray-600">
+              <div className="flex items-center gap-1 bg-[var(--color-bg-tertiary)] rounded border border-[var(--color-border)]">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -570,7 +598,7 @@ function MessageList({
                       reactionPickerMessageId === message.id ? null : message.id
                     );
                   }}
-                  className="p-2 sm:p-1.5 hover:bg-gray-600 rounded text-gray-300 hover:text-white min-w-[36px] sm:min-w-0"
+                  className="p-2 sm:p-1.5 hover:bg-[var(--color-bg-secondary)] rounded text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] min-w-[36px] sm:min-w-0"
                   title="Add reaction"
                   aria-label="Add reaction"
                 >
@@ -581,7 +609,7 @@ function MessageList({
                     e.stopPropagation();
                     onOpenThread(message);
                   }}
-                  className="p-2 sm:p-1.5 hover:bg-gray-600 rounded text-gray-300 hover:text-white min-w-[36px] sm:min-w-0"
+                  className="p-2 sm:p-1.5 hover:bg-[var(--color-bg-secondary)] rounded text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] min-w-[36px] sm:min-w-0"
                   title="Reply in thread"
                   aria-label="Reply in thread"
                 >
@@ -597,8 +625,8 @@ function MessageList({
                         onPinMessage(message.id);
                       }
                     }}
-                    className={`p-2 sm:p-1.5 hover:bg-gray-600 rounded min-w-[36px] sm:min-w-0 ${
-                      pinnedMessageIds?.has(message.id) ? 'text-yellow-400' : 'text-gray-300 hover:text-white'
+                    className={`p-2 sm:p-1.5 hover:bg-[var(--color-bg-secondary)] rounded min-w-[36px] sm:min-w-0 ${
+                      pinnedMessageIds?.has(message.id) ? 'text-yellow-400' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
                     }`}
                     title={pinnedMessageIds?.has(message.id) ? 'Unpin message' : 'Pin message'}
                     aria-label={pinnedMessageIds?.has(message.id) ? 'Unpin message' : 'Pin message'}
@@ -613,7 +641,7 @@ function MessageList({
                         e.stopPropagation();
                         handleStartEdit(message);
                       }}
-                      className="p-2 sm:p-1.5 hover:bg-gray-600 rounded text-gray-300 hover:text-white min-w-[36px] sm:min-w-0"
+                      className="p-2 sm:p-1.5 hover:bg-[var(--color-bg-secondary)] rounded text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] min-w-[36px] sm:min-w-0"
                       title="Edit"
                       aria-label="Edit message"
                     >
@@ -624,7 +652,7 @@ function MessageList({
                         e.stopPropagation();
                         setDeleteMessageId(message.id);
                       }}
-                      className="p-2 sm:p-1.5 hover:bg-gray-600 rounded text-gray-300 hover:text-red-400 min-w-[36px] sm:min-w-0"
+                      className="p-2 sm:p-1.5 hover:bg-[var(--color-bg-secondary)] rounded text-[var(--color-text-secondary)] hover:text-red-400 min-w-[36px] sm:min-w-0"
                       title="Delete"
                       aria-label="Delete message"
                     >

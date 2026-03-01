@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'crypto';
 import { authenticate } from '../middleware/auth.js';
 import { isWorkspaceMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
@@ -1163,6 +1164,40 @@ router.post('/:gigId/duplicate', authenticate, async (req, res) => {
   }
 });
 
+// Get all media for a gig
+router.get('/:gigId/media', authenticate, async (req, res) => {
+  try {
+    const gig = await prisma.gig.findUnique({
+      where: { id: req.params.gigId },
+      include: { workspace: { include: { members: true } } }
+    });
+
+    if (!gig) {
+      return res.status(404).json({ error: 'Gig not found' });
+    }
+
+    const isMember = gig.workspace.members.some(m => m.userId === req.user.id);
+    if (!isMember) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    const media = await prisma.gigMedia.findMany({
+      where: { gigId: req.params.gigId },
+      include: {
+        uploadedBy: {
+          select: { id: true, displayName: true, avatarUrl: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json(media);
+  } catch (error) {
+    console.error('Get gig media error:', error);
+    res.status(500).json({ error: 'Failed to get media' });
+  }
+});
+
 // Add media to a gig
 router.post('/:gigId/media', authenticate, async (req, res) => {
   try {
@@ -1202,8 +1237,21 @@ router.post('/:gigId/media', authenticate, async (req, res) => {
         gigId: req.params.gigId,
         type,
         url,
-        caption
+        caption,
+        uploadedById: req.user.id
+      },
+      include: {
+        uploadedBy: {
+          select: { id: true, displayName: true, avatarUrl: true }
+        }
       }
+    });
+
+    // Emit socket event
+    const io = req.app.get('io');
+    io.to(`workspace:${gig.workspaceId}`).emit('gig:mediaAdded', {
+      gigId: req.params.gigId,
+      media
     });
 
     res.status(201).json(media);
@@ -1236,6 +1284,13 @@ router.delete('/:gigId/media/:mediaId', authenticate, async (req, res) => {
 
     await prisma.gigMedia.delete({
       where: { id: req.params.mediaId }
+    });
+
+    // Emit socket event
+    const io = req.app.get('io');
+    io.to(`workspace:${media.gig.workspaceId}`).emit('gig:mediaDeleted', {
+      gigId: req.params.gigId,
+      mediaId: req.params.mediaId
     });
 
     res.json({ message: 'Media deleted' });
@@ -1478,6 +1533,101 @@ router.post('/workspace/:workspaceId/auto-link-setlists', authenticate, isWorksp
   } catch (error) {
     console.error('Auto-link setlists error:', error);
     res.status(500).json({ error: 'Failed to auto-link setlists' });
+  }
+});
+
+// Generate/regenerate calendar token for a workspace
+router.post('/workspace/:workspaceId/calendar-token', authenticate, isWorkspaceMember, async (req, res) => {
+  try {
+    const token = crypto.randomBytes(32).toString('hex');
+    await prisma.workspace.update({
+      where: { id: req.params.workspaceId },
+      data: { calendarToken: token }
+    });
+    res.json({ token });
+  } catch (error) {
+    console.error('Generate calendar token error:', error);
+    res.status(500).json({ error: 'Failed to generate calendar token' });
+  }
+});
+
+// Get existing calendar token
+router.get('/workspace/:workspaceId/calendar-token', authenticate, isWorkspaceMember, async (req, res) => {
+  try {
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: req.params.workspaceId },
+      select: { calendarToken: true }
+    });
+    res.json({ token: workspace?.calendarToken || null });
+  } catch (error) {
+    console.error('Get calendar token error:', error);
+    res.status(500).json({ error: 'Failed to get calendar token' });
+  }
+});
+
+// Public iCal feed (no auth, uses token)
+router.get('/workspace/:workspaceId/calendar.ics', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) {
+      return res.status(401).json({ error: 'Token required' });
+    }
+
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: req.params.workspaceId },
+      select: { calendarToken: true, name: true }
+    });
+
+    if (!workspace || workspace.calendarToken !== token) {
+      return res.status(403).json({ error: 'Invalid token' });
+    }
+
+    const gigs = await prisma.gig.findMany({
+      where: {
+        workspaceId: req.params.workspaceId,
+        status: { not: 'CANCELLED' },
+        isPersonal: false
+      },
+      orderBy: { date: 'asc' }
+    });
+
+    const now = new Date();
+    const formatDate = (d) => new Date(d).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+
+    let ical = 'BEGIN:VCALENDAR\r\n';
+    ical += 'VERSION:2.0\r\n';
+    ical += `PRODID:-//BandChat//${workspace.name}//EN\r\n`;
+    ical += `X-WR-CALNAME:${workspace.name} Gigs\r\n`;
+    ical += 'CALSCALE:GREGORIAN\r\n';
+    ical += 'METHOD:PUBLISH\r\n';
+
+    for (const gig of gigs) {
+      ical += 'BEGIN:VEVENT\r\n';
+      ical += `UID:${gig.id}@bandchat.app\r\n`;
+      ical += `DTSTAMP:${formatDate(now)}\r\n`;
+      ical += `DTSTART:${formatDate(gig.date)}\r\n`;
+      if (gig.endDate) {
+        ical += `DTEND:${formatDate(gig.endDate)}\r\n`;
+      }
+      ical += `SUMMARY:${(gig.title || '').replace(/[,;\\]/g, '\\$&')}\r\n`;
+      if (gig.venue || gig.address) {
+        const location = [gig.venue, gig.address].filter(Boolean).join(', ');
+        ical += `LOCATION:${location.replace(/[,;\\]/g, '\\$&')}\r\n`;
+      }
+      if (gig.notes) {
+        ical += `DESCRIPTION:${gig.notes.replace(/\n/g, '\\n').replace(/[,;\\]/g, '\\$&')}\r\n`;
+      }
+      ical += 'END:VEVENT\r\n';
+    }
+
+    ical += 'END:VCALENDAR\r\n';
+
+    res.set('Content-Type', 'text/calendar; charset=utf-8');
+    res.set('Content-Disposition', 'attachment; filename="calendar.ics"');
+    res.send(ical);
+  } catch (error) {
+    console.error('iCal feed error:', error);
+    res.status(500).json({ error: 'Failed to generate calendar feed' });
   }
 });
 

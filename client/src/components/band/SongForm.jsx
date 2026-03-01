@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import api from '../../services/api';
 import ConfirmDialog from '../common/ConfirmDialog';
+import { useToast } from '../../context/ToastContext';
+import LyricsModal from './LyricsModal';
 
-function SongForm({ song, onSave, onClose }) {
+function SongForm({ song, workspaceId, onSave, onClose }) {
   // Parse existing key into root and mode
   const parseKey = (key) => {
     if (!key) return { root: '', isMinor: false };
@@ -53,6 +55,7 @@ function SongForm({ song, onSave, onClose }) {
   const [error, setError] = useState('');
   const [attachments, setAttachments] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [showLyricsModal, setShowLyricsModal] = useState(false);
   const fileInputRef = useRef(null);
 
   // Load attachments when editing an existing song
@@ -98,6 +101,36 @@ function SongForm({ song, onSave, onClose }) {
   };
 
   const [deleteAttachmentId, setDeleteAttachmentId] = useState(null);
+
+  // Practice logging
+  const toast = useToast();
+  const [practiceDuration, setPracticeDuration] = useState('30');
+  const [practiceNotes, setPracticeNotes] = useState('');
+  const [loggingPractice, setLoggingPractice] = useState(false);
+
+  const handleLogPractice = async () => {
+    const dur = parseInt(practiceDuration, 10);
+    if (isNaN(dur) || dur < 1 || dur > 480) {
+      toast.error('Duration must be between 1 and 480 minutes');
+      return;
+    }
+    setLoggingPractice(true);
+    try {
+      await api.logPractice(workspaceId, {
+        songId: song.id,
+        duration: dur,
+        notes: practiceNotes.trim() || null,
+        practicedAt: new Date().toISOString(),
+      });
+      toast.success('Practice session logged!');
+      setPracticeDuration('30');
+      setPracticeNotes('');
+    } catch (err) {
+      toast.error(err.message || 'Failed to log practice');
+    } finally {
+      setLoggingPractice(false);
+    }
+  };
 
   const handleDeleteAttachment = async (attachmentId) => {
     try {
@@ -184,7 +217,8 @@ function SongForm({ song, onSave, onClose }) {
               { id: 'details', label: 'Details' },
               { id: 'lyrics', label: 'Lyrics' },
               { id: 'arrangement', label: 'Arrangement' },
-              ...(song ? [{ id: 'attachments', label: 'Files' }] : [])
+              ...(song ? [{ id: 'attachments', label: 'Files' }] : []),
+              ...(song ? [{ id: 'practice', label: 'Practice' }] : [])
             ].map(tab => (
               <button
                 key={tab.id}
@@ -341,7 +375,18 @@ function SongForm({ song, onSave, onClose }) {
             {/* Lyrics Tab */}
             {activeTab === 'lyrics' && (
             <div>
-              <label className="modal-label">Lyrics / Chord Chart</label>
+              <div className="flex items-center justify-between">
+                <label className="modal-label">Lyrics / Chord Chart</label>
+                {formData.lyrics && (
+                  <button
+                    type="button"
+                    onClick={() => setShowLyricsModal(true)}
+                    className="text-xs text-blue-400 hover:text-blue-300 font-semibold"
+                  >
+                    Full Screen
+                  </button>
+                )}
+              </div>
               <textarea
                 value={formData.lyrics}
                 onChange={(e) => handleChange('lyrics', e.target.value)}
@@ -458,6 +503,48 @@ Example:
             </div>
             )}
 
+            {/* Practice Tab */}
+            {activeTab === 'practice' && song && (
+            <div>
+              <label className="modal-label">Log Practice Session</label>
+              <p className="text-sm text-[var(--color-text-muted)] mb-4">
+                Record that you practiced this song.
+              </p>
+              <div className="space-y-4">
+                <div>
+                  <label className="modal-label">Duration (minutes)</label>
+                  <input
+                    type="number"
+                    value={practiceDuration}
+                    onChange={(e) => setPracticeDuration(e.target.value)}
+                    className="modal-input"
+                    placeholder="30"
+                    min="1"
+                    max="480"
+                  />
+                </div>
+                <div>
+                  <label className="modal-label">Notes (optional)</label>
+                  <textarea
+                    value={practiceNotes}
+                    onChange={(e) => setPracticeNotes(e.target.value)}
+                    className="modal-input"
+                    rows={3}
+                    placeholder="How did it go?"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleLogPractice}
+                  disabled={loggingPractice || !practiceDuration}
+                  className="btn bg-green-600 hover:bg-green-700 text-white w-full"
+                >
+                  {loggingPractice ? 'Logging...' : 'Log Practice'}
+                </button>
+              </div>
+            </div>
+            )}
+
             <div className="flex gap-2 justify-end mt-6 pt-4 border-t border-[var(--color-border)]">
               <button
                 type="button"
@@ -486,6 +573,18 @@ Example:
         onConfirm={() => handleDeleteAttachment(deleteAttachmentId)}
         onCancel={() => setDeleteAttachmentId(null)}
       />
+      {showLyricsModal && formData.lyrics && (
+        <LyricsModal
+          lyrics={formData.lyrics}
+          songTitle={formData.title || 'Lyrics'}
+          duration={formData.durationStr ? (() => {
+            const parts = formData.durationStr.split(':');
+            if (parts.length === 2) return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+            return null;
+          })() : null}
+          onClose={() => setShowLyricsModal(false)}
+        />
+      )}
     </div>
   );
 }

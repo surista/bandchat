@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
+const QUICK_EMOJIS = ['\uD83D\uDC4D', '\uD83D\uDC4E', '\uD83C\uDFB8', '\uD83D\uDD25', '\u2764\uFE0F'];
+
 const ACTIONS = [
   { key: 'reply', label: 'Reply in Thread', icon: '\u{1F4AC}' },
   { key: 'react', label: 'Add Reaction', icon: '\u{1F600}' },
@@ -18,7 +20,7 @@ const ACTIONS = [
   { key: 'report', label: 'Report Message', icon: '\u{26A0}\u{FE0F}', notOwn: true, destructive: true },
 ];
 
-function MessageActionSheet({ visible, onClose, onAction, isOwnMessage, hideReply }) {
+function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwnMessage, hideReply }) {
   const { colors } = useTheme();
 
   const filteredActions = ACTIONS.filter(a =>
@@ -26,10 +28,47 @@ function MessageActionSheet({ visible, onClose, onAction, isOwnMessage, hideRepl
     !(hideReply && a.key === 'reply')
   );
 
+  const handleQuickReaction = (emoji) => {
+    if (onQuickReaction) {
+      onQuickReaction(emoji);
+    }
+    onClose();
+  };
+
+  const handleOpenFullPicker = () => {
+    onClose();
+    onAction('react');
+  };
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <View style={[styles.sheet, { backgroundColor: colors.modalBg }]}>
+          {/* Quick Reaction Row */}
+          <View style={[styles.quickReactionRow, { borderBottomColor: colors.border }]}>
+            {QUICK_EMOJIS.map((emoji) => (
+              <TouchableOpacity
+                key={emoji}
+                style={[styles.quickReactionButton, { backgroundColor: colors.bgTertiary }]}
+                onPress={() => handleQuickReaction(emoji)}
+                activeOpacity={0.6}
+                accessibilityRole="button"
+                accessibilityLabel={`React with ${emoji}`}
+              >
+                <Text style={styles.quickReactionEmoji}>{emoji}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={[styles.quickReactionButton, { backgroundColor: colors.bgTertiary }]}
+              onPress={handleOpenFullPicker}
+              activeOpacity={0.6}
+              accessibilityRole="button"
+              accessibilityLabel="Open full emoji picker"
+            >
+              <Text style={styles.quickReactionPlus}>+</Text>
+            </TouchableOpacity>
+          </View>
+
           {filteredActions.map((action, i) => (
             <TouchableOpacity
               key={action.key}
@@ -86,6 +125,29 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 34,
     paddingHorizontal: 16,
+  },
+  quickReactionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginBottom: 4,
+  },
+  quickReactionButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quickReactionEmoji: {
+    fontSize: 22,
+  },
+  quickReactionPlus: {
+    fontSize: 24,
+    fontWeight: '300',
+    color: '#999',
   },
   actionRow: {
     flexDirection: 'row',

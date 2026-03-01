@@ -237,7 +237,7 @@ export default function AnnouncementsScreen({ navigation, route }) {
             </Text>
             {item.acknowledgmentCount > 0 && (
               <Text style={[styles.ackCount, { color: colors.textSecondary }]}>
-                {item.acknowledgmentCount} acknowledged
+                Seen by {item.acknowledgmentCount}/{item.memberCount || '?'}
               </Text>
             )}
           </View>

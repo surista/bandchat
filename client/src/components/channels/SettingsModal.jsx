@@ -66,6 +66,9 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
   const [editMemberLoading, setEditMemberLoading] = useState(false);
   // Slack import
   const [showSlackImport, setShowSlackImport] = useState(false);
+  // Notification preferences
+  const [notifPrefs, setNotifPrefs] = useState(null);
+  const [notifPrefsLoading, setNotifPrefsLoading] = useState(false);
 
   // Reset form state when modal opens
   useEffect(() => {
@@ -104,6 +107,17 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
   useEffect(() => {
     if (settingsTab === 'bandmembers' && workspace?.id) {
       loadBandMembers();
+    }
+  }, [settingsTab, workspace?.id]);
+
+  // Load notification preferences when notifications tab is selected
+  useEffect(() => {
+    if (settingsTab === 'notifications' && workspace?.id) {
+      setNotifPrefsLoading(true);
+      api.getNotificationPreferences(workspace.id)
+        .then(data => setNotifPrefs(data))
+        .catch(() => setNotifPrefs({ notifyDMs: true, notifyMentions: true, notifyGigChanges: true, notifyAnnouncements: true, notifyChannelMessages: true }))
+        .finally(() => setNotifPrefsLoading(false));
     }
   }, [settingsTab, workspace?.id]);
 
@@ -226,6 +240,18 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 }`}
               >
                 Theme
+              </button>
+              <button
+                role="tab"
+                aria-selected={settingsTab === 'notifications'}
+                onClick={() => setSettingsTab('notifications')}
+                className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
+                  settingsTab === 'notifications'
+                    ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
+                    : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                Notifications
               </button>
               {isAdmin && (
                 <>
@@ -1422,6 +1448,60 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                   <div className="text-center text-xs text-gray-500 pt-4">
                     Made with ♥ for musicians everywhere
                   </div>
+                </div>
+              )}
+
+              {settingsTab === 'notifications' && (
+                <div className="space-y-6">
+                  <h3 className="text-lg font-bold text-[var(--color-text-primary)]">Notification Preferences</h3>
+                  <p className="text-sm text-[var(--color-text-muted)]">
+                    Choose which types of notifications you receive for this workspace.
+                  </p>
+                  {notifPrefsLoading ? (
+                    <div className="flex justify-center py-8">
+                      <Skeleton.Text lines={5} />
+                    </div>
+                  ) : notifPrefs ? (
+                    <div className="bg-[var(--color-modal-card)] rounded-lg divide-y divide-[var(--color-modal-border)]">
+                      {[
+                        { key: 'notifyDMs', label: 'Direct Messages', desc: 'Get notified for new direct messages' },
+                        { key: 'notifyMentions', label: 'Mentions', desc: 'Get notified when someone mentions you' },
+                        { key: 'notifyGigChanges', label: 'Gig Changes', desc: 'Get notified about gig updates and changes' },
+                        { key: 'notifyAnnouncements', label: 'Announcements', desc: 'Get notified about new announcements' },
+                        { key: 'notifyChannelMessages', label: 'All Channel Messages', desc: 'Get notified for all channel messages' },
+                      ].map(({ key, label, desc }) => (
+                        <div key={key} className="flex items-center justify-between px-4 py-3">
+                          <div>
+                            <div className="text-[var(--color-text-primary)] font-medium">{label}</div>
+                            <div className="text-xs text-[var(--color-text-muted)]">{desc}</div>
+                          </div>
+                          <button
+                            onClick={async () => {
+                              const newVal = !(notifPrefs[key] !== false);
+                              setNotifPrefs(prev => ({ ...prev, [key]: newVal }));
+                              try {
+                                await api.updateNotificationPreferences(workspace.id, { [key]: newVal });
+                              } catch {
+                                setNotifPrefs(prev => ({ ...prev, [key]: !newVal }));
+                              }
+                            }}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                              notifPrefs[key] !== false ? 'bg-[var(--color-primary)]' : 'bg-gray-600'
+                            }`}
+                            role="switch"
+                            aria-checked={notifPrefs[key] !== false}
+                            aria-label={`${label} notifications`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                notifPrefs[key] !== false ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               )}
 

@@ -361,7 +361,7 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
           url: `/workspace/${channel.workspaceId}?channel=${req.params.channelId}`,
           channelId: req.params.channelId,
           workspaceId: channel.workspaceId
-        });
+        }, { category: 'mention', workspaceId: channel.workspaceId });
       });
     }
 
@@ -917,6 +917,60 @@ router.get('/channel/:channelId/pins', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Get pinned messages error:', error);
     res.status(500).json({ error: 'Failed to get pinned messages' });
+  }
+});
+
+// Get "seen by" info for a message
+router.get('/:messageId/seen-by', authenticate, async (req, res) => {
+  try {
+    const message = await prisma.message.findUnique({
+      where: { id: req.params.messageId },
+      include: { channel: true }
+    });
+
+    if (!message) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+
+    // Verify workspace membership
+    const workspaceMember = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: message.channel.workspaceId
+        }
+      }
+    });
+
+    if (!workspaceMember) {
+      return res.status(403).json({ error: 'Not a member of this workspace' });
+    }
+
+    // Find channel members whose lastRead >= message.createdAt
+    const seenMembers = await prisma.channelMember.findMany({
+      where: {
+        channelId: message.channelId,
+        lastRead: { gte: message.createdAt },
+        userId: { not: message.authorId }
+      },
+      include: {
+        user: {
+          select: { id: true, displayName: true, avatarUrl: true }
+        }
+      }
+    });
+
+    const totalMembers = await prisma.channelMember.count({
+      where: { channelId: message.channelId }
+    });
+
+    res.json({
+      seenBy: seenMembers.map(m => m.user),
+      totalMembers
+    });
+  } catch (error) {
+    console.error('Get seen-by error:', error);
+    res.status(500).json({ error: 'Failed to get seen-by info' });
   }
 });
 

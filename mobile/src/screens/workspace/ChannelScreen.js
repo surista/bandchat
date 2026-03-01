@@ -52,6 +52,9 @@ export default function ChannelScreen({ navigation, route }) {
   const [reportReason, setReportReason] = useState('');
   const [reportSubmitting, setReportSubmitting] = useState(false);
 
+  const [seenByCount, setSeenByCount] = useState(null);
+  const [lastOwnMessageId, setLastOwnMessageId] = useState(null);
+
   const channelIdRef = useRef(channel.id);
   const userIdRef = useRef(user?.id);
   const flatListRef = useRef(null);
@@ -239,6 +242,17 @@ export default function ChannelScreen({ navigation, route }) {
     };
   }, [socket, joinChannel]);
 
+  // Fetch "seen by" count for the last message by the current user
+  useEffect(() => {
+    if (!messages.length || !user?.id) return;
+    const lastOwn = [...messages].reverse().find(m => m.author?.id === user.id && !m.pending);
+    if (!lastOwn || lastOwn.id === lastOwnMessageId) return;
+    setLastOwnMessageId(lastOwn.id);
+    api.getMessageSeenBy(lastOwn.id)
+      .then(data => setSeenByCount(data.count ?? data.length ?? 0))
+      .catch(() => setSeenByCount(null));
+  }, [messages, user?.id]);
+
   // Load older messages (pagination)
   const loadMore = useCallback(async () => {
     if (!hasMore || loadingMoreRef.current || !nextCursor) return;
@@ -275,6 +289,7 @@ export default function ChannelScreen({ navigation, route }) {
 
   // Send message with optimistic update + optional attachment
   const handleSend = useCallback(async (content, attachment) => {
+    const attType = attachment ? (attachment.isVideo ? 'VIDEO' : attachment.isAudio ? 'AUDIO' : 'IMAGE') : null;
     const optimisticMessage = {
       id: `temp-${Date.now()}`,
       content: content || '',
@@ -282,7 +297,7 @@ export default function ChannelScreen({ navigation, route }) {
       channelId: channel.id,
       createdAt: new Date().toISOString(),
       reactions: [],
-      attachments: attachment ? [{ id: `temp-att-${Date.now()}`, type: attachment.isVideo ? 'VIDEO' : 'IMAGE', url: attachment.uri, pending: true }] : [],
+      attachments: attachment ? [{ id: `temp-att-${Date.now()}`, type: attType, url: attachment.uri, pending: true }] : [],
       _count: { replies: 0 },
       pending: true,
     };
@@ -302,6 +317,35 @@ export default function ChannelScreen({ navigation, route }) {
     } catch (err) {
       setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
       console.error('Failed to send message:', err);
+    }
+  }, [user, channel.id]);
+
+  // Send voice message
+  const handleSendVoice = useCallback(async (uri) => {
+    const filename = `voice-${Date.now()}.m4a`;
+    const optimisticMessage = {
+      id: `temp-${Date.now()}`,
+      content: '',
+      author: { id: user.id, displayName: user.displayName, avatarUrl: user.avatarUrl },
+      channelId: channel.id,
+      createdAt: new Date().toISOString(),
+      reactions: [],
+      attachments: [{ id: `temp-att-${Date.now()}`, type: 'AUDIO', url: uri, filename, pending: true }],
+      _count: { replies: 0 },
+      pending: true,
+    };
+
+    setMessages(prev => [...prev, optimisticMessage]);
+
+    try {
+      const uploaded = await api.uploadFile(uri, filename, 'audio/m4a');
+      const savedMessage = await api.sendMessage(channel.id, '', null, [uploaded]);
+      setMessages(prev => prev.map(m =>
+        m.id === optimisticMessage.id ? savedMessage : m
+      ));
+    } catch (err) {
+      setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
+      console.error('Failed to send voice message:', err);
     }
   }, [user, channel.id]);
 
@@ -464,9 +508,15 @@ export default function ChannelScreen({ navigation, route }) {
   const renderItem = useCallback(({ item, index }) => {
     const grouped = isGrouped(item, index);
     const showDate = needsDateSeparator(item, index);
+    const isLastOwn = item.id === lastOwnMessageId;
 
     return (
       <View>
+        {isLastOwn && seenByCount > 0 && (
+          <Text style={[styles.seenByText, { color: colors.textSecondary }]}>
+            Seen by {seenByCount}
+          </Text>
+        )}
         <MessageBubble
           message={item}
           isGrouped={grouped}
@@ -486,7 +536,7 @@ export default function ChannelScreen({ navigation, route }) {
         )}
       </View>
     );
-  }, [isGrouped, needsDateSeparator, colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress]);
+  }, [isGrouped, needsDateSeparator, colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, lastOwnMessageId, seenByCount]);
 
   const renderFooter = useCallback(() => {
     if (!loadingMore) return null;
@@ -551,6 +601,7 @@ export default function ChannelScreen({ navigation, route }) {
       )}
       <MessageInput
         onSend={handleSend}
+        onSendVoice={handleSendVoice}
         onTyping={handleTyping}
         editingMessage={editingMessage}
         onCancelEdit={handleCancelEdit}
@@ -562,6 +613,7 @@ export default function ChannelScreen({ navigation, route }) {
         visible={showActions}
         onClose={() => setShowActions(false)}
         onAction={handleAction}
+        onQuickReaction={handleAddReaction}
         isOwnMessage={actionMessage?.author?.id === user?.id}
       />
 
@@ -661,6 +713,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     paddingHorizontal: 12,
+  },
+  seenByText: {
+    fontSize: 12,
+    paddingHorizontal: 16,
+    paddingTop: 2,
+    paddingBottom: 4,
+    textAlign: 'right',
   },
   typingBar: {
     paddingHorizontal: 16,

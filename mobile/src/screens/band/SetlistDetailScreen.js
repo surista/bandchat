@@ -17,6 +17,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
+import { buildSetlistHTML } from '../../utils/buildSetlistHTML';
+import DraggableList from '../../components/DraggableList';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 function Badge({ label, color, bgColor }) {
   return (
@@ -80,30 +84,53 @@ export default function SetlistDetailScreen({ navigation, route }) {
     }
   }, [navigation, setlist]);
 
+  // Export PDF
+  const handleExportPDF = useCallback(async () => {
+    try {
+      const html = buildSetlistHTML(setlist?.name || 'Setlist', setlist?.songs || []);
+      const { uri } = await Print.printToFileAsync({ html });
+      await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Export Setlist' });
+    } catch (err) {
+      if (err.message !== 'User canceled') {
+        Alert.alert('Error', 'Failed to export PDF');
+      }
+    }
+  }, [setlist]);
+
   // Header buttons
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity
-          onPress={() => setEditing(prev => !prev)}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          accessibilityRole="button"
-          accessibilityLabel={editing ? 'Done editing' : 'Edit setlist'}
-        >
-          <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>
-            {editing ? 'Done' : 'Edit'}
-          </Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <TouchableOpacity
+            onPress={handleExportPDF}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Export setlist as PDF"
+          >
+            <Text style={{ fontSize: 18 }}>{'\u2B07'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setEditing(prev => !prev)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel={editing ? 'Done editing' : 'Edit setlist'}
+          >
+            <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>
+              {editing ? 'Done' : 'Edit'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       ),
     });
-  }, [navigation, editing, colors.primary]);
+  }, [navigation, editing, colors.primary, handleExportPDF]);
 
   const items = setlist?.songs || [];
   const songItems = items.filter(s => s.type === 'SONG' || (!s.type && s.song));
   const setBreaks = items.filter(s => s.type === 'SET_BREAK');
   const totalDuration = items.reduce((sum, s) => sum + (s.song?.duration || s.duration || 0), 0);
 
-  // Reorder
+  // Reorder (arrow buttons - used in non-drag mode)
   const moveItem = useCallback(async (index, direction) => {
     const newIndex = index + direction;
     if (newIndex < 0 || newIndex >= items.length) return;
@@ -118,6 +145,16 @@ export default function SetlistDetailScreen({ navigation, route }) {
       loadSetlist(); // revert on error
     }
   }, [items, setlistId, loadSetlist]);
+
+  // Drag-and-drop reorder
+  const handleDragReorder = useCallback(async (newItems) => {
+    setSetlist(prev => ({ ...prev, songs: newItems }));
+    try {
+      await api.reorderSetlistItems(setlistId, newItems.map(i => i.id));
+    } catch (err) {
+      loadSetlist(); // revert on error
+    }
+  }, [setlistId, loadSetlist]);
 
   const removeItem = useCallback(async (item) => {
     setSetlist(prev => ({
@@ -246,7 +283,8 @@ export default function SetlistDetailScreen({ navigation, route }) {
     return s.title?.toLowerCase().includes(q) || s.artist?.toLowerCase().includes(q);
   }), [allSongs, existingSongIds, songSearch]);
 
-  const renderItem = useCallback(({ item, index }) => {
+  // Render function for standard FlatList (view mode) and draggable (edit mode)
+  const renderSetlistItem = useCallback(({ item, index, isDragItem = false }) => {
     // Determine if we need a set header above this item
     let setHeader = null;
     if (item.type !== 'SET_BREAK') {
@@ -287,18 +325,8 @@ export default function SetlistDetailScreen({ navigation, route }) {
     if (item.type === 'MC') {
       return (
         <>
-          {setHeader}
+          {!isDragItem && setHeader}
           <View style={[styles.itemRow, { backgroundColor: colors.bgSecondary }]}>
-            {editing && (
-              <View style={styles.reorderButtons}>
-                <TouchableOpacity onPress={() => moveItem(index, -1)} disabled={index === 0} accessibilityRole="button" accessibilityLabel="Move MC up">
-                  <Text style={[styles.reorderArrow, { color: index === 0 ? colors.border : colors.textSecondary }]}>{'\u25B2'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => moveItem(index, 1)} disabled={index === items.length - 1} accessibilityRole="button" accessibilityLabel="Move MC down">
-                  <Text style={[styles.reorderArrow, { color: index === items.length - 1 ? colors.border : colors.textSecondary }]}>{'\u25BC'}</Text>
-                </TouchableOpacity>
-              </View>
-            )}
             <Text style={styles.mcIcon}>{'\uD83C\uDFA4'}</Text>
             <View style={styles.itemContent}>
               <Text style={[styles.mcLabel, { color: colors.textSecondary }]}>
@@ -330,18 +358,8 @@ export default function SetlistDetailScreen({ navigation, route }) {
 
     return (
       <>
-        {setHeader}
+        {!isDragItem && setHeader}
         <View style={[styles.itemRow, { backgroundColor: colors.bgSecondary }]}>
-          {editing && (
-            <View style={styles.reorderButtons}>
-              <TouchableOpacity onPress={() => moveItem(index, -1)} disabled={index === 0} accessibilityRole="button" accessibilityLabel={`Move ${item.song?.title || 'song'} up`}>
-                <Text style={[styles.reorderArrow, { color: index === 0 ? colors.border : colors.textSecondary }]}>{'\u25B2'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => moveItem(index, 1)} disabled={index === items.length - 1} accessibilityRole="button" accessibilityLabel={`Move ${item.song?.title || 'song'} down`}>
-                <Text style={[styles.reorderArrow, { color: index === items.length - 1 ? colors.border : colors.textSecondary }]}>{'\u25BC'}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
           <Text style={[styles.songNumber, { color: colors.textSecondary }]}>{songNumber}</Text>
           <View style={styles.itemContent}>
             <Text style={[styles.songTitle, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -369,7 +387,15 @@ export default function SetlistDetailScreen({ navigation, route }) {
         </View>
       </>
     );
-  }, [colors, editing, items, moveItem, removeItem]);
+  }, [colors, editing, items, removeItem]);
+
+  const renderItem = useCallback(({ item, index }) => {
+    return renderSetlistItem({ item, index });
+  }, [renderSetlistItem]);
+
+  const renderDraggableItem = useCallback(({ item, index }) => {
+    return renderSetlistItem({ item, index, isDragItem: true });
+  }, [renderSetlistItem]);
 
   if (loading) {
     return (
@@ -402,6 +428,19 @@ export default function SetlistDetailScreen({ navigation, route }) {
         )}
       </View>
 
+      {/* Live Mode button */}
+      {!editing && items.length > 0 && (
+        <TouchableOpacity
+          style={styles.liveModeButton}
+          onPress={() => navigation.navigate('LiveMode', { setlistItems: items, setlistName: setlist?.name || 'Setlist' })}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Start live mode"
+        >
+          <Text style={styles.liveModeButtonText}>Live Mode</Text>
+        </TouchableOpacity>
+      )}
+
       {/* Performers */}
       {(performers.length > 0 || editing) && (
         <View style={styles.performersSection}>
@@ -432,19 +471,39 @@ export default function SetlistDetailScreen({ navigation, route }) {
       )}
 
       {/* Setlist items */}
-      <FlatList
-        data={items}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <View style={styles.centered}>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              No songs in this setlist
-            </Text>
-          </View>
-        }
-      />
+      {editing ? (
+        <ScrollView contentContainerStyle={styles.listContent}>
+          {items.length === 0 ? (
+            <View style={styles.centered}>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                No songs in this setlist
+              </Text>
+            </View>
+          ) : (
+            <DraggableList
+              items={items}
+              keyExtractor={(item) => item.id}
+              renderItem={renderDraggableItem}
+              onReorder={handleDragReorder}
+              itemHeight={56}
+            />
+          )}
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={items}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={styles.centered}>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                No songs in this setlist
+              </Text>
+            </View>
+          }
+        />
+      )}
 
       {/* Edit mode toolbar */}
       {editing && (
@@ -653,6 +712,20 @@ const styles = StyleSheet.create({
   },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
   badgeText: { fontSize: 13, fontWeight: '600' },
+  liveModeButton: {
+    marginHorizontal: 14,
+    marginBottom: 8,
+    backgroundColor: '#dc2626',
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  liveModeButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
   listContent: { paddingHorizontal: 8, paddingBottom: 80 },
   // Item rows
   itemRow: {

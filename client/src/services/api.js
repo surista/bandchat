@@ -864,10 +864,23 @@ class ApiService {
     });
   }
 
+  async getGigMedia(gigId) {
+    return this.request(`/gigs/${gigId}/media`);
+  }
+
   async deleteGigMedia(gigId, mediaId) {
     return this.request(`/gigs/${gigId}/media/${mediaId}`, {
       method: 'DELETE'
     });
+  }
+
+  // iCal Calendar Sync
+  async getCalendarToken(workspaceId) {
+    return this.request(`/gigs/workspace/${workspaceId}/calendar-token`);
+  }
+
+  async generateCalendarToken(workspaceId) {
+    return this.request(`/gigs/workspace/${workspaceId}/calendar-token`, { method: 'POST' });
   }
 
   // Band Members
@@ -1243,6 +1256,23 @@ class ApiService {
     });
   }
 
+  // Notification Preferences
+  async getNotificationPreferences(workspaceId) {
+    return this.request(`/push/preferences/${workspaceId}`);
+  }
+
+  async updateNotificationPreferences(workspaceId, prefs) {
+    return this.request(`/push/preferences/${workspaceId}`, {
+      method: 'PUT',
+      body: JSON.stringify(prefs)
+    });
+  }
+
+  // Read Receipts
+  async getMessageSeenBy(messageId) {
+    return this.request(`/messages/${messageId}/seen-by`);
+  }
+
   // Band Kitty
   async getKitty(workspaceId) {
     return this.request(`/kitty/workspace/${workspaceId}`);
@@ -1273,6 +1303,27 @@ class ApiService {
     return this.request(`/kitty/transactions/${transactionId}`, {
       method: 'DELETE'
     });
+  }
+
+  // Practice
+  async logPractice(workspaceId, data) {
+    return this.request(`/practice/workspace/${workspaceId}`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async getMyPractice(workspaceId, cursor) {
+    const params = cursor ? `?cursor=${cursor}` : '';
+    return this.request(`/practice/workspace/${workspaceId}/me${params}`);
+  }
+
+  async getPracticeSummary(workspaceId) {
+    return this.request(`/practice/workspace/${workspaceId}/summary`);
+  }
+
+  async deletePracticeSession(sessionId) {
+    return this.request(`/practice/${sessionId}`, { method: 'DELETE' });
   }
 
   // Link Previews

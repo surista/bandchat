@@ -35,11 +35,17 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
       ]
     });
 
-    // Add user's acknowledgment status
+    // Get total workspace member count
+    const memberCount = await prisma.workspaceMember.count({
+      where: { workspaceId: req.params.workspaceId }
+    });
+
+    // Add user's acknowledgment status and member count
     const result = announcements.map(a => ({
       ...a,
       isAcknowledged: a.acknowledgments.some(ack => ack.user.id === req.user.id),
-      acknowledgmentCount: a._count.acknowledgments
+      acknowledgmentCount: a._count.acknowledgments,
+      memberCount
     }));
 
     res.json(result);

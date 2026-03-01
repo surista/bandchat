@@ -322,6 +322,7 @@ export default function ThreadScreen({ route }) {
         visible={showActions}
         onClose={() => setShowActions(false)}
         onAction={handleAction}
+        onQuickReaction={handleAddReaction}
         isOwnMessage={actionMessage?.author?.id === user?.id}
         hideReply
       />

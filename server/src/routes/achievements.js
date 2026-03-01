@@ -75,6 +75,12 @@ const DEFAULT_ACHIEVEMENTS = [
   { code: 'emoji_fan', name: 'Emoji Fan', description: 'Added 50 emoji reactions', icon: '😄', category: 'social', threshold: 50, isBandWide: false },
   { code: 'emoji_enthusiast', name: 'Emoji Enthusiast', description: 'Added 250 emoji reactions', icon: '🤩', category: 'social', threshold: 250, isBandWide: false },
   { code: 'emoji_master', name: 'Emoji Master', description: 'Added 1000 emoji reactions', icon: '🎭', category: 'social', threshold: 1000, isBandWide: false },
+
+  // Practice achievements (member)
+  { code: 'first_practice', name: 'First Practice', description: 'Logged your first practice session', icon: '🎵', category: 'practice', threshold: 1, isBandWide: false },
+  { code: 'practice_streak_7', name: 'Week Warrior', description: 'Practiced 7 days in a row', icon: '🔥', category: 'practice', threshold: 7, isBandWide: false },
+  { code: 'practice_streak_30', name: 'Monthly Master', description: 'Practiced 30 days in a row', icon: '💎', category: 'practice', threshold: 30, isBandWide: false },
+  { code: 'practice_10_hours', name: 'Dedicated Practicer', description: 'Practiced for 10 hours total', icon: '⏰', category: 'practice', threshold: 600, isBandWide: false },
 ];
 
 // Seed achievements - update existing records to ensure icons are set
@@ -537,7 +543,7 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
     }
 
     // Get counts per user using groupBy (no full record loading)
-    const [songCountsByUser, setlistCountsByUser, messageCountsByUser, reactionCountsByUser] = await Promise.all([
+    const [songCountsByUser, setlistCountsByUser, messageCountsByUser, reactionCountsByUser, practiceCountsByUser, practiceDurationByUser] = await Promise.all([
       prisma.song.groupBy({
         by: ['createdById'],
         where: { workspaceId, createdById: { in: memberIds } },
@@ -557,6 +563,16 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
         by: ['userId'],
         where: { message: { channel: { workspaceId } }, userId: { in: memberIds } },
         _count: { id: true }
+      }),
+      prisma.practiceSession.groupBy({
+        by: ['userId'],
+        where: { workspaceId, userId: { in: memberIds } },
+        _count: { id: true }
+      }),
+      prisma.practiceSession.groupBy({
+        by: ['userId'],
+        where: { workspaceId, userId: { in: memberIds } },
+        _sum: { duration: true }
       })
     ]);
 
@@ -565,6 +581,8 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
     const setlistCounts = new Map(setlistCountsByUser.map(s => [s.createdById, s._count.id]));
     const messageCounts = new Map(messageCountsByUser.map(m => [m.authorId, m._count.id]));
     const reactionCounts = new Map(reactionCountsByUser.map(r => [r.userId, r._count.id]));
+    const practiceCounts = new Map(practiceCountsByUser.map(p => [p.userId, p._count.id]));
+    const practiceDurations = new Map(practiceDurationByUser.map(p => [p.userId, p._sum.duration || 0]));
 
     // Helper to get the Nth item's date using findFirst + skip (avoids loading all records)
     const getNthSongDate = async (userId, n) => {
@@ -750,6 +768,16 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
               earnedAt = new Date(joinDate);
               earnedAt.setFullYear(earnedAt.getFullYear() + 10);
             }
+            break;
+          case 'first_practice':
+            shouldAward = (practiceCounts.get(userId) || 0) >= 1;
+            break;
+          case 'practice_10_hours':
+            shouldAward = (practiceDurations.get(userId) || 0) >= 600;
+            break;
+          // Streak achievements are awarded when practice is logged (checked client-side)
+          case 'practice_streak_7':
+          case 'practice_streak_30':
             break;
         }
 

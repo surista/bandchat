@@ -1,5 +1,5 @@
-import { memo, useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
+import { memo, useState, useEffect, useRef, useMemo } from 'react';
+import { View, Text, Image, TouchableOpacity, Pressable, Animated, StyleSheet } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { format, isToday, isYesterday } from 'date-fns';
 import { useTheme } from '../context/ThemeContext';
@@ -11,6 +11,13 @@ function formatTimestamp(dateStr) {
   if (isToday(date)) return format(date, 'h:mm a');
   if (isYesterday(date)) return 'Yesterday ' + format(date, 'h:mm a');
   return format(date, 'MMM d, h:mm a');
+}
+
+function formatDurationMmSs(ms) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress }) {
@@ -146,10 +153,25 @@ function VideoAttachment({ url }) {
   );
 }
 
+// Generate stable faux waveform bar heights
+function generateWaveformBars(count) {
+  const bars = [];
+  for (let i = 0; i < count; i++) {
+    // Use a deterministic pattern that looks organic
+    const h = 0.2 + 0.8 * Math.abs(Math.sin(i * 0.7 + 1.3) * Math.cos(i * 0.4 + 0.8));
+    bars.push(h);
+  }
+  return bars;
+}
+
 function AudioAttachment({ url, filename }) {
   const { colors } = useTheme();
   const [playing, setPlaying] = useState(false);
   const [sound, setSound] = useState(null);
+  const [duration, setDuration] = useState(0);
+  const [position, setPosition] = useState(0);
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const waveformBars = useMemo(() => generateWaveformBars(24), []);
 
   useEffect(() => {
     return () => {
@@ -158,6 +180,18 @@ function AudioAttachment({ url, filename }) {
       }
     };
   }, [sound]);
+
+  // Update progress animation
+  useEffect(() => {
+    if (duration > 0) {
+      const progress = position / duration;
+      Animated.timing(progressAnim, {
+        toValue: progress,
+        duration: 200,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [position, duration, progressAnim]);
 
   const togglePlay = async () => {
     if (playing && sound) {
@@ -173,7 +207,14 @@ function AudioAttachment({ url, filename }) {
           { uri: url },
           { shouldPlay: true },
           (status) => {
-            if (status.didJustFinish) setPlaying(false);
+            if (status.isLoaded) {
+              setDuration(status.durationMillis || 0);
+              setPosition(status.positionMillis || 0);
+              if (status.didJustFinish) {
+                setPlaying(false);
+                setPosition(0);
+              }
+            }
           }
         );
         setSound(newSound);
@@ -184,18 +225,52 @@ function AudioAttachment({ url, filename }) {
     }
   };
 
+  const isVoice = filename?.startsWith('voice-') || filename?.includes('voice');
+  const displayDuration = duration > 0 ? formatDurationMmSs(duration) : '0:00';
+  const displayPosition = position > 0 ? formatDurationMmSs(position) : '0:00';
+
   return (
     <TouchableOpacity
       style={[styles.audioContainer, { backgroundColor: colors.bgTertiary }]}
       onPress={togglePlay}
       activeOpacity={0.7}
       accessibilityRole="button"
-      accessibilityLabel={`${playing ? 'Pause' : 'Play'} audio ${filename || ''}`}
+      accessibilityLabel={`${playing ? 'Pause' : 'Play'} audio ${filename || ''}, duration ${displayDuration}`}
     >
       <Text style={styles.audioIcon}>{playing ? '\u23F8' : '\u25B6\uFE0F'}</Text>
-      <Text style={[styles.audioFilename, { color: colors.textPrimary }]} numberOfLines={1}>
-        {filename || 'Audio'}
-      </Text>
+      <View style={styles.audioDetails}>
+        {/* Waveform visualization */}
+        <View style={styles.waveformContainer}>
+          {waveformBars.map((h, i) => {
+            const barProgress = duration > 0 ? position / duration : 0;
+            const barThreshold = i / waveformBars.length;
+            const isActive = barThreshold < barProgress;
+            return (
+              <View
+                key={i}
+                style={[
+                  styles.waveformBar,
+                  {
+                    height: 4 + h * 16,
+                    backgroundColor: isActive ? colors.primary : (colors.textSecondary + '40'),
+                  },
+                ]}
+              />
+            );
+          })}
+        </View>
+        {/* Duration / position */}
+        <View style={styles.audioDurationRow}>
+          <Text style={[styles.audioDuration, { color: colors.textSecondary }]}>
+            {playing ? displayPosition : displayDuration}
+          </Text>
+          {!isVoice && filename ? (
+            <Text style={[styles.audioFilenameSmall, { color: colors.textSecondary }]} numberOfLines={1}>
+              {filename}
+            </Text>
+          ) : null}
+        </View>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -314,13 +389,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 12,
     marginTop: 6,
     maxWidth: 260,
   },
   audioIcon: {
     fontSize: 18,
     marginRight: 10,
+  },
+  audioDetails: {
+    flex: 1,
+  },
+  waveformContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 24,
+    gap: 2,
+  },
+  waveformBar: {
+    width: 3,
+    borderRadius: 1.5,
+    minHeight: 4,
+  },
+  audioDurationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 2,
+  },
+  audioDuration: {
+    fontSize: 12,
+    fontVariant: ['tabular-nums'],
+  },
+  audioFilenameSmall: {
+    fontSize: 11,
+    flex: 1,
+    marginLeft: 8,
+    textAlign: 'right',
   },
   audioFilename: {
     fontSize: 14,

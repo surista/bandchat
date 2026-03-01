@@ -1,16 +1,17 @@
 /**
- * @fileoverview Message input component with file uploads and @mentions.
- * Supports image paste, drag-drop files, and autocomplete for member mentions.
+ * @fileoverview Message input component with file uploads, @mentions, and voice recording.
+ * Supports image paste, drag-drop files, autocomplete for member mentions, and
+ * voice message recording via MediaRecorder API.
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { hapticLight } from '../../services/haptic';
 import { formatFileSize } from '../../utils/format';
 import { MAX_IMAGE_SIZE, MAX_AUDIO_SIZE, MAX_VIDEO_SIZE, ALLOWED_IMAGE_TYPES, ALLOWED_AUDIO_TYPES, ALLOWED_VIDEO_TYPES, isImageFile, isAudioFile, isVideoFile } from '../../utils/fileValidation';
 
 
 /**
- * Message composition input with file attachments and @mention support.
+ * Message composition input with file attachments, @mention support, and voice recording.
  *
  * @param {Object} props
  * @param {string} props.channelName - Channel name for placeholder text
@@ -31,6 +32,14 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
 
+  // Voice recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const streamRef = useRef(null);
+  const durationIntervalRef = useRef(null);
+
   // Filter members based on mention filter
   const filteredMembers = members.filter(m =>
     m.user.displayName.toLowerCase().includes(mentionFilter.toLowerCase())
@@ -40,6 +49,126 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
   useEffect(() => {
     setMentionIndex(0);
   }, [mentionFilter]);
+
+  // Cleanup recording on unmount
+  useEffect(() => {
+    return () => {
+      if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, []);
+
+  const formatRecordingTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const startRecording = useCallback(async () => {
+    setError('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      audioChunksRef.current = [];
+
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioFile = new File([audioBlob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
+
+        // Stop all tracks
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(t => t.stop());
+          streamRef.current = null;
+        }
+
+        // Add to selected files and auto-send
+        setSelectedFiles([audioFile]);
+        setPreviews([{
+          name: audioFile.name,
+          url: null,
+          size: audioFile.size,
+          type: 'audio',
+        }]);
+
+        // Auto-submit after a short delay to allow state update
+        setTimeout(async () => {
+          setSending(true);
+          hapticLight();
+          try {
+            await onSend('', [audioFile]);
+            setSelectedFiles([]);
+            setPreviews([]);
+          } catch (err) {
+            setError(err.message || 'Failed to send voice message');
+          } finally {
+            setSending(false);
+          }
+        }, 50);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingDuration(0);
+
+      durationIntervalRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+    } catch (err) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setError('Microphone access denied. Please allow microphone permission in your browser settings.');
+      } else {
+        setError('Could not start recording. Please check your microphone.');
+      }
+      console.error('Failed to start recording:', err);
+    }
+  }, [onSend]);
+
+  const stopRecording = useCallback(() => {
+    if (durationIntervalRef.current) {
+      clearInterval(durationIntervalRef.current);
+      durationIntervalRef.current = null;
+    }
+    setIsRecording(false);
+    setRecordingDuration(0);
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+  }, []);
+
+  const cancelRecording = useCallback(() => {
+    if (durationIntervalRef.current) {
+      clearInterval(durationIntervalRef.current);
+      durationIntervalRef.current = null;
+    }
+    setIsRecording(false);
+    setRecordingDuration(0);
+    audioChunksRef.current = [];
+
+    // Stop MediaRecorder without triggering onstop send logic
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.ondataavailable = null;
+      mediaRecorderRef.current.onstop = null;
+      mediaRecorderRef.current.stop();
+    }
+
+    // Stop audio stream
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -280,8 +409,37 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
         </div>
       )}
 
+      {/* Voice recording indicator bar */}
+      {isRecording && (
+        <div className="mb-2 flex items-center gap-3 bg-gray-800 px-4 py-3 rounded-lg">
+          <span className="inline-block w-3 h-3 rounded-full bg-red-500 animate-pulse" />
+          <span className="text-white font-mono text-sm">{formatRecordingTime(recordingDuration)}</span>
+          <span className="text-gray-400 text-sm flex-1">Recording...</span>
+          <button
+            type="button"
+            onClick={cancelRecording}
+            className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+            title="Cancel recording"
+            aria-label="Cancel voice recording"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={stopRecording}
+            className="bg-slack-green text-white px-3 py-1.5 rounded font-medium hover:bg-green-600 transition-colors min-h-[36px]"
+            title="Stop and send"
+            aria-label="Stop recording and send voice message"
+          >
+            Send
+          </button>
+        </div>
+      )}
+
       {/* File previews */}
-      {previews.length > 0 && (
+      {previews.length > 0 && !isRecording && (
         <div className="mb-3 flex flex-wrap gap-2">
           {previews.map((preview, index) => (
             <div
@@ -375,7 +533,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
           aria-controls="mention-listbox"
           className={`w-full bg-transparent text-white px-4 py-3 resize-none outline-none placeholder-gray-400 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           rows={1}
-          disabled={sending || disabled}
+          disabled={sending || disabled || isRecording}
         />
         <div className="flex items-center justify-between px-3 py-2 border-t border-gray-600">
           <div className="flex items-center gap-2">
@@ -392,10 +550,23 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
               onClick={() => fileInputRef.current?.click()}
               className="p-2 -m-1 text-gray-400 hover:text-white transition-colors"
               title="Add file (images 10MB, audio 30MB, video 50MB)"
-              disabled={sending}
+              disabled={sending || isRecording}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </button>
+            {/* Voice recording button */}
+            <button
+              type="button"
+              onClick={isRecording ? stopRecording : startRecording}
+              className={`p-2 -m-1 transition-colors ${isRecording ? 'text-red-400 hover:text-red-300' : 'text-gray-400 hover:text-white'}`}
+              title={isRecording ? 'Stop recording' : 'Record voice message'}
+              aria-label={isRecording ? 'Stop voice recording' : 'Record voice message'}
+              disabled={sending}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4M12 15a3 3 0 003-3V5a3 3 0 00-6 0v7a3 3 0 003 3z" />
               </svg>
             </button>
             <button
@@ -415,7 +586,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
           </div>
           <button
             type="submit"
-            disabled={(!content.trim() && selectedFiles.length === 0) || sending}
+            disabled={(!content.trim() && selectedFiles.length === 0) || sending || isRecording}
             className="bg-slack-green text-white px-4 py-1.5 rounded font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
           >
             {sending ? 'Sending...' : 'Send'}

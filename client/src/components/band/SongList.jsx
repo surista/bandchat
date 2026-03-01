@@ -7,7 +7,18 @@ import ContextMenu from '../common/ContextMenu';
 import useLongPress from '../../hooks/useLongPress';
 import Skeleton from '../common/Skeleton';
 
-function SongCard({ song, onEdit, onDelete, onContextMenu }) {
+function PracticeIndicator({ songId, practiceSummary }) {
+  const stat = practiceSummary?.songStats?.find(s => s.songId === songId);
+  if (!stat?.lastPracticedAt) return null;
+  const days = Math.floor((Date.now() - new Date(stat.lastPracticedAt).getTime()) / (1000 * 60 * 60 * 24));
+  return (
+    <span className="text-xs text-[var(--color-text-muted)]">
+      {days === 0 ? 'Practiced today' : `Practiced ${days}d ago`}
+    </span>
+  );
+}
+
+function SongCard({ song, onEdit, onDelete, onContextMenu, practiceSummary }) {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const longPress = useLongPress({
     onLongPress: (pos) => onContextMenu(pos),
@@ -112,6 +123,12 @@ function SongCard({ song, onEdit, onDelete, onContextMenu }) {
           In {song._count.setlistSongs} setlist{song._count.setlistSongs !== 1 ? 's' : ''}
         </div>
       )}
+
+      {practiceSummary && (
+        <div className={`${song._count?.setlistSongs > 0 ? 'mt-1' : 'mt-3 pt-3 border-t border-[var(--color-border)]'}`}>
+          <PracticeIndicator songId={song.id} practiceSummary={practiceSummary} />
+        </div>
+      )}
     </div>
   );
 }
@@ -136,9 +153,11 @@ function SongList({ workspaceId, onSelectSong }) {
   const [deleteSongId, setDeleteSongId] = useState(null);
   const [contextMenu, setContextMenu] = useState(null); // { songId, x, y }
   const [showEnrichConfirm, setShowEnrichConfirm] = useState(null); // count of songs needing data
+  const [practiceSummary, setPracticeSummary] = useState(null);
 
   useEffect(() => {
     loadSongs();
+    api.getPracticeSummary(workspaceId).then(setPracticeSummary).catch(() => {});
   }, [workspaceId]);
 
   const loadSongs = async () => {
@@ -431,6 +450,7 @@ function SongList({ workspaceId, onSelectSong }) {
               <SongCard
                 key={song.id}
                 song={song}
+                practiceSummary={practiceSummary}
                 onEdit={() => {
                   setEditingSong(song);
                   setShowForm(true);
@@ -447,6 +467,7 @@ function SongList({ workspaceId, onSelectSong }) {
       {showForm && (
         <SongForm
           song={editingSong}
+          workspaceId={workspaceId}
           onSave={handleSaveSong}
           onClose={() => {
             setShowForm(false);

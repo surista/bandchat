@@ -13,11 +13,13 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
 import api from '../../services/api';
 import ChannelItem from '../../components/ChannelItem';
+import OnboardingOverlay from '../../components/OnboardingOverlay';
 
 const BAND_CATEGORIES = [
   {
@@ -85,6 +87,33 @@ export default function ChannelListScreen({ navigation, route }) {
   const [selectedMemberIds, setSelectedMemberIds] = useState([]);
 
   const activeChannelRef = useRef(null);
+
+  // Onboarding tour
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      try {
+        const done = await AsyncStorage.getItem('onboarding_complete');
+        if (!done) {
+          const timer = setTimeout(() => setShowOnboarding(true), 500);
+          return () => clearTimeout(timer);
+        }
+      } catch {
+        // Ignore errors
+      }
+    };
+    checkOnboarding();
+  }, []);
+
+  const handleOnboardingComplete = useCallback(async () => {
+    setShowOnboarding(false);
+    try {
+      await AsyncStorage.setItem('onboarding_complete', 'true');
+    } catch {
+      // Ignore errors
+    }
+  }, []);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -644,6 +673,11 @@ export default function ChannelListScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
+
+      {/* Onboarding Overlay */}
+      {showOnboarding && (
+        <OnboardingOverlay onComplete={handleOnboardingComplete} />
+      )}
     </SafeAreaView>
   );
 }

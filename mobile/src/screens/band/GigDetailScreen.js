@@ -12,7 +12,10 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  FlatList,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Calendar from 'expo-calendar';
 import { format, parseISO } from 'date-fns';
@@ -64,6 +67,10 @@ export default function GigDetailScreen({ navigation, route }) {
   const [pay, setPay] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Media
+  const [gigMedia, setGigMedia] = useState([]);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+
   // Pickers
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTypePicker, setShowTypePicker] = useState(false);
@@ -73,8 +80,12 @@ export default function GigDetailScreen({ navigation, route }) {
     if (isNew) return;
     (async () => {
       try {
-        const data = await api.getGig(gigId);
+        const [data, mediaData] = await Promise.all([
+          api.getGig(gigId),
+          api.getGigMedia(gigId).catch(() => []),
+        ]);
         setGig(data);
+        setGigMedia(mediaData);
         populateForm(data);
       } catch (err) {
         console.error('Failed to load gig:', err);
@@ -267,6 +278,38 @@ export default function GigDetailScreen({ navigation, route }) {
     setShowDatePicker(false);
     if (selectedDate) setDate(selectedDate);
   }, []);
+
+  const handleAddPhotos = useCallback(async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images', 'videos'],
+        allowsMultipleSelection: true,
+        quality: 0.8,
+      });
+      if (result.canceled || !result.assets?.length) return;
+
+      setUploadingMedia(true);
+      for (const asset of result.assets) {
+        const filename = asset.fileName || `media_${Date.now()}.jpg`;
+        const mimeType = asset.mimeType || (asset.type === 'video' ? 'video/mp4' : 'image/jpeg');
+        const uploaded = await api.uploadFile(asset.uri, filename, mimeType);
+        const mediaType = asset.type === 'video' ? 'video' : 'image';
+        await api.addGigMedia(gigId, {
+          type: mediaType,
+          url: uploaded.url,
+          caption: filename,
+        });
+      }
+      // Reload media
+      const updatedMedia = await api.getGigMedia(gigId).catch(() => []);
+      setGigMedia(updatedMedia);
+      successNotification();
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to upload media');
+    } finally {
+      setUploadingMedia(false);
+    }
+  }, [gigId]);
 
   if (loading) {
     return (
@@ -608,6 +651,72 @@ export default function GigDetailScreen({ navigation, route }) {
         </View>
       ) : null}
 
+      {/* Photos & Videos */}
+      <View style={styles.viewSection}>
+        <View style={styles.mediaSectionHeader}>
+          <Text style={[styles.viewLabel, { color: colors.textSecondary }]}>Photos & Videos</Text>
+          {gigMedia.length > 6 && (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('GigGallery', { gigId, gigTitle: gig?.title })}
+              accessibilityRole="button"
+              accessibilityLabel="View all photos and videos"
+            >
+              <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>View All {'\u2192'}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {gigMedia.length > 0 ? (
+          <FlatList
+            horizontal
+            data={gigMedia.slice(0, 6)}
+            keyExtractor={(item) => item.id}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.mediaStrip}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[styles.mediaThumbnail, { backgroundColor: colors.bgTertiary }]}
+                onPress={() => {
+                  if (item.type === 'image') {
+                    navigation.navigate('GigGallery', { gigId, gigTitle: gig?.title });
+                  }
+                }}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={item.type === 'video' ? 'Video thumbnail' : 'Photo thumbnail'}
+              >
+                {item.type === 'image' ? (
+                  <Image source={{ uri: item.url }} style={styles.mediaThumbnailImage} resizeMode="cover" />
+                ) : item.type === 'video' ? (
+                  <View style={[styles.mediaThumbnailImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bgTertiary }]}>
+                    <View style={styles.videoOverlay}>
+                      <Text style={styles.videoOverlayIcon}>{'\u25B6'}</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={[styles.mediaThumbnailImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bgTertiary }]}>
+                    <Text style={{ color: colors.textSecondary, fontSize: 20 }}>{'\uD83D\uDD17'}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
+          />
+        ) : null}
+        <TouchableOpacity
+          style={[styles.addPhotosButton, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
+          onPress={handleAddPhotos}
+          disabled={uploadingMedia}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Add photos or videos"
+        >
+          {uploadingMedia ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Text style={[styles.addPhotosText, { color: colors.primary }]}>+ Add Photos</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
       {/* Add to Calendar */}
       <TouchableOpacity
         style={[styles.calendarButton, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
@@ -673,6 +782,14 @@ const styles = StyleSheet.create({
   attendeeName: { flex: 1, fontSize: 15 },
   attendeeStatusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   attendeeStatusText: { fontSize: 12, fontWeight: '600' },
+  mediaSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  mediaStrip: { gap: 8, marginBottom: 10 },
+  mediaThumbnail: { width: 80, height: 80, borderRadius: 8, overflow: 'hidden' },
+  mediaThumbnailImage: { width: '100%', height: '100%' },
+  videoOverlay: { width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
+  videoOverlayIcon: { color: '#ffffff', fontSize: 14, marginLeft: 2 },
+  addPhotosButton: { paddingVertical: 10, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderStyle: 'dashed' },
+  addPhotosText: { fontSize: 14, fontWeight: '600' },
   calendarButton: { paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 8, borderWidth: 1 },
   calendarButtonText: { fontSize: 16, fontWeight: '600' },
   completeButton: { paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 8, marginBottom: 20 },

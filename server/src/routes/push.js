@@ -116,8 +116,88 @@ router.post('/snooze', authenticate, async (req, res) => {
   }
 });
 
+// Get notification preferences for a workspace
+router.get('/preferences/:workspaceId', authenticate, async (req, res) => {
+  try {
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: req.params.workspaceId
+        }
+      },
+      select: {
+        notifyDMs: true,
+        notifyMentions: true,
+        notifyGigChanges: true,
+        notifyAnnouncements: true,
+        notifyChannelMessages: true
+      }
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    res.json(member);
+  } catch (error) {
+    console.error('Get notification preferences error:', error);
+    res.status(500).json({ error: 'Failed to get notification preferences' });
+  }
+});
+
+// Update notification preferences for a workspace
+router.put('/preferences/:workspaceId', authenticate, async (req, res) => {
+  try {
+    const { notifyDMs, notifyMentions, notifyGigChanges, notifyAnnouncements, notifyChannelMessages } = req.body;
+
+    const member = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: req.params.workspaceId
+        }
+      }
+    });
+
+    if (!member) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    const data = {};
+    if (typeof notifyDMs === 'boolean') data.notifyDMs = notifyDMs;
+    if (typeof notifyMentions === 'boolean') data.notifyMentions = notifyMentions;
+    if (typeof notifyGigChanges === 'boolean') data.notifyGigChanges = notifyGigChanges;
+    if (typeof notifyAnnouncements === 'boolean') data.notifyAnnouncements = notifyAnnouncements;
+    if (typeof notifyChannelMessages === 'boolean') data.notifyChannelMessages = notifyChannelMessages;
+
+    const updated = await prisma.workspaceMember.update({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: req.params.workspaceId
+        }
+      },
+      data,
+      select: {
+        notifyDMs: true,
+        notifyMentions: true,
+        notifyGigChanges: true,
+        notifyAnnouncements: true,
+        notifyChannelMessages: true
+      }
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Update notification preferences error:', error);
+    res.status(500).json({ error: 'Failed to update notification preferences' });
+  }
+});
+
 // Helper function to send push notification to a user
-export const sendPushToUser = async (userId, payload) => {
+// options: { category: 'mention'|'dm'|'gig'|'announcement'|'channel', workspaceId: string }
+export const sendPushToUser = async (userId, payload, options = {}) => {
   if (!process.env.VAPID_PUBLIC_KEY) return;
 
   try {
@@ -129,6 +209,33 @@ export const sendPushToUser = async (userId, payload) => {
 
     if (user?.notificationsSnoozedUntil && new Date(user.notificationsSnoozedUntil) > new Date()) {
       return; // Notifications are snoozed, skip sending
+    }
+
+    // Check per-workspace notification preferences
+    if (options.category && options.workspaceId) {
+      const member = await prisma.workspaceMember.findUnique({
+        where: {
+          userId_workspaceId: {
+            userId,
+            workspaceId: options.workspaceId
+          }
+        }
+      });
+
+      if (member) {
+        const categoryMap = {
+          mention: 'notifyMentions',
+          dm: 'notifyDMs',
+          gig: 'notifyGigChanges',
+          announcement: 'notifyAnnouncements',
+          channel: 'notifyChannelMessages'
+        };
+
+        const prefKey = categoryMap[options.category];
+        if (prefKey && member[prefKey] === false) {
+          return; // User has disabled this notification category
+        }
+      }
     }
 
     const subscriptions = await prisma.pushSubscription.findMany({

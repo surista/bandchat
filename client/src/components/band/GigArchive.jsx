@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../services/api';
 import ConfirmDialog from '../common/ConfirmDialog';
+import ImageLightbox from '../common/ImageLightbox';
 
 function GigArchive({ workspaceId }) {
   const [setlists, setSetlists] = useState([]);
@@ -24,6 +25,7 @@ function GigArchive({ workspaceId }) {
   const [uploading, setUploading] = useState(false);
   const [filter, setFilter] = useState('all'); // 'all', 'past', 'upcoming'
   const [lightboxImage, setLightboxImage] = useState(null); // For image lightbox
+  const [dragActive, setDragActive] = useState(false);
   const [showEditDetails, setShowEditDetails] = useState(false);
   const [editFee, setEditFee] = useState('');
   const [editNotes, setEditNotes] = useState('');
@@ -278,6 +280,29 @@ function GigArchive({ workspaceId }) {
       setUploadProgress('');
     }
   };
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  }, []);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    const files = e.dataTransfer?.files;
+    if (files?.length > 0) {
+      // Simulate file input change event
+      handleFileUpload({ target: { files } });
+    }
+  }, [selectedGig]);
 
   const handleAddUrl = async (e) => {
     e.preventDefault();
@@ -538,23 +563,7 @@ function GigArchive({ workspaceId }) {
     return videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null;
   };
 
-  // Close lightbox on ESC key
-  const handleLightboxKeyDown = useCallback((e) => {
-    if (e.key === 'Escape') {
-      setLightboxImage(null);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (lightboxImage) {
-      document.addEventListener('keydown', handleLightboxKeyDown);
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.removeEventListener('keydown', handleLightboxKeyDown);
-        document.body.style.overflow = '';
-      };
-    }
-  }, [lightboxImage, handleLightboxKeyDown]);
+  // Note: lightbox keyboard handling is done by ImageLightbox component
 
   const formatDuration = (seconds) => {
     if (!seconds) return '';
@@ -583,20 +592,20 @@ function GigArchive({ workspaceId }) {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64 text-gray-400">Loading archive...</div>;
+    return <div className="flex items-center justify-center h-64 text-[var(--color-text-muted)]">Loading archive...</div>;
   }
 
   const pastCount = archiveEntries.filter(e => e.date && e.date < now).length;
   const upcomingCount = archiveEntries.filter(e => e.date && e.date >= now).length;
 
   return (
-    <div className="h-full flex flex-col bg-gray-800">
+    <div className="h-full flex flex-col bg-[var(--color-bg-secondary)]">
       {/* Header */}
-      <div className="flex-shrink-0 p-4 border-b border-gray-700">
+      <div className="flex-shrink-0 p-4 border-b border-[var(--color-border)]">
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h2 className="text-xl font-bold text-white">Gig Archive</h2>
-            <p className="text-gray-400 text-sm mt-1">Photos, videos, and memories from your gigs</p>
+            <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Gig Archive</h2>
+            <p className="text-[var(--color-text-muted)] text-sm mt-1">Photos, videos, and memories from your gigs</p>
           </div>
           <button
             onClick={() => setShowAddGig(true)}
@@ -609,19 +618,19 @@ function GigArchive({ workspaceId }) {
         <div className="flex gap-2 mt-3">
           <button
             onClick={() => setFilter('all')}
-            className={`px-3 py-1 rounded text-sm ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+            className={`px-3 py-1 rounded text-sm ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]'}`}
           >
             All ({archiveEntries.length})
           </button>
           <button
             onClick={() => setFilter('past')}
-            className={`px-3 py-1 rounded text-sm ${filter === 'past' ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+            className={`px-3 py-1 rounded text-sm ${filter === 'past' ? 'bg-green-600 text-white' : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]'}`}
           >
             Past ({pastCount})
           </button>
           <button
             onClick={() => setFilter('upcoming')}
-            className={`px-3 py-1 rounded text-sm ${filter === 'upcoming' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+            className={`px-3 py-1 rounded text-sm ${filter === 'upcoming' ? 'bg-purple-600 text-white' : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]'}`}
           >
             Upcoming ({upcomingCount})
           </button>
@@ -638,13 +647,13 @@ function GigArchive({ workspaceId }) {
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
         {archiveEntries.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
+          <div className="text-center py-12 text-[var(--color-text-muted)]">
             <div className="text-6xl mb-4">📸</div>
             <p className="text-lg mb-2">No gigs yet</p>
             <p className="text-sm">Create setlists with dates in the name (e.g., "Venue - 21 May 2024") or schedule gigs in Calendar</p>
           </div>
         ) : filteredEntries.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
+          <div className="text-center py-12 text-[var(--color-text-muted)]">
             <p>No {filter === 'past' ? 'past' : 'upcoming'} gigs found</p>
           </div>
         ) : (
@@ -660,14 +669,14 @@ function GigArchive({ workspaceId }) {
                 <div
                   key={entry.id}
                   onClick={() => setSelectedEntry(entry)}
-                  className="bg-gray-900 rounded-lg border border-gray-700 p-4 hover:border-gray-500 hover:bg-gray-850 transition-colors cursor-pointer"
+                  className="bg-[var(--color-bg-primary)] rounded-lg border border-[var(--color-border)] p-4 hover:border-[var(--color-text-muted)] hover:bg-[var(--color-bg-secondary)] transition-colors cursor-pointer"
                 >
                   {/* Header with title and date */}
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-white font-medium truncate">{title}</h3>
+                      <h3 className="text-[var(--color-text-primary)] font-medium truncate">{title}</h3>
                       {date && (
-                        <p className="text-gray-400 text-sm">
+                        <p className="text-[var(--color-text-muted)] text-sm">
                           {date.toLocaleDateString('en-GB', {
                             day: 'numeric',
                             month: 'short',
@@ -687,7 +696,7 @@ function GigArchive({ workspaceId }) {
                       {songCount} songs
                     </span>
                     {totalDuration > 0 && (
-                      <span className="px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded">
+                      <span className="px-2 py-0.5 bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] text-xs rounded">
                         {formatTotalDuration(totalDuration)}
                       </span>
                     )}
@@ -709,13 +718,13 @@ function GigArchive({ workspaceId }) {
                               src={member.imageUrl}
                               alt={member.name}
                               title={member.name}
-                              className="w-7 h-7 rounded-full object-cover border-2 border-gray-900"
+                              className="w-7 h-7 rounded-full object-cover border-2 border-[var(--color-bg-primary)]"
                             />
                           ) : (
                             <div
                               key={member.id}
                               title={member.name}
-                              className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-white text-xs font-medium border-2 border-gray-900"
+                              className="w-7 h-7 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center text-[var(--color-text-primary)] text-xs font-medium border-2 border-[var(--color-bg-primary)]"
                             >
                               {member.name?.charAt(0).toUpperCase()}
                             </div>
@@ -723,14 +732,14 @@ function GigArchive({ workspaceId }) {
                         ))}
                       </div>
                       {setlist.performers.length > 6 && (
-                        <span className="text-gray-500 text-xs ml-1">+{setlist.performers.length - 6}</span>
+                        <span className="text-[var(--color-text-muted)] text-xs ml-1">+{setlist.performers.length - 6}</span>
                       )}
                     </div>
                   )}
 
                   {/* Song preview */}
                   {displaySongs.length > 0 && (
-                    <div className="text-sm text-gray-400">
+                    <div className="text-sm text-[var(--color-text-muted)]">
                       <ol className="list-decimal list-inside space-y-0.5">
                         {displaySongs.map((item, idx) => (
                           <li key={item.id || idx} className="truncate">
@@ -739,16 +748,16 @@ function GigArchive({ workspaceId }) {
                         ))}
                       </ol>
                       {remainingSongs > 0 && (
-                        <p className="text-gray-500 text-xs mt-1">+{remainingSongs} more...</p>
+                        <p className="text-[var(--color-text-muted)] text-xs mt-1">+{remainingSongs} more...</p>
                       )}
                     </div>
                   )}
 
                   {/* Media thumbnails if any */}
                   {gig?.media?.length > 0 && (
-                    <div className="flex gap-1 mt-3 pt-3 border-t border-gray-700">
+                    <div className="flex gap-1 mt-3 pt-3 border-t border-[var(--color-border)]">
                       {gig.media.slice(0, 4).map((item) => (
-                        <div key={item.id} className="w-10 h-10 rounded overflow-hidden bg-gray-800 flex-shrink-0 relative">
+                        <div key={item.id} className="w-10 h-10 rounded overflow-hidden bg-[var(--color-bg-secondary)] flex-shrink-0 relative">
                           {item.type === 'image' ? (
                             <img src={item.url} alt="" className="w-full h-full object-cover" />
                           ) : item.type === 'youtube' ? (
@@ -765,16 +774,16 @@ function GigArchive({ workspaceId }) {
                               </div>
                             </div>
                           ) : item.type === 'video' ? (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-700">
+                            <div className="w-full h-full flex items-center justify-center bg-[var(--color-bg-tertiary)]">
                               <span className="text-blue-400 text-xs">▶</span>
                             </div>
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-500">🔗</div>
+                            <div className="w-full h-full flex items-center justify-center text-[var(--color-text-muted)]">🔗</div>
                           )}
                         </div>
                       ))}
                       {gig.media.length > 4 && (
-                        <div className="w-10 h-10 rounded bg-gray-800 flex items-center justify-center text-gray-500 text-xs">
+                        <div className="w-10 h-10 rounded bg-[var(--color-bg-secondary)] flex items-center justify-center text-[var(--color-text-muted)] text-xs">
                           +{gig.media.length - 4}
                         </div>
                       )}
@@ -794,18 +803,18 @@ function GigArchive({ workspaceId }) {
           onClick={() => setSelectedEntry(null)}
         >
           <div
-            className="bg-gray-900 rounded-xl w-full max-w-3xl max-h-modal overflow-hidden border border-gray-700 shadow-2xl"
+            className="bg-[var(--color-bg-primary)] rounded-xl w-full max-w-3xl max-h-modal overflow-hidden border border-[var(--color-border)] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="relative bg-gradient-to-r from-purple-900/50 to-blue-900/50 p-6">
               <button
                 onClick={() => setSelectedEntry(null)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl"
+                className="absolute top-4 right-4 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl"
               >
                 &times;
               </button>
-              <h2 className="text-2xl font-bold text-white mb-1">
+              <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-1">
                 {selectedEntry.title}
               </h2>
               {selectedEntry.date && (
@@ -814,14 +823,14 @@ function GigArchive({ workspaceId }) {
                 </p>
               )}
               {selectedEntry.gig?.notes && (
-                <p className="text-gray-300 mt-2 text-sm">{selectedEntry.gig.notes}</p>
+                <p className="text-[var(--color-text-secondary)] mt-2 text-sm">{selectedEntry.gig.notes}</p>
               )}
             </div>
 
             {/* Content */}
             <div className="overflow-y-auto max-h-[calc(90vh-180px)]">
               {/* Stats Row */}
-              <div className="flex items-center gap-4 px-6 py-3 bg-gray-800/50 border-b border-gray-700 flex-wrap">
+              <div className="flex items-center gap-4 px-6 py-3 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] flex-wrap">
                 {(() => {
                   const { songCount, totalDuration } = getSetlistStats(selectedEntry.setlist);
                   return (
@@ -853,7 +862,7 @@ function GigArchive({ workspaceId }) {
                 {/* Fee & Notes Section */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-white font-semibold flex items-center gap-2">
+                    <h3 className="text-[var(--color-text-primary)] font-semibold flex items-center gap-2">
                       <span className="text-xl">📝</span> Details
                     </h3>
                     <button
@@ -863,25 +872,25 @@ function GigArchive({ workspaceId }) {
                       Edit
                     </button>
                   </div>
-                  <div className="bg-gray-800 rounded-lg p-4 space-y-3">
+                  <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Date</span>
-                      <span className="text-white font-medium">
+                      <span className="text-[var(--color-text-muted)]">Date</span>
+                      <span className="text-[var(--color-text-primary)] font-medium">
                         {selectedEntry.date
                           ? selectedEntry.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/ /g, '-')
                           : '—'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Fee</span>
-                      <span className="text-white font-medium">
+                      <span className="text-[var(--color-text-muted)]">Fee</span>
+                      <span className="text-[var(--color-text-primary)] font-medium">
                         {selectedEntry.gig?.pay ? `¥${selectedEntry.gig.pay.toLocaleString()}` : '—'}
                       </span>
                     </div>
                     {selectedEntry.gig?.notes && (
                       <div>
-                        <span className="text-gray-400 text-sm">Notes</span>
-                        <p className="text-white mt-1">{selectedEntry.gig.notes}</p>
+                        <span className="text-[var(--color-text-muted)] text-sm">Notes</span>
+                        <p className="text-[var(--color-text-primary)] mt-1">{selectedEntry.gig.notes}</p>
                       </div>
                     )}
                   </div>
@@ -891,7 +900,7 @@ function GigArchive({ workspaceId }) {
                 {selectedEntry.setlist && (
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-white font-semibold flex items-center gap-2">
+                      <h3 className="text-[var(--color-text-primary)] font-semibold flex items-center gap-2">
                         <span className="text-xl">👥</span> Who Played
                       </h3>
                       <button
@@ -908,7 +917,7 @@ function GigArchive({ workspaceId }) {
                           return (
                           <div
                             key={member.id}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 rounded-full"
+                            className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-secondary)] rounded-full"
                           >
                             {member.imageUrl ? (
                               <img
@@ -917,15 +926,15 @@ function GigArchive({ workspaceId }) {
                                 className="w-6 h-6 rounded-full object-cover"
                               />
                             ) : (
-                              <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs font-medium">
+                              <div className="w-6 h-6 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center text-[var(--color-text-primary)] text-xs font-medium">
                                 {member.name?.charAt(0).toUpperCase()}
                               </div>
                             )}
-                            <span className="text-white text-sm">{member.name}</span>
+                            <span className="text-[var(--color-text-primary)] text-sm">{member.name}</span>
                             {member.isGuest ? (
                               <span className="text-purple-400 text-xs">(Guest)</span>
                             ) : (
-                              <span className="text-gray-400 text-xs">({instruments.join(', ') || 'Unknown'})</span>
+                              <span className="text-[var(--color-text-muted)] text-xs">({instruments.join(', ') || 'Unknown'})</span>
                             )}
                           </div>
                           );
@@ -934,7 +943,7 @@ function GigArchive({ workspaceId }) {
                     ) : (
                       <button
                         onClick={() => handleOpenEditPerformers(selectedEntry)}
-                        className="w-full py-3 border-2 border-dashed border-gray-600 rounded-lg text-gray-400 hover:text-white hover:border-gray-500 transition-colors text-sm"
+                        className="w-full py-3 border-2 border-dashed border-[var(--color-border)] rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-text-muted)] transition-colors text-sm"
                       >
                         + Tag band members who played this gig
                       </button>
@@ -945,29 +954,29 @@ function GigArchive({ workspaceId }) {
                 {/* Setlist */}
                 {selectedEntry.setlist && (
                   <div>
-                    <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                    <h3 className="text-[var(--color-text-primary)] font-semibold mb-3 flex items-center gap-2">
                       <span className="text-xl">📋</span> Setlist
                     </h3>
-                    <div className="bg-gray-800 rounded-lg p-4">
+                    <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4">
                       {selectedEntry.setlist.songs?.filter(s => s.type === 'SONG' || !s.type).length > 0 ? (
                         <ol className="space-y-1">
                           {selectedEntry.setlist.songs
                             .filter(s => s.type === 'SONG' || !s.type)
                             .map((item, idx) => (
                               <li key={item.id || idx} className="flex items-center gap-3 py-1">
-                                <span className="text-gray-500 text-sm w-6 text-right">{idx + 1}.</span>
-                                <span className="text-white">{item.song?.title || item.label || 'Unknown'}</span>
+                                <span className="text-[var(--color-text-muted)] text-sm w-6 text-right">{idx + 1}.</span>
+                                <span className="text-[var(--color-text-primary)]">{item.song?.title || item.label || 'Unknown'}</span>
                                 {item.song?.artist && (
-                                  <span className="text-gray-500">— {item.song.artist}</span>
+                                  <span className="text-[var(--color-text-muted)]">— {item.song.artist}</span>
                                 )}
                                 {item.song?.duration && (
-                                  <span className="text-gray-600 text-sm ml-auto">{formatDuration(item.song.duration)}</span>
+                                  <span className="text-[var(--color-text-muted)] text-sm ml-auto">{formatDuration(item.song.duration)}</span>
                                 )}
                               </li>
                             ))}
                         </ol>
                       ) : (
-                        <p className="text-gray-500 text-center py-4">No songs in setlist</p>
+                        <p className="text-[var(--color-text-muted)] text-center py-4">No songs in setlist</p>
                       )}
                     </div>
                   </div>
@@ -976,14 +985,14 @@ function GigArchive({ workspaceId }) {
                 {/* Media Gallery */}
                 {selectedEntry.gig?.media?.length > 0 && (
                   <div>
-                    <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                    <h3 className="text-[var(--color-text-primary)] font-semibold mb-3 flex items-center gap-2">
                       <span className="text-xl">📸</span> Photos & Videos
                     </h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {selectedEntry.gig.media.map((item) => (
                         <div key={item.id} className="relative group">
                           {/* Thumbnail container with aspect ratio */}
-                          <div className="relative rounded-lg overflow-hidden bg-gray-800 aspect-video">
+                          <div className="relative rounded-lg overflow-hidden bg-[var(--color-bg-secondary)] aspect-video">
                             {item.type === 'image' ? (
                               <button
                                 onClick={() => setLightboxImage({ url: item.url, caption: item.caption })}
@@ -1027,7 +1036,7 @@ function GigArchive({ workspaceId }) {
                                 href={item.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center justify-center w-full h-full bg-gray-800 hover:bg-gray-700 transition-colors"
+                                className="flex items-center justify-center w-full h-full bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] transition-colors"
                               >
                                 <span className="text-4xl">🔗</span>
                               </a>
@@ -1046,7 +1055,7 @@ function GigArchive({ workspaceId }) {
                           </div>
                           {/* Caption below thumbnail */}
                           <div className="mt-2 px-1">
-                            <p className="text-gray-300 text-sm truncate">
+                            <p className="text-[var(--color-text-secondary)] text-sm truncate">
                               {item.caption || (item.type === 'youtube' ? 'YouTube Video' : item.type === 'video' ? 'Video' : item.type === 'link' ? 'Link' : '')}
                             </p>
                           </div>
@@ -1059,7 +1068,7 @@ function GigArchive({ workspaceId }) {
                 {/* Add Media Button - works for any entry */}
                 <button
                   onClick={() => handleOpenAddMedia(selectedEntry)}
-                  className="w-full py-3 border-2 border-dashed border-gray-600 rounded-lg text-gray-400 hover:text-white hover:border-gray-500 transition-colors"
+                  className="w-full py-3 border-2 border-dashed border-[var(--color-border)] rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:border-[var(--color-text-muted)] transition-colors"
                 >
                   + Add Photos, Videos, or Links
                 </button>
@@ -1072,9 +1081,9 @@ function GigArchive({ workspaceId }) {
       {/* Add Gig Modal */}
       {showAddGig && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-gray-800 rounded-lg w-full max-w-md border border-gray-700">
-            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-white">Add Past Gig</h3>
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg w-full max-w-md border border-[var(--color-border)]">
+            <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
+              <h3 className="text-lg font-medium text-[var(--color-text-primary)]">Add Past Gig</h3>
               <button
                 onClick={() => {
                   setShowAddGig(false);
@@ -1082,14 +1091,14 @@ function GigArchive({ workspaceId }) {
                   setNewGigDate('');
                   setNewGigVenue('');
                 }}
-                className="text-gray-400 hover:text-white text-2xl"
+                className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl"
               >
                 &times;
               </button>
             </div>
             <form onSubmit={handleCreateGig} className="p-4 space-y-4">
               <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
+                <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
                   Gig Title <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -1097,24 +1106,24 @@ function GigArchive({ workspaceId }) {
                   value={newGigTitle}
                   onChange={(e) => setNewGigTitle(e.target.value)}
                   placeholder="e.g., Ruby Room Show"
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white"
+                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)]"
                   required
                 />
               </div>
               <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
+                <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
                   Date <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
                   value={newGigDate}
                   onChange={(e) => setNewGigDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white"
+                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)]"
                   required
                 />
               </div>
               <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
+                <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
                   Venue
                 </label>
                 <input
@@ -1122,7 +1131,7 @@ function GigArchive({ workspaceId }) {
                   value={newGigVenue}
                   onChange={(e) => setNewGigVenue(e.target.value)}
                   placeholder="e.g., The Den"
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white"
+                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)]"
                 />
               </div>
               <div className="flex gap-2 justify-end pt-2">
@@ -1154,29 +1163,39 @@ function GigArchive({ workspaceId }) {
       {/* Add Media Modal */}
       {showAddMedia && selectedGig && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]">
-          <div className="bg-gray-800 rounded-lg w-full max-w-md border border-gray-700">
-            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-white">Add Media</h3>
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg w-full max-w-md border border-[var(--color-border)]">
+            <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
+              <h3 className="text-lg font-medium text-[var(--color-text-primary)]">Add Media</h3>
               <button
                 onClick={() => {
                   setShowAddMedia(false);
                   setMediaUrl('');
                   setMediaCaption('');
                 }}
-                className="text-gray-400 hover:text-white text-2xl"
+                className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl"
               >
                 &times;
               </button>
             </div>
             <div className="p-4 space-y-4">
-              {/* Upload Files */}
+              {/* Upload Files with Drag & Drop */}
               <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
+                <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
                   Upload Images or Videos
                 </label>
-                <label className="block">
-                  <span className="btn btn-secondary w-full cursor-pointer text-center">
-                    {uploadProgress || (uploading ? 'Uploading...' : 'Choose Files')}
+                <label
+                  className={`block border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                    dragActive
+                      ? 'border-blue-500 bg-blue-500/10'
+                      : 'border-[var(--color-border)] hover:border-[var(--color-text-muted)]'
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <div className="text-3xl mb-2">{dragActive ? '\uD83D\uDCE5' : '\uD83D\uDCF7'}</div>
+                  <span className="text-[var(--color-text-secondary)] text-sm">
+                    {uploadProgress || (uploading ? 'Uploading...' : dragActive ? 'Drop files here' : 'Drag & drop files here, or click to browse')}
                   </span>
                   <input
                     type="file"
@@ -1187,22 +1206,22 @@ function GigArchive({ workspaceId }) {
                     className="hidden"
                   />
                 </label>
-                <p className="text-gray-500 text-xs mt-1">Max 50MB per file. Select multiple files at once.</p>
+                <p className="text-[var(--color-text-muted)] text-xs mt-1">Max 50MB per file. Select multiple files at once.</p>
               </div>
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-700"></div>
+                  <div className="w-full border-t border-[var(--color-border)]"></div>
                 </div>
                 <div className="relative flex justify-center">
-                  <span className="bg-gray-800 px-2 text-gray-500 text-sm">or add a link</span>
+                  <span className="bg-[var(--color-bg-secondary)] px-2 text-[var(--color-text-muted)] text-sm">or add a link</span>
                 </div>
               </div>
 
               {/* Add URL */}
               <form onSubmit={handleAddUrl}>
                 <div className="mb-3">
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
+                  <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
                     URL (YouTube, image link, etc.)
                   </label>
                   <input
@@ -1210,11 +1229,11 @@ function GigArchive({ workspaceId }) {
                     value={mediaUrl}
                     onChange={(e) => setMediaUrl(e.target.value)}
                     placeholder="https://..."
-                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white"
+                    className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)]"
                   />
                 </div>
                 <div className="mb-3">
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
+                  <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
                     Caption (optional)
                   </label>
                   <input
@@ -1222,7 +1241,7 @@ function GigArchive({ workspaceId }) {
                     value={mediaCaption}
                     onChange={(e) => setMediaCaption(e.target.value)}
                     placeholder="Add a caption..."
-                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white"
+                    className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)]"
                   />
                 </div>
                 <button
@@ -1241,19 +1260,19 @@ function GigArchive({ workspaceId }) {
       {/* Edit Performers Modal */}
       {showEditPerformers && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]">
-          <div className="bg-gray-800 rounded-lg w-full max-w-md border border-gray-700">
-            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-white">Who Played This Gig?</h3>
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg w-full max-w-md border border-[var(--color-border)]">
+            <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
+              <h3 className="text-lg font-medium text-[var(--color-text-primary)]">Who Played This Gig?</h3>
               <button
                 onClick={() => setShowEditPerformers(false)}
-                className="text-gray-400 hover:text-white text-2xl"
+                className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl"
               >
                 &times;
               </button>
             </div>
             <div className="p-4">
               {bandMembers.length === 0 ? (
-                <div className="text-center py-6 text-gray-400">
+                <div className="text-center py-6 text-[var(--color-text-muted)]">
                   <p className="mb-2">No band members found.</p>
                   <p className="text-sm">Add band members in Settings first.</p>
                 </div>
@@ -1299,14 +1318,14 @@ function GigArchive({ workspaceId }) {
                       className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
                         selectedPerformerIds.includes(member.id)
                           ? 'bg-purple-600/20 border border-purple-500'
-                          : 'bg-gray-900 border border-gray-700 hover:border-gray-600'
+                          : 'bg-[var(--color-bg-primary)] border border-[var(--color-border)] hover:border-[var(--color-text-muted)]'
                       }`}
                     >
                       <input
                         type="checkbox"
                         checked={selectedPerformerIds.includes(member.id)}
                         onChange={() => togglePerformer(member.id)}
-                        className="w-5 h-5 rounded border-gray-600 bg-gray-700 text-purple-500 focus:ring-purple-500"
+                        className="w-5 h-5 rounded border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-purple-500 focus:ring-purple-500"
                       />
                       {member.imageUrl ? (
                         <img
@@ -1315,23 +1334,23 @@ function GigArchive({ workspaceId }) {
                           className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-white font-medium flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center text-[var(--color-text-primary)] font-medium flex-shrink-0">
                           {member.name?.charAt(0).toUpperCase()}
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-white font-medium">{member.name}</span>
+                          <span className="text-[var(--color-text-primary)] font-medium">{member.name}</span>
                           {member.isGuest && (
                             <span className="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-300 rounded">Guest</span>
                           )}
                         </div>
-                        <div className="text-gray-400 text-sm">
+                        <div className="text-[var(--color-text-muted)] text-sm">
                           {instruments.length > 0 ? instruments.join(', ') : (member.isGuest ? 'Guest musician' : 'Unknown')}
                         </div>
                       </div>
                       {isFormer && (
-                        <span className="text-xs text-gray-500 bg-gray-700 px-2 py-0.5 rounded">Former</span>
+                        <span className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-tertiary)] px-2 py-0.5 rounded">Former</span>
                       )}
                     </label>
                     );
@@ -1339,7 +1358,7 @@ function GigArchive({ workspaceId }) {
                 </div>
                 </>
               )}
-              <div className="flex gap-2 justify-end mt-4 pt-4 border-t border-gray-700">
+              <div className="flex gap-2 justify-end mt-4 pt-4 border-t border-[var(--color-border)]">
                 <button
                   type="button"
                   onClick={() => setShowEditPerformers(false)}
@@ -1363,30 +1382,30 @@ function GigArchive({ workspaceId }) {
       {/* Edit Details Modal */}
       {showEditDetails && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]">
-          <div className="bg-gray-800 rounded-lg w-full max-w-md border border-gray-700">
-            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-              <h3 className="text-lg font-medium text-white">Edit Gig Details</h3>
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg w-full max-w-md border border-[var(--color-border)]">
+            <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
+              <h3 className="text-lg font-medium text-[var(--color-text-primary)]">Edit Gig Details</h3>
               <button
                 onClick={() => setShowEditDetails(false)}
-                className="text-gray-400 hover:text-white text-2xl"
+                className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl"
               >
                 &times;
               </button>
             </div>
             <div className="p-4 space-y-4">
               <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
+                <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
                   Date
                 </label>
                 <input
                   type="date"
                   value={editDate}
                   onChange={(e) => setEditDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white"
+                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)]"
                 />
               </div>
               <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
+                <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
                   Fee (¥)
                 </label>
                 <input
@@ -1396,11 +1415,11 @@ function GigArchive({ workspaceId }) {
                   placeholder="0.00"
                   step="0.01"
                   min="0"
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white"
+                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)]"
                 />
               </div>
               <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">
+                <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
                   Notes
                 </label>
                 <textarea
@@ -1408,7 +1427,7 @@ function GigArchive({ workspaceId }) {
                   onChange={(e) => setEditNotes(e.target.value)}
                   placeholder="Add notes about the gig..."
                   rows={4}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white resize-none"
+                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] resize-none"
                 />
               </div>
               <div className="flex gap-2 justify-between pt-2">
@@ -1442,44 +1461,13 @@ function GigArchive({ workspaceId }) {
         </div>
       )}
 
-      {/* Image Lightbox Modal */}
+      {/* Image Lightbox */}
       {lightboxImage && (
-        <div
-          className="fixed inset-0 bg-black/90 flex items-center justify-center z-[70]"
-          onClick={() => setLightboxImage(null)}
-        >
-          {/* Close button */}
-          <button
-            onClick={() => setLightboxImage(null)}
-            className="absolute top-4 right-4 w-10 h-10 bg-gray-800 hover:bg-gray-700 text-white rounded-full flex items-center justify-center text-2xl transition-colors z-10"
-            aria-label="Close lightbox"
-          >
-            ×
-          </button>
-
-          {/* ESC hint */}
-          <div className="absolute top-4 left-4 text-gray-500 text-sm">
-            Press ESC to close
-          </div>
-
-          {/* Image container */}
-          <div
-            className="relative max-w-[90vw] max-h-modal flex flex-col items-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <img
-              src={lightboxImage.url}
-              alt={lightboxImage.caption || 'Gig photo'}
-              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
-            />
-            {/* Caption below image */}
-            {lightboxImage.caption && (
-              <div className="mt-4 text-white text-center text-lg max-w-2xl">
-                {lightboxImage.caption}
-              </div>
-            )}
-          </div>
-        </div>
+        <ImageLightbox
+          src={lightboxImage.url}
+          alt={lightboxImage.caption || 'Gig photo'}
+          onClose={() => setLightboxImage(null)}
+        />
       )}
 
       <ConfirmDialog

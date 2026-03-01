@@ -31,6 +31,7 @@ import linkPreviewRoutes from './routes/linkPreview.js';
 import slackImportRoutes from './routes/slackImport.js';
 import reportRoutes from './routes/reports.js';
 import blockRoutes from './routes/blocks.js';
+import practiceRoutes from './routes/practice.js';
 import { setupSocketHandlers } from './socket/handlers.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import prisma from './lib/prisma.js';
@@ -117,6 +118,7 @@ app.use('/api/link-preview', linkPreviewRoutes);
 app.use('/api/slack-import', slackImportRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/blocks', blockRoutes);
+app.use('/api/practice', practiceRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

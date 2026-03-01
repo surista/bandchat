@@ -142,7 +142,7 @@ export default function SettingsScreen({ navigation, route }) {
           <SettingsRow
             icon={'\uD83D\uDD14'}
             label="Notifications"
-            onPress={() => navigation.navigate('Notifications')}
+            onPress={() => navigation.navigate('Notifications', { workspaceId })}
             colors={colors}
           />
         </View>

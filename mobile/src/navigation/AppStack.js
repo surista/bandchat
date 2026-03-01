@@ -9,6 +9,7 @@ import SetlistListScreen from '../screens/band/SetlistListScreen';
 import SetlistDetailScreen from '../screens/band/SetlistDetailScreen';
 import GigListScreen from '../screens/band/GigListScreen';
 import GigDetailScreen from '../screens/band/GigDetailScreen';
+import GigGalleryScreen from '../screens/band/GigGalleryScreen';
 import StatsScreen from '../screens/band/StatsScreen';
 import BandMembersScreen from '../screens/band/BandMembersScreen';
 import AvailabilityScreen from '../screens/band/AvailabilityScreen';
@@ -23,6 +24,9 @@ import TimelineScreen from '../screens/band/TimelineScreen';
 import AchievementsScreen from '../screens/band/AchievementsScreen';
 import KittyScreen from '../screens/band/KittyScreen';
 import SongIntelligenceScreen from '../screens/band/SongIntelligenceScreen';
+import PracticeDashboardScreen from '../screens/band/PracticeDashboardScreen';
+import LiveModeScreen from '../screens/band/LiveModeScreen';
+import LyricsScreen from '../screens/band/LyricsScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
 import EditProfileScreen from '../screens/settings/EditProfileScreen';
 import SecurityScreen from '../screens/settings/SecurityScreen';
@@ -86,6 +90,7 @@ export default function AppStack() {
       <Stack.Screen name="SetlistDetail" component={SetlistDetailScreen} options={{ title: 'Setlist' }} />
       <Stack.Screen name="GigList" component={GigListScreen} options={{ title: 'Calendar' }} />
       <Stack.Screen name="GigDetail" component={GigDetailScreen} options={{ title: 'Event' }} />
+      <Stack.Screen name="GigGallery" component={GigGalleryScreen} options={({ route }) => ({ title: route.params?.gigTitle ? `${route.params.gigTitle} - Gallery` : 'Gallery' })} />
       <Stack.Screen name="Stats" component={StatsScreen} options={{ title: 'Stats' }} />
       <Stack.Screen name="BandMembers" component={BandMembersScreen} options={{ title: 'Members' }} />
       <Stack.Screen name="Availability" component={AvailabilityScreen} options={{ title: 'Availability' }} />
@@ -100,6 +105,9 @@ export default function AppStack() {
       <Stack.Screen name="Achievements" component={AchievementsScreen} options={{ title: 'Achievements' }} />
       <Stack.Screen name="Kitty" component={KittyScreen} options={{ title: 'Band Kitty' }} />
       <Stack.Screen name="SongIntelligence" component={SongIntelligenceScreen} options={{ title: 'Song Intelligence' }} />
+      <Stack.Screen name="PracticeDashboard" component={PracticeDashboardScreen} options={{ title: 'Practice' }} />
+      <Stack.Screen name="LiveMode" component={LiveModeScreen} options={{ headerShown: false, animation: 'fade' }} />
+      <Stack.Screen name="Lyrics" component={LyricsScreen} options={{ headerShown: false, animation: 'fade' }} />
 
       {/* Settings */}
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />

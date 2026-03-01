@@ -266,34 +266,34 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
   const formatTime = (date) => format(new Date(date), 'MMM d, h:mm a');
 
   return (
-    <div ref={swipeRef} className="flex flex-col h-full bg-gray-800">
+    <div ref={swipeRef} className="flex flex-col h-full bg-[var(--color-bg-secondary)]">
       {/* Header */}
-      <div className="h-14 border-b border-gray-700 px-4 flex items-center justify-between">
-        <h3 className="text-white font-semibold">Thread</h3>
+      <div className="h-14 border-b border-[var(--color-border)] px-4 flex items-center justify-between">
+        <h3 className="text-[var(--color-text-primary)] font-semibold">Thread</h3>
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-white transition-colors text-xl"
+          className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors text-xl"
         >
           ×
         </button>
       </div>
 
       {/* Original Message */}
-      <div className="p-4 border-b border-gray-700 group relative">
+      <div className="p-4 border-b border-[var(--color-border)] group relative">
         <div className="flex gap-3">
           <div className="w-9 h-9 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white font-medium">
             {(message.author?.displayName || message.removedUserName || 'Deleted User').charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2">
-              <span className="font-semibold text-white">
+              <span className="font-semibold text-[var(--color-text-primary)]">
                 {message.author?.displayName || message.removedUserName || 'Deleted User'}
               </span>
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-[var(--color-text-muted)]">
                 {formatTime(message.createdAt)}
               </span>
             </div>
-            <div className="text-gray-200 break-words whitespace-pre-wrap">
+            <div className="text-[var(--color-text-secondary)] break-words whitespace-pre-wrap">
               {message.content}
             </div>
             <ReactionDisplay
@@ -303,7 +303,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
             />
           </div>
         </div>
-        <div className="mt-2 text-xs text-gray-400">
+        <div className="mt-2 text-xs text-[var(--color-text-muted)]">
           {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
         </div>
         {/* Reaction button for parent message */}
@@ -320,7 +320,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
             onClick={() => setReactionPickerMessageId(
               reactionPickerMessageId === message.id ? null : message.id
             )}
-            className="p-1.5 bg-gray-700 hover:bg-gray-600 rounded border border-gray-600 text-gray-300 hover:text-white"
+            className="p-1.5 bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-secondary)] rounded border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
             title="Add reaction"
           >
             😀
@@ -335,7 +335,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
             {Array.from({length: 3}).map((_, i) => <Skeleton.Message key={i} />)}
           </div>
         ) : replies.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-gray-400 text-sm">
+          <div className="flex items-center justify-center h-32 text-[var(--color-text-muted)] text-sm">
             No replies yet. Start the conversation!
           </div>
         ) : (
@@ -347,10 +347,10 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2">
-                    <span className="font-semibold text-white text-sm">
+                    <span className="font-semibold text-[var(--color-text-primary)] text-sm">
                       {reply.author?.displayName || reply.removedUserName || 'Deleted User'}
                     </span>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-[var(--color-text-muted)]">
                       {formatTime(reply.createdAt)}
                     </span>
                   </div>
@@ -385,26 +385,26 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
                                   </svg>
                                 </button>
                               </div>
-                              <div className="text-xs text-gray-400 mt-1">{att.filename}</div>
+                              <div className="text-xs text-[var(--color-text-muted)] mt-1">{att.filename}</div>
                             </div>
                           )}
                           {att.type === 'VIDEO' && (
                             <video src={att.url} controls className="max-w-sm rounded" />
                           )}
                           {att.type === 'AUDIO' && (
-                            <div className="bg-gray-700 rounded-lg p-2 max-w-sm">
+                            <div className="bg-[var(--color-bg-tertiary)] rounded-lg p-2 max-w-sm">
                               <div className="flex items-center gap-2 mb-2">
-                                <div className="w-8 h-8 bg-gray-600 rounded flex items-center justify-center flex-shrink-0">
-                                  <svg className="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div className="w-8 h-8 bg-[var(--color-bg-secondary)] rounded flex items-center justify-center flex-shrink-0">
+                                  <svg className="w-4 h-4 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                                   </svg>
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                  <div className="text-xs text-white truncate">{att.filename}</div>
+                                  <div className="text-xs text-[var(--color-text-primary)] truncate">{att.filename}</div>
                                 </div>
                                 <button
                                   onClick={() => handleDownload(att.url, att.filename)}
-                                  className="p-1 text-gray-400 hover:text-white transition-colors"
+                                  className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
                                   title="Download"
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -440,7 +440,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
                     onClick={() => setReactionPickerMessageId(
                       reactionPickerMessageId === reply.id ? null : reply.id
                     )}
-                    className="p-1 bg-gray-700 hover:bg-gray-600 rounded border border-gray-600 text-gray-300 hover:text-white text-sm"
+                    className="p-1 bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-secondary)] rounded border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-sm"
                     title="Add reaction"
                   >
                     😀
@@ -454,7 +454,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
       </div>
 
       {/* Reply Input */}
-      <form onSubmit={handleSend} className="p-4 border-t border-gray-700">
+      <form onSubmit={handleSend} className="p-4 border-t border-[var(--color-border)]">
         {/* File error */}
         {fileError && (
           <div className="mb-2 text-red-400 text-xs">{fileError}</div>
@@ -466,11 +466,11 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
             {previews.map((preview, index) => (
               <div
                 key={preview.name + '-' + preview.size}
-                className="relative bg-gray-700 rounded p-2 flex items-center gap-2"
+                className="relative bg-[var(--color-bg-tertiary)] rounded p-2 flex items-center gap-2"
               >
                 {preview.type === 'audio' ? (
-                  <div className="w-10 h-10 bg-gray-600 rounded flex items-center justify-center">
-                    <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-10 h-10 bg-[var(--color-bg-secondary)] rounded flex items-center justify-center">
+                    <svg className="w-5 h-5 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                     </svg>
                   </div>
@@ -482,10 +482,10 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
                   />
                 )}
                 <div className="flex flex-col min-w-0">
-                  <span className="text-xs text-white truncate max-w-[100px]">
+                  <span className="text-xs text-[var(--color-text-primary)] truncate max-w-[100px]">
                     {preview.name}
                   </span>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-[var(--color-text-muted)]">
                     {formatFileSize(preview.size)}
                   </span>
                 </div>
@@ -501,7 +501,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
           </div>
         )}
 
-        <div className="bg-gray-700 rounded-lg">
+        <div className="bg-[var(--color-bg-tertiary)] rounded-lg">
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
@@ -512,7 +512,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
               }
             }}
             placeholder="Reply..."
-            className="w-full bg-transparent text-white px-4 py-3 resize-none outline-none placeholder-gray-400 text-sm"
+            className="w-full bg-transparent text-[var(--color-text-primary)] px-4 py-3 resize-none outline-none placeholder-gray-400 text-sm"
             rows={2}
             disabled={sending}
           />
@@ -529,7 +529,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead }) {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="p-1.5 text-gray-400 hover:text-white transition-colors"
+                className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
                 title="Add file"
                 disabled={sending}
               >

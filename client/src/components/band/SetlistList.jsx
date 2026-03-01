@@ -8,6 +8,7 @@ import ConfirmDialog from '../common/ConfirmDialog';
 import ContextMenu from '../common/ContextMenu';
 import useLongPress from '../../hooks/useLongPress';
 import Skeleton from '../common/Skeleton';
+import LiveMode from './LiveMode';
 
 function SetlistCard({ setlist, onTap, onEdit, onDuplicate, onDelete, onContextMenu, calculateDuration, formatTime12h }) {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -179,6 +180,7 @@ function SetlistList({ workspaceId, workspaceName }) {
   const [duplicateSetlistId, setDuplicateSetlistId] = useState(null);
   const [duplicateName, setDuplicateName] = useState('');
   const [contextMenu, setContextMenu] = useState(null); // { setlistId, x, y }
+  const [liveModeSetlist, setLiveModeSetlist] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -1119,11 +1121,21 @@ function SetlistList({ workspaceId, workspaceName }) {
               </div>
               <div className="flex items-center gap-2">
                 <button
+                  onClick={() => {
+                    setLiveModeSetlist(viewingSetlist);
+                    setViewingSetlist(null);
+                  }}
+                  className="btn bg-red-600 hover:bg-red-500 text-white text-sm"
+                  title="Start live mode"
+                >
+                  Live Mode
+                </button>
+                <button
                   onClick={() => handlePrintSetlist(viewingSetlist)}
                   className="btn bg-orange-600 hover:bg-orange-500 text-white text-sm"
-                  title="Print or save as PDF"
+                  title="Export as PDF"
                 >
-                  🖨️ Print
+                  Export PDF
                 </button>
                 <button
                   onClick={() => openEditDetails(viewingSetlist)}
@@ -1341,6 +1353,14 @@ function SetlistList({ workspaceId, workspaceName }) {
         onClose={() => setContextMenu(null)}
         items={[
           {
+            label: 'Live Mode',
+            icon: '🎸',
+            onClick: () => {
+              const setlist = setlists.find(s => s.id === contextMenu?.setlistId);
+              if (setlist) setLiveModeSetlist(setlist);
+            }
+          },
+          {
             label: 'Edit Setlist',
             icon: '✏️',
             onClick: () => {
@@ -1349,6 +1369,14 @@ function SetlistList({ workspaceId, workspaceName }) {
                 setEditingSetlist(setlist);
                 setShowBuilder(true);
               }
+            }
+          },
+          {
+            label: 'Export PDF',
+            icon: '📄',
+            onClick: () => {
+              const setlist = setlists.find(s => s.id === contextMenu?.setlistId);
+              if (setlist) handlePrintSetlist(setlist);
             }
           },
           {
@@ -1370,6 +1398,15 @@ function SetlistList({ workspaceId, workspaceName }) {
           }
         ]}
       />
+
+      {/* Live Mode */}
+      {liveModeSetlist && (
+        <LiveMode
+          setlistItems={liveModeSetlist.songs || []}
+          setlistName={liveModeSetlist.name}
+          onClose={() => setLiveModeSetlist(null)}
+        />
+      )}
     </div>
   );
 }

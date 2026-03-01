@@ -235,8 +235,8 @@ function AnnouncementCard({ announcement, isAdmin, onAcknowledge, onEdit, onDele
             By {announcement.createdBy?.displayName || announcement.removedCreatorName || 'Deleted User'} • {formatDistanceToNow(new Date(announcement.createdAt), { addSuffix: true })}
           </span>
           <span className="flex items-center gap-1">
-            <span className="text-green-400">{announcement.acknowledgmentCount || 0}</span>
-            <span>/ {memberCount} acknowledged</span>
+            <span className="text-green-400">Seen by {announcement.acknowledgmentCount || 0}</span>
+            <span>/ {announcement.memberCount || memberCount}</span>
           </span>
         </div>
 

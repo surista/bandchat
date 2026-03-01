@@ -58,6 +58,12 @@ export default function SongDetailScreen({ navigation, route }) {
 
   const [showKeyPicker, setShowKeyPicker] = useState(false);
 
+  // Practice logging
+  const [showPracticeModal, setShowPracticeModal] = useState(false);
+  const [practiceDuration, setPracticeDuration] = useState('30');
+  const [practiceNotes, setPracticeNotes] = useState('');
+  const [loggingPractice, setLoggingPractice] = useState(false);
+
   useEffect(() => {
     if (isNew) return;
     (async () => {
@@ -182,6 +188,31 @@ export default function SongDetailScreen({ navigation, route }) {
       },
     ]);
   }, [song, songId, navigation]);
+
+  const handleLogPractice = useCallback(async () => {
+    const dur = parseInt(practiceDuration, 10);
+    if (isNaN(dur) || dur < 1 || dur > 480) {
+      Alert.alert('Invalid', 'Duration must be between 1 and 480 minutes');
+      return;
+    }
+    setLoggingPractice(true);
+    try {
+      await api.logPractice(workspaceId, {
+        songId: songId || song?.id,
+        duration: dur,
+        notes: practiceNotes.trim() || null,
+        practicedAt: new Date().toISOString(),
+      });
+      setShowPracticeModal(false);
+      setPracticeDuration('30');
+      setPracticeNotes('');
+      Alert.alert('Logged', 'Practice session logged!');
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to log practice');
+    } finally {
+      setLoggingPractice(false);
+    }
+  }, [workspaceId, songId, song, practiceDuration, practiceNotes]);
 
   if (loading) {
     return (
@@ -448,7 +479,17 @@ export default function SongDetailScreen({ navigation, route }) {
       {/* Lyrics */}
       {song?.lyrics ? (
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">Lyrics / Chord Chart</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary, marginBottom: 0 }]} accessibilityRole="header">Lyrics / Chord Chart</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Lyrics', { lyrics: song.lyrics, songTitle: song.title, duration: song.duration })}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="View lyrics full screen"
+            >
+              <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>Full Screen</Text>
+            </TouchableOpacity>
+          </View>
           <Text style={[styles.sectionText, styles.monoText, { color: colors.textPrimary, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }]}>
             {song.lyrics}
           </Text>
@@ -462,6 +503,76 @@ export default function SongDetailScreen({ navigation, route }) {
           <Text style={[styles.sectionText, { color: colors.textPrimary }]}>{song.arrangement}</Text>
         </View>
       ) : null}
+
+      {/* Log Practice Button */}
+      <TouchableOpacity
+        style={[styles.practiceButton, { backgroundColor: colors.primary }]}
+        onPress={() => setShowPracticeModal(true)}
+        accessibilityRole="button"
+        accessibilityLabel="Log practice session"
+      >
+        <Text style={styles.practiceButtonText}>Log Practice</Text>
+      </TouchableOpacity>
+
+      {/* Practice Modal */}
+      <Modal visible={showPracticeModal} transparent animationType="fade" onRequestClose={() => setShowPracticeModal(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowPracticeModal(false)} accessibilityRole="button" accessibilityLabel="Dismiss practice modal">
+          <View style={[styles.practiceModalContent, { backgroundColor: colors.modalBg }]} onStartShouldSetResponder={() => true}>
+            <Text style={[styles.practiceModalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Log Practice</Text>
+            <Text style={[styles.practiceModalSong, { color: colors.textSecondary }]}>
+              {song?.title}
+            </Text>
+
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Duration (minutes)</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+              value={practiceDuration}
+              onChangeText={setPracticeDuration}
+              placeholder="30"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="numeric"
+              accessibilityLabel="Duration in minutes"
+            />
+
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Notes (optional)</Text>
+            <TextInput
+              style={[styles.input, styles.practiceNotesInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+              value={practiceNotes}
+              onChangeText={setPracticeNotes}
+              placeholder="How did it go?"
+              placeholderTextColor={colors.textSecondary}
+              multiline
+              textAlignVertical="top"
+              accessibilityLabel="Practice notes"
+            />
+
+            <View style={styles.practiceModalActions}>
+              <TouchableOpacity
+                style={[styles.formButton, { backgroundColor: colors.bgTertiary }]}
+                onPress={() => setShowPracticeModal(false)}
+                disabled={loggingPractice}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel"
+              >
+                <Text style={[styles.formButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.formButton, { backgroundColor: colors.primary }]}
+                onPress={handleLogPractice}
+                disabled={loggingPractice || !practiceDuration.trim()}
+                accessibilityRole="button"
+                accessibilityLabel="Save practice session"
+              >
+                {loggingPractice ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <Text style={styles.formButtonTextWhite}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </ScrollView>
   );
 }
@@ -479,6 +590,7 @@ const styles = StyleSheet.create({
   youtubeLink: { color: '#ef4444', fontSize: 15, fontWeight: '600' },
   spotifyLink: { color: '#22c55e', fontSize: 15, fontWeight: '600' },
   section: { marginTop: 20 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   sectionTitle: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.5 },
   sectionText: { fontSize: 15, lineHeight: 22 },
   monoText: { fontSize: 13, lineHeight: 20 },
@@ -525,4 +637,40 @@ const styles = StyleSheet.create({
   },
   keyOptionGrid: { flex: 1 },
   keyOptionText: { fontSize: 15 },
+  // Practice
+  practiceButton: {
+    marginTop: 24,
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  practiceButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  practiceModalContent: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    padding: 20,
+    paddingBottom: 40,
+  },
+  practiceModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  practiceModalSong: {
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  practiceNotesInput: {
+    minHeight: 60,
+    paddingTop: 10,
+  },
+  practiceModalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 20,
+  },
 });

@@ -477,12 +477,12 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
           </>
         ) : (
           <>
-            <span className="text-gray-400 mr-2">
+            <span className="text-[var(--color-text-muted)] mr-2">
               {channel.isPrivate ? '🔒' : '#'}
             </span>
             <h2 className="text-[var(--color-text-primary)] font-semibold">{channel.name}</h2>
             {channel.description && (
-              <span className="ml-4 text-gray-400 text-sm truncate hidden md:inline">
+              <span className="ml-4 text-[var(--color-text-muted)] text-sm truncate hidden md:inline">
                 {channel.description}
               </span>
             )}
@@ -492,7 +492,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
           {onOpenSearch && (
             <button
               onClick={onOpenSearch}
-              className="p-2 rounded hover:bg-gray-700 transition-colors text-gray-400 hover:text-white hidden md:block"
+              className="p-2 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hidden md:block"
               title="Search messages"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -502,7 +502,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
           )}
           <button
             onClick={() => setShowPinned(prev => !prev)}
-            className={`p-2 rounded hover:bg-gray-700 transition-colors relative ${showPinned ? 'text-white bg-gray-700' : 'text-gray-400 hover:text-white'}`}
+            className={`p-2 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors relative ${showPinned ? 'text-[var(--color-text-primary)] bg-[var(--color-bg-tertiary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
             title="Pinned messages"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -516,7 +516,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
           </button>
           <button
             onClick={() => setShowMembers(prev => !prev)}
-            className={`p-2 rounded hover:bg-gray-700 transition-colors ${showMembers ? 'text-white bg-gray-700' : 'text-gray-400 hover:text-white'}`}
+            className={`p-2 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors ${showMembers ? 'text-[var(--color-text-primary)] bg-[var(--color-bg-tertiary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
             title="Members"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -574,7 +574,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
 
       {/* Typing Indicator */}
       {typingUsers.length > 0 && (
-        <div className="px-4 py-2 text-gray-400 text-sm">
+        <div className="px-4 py-2 text-[var(--color-text-muted)] text-sm">
           <span className="inline-flex items-center gap-1">
             <span className="typing-dot w-1.5 h-1.5 bg-gray-400 rounded-full" />
             <span className="typing-dot w-1.5 h-1.5 bg-gray-400 rounded-full" />
@@ -603,7 +603,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       {showMembers && (
         <>
           <div className="hidden md:block fixed inset-0 z-40" onClick={() => setShowMembers(false)} />
-          <div className="fixed inset-0 z-50 md:left-auto md:w-80 md:border-l md:border-gray-700">
+          <div className="fixed inset-0 z-50 md:left-auto md:w-80 md:border-l md:border-[var(--color-border)]">
             <ChannelMembersPanel
               channel={channel}
               workspace={workspace}
@@ -617,7 +617,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       {showPinned && (
         <>
           <div className="hidden md:block fixed inset-0 z-40" onClick={() => setShowPinned(false)} />
-          <div className="fixed inset-0 z-50 md:left-auto md:w-80 md:border-l md:border-gray-700">
+          <div className="fixed inset-0 z-50 md:left-auto md:w-80 md:border-l md:border-[var(--color-border)]">
             <PinnedMessagesPanel
               pinnedMessages={pinnedMessages}
               onUnpin={handleUnpinMessage}

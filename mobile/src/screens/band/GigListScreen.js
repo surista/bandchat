@@ -10,7 +10,10 @@ import {
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
+  Linking,
+  Platform,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
@@ -68,24 +71,44 @@ export default function GigListScreen({ navigation, route }) {
   const [selectedGig, setSelectedGig] = useState(null);
   const [showActions, setShowActions] = useState(false);
 
+  // Calendar subscribe
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [calendarUrl, setCalendarUrl] = useState('');
+  const [calendarLoading, setCalendarLoading] = useState(false);
+
   const loadingRef = useRef(loading);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
 
-  // Header "+" button
+  // Header buttons
   useLayoutEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity
-          onPress={() => navigation.navigate('GigDetail', { workspaceId })}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          accessibilityRole="button"
-          accessibilityLabel="Create event"
-        >
-          <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <TouchableOpacity
+            onPress={handleSubscribeCalendar}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Subscribe to calendar"
+            disabled={calendarLoading}
+          >
+            {calendarLoading ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Text style={{ color: colors.primary, fontSize: 18 }}>{'\uD83D\uDCC5'}</Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('GigDetail', { workspaceId })}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Create event"
+          >
+            <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
+          </TouchableOpacity>
+        </View>
       ),
     });
-  }, [navigation, workspaceId, colors.primary]);
+  }, [navigation, workspaceId, colors.primary, calendarLoading, handleSubscribeCalendar]);
 
   const loadGigs = useCallback(async () => {
     try {
@@ -119,6 +142,31 @@ export default function GigListScreen({ navigation, route }) {
     setRefreshing(true);
     loadGigs();
   }, [loadGigs]);
+
+  const handleSubscribeCalendar = useCallback(async () => {
+    setCalendarLoading(true);
+    try {
+      // Try to get existing token first, generate if not found
+      let tokenData;
+      try {
+        tokenData = await api.getCalendarToken(workspaceId);
+      } catch {
+        tokenData = await api.generateCalendarToken(workspaceId);
+      }
+      const token = tokenData.token;
+      // Build base URL without /api suffix
+      const Constants = require('expo-constants').default;
+      const apiUrl = Constants.expoConfig?.extra?.apiUrl || 'http://localhost:3001/api';
+      const baseUrl = apiUrl.replace(/\/api\/?$/, '');
+      const icalUrl = `${baseUrl}/api/gigs/workspace/${workspaceId}/calendar.ics?token=${token}`;
+      setCalendarUrl(icalUrl);
+      setShowCalendarModal(true);
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to get calendar link');
+    } finally {
+      setCalendarLoading(false);
+    }
+  }, [workspaceId]);
 
   // Group by month
   const sections = useMemo(() => {
@@ -371,6 +419,63 @@ export default function GigListScreen({ navigation, route }) {
         }
       />
 
+      {/* Calendar Subscribe Modal */}
+      <Modal visible={showCalendarModal} transparent animationType="fade" onRequestClose={() => setShowCalendarModal(false)}>
+        <TouchableOpacity
+          style={styles.actionOverlay}
+          activeOpacity={1}
+          onPress={() => setShowCalendarModal(false)}
+          accessibilityRole="button"
+          accessibilityLabel="Close calendar subscribe modal"
+        >
+          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
+            <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
+            <Text style={[styles.actionTitle, { color: colors.textPrimary }]}>Subscribe to Calendar</Text>
+            <Text style={[styles.calendarDesc, { color: colors.textSecondary }]}>
+              Add this URL to your calendar app to stay in sync with all band events.
+            </Text>
+            <View style={[styles.calendarUrlBox, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}>
+              <Text style={[styles.calendarUrlText, { color: colors.textPrimary }]} numberOfLines={2} selectable>
+                {calendarUrl}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.calendarActionButton, { backgroundColor: colors.primary }]}
+              onPress={async () => {
+                await Clipboard.setStringAsync(calendarUrl);
+                mediumImpact();
+                Alert.alert('Copied', 'Calendar URL copied to clipboard');
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Copy calendar URL"
+            >
+              <Text style={styles.calendarActionButtonText}>Copy URL</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.calendarActionButton, { backgroundColor: colors.bgTertiary, marginTop: 8 }]}
+              onPress={() => {
+                const webcalUrl = calendarUrl.replace(/^https?:\/\//, 'webcal://');
+                Linking.openURL(webcalUrl).catch(() => {
+                  Alert.alert('Error', 'Could not open calendar app');
+                });
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Open in calendar app"
+            >
+              <Text style={[styles.calendarActionButtonText, { color: colors.primary }]}>Open in Calendar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionItem, styles.actionCancel]}
+              onPress={() => setShowCalendarModal(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+            >
+              <Text style={[styles.actionText, { color: colors.textSecondary }]}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Action Sheet */}
       <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => setShowActions(false)}>
         <TouchableOpacity
@@ -495,6 +600,11 @@ const styles = StyleSheet.create({
   actionItem: { paddingVertical: 16, alignItems: 'center' },
   actionText: { fontSize: 17 },
   actionCancel: { marginTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.1)' },
+  calendarDesc: { fontSize: 14, textAlign: 'center', marginBottom: 16, paddingHorizontal: 16 },
+  calendarUrlBox: { borderWidth: 1, borderRadius: 8, padding: 12, marginHorizontal: 16, marginBottom: 16 },
+  calendarUrlText: { fontSize: 12, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  calendarActionButton: { marginHorizontal: 16, paddingVertical: 14, borderRadius: 10, alignItems: 'center' },
+  calendarActionButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
   filterDivider: { width: 1, height: 20, alignSelf: 'center' },
   otherWorkspaceCard: { borderLeftWidth: 0, borderWidth: 1, borderColor: 'rgba(99,102,241,0.3)' },
   workspaceBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, marginBottom: 4 },
