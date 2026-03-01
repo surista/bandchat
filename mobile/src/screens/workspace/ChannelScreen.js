@@ -4,6 +4,8 @@ import {
   Text,
   FlatList,
   Alert,
+  Modal,
+  TextInput,
   TouchableOpacity,
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -44,6 +46,9 @@ export default function ChannelScreen({ navigation, route }) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [editingMessage, setEditingMessage] = useState(null);
   const [viewingImage, setViewingImage] = useState(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
 
   const channelIdRef = useRef(channel.id);
   const userIdRef = useRef(user?.id);
@@ -336,39 +341,35 @@ export default function ChannelScreen({ navigation, route }) {
         );
         break;
       case 'report':
-        Alert.prompt(
-          'Report Message',
-          'Why are you reporting this message?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Report',
-              style: 'destructive',
-              onPress: async (reason) => {
-                if (!reason?.trim()) {
-                  Alert.alert('Error', 'Please provide a reason for your report.');
-                  return;
-                }
-                try {
-                  await api.reportMessage(actionMessage.id, reason.trim());
-                  Alert.alert('Report Submitted', "We'll review it shortly. Thank you.");
-                } catch (err) {
-                  if (err.message?.includes('already reported')) {
-                    Alert.alert('Already Reported', "You've already reported this message.");
-                  } else {
-                    Alert.alert('Error', 'Failed to submit report. Please try again.');
-                  }
-                }
-              },
-            },
-          ],
-          'plain-text',
-          '',
-          'default'
-        );
+        setReportReason('');
+        setShowReportModal(true);
         break;
     }
   }, [actionMessage, navigation, channel.id, workspaceId]);
+
+  // Submit report
+  const handleSubmitReport = useCallback(async () => {
+    if (!reportReason.trim() || !actionMessage) {
+      Alert.alert('Error', 'Please provide a reason for your report.');
+      return;
+    }
+    setReportSubmitting(true);
+    try {
+      await api.reportMessage(actionMessage.id, reportReason.trim());
+      setShowReportModal(false);
+      setActionMessage(null);
+      Alert.alert('Report Submitted', "We'll review it shortly. Thank you.");
+    } catch (err) {
+      if (err.message?.includes('already reported')) {
+        Alert.alert('Already Reported', "You've already reported this message.");
+        setShowReportModal(false);
+      } else {
+        Alert.alert('Error', 'Failed to submit report. Please try again.');
+      }
+    } finally {
+      setReportSubmitting(false);
+    }
+  }, [actionMessage, reportReason]);
 
   // Add reaction
   const handleAddReaction = useCallback(async (emoji) => {
@@ -532,6 +533,50 @@ export default function ChannelScreen({ navigation, route }) {
         imageUrl={viewingImage}
         onClose={() => setViewingImage(null)}
       />
+
+      {/* Report Message Modal */}
+      <Modal
+        visible={showReportModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowReportModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Report Message</Text>
+            <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+              Why are you reporting this message?
+            </Text>
+            <TextInput
+              style={[styles.reportInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+              placeholder="Reason for reporting..."
+              placeholderTextColor={colors.textSecondary}
+              value={reportReason}
+              onChangeText={setReportReason}
+              multiline
+              maxLength={500}
+              autoFocus
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.background }]}
+                onPress={() => { setShowReportModal(false); setActionMessage(null); }}
+              >
+                <Text style={{ color: colors.text }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#dc2626', opacity: reportSubmitting ? 0.6 : 1 }]}
+                onPress={handleSubmitReport}
+                disabled={reportSubmitting}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600' }}>
+                  {reportSubmitting ? 'Submitting...' : 'Report'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -574,5 +619,46 @@ const styles = StyleSheet.create({
   typingText: {
     fontSize: 13,
     fontStyle: 'italic',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    width: '100%',
+    borderRadius: 12,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  reportInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 15,
+    minHeight: 80,
+    textAlignVertical: 'top',
+    marginBottom: 16,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  modalButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
   },
 });

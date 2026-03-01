@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { Resend } from 'resend';
 import { OAuth2Client } from 'google-auth-library';
 import { authenticate } from '../middleware/auth.js';
-import { authLimiter } from '../middleware/rateLimit.js';
+import { authLimiter, tokenLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 
 const router = express.Router();
@@ -176,7 +176,7 @@ router.post('/signup', authLimiter, async (req, res) => {
 });
 
 // Verify email
-router.post('/verify-email', async (req, res) => {
+router.post('/verify-email', tokenLimiter, async (req, res) => {
   try {
     const { token } = req.body;
 
@@ -744,7 +744,7 @@ router.post('/change-email', authenticate, async (req, res) => {
 });
 
 // Verify email change
-router.post('/verify-email-change', async (req, res) => {
+router.post('/verify-email-change', tokenLimiter, async (req, res) => {
   try {
     const { token } = req.body;
 
@@ -959,7 +959,7 @@ router.post('/reset-password', authLimiter, async (req, res) => {
 });
 
 // Verify reset token (check if valid before showing reset form)
-router.get('/verify-reset-token', async (req, res) => {
+router.get('/verify-reset-token', tokenLimiter, async (req, res) => {
   try {
     const { token } = req.query;
 

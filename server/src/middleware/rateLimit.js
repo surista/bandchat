@@ -18,6 +18,15 @@ export const authLimiter = rateLimit({
   legacyHeaders: false
 });
 
+// Stricter limit for verification/reset token endpoints (prevent brute-force guessing)
+export const tokenLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 attempts per window per IP
+  message: { error: 'Too many attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 // Limit for sending messages
 export const messageLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
