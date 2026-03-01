@@ -14,6 +14,7 @@ const CACHE_MAX_SIZE = 200;
 const linkPreviewLimiter = rateLimit({
   windowMs: 60000,
   max: 20,
+  skip: process.env.NODE_ENV === 'test' ? () => true : undefined,
   keyGenerator: (req) => req.user?.id || req.ip,
   message: { error: 'Too many link preview requests, please try again later' },
 });

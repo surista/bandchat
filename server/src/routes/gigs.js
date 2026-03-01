@@ -7,7 +7,7 @@ import prisma from '../lib/prisma.js';
 
 const router = express.Router();
 
-const calendarLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, message: { error: 'Too many requests' } });
+const calendarLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, skip: process.env.NODE_ENV === 'test' ? () => true : undefined, message: { error: 'Too many requests' } });
 
 // Get all gigs for a workspace
 router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {

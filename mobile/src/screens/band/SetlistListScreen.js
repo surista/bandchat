@@ -158,8 +158,13 @@ export default function SetlistListScreen({ navigation, route }) {
   const renderSetlist = useCallback(({ item }) => {
     const songs = (item.songs || []).filter(s => s.type === 'SONG' || (!s.type && s.song));
     const songCount = songs.length;
-    const setBreaks = (item.songs || []).filter(s => s.type === 'SET_BREAK');
-    const setCount = setBreaks.length;
+    const allItems = item.songs || [];
+    const setBreaks = allItems.filter(s => s.type === 'SET_BREAK');
+    const firstContentIdx = allItems.findIndex(s => s.type !== 'SET_BREAK');
+    const effectiveBreaks = firstContentIdx >= 0
+      ? allItems.filter((s, i) => s.type === 'SET_BREAK' && i > firstContentIdx).length
+      : 0;
+    const setCount = effectiveBreaks + 1;
     const totalDuration = (item.songs || []).reduce((sum, s) => sum + (s.song?.duration || s.duration || 0), 0);
     const preview = songs.slice(0, 4).map((s, i) => s.song?.title || s.label || `Song ${i + 1}`);
     const remaining = songCount - preview.length;
@@ -186,7 +191,7 @@ export default function SetlistListScreen({ navigation, route }) {
         )}
         <View style={styles.badgeRow}>
           {songCount > 0 && <Badge label={`${songCount} songs`} color="#60a5fa" bgColor="rgba(96,165,250,0.15)" />}
-          {setCount > 1 && <Badge label={`${setCount} sets`} color="#c084fc" bgColor="rgba(192,132,252,0.15)" />}
+          {effectiveBreaks > 0 && <Badge label={`${setCount} sets`} color="#c084fc" bgColor="rgba(192,132,252,0.15)" />}
           {totalDuration > 0 && <Badge label={formatDuration(totalDuration)} color="#9ca3af" bgColor="rgba(156,163,175,0.15)" />}
         </View>
         {preview.length > 0 && (

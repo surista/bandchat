@@ -13,6 +13,7 @@ const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KE
 const inviteJoinLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
+  skip: process.env.NODE_ENV === 'test' ? () => true : undefined,
   message: { error: 'Too many join attempts, please try again later' },
   standardHeaders: true,
   legacyHeaders: false
@@ -1270,7 +1271,7 @@ router.get('/:workspaceId/export', authenticate, isWorkspaceAdmin, async (req, r
           }
         },
         bandMembers: {
-          include: { instruments: true }
+          include: { stints: true }
         },
         contacts: {
           include: { createdBy: { select: { displayName: true } } }
@@ -1303,7 +1304,7 @@ router.get('/:workspaceId/export', authenticate, isWorkspaceAdmin, async (req, r
             songs: { include: { song: { select: { title: true, artist: true } } }, orderBy: { position: 'asc' } }
           }
         },
-        kitty: {
+        bandKitty: {
           include: { transactions: { orderBy: { date: 'desc' } } }
         },
         memberAchievements: {
@@ -1403,7 +1404,7 @@ router.get('/:workspaceId/export', authenticate, isWorkspaceAdmin, async (req, r
       })),
       bandMembers: workspace.bandMembers.map(bm => ({
         name: bm.name, imageUrl: bm.imageUrl, notes: bm.notes,
-        instruments: bm.instruments.map(i => ({
+        stints: bm.stints.map(i => ({
           instrument: i.instrument, startDate: i.startDate, endDate: i.endDate
         }))
       })),
@@ -1448,10 +1449,10 @@ router.get('/:workspaceId/export', authenticate, isWorkspaceAdmin, async (req, r
         createdBy: m.createdBy?.displayName || m.removedCreatorName || 'Deleted User',
         songs: m.songs.map(ms => `${ms.song.title}${ms.song.artist ? ` - ${ms.song.artist}` : ''}`)
       })),
-      kitty: workspace.kitty ? {
-        startingBalance: workspace.kitty.startingBalance,
-        currency: workspace.kitty.currency,
-        transactions: workspace.kitty.transactions.map(t => ({
+      kitty: workspace.bandKitty ? {
+        startingBalance: workspace.bandKitty.startingBalance,
+        currency: workspace.bandKitty.currency,
+        transactions: workspace.bandKitty.transactions.map(t => ({
           type: t.type, category: t.category, amount: t.amount,
           description: t.description, date: t.date,
           createdBy: t.createdBy?.displayName || t.removedCreatorName || 'Deleted User'

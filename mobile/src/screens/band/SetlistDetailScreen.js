@@ -128,6 +128,11 @@ export default function SetlistDetailScreen({ navigation, route }) {
   const items = setlist?.songs || [];
   const songItems = items.filter(s => s.type === 'SONG' || (!s.type && s.song));
   const setBreaks = items.filter(s => s.type === 'SET_BREAK');
+  // Count only breaks that actually separate sets (skip leading breaks before any content)
+  const firstContentIdx = items.findIndex(s => s.type !== 'SET_BREAK');
+  const effectiveBreaks = firstContentIdx >= 0
+    ? items.filter((s, i) => s.type === 'SET_BREAK' && i > firstContentIdx).length
+    : 0;
   const totalDuration = items.reduce((sum, s) => sum + (s.song?.duration || s.duration || 0), 0);
 
   // Reorder (arrow buttons - used in non-drag mode)
@@ -289,9 +294,12 @@ export default function SetlistDetailScreen({ navigation, route }) {
     let setHeader = null;
     if (item.type !== 'SET_BREAK') {
       // Count set breaks before this index to determine the set number
+      // Skip leading breaks (before any content) — they don't separate sets
       let setNumber = 1;
+      let hasContent = false;
       for (let i = 0; i < index; i++) {
-        if (items[i].type === 'SET_BREAK') setNumber++;
+        if (items[i].type !== 'SET_BREAK') hasContent = true;
+        if (items[i].type === 'SET_BREAK' && hasContent) setNumber++;
       }
       // Show header if this is the first item, or the previous item was a set break
       const isFirstItem = index === 0;
@@ -412,8 +420,8 @@ export default function SetlistDetailScreen({ navigation, route }) {
       {/* Stats header */}
       <View style={styles.statsRow}>
         <Badge label={`${songItems.length} songs`} color="#60a5fa" bgColor="rgba(96,165,250,0.15)" />
-        {setBreaks.length > 0 && (
-          <Badge label={`${setBreaks.length + 1} sets`} color="#c084fc" bgColor="rgba(192,132,252,0.15)" />
+        {effectiveBreaks > 0 && (
+          <Badge label={`${effectiveBreaks + 1} sets`} color="#c084fc" bgColor="rgba(192,132,252,0.15)" />
         )}
         {totalDuration > 0 && (
           <Badge label={formatDuration(totalDuration)} color="#9ca3af" bgColor="rgba(156,163,175,0.15)" />

@@ -658,7 +658,8 @@ router.post('/:messageId/reactions', authenticate, async (req, res) => {
     const io = req.app.get('io');
     io.to(`channel:${channel.id}`).emit('reaction:added', {
       messageId: req.params.messageId,
-      reaction
+      reaction,
+      channelId: channel.id
     });
 
     res.status(201).json(reaction);
@@ -720,7 +721,8 @@ router.delete('/:messageId/reactions/:emoji', authenticate, async (req, res) => 
     io.to(`channel:${message.channelId}`).emit('reaction:removed', {
       messageId: req.params.messageId,
       emoji,
-      userId: req.user.id
+      userId: req.user.id,
+      channelId: message.channelId
     });
 
     res.json({ message: 'Reaction removed' });

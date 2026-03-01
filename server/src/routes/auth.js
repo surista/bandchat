@@ -120,7 +120,7 @@ const generateTokens = async (userId) => {
   );
 
   const refreshToken = jwt.sign(
-    { userId, type: 'refresh' },
+    { userId, type: 'refresh', jti: crypto.randomUUID() },
     process.env.JWT_REFRESH_SECRET,
     { expiresIn: '14d' } // Reduced from 30d to 14d for better security
   );

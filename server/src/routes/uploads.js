@@ -10,6 +10,7 @@ const router = express.Router();
 const uploadLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
+  skip: process.env.NODE_ENV === 'test' ? () => true : undefined,
   message: { error: 'Too many uploads, please try again later' },
   keyGenerator: (req) => req.user?.id || req.ip,
 });
