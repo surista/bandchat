@@ -310,8 +310,8 @@
       try {
         const res = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' });
         const data = await res.json().catch(() => ({}));
-        if (data.token) {
-          token = data.token;
+        if (data.accessToken) {
+          token = data.accessToken;
         } else {
           handleLogout();
         }
@@ -352,9 +352,9 @@
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.error) throw new Error(data.error || `Login failed (${res.status})`);
-        if (!data.token) throw new Error('No token received');
+        if (!data.accessToken) throw new Error('No token received');
 
-        token = data.token;
+        token = data.accessToken;
         currentUser = data.user;
 
         // Verify system admin access
