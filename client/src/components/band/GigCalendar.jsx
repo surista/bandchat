@@ -297,6 +297,8 @@ function GigCalendar({ workspaceId, workspace }) {
   // Availability overlay
   const [showAvailability, setShowAvailability] = useState(true);
   const [availability, setAvailability] = useState([]);
+  const [availabilityDate, setAvailabilityDate] = useState(null); // For setting my availability
+  const [savingAvailability, setSavingAvailability] = useState(false);
 
   // iCal subscribe
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
@@ -541,6 +543,47 @@ function GigCalendar({ workspaceId, workspace }) {
       setIcsError(err.message || 'Failed to import');
     } finally {
       setIcsImporting(false);
+    }
+  };
+
+  // Availability handlers
+  const getMyAvailabilityStatus = (date) => {
+    const dateKey = format(date, 'yyyy-MM-dd');
+    const myAvail = availability.find(a =>
+      a.user?.id === user?.id && format(new Date(a.date), 'yyyy-MM-dd') === dateKey
+    );
+    return myAvail?.status || 'UNKNOWN';
+  };
+
+  const handleSetAvailability = async (date, status) => {
+    setSavingAvailability(true);
+    try {
+      const dateStr = format(date, 'yyyy-MM-dd');
+      if (status === 'CLEAR') {
+        await api.clearAvailability(workspaceId, dateStr);
+        setAvailability(prev => prev.filter(a =>
+          !(a.user?.id === user?.id && format(new Date(a.date), 'yyyy-MM-dd') === dateStr)
+        ));
+      } else {
+        const result = await api.setAvailability(workspaceId, dateStr, status);
+        setAvailability(prev => {
+          const existingIdx = prev.findIndex(a =>
+            a.user?.id === user?.id && format(new Date(a.date), 'yyyy-MM-dd') === dateStr
+          );
+          if (existingIdx >= 0) {
+            const updated = [...prev];
+            updated[existingIdx] = result;
+            return updated;
+          }
+          return [...prev, result];
+        });
+      }
+      setAvailabilityDate(null);
+      toast.success('Availability updated');
+    } catch (err) {
+      toast.error(err.message || 'Failed to set availability');
+    } finally {
+      setSavingAvailability(false);
     }
   };
 
@@ -1020,6 +1063,7 @@ function GigCalendar({ workspaceId, workspace }) {
                 const isCurrentMonth = isSameMonth(day, currentMonth);
                 const dayAvail = availabilityByDate[dateKey];
                 const hasAvailability = dayAvail && (dayAvail.available.length > 0 || dayAvail.unavailable.length > 0 || dayAvail.maybe.length > 0);
+                const myStatus = getMyAvailabilityStatus(day);
 
                 return (
                   <div
@@ -1028,6 +1072,10 @@ function GigCalendar({ workspaceId, workspace }) {
                       setSelectedDate(day);
                       setEditingGig(null);
                       setShowForm(true);
+                    }}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setAvailabilityDate(day);
                     }}
                     onDragOver={(e) => handleDragOver(e, day)}
                     onDragLeave={handleDragLeave}
@@ -1038,10 +1086,21 @@ function GigCalendar({ workspaceId, workspace }) {
                       isDropTarget ? 'bg-green-900/40 ring-2 ring-green-500 ring-inset' : ''
                     }`}
                   >
-                    <div className={`text-sm mb-1 ${
+                    <div className={`text-sm mb-1 flex items-center justify-between ${
                       isToday(day) ? 'text-blue-400 font-bold' : isCurrentMonth ? 'text-gray-400' : 'text-gray-600'
                     }`}>
-                      {format(day, 'd')}
+                      <span>{format(day, 'd')}</span>
+                      {/* My availability indicator */}
+                      {showAvailability && myStatus !== 'UNKNOWN' && (
+                        <span
+                          className={`w-2.5 h-2.5 rounded-full ${
+                            myStatus === 'AVAILABLE' ? 'bg-green-500' :
+                            myStatus === 'UNAVAILABLE' ? 'bg-red-500' :
+                            'bg-yellow-500'
+                          }`}
+                          title={`My status: ${myStatus.toLowerCase()}`}
+                        />
+                      )}
                     </div>
                     <div className="space-y-1">
                       {filteredDayGigs.slice(0, 3).map(gig => {
@@ -1386,6 +1445,74 @@ function GigCalendar({ workspaceId, workspace }) {
                 Import as Gig
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Set Availability Modal */}
+      {availabilityDate && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+          onClick={() => setAvailabilityDate(null)}
+        >
+          <div
+            className="bg-[var(--color-bg-secondary)] rounded-lg p-6 w-full max-w-sm border border-[var(--color-border)]"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">
+              Set My Availability
+            </h3>
+            <p className="text-[var(--color-text-muted)] mb-4">
+              {format(availabilityDate, 'EEEE, MMMM d, yyyy')}
+            </p>
+
+            <div className="space-y-2">
+              <button
+                onClick={() => handleSetAvailability(availabilityDate, 'AVAILABLE')}
+                disabled={savingAvailability}
+                className="w-full flex items-center gap-3 p-3 rounded bg-green-600 hover:bg-green-500 text-white disabled:opacity-50"
+              >
+                <span className="text-lg">✓</span>
+                Available
+              </button>
+              <button
+                onClick={() => handleSetAvailability(availabilityDate, 'MAYBE')}
+                disabled={savingAvailability}
+                className="w-full flex items-center gap-3 p-3 rounded bg-yellow-600 hover:bg-yellow-500 text-white disabled:opacity-50"
+              >
+                <span className="text-lg">?</span>
+                Maybe
+              </button>
+              <button
+                onClick={() => handleSetAvailability(availabilityDate, 'UNAVAILABLE')}
+                disabled={savingAvailability}
+                className="w-full flex items-center gap-3 p-3 rounded bg-red-600 hover:bg-red-500 text-white disabled:opacity-50"
+              >
+                <span className="text-lg">✗</span>
+                Unavailable
+              </button>
+              {getMyAvailabilityStatus(availabilityDate) !== 'UNKNOWN' && (
+                <button
+                  onClick={() => handleSetAvailability(availabilityDate, 'CLEAR')}
+                  disabled={savingAvailability}
+                  className="w-full flex items-center gap-3 p-3 rounded bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-border)] text-[var(--color-text-secondary)] disabled:opacity-50"
+                >
+                  <span className="text-lg">○</span>
+                  Clear
+                </button>
+              )}
+            </div>
+
+            <p className="text-[var(--color-text-muted)] text-xs mt-4 text-center">
+              Right-click any date to set availability
+            </p>
+
+            <button
+              onClick={() => setAvailabilityDate(null)}
+              className="w-full mt-3 p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}

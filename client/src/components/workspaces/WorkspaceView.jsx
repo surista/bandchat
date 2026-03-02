@@ -26,7 +26,6 @@ function lazyRetry(importFn) {
 const SongList = lazyRetry(() => import('../band/SongList'));
 const SetlistList = lazyRetry(() => import('../band/SetlistList'));
 const GigCalendar = lazyRetry(() => import('../band/GigCalendar'));
-const AvailabilityCalendar = lazyRetry(() => import('../band/AvailabilityCalendar'));
 const GigStats = lazyRetry(() => import('../band/GigStats'));
 const GigArchive = lazyRetry(() => import('../band/GigArchive'));
 const BandMembersList = lazyRetry(() => import('../band/BandMembers/BandMembersList'));
@@ -59,7 +58,6 @@ const BAND_VIEW_TITLES = {
   songs: 'Songs',
   setlists: 'Setlists',
   calendar: 'Calendar',
-  availability: 'Availability',
   stats: 'Stats',
   archive: 'Gig Archive',
   members: 'Members',
@@ -81,7 +79,6 @@ const BAND_VIEW_COMPONENTS = {
   songs: SongList,
   setlists: SetlistList,
   calendar: GigCalendar,
-  availability: AvailabilityCalendar,
   stats: GigStats,
   archive: GigArchive,
   members: BandMembersList,
