@@ -210,7 +210,4 @@ function parseICSMultiple(icsContent) {
   return events;
 }
 
-module.exports = {
-  parseICS,
-  parseICSMultiple,
-};
+export { parseICS, parseICSMultiple };
