@@ -2,7 +2,7 @@
 
 Comprehensive technical reference for the BandChat platform — a real-time communication and management app for bands.
 
-**Version:** v1.03.52
+**Version:** v1.03.81
 **Last updated:** March 2026
 
 ---
@@ -577,7 +577,7 @@ prisma generate && prisma db push && node src/index.js
 client/src/
 ├── components/
 │   ├── auth/           # Login, Signup, GoogleSignInButton, ForgotPassword, ResetPassword
-│   ├── band/           # Songs, Setlists, Calendar, Stats, Members, Kitty, etc. (22 components)
+│   ├── band/           # Songs, Setlists, Calendar, Stats, Members, Practice, Kitty, etc. (23 components)
 │   ├── channels/       # Sidebar, ChannelView, ChannelMembersPanel, PinnedMessages
 │   ├── common/         # ConfirmDialog, ContextMenu, Footer, MemberProfile, Skeleton, etc.
 │   ├── legal/          # PrivacyPolicy, TermsOfService

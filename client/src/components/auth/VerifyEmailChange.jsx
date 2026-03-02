@@ -59,7 +59,7 @@ function VerifyEmailChange() {
             <p className="text-gray-600 mt-2">{message}</p>
             <button
               onClick={() => navigate('/')}
-              className="mt-6 bg-slack-purple text-white px-6 py-2 rounded-lg hover:bg-opacity-90 transition-colors"
+              className="mt-6 bg-[#4A154B] text-white px-6 py-2 rounded-lg hover:bg-[#3D1140] transition-colors"
             >
               Go to BandChat
             </button>
@@ -77,7 +77,7 @@ function VerifyEmailChange() {
             <p className="text-gray-600 mt-2">{message}</p>
             <button
               onClick={() => navigate('/')}
-              className="mt-6 bg-slack-purple text-white px-6 py-2 rounded-lg hover:bg-opacity-90 transition-colors"
+              className="mt-6 bg-[#4A154B] text-white px-6 py-2 rounded-lg hover:bg-[#3D1140] transition-colors"
             >
               Go to BandChat
             </button>

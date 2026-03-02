@@ -119,8 +119,20 @@ function PollsList({ workspaceId }) {
       {/* Polls List */}
       <div className="flex-1 overflow-y-auto p-4">
         {polls.length === 0 ? (
-          <div className="text-center text-[var(--color-text-muted)] py-12">
-            No {showClosed ? '' : 'active '}polls yet. Create one to get your band's opinion!
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="text-5xl mb-4">🗳️</div>
+            <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
+              No {showClosed ? '' : 'active '}polls yet
+            </h3>
+            <p className="text-[var(--color-text-muted)] max-w-sm mb-4">
+              Make band decisions together. Create polls to vote on new songs, gig dates, or anything else.
+            </p>
+            <button
+              onClick={() => { setEditingPoll(null); setShowForm(true); }}
+              className="btn bg-green-600 hover:bg-green-700 text-white"
+            >
+              + Create Poll
+            </button>
           </div>
         ) : (
           <div className="space-y-4">

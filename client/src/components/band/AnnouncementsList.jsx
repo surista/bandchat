@@ -110,9 +110,24 @@ function AnnouncementsList({ workspaceId, workspace }) {
       {/* Announcements List */}
       <div className="flex-1 overflow-y-auto p-4">
         {announcements.length === 0 ? (
-          <div className="text-center text-[var(--color-text-muted)] py-12">
-            No announcements yet.
-            {isAdmin && ' Create one to share important updates with your band.'}
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="text-5xl mb-4">📢</div>
+            <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
+              No announcements yet
+            </h3>
+            <p className="text-[var(--color-text-muted)] max-w-sm mb-4">
+              {isAdmin
+                ? 'Share important updates with your band. Announcements can be pinned and require acknowledgment.'
+                : 'Announcements from your band will appear here.'}
+            </p>
+            {isAdmin && (
+              <button
+                onClick={() => { setEditingAnnouncement(null); setShowForm(true); }}
+                className="btn bg-green-600 hover:bg-green-700 text-white"
+              >
+                + Create Announcement
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-4">

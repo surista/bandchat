@@ -2,6 +2,19 @@
 
 All notable changes to BandChat will be documented in this file.
 
+## [1.03.81] - 2026-03-02
+
+### Added
+- **Practice Dashboard (Web)**: View your practice history, streaks, and stats on the web. Log practice sessions from Songs, track your day streak, total time, and session count. Sessions grouped by date with delete support.
+- **Improved Empty States**: All major list views (Songs, Setlists, Gigs, Contacts, Polls, Announcements, Medleys, Recordings) now feature helpful empty states with icons, descriptions, and action buttons.
+
+### Fixed
+- **Push Notification Deep-Linking**: Tapping a native push notification (iOS/Android) now navigates to the relevant channel/message instead of just opening the app.
+
+### Documentation
+- **Platform-Specific Features Guide**: Added documentation in CLAUDE.md explaining which features are desktop-only, mobile-only, or both, with rationale for each.
+- **Empty State Guidelines**: Added coding guidelines for consistent empty state design.
+
 ## [1.02.13] - 2026-01-21
 
 ### Added

@@ -867,8 +867,20 @@ function GigCalendar({ workspaceId, workspace }) {
           /* List View */
           <div className="space-y-4">
             {upcomingGigs.length === 0 ? (
-              <div className="text-center text-gray-400 py-12">
-                No upcoming events
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="text-5xl mb-4">📅</div>
+                <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
+                  No upcoming events
+                </h3>
+                <p className="text-[var(--color-text-muted)] max-w-sm mb-4">
+                  Schedule gigs, rehearsals, and other events to keep your band organized.
+                </p>
+                <button
+                  onClick={() => { setEditingGig(null); setShowForm(true); }}
+                  className="btn bg-green-600 hover:bg-green-700 text-white"
+                >
+                  + Add Event
+                </button>
               </div>
             ) : (
               upcomingGigs.map(gig => (

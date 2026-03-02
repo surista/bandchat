@@ -64,7 +64,19 @@ class NativePushService {
     // Listen for notification taps (app opened from notification)
     const tapListener = await Push.addListener('pushNotificationActionPerformed', (action) => {
       if (import.meta.env.DEV) console.log('Push notification tapped:', action);
-      // TODO: Navigate to the relevant channel/message
+
+      // Navigate to the relevant channel/message
+      const data = action.notification?.data;
+      if (data?.url) {
+        // Use the URL from the notification payload
+        window.location.href = data.url;
+      } else if (data?.workspaceId && data?.channelId) {
+        // Fallback: construct URL from workspaceId and channelId
+        window.location.href = `/workspace/${data.workspaceId}?channel=${data.channelId}`;
+      } else if (data?.workspaceId) {
+        // Just go to the workspace if no channel specified
+        window.location.href = `/workspace/${data.workspaceId}`;
+      }
     });
     this.listeners.push(tapListener);
 

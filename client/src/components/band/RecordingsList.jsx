@@ -420,10 +420,20 @@ export default function RecordingsList({ workspaceId }) {
 
       {/* Recordings Grid */}
       {recordings.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
-          <p className="text-4xl mb-4">🎙️</p>
-          <p className="text-lg">No recordings yet</p>
-          <p className="text-sm mt-2">Capture song ideas, demos, or rehearsal clips!</p>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="text-5xl mb-4">🎙️</div>
+          <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
+            No recordings yet
+          </h3>
+          <p className="text-[var(--color-text-muted)] max-w-sm mb-4">
+            Capture song ideas, demos, rehearsal takes, or live recordings to share with your band.
+          </p>
+          <button
+            onClick={() => { setEditingRecording(null); setShowForm(true); }}
+            className="btn bg-green-600 hover:bg-green-700 text-white"
+          >
+            + Add Recording
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

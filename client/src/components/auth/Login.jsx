@@ -128,7 +128,7 @@ function Login() {
           </div>
 
           <div className="mb-6 text-right">
-            <Link to="/forgot-password" className="text-sm text-slack-purple hover:underline">
+            <Link to="/forgot-password" className="text-sm text-[#4A154B] hover:underline">
               Forgot password?
             </Link>
           </div>
@@ -136,14 +136,14 @@ function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-slack-purple text-white py-3 rounded font-medium hover:bg-slack-purple-dark transition-colors disabled:opacity-50"
+            className="w-full bg-[#4A154B] text-white py-3 rounded font-medium hover:bg-[#3D1140] transition-colors disabled:opacity-50"
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
 
           <p className="text-center mt-6 text-gray-600">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-slack-purple font-medium hover:underline">
+            <Link to="/signup" className="text-[#4A154B] font-medium hover:underline">
               Sign up
             </Link>
           </p>

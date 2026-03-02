@@ -123,10 +123,24 @@ function ContactsList({ workspaceId }) {
       {/* Contacts List */}
       <div className="flex-1 overflow-y-auto p-4">
         {filteredContacts.length === 0 ? (
-          <div className="text-center text-[var(--color-text-muted)] py-12">
-            {contacts.length === 0
-              ? 'No contacts yet. Add your first contact!'
-              : 'No contacts match your filters.'}
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="text-5xl mb-4">{contacts.length === 0 ? '📇' : '🔍'}</div>
+            <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
+              {contacts.length === 0 ? 'No contacts yet' : 'No matches found'}
+            </h3>
+            <p className="text-[var(--color-text-muted)] max-w-sm mb-4">
+              {contacts.length === 0
+                ? 'Save venues, sound engineers, promoters, and other contacts your band works with.'
+                : 'Try a different search term or category filter.'}
+            </p>
+            {contacts.length === 0 && (
+              <button
+                onClick={() => { setEditingContact(null); setShowForm(true); }}
+                className="btn bg-green-600 hover:bg-green-700 text-white"
+              >
+                + Add Contact
+              </button>
+            )}
           </div>
         ) : filterCategory === 'all' ? (
           // Grouped view

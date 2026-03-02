@@ -776,8 +776,20 @@ function SetlistList({ workspaceId, workspaceName }) {
         )}
 
         {setlists.length === 0 ? (
-          <div className="text-center text-[var(--color-text-muted)] py-12">
-            No setlists yet. Create your first setlist!
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="text-5xl mb-4">📋</div>
+            <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
+              No setlists yet
+            </h3>
+            <p className="text-[var(--color-text-muted)] max-w-sm mb-4">
+              Setlists help you organize songs for gigs and rehearsals. Add MC sections, set breaks, and see total duration.
+            </p>
+            <button
+              onClick={() => { setEditingSetlist(null); setShowBuilder(true); }}
+              className="btn bg-green-600 hover:bg-green-700 text-white"
+            >
+              + Create Setlist
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -40,6 +40,7 @@ const RecordingsList = lazyRetry(() => import('../band/RecordingsList'));
 const SongSuggestions = lazyRetry(() => import('../band/SongSuggestions'));
 const BandKitty = lazyRetry(() => import('../band/BandKitty'));
 const AudioAnalyzer = lazyRetry(() => import('../band/AudioAnalyzer'));
+const PracticeDashboard = lazyRetry(() => import('../band/PracticeDashboard'));
 
 /** Safe search-highlight renderer — no dangerouslySetInnerHTML */
 function HighlightedText({ text, query }) {
@@ -72,6 +73,7 @@ const BAND_VIEW_TITLES = {
   suggestions: 'Song Intelligence',
   kitty: 'Band Kitty',
   analyzer: 'Audio Analyzer',
+  practice: 'Practice',
 };
 
 /** Lookup for band view components */
@@ -93,6 +95,7 @@ const BAND_VIEW_COMPONENTS = {
   suggestions: SongSuggestions,
   kitty: BandKitty,
   analyzer: AudioAnalyzer,
+  practice: PracticeDashboard,
 };
 
 /** Props that need extra data beyond workspaceId */

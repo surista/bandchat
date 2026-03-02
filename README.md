@@ -26,7 +26,7 @@ A real-time communication and management app for bands. Think Slack, but built s
 - **Medleys** — Group songs into medleys within setlists
 - **Calendar** — Schedule gigs, rehearsals, and recording sessions with venue, address, pay tracking, device calendar sync, and iCal feed
 - **Gig Management** — Track attendance, mark gigs complete, view gig history, live mode during performances
-- **Practice Tracker** — Log practice sessions with streaks, timezone-aware calculations
+- **Practice Dashboard** — Log practice sessions, track streaks and total time, view history grouped by date
 - **Stats** — Gigs played, total revenue, most played songs, songs never performed, band achievements
 - **Band Members** — Timeline of current, former, and guest musicians with instrument tracking
 - **Availability** — Members can mark their availability for upcoming dates

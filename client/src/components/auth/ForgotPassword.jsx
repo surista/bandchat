@@ -51,7 +51,7 @@ function ForgotPassword() {
                 </p>
                 <Link
                   to="/login"
-                  className="inline-block bg-slack-purple text-white px-6 py-2 rounded font-medium hover:bg-slack-purple-dark transition-colors"
+                  className="inline-block bg-[#4A154B] text-white px-6 py-2 rounded font-medium hover:bg-[#3D1140] transition-colors"
                 >
                   Back to Login
                 </Link>
@@ -82,14 +82,14 @@ function ForgotPassword() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-slack-purple text-white py-3 rounded font-medium hover:bg-slack-purple-dark transition-colors disabled:opacity-50"
+                  className="w-full bg-[#4A154B] text-white py-3 rounded font-medium hover:bg-[#3D1140] transition-colors disabled:opacity-50"
                 >
                   {loading ? 'Sending...' : 'Send Reset Link'}
                 </button>
 
                 <p className="text-center mt-6 text-gray-600">
                   Remember your password?{' '}
-                  <Link to="/login" className="text-slack-purple font-medium hover:underline">
+                  <Link to="/login" className="text-[#4A154B] font-medium hover:underline">
                     Sign in
                   </Link>
                 </p>

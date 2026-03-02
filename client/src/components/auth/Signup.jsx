@@ -178,21 +178,21 @@ function Signup() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-slack-purple text-white py-3 rounded font-medium hover:bg-slack-purple-dark transition-colors disabled:opacity-50"
+            className="w-full bg-[#4A154B] text-white py-3 rounded font-medium hover:bg-[#3D1140] transition-colors disabled:opacity-50"
           >
             {loading ? 'Creating account...' : 'Create Account'}
           </button>
 
           <p className="text-center mt-3 text-xs text-gray-400">
             By creating an account, you agree to our{' '}
-            <Link to="/terms" className="text-slack-purple hover:underline">Terms of Service</Link>
+            <Link to="/terms" className="text-[#4A154B] hover:underline">Terms of Service</Link>
             {' '}and{' '}
-            <Link to="/privacy" className="text-slack-purple hover:underline">Privacy Policy</Link>.
+            <Link to="/privacy" className="text-[#4A154B] hover:underline">Privacy Policy</Link>.
           </p>
 
           <p className="text-center mt-6 text-gray-600">
             Already have an account?{' '}
-            <Link to="/login" className="text-slack-purple font-medium hover:underline">
+            <Link to="/login" className="text-[#4A154B] font-medium hover:underline">
               Sign in
             </Link>
           </p>

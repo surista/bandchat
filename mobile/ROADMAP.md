@@ -115,3 +115,29 @@
 - Setlist performers (view/edit who played each setlist)
 - Cross-workspace calendar view (see gigs from all bands)
 - Add gig to device calendar (expo-calendar integration)
+
+---
+
+## Platform-Specific Features
+
+Some features are intentionally available on only one platform:
+
+### Desktop/Web Only
+| Feature | Reason |
+|---------|--------|
+| Audio Analyzer | CPU-intensive WASM (Essentia.js), file system access |
+| Slack Import Wizard | One-time admin task, large file uploads |
+| Bulk song import (paste) | Easier with keyboard and clipboard |
+| Workspace data export | Large JSON downloads |
+
+### Mobile Only
+| Feature | Reason |
+|---------|--------|
+| Live Mode (optimized) | On-stage use with phone |
+| Device calendar sync | Native calendar integration |
+| Camera for gig photos | Direct capture |
+| Haptic feedback | Touch-specific |
+| Offline detection banner | Mobile connectivity |
+
+### Both Platforms
+All core features (messaging, songs, setlists, gigs, practice, polls, etc.) are available on both web and mobile.

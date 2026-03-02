@@ -441,8 +441,44 @@ function SongList({ workspaceId, onSelectSong }) {
         )}
 
         {filteredSongs.length === 0 ? (
-          <div className="text-center text-[var(--color-text-muted)] py-12">
-            {searchQuery ? 'No songs found matching your search.' : 'No songs yet. Add your first song!'}
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="text-5xl mb-4">{searchQuery ? '🔍' : '🎵'}</div>
+            <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
+              {searchQuery ? 'No songs found' : 'No songs yet'}
+            </h3>
+            <p className="text-[var(--color-text-muted)] max-w-sm mb-4">
+              {searchQuery
+                ? 'Try a different search term or clear your filters.'
+                : 'Build your repertoire by adding songs one at a time, or use Bulk Import to add many at once.'}
+            </p>
+            {!searchQuery && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setEditingSong(null); setShowForm(true); }}
+                  className="btn bg-green-600 hover:bg-green-700 text-white"
+                >
+                  + Add Song
+                </button>
+                <button
+                  onClick={async () => {
+                    setBulkText('');
+                    setBulkResults(null);
+                    setShowBulkImport(true);
+                    try {
+                      const status = await api.getMetadataStatus();
+                      setMetadataConfigured(status.configured);
+                      setFetchMetadata(status.configured);
+                    } catch {
+                      setMetadataConfigured(false);
+                      setFetchMetadata(false);
+                    }
+                  }}
+                  className="btn btn-secondary"
+                >
+                  Bulk Import
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

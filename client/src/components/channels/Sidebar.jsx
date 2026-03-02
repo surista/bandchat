@@ -779,6 +779,7 @@ function Sidebar({
                   { id: 'setlists', label: 'Setlists', icon: '📋' },
                   { id: 'medleys', label: 'Medleys', icon: '🎶' },
                   { id: 'recordings', label: 'Recordings', icon: '🎙️' },
+                  { id: 'practice', label: 'Practice', icon: '🎯' },
                   { id: 'suggestions', label: 'Song Intelligence', icon: '💡' },
                   { id: 'analyzer', label: 'Audio Analyzer', icon: '🔊' },
                 ]

@@ -166,3 +166,69 @@ Mobile app: EAS Build (Expo Application Services) for iOS/Android.
 - **Server-side changes** (new endpoints, response shape changes) — update BOTH clients that consume them
 
 Before marking a task as complete, ask yourself: "Does the other platform need this change too?" If the answer is yes or maybe, apply it to both in the same commit.
+
+## Platform-Specific Features
+
+While most features should exist on both web and mobile, some features make sense on only one platform due to device capabilities or use context.
+
+### Desktop/Web Only
+These features work better with a keyboard, mouse, or larger screen:
+
+| Feature | Rationale |
+|---------|-----------|
+| **Audio Analyzer** | CPU-intensive WASM (Essentia.js), needs file system access |
+| **Slack Import Wizard** | One-time admin task, requires uploading large ZIP files |
+| **Bulk song import** (paste large lists) | Easier with keyboard and clipboard |
+| **Complex setlist builder** | Drag-and-drop works better with mouse, multi-column layout |
+| **Workspace data export** | Admin task, downloads large JSON files |
+
+### Mobile Only
+These features leverage native device capabilities:
+
+| Feature | Rationale |
+|---------|-----------|
+| **Live Mode** (optimized) | Primary use case is on-stage with phone in hand |
+| **Add gig to device calendar** | Native calendar integration via Expo Calendar |
+| **Camera for gig photos** | Direct capture vs upload |
+| **Haptic feedback** | Touch-specific feedback |
+| **Quick attendance RSVP** | Tap from push notification |
+| **Offline detection banner** | More relevant for mobile connectivity |
+
+### Both Platforms (Core Features)
+All communication and reference features should work on both:
+
+- Messaging, channels, threads, reactions
+- Song list, setlists, gigs, calendar
+- Members, contacts, polls, announcements
+- Settings, profile, themes
+- Push notifications
+- Practice Dashboard
+
+### Implementation Notes
+- When adding a desktop-only feature, add a note in the relevant mobile screen (if applicable) saying "Use the web app for [feature]"
+- When adding a mobile-only feature, document it in `mobile/ROADMAP.md`
+- Core features added to one platform should be added to the other in the same PR when possible
+
+## Empty State Guidelines
+
+Empty states should be helpful and actionable. Follow this pattern:
+
+```jsx
+<div className="flex flex-col items-center justify-center py-16 text-center">
+  <div className="text-5xl mb-4">{emoji}</div>
+  <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
+    {title}
+  </h3>
+  <p className="text-[var(--color-text-muted)] max-w-sm mb-4">
+    {helpfulDescription}
+  </p>
+  <button className="btn bg-green-600 hover:bg-green-700 text-white">
+    + {actionLabel}
+  </button>
+</div>
+```
+
+- Include a relevant emoji icon
+- Use a clear title ("No songs yet" not just "Empty")
+- Provide a helpful description explaining the feature's purpose
+- Include an action button when the user can create content
