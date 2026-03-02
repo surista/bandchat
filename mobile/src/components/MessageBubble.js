@@ -29,6 +29,7 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
   const avatarColor = getAvatarColor(displayName);
   const isPending = message.pending;
   const isEdited = message.updatedAt && message.updatedAt !== message.createdAt;
+  const [avatarError, setAvatarError] = useState(false);
 
   const handleLongPress = () => {
     if (!isPending && onLongPress) onLongPress(message);
@@ -88,8 +89,13 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
       accessibilityLabel={`${displayName}: ${message.content || 'attachment'}`}
     >
       <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
-        {author.avatarUrl ? (
-          <Image source={{ uri: author.avatarUrl }} style={styles.avatarImage} accessibilityLabel={`${displayName} avatar`} />
+        {author.avatarUrl && !avatarError ? (
+          <Image
+            source={{ uri: author.avatarUrl }}
+            style={styles.avatarImage}
+            accessibilityLabel={`${displayName} avatar`}
+            onError={() => setAvatarError(true)}
+          />
         ) : (
           <Text style={styles.avatarText}>{initial}</Text>
         )}
