@@ -41,6 +41,12 @@ const STATUS_COLORS = {
   CANCELLED: '#ef4444',
 };
 
+const AVAILABILITY_STATUS = {
+  AVAILABLE: { label: 'Available', color: '#22c55e', icon: '✓' },
+  MAYBE: { label: 'Maybe', color: '#eab308', icon: '?' },
+  UNAVAILABLE: { label: 'Unavailable', color: '#ef4444', icon: '✗' },
+};
+
 function formatGigDate(dateStr) {
   try {
     const d = parseISO(dateStr);
@@ -76,6 +82,11 @@ export default function GigListScreen({ navigation, route }) {
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [calendarUrl, setCalendarUrl] = useState('');
   const [calendarLoading, setCalendarLoading] = useState(false);
+
+  // Availability
+  const [availability, setAvailability] = useState({});
+  const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
+  const [availabilityDate, setAvailabilityDate] = useState(null);
 
   const loadingRef = useRef(loading);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
@@ -137,12 +148,19 @@ export default function GigListScreen({ navigation, route }) {
   const loadGigs = useCallback(async () => {
     try {
       const filters = typeFilter !== 'all' ? { type: typeFilter } : {};
-      const [data, other] = await Promise.all([
+      const [data, other, myAvail] = await Promise.all([
         api.getGigs(workspaceId, filters),
         showAllBands ? api.getGigsFromAllWorkspaces(workspaceId).catch(() => []) : Promise.resolve([]),
+        api.getMyAvailability(workspaceId).catch(() => []),
       ]);
       setGigs(data);
       setOtherGigs(showAllBands ? other : []);
+      // Index availability by date
+      const availMap = {};
+      for (const a of myAvail) {
+        if (a.date) availMap[a.date.split('T')[0]] = a.status;
+      }
+      setAvailability(availMap);
     } catch (err) {
       console.error('Failed to load gigs:', err);
     } finally {
@@ -250,6 +268,28 @@ export default function GigListScreen({ navigation, route }) {
     ]);
   }, [selectedGig]);
 
+  const handleSetAvailability = useCallback(async (status) => {
+    if (!availabilityDate) return;
+    try {
+      if (status === 'CLEAR') {
+        await api.clearAvailability(workspaceId, availabilityDate);
+        setAvailability(prev => {
+          const next = { ...prev };
+          delete next[availabilityDate];
+          return next;
+        });
+      } else {
+        await api.setAvailability(workspaceId, availabilityDate, status);
+        setAvailability(prev => ({ ...prev, [availabilityDate]: status }));
+      }
+      successNotification();
+    } catch (err) {
+      Alert.alert('Error', 'Failed to set availability');
+    }
+    setShowAvailabilityModal(false);
+    setAvailabilityDate(null);
+  }, [workspaceId, availabilityDate]);
+
   const renderGig = useCallback(({ item }) => {
     const typeColor = TYPE_COLORS[item.type] || TYPE_COLORS.OTHER;
     const isCancelled = item.status === 'CANCELLED';
@@ -257,6 +297,9 @@ export default function GigListScreen({ navigation, route }) {
     const timeStr = formatTimeRange(item.startTime, item.endTime);
     const setlistNames = (item.setlists || []).map(gs => gs.setlist?.name).filter(Boolean);
     const isOther = item._otherWorkspace;
+    const dateKey = item.date ? item.date.split('T')[0] : null;
+    const myStatus = dateKey ? availability[dateKey] : null;
+    const statusInfo = myStatus ? AVAILABILITY_STATUS[myStatus] : null;
 
     return (
       <TouchableOpacity
@@ -301,10 +344,19 @@ export default function GigListScreen({ navigation, route }) {
             </View>
           </View>
 
-          <Text style={[styles.gigDate, { color: colors.textSecondary }]}>
-            {item.date ? formatGigDate(item.date) : 'No date'}
-            {timeStr ? ` \u00B7 ${timeStr}` : ''}
-          </Text>
+          <View style={styles.dateRow}>
+            <Text style={[styles.gigDate, { color: colors.textSecondary }]}>
+              {item.date ? formatGigDate(item.date) : 'No date'}
+              {timeStr ? ` \u00B7 ${timeStr}` : ''}
+            </Text>
+            {statusInfo && (
+              <View style={[styles.availabilityBadge, { backgroundColor: statusInfo.color + '20' }]}>
+                <Text style={[styles.availabilityText, { color: statusInfo.color }]}>
+                  {statusInfo.icon} {statusInfo.label}
+                </Text>
+              </View>
+            )}
+          </View>
 
           {(isCompleted || isCancelled) && (
             <View style={[styles.statusBadge, { backgroundColor: (STATUS_COLORS[item.status] || '#6b7280') + '20' }]}>
@@ -332,7 +384,7 @@ export default function GigListScreen({ navigation, route }) {
         </View>
       </TouchableOpacity>
     );
-  }, [colors, navigation, workspaceId]);
+  }, [colors, navigation, workspaceId, availability]);
 
   const renderSectionHeader = useCallback(({ section }) => (
     <View style={styles.monthHeader}>
@@ -513,6 +565,21 @@ export default function GigListScreen({ navigation, route }) {
             <TouchableOpacity style={styles.actionItem} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate event">
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Duplicate</Text>
             </TouchableOpacity>
+            {selectedGig?.date && (
+              <TouchableOpacity
+                style={styles.actionItem}
+                onPress={() => {
+                  setShowActions(false);
+                  setAvailabilityDate(selectedGig.date.split('T')[0]);
+                  setShowAvailabilityModal(true);
+                  setSelectedGig(null);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Set availability for this date"
+              >
+                <Text style={[styles.actionText, { color: colors.primary }]}>Set Availability</Text>
+              </TouchableOpacity>
+            )}
             {selectedGig?.status === 'SCHEDULED' && (
               <TouchableOpacity style={styles.actionItem} onPress={handleComplete} accessibilityRole="button" accessibilityLabel="Mark event as complete">
                 <Text style={[styles.actionText, { color: '#22c55e' }]}>{'\u2713'} Mark Complete</Text>
@@ -524,6 +591,67 @@ export default function GigListScreen({ navigation, route }) {
             <TouchableOpacity
               style={[styles.actionItem, styles.actionCancel]}
               onPress={() => { setShowActions(false); setSelectedGig(null); }}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
+            >
+              <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Availability Modal */}
+      <Modal visible={showAvailabilityModal} transparent animationType="fade" onRequestClose={() => setShowAvailabilityModal(false)}>
+        <TouchableOpacity
+          style={styles.actionOverlay}
+          activeOpacity={1}
+          onPress={() => { setShowAvailabilityModal(false); setAvailabilityDate(null); }}
+          accessibilityRole="button"
+          accessibilityLabel="Close availability modal"
+        >
+          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
+            <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
+            <Text style={[styles.actionTitle, { color: colors.textPrimary }]}>Set Availability</Text>
+            <Text style={[styles.availabilityDateLabel, { color: colors.textSecondary }]}>
+              {availabilityDate ? format(parseISO(availabilityDate), 'EEEE, MMMM d, yyyy') : ''}
+            </Text>
+            <TouchableOpacity
+              style={[styles.availabilityOption, { backgroundColor: '#22c55e20' }]}
+              onPress={() => handleSetAvailability('AVAILABLE')}
+              accessibilityRole="button"
+              accessibilityLabel="Set as available"
+            >
+              <Text style={[styles.availabilityOptionText, { color: '#22c55e' }]}>✓ Available</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.availabilityOption, { backgroundColor: '#eab30820' }]}
+              onPress={() => handleSetAvailability('MAYBE')}
+              accessibilityRole="button"
+              accessibilityLabel="Set as maybe"
+            >
+              <Text style={[styles.availabilityOptionText, { color: '#eab308' }]}>? Maybe</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.availabilityOption, { backgroundColor: '#ef444420' }]}
+              onPress={() => handleSetAvailability('UNAVAILABLE')}
+              accessibilityRole="button"
+              accessibilityLabel="Set as unavailable"
+            >
+              <Text style={[styles.availabilityOptionText, { color: '#ef4444' }]}>✗ Unavailable</Text>
+            </TouchableOpacity>
+            {availability[availabilityDate] && (
+              <TouchableOpacity
+                style={[styles.availabilityOption, { backgroundColor: colors.bgTertiary }]}
+                onPress={() => handleSetAvailability('CLEAR')}
+                accessibilityRole="button"
+                accessibilityLabel="Clear availability"
+              >
+                <Text style={[styles.availabilityOptionText, { color: colors.textSecondary }]}>Clear</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[styles.actionItem, styles.actionCancel]}
+              onPress={() => { setShowAvailabilityModal(false); setAvailabilityDate(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
@@ -621,4 +749,11 @@ const styles = StyleSheet.create({
   workspaceBadgeText: { fontSize: 11, fontWeight: '700' },
   desktopHint: { paddingHorizontal: 12, paddingVertical: 6 },
   desktopHintText: { fontSize: 12, textAlign: 'center' },
+  // Availability
+  dateRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' },
+  availabilityBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  availabilityText: { fontSize: 11, fontWeight: '600' },
+  availabilityDateLabel: { fontSize: 14, textAlign: 'center', marginBottom: 16 },
+  availabilityOption: { paddingVertical: 16, borderRadius: 10, alignItems: 'center', marginBottom: 8, marginHorizontal: 16 },
+  availabilityOptionText: { fontSize: 17, fontWeight: '600' },
 });

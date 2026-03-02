@@ -36,7 +36,6 @@ const BAND_CATEGORIES = [
     key: 'band-gigs', label: 'Gigs', icon: '\uD83D\uDCC5',
     items: [
       { id: 'band-calendar', key: 'calendar', label: 'Calendar', icon: '\uD83D\uDCC5' },
-      { id: 'band-availability', key: 'availability', label: 'Availability', icon: '\uD83D\uDDD3\uFE0F' },
       { id: 'band-stats', key: 'stats', label: 'Stats', icon: '\uD83D\uDCCA' },
     ],
   },
@@ -392,7 +391,6 @@ export default function ChannelListScreen({ navigation, route }) {
       calendar: 'GigList',
       stats: 'Stats',
       members: 'BandMembers',
-      availability: 'Availability',
       contacts: 'Contacts',
       announcements: 'Announcements',
       polls: 'Polls',

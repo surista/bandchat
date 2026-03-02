@@ -12,7 +12,6 @@ import GigDetailScreen from '../screens/band/GigDetailScreen';
 import GigGalleryScreen from '../screens/band/GigGalleryScreen';
 import StatsScreen from '../screens/band/StatsScreen';
 import BandMembersScreen from '../screens/band/BandMembersScreen';
-import AvailabilityScreen from '../screens/band/AvailabilityScreen';
 import ContactsScreen from '../screens/band/ContactsScreen';
 import AnnouncementsScreen from '../screens/band/AnnouncementsScreen';
 import PollsScreen from '../screens/band/PollsScreen';
@@ -93,7 +92,6 @@ export default function AppStack() {
       <Stack.Screen name="GigGallery" component={GigGalleryScreen} options={({ route }) => ({ title: route.params?.gigTitle ? `${route.params.gigTitle} - Gallery` : 'Gallery' })} />
       <Stack.Screen name="Stats" component={StatsScreen} options={{ title: 'Stats' }} />
       <Stack.Screen name="BandMembers" component={BandMembersScreen} options={{ title: 'Members' }} />
-      <Stack.Screen name="Availability" component={AvailabilityScreen} options={{ title: 'Availability' }} />
       <Stack.Screen name="Contacts" component={ContactsScreen} options={{ title: 'Contacts' }} />
       <Stack.Screen name="Announcements" component={AnnouncementsScreen} options={{ title: 'Announcements' }} />
       <Stack.Screen name="Polls" component={PollsScreen} options={{ title: 'Polls' }} />
