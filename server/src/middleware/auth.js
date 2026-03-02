@@ -18,7 +18,8 @@ export const authenticate = async (req, res, next) => {
         id: true,
         email: true,
         displayName: true,
-        avatarUrl: true
+        avatarUrl: true,
+        isSystemAdmin: true
       }
     });
 
@@ -124,4 +125,11 @@ export const isChannelMember = async (req, res, next) => {
   } catch (error) {
     return res.status(500).json({ error: 'Authorization failed' });
   }
+};
+
+export const isSystemAdmin = (req, res, next) => {
+  if (!req.user?.isSystemAdmin) {
+    return res.status(403).json({ error: 'System admin access required' });
+  }
+  next();
 };

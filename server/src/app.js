@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 import authRoutes from './routes/auth.js';
 import workspaceRoutes from './routes/workspaces.js';
@@ -29,6 +31,7 @@ import slackImportRoutes from './routes/slackImport.js';
 import reportRoutes from './routes/reports.js';
 import blockRoutes from './routes/blocks.js';
 import practiceRoutes from './routes/practice.js';
+import adminRoutes from './routes/admin.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 
 export function createApp() {
@@ -49,6 +52,15 @@ export function createApp() {
       return origin.replace('http://', 'ws://');
     }
     return origin;
+  });
+
+  // Admin dashboard — standalone HTML with its own CSP (served before Helmet)
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  app.get('/admin', (req, res) => {
+    res.setHeader('Content-Security-Policy',
+      "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: https://res.cloudinary.com; connect-src 'self'; frame-ancestors 'none'"
+    );
+    res.sendFile(path.join(__dirname, 'admin', 'index.html'));
   });
 
   // Middleware
@@ -104,6 +116,7 @@ export function createApp() {
   app.use('/api/reports', reportRoutes);
   app.use('/api/blocks', blockRoutes);
   app.use('/api/practice', practiceRoutes);
+  app.use('/api/admin', adminRoutes);
 
   // Health check
   app.get('/api/health', (req, res) => {

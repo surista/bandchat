@@ -52,22 +52,22 @@ export default function InviteScreen({ route }) {
   }, [loadInviteData]);
 
   const handleCopy = useCallback(async () => {
-    if (!inviteData?.code) return;
-    await Clipboard.setStringAsync(inviteData.code);
+    if (!inviteData?.inviteCode) return;
+    await Clipboard.setStringAsync(inviteData.inviteCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  }, [inviteData?.code]);
+  }, [inviteData?.inviteCode]);
 
   const handleShare = useCallback(async () => {
-    if (!inviteData?.code) return;
+    if (!inviteData?.inviteCode) return;
     try {
       await Share.share({
-        message: `Join our band on BandChat! Use invite code: ${inviteData.code}`,
+        message: `Join our band on BandChat! Use invite code: ${inviteData.inviteCode}`,
       });
     } catch {
       // User cancelled
     }
-  }, [inviteData?.code]);
+  }, [inviteData?.inviteCode]);
 
   const handleRegenerate = useCallback(async () => {
     Alert.alert(
@@ -127,7 +127,7 @@ export default function InviteScreen({ route }) {
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
           <View style={[styles.codeBox, { backgroundColor: colors.bgTertiary }]}>
             <Text style={[styles.codeText, { color: colors.textPrimary }]}>
-              {inviteData?.code || 'N/A'}
+              {inviteData?.inviteCode || 'N/A'}
             </Text>
           </View>
 
@@ -136,9 +136,9 @@ export default function InviteScreen({ route }) {
               Expires: {new Date(inviteData.expiresAt).toLocaleDateString()}
             </Text>
           )}
-          {inviteData?.useCount != null && (
+          {inviteData?.usedCount != null && (
             <Text style={[styles.meta, { color: colors.textSecondary }]}>
-              Used {inviteData.useCount} time{inviteData.useCount !== 1 ? 's' : ''}
+              Used {inviteData.usedCount} time{inviteData.usedCount !== 1 ? 's' : ''}
               {inviteData.maxUses ? ` / ${inviteData.maxUses}` : ''}
             </Text>
           )}

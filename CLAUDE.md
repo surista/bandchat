@@ -72,8 +72,9 @@ bandchat/
 │   └── package.json
 ├── server/                 # Express backend
 │   ├── src/
-│   │   ├── routes/         # 26 route modules (auth, channels, messages, songs, etc.)
-│   │   ├── middleware/      # Auth (JWT), rate limiting
+│   │   ├── routes/         # 27 route modules (auth, channels, messages, songs, admin, etc.)
+│   │   ├── middleware/      # Auth (JWT), rate limiting, system admin
+│   │   ├── admin/          # System admin dashboard (standalone HTML, not bundled)
 │   │   ├── services/       # Slack text converter, emoji map
 │   │   ├── socket/         # Real-time event handlers
 │   │   ├── scripts/        # CLI utilities (import-slack, etc.)
@@ -124,8 +125,8 @@ bandchat/
 - Leave workspace, delete workspace
 - Onboarding wizard for new workspaces
 
-### Server Routes (26 modules)
-auth, channels, channelGroups, messages, workspaces, songs, setlists, gigs, bandMembers, availability, blocks, contacts, announcements, polls, timeline, achievements, recordings, medleys, kitty, uploads, push, linkPreview, suggestions, slackImport, practice, reports
+### Server Routes (27 modules)
+auth, channels, channelGroups, messages, workspaces, songs, setlists, gigs, bandMembers, availability, blocks, contacts, announcements, polls, timeline, achievements, recordings, medleys, kitty, uploads, push, linkPreview, suggestions, slackImport, practice, reports, admin
 
 ## Environment Variables
 
@@ -150,6 +151,20 @@ Mobile app: EAS Build (Expo Application Services) for iOS/Android.
 
 - NEVER add "Co-Authored-By" lines to commits
 - Keep commit messages short and descriptive
+
+## Admin Roles
+
+BandChat has two distinct admin concepts:
+
+| Role | Scope | Field | Purpose |
+|------|-------|-------|---------|
+| **System Admin** | Platform-wide | `User.isSystemAdmin` | Developer/ops access: admin dashboard at `/admin`, user management, platform stats |
+| **Workspace Admin** | Per workspace | `WorkspaceMember.role = 'ADMIN'` | Band leader: manages members, invites, settings, announcements, gig locking |
+
+- The `/admin` dashboard is a standalone HTML page served by Express — never bundled into client or mobile
+- System admin routes are at `/api/admin/*` and protected by `isSystemAdmin` middleware
+- Workspace admin routes use `isWorkspaceAdmin` middleware (unchanged)
+- The two roles are independent: a system admin is not automatically a workspace admin (and vice versa)
 
 ## Development Notes
 

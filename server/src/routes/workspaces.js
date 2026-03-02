@@ -153,6 +153,15 @@ router.get('/:workspaceId', authenticate, isWorkspaceMember, async (req, res) =>
       }
     });
 
+    // Strip invite fields for non-admins
+    const membership = workspace.members?.find(m => m.userId === req.user.id);
+    if (membership?.role !== 'ADMIN') {
+      delete workspace.inviteCode;
+      delete workspace.inviteCodeExpiresAt;
+      delete workspace.inviteMaxUses;
+      delete workspace.inviteUsedCount;
+    }
+
     res.json(workspace);
   } catch (error) {
     res.status(500).json({ error: 'Failed to get workspace' });

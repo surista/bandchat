@@ -187,14 +187,14 @@ export default function SettingsScreen({ navigation, route }) {
                 colors={colors}
               />
               <View style={[styles.separator, { backgroundColor: colors.border }]} />
+              <SettingsRow
+                icon={'\u2709\uFE0F'}
+                label="Invite People"
+                onPress={() => navigation.navigate('Invite', { workspaceId })}
+                colors={colors}
+              />
             </>
           )}
-          <SettingsRow
-            icon={'\u2709\uFE0F'}
-            label="Invite People"
-            onPress={() => navigation.navigate('Invite', { workspaceId })}
-            colors={colors}
-          />
         </View>
 
         {/* Legal */}
