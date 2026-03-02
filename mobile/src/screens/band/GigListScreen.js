@@ -394,6 +394,13 @@ export default function GigListScreen({ navigation, route }) {
         </TouchableOpacity>
       </ScrollView>
 
+      {/* Desktop feature hint */}
+      <View style={[styles.desktopHint, { backgroundColor: colors.bgTertiary }]}>
+        <Text style={[styles.desktopHintText, { color: colors.textMuted }]}>
+          Import calendar invites from web app
+        </Text>
+      </View>
+
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
@@ -612,4 +619,6 @@ const styles = StyleSheet.create({
   otherWorkspaceCard: { borderLeftWidth: 0, borderWidth: 1, borderColor: 'rgba(99,102,241,0.3)' },
   workspaceBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, marginBottom: 4 },
   workspaceBadgeText: { fontSize: 11, fontWeight: '700' },
+  desktopHint: { paddingHorizontal: 12, paddingVertical: 6 },
+  desktopHintText: { fontSize: 12, textAlign: 'center' },
 });

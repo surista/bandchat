@@ -9,6 +9,78 @@ import ContextMenu from '../common/ContextMenu';
 import useLongPress from '../../hooks/useLongPress';
 import Skeleton from '../common/Skeleton';
 
+// Compact single-line row for list view
+function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, onContextMenu }) {
+  const canEdit = !gig.isExternal && (!gig.isLocked || isAdmin);
+  const longPress = useLongPress({
+    onLongPress: (pos) => onContextMenu(pos),
+    onTap: canEdit ? onEdit : undefined,
+  });
+
+  return (
+    <div
+      className={`flex items-center gap-3 px-3 py-2 hover:bg-[var(--color-bg-tertiary)] rounded cursor-pointer group ${
+        gig.status === 'CANCELLED' ? 'opacity-50' : ''
+      }`}
+      {...longPress}
+    >
+      {/* Date */}
+      <div className="w-24 flex-shrink-0 text-sm">
+        <span className="text-[var(--color-text-primary)] font-medium">
+          {format(new Date(gig.date), 'MMM d')}
+        </span>
+        <span className="text-[var(--color-text-muted)] ml-1">
+          {format(new Date(gig.date), 'EEE')}
+        </span>
+      </div>
+
+      {/* Time */}
+      <div className="w-24 flex-shrink-0 text-sm text-[var(--color-text-secondary)]">
+        {formatTimeRange(gig.date, gig.endDate)}
+      </div>
+
+      {/* Title + Icons */}
+      <div className="flex-1 min-w-0 flex items-center gap-2">
+        {gig.isLocked && <span className="text-xs">🔒</span>}
+        {gig.isPersonal && <span className="text-xs">👤</span>}
+        <span className={`text-sm truncate ${gig.status === 'CANCELLED' ? 'line-through' : ''} text-[var(--color-text-primary)]`}>
+          {gig.title}
+        </span>
+        {gig.isExternal && (
+          <span className="text-xs text-[var(--color-text-muted)]">
+            ({gig.workspace?.name || 'Other'})
+          </span>
+        )}
+      </div>
+
+      {/* Venue */}
+      <div className="w-32 flex-shrink-0 text-sm text-[var(--color-text-muted)] truncate hidden md:block">
+        {gig.venue || '—'}
+      </div>
+
+      {/* Type badge */}
+      <div className="w-24 flex-shrink-0 text-right">
+        <span className={`text-xs px-2 py-0.5 rounded ${getTypeColor(gig.type, gig.isExternal, gig.workspaceId)} text-white`}>
+          {gig.type}
+        </span>
+      </div>
+
+      {/* Quick actions on hover */}
+      <div className="w-16 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end gap-1">
+        {canEdit && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] px-1"
+            title="Edit"
+          >
+            ✏️
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRange, onEdit, onDuplicate, onComplete, onDelete, onContextMenu, getGoogleCalendarUrl }) {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const canEdit = !gig.isExternal && (!gig.isLocked || isAdmin);
@@ -210,9 +282,17 @@ function GigCalendar({ workspaceId, workspace }) {
   const [selectedDate, setSelectedDate] = useState(null);
   // Default to list view on mobile for better usability
   const [view, setView] = useState(() => window.innerWidth < 768 ? 'list' : 'calendar');
+  const [listMode, setListMode] = useState('compact'); // 'compact' or 'cards'
   const [filterType, setFilterType] = useState('');
   const [deleteGigId, setDeleteGigId] = useState(null);
   const [gigContextMenu, setGigContextMenu] = useState(null); // { gigId, x, y }
+
+  // ICS Import
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [icsContent, setIcsContent] = useState('');
+  const [icsPreview, setIcsPreview] = useState(null);
+  const [icsImporting, setIcsImporting] = useState(false);
+  const [icsError, setIcsError] = useState('');
 
   // iCal subscribe
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
@@ -375,6 +455,63 @@ function GigCalendar({ workspaceId, workspace }) {
       document.body.removeChild(input);
       setIcalCopied(true);
       setTimeout(() => setIcalCopied(false), 2000);
+    }
+  };
+
+  // ICS Import handlers
+  const handleIcsFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      setIcsContent(text);
+      setIcsError('');
+      // Preview the content
+      const preview = await api.previewICS(workspaceId, text);
+      setIcsPreview(preview.events);
+    } catch (err) {
+      setIcsError(err.message || 'Failed to parse ICS file');
+      setIcsPreview(null);
+    }
+  };
+
+  const handleIcsTextChange = async (text) => {
+    setIcsContent(text);
+    setIcsError('');
+    setIcsPreview(null);
+
+    if (text.trim().length > 20 && text.includes('BEGIN:VCALENDAR')) {
+      try {
+        const preview = await api.previewICS(workspaceId, text);
+        setIcsPreview(preview.events);
+      } catch (err) {
+        setIcsError(err.message || 'Failed to parse ICS content');
+      }
+    }
+  };
+
+  const handleIcsImport = async (type = 'REHEARSAL') => {
+    if (!icsContent) return;
+
+    setIcsImporting(true);
+    setIcsError('');
+
+    try {
+      const result = await api.importICS(workspaceId, icsContent, type);
+      // Add new gigs to state
+      if (result.created && result.created.length > 0) {
+        setGigs(prev => [...prev, ...result.created].sort((a, b) => new Date(a.date) - new Date(b.date)));
+        toast.success(`Imported ${result.created.length} event(s)`);
+      }
+      // Close modal and reset
+      setShowImportModal(false);
+      setIcsContent('');
+      setIcsPreview(null);
+    } catch (err) {
+      setIcsError(err.message || 'Failed to import');
+    } finally {
+      setIcsImporting(false);
     }
   };
 
@@ -711,6 +848,24 @@ function GigCalendar({ workspaceId, workspace }) {
                 List
               </button>
             </div>
+            {view === 'list' && (
+              <div className="flex bg-[var(--color-bg-tertiary)] rounded overflow-hidden">
+                <button
+                  onClick={() => setListMode('compact')}
+                  className={`px-2 py-2 text-sm ${listMode === 'compact' ? 'bg-slate-600 text-white' : 'text-[var(--color-text-secondary)]'}`}
+                  title="Compact view"
+                >
+                  ≡
+                </button>
+                <button
+                  onClick={() => setListMode('cards')}
+                  className={`px-2 py-2 text-sm ${listMode === 'cards' ? 'bg-slate-600 text-white' : 'text-[var(--color-text-secondary)]'}`}
+                  title="Card view"
+                >
+                  ▦
+                </button>
+              </div>
+            )}
             <button
               onClick={handleSubscribe}
               disabled={icalLoading}
@@ -719,6 +874,15 @@ function GigCalendar({ workspaceId, workspace }) {
             >
               {icalLoading ? '...' : 'Subscribe'}
             </button>
+            {isAdmin && (
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="btn bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-border)] text-[var(--color-text-secondary)] text-sm"
+                title="Import from calendar invite"
+              >
+                Import
+              </button>
+            )}
             <button
               onClick={() => {
                 setEditingGig(null);
@@ -865,7 +1029,7 @@ function GigCalendar({ workspaceId, workspace }) {
           </div>
         ) : (
           /* List View */
-          <div className="space-y-4">
+          <div className={listMode === 'compact' ? 'bg-[var(--color-bg-secondary)] rounded-lg divide-y divide-[var(--color-border)]' : 'space-y-4'}>
             {upcomingGigs.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="text-5xl mb-4">📅</div>
@@ -882,6 +1046,29 @@ function GigCalendar({ workspaceId, workspace }) {
                   + Add Event
                 </button>
               </div>
+            ) : listMode === 'compact' ? (
+              /* Compact list header */
+              <>
+                <div className="flex items-center gap-3 px-3 py-2 text-xs text-[var(--color-text-muted)] font-medium border-b border-[var(--color-border)]">
+                  <div className="w-24">Date</div>
+                  <div className="w-24">Time</div>
+                  <div className="flex-1">Event</div>
+                  <div className="w-32 hidden md:block">Venue</div>
+                  <div className="w-24 text-right">Type</div>
+                  <div className="w-16"></div>
+                </div>
+                {upcomingGigs.map(gig => (
+                  <GigCompactRow
+                    key={gig.id}
+                    gig={gig}
+                    isAdmin={isAdmin}
+                    getTypeColor={getTypeColor}
+                    formatTimeRange={formatTimeRange}
+                    onEdit={() => { setEditingGig(gig); setShowForm(true); }}
+                    onContextMenu={(pos) => setGigContextMenu({ gigId: gig.id, ...pos })}
+                  />
+                ))}
+              </>
             ) : (
               upcomingGigs.map(gig => (
                 <GigListCard
@@ -1026,6 +1213,103 @@ function GigCalendar({ workspaceId, workspace }) {
             <p className="text-[var(--color-text-muted)] text-xs mt-3">
               Most calendar apps support webcal:// links. If it does not open automatically, paste the URL manually in your calendar app's "subscribe" feature.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* ICS Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowImportModal(false)}>
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-6 w-full max-w-lg border border-[var(--color-border)]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-[var(--color-text-primary)]">Import Calendar Event</h3>
+              <button
+                onClick={() => { setShowImportModal(false); setIcsContent(''); setIcsPreview(null); setIcsError(''); }}
+                className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl"
+              >
+                &times;
+              </button>
+            </div>
+
+            <p className="text-[var(--color-text-muted)] text-sm mb-4">
+              Upload an .ics file or paste calendar invite content from Outlook, Google Calendar, etc.
+            </p>
+
+            {/* File upload */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+                Upload .ics file
+              </label>
+              <input
+                type="file"
+                accept=".ics,text/calendar"
+                onChange={handleIcsFileUpload}
+                className="block w-full text-sm text-[var(--color-text-secondary)] file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-medium file:bg-[var(--color-bg-tertiary)] file:text-[var(--color-text-primary)] hover:file:bg-[var(--color-border)]"
+              />
+            </div>
+
+            <div className="text-center text-[var(--color-text-muted)] text-sm mb-4">— or —</div>
+
+            {/* Paste content */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+                Paste .ics content
+              </label>
+              <textarea
+                value={icsContent}
+                onChange={(e) => handleIcsTextChange(e.target.value)}
+                placeholder="BEGIN:VCALENDAR&#10;..."
+                rows={4}
+                className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] text-sm font-mono"
+              />
+            </div>
+
+            {/* Error */}
+            {icsError && (
+              <div className="mb-4 p-3 bg-red-900/30 border border-red-500/50 rounded text-red-300 text-sm">
+                {icsError}
+              </div>
+            )}
+
+            {/* Preview */}
+            {icsPreview && icsPreview.length > 0 && (
+              <div className="mb-4 p-3 bg-[var(--color-bg-tertiary)] rounded">
+                <h4 className="text-sm font-medium text-[var(--color-text-primary)] mb-2">
+                  Preview ({icsPreview.length} event{icsPreview.length > 1 ? 's' : ''})
+                </h4>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {icsPreview.map((event, i) => (
+                    <div key={i} className="text-sm">
+                      <span className="text-[var(--color-text-primary)]">{event.title}</span>
+                      <span className="text-[var(--color-text-muted)] ml-2">
+                        {event.date && format(new Date(event.date), 'MMM d, yyyy HH:mm')}
+                      </span>
+                      {event.venue && (
+                        <span className="text-[var(--color-text-muted)] ml-2">@ {event.venue}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Import buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleIcsImport('REHEARSAL')}
+                disabled={!icsPreview || icsImporting}
+                className="flex-1 btn bg-sky-600 hover:bg-sky-500 text-white disabled:opacity-50"
+              >
+                {icsImporting ? 'Importing...' : 'Import as Rehearsal'}
+              </button>
+              <button
+                onClick={() => handleIcsImport('GIG')}
+                disabled={!icsPreview || icsImporting}
+                className="flex-1 btn bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50"
+              >
+                Import as Gig
+              </button>
+            </div>
           </div>
         </div>
       )}

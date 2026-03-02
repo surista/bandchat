@@ -338,8 +338,20 @@ SYNC_WORKSPACE_ID=your-workspace-uuid
 
 ---
 
+## Additional Endpoints (Admin Only)
+
+These endpoints are not used by the website sync but are available for workspace management:
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| POST | `/api/gigs/workspace/:id/import-ics` | Import gig/rehearsal from .ics calendar file |
+| POST | `/api/gigs/workspace/:id/preview-ics` | Preview .ics content before importing |
+
+---
+
 ## Version History
 
 | Date | Version | Changes |
 |------|---------|---------|
+| 2026-03-02 | 1.1 | Added ICS import endpoints |
 | 2026-03-02 | 1.0 | Initial specification |

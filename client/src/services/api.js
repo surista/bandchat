@@ -1421,6 +1421,21 @@ class ApiService {
       body: JSON.stringify(config)
     });
   }
+
+  // ICS Calendar Import
+  async previewICS(workspaceId, icsContent) {
+    return this.request(`/gigs/workspace/${workspaceId}/preview-ics`, {
+      method: 'POST',
+      body: JSON.stringify({ icsContent })
+    });
+  }
+
+  async importICS(workspaceId, icsContent, type = 'REHEARSAL') {
+    return this.request(`/gigs/workspace/${workspaceId}/import-ics`, {
+      method: 'POST',
+      body: JSON.stringify({ icsContent, type })
+    });
+  }
 }
 
 export const api = new ApiService();

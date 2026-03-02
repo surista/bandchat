@@ -1,9 +1,9 @@
 import express from 'express';
 import crypto from 'crypto';
 import rateLimit from 'express-rate-limit';
-import { authenticate } from '../middleware/auth.js';
-import { isWorkspaceMember } from '../middleware/auth.js';
+import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
+import { parseICS, parseICSMultiple } from '../lib/icsParser.js';
 
 const router = express.Router();
 
@@ -1635,6 +1635,93 @@ router.get('/workspace/:workspaceId/calendar.ics', calendarLimiter, async (req, 
   } catch (error) {
     console.error('iCal feed error:', error);
     res.status(500).json({ error: 'Failed to generate calendar feed' });
+  }
+});
+
+// Import calendar event from ICS file (admin only)
+router.post('/workspace/:workspaceId/import-ics', authenticate, isWorkspaceAdmin, async (req, res) => {
+  try {
+    const { icsContent, type = 'REHEARSAL' } = req.body;
+
+    if (!icsContent) {
+      return res.status(400).json({ error: 'ICS content is required' });
+    }
+
+    // Validate type
+    const validTypes = ['GIG', 'REHEARSAL', 'MEETING', 'OTHER'];
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({ error: `Invalid type. Must be one of: ${validTypes.join(', ')}` });
+    }
+
+    // Parse ICS content
+    let events;
+    try {
+      events = parseICSMultiple(icsContent);
+    } catch (parseError) {
+      return res.status(400).json({ error: `Failed to parse ICS: ${parseError.message}` });
+    }
+
+    // Create gigs for each event
+    const createdGigs = [];
+    const errors = [];
+
+    for (const event of events) {
+      try {
+        const gig = await prisma.gig.create({
+          data: {
+            title: event.title || 'Imported Event',
+            type,
+            date: event.date,
+            endDate: event.endDate || null,
+            venue: event.venue || null,
+            address: event.address || null,
+            notes: event.notes || null,
+            workspaceId: req.params.workspaceId,
+            createdById: req.user.id,
+          },
+          include: {
+            createdBy: {
+              select: { id: true, displayName: true }
+            }
+          }
+        });
+        createdGigs.push(gig);
+      } catch (err) {
+        errors.push({ event: event.title, error: err.message });
+      }
+    }
+
+    res.status(201).json({
+      created: createdGigs,
+      errors: errors.length > 0 ? errors : undefined,
+      message: `Created ${createdGigs.length} event(s)${errors.length > 0 ? `, ${errors.length} failed` : ''}`
+    });
+  } catch (error) {
+    console.error('Import ICS error:', error);
+    res.status(500).json({ error: 'Failed to import calendar event' });
+  }
+});
+
+// Preview ICS content without creating (for UI preview)
+router.post('/workspace/:workspaceId/preview-ics', authenticate, isWorkspaceAdmin, async (req, res) => {
+  try {
+    const { icsContent } = req.body;
+
+    if (!icsContent) {
+      return res.status(400).json({ error: 'ICS content is required' });
+    }
+
+    let events;
+    try {
+      events = parseICSMultiple(icsContent);
+    } catch (parseError) {
+      return res.status(400).json({ error: `Failed to parse ICS: ${parseError.message}` });
+    }
+
+    res.json({ events });
+  } catch (error) {
+    console.error('Preview ICS error:', error);
+    res.status(500).json({ error: 'Failed to preview calendar event' });
   }
 });
 
