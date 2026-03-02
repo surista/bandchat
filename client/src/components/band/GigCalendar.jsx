@@ -299,6 +299,7 @@ function GigCalendar({ workspaceId, workspace }) {
   const [availability, setAvailability] = useState([]);
   const [availabilityDate, setAvailabilityDate] = useState(null); // For setting my availability
   const [savingAvailability, setSavingAvailability] = useState(false);
+  const [editingAvailability, setEditingAvailability] = useState(false); // Edit mode for click-to-set
 
   // iCal subscribe
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
@@ -553,6 +554,19 @@ function GigCalendar({ workspaceId, workspace }) {
       a.user?.id === user?.id && format(new Date(a.date), 'yyyy-MM-dd') === dateKey
     );
     return myAvail?.status || 'UNKNOWN';
+  };
+
+  // Cycle through: UNKNOWN → AVAILABLE → MAYBE → UNAVAILABLE → UNKNOWN
+  const cycleAvailability = async (date) => {
+    const current = getMyAvailabilityStatus(date);
+    const cycle = {
+      'UNKNOWN': 'AVAILABLE',
+      'AVAILABLE': 'MAYBE',
+      'MAYBE': 'UNAVAILABLE',
+      'UNAVAILABLE': 'CLEAR',
+    };
+    const next = cycle[current] || 'AVAILABLE';
+    await handleSetAvailability(date, next);
   };
 
   const handleSetAvailability = async (date, status) => {
@@ -909,6 +923,19 @@ function GigCalendar({ workspaceId, workspace }) {
               <span className="hidden sm:inline">Availability</span>
               <span className="sm:hidden">Avail</span>
             </label>
+            {view === 'calendar' && showAvailability && (
+              <button
+                onClick={() => setEditingAvailability(!editingAvailability)}
+                className={`px-3 py-1.5 text-sm rounded transition-colors ${
+                  editingAvailability
+                    ? 'bg-green-600 text-white'
+                    : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-border)]'
+                }`}
+                title={editingAvailability ? 'Exit edit mode' : 'Click days to set your availability'}
+              >
+                {editingAvailability ? '✓ Done' : '✏️ Edit Mine'}
+              </button>
+            )}
             <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
               <input
                 type="checkbox"
@@ -1031,7 +1058,7 @@ function GigCalendar({ workspaceId, workspace }) {
 
         {view === 'calendar' ? (
           /* Calendar View */
-          <div ref={calendarContainerRef} className="bg-[var(--color-bg-secondary)] rounded-lg overflow-hidden relative">
+          <div ref={calendarContainerRef} className={`bg-[var(--color-bg-secondary)] rounded-lg overflow-hidden relative ${editingAvailability ? 'ring-2 ring-green-500/50' : ''}`}>
             {/* Edge zone indicators */}
             {draggingGig && edgeZone === 'left' && (
               <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-blue-500/30 to-transparent pointer-events-none z-10 flex items-center justify-start pl-2">
@@ -1068,7 +1095,14 @@ function GigCalendar({ workspaceId, workspace }) {
                 return (
                   <div
                     key={dateKey}
-                    onClick={() => {
+                    onClick={(e) => {
+                      // Shift+click or edit mode: cycle availability
+                      if (e.shiftKey || editingAvailability) {
+                        e.preventDefault();
+                        cycleAvailability(day);
+                        return;
+                      }
+                      // Normal click: create event
                       setSelectedDate(day);
                       setEditingGig(null);
                       setShowForm(true);
@@ -1084,7 +1118,7 @@ function GigCalendar({ workspaceId, workspace }) {
                       !isCurrentMonth ? 'bg-gray-900/70' : ''
                     } ${isToday(day) ? 'bg-blue-900/20' : ''} ${
                       isDropTarget ? 'bg-green-900/40 ring-2 ring-green-500 ring-inset' : ''
-                    }`}
+                    } ${editingAvailability ? 'hover:ring-2 hover:ring-green-500/50 hover:ring-inset' : ''}`}
                   >
                     <div className={`text-sm mb-1 flex items-center justify-between ${
                       isToday(day) ? 'text-blue-400 font-bold' : isCurrentMonth ? 'text-gray-400' : 'text-gray-600'
@@ -1504,7 +1538,7 @@ function GigCalendar({ workspaceId, workspace }) {
             </div>
 
             <p className="text-[var(--color-text-muted)] text-xs mt-4 text-center">
-              Right-click any date to set availability
+              Shift+click or use "Edit Mine" to quickly set availability
             </p>
 
             <button

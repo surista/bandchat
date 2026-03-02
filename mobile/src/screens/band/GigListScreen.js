@@ -290,6 +290,35 @@ export default function GigListScreen({ navigation, route }) {
     setAvailabilityDate(null);
   }, [workspaceId, availabilityDate]);
 
+  // Cycle through: none → AVAILABLE → MAYBE → UNAVAILABLE → none
+  const cycleAvailability = useCallback(async (dateKey) => {
+    const current = availability[dateKey];
+    const cycle = {
+      undefined: 'AVAILABLE',
+      'AVAILABLE': 'MAYBE',
+      'MAYBE': 'UNAVAILABLE',
+      'UNAVAILABLE': 'CLEAR',
+    };
+    const next = cycle[current] || 'AVAILABLE';
+
+    try {
+      if (next === 'CLEAR') {
+        await api.clearAvailability(workspaceId, dateKey);
+        setAvailability(prev => {
+          const updated = { ...prev };
+          delete updated[dateKey];
+          return updated;
+        });
+      } else {
+        await api.setAvailability(workspaceId, dateKey, next);
+        setAvailability(prev => ({ ...prev, [dateKey]: next }));
+      }
+      mediumImpact();
+    } catch (err) {
+      Alert.alert('Error', 'Failed to set availability');
+    }
+  }, [workspaceId, availability]);
+
   const renderGig = useCallback(({ item }) => {
     const typeColor = TYPE_COLORS[item.type] || TYPE_COLORS.OTHER;
     const isCancelled = item.status === 'CANCELLED';
@@ -349,12 +378,21 @@ export default function GigListScreen({ navigation, route }) {
               {item.date ? formatGigDate(item.date) : 'No date'}
               {timeStr ? ` \u00B7 ${timeStr}` : ''}
             </Text>
-            {statusInfo && (
-              <View style={[styles.availabilityBadge, { backgroundColor: statusInfo.color + '20' }]}>
-                <Text style={[styles.availabilityText, { color: statusInfo.color }]}>
-                  {statusInfo.icon} {statusInfo.label}
+            {dateKey && (
+              <TouchableOpacity
+                onPress={() => cycleAvailability(dateKey)}
+                style={[
+                  styles.availabilityBadge,
+                  { backgroundColor: statusInfo ? statusInfo.color + '20' : colors.bgTertiary }
+                ]}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Set availability: ${statusInfo?.label || 'Not set'}`}
+              >
+                <Text style={[styles.availabilityText, { color: statusInfo?.color || colors.textMuted }]}>
+                  {statusInfo ? `${statusInfo.icon} ${statusInfo.label}` : '+ Avail'}
                 </Text>
-              </View>
+              </TouchableOpacity>
             )}
           </View>
 
@@ -384,7 +422,7 @@ export default function GigListScreen({ navigation, route }) {
         </View>
       </TouchableOpacity>
     );
-  }, [colors, navigation, workspaceId, availability]);
+  }, [colors, navigation, workspaceId, availability, cycleAvailability]);
 
   const renderSectionHeader = useCallback(({ section }) => (
     <View style={styles.monthHeader}>
