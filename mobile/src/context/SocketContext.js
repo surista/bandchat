@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
 import Constants from 'expo-constants';
 import { useAuth } from './AuthContext';
@@ -7,44 +7,86 @@ import api from '../services/api';
 const SocketContext = createContext(null);
 
 const SOCKET_URL = Constants.expoConfig?.extra?.socketUrl || 'http://localhost:3001';
+const RECONNECT_DELAY = 1000;
+const MAX_RECONNECT_ATTEMPTS = 5;
 
 export function SocketProvider({ children }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isOffline } = useAuth();
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
+  const [error, setError] = useState(null);
+  const reconnectAttempts = useRef(0);
+  const reconnectTimeout = useRef(null);
 
   useEffect(() => {
-    if (isAuthenticated && api.accessToken) {
-      const newSocket = io(SOCKET_URL, {
-        auth: (cb) => {
-          cb({ token: api.accessToken });
-        },
-        transports: ['websocket', 'polling'],
-      });
-
-      newSocket.on('connect', () => {
-        setConnected(true);
-      });
-
-      newSocket.on('disconnect', () => {
-        setConnected(false);
-      });
-
-      newSocket.on('connect_error', async (error) => {
-        setConnected(false);
-        if (error.message?.includes('Authentication') || error.message?.includes('token')) {
-          try { await api.refreshAccessToken(); } catch (e) {}
-        }
-      });
-
-      setSocket(newSocket);
-
-      return () => {
-        newSocket.disconnect();
-        setSocket(null);
-      };
+    // Don't connect if not authenticated, no token, or offline
+    if (!isAuthenticated || !api.accessToken || isOffline) {
+      return;
     }
-  }, [isAuthenticated]);
+
+    // Clear any pending reconnect
+    if (reconnectTimeout.current) {
+      clearTimeout(reconnectTimeout.current);
+      reconnectTimeout.current = null;
+    }
+
+    const newSocket = io(SOCKET_URL, {
+      auth: (cb) => {
+        // Always get the latest token
+        cb({ token: api.accessToken });
+      },
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
+      reconnectionDelay: RECONNECT_DELAY,
+    });
+
+    newSocket.on('connect', () => {
+      setConnected(true);
+      setError(null);
+      reconnectAttempts.current = 0;
+    });
+
+    newSocket.on('disconnect', (reason) => {
+      setConnected(false);
+      // If server disconnected us, don't auto-reconnect
+      if (reason === 'io server disconnect') {
+        setError('Disconnected by server');
+      }
+    });
+
+    newSocket.on('connect_error', async (socketError) => {
+      setConnected(false);
+      reconnectAttempts.current++;
+
+      if (socketError.message?.includes('Authentication') || socketError.message?.includes('token')) {
+        try {
+          const refreshed = await api.refreshAccessToken();
+          if (refreshed) {
+            // Token refreshed, socket will auto-reconnect with new token
+            reconnectAttempts.current = 0;
+          } else {
+            setError('Session expired');
+          }
+        } catch (e) {
+          setError('Authentication failed');
+        }
+      } else if (reconnectAttempts.current >= MAX_RECONNECT_ATTEMPTS) {
+        setError('Connection failed after multiple attempts');
+      }
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      if (reconnectTimeout.current) {
+        clearTimeout(reconnectTimeout.current);
+      }
+      newSocket.disconnect();
+      setSocket(null);
+      setConnected(false);
+    };
+  }, [isAuthenticated, isOffline]);
 
   const joinChannel = useCallback((channelId) => {
     if (socket) socket.emit('channel:join', channelId);
@@ -66,15 +108,19 @@ export function SocketProvider({ children }) {
     if (socket) socket.emit('workspace:join', workspaceId);
   }, [socket]);
 
+  const clearError = useCallback(() => setError(null), []);
+
   const value = useMemo(() => ({
     socket,
     connected,
+    error,
     joinChannel,
     leaveChannel,
     startTyping,
     stopTyping,
     joinWorkspace,
-  }), [socket, connected, joinChannel, leaveChannel, startTyping, stopTyping, joinWorkspace]);
+    clearError,
+  }), [socket, connected, error, joinChannel, leaveChannel, startTyping, stopTyping, joinWorkspace, clearError]);
 
   return (
     <SocketContext.Provider value={value}>

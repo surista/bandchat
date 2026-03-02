@@ -2,6 +2,31 @@ import Constants from 'expo-constants';
 import storage from './storage';
 
 const API_URL = Constants.expoConfig?.extra?.apiUrl || 'http://localhost:3001/api';
+const DEFAULT_TIMEOUT = 30000; // 30 seconds
+const UPLOAD_TIMEOUT = 120000; // 2 minutes for uploads
+
+/**
+ * Fetch with timeout support
+ */
+function fetchWithTimeout(url, options = {}, timeout = DEFAULT_TIMEOUT) {
+  return Promise.race([
+    fetch(url, options),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request timed out')), timeout)
+    ),
+  ]);
+}
+
+/**
+ * Error types for better error handling
+ */
+const ErrorTypes = {
+  NETWORK: 'NETWORK',
+  TIMEOUT: 'TIMEOUT',
+  AUTH: 'AUTH',
+  SERVER: 'SERVER',
+  VALIDATION: 'VALIDATION',
+};
 
 class ApiService {
   constructor() {
@@ -51,7 +76,7 @@ class ApiService {
     }
   }
 
-  async request(endpoint, options = {}) {
+  async request(endpoint, options = {}, timeout = DEFAULT_TIMEOUT) {
     if (this.refreshToken && this.isTokenExpiringSoon()) {
       if (!this._refreshPromise) {
         this._refreshPromise = this.refreshAccessToken().finally(() => {
@@ -72,10 +97,10 @@ class ApiService {
     }
 
     try {
-      const response = await fetch(url, {
+      const response = await fetchWithTimeout(url, {
         ...options,
         headers,
-      });
+      }, timeout);
 
       if (response.status === 401 && this.refreshToken) {
         if (!this._refreshPromise) {
@@ -86,21 +111,37 @@ class ApiService {
         const refreshed = await this._refreshPromise;
         if (refreshed) {
           headers['Authorization'] = `Bearer ${this.accessToken}`;
-          const retryResponse = await fetch(url, { ...options, headers });
+          const retryResponse = await fetchWithTimeout(url, { ...options, headers }, timeout);
           return this.handleResponse(retryResponse);
         }
         if (this.onSessionExpired) {
           this.onSessionExpired();
         }
-        throw new Error('Session expired. Please log in again.');
+        const error = new Error('Session expired. Please log in again.');
+        error.type = ErrorTypes.AUTH;
+        throw error;
       }
 
       return this.handleResponse(response);
     } catch (error) {
-      if (error.message === 'Session expired. Please log in again.') {
+      // Preserve typed errors
+      if (error.type) {
         throw error;
       }
-      throw new Error('Network error');
+      // Handle timeout
+      if (error.message === 'Request timed out') {
+        const timeoutError = new Error('Request timed out. Please check your connection and try again.');
+        timeoutError.type = ErrorTypes.TIMEOUT;
+        throw timeoutError;
+      }
+      // Handle network errors
+      if (error instanceof TypeError || error.message === 'Network request failed') {
+        const networkError = new Error('Unable to connect. Please check your internet connection.');
+        networkError.type = ErrorTypes.NETWORK;
+        throw networkError;
+      }
+      // Re-throw with original message if it's meaningful
+      throw error;
     }
   }
 
@@ -108,10 +149,37 @@ class ApiService {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(data.error || 'Request failed');
+      const error = new Error(data.error || this._getErrorMessage(response.status));
+      error.status = response.status;
+      error.type = this._getErrorType(response.status);
+      throw error;
     }
 
     return data;
+  }
+
+  _getErrorMessage(status) {
+    switch (status) {
+      case 400: return 'Invalid request. Please check your input.';
+      case 401: return 'Please log in to continue.';
+      case 403: return 'You don\'t have permission to do that.';
+      case 404: return 'The requested item was not found.';
+      case 409: return 'This conflicts with existing data.';
+      case 413: return 'The file is too large.';
+      case 429: return 'Too many requests. Please wait a moment.';
+      case 500: return 'Server error. Please try again later.';
+      case 502:
+      case 503:
+      case 504: return 'Service temporarily unavailable. Please try again.';
+      default: return 'Something went wrong. Please try again.';
+    }
+  }
+
+  _getErrorType(status) {
+    if (status === 401 || status === 403) return ErrorTypes.AUTH;
+    if (status >= 400 && status < 500) return ErrorTypes.VALIDATION;
+    if (status >= 500) return ErrorTypes.SERVER;
+    return ErrorTypes.SERVER;
   }
 
   async refreshAccessToken() {
@@ -270,6 +338,12 @@ class ApiService {
   async deleteWorkspace(id) {
     return this.request(`/workspaces/${id}`, {
       method: 'DELETE',
+    });
+  }
+
+  async leaveWorkspace(id) {
+    return this.request(`/workspaces/${id}/leave`, {
+      method: 'POST',
     });
   }
 
@@ -1251,11 +1325,38 @@ class ApiService {
       headers['Authorization'] = `Bearer ${this.accessToken}`;
     }
 
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: 'POST',
       headers,
       body: formData,
+    }, UPLOAD_TIMEOUT);
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || 'Upload failed');
+    }
+
+    return response.json();
+  }
+
+  async uploadFiles(files) {
+    await this.ensureFreshToken();
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('files', { uri: file.uri, name: file.filename, type: file.mimeType });
     });
+
+    const url = `${API_URL}/uploads/multiple`;
+    const headers = {};
+    if (this.accessToken) {
+      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    const response = await fetchWithTimeout(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+    }, UPLOAD_TIMEOUT);
 
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));

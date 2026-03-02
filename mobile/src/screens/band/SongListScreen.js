@@ -20,6 +20,21 @@ import { successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
 
+// Debounce hook for search input
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 const SORT_OPTIONS = [
   { key: 'title', label: 'Title' },
   { key: 'artist', label: 'Artist' },
@@ -42,6 +57,7 @@ export default function SongListScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300); // Debounce search by 300ms
   const [sortBy, setSortBy] = useState('title');
   const [showSortModal, setShowSortModal] = useState(false);
 
@@ -124,8 +140,8 @@ export default function SongListScreen({ navigation, route }) {
 
   const filteredSongs = useMemo(() => {
     let list = [...songs];
-    if (search.trim()) {
-      const q = search.toLowerCase();
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase();
       list = list.filter(
         s =>
           s.title?.toLowerCase().includes(q) ||
@@ -140,7 +156,7 @@ export default function SongListScreen({ navigation, route }) {
       return 0;
     });
     return list;
-  }, [songs, search, sortBy]);
+  }, [songs, debouncedSearch, sortBy]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);

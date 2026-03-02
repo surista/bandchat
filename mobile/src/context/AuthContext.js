@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import api from '../services/api';
 
 const AuthContext = createContext(null);
@@ -6,17 +6,41 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isOffline, setIsOffline] = useState(false);
+  const initAttempted = useRef(false);
 
   useEffect(() => {
+    // Prevent double initialization
+    if (initAttempted.current) return;
+    initAttempted.current = true;
+
     const initAuth = async () => {
+      setError(null);
       try {
         await api.loadTokens();
         if (api.accessToken) {
-          const userData = await api.getMe();
-          setUser(userData);
+          try {
+            const userData = await api.getMe();
+            setUser(userData);
+            setIsOffline(false);
+          } catch (fetchError) {
+            // Check if it's a network/timeout error (app started offline)
+            if (fetchError.type === 'NETWORK' || fetchError.type === 'TIMEOUT') {
+              // Keep tokens but mark as offline - user can retry later
+              setIsOffline(true);
+              console.warn('App started offline, keeping stored tokens');
+            } else {
+              // Auth error (token invalid) - clear tokens
+              await api.clearTokens();
+              setError(fetchError.message);
+            }
+          }
         }
-      } catch {
-        await api.clearTokens();
+      } catch (tokenError) {
+        // Failed to load tokens from storage
+        console.error('Failed to load tokens:', tokenError);
+        setError('Failed to load saved session');
       } finally {
         setLoading(false);
       }
@@ -24,10 +48,32 @@ export function AuthProvider({ children }) {
 
     api.onSessionExpired = () => {
       setUser(null);
+      setError(null);
       api.clearTokens();
     };
 
     initAuth();
+  }, []);
+
+  // Retry auth when coming back online
+  const retryAuth = useCallback(async () => {
+    if (!api.accessToken) return;
+    setError(null);
+    setLoading(true);
+    try {
+      const userData = await api.getMe();
+      setUser(userData);
+      setIsOffline(false);
+    } catch (fetchError) {
+      if (fetchError.type === 'NETWORK' || fetchError.type === 'TIMEOUT') {
+        setIsOffline(true);
+      } else {
+        await api.clearTokens();
+        setError(fetchError.message);
+      }
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const signup = useCallback(async (email, password, displayName) => {
@@ -56,15 +102,21 @@ export function AuthProvider({ children }) {
     setUser(prev => ({ ...prev, ...userData }));
   }, []);
 
+  const clearError = useCallback(() => setError(null), []);
+
   const value = useMemo(() => ({
     user,
     loading,
+    error,
+    isOffline,
     signup,
     login,
     logout,
     updateUser,
+    retryAuth,
+    clearError,
     isAuthenticated: !!user,
-  }), [user, loading, signup, login, logout, updateUser]);
+  }), [user, loading, error, isOffline, signup, login, logout, updateUser, retryAuth, clearError]);
 
   return (
     <AuthContext.Provider value={value}>

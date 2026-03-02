@@ -580,6 +580,13 @@ export default function ChannelScreen({ navigation, route }) {
         contentContainerStyle={styles.messageList}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
+        // Performance optimizations
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        windowSize={10}
+        removeClippedSubviews={Platform.OS === 'android'}
+        initialNumToRender={15}
+        getItemLayout={undefined} // Can't use with variable height items
       />
       {typingText && (
         <View style={[styles.typingBar, { backgroundColor: colors.bgSecondary }]}>

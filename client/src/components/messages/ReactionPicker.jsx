@@ -1,4 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+
+// Pre-compiled regex for emoji detection (avoid creating on every render)
+const EMOJI_REGEX = /\p{Emoji}/u;
 
 const EMOJI_CATEGORIES = {
   reactions: ['👍', '👎', '❤️', '🔥', '😂', '😮', '😢', '😡', '🎉', '🙏', '👏', '💯', '✅', '❌', '👀', '🤔', '💪', '🙌', '😍', '🥳'],
@@ -92,7 +95,7 @@ export default function ReactionPicker({ onSelect, onClose }) {
       <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-600 overflow-hidden" style={{ minWidth: '280px', maxWidth: '320px' }}>
         {/* Quick reactions row */}
         <div className="flex items-center gap-0.5 p-1.5 border-b border-gray-700">
-          {quickReactions.map(emoji => renderEmojiButton(emoji, !emoji.match(/\p{Emoji}/u)))}
+          {quickReactions.map(emoji => renderEmojiButton(emoji, !EMOJI_REGEX.test(emoji)))}
           <div className="flex-1" />
           <button
             onClick={() => setExpandedCategory(expandedCategory ? null : 'reactions')}
