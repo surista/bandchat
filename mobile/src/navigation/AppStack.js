@@ -35,6 +35,7 @@ import WorkspaceMembersScreen from '../screens/settings/WorkspaceMembersScreen';
 import InviteScreen from '../screens/settings/InviteScreen';
 import BlockedUsersScreen from '../screens/settings/BlockedUsersScreen';
 import MemberProfileScreen from '../screens/workspace/MemberProfileScreen';
+import PinnedMessagesScreen from '../screens/workspace/PinnedMessagesScreen';
 import SearchScreen from '../screens/workspace/SearchScreen';
 import ChannelSettingsScreen from '../screens/workspace/ChannelSettingsScreen';
 import { useTheme } from '../context/ThemeContext';
@@ -120,8 +121,9 @@ export default function AppStack() {
       {/* Members */}
       <Stack.Screen name="MemberProfile" component={MemberProfileScreen} options={{ title: 'Member' }} />
 
-      {/* Search & Channel Management */}
+      {/* Search, Pins & Channel Management */}
       <Stack.Screen name="Search" component={SearchScreen} options={{ title: 'Search' }} />
+      <Stack.Screen name="PinnedMessages" component={PinnedMessagesScreen} options={{ title: 'Pinned Messages' }} />
       <Stack.Screen name="ChannelSettings" component={ChannelSettingsScreen} options={{ title: 'Channel Settings' }} />
     </Stack.Navigator>
   );

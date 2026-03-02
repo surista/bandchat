@@ -18,6 +18,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
 import api from '../../services/api';
+import { addToOfflineQueue, getOfflineQueue, removeFromOfflineQueue } from '../../services/storage';
 import MessageBubble from '../../components/MessageBubble';
 import MessageInput from '../../components/MessageInput';
 import MessageActionSheet from '../../components/MessageActionSheet';
@@ -53,6 +54,8 @@ export default function ChannelScreen({ navigation, route }) {
   const [seenByCount, setSeenByCount] = useState(null);
   const [lastOwnMessageId, setLastOwnMessageId] = useState(null);
   const [workspaceMembers, setWorkspaceMembers] = useState([]);
+  const [pinnedMessageIds, setPinnedMessageIds] = useState(new Set());
+  const [uploadProgress, setUploadProgress] = useState(null);
 
   const channelIdRef = useRef(channel.id);
   const userIdRef = useRef(user?.id);
@@ -67,19 +70,29 @@ export default function ChannelScreen({ navigation, route }) {
     userIdRef.current = user?.id;
   }, [channel.id, user?.id]);
 
-  // Header: info/settings button (hidden for DMs)
+  // Header: pin + info/settings buttons (hidden for DMs)
   useLayoutEffect(() => {
     if (channel.isDM) return;
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity
-          onPress={() => navigation.navigate('ChannelSettings', { channel, workspaceId })}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          accessibilityRole="button"
-          accessibilityLabel="Channel settings"
-        >
-          <Text style={{ fontSize: 20 }}>{'\u2139\uFE0F'}</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('PinnedMessages', { channelId: channel.id })}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Pinned messages"
+          >
+            <Text style={{ fontSize: 18 }}>{'\uD83D\uDCCC'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ChannelSettings', { channel, workspaceId })}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Channel settings"
+          >
+            <Text style={{ fontSize: 20 }}>{'\u2139\uFE0F'}</Text>
+          </TouchableOpacity>
+        </View>
       ),
     });
   }, [navigation, channel, workspaceId]);
@@ -99,6 +112,13 @@ export default function ChannelScreen({ navigation, route }) {
       }).catch(() => {});
     }
   }, [workspaceId]);
+
+  // Load pinned message IDs
+  useEffect(() => {
+    api.getPinnedMessages(channel.id).then(pins => {
+      setPinnedMessageIds(new Set(pins.map(p => p.messageId)));
+    }).catch(() => {});
+  }, [channel.id]);
 
   // Load messages → mark read → join socket (exact order from web)
   useEffect(() => {
@@ -217,7 +237,7 @@ export default function ChannelScreen({ navigation, route }) {
       }));
     };
 
-    const handleReconnect = () => {
+    const handleReconnect = async () => {
       const chId = channelIdRef.current;
       joinChannel(chId);
       api.getMessages(chId).then(data => {
@@ -227,6 +247,34 @@ export default function ChannelScreen({ navigation, route }) {
           setNextCursor(data.nextCursor);
         }
       }).catch(err => console.warn('Failed to refresh on reconnect:', err.message));
+
+      // Flush offline queue
+      try {
+        const queue = await getOfflineQueue();
+        const channelQueue = queue.filter(m => m.channelId === chId);
+        for (const queued of channelQueue) {
+          try {
+            await api.sendMessage(queued.channelId, queued.content);
+            await removeFromOfflineQueue(queued.tempId);
+            setMessages(prev => prev.filter(m => m.id !== queued.tempId));
+          } catch {}
+        }
+      } catch {}
+    };
+
+    const handleMessagePinned = (data) => {
+      if (data.channelId === channelIdRef.current) {
+        setPinnedMessageIds(prev => new Set([...prev, data.messageId]));
+      }
+    };
+    const handleMessageUnpinned = (data) => {
+      if (data.channelId === channelIdRef.current) {
+        setPinnedMessageIds(prev => {
+          const next = new Set(prev);
+          next.delete(data.messageId);
+          return next;
+        });
+      }
     };
 
     socket.on('message:new', handleNewMessage);
@@ -237,6 +285,8 @@ export default function ChannelScreen({ navigation, route }) {
     socket.on('reaction:added', handleReactionAdded);
     socket.on('reaction:removed', handleReactionRemoved);
     socket.on('message:reply', handleReply);
+    socket.on('message:pinned', handleMessagePinned);
+    socket.on('message:unpinned', handleMessageUnpinned);
     socket.on('connect', handleReconnect);
 
     return () => {
@@ -248,6 +298,8 @@ export default function ChannelScreen({ navigation, route }) {
       socket.off('reaction:added', handleReactionAdded);
       socket.off('reaction:removed', handleReactionRemoved);
       socket.off('message:reply', handleReply);
+      socket.off('message:pinned', handleMessagePinned);
+      socket.off('message:unpinned', handleMessageUnpinned);
       socket.off('connect', handleReconnect);
     };
   }, [socket, joinChannel]);
@@ -287,8 +339,9 @@ export default function ChannelScreen({ navigation, route }) {
   // Send message with optimistic update + optional attachment
   const handleSend = useCallback(async (content, attachment) => {
     const attType = attachment ? (attachment.isVideo ? 'VIDEO' : attachment.isAudio ? 'AUDIO' : 'IMAGE') : null;
+    const tempId = `temp-${Date.now()}`;
     const optimisticMessage = {
-      id: `temp-${Date.now()}`,
+      id: tempId,
       content: content || '',
       author: { id: user.id, displayName: user.displayName, avatarUrl: user.avatarUrl },
       channelId: channel.id,
@@ -304,7 +357,12 @@ export default function ChannelScreen({ navigation, route }) {
     try {
       let uploadedAttachments = null;
       if (attachment) {
-        const uploaded = await api.uploadFile(attachment.uri, attachment.filename, attachment.mimeType);
+        setUploadProgress(0);
+        const uploaded = await api.uploadFileWithProgress(
+          attachment.uri, attachment.filename, attachment.mimeType,
+          (progress) => setUploadProgress(progress)
+        );
+        setUploadProgress(null);
         uploadedAttachments = [uploaded];
       }
       const savedMessage = await api.sendMessage(channel.id, content || '', null, uploadedAttachments);
@@ -312,7 +370,16 @@ export default function ChannelScreen({ navigation, route }) {
         m.id === optimisticMessage.id ? savedMessage : m
       ));
     } catch (err) {
-      setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
+      setUploadProgress(null);
+      // Queue text-only messages for retry when offline
+      if (!attachment && content) {
+        setMessages(prev => prev.map(m =>
+          m.id === tempId ? { ...m, queued: true, pending: false } : m
+        ));
+        addToOfflineQueue({ tempId, channelId: channel.id, content, createdAt: optimisticMessage.createdAt });
+      } else {
+        setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
+      }
       console.error('Failed to send message:', err);
     }
   }, [user, channel.id]);
@@ -373,6 +440,19 @@ export default function ChannelScreen({ navigation, route }) {
       case 'react':
         setShowEmojiPicker(true);
         break;
+      case 'pin':
+        (async () => {
+          try {
+            if (pinnedMessageIds.has(actionMessage.id)) {
+              await api.unpinMessage(actionMessage.id);
+            } else {
+              await api.pinMessage(actionMessage.id);
+            }
+          } catch (err) {
+            Alert.alert('Error', err.message || 'Failed to pin/unpin message');
+          }
+        })();
+        break;
       case 'copy':
         if (actionMessage.content) {
           Clipboard.setStringAsync(actionMessage.content);
@@ -406,7 +486,7 @@ export default function ChannelScreen({ navigation, route }) {
         setShowReportModal(true);
         break;
     }
-  }, [actionMessage, navigation, channel.id, workspaceId]);
+  }, [actionMessage, navigation, channel.id, workspaceId, pinnedMessageIds]);
 
   // Submit report
   const handleSubmitReport = useCallback(async () => {
@@ -588,6 +668,14 @@ export default function ChannelScreen({ navigation, route }) {
         initialNumToRender={15}
         getItemLayout={undefined} // Can't use with variable height items
       />
+      {uploadProgress !== null && (
+        <View style={[styles.uploadBar, { backgroundColor: colors.bgSecondary }]}>
+          <View style={[styles.uploadProgress, { backgroundColor: colors.primary, width: `${Math.round(uploadProgress * 100)}%` }]} />
+          <Text style={[styles.uploadText, { color: colors.textSecondary }]}>
+            Uploading... {Math.round(uploadProgress * 100)}%
+          </Text>
+        </View>
+      )}
       {typingText && (
         <View style={[styles.typingBar, { backgroundColor: colors.bgSecondary }]}>
           <Text style={[styles.typingText, { color: colors.textSecondary }]}>
@@ -611,6 +699,7 @@ export default function ChannelScreen({ navigation, route }) {
         onAction={handleAction}
         onQuickReaction={handleAddReaction}
         isOwnMessage={actionMessage?.author?.id === user?.id}
+        isPinned={actionMessage ? pinnedMessageIds.has(actionMessage.id) : false}
       />
 
       {/* Emoji Picker */}
@@ -716,6 +805,23 @@ const styles = StyleSheet.create({
     paddingTop: 2,
     paddingBottom: 4,
     textAlign: 'right',
+  },
+  uploadBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  uploadProgress: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    opacity: 0.15,
+  },
+  uploadText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   typingBar: {
     paddingHorizontal: 16,

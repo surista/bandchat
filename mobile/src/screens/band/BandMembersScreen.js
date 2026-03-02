@@ -15,6 +15,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
+import useDebounce from '../../hooks/useDebounce';
+import ErrorState from '../../components/ErrorState';
 import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
 
@@ -67,6 +69,17 @@ export default function BandMembersScreen({ navigation, route }) {
   const [members, setMembers] = useState({ current: [], former: [], guests: [] });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
+  const [search, setSearch] = useState('');
+  const [segment, setSegment] = useState('all');
+  const debouncedSearch = useDebounce(search, 300);
+
+  const SEGMENTS = [
+    { key: 'all', label: 'All' },
+    { key: 'current', label: 'Current' },
+    { key: 'former', label: 'Former' },
+    { key: 'guests', label: 'Guests' },
+  ];
 
   // Create/Edit modal
   const [showModal, setShowModal] = useState(false);
@@ -100,11 +113,15 @@ export default function BandMembersScreen({ navigation, route }) {
   }, [navigation, colors.primary]);
 
   const loadMembers = useCallback(async () => {
+    setError(null);
     try {
       const data = await api.getBandMembers(workspaceId);
       setMembers(data);
     } catch (err) {
       console.error('Failed to load members:', err);
+      if (!members.current?.length && !members.former?.length && !members.guests?.length) {
+        setError(err.message || 'Failed to load members');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -203,18 +220,30 @@ export default function BandMembersScreen({ navigation, route }) {
   }, [selectedMember, loadMembers]);
 
   const sections = useMemo(() => {
+    const q = debouncedSearch.trim().toLowerCase();
+    const filterFn = (m) => !q || m.name?.toLowerCase().includes(q);
+
+    const filteredCurrent = (members.current || []).filter(filterFn);
+    const filteredFormer = (members.former || []).filter(filterFn);
+    const filteredGuests = (members.guests || []).filter(filterFn);
+
+    // Apply segment filter
+    const showCurrent = segment === 'all' || segment === 'current';
+    const showFormer = segment === 'all' || segment === 'former';
+    const showGuests = segment === 'all' || segment === 'guests';
+
     const result = [];
-    if (members.current?.length > 0) {
-      result.push({ title: 'Current Members', data: members.current });
+    if (showCurrent && filteredCurrent.length > 0) {
+      result.push({ title: 'Current Members', data: filteredCurrent });
     }
-    if (members.former?.length > 0) {
-      result.push({ title: 'Former Members', data: members.former });
+    if (showFormer && filteredFormer.length > 0) {
+      result.push({ title: 'Former Members', data: filteredFormer });
     }
-    if (members.guests?.length > 0) {
-      result.push({ title: 'Guest Musicians', data: members.guests });
+    if (showGuests && filteredGuests.length > 0) {
+      result.push({ title: 'Guest Musicians', data: filteredGuests });
     }
     return result;
-  }, [members]);
+  }, [members, debouncedSearch, segment]);
 
   const renderMember = useCallback(({ item }) => {
     const instruments = getInstruments(item);
@@ -266,8 +295,53 @@ export default function BandMembersScreen({ navigation, route }) {
     );
   }
 
+  if (error) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+        <ErrorState
+          emoji={'\uD83D\uDE15'}
+          title="Couldn't load members"
+          message={error}
+          onRetry={() => { setLoading(true); loadMembers(); }}
+        />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <View style={[styles.toolbar, { borderBottomColor: colors.border }]}>
+        <TextInput
+          style={[styles.searchInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary }]}
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search members..."
+          placeholderTextColor={colors.textSecondary}
+          autoCorrect={false}
+          accessibilityLabel="Search members"
+        />
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.segmentRow}
+        style={styles.segmentScroll}
+      >
+        {SEGMENTS.map(seg => (
+          <TouchableOpacity
+            key={seg.key}
+            style={[styles.segmentChip, { backgroundColor: segment === seg.key ? colors.primary : colors.bgTertiary }]}
+            onPress={() => setSegment(seg.key)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`${seg.label}${segment === seg.key ? ', selected' : ''}`}
+          >
+            <Text style={[styles.segmentChipText, { color: segment === seg.key ? '#ffffff' : colors.textSecondary }]}>
+              {seg.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
@@ -285,7 +359,13 @@ export default function BandMembersScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           <View style={styles.centered}>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No members yet</Text>
+            <Text style={styles.emptyIcon}>{'\uD83C\uDFB8'}</Text>
+            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>{search ? 'No matching members' : 'No members yet'}</Text>
+            {!search && (
+              <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
+                Build your band roster. Tap + to add current, former, or guest musicians.
+              </Text>
+            )}
           </View>
         }
       />
@@ -425,6 +505,15 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   emptyText: { fontSize: 15 },
+  emptyIcon: { fontSize: 40, marginBottom: 12 },
+  emptyTitle: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
+  emptyHint: { fontSize: 13, textAlign: 'center', opacity: 0.7, maxWidth: 280 },
+  toolbar: { paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
+  searchInput: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15 },
+  segmentScroll: { flexGrow: 0 },
+  segmentRow: { paddingHorizontal: 12, paddingVertical: 6, gap: 6, flexDirection: 'row' },
+  segmentChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16 },
+  segmentChipText: { fontSize: 14, fontWeight: '600' },
   listContent: { padding: 12, paddingBottom: 20 },
   // Section header
   sectionHeader: { paddingVertical: 8, paddingHorizontal: 4 },

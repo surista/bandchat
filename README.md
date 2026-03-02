@@ -58,7 +58,7 @@ A real-time communication and management app for bands. Think Slack, but built s
 React single-page app deployed as a static site.
 
 ### Mobile App (iOS & Android)
-Native mobile app built with Expo/React Native. 50+ screens covering all features including offline support, haptic feedback, and push notifications.
+Native mobile app built with Expo/React Native. 40+ screens covering all features including offline support, haptic feedback, and push notifications.
 
 See `mobile/ROADMAP.md` for detailed feature breakdown.
 
@@ -79,7 +79,7 @@ See `mobile/ROADMAP.md` for detailed feature breakdown.
 
 ### Server
 - Node.js / Express 4
-- Prisma ORM with PostgreSQL (30+ models)
+- Prisma ORM with PostgreSQL (40+ models)
 - Socket.IO (real-time messaging)
 - JWT Authentication (access tokens + httpOnly cookie refresh tokens)
 - Cloudinary (image/file uploads with magic byte validation)
@@ -163,7 +163,9 @@ bandchat/
 │   │   │   ├── band/       # Songs, Setlists, Calendar, Stats, Members
 │   │   │   ├── channels/   # Sidebar, ChannelView, ChannelMembersPanel
 │   │   │   ├── common/     # Shared components (MemberProfile, ConfirmDialog, etc.)
+│   │   │   ├── legal/      # Privacy, Terms
 │   │   │   ├── messages/   # MessageList, MessageInput, LinkPreviewCard
+│   │   │   ├── navigation/ # Navigation components
 │   │   │   ├── threads/    # ThreadView
 │   │   │   └── workspaces/ # WorkspaceList, WorkspaceView, SlackImportWizard
 │   │   ├── context/        # AuthContext, SocketContext, ThemeContext, ToastContext
@@ -173,7 +175,7 @@ bandchat/
 │   └── package.json
 ├── mobile/                 # Expo/React Native mobile app
 │   ├── src/
-│   │   ├── screens/        # 50+ screens organized by feature
+│   │   ├── screens/        # 40+ screens organized by feature
 │   │   ├── components/     # Shared mobile components
 │   │   ├── context/        # Auth, Socket, Theme, Toast contexts
 │   │   ├── services/       # API client (~1400 lines)
@@ -183,14 +185,14 @@ bandchat/
 │   └── package.json
 ├── server/                 # Express backend
 │   ├── src/
-│   │   ├── routes/         # 23 route modules
+│   │   ├── routes/         # 26 route modules
 │   │   ├── middleware/      # Auth, rate limiting
 │   │   ├── services/       # Slack text converter, emoji map
 │   │   ├── socket/         # Real-time event handlers
 │   │   ├── scripts/        # CLI utilities
 │   │   └── lib/            # Prisma client
 │   ├── prisma/
-│   │   └── schema.prisma   # Database schema (30+ models)
+│   │   └── schema.prisma   # Database schema (40+ models)
 │   └── package.json
 ├── CLAUDE.md               # AI assistant instructions
 └── README.md

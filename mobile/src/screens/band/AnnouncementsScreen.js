@@ -17,6 +17,7 @@ import { formatDistanceToNow, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import ActionSheet from '../../components/ActionSheet';
+import ErrorState from '../../components/ErrorState';
 import api from '../../services/api';
 
 const PRIORITY_COLORS = {
@@ -49,6 +50,7 @@ export default function AnnouncementsScreen({ navigation, route }) {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
   // Create/Edit modal
   const [showModal, setShowModal] = useState(false);
@@ -82,11 +84,13 @@ export default function AnnouncementsScreen({ navigation, route }) {
   }, [navigation, colors.primary]);
 
   const loadAnnouncements = useCallback(async () => {
+    setError(null);
     try {
       const data = await api.getAnnouncements(workspaceId);
       setAnnouncements(data);
     } catch (err) {
       console.error('Failed to load announcements:', err);
+      if (!announcements.length) setError(err.message || 'Failed to load announcements');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -275,6 +279,19 @@ export default function AnnouncementsScreen({ navigation, route }) {
     );
   }
 
+  if (error) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+        <ErrorState
+          emoji={'\uD83D\uDE15'}
+          title="Couldn't load announcements"
+          message={error}
+          onRetry={() => { setLoading(true); loadAnnouncements(); }}
+        />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
       <SectionList
@@ -294,7 +311,11 @@ export default function AnnouncementsScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           <View style={styles.centered}>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No announcements</Text>
+            <Text style={styles.emptyIcon}>{'\uD83D\uDCE2'}</Text>
+            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No announcements yet</Text>
+            <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
+              Share important updates with your band. Tap + to post an announcement.
+            </Text>
           </View>
         }
       />
@@ -411,7 +432,9 @@ export default function AnnouncementsScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-  emptyText: { fontSize: 15 },
+  emptyIcon: { fontSize: 40, marginBottom: 12 },
+  emptyTitle: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
+  emptyHint: { fontSize: 13, textAlign: 'center', opacity: 0.7, maxWidth: 280 },
   listContent: { padding: 12, paddingBottom: 20 },
   // Section header
   sectionHeader: { paddingVertical: 8, paddingHorizontal: 4 },

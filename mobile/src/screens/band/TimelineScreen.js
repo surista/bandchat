@@ -19,6 +19,8 @@ import { format } from 'date-fns';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import ErrorState from '../../components/ErrorState';
+import useDebounce from '../../hooks/useDebounce';
 import api from '../../services/api';
 
 const EVENT_TYPES = [
@@ -58,8 +60,11 @@ export default function TimelineScreen({ navigation, route }) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
 
   // Form state
   const [showForm, setShowForm] = useState(false);
@@ -100,6 +105,7 @@ export default function TimelineScreen({ navigation, route }) {
   }, [navigation, colors.primary]);
 
   const loadData = useCallback(async () => {
+    setError(null);
     try {
       const [timeline, ws] = await Promise.all([
         api.getTimeline(workspaceId),
@@ -110,6 +116,9 @@ export default function TimelineScreen({ navigation, route }) {
       setIsAdmin(membership?.role === 'admin');
     } catch (err) {
       console.error('Failed to load timeline:', err);
+      if (events.length === 0) {
+        setError(err.message || 'Failed to load timeline');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -134,9 +143,16 @@ export default function TimelineScreen({ navigation, route }) {
 
   // Group events by year
   const groupedData = useMemo(() => {
+    // Filter by search first
+    const q = debouncedSearch.trim().toLowerCase();
+    const filtered = q ? events.filter(e =>
+      e.title?.toLowerCase().includes(q) ||
+      e.description?.toLowerCase().includes(q)
+    ) : events;
+    // Then group filtered events by year
     const items = [];
     let currentYear = null;
-    for (const event of events) {
+    for (const event of filtered) {
       const year = new Date(event.eventDate).getFullYear();
       if (year !== currentYear) {
         currentYear = year;
@@ -145,7 +161,7 @@ export default function TimelineScreen({ navigation, route }) {
       items.push({ type: 'event', ...event });
     }
     return items;
-  }, [events]);
+  }, [events, debouncedSearch]);
 
   const resetForm = useCallback(() => {
     setEditingEvent(null);
@@ -335,6 +351,14 @@ export default function TimelineScreen({ navigation, route }) {
     );
   }
 
+  if (error) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+        <ErrorState message={error} onRetry={loadData} />
+      </SafeAreaView>
+    );
+  }
+
   if (showForm) {
     return (
       <KeyboardAvoidingView
@@ -359,6 +383,25 @@ export default function TimelineScreen({ navigation, route }) {
           </TouchableOpacity>
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Date</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateShortcuts} contentContainerStyle={styles.dateShortcutsContent}>
+            {[
+              { label: 'Today', getDate: () => new Date() },
+              { label: 'Tomorrow', getDate: () => { const d = new Date(); d.setDate(d.getDate() + 1); return d; } },
+              { label: 'This Weekend', getDate: () => { const d = new Date(); const day = d.getDay(); d.setDate(d.getDate() + (day === 0 ? 0 : 6 - day)); return d; } },
+              { label: 'Next Week', getDate: () => { const d = new Date(); d.setDate(d.getDate() + (8 - d.getDay())); return d; } },
+            ].map(shortcut => (
+              <TouchableOpacity
+                key={shortcut.label}
+                style={[styles.dateChip, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
+                onPress={() => setFormDate(shortcut.getDate())}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Set date to ${shortcut.label}`}
+              >
+                <Text style={[styles.dateChipText, { color: colors.textPrimary }]}>{shortcut.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
           <TouchableOpacity
             style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
             onPress={() => setShowDatePicker(true)}
@@ -497,6 +540,18 @@ export default function TimelineScreen({ navigation, route }) {
         </View>
       )}
 
+      <View style={[styles.searchBar, { borderBottomColor: colors.border }]}>
+        <TextInput
+          style={[styles.searchInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary }]}
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search timeline..."
+          placeholderTextColor={colors.textSecondary}
+          autoCorrect={false}
+          accessibilityLabel="Search timeline"
+        />
+      </View>
+
       <FlatList
         data={groupedData}
         keyExtractor={(item) => item.id}
@@ -512,12 +567,12 @@ export default function TimelineScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           <View style={styles.centered}>
-            <Text style={styles.emptyIcon}>{'\uD83D\uDCDC'}</Text>
+            <Text style={styles.emptyIcon}>{debouncedSearch.trim() ? '\uD83D\uDD0D' : '\uD83D\uDCDC'}</Text>
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              Your band's story starts here!
+              {debouncedSearch.trim() ? 'No matching events' : "Your band's story starts here!"}
             </Text>
             <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-              Add events or tap Auto-Generate
+              {debouncedSearch.trim() ? 'Try a different search term' : 'Add events or tap Auto-Generate'}
             </Text>
           </View>
         }
@@ -583,6 +638,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   adminButtonText: { fontSize: 13, fontWeight: '600' },
+  // Search
+  searchBar: { paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
+  searchInput: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15 },
+  dateShortcuts: { marginBottom: 8, flexGrow: 0 },
+  dateShortcutsContent: { gap: 8 },
+  dateChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1 },
+  dateChipText: { fontSize: 13, fontWeight: '500' },
   // List
   listContent: { paddingHorizontal: 12, paddingBottom: 20 },
   // Year badge

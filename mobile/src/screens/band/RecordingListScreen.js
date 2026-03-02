@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useLayoutEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
+  TextInput,
   FlatList,
   ScrollView,
   TouchableOpacity,
@@ -16,6 +17,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import formatDate from '../../utils/formatDate';
 import api from '../../services/api';
+import ErrorState from '../../components/ErrorState';
+import useDebounce from '../../hooks/useDebounce';
 
 const TYPE_FILTERS = [
   { key: 'all', label: 'All Types' },
@@ -106,12 +109,25 @@ export default function RecordingListScreen({ navigation, route }) {
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
   const [typeFilter, setTypeFilter] = useState('all');
   const [songFilter, setSongFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
 
   // Action sheet
   const [selectedRecording, setSelectedRecording] = useState(null);
   const [showActions, setShowActions] = useState(false);
+
+  const filteredRecordings = useMemo(() => {
+    if (!debouncedSearch.trim()) return recordings;
+    const q = debouncedSearch.toLowerCase();
+    return recordings.filter(r =>
+      r.title?.toLowerCase().includes(q) ||
+      r.song?.title?.toLowerCase().includes(q) ||
+      r.description?.toLowerCase().includes(q)
+    );
+  }, [recordings, debouncedSearch]);
 
   const loadingRef = useRef(loading);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
@@ -133,6 +149,7 @@ export default function RecordingListScreen({ navigation, route }) {
   }, [navigation, workspaceId, colors.primary]);
 
   const loadData = useCallback(async () => {
+    setError(null);
     try {
       const filters = {};
       if (typeFilter !== 'all') filters.type = typeFilter;
@@ -145,6 +162,7 @@ export default function RecordingListScreen({ navigation, route }) {
       setSongs(songList);
     } catch (err) {
       console.error('Failed to load recordings:', err);
+      if (!recordings.length) setError(err.message || 'Failed to load recordings');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -244,8 +262,33 @@ export default function RecordingListScreen({ navigation, route }) {
     );
   }
 
+  if (error) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+        <ErrorState
+          emoji={'\uD83D\uDE15'}
+          title="Couldn't load recordings"
+          message={error}
+          onRetry={() => { setLoading(true); loadData(); }}
+        />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <View style={[styles.searchBar, { borderBottomColor: colors.border }]}>
+        <TextInput
+          style={[styles.searchInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary }]}
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search recordings..."
+          placeholderTextColor={colors.textSecondary}
+          autoCorrect={false}
+          accessibilityLabel="Search recordings"
+        />
+      </View>
+
       {/* Type Filter */}
       <ScrollView
         horizontal
@@ -325,7 +368,7 @@ export default function RecordingListScreen({ navigation, route }) {
       )}
 
       <FlatList
-        data={recordings}
+        data={filteredRecordings}
         keyExtractor={(item) => item.id}
         renderItem={renderRecording}
         contentContainerStyle={styles.listContent}
@@ -340,7 +383,12 @@ export default function RecordingListScreen({ navigation, route }) {
         ListEmptyComponent={
           <View style={styles.centered}>
             <Text style={styles.emptyIcon}>{'\uD83C\uDFA4'}</Text>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No recordings yet</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{search ? 'No matching recordings' : 'No recordings yet'}</Text>
+            {!search && (
+              <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
+                Capture rehearsals, jams, and live performances. Tap + to add a recording.
+              </Text>
+            )}
           </View>
         }
       />
@@ -424,9 +472,13 @@ const styles = StyleSheet.create({
   },
   audioPlayerIcon: { fontSize: 18 },
   audioPlayerText: { fontSize: 13 },
+  // Search
+  searchBar: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 4, borderBottomWidth: StyleSheet.hairlineWidth },
+  searchInput: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15 },
   // Empty state
   emptyIcon: { fontSize: 40, marginBottom: 12 },
   emptyText: { fontSize: 16, fontWeight: '600' },
+  emptyHint: { fontSize: 13, textAlign: 'center', opacity: 0.7, maxWidth: 280, marginTop: 6 },
   // Action sheet
   modalOverlay: {
     flex: 1,

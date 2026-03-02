@@ -19,21 +19,7 @@ import { SkeletonList } from '../../components/SkeletonLoader';
 import { successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
-
-// Debounce hook for search input
-function useDebounce(value, delay) {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => clearTimeout(handler);
-  }, [value, delay]);
-
-  return debouncedValue;
-}
+import useDebounce from '../../hooks/useDebounce';
 
 const SORT_OPTIONS = [
   { key: 'title', label: 'Title' },

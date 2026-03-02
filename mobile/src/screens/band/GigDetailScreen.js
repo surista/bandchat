@@ -75,6 +75,7 @@ export default function GigDetailScreen({ navigation, route }) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
     if (isNew) return;
@@ -138,11 +139,18 @@ export default function GigDetailScreen({ navigation, route }) {
   }, [navigation, isNew, editing, loading, colors.primary]);
 
   const handleSave = useCallback(async () => {
+    const errors = {};
     const trimmedTitle = title.trim();
-    if (!trimmedTitle) {
-      Alert.alert('Required', 'Event title is required');
+    if (!trimmedTitle) errors.title = 'Title is required';
+    if (pay) {
+      const payNum = parseFloat(pay);
+      if (isNaN(payNum) || payNum < 0) errors.pay = 'Pay must be a valid number';
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
     setSaving(true);
     const data = {
       title: trimmedTitle,
@@ -331,13 +339,20 @@ export default function GigDetailScreen({ navigation, route }) {
         <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
           <Text style={[styles.label, { color: colors.textSecondary }]}>Title *</Text>
           <TextInput
-            style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+            style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: fieldErrors.title ? '#ef4444' : colors.border }]}
             value={title}
-            onChangeText={setTitle}
+            onChangeText={(text) => {
+              setTitle(text);
+              if (fieldErrors.title) setFieldErrors(prev => ({ ...prev, title: null }));
+            }}
+            onBlur={() => {
+              if (!title.trim()) setFieldErrors(prev => ({ ...prev, title: 'Title is required' }));
+            }}
             placeholder="Event title"
             placeholderTextColor={colors.textSecondary}
             accessibilityLabel="Event title"
           />
+          {fieldErrors.title && <Text style={styles.fieldError}>{fieldErrors.title}</Text>}
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Type</Text>
           <TouchableOpacity
@@ -366,6 +381,25 @@ export default function GigDetailScreen({ navigation, route }) {
           )}
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Date</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateShortcuts} contentContainerStyle={styles.dateShortcutsContent}>
+            {[
+              { label: 'Today', getDate: () => new Date() },
+              { label: 'Tomorrow', getDate: () => { const d = new Date(); d.setDate(d.getDate() + 1); return d; } },
+              { label: 'This Weekend', getDate: () => { const d = new Date(); const day = d.getDay(); d.setDate(d.getDate() + (day === 0 ? 0 : 6 - day)); return d; } },
+              { label: 'Next Week', getDate: () => { const d = new Date(); d.setDate(d.getDate() + (8 - d.getDay())); return d; } },
+            ].map(shortcut => (
+              <TouchableOpacity
+                key={shortcut.label}
+                style={[styles.dateChip, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
+                onPress={() => setDate(shortcut.getDate())}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Set date to ${shortcut.label}`}
+              >
+                <Text style={[styles.dateChipText, { color: colors.textPrimary }]}>{shortcut.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
           <TouchableOpacity
             style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
             onPress={() => setShowDatePicker(true)}
@@ -436,14 +470,24 @@ export default function GigDetailScreen({ navigation, route }) {
             <>
               <Text style={[styles.label, { color: colors.textSecondary }]}>Pay</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: fieldErrors.pay ? '#ef4444' : colors.border }]}
                 value={pay}
-                onChangeText={setPay}
+                onChangeText={(text) => {
+                  setPay(text);
+                  if (fieldErrors.pay) setFieldErrors(prev => ({ ...prev, pay: null }));
+                }}
+                onBlur={() => {
+                  if (pay) {
+                    const n = parseFloat(pay);
+                    if (isNaN(n) || n < 0) setFieldErrors(prev => ({ ...prev, pay: 'Pay must be a valid number' }));
+                  }
+                }}
                 placeholder="0"
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="numeric"
                 accessibilityLabel="Pay amount"
               />
+              {fieldErrors.pay && <Text style={styles.fieldError}>{fieldErrors.pay}</Text>}
             </>
           )}
 
@@ -837,4 +881,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   pickerOptionText: { fontSize: 16 },
+  fieldError: { color: '#ef4444', fontSize: 12, marginTop: 4 },
+  dateShortcuts: { marginBottom: 8, flexGrow: 0 },
+  dateShortcutsContent: { gap: 8 },
+  dateChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1 },
+  dateChipText: { fontSize: 13, fontWeight: '500' },
 });

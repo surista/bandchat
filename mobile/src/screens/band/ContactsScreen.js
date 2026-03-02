@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import ActionSheet from '../../components/ActionSheet';
+import ErrorState from '../../components/ErrorState';
 import api from '../../services/api';
 
 const CATEGORY_FILTERS = [
@@ -58,6 +59,7 @@ export default function ContactsScreen({ navigation, route }) {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('all');
 
   // Create/Edit modal
@@ -95,12 +97,14 @@ export default function ContactsScreen({ navigation, route }) {
   }, [navigation, colors.primary]);
 
   const loadContacts = useCallback(async () => {
+    setError(null);
     try {
       const cat = categoryFilter !== 'all' ? categoryFilter : null;
       const data = await api.getContacts(workspaceId, cat);
       setContacts(data);
     } catch (err) {
       console.error('Failed to load contacts:', err);
+      if (!contacts.length) setError(err.message || 'Failed to load contacts');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -277,6 +281,19 @@ export default function ContactsScreen({ navigation, route }) {
     );
   }
 
+  if (error) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+        <ErrorState
+          emoji={'\uD83D\uDE15'}
+          title="Couldn't load contacts"
+          message={error}
+          onRetry={() => { setLoading(true); loadContacts(); }}
+        />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
       {/* Filter chips */}
@@ -320,7 +337,11 @@ export default function ContactsScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           <View style={styles.centered}>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No contacts</Text>
+            <Text style={styles.emptyIcon}>{'\uD83D\uDCC7'}</Text>
+            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No contacts yet</Text>
+            <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
+              Keep track of venues, sound engineers, photographers, and more. Tap + to add a contact.
+            </Text>
           </View>
         }
       />
@@ -467,7 +488,9 @@ export default function ContactsScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-  emptyText: { fontSize: 15 },
+  emptyIcon: { fontSize: 40, marginBottom: 12 },
+  emptyTitle: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
+  emptyHint: { fontSize: 13, textAlign: 'center', opacity: 0.7, maxWidth: 280 },
   // Filters
   filterScroll: { flexGrow: 0 },
   filterRow: {

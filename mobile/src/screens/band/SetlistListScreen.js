@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useLayoutEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,8 @@ import { useTheme } from '../../context/ThemeContext';
 import Badge from '../../components/Badge';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import { successNotification } from '../../utils/haptics';
+import ErrorState from '../../components/ErrorState';
+import useDebounce from '../../hooks/useDebounce';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
 import { buildSetlistHTML } from '../../utils/buildSetlistHTML';
@@ -30,6 +32,18 @@ export default function SetlistListScreen({ navigation, route }) {
   const [setlists, setSetlists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
+
+  const filteredSetlists = useMemo(() => {
+    if (!debouncedSearch.trim()) return setlists;
+    const q = debouncedSearch.toLowerCase();
+    return setlists.filter(s =>
+      s.name?.toLowerCase().includes(q) ||
+      s.description?.toLowerCase().includes(q)
+    );
+  }, [setlists, debouncedSearch]);
 
   // Create modal
   const [showCreate, setShowCreate] = useState(false);
@@ -61,11 +75,13 @@ export default function SetlistListScreen({ navigation, route }) {
   }, [navigation, colors.primary]);
 
   const loadSetlists = useCallback(async () => {
+    setError(null);
     try {
       const data = await api.getSetlists(workspaceId);
       setSetlists(data);
     } catch (err) {
       console.error('Failed to load setlists:', err);
+      if (!setlists.length) setError(err.message || 'Failed to load setlists');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -224,10 +240,34 @@ export default function SetlistListScreen({ navigation, route }) {
     );
   }
 
+  if (error) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+        <ErrorState
+          emoji={'\uD83D\uDE15'}
+          title="Couldn't load setlists"
+          message={error}
+          onRetry={() => { setLoading(true); loadSetlists(); }}
+        />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <View style={[styles.toolbar, { borderBottomColor: colors.border }]}>
+        <TextInput
+          style={[styles.searchInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary }]}
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search setlists..."
+          placeholderTextColor={colors.textSecondary}
+          autoCorrect={false}
+          accessibilityLabel="Search setlists"
+        />
+      </View>
       <FlatList
-        data={setlists}
+        data={filteredSetlists}
         keyExtractor={(item) => item.id}
         renderItem={renderSetlist}
         contentContainerStyle={styles.listContent}
@@ -242,10 +282,12 @@ export default function SetlistListScreen({ navigation, route }) {
         ListEmptyComponent={
           <View style={styles.centered}>
             <Text style={styles.emptyIcon}>{'\uD83C\uDFBC'}</Text>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No setlists yet</Text>
-            <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
-              Tap + to create your first setlist
-            </Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{search ? 'No matching setlists' : 'No setlists yet'}</Text>
+            {!search && (
+              <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
+                Tap + to create your first setlist
+              </Text>
+            )}
           </View>
         }
       />
@@ -354,6 +396,8 @@ export default function SetlistListScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  toolbar: { paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
+  searchInput: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   listContent: { padding: 12, paddingBottom: 20 },
   setlistCard: {

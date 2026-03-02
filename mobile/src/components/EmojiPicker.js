@@ -1,4 +1,4 @@
-import { useState, memo } from 'react';
+import { useState, useEffect, memo } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { getRecentEmojis, addRecentEmoji } from '../services/storage';
 
 const EMOJI_CATEGORIES = {
   Reactions: ['👍', '👎', '❤️', '🔥', '😂', '😮', '😢', '😡', '🎉', '🙏', '👏', '💯', '✅', '❌', '👀', '🤔', '💪', '🙌', '😍', '🥳'],
@@ -17,19 +18,38 @@ const EMOJI_CATEGORIES = {
   Food: ['🍕', '🍔', '🍟', '🌮', '🍣', '🍜', '🍺', '🍷', '☕', '🍰', '🍩', '🌭', '🥗', '🍝', '🥤'],
 };
 
-const CATEGORY_NAMES = Object.keys(EMOJI_CATEGORIES);
+const BASE_CATEGORIES = Object.keys(EMOJI_CATEGORIES);
 
 function EmojiPicker({ visible, onClose, onSelect }) {
   const { colors } = useTheme();
-  const [activeCategory, setActiveCategory] = useState(CATEGORY_NAMES[0]);
+  const [recentEmojis, setRecentEmojis] = useState([]);
+  const [activeCategory, setActiveCategory] = useState(BASE_CATEGORIES[0]);
+
+  useEffect(() => {
+    if (visible) {
+      getRecentEmojis().then(recent => {
+        setRecentEmojis(recent);
+        if (recent.length > 0) setActiveCategory('Recent');
+      });
+    }
+  }, [visible]);
+
+  const categoryNames = recentEmojis.length > 0 ? ['Recent', ...BASE_CATEGORIES] : BASE_CATEGORIES;
+  const currentEmojis = activeCategory === 'Recent' ? recentEmojis : (EMOJI_CATEGORIES[activeCategory] || []);
+
+  const handleSelect = (emoji) => {
+    addRecentEmoji(emoji).then(setRecentEmojis);
+    onSelect(emoji);
+    onClose();
+  };
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={[styles.container, { backgroundColor: colors.modalBg }]}>
           {/* Category tabs */}
-          <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
-            {CATEGORY_NAMES.map(cat => (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.tabBar, { borderBottomColor: colors.border }]} contentContainerStyle={styles.tabBarContent}>
+            {categoryNames.map(cat => (
               <TouchableOpacity
                 key={cat}
                 style={[
@@ -50,18 +70,15 @@ function EmojiPicker({ visible, onClose, onSelect }) {
                 </Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
 
           {/* Emoji grid */}
           <ScrollView contentContainerStyle={styles.grid}>
-            {EMOJI_CATEGORIES[activeCategory].map(emoji => (
+            {currentEmojis.map((emoji, idx) => (
               <TouchableOpacity
-                key={emoji}
+                key={`${emoji}-${idx}`}
                 style={styles.emojiButton}
-                onPress={() => {
-                  onSelect(emoji);
-                  onClose();
-                }}
+                onPress={() => handleSelect(emoji)}
                 activeOpacity={0.5}
                 accessibilityRole="button"
                 accessibilityLabel={`Select ${emoji}`}
@@ -91,11 +108,14 @@ const styles = StyleSheet.create({
     paddingBottom: 34,
   },
   tabBar: {
-    flexDirection: 'row',
     borderBottomWidth: StyleSheet.hairlineWidth,
+    flexGrow: 0,
+  },
+  tabBarContent: {
+    flexDirection: 'row',
   },
   tab: {
-    flex: 1,
+    paddingHorizontal: 14,
     paddingVertical: 12,
     alignItems: 'center',
     borderBottomWidth: 2,

@@ -18,7 +18,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
 
-export default function WorkspaceListScreen({ navigation }) {
+export default function WorkspaceListScreen({ navigation, route }) {
   const { user, logout } = useAuth();
   const { colors } = useTheme();
   const toast = useToast();
@@ -46,6 +46,15 @@ export default function WorkspaceListScreen({ navigation }) {
   useEffect(() => {
     loadWorkspaces();
   }, [loadWorkspaces]);
+
+  // Handle invite deep link
+  useEffect(() => {
+    const code = route.params?.inviteCode;
+    if (code) {
+      setInviteCode(code);
+      setShowJoin(true);
+    }
+  }, [route.params?.inviteCode]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);

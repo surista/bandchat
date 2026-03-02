@@ -50,7 +50,9 @@ bandchat/
 │   │   │   ├── band/       # Songs, Setlists, Calendar, Stats, Members
 │   │   │   ├── channels/   # Sidebar, ChannelView, ChannelMembersPanel
 │   │   │   ├── common/     # MemberProfile, ConfirmDialog, Skeleton, etc.
+│   │   │   ├── legal/      # Privacy, Terms
 │   │   │   ├── messages/   # MessageList, MessageInput, LinkPreviewCard
+│   │   │   ├── navigation/ # Navigation components
 │   │   │   ├── threads/    # ThreadView
 │   │   │   └── workspaces/ # WorkspaceList, WorkspaceView, SlackImportWizard
 │   │   ├── context/        # AuthContext, SocketContext, ThemeContext, ToastContext
@@ -60,7 +62,7 @@ bandchat/
 │   └── package.json
 ├── mobile/                 # Expo/React Native mobile app
 │   ├── src/
-│   │   ├── screens/        # 50+ screens organized by feature
+│   │   ├── screens/        # 40+ screens organized by feature
 │   │   ├── components/     # Shared mobile components
 │   │   ├── context/        # Auth, Socket, Theme, Toast contexts
 │   │   ├── services/       # API client (~1400 lines)
@@ -70,14 +72,14 @@ bandchat/
 │   └── package.json
 ├── server/                 # Express backend
 │   ├── src/
-│   │   ├── routes/         # 23 route modules (auth, channels, messages, songs, etc.)
+│   │   ├── routes/         # 26 route modules (auth, channels, messages, songs, etc.)
 │   │   ├── middleware/      # Auth (JWT), rate limiting
 │   │   ├── services/       # Slack text converter, emoji map
 │   │   ├── socket/         # Real-time event handlers
 │   │   ├── scripts/        # CLI utilities (import-slack, etc.)
 │   │   └── lib/            # Prisma client singleton
 │   ├── prisma/
-│   │   └── schema.prisma   # Database schema (30+ models)
+│   │   └── schema.prisma   # Database schema (40+ models)
 │   └── package.json
 └── README.md
 ```
@@ -98,7 +100,7 @@ bandchat/
 
 **Server:**
 - Express 4
-- Prisma ORM with PostgreSQL (30+ models)
+- Prisma ORM with PostgreSQL (40+ models)
 - Socket.IO (real-time)
 - JWT Authentication (access tokens + httpOnly cookie refresh tokens)
 - Cloudinary (image/file uploads with magic byte validation)
@@ -122,8 +124,8 @@ bandchat/
 - Leave workspace, delete workspace
 - Onboarding wizard for new workspaces
 
-### Server Routes (25 modules)
-auth, channels, channelGroups, messages, workspaces, songs, setlists, gigs, bandMembers, availability, contacts, announcements, polls, timeline, achievements, recordings, medleys, kitty, uploads, push, linkPreview, suggestions, slackImport, practice, reports
+### Server Routes (26 modules)
+auth, channels, channelGroups, messages, workspaces, songs, setlists, gigs, bandMembers, availability, blocks, contacts, announcements, polls, timeline, achievements, recordings, medleys, kitty, uploads, push, linkPreview, suggestions, slackImport, practice, reports
 
 ## Environment Variables
 

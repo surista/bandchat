@@ -1339,6 +1339,48 @@ class ApiService {
     return response.json();
   }
 
+  async uploadFileWithProgress(uri, filename, mimeType, onProgress) {
+    await this.ensureFreshToken();
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const formData = new FormData();
+      formData.append('file', { uri, name: filename, type: mimeType });
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable && onProgress) {
+          onProgress(event.loaded / event.total);
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            resolve(JSON.parse(xhr.responseText));
+          } catch {
+            reject(new Error('Invalid response'));
+          }
+        } else {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            reject(new Error(data.error || 'Upload failed'));
+          } catch {
+            reject(new Error('Upload failed'));
+          }
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('Network error'));
+      xhr.ontimeout = () => reject(new Error('Upload timed out'));
+
+      xhr.open('POST', `${API_URL}/uploads`);
+      xhr.timeout = UPLOAD_TIMEOUT;
+      if (this.accessToken) {
+        xhr.setRequestHeader('Authorization', `Bearer ${this.accessToken}`);
+      }
+      xhr.send(formData);
+    });
+  }
+
   async uploadFiles(files) {
     await this.ensureFreshToken();
     const formData = new FormData();

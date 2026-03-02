@@ -25,6 +25,7 @@ export default function EditProfileScreen({ navigation }) {
   const [bio, setBio] = useState(user?.bio || '');
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const handlePickAvatar = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -54,9 +55,10 @@ export default function EditProfileScreen({ navigation }) {
   const handleSave = useCallback(async () => {
     const trimmedName = displayName.trim();
     if (trimmedName.length < 2 || trimmedName.length > 50) {
-      Alert.alert('Invalid', 'Display name must be 2\u201350 characters');
+      setFieldErrors({ displayName: 'Must be 2\u201350 characters' });
       return;
     }
+    setFieldErrors({});
     setSaving(true);
     try {
       const updated = await api.updateProfile({
@@ -105,14 +107,26 @@ export default function EditProfileScreen({ navigation }) {
         {/* Display Name */}
         <Text style={[styles.label, { color: colors.textSecondary }]}>Display Name</Text>
         <TextInput
-          style={[styles.input, { backgroundColor: colors.bgSecondary, color: colors.textPrimary, borderColor: colors.border }]}
+          style={[styles.input, { backgroundColor: colors.bgSecondary, color: colors.textPrimary, borderColor: fieldErrors.displayName ? '#ef4444' : colors.border }]}
           value={displayName}
-          onChangeText={setDisplayName}
+          onChangeText={(text) => {
+            setDisplayName(text);
+            if (fieldErrors.displayName) setFieldErrors(prev => ({ ...prev, displayName: null }));
+          }}
+          onBlur={() => {
+            const trimmed = displayName.trim();
+            if (trimmed.length > 0 && (trimmed.length < 2 || trimmed.length > 50)) {
+              setFieldErrors(prev => ({ ...prev, displayName: 'Must be 2\u201350 characters' }));
+            }
+          }}
           placeholder="Your display name"
           placeholderTextColor={colors.textSecondary}
           maxLength={50}
           autoCapitalize="words"
         />
+        {fieldErrors.displayName && (
+          <Text style={styles.fieldError}>{fieldErrors.displayName}</Text>
+        )}
         <Text style={[styles.charCount, { color: colors.textSecondary }]}>
           {displayName.length}/50
         </Text>
@@ -191,6 +205,7 @@ const styles = StyleSheet.create({
   },
   bioInput: { height: 100, textAlignVertical: 'top' },
   charCount: { fontSize: 12, alignSelf: 'flex-end', marginTop: 4, marginBottom: 16 },
+  fieldError: { color: '#ef4444', fontSize: 12, alignSelf: 'flex-start', marginTop: 4 },
   // Save
   saveButton: {
     width: '100%',

@@ -57,6 +57,7 @@ export default function SongDetailScreen({ navigation, route }) {
   const [arrangement, setArrangement] = useState('');
 
   const [showKeyPicker, setShowKeyPicker] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   // Practice logging
   const [showPracticeModal, setShowPracticeModal] = useState(false);
@@ -122,11 +123,19 @@ export default function SongDetailScreen({ navigation, route }) {
   }, [navigation, isNew, editing, loading, colors.primary]);
 
   const handleSave = useCallback(async () => {
+    const errors = {};
     const trimmedTitle = title.trim();
-    if (!trimmedTitle) {
-      Alert.alert('Required', 'Song title is required');
+    if (!trimmedTitle) errors.title = 'Title is required';
+    if (bpm) {
+      const bpmNum = parseInt(bpm, 10);
+      if (isNaN(bpmNum) || bpmNum < 20 || bpmNum > 300) errors.bpm = 'BPM must be 20\u2013300';
+    }
+    if (duration && !parseDuration(duration)) errors.duration = 'Use mm:ss format';
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
     setSaving(true);
     const data = {
       title: trimmedTitle,
@@ -234,13 +243,20 @@ export default function SongDetailScreen({ navigation, route }) {
         <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
           <Text style={[styles.label, { color: colors.textSecondary }]}>Title *</Text>
           <TextInput
-            style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+            style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: fieldErrors.title ? '#ef4444' : colors.border }]}
             value={title}
-            onChangeText={setTitle}
+            onChangeText={(text) => {
+              setTitle(text);
+              if (fieldErrors.title) setFieldErrors(prev => ({ ...prev, title: null }));
+            }}
+            onBlur={() => {
+              if (!title.trim()) setFieldErrors(prev => ({ ...prev, title: 'Title is required' }));
+            }}
             placeholder="Song title"
             placeholderTextColor={colors.textSecondary}
             accessibilityLabel="Song title"
           />
+          {fieldErrors.title && <Text style={styles.fieldError}>{fieldErrors.title}</Text>}
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Short Name</Text>
           <TextInput
@@ -279,25 +295,42 @@ export default function SongDetailScreen({ navigation, route }) {
             <View style={styles.rowField}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>BPM</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: fieldErrors.bpm ? '#ef4444' : colors.border }]}
                 value={bpm}
-                onChangeText={setBpm}
+                onChangeText={(text) => {
+                  setBpm(text);
+                  if (fieldErrors.bpm) setFieldErrors(prev => ({ ...prev, bpm: null }));
+                }}
+                onBlur={() => {
+                  if (bpm) {
+                    const n = parseInt(bpm, 10);
+                    if (isNaN(n) || n < 20 || n > 300) setFieldErrors(prev => ({ ...prev, bpm: 'BPM must be 20\u2013300' }));
+                  }
+                }}
                 placeholder="120"
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="numeric"
                 accessibilityLabel="BPM"
               />
+              {fieldErrors.bpm && <Text style={styles.fieldError}>{fieldErrors.bpm}</Text>}
             </View>
             <View style={styles.rowField}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>Duration</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: fieldErrors.duration ? '#ef4444' : colors.border }]}
                 value={duration}
-                onChangeText={setDuration}
+                onChangeText={(text) => {
+                  setDuration(text);
+                  if (fieldErrors.duration) setFieldErrors(prev => ({ ...prev, duration: null }));
+                }}
+                onBlur={() => {
+                  if (duration && !parseDuration(duration)) setFieldErrors(prev => ({ ...prev, duration: 'Use mm:ss format' }));
+                }}
                 placeholder="3:30"
                 placeholderTextColor={colors.textSecondary}
                 accessibilityLabel="Duration"
               />
+              {fieldErrors.duration && <Text style={styles.fieldError}>{fieldErrors.duration}</Text>}
             </View>
           </View>
 
@@ -623,6 +656,7 @@ const styles = StyleSheet.create({
   formButtonTextWhite: { fontSize: 16, fontWeight: '600', color: '#ffffff' },
   deleteButton: { marginTop: 16, paddingVertical: 14, alignItems: 'center' },
   deleteButtonText: { color: '#ef4444', fontSize: 16, fontWeight: '600' },
+  fieldError: { color: '#ef4444', fontSize: 12, marginTop: 4 },
   // Key picker
   modalOverlay: {
     flex: 1,
