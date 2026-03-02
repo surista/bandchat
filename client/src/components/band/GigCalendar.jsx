@@ -294,6 +294,10 @@ function GigCalendar({ workspaceId, workspace }) {
   const [icsImporting, setIcsImporting] = useState(false);
   const [icsError, setIcsError] = useState('');
 
+  // Availability overlay
+  const [showAvailability, setShowAvailability] = useState(true);
+  const [availability, setAvailability] = useState([]);
+
   // iCal subscribe
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
   const [icalUrl, setIcalUrl] = useState('');
@@ -325,6 +329,31 @@ function GigCalendar({ workspaceId, workspace }) {
       setOtherWorkspaceGigs([]);
     }
   }, [showOtherWorkspaces, workspaceId]);
+
+  // Load availability when month changes or toggle is on
+  useEffect(() => {
+    if (!showAvailability) {
+      setAvailability([]);
+      return;
+    }
+
+    const loadAvailability = async () => {
+      try {
+        const start = startOfMonth(currentMonth);
+        const end = endOfMonth(currentMonth);
+        const data = await api.getAvailability(
+          workspaceId,
+          format(start, 'yyyy-MM-dd'),
+          format(end, 'yyyy-MM-dd')
+        );
+        setAvailability(data);
+      } catch (err) {
+        console.error('Failed to load availability:', err);
+      }
+    };
+
+    loadAvailability();
+  }, [workspaceId, currentMonth, showAvailability]);
 
   // Keyboard navigation for calendar view
   useEffect(() => {
@@ -673,6 +702,20 @@ function GigCalendar({ workspaceId, workspace }) {
     return map;
   }, [allGigs]);
 
+  // Group availability by date -> { available: [], unavailable: [], maybe: [] }
+  const availabilityByDate = useMemo(() => {
+    const map = {};
+    availability.forEach(a => {
+      const dateKey = format(new Date(a.date), 'yyyy-MM-dd');
+      if (!map[dateKey]) map[dateKey] = { available: [], unavailable: [], maybe: [] };
+      const statusKey = a.status.toLowerCase();
+      if (map[dateKey][statusKey]) {
+        map[dateKey][statusKey].push(a.user);
+      }
+    });
+    return map;
+  }, [availability]);
+
   const filteredGigs = filterType
     ? allGigs.filter(g => g.type === filterType)
     : allGigs;
@@ -813,6 +856,16 @@ function GigCalendar({ workspaceId, workspace }) {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Calendar</h2>
           <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer" title="Show member availability">
+              <input
+                type="checkbox"
+                checked={showAvailability}
+                onChange={(e) => setShowAvailability(e.target.checked)}
+                className="rounded bg-gray-700 border-gray-600 text-green-500 focus:ring-green-500"
+              />
+              <span className="hidden sm:inline">Availability</span>
+              <span className="sm:hidden">Avail</span>
+            </label>
             <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
               <input
                 type="checkbox"
@@ -965,6 +1018,8 @@ function GigCalendar({ workspaceId, workspace }) {
                   : dayGigs;
                 const isDropTarget = dropTargetDate && isSameDay(day, dropTargetDate);
                 const isCurrentMonth = isSameMonth(day, currentMonth);
+                const dayAvail = availabilityByDate[dateKey];
+                const hasAvailability = dayAvail && (dayAvail.available.length > 0 || dayAvail.unavailable.length > 0 || dayAvail.maybe.length > 0);
 
                 return (
                   <div
@@ -1022,6 +1077,27 @@ function GigCalendar({ workspaceId, workspace }) {
                         </div>
                       )}
                     </div>
+                    {/* Availability indicator */}
+                    {showAvailability && hasAvailability && (
+                      <div
+                        className="mt-1 flex items-center gap-1 text-[10px]"
+                        title={[
+                          dayAvail.available.length > 0 && `Available: ${dayAvail.available.map(u => u.displayName).join(', ')}`,
+                          dayAvail.unavailable.length > 0 && `Unavailable: ${dayAvail.unavailable.map(u => u.displayName).join(', ')}`,
+                          dayAvail.maybe.length > 0 && `Maybe: ${dayAvail.maybe.map(u => u.displayName).join(', ')}`
+                        ].filter(Boolean).join('\n')}
+                      >
+                        {dayAvail.available.length > 0 && (
+                          <span className="text-green-400">✓{dayAvail.available.length}</span>
+                        )}
+                        {dayAvail.unavailable.length > 0 && (
+                          <span className="text-red-400">✗{dayAvail.unavailable.length}</span>
+                        )}
+                        {dayAvail.maybe.length > 0 && (
+                          <span className="text-yellow-400">?{dayAvail.maybe.length}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
