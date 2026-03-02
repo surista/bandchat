@@ -174,13 +174,10 @@ While most features should exist on both web and mobile, some features make sens
 ### Desktop/Web Only
 These features work better with a keyboard, mouse, or larger screen:
 
-| Feature | Rationale |
-|---------|-----------|
-| **Audio Analyzer** | CPU-intensive WASM (Essentia.js), needs file system access |
-| **Slack Import Wizard** | One-time admin task, requires uploading large ZIP files |
-| **Bulk song import** (paste large lists) | Easier with keyboard and clipboard |
-| **Complex setlist builder** | Drag-and-drop works better with mouse, multi-column layout |
-| **Workspace data export** | Admin task, downloads large JSON files |
+| Feature | Rationale | Mobile Hint |
+|---------|-----------|-------------|
+| **Audio Analyzer** | CPU-intensive WASM (Essentia.js), needs file system access | SongDetailScreen shows hint |
+| **Slack Import Wizard** | One-time admin task, requires uploading large ZIP files | SettingsScreen shows hint |
 
 ### Mobile Only
 These features leverage native device capabilities:
@@ -191,22 +188,36 @@ These features leverage native device capabilities:
 | **Add gig to device calendar** | Native calendar integration via Expo Calendar |
 | **Camera for gig photos** | Direct capture vs upload |
 | **Haptic feedback** | Touch-specific feedback |
-| **Quick attendance RSVP** | Tap from push notification |
+| **Gig gallery** | Browse and manage gig photos |
+| **Message reporting** | Report objectionable content |
+| **Print & Share setlists** | expo-print integration |
 | **Offline detection banner** | More relevant for mobile connectivity |
 
 ### Both Platforms (Core Features)
-All communication and reference features should work on both:
+All communication and reference features work on both:
 
 - Messaging, channels, threads, reactions
-- Song list, setlists, gigs, calendar
+- Song list, bulk import, metadata enrichment
+- Setlists, setlist performers, live mode
+- Gigs, calendar, cross-workspace view
 - Members, contacts, polls, announcements
-- Settings, profile, themes
-- Push notifications
-- Practice Dashboard
+- Settings, profile, themes, data export
+- Push notifications, Practice Dashboard
+
+### Feature Parity Summary (March 2026)
+
+| Area | Parity | Notes |
+|------|--------|-------|
+| Messaging | 95% | Mobile missing: pinned messages panel, link previews |
+| Songs | 90% | Web has Song Suggestions; both have bulk import |
+| Setlists | 85% | Web has advanced drag-drop; mobile has print/share |
+| Gigs/Calendar | 90% | Web has month view; mobile has iCal subscribe |
+| Members | 95% | Excellent parity |
+| Settings | 85% | Mobile has more granular security options |
 
 ### Implementation Notes
-- When adding a desktop-only feature, add a note in the relevant mobile screen (if applicable) saying "Use the web app for [feature]"
-- When adding a mobile-only feature, document it in `mobile/ROADMAP.md`
+- Desktop-only features show hints on mobile directing users to the web app
+- Mobile-only features are documented in `mobile/ROADMAP.md`
 - Core features added to one platform should be added to the other in the same PR when possible
 
 ## Empty State Guidelines

@@ -504,6 +504,14 @@ export default function SongDetailScreen({ navigation, route }) {
         </View>
       ) : null}
 
+      {/* Desktop Feature Hint */}
+      <View style={[styles.desktopHint, { backgroundColor: colors.bgTertiary }]}>
+        <Text style={styles.desktopHintIcon}>🔊</Text>
+        <Text style={[styles.desktopHintText, { color: colors.textSecondary }]}>
+          Audio analysis (BPM/key detection) available on web
+        </Text>
+      </View>
+
       {/* Log Practice Button */}
       <TouchableOpacity
         style={[styles.practiceButton, { backgroundColor: colors.primary }]}
@@ -672,5 +680,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     marginTop: 20,
+  },
+  // Desktop feature hint
+  desktopHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 20,
+    gap: 10,
+  },
+  desktopHintIcon: {
+    fontSize: 20,
+  },
+  desktopHintText: {
+    fontSize: 13,
+    flex: 1,
   },
 });

@@ -105,16 +105,13 @@
 - Haptic feedback utility module
 - Haptics on long-press action sheets and success actions
 
----
-
-## Remaining Phases
-
 ### Phase 15 — Feature Completions
 - Bulk song import (paste list, parse, import with metadata fetch)
 - Song metadata enrichment (fetch missing BPM, key, duration)
 - Setlist performers (view/edit who played each setlist)
-- Cross-workspace calendar view (see gigs from all bands)
+- Cross-workspace calendar view ("All Bands" toggle in gig list)
 - Add gig to device calendar (expo-calendar integration)
+- Desktop-only feature hints (Audio Analyzer, Slack Import)
 
 ---
 
@@ -123,12 +120,10 @@
 Some features are intentionally available on only one platform:
 
 ### Desktop/Web Only
-| Feature | Reason |
-|---------|--------|
-| Audio Analyzer | CPU-intensive WASM (Essentia.js), file system access |
-| Slack Import Wizard | One-time admin task, large file uploads |
-| Bulk song import (paste) | Easier with keyboard and clipboard |
-| Workspace data export | Large JSON downloads |
+| Feature | Reason | Mobile Hint |
+|---------|--------|-------------|
+| Audio Analyzer | CPU-intensive WASM (Essentia.js), file system access | SongDetailScreen shows hint |
+| Slack Import Wizard | One-time admin task, large file uploads | SettingsScreen shows hint |
 
 ### Mobile Only
 | Feature | Reason |
@@ -138,6 +133,24 @@ Some features are intentionally available on only one platform:
 | Camera for gig photos | Direct capture |
 | Haptic feedback | Touch-specific |
 | Offline detection banner | Mobile connectivity |
+| Gig gallery | Browse gig photos |
+| Message reporting | Report objectionable content |
+| Print & Share setlists | expo-print integration |
 
 ### Both Platforms
-All core features (messaging, songs, setlists, gigs, practice, polls, etc.) are available on both web and mobile.
+All core features (messaging, songs, setlists, gigs, practice, polls, bulk import, data export, etc.) are available on both web and mobile.
+
+---
+
+## Feature Parity Summary
+
+| Area | Parity | Notes |
+|------|--------|-------|
+| Messaging | 95% | Mobile missing: pinned messages panel, link previews |
+| Songs | 90% | Web has Song Suggestions; both have bulk import |
+| Setlists | 85% | Web has advanced drag-drop; mobile has print/share |
+| Gigs/Calendar | 90% | Web has month view; mobile has iCal subscribe |
+| Members | 95% | Excellent parity |
+| Settings | 85% | Mobile has more granular security options |
+
+Last audit: March 2026

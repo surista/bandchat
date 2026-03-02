@@ -176,6 +176,17 @@ export default function SettingsScreen({ navigation, route }) {
                 colors={colors}
               />
               <View style={[styles.separator, { backgroundColor: colors.border }]} />
+              <SettingsRow
+                icon={'\uD83D\uDCE8'}
+                label="Import from Slack"
+                onPress={() => Alert.alert(
+                  'Desktop Feature',
+                  'Slack workspace import is available on the web app at bandchat.app',
+                  [{ text: 'OK' }]
+                )}
+                colors={colors}
+              />
+              <View style={[styles.separator, { backgroundColor: colors.border }]} />
             </>
           )}
           <SettingsRow
