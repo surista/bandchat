@@ -176,7 +176,7 @@ bandchat/
 │   │   ├── screens/        # 50+ screens organized by feature
 │   │   ├── components/     # Shared mobile components
 │   │   ├── context/        # Auth, Socket, Theme, Toast contexts
-│   │   ├── services/       # API client (~1200 lines)
+│   │   ├── services/       # API client (~1400 lines)
 │   │   └── utils/          # Haptics, helpers
 │   ├── app.config.js       # Expo configuration
 │   ├── eas.json            # EAS Build profiles

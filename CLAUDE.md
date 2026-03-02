@@ -63,7 +63,7 @@ bandchat/
 │   │   ├── screens/        # 50+ screens organized by feature
 │   │   ├── components/     # Shared mobile components
 │   │   ├── context/        # Auth, Socket, Theme, Toast contexts
-│   │   ├── services/       # API client (~1200 lines)
+│   │   ├── services/       # API client (~1400 lines)
 │   │   └── utils/          # Haptics, helpers
 │   ├── app.config.js       # Expo config with permissions
 │   ├── eas.json            # EAS Build profiles (dev/preview/production)
@@ -153,7 +153,7 @@ Mobile app: EAS Build (Expo Application Services) for iOS/Android.
 
 - CSS should go in `/client/styles/` CSS files
 - JavaScript code in `/client/src/` and `/server/src/`
-- The Sidebar.jsx component is large (~2700 lines) — contains the settings modal, channel management, and workspace UI
+- The Sidebar.jsx component is large (~1300 lines) — contains channel management and workspace UI (settings moved to SettingsModal.jsx)
 - Database uses cascade deletes on workspace relations
 
 ## Web + Mobile Parity
