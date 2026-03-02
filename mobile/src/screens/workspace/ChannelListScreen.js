@@ -73,19 +73,22 @@ export default function ChannelListScreen({ navigation, route }) {
   const [collapsedGroups, setCollapsedGroups] = useState({});
   const [collapsedBand, setCollapsedBand] = useState(false);
   const [collapsedBandCats, setCollapsedBandCats] = useState({});
+  const [collapsedDMs, setCollapsedDMs] = useState(false);
 
   // Load persisted collapse state
   useEffect(() => {
     const load = async () => {
       try {
-        const [savedGroups, savedBand, savedBandCats] = await Promise.all([
+        const [savedGroups, savedBand, savedBandCats, savedDMs] = await Promise.all([
           AsyncStorage.getItem(`collapsedGroups:${workspaceId}`),
           AsyncStorage.getItem(`collapsedBand:${workspaceId}`),
           AsyncStorage.getItem(`collapsedBandCats:${workspaceId}`),
+          AsyncStorage.getItem(`collapsedDMs:${workspaceId}`),
         ]);
         if (savedGroups) setCollapsedGroups(JSON.parse(savedGroups));
         if (savedBand) setCollapsedBand(JSON.parse(savedBand));
         if (savedBandCats) setCollapsedBandCats(JSON.parse(savedBandCats));
+        if (savedDMs) setCollapsedDMs(JSON.parse(savedDMs));
       } catch {}
     };
     load();
@@ -101,6 +104,9 @@ export default function ChannelListScreen({ navigation, route }) {
   useEffect(() => {
     AsyncStorage.setItem(`collapsedBandCats:${workspaceId}`, JSON.stringify(collapsedBandCats)).catch(() => {});
   }, [collapsedBandCats, workspaceId]);
+  useEffect(() => {
+    AsyncStorage.setItem(`collapsedDMs:${workspaceId}`, JSON.stringify(collapsedDMs)).catch(() => {});
+  }, [collapsedDMs, workspaceId]);
 
   // Create channel modal
   const [showCreateChannel, setShowCreateChannel] = useState(false);
@@ -438,7 +444,8 @@ export default function ChannelListScreen({ navigation, route }) {
     const dmSection = {
       title: 'Direct Messages',
       showNewDM: true,
-      data: directMessages.map(dm => ({ ...dm, _type: 'dm' })),
+      isDM: true,
+      data: collapsedDMs ? [] : directMessages.map(dm => ({ ...dm, _type: 'dm' })),
     };
 
     // Build band items: category headers + their items (if not collapsed)
@@ -461,7 +468,7 @@ export default function ChannelListScreen({ navigation, route }) {
     };
 
     return [...channelSections, dmSection, bandSection];
-  }, [channels, channelGroups, directMessages, collapsedGroups, collapsedBand, collapsedBandCats]);
+  }, [channels, channelGroups, directMessages, collapsedGroups, collapsedBand, collapsedBandCats, collapsedDMs]);
 
   const toggleBandCat = useCallback((catKey) => {
     setCollapsedBandCats(prev => ({ ...prev, [catKey]: !prev[catKey] }));
@@ -514,13 +521,15 @@ export default function ChannelListScreen({ navigation, route }) {
   }, [getDMDisplayName, handleChannelPress, handleBandItemPress, colors, collapsedBandCats, toggleBandCat]);
 
   const renderSectionHeader = useCallback(({ section }) => {
-    const isCollapsible = section.isGroup || section.isBand;
-    const isCollapsed = section.isGroup ? collapsedGroups[section.groupId] : section.isBand ? collapsedBand : false;
+    const isCollapsible = section.isGroup || section.isBand || section.isDM;
+    const isCollapsed = section.isGroup ? collapsedGroups[section.groupId] : section.isBand ? collapsedBand : section.isDM ? collapsedDMs : false;
     const handlePress = section.isGroup
       ? () => toggleGroup(section.groupId)
       : section.isBand
         ? () => setCollapsedBand(prev => !prev)
-        : undefined;
+        : section.isDM
+          ? () => setCollapsedDMs(prev => !prev)
+          : undefined;
     return (
       <View style={styles.sectionHeaderRow}>
         <TouchableOpacity
@@ -547,7 +556,7 @@ export default function ChannelListScreen({ navigation, route }) {
             <Text style={[styles.addIcon, { color: colors.textSecondary }]}>+</Text>
           </TouchableOpacity>
         )}
-        {section.showNewDM && (
+        {section.showNewDM && !isCollapsed && (
           <TouchableOpacity
             style={styles.addButton}
             onPress={openNewDM}
@@ -558,7 +567,7 @@ export default function ChannelListScreen({ navigation, route }) {
         )}
       </View>
     );
-  }, [collapsedGroups, collapsedBand, toggleGroup, colors, openNewDM]);
+  }, [collapsedGroups, collapsedBand, collapsedDMs, toggleGroup, colors, openNewDM]);
 
   if (loading) {
     return (
