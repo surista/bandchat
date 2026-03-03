@@ -5,6 +5,9 @@ import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+// BigInt JSON serialization support (Prisma returns BigInt for storageUsedBytes)
+BigInt.prototype.toJSON = function () { return Number(this); };
+
 import authRoutes from './routes/auth.js';
 import workspaceRoutes from './routes/workspaces.js';
 import channelRoutes from './routes/channels.js';
@@ -54,14 +57,27 @@ export function createApp() {
     return origin;
   });
 
+  // R2 public URL for CSP (if configured)
+  const r2PublicUrl = process.env.R2_PUBLIC_URL || '';
+  const r2CspDomain = r2PublicUrl ? r2PublicUrl.replace(/\/$/, '') : null;
+
   // Admin dashboard — standalone HTML with its own CSP (served before Helmet)
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const adminImgSrc = ['self', 'data:', 'https://res.cloudinary.com', r2CspDomain].filter(Boolean).join(' ');
   app.get('/admin', (req, res) => {
     res.setHeader('Content-Security-Policy',
-      "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: https://res.cloudinary.com; connect-src 'self'; frame-ancestors 'none'"
+      `default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: https://res.cloudinary.com${r2CspDomain ? ' ' + r2CspDomain : ''}; connect-src 'self'; frame-ancestors 'none'; media-src 'self' https://res.cloudinary.com${r2CspDomain ? ' ' + r2CspDomain : ''}`
     );
     res.sendFile(path.join(__dirname, 'admin', 'index.html'));
   });
+
+  // Build img/media source lists for CSP
+  const imgSources = ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://*.googleusercontent.com"];
+  const mediaSources = ["'self'", "https://res.cloudinary.com"];
+  if (r2CspDomain) {
+    imgSources.push(r2CspDomain);
+    mediaSources.push(r2CspDomain);
+  }
 
   // Middleware
   app.use(helmet({
@@ -70,7 +86,8 @@ export function createApp() {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://*.googleusercontent.com"],
+        imgSrc: imgSources,
+        mediaSrc: mediaSources,
         connectSrc: ["'self'", ...wsOrigins, ...allowedOrigins],
         fontSrc: ["'self'"],
         objectSrc: ["'none'"],

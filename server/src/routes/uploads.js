@@ -3,6 +3,8 @@ import multer from 'multer';
 import fileType from 'file-type';
 import { rateLimit } from 'express-rate-limit';
 import { authenticate } from '../middleware/auth.js';
+import { uploadFile } from '../lib/storage.js';
+import prisma from '../lib/prisma.js';
 
 const router = express.Router();
 
@@ -15,14 +17,6 @@ const uploadLimiter = rateLimit({
   keyGenerator: (req) => req.user?.id || req.ip,
 });
 
-// Cloudinary cloud name for unsigned uploads - environment variables required
-const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
-const CLOUDINARY_UPLOAD_PRESET = process.env.CLOUDINARY_UPLOAD_PRESET;
-
-if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
-  console.warn('Warning: CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET must be set for file uploads to work');
-}
-
 // Allowed MIME types (validated by magic bytes)
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const ALLOWED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/aac', 'audio/m4a', 'audio/x-m4a', 'audio/mp4'];
@@ -34,8 +28,11 @@ const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_AUDIO_SIZE = 30 * 1024 * 1024; // 30MB
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
 
-// Use memory storage for Cloudinary uploads
-const storage = multer.memoryStorage();
+// Storage quota: 2 GB default (can be adjusted per tier later)
+const DEFAULT_STORAGE_QUOTA = 2n * 1024n * 1024n * 1024n; // 2 GB in bytes
+
+// Use memory storage
+const memStorage = multer.memoryStorage();
 
 // Initial file filter based on declared MIME type (will be verified by magic bytes later)
 const fileFilter = (req, file, cb) => {
@@ -49,8 +46,6 @@ const fileFilter = (req, file, cb) => {
 /**
  * Validates file content by checking magic bytes (file signature).
  * Prevents MIME type spoofing attacks.
- * @param {Buffer} buffer - File buffer to validate
- * @returns {Promise<{valid: boolean, detectedType: string|null, fileCategory: string|null}>}
  */
 const validateFileType = async (buffer) => {
   const detected = await fileType.fromBuffer(buffer);
@@ -70,40 +65,43 @@ const validateFileType = async (buffer) => {
 
 // Configure multer with 50MB limit (will validate per-type in handler)
 const upload = multer({
-  storage,
+  storage: memStorage,
   fileFilter,
   limits: {
     fileSize: MAX_VIDEO_SIZE // 50MB max (video), smaller types validated separately
   }
 });
 
-// Helper to upload buffer to Cloudinary using unsigned upload
-const uploadToCloudinary = async (buffer, originalname, fileCategory, mimeType) => {
-  const base64 = buffer.toString('base64');
-  const dataUri = `data:${mimeType};base64,${base64}`;
+/**
+ * Check workspace storage quota before upload.
+ * Returns null if OK, or an error response object if over quota.
+ */
+const checkStorageQuota = async (workspaceId, fileSize) => {
+  if (!workspaceId) return null;
 
-  const formData = new FormData();
-  formData.append('file', dataUri);
-  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-  formData.append('folder', 'bandchat');
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { storageUsedBytes: true },
+  });
+  if (!workspace) return null;
 
-  // Cloudinary uses 'video' endpoint for both video and audio files
-  const resourceType = (fileCategory === 'AUDIO' || fileCategory === 'VIDEO') ? 'video' : 'image';
-
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`,
-    {
-      method: 'POST',
-      body: formData
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error?.message || 'Upload failed');
+  const used = workspace.storageUsedBytes ?? 0n;
+  if (used + BigInt(fileSize) > DEFAULT_STORAGE_QUOTA) {
+    return { error: 'Storage quota exceeded. Free tier allows 2 GB per workspace.' };
   }
+  return null;
+};
 
-  return response.json();
+/**
+ * Increment workspace storage counter after a successful upload.
+ */
+const trackStorageUsage = async (workspaceId, fileSize) => {
+  if (!workspaceId) return;
+
+  await prisma.workspace.update({
+    where: { id: workspaceId },
+    data: { storageUsedBytes: { increment: BigInt(fileSize) } },
+  });
 };
 
 // Upload single file (image, audio, or video)
@@ -130,11 +128,22 @@ router.post('/', authenticate, uploadLimiter, upload.single('file'), async (req,
       });
     }
 
-    // Upload to Cloudinary
-    const result = await uploadToCloudinary(req.file.buffer, req.file.originalname, fileCategory, detectedType);
+    // Check workspace storage quota if workspaceId provided
+    const workspaceId = req.body.workspaceId || req.query.workspaceId;
+    const quotaError = await checkStorageQuota(workspaceId, req.file.size);
+    if (quotaError) {
+      return res.status(413).json(quotaError);
+    }
+
+    // Upload to R2
+    const folder = fileCategory === 'IMAGE' ? 'images' : fileCategory === 'AUDIO' ? 'audio' : 'video';
+    const result = await uploadFile(req.file.buffer, req.file.originalname, detectedType, folder);
+
+    // Track storage usage
+    await trackStorageUsage(workspaceId, req.file.size);
 
     res.json({
-      url: result.secure_url,
+      url: result.url,
       filename: req.file.originalname,
       size: req.file.size,
       type: fileCategory
@@ -154,6 +163,7 @@ router.post('/multiple', authenticate, uploadLimiter, upload.array('files', 5), 
 
     // Validate all files by magic bytes and size before uploading
     const fileValidations = [];
+    let totalSize = 0;
     for (const file of req.files) {
       const { valid, detectedType, fileCategory } = await validateFileType(file.buffer);
       if (!valid) {
@@ -171,17 +181,29 @@ router.post('/multiple', authenticate, uploadLimiter, upload.array('files', 5), 
         });
       }
 
+      totalSize += file.size;
       fileValidations.push({ file, detectedType, fileCategory });
     }
 
-    // Upload all files to Cloudinary
-    const uploadPromises = fileValidations.map(({ file, detectedType, fileCategory }) =>
-      uploadToCloudinary(file.buffer, file.originalname, fileCategory, detectedType)
-    );
+    // Check workspace storage quota for total batch size
+    const workspaceId = req.body.workspaceId || req.query.workspaceId;
+    const quotaError = await checkStorageQuota(workspaceId, totalSize);
+    if (quotaError) {
+      return res.status(413).json(quotaError);
+    }
+
+    // Upload all files to R2
+    const uploadPromises = fileValidations.map(({ file, detectedType, fileCategory }) => {
+      const folder = fileCategory === 'IMAGE' ? 'images' : fileCategory === 'AUDIO' ? 'audio' : 'video';
+      return uploadFile(file.buffer, file.originalname, detectedType, folder);
+    });
     const results = await Promise.all(uploadPromises);
 
+    // Track storage usage for total batch
+    await trackStorageUsage(workspaceId, totalSize);
+
     const files = results.map((result, index) => ({
-      url: result.secure_url,
+      url: result.url,
       filename: req.files[index].originalname,
       size: req.files[index].size,
       type: fileValidations[index].fileCategory

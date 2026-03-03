@@ -2,6 +2,8 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { isWorkspaceMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
+import { isAllowedUploadUrl } from '../lib/validateUrl.js';
+import { deleteFile, isR2Url } from '../lib/storage.js';
 import songBPMScraperService from '../services/songbpm-scraper.js';
 import deezerService from '../services/deezer.js';
 import itunesService from '../services/itunes.js';
@@ -663,14 +665,10 @@ router.post('/:songId/attachments', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
-    // Validate that URL is a valid Cloudinary URL
-    try {
-      const parsedUrl = new URL(url);
-      if (!parsedUrl.hostname.endsWith('cloudinary.com')) {
-        return res.status(400).json({ error: 'Invalid attachment URL' });
-      }
-    } catch {
-      return res.status(400).json({ error: 'Invalid URL' });
+    // Validate that URL is from an allowed upload provider
+    const urlCheck = isAllowedUploadUrl(url);
+    if (!urlCheck.valid) {
+      return res.status(400).json({ error: urlCheck.error || 'Invalid URL' });
     }
 
     const attachment = await prisma.songAttachment.create({
@@ -715,6 +713,17 @@ router.delete('/:songId/attachments/:attachmentId', authenticate, async (req, re
     });
     if (!membership) {
       return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    // Clean up R2 file and track storage
+    if (isR2Url(attachment.url)) {
+      try { await deleteFile(attachment.url); } catch { /* best effort */ }
+    }
+    if (attachment.size) {
+      await prisma.workspace.update({
+        where: { id: attachment.song.workspaceId },
+        data: { storageUsedBytes: { decrement: BigInt(attachment.size) } },
+      }).catch(() => {});
     }
 
     await prisma.songAttachment.delete({

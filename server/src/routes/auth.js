@@ -7,6 +7,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { authenticate } from '../middleware/auth.js';
 import { authLimiter, tokenLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
+import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 
 const router = express.Router();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -628,16 +629,9 @@ router.put('/me', authenticate, async (req, res) => {
 
     // Validate avatarUrl if provided
     if (avatarUrl !== undefined && avatarUrl !== null && avatarUrl !== '') {
-      try {
-        const url = new URL(avatarUrl);
-        if (!['http:', 'https:'].includes(url.protocol)) {
-          return res.status(400).json({ error: 'Avatar URL must use HTTP or HTTPS' });
-        }
-        if (!url.hostname.endsWith('cloudinary.com') && !url.hostname.endsWith('googleusercontent.com')) {
-          return res.status(400).json({ error: 'Avatar URL must be from Cloudinary or Google' });
-        }
-      } catch {
-        return res.status(400).json({ error: 'Invalid avatar URL' });
+      const check = isAllowedUploadUrl(avatarUrl, { allowGoogle: true });
+      if (!check.valid) {
+        return res.status(400).json({ error: check.error || 'Invalid avatar URL' });
       }
     }
 

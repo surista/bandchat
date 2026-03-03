@@ -104,7 +104,7 @@ bandchat/
 - Prisma ORM with PostgreSQL (40+ models)
 - Socket.IO (real-time)
 - JWT Authentication (access tokens + httpOnly cookie refresh tokens)
-- Cloudinary (image/file uploads with magic byte validation)
+- Cloudflare R2 (file uploads via @aws-sdk/client-s3, with magic byte validation)
 - Web Push Notifications (VAPID)
 - Resend (transactional email)
 - cookie-parser, Helmet + CSP, rate limiting
@@ -133,10 +133,22 @@ auth, channels, channelGroups, messages, workspaces, songs, setlists, gigs, band
 See README.md for full list. Required:
 - `DATABASE_URL` - PostgreSQL connection string
 - `JWT_SECRET` / `JWT_REFRESH_SECRET`
-- `CLOUDINARY_*` - Image upload config
+- `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_BUCKET_NAME` / `R2_PUBLIC_URL` - Cloudflare R2 storage
 - `VAPID_*` - Push notification keys
 - `GOOGLE_CLIENT_ID`
 - `RESEND_API_KEY` - Transactional email
+
+Legacy (still accepted for existing URLs): `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_UPLOAD_PRESET`
+
+## File Storage (Cloudflare R2)
+
+- New uploads go to Cloudflare R2 via `server/src/lib/storage.js` (S3-compatible API)
+- Legacy Cloudinary URLs still work — URL validation accepts both domains (`server/src/lib/validateUrl.js`)
+- Per-workspace storage tracking: `Workspace.storageUsedBytes` (BigInt, incremented on upload, decremented on delete)
+- Storage quota enforcement: checked before upload in `uploads.js` (default 2GB per workspace)
+- R2 file cleanup: when records are deleted (messages, recordings, songs, gig media), the R2 file is also deleted
+- Orphan detection: admin dashboard can scan for R2 files with no matching DB record
+- Admin endpoints: `/api/admin/storage/stats`, `/api/admin/storage/orphans`, `/api/admin/storage/cleanup`, `/api/admin/storage/recalculate`
 
 ## Deployment
 

@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate, isSystemAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
+import { listAllObjects, deleteFile, isConfigured as isR2Configured } from '../lib/storage.js';
 
 const router = express.Router();
 
@@ -172,6 +173,7 @@ router.get('/workspaces', async (req, res) => {
         select: {
           id: true,
           name: true,
+          storageUsedBytes: true,
           createdAt: true,
           _count: {
             select: { members: true, channels: true },
@@ -253,6 +255,208 @@ router.post('/users/:userId/toggle-admin', async (req, res) => {
   } catch (error) {
     console.error('Admin toggle error:', error);
     res.status(500).json({ error: 'Failed to update admin status' });
+  }
+});
+
+// GET /api/admin/storage/stats — Storage overview
+router.get('/storage/stats', async (req, res) => {
+  try {
+    const workspaces = await prisma.workspace.findMany({
+      select: { id: true, name: true, storageUsedBytes: true },
+      orderBy: { storageUsedBytes: 'desc' },
+    });
+
+    const totalTracked = workspaces.reduce((sum, w) => sum + (w.storageUsedBytes ?? 0n), 0n);
+
+    // Check if R2 is configured
+    let r2Available = false;
+    try { r2Available = await isR2Configured(); } catch { /* ignore */ }
+
+    res.json({
+      totalTrackedBytes: totalTracked.toString(),
+      workspaces: workspaces.map(w => ({
+        id: w.id,
+        name: w.name,
+        storageUsedBytes: (w.storageUsedBytes ?? 0n).toString(),
+      })),
+      r2Available,
+    });
+  } catch (error) {
+    console.error('Admin storage stats error:', error);
+    res.status(500).json({ error: 'Failed to load storage stats' });
+  }
+});
+
+// GET /api/admin/storage/orphans — Find orphaned R2 files
+router.get('/storage/orphans', async (req, res) => {
+  try {
+    const r2Available = await isR2Configured();
+    if (!r2Available) {
+      return res.status(400).json({ error: 'R2 storage not configured' });
+    }
+
+    // Get all R2 objects
+    const r2Objects = await listAllObjects();
+
+    // Get all URLs stored in the database (across all models with file URLs)
+    const [attachments, songAttachments, recordings, gigMedia, users, bandMembers, timelineEvents] = await Promise.all([
+      prisma.attachment.findMany({ select: { url: true } }),
+      prisma.songAttachment.findMany({ select: { url: true } }),
+      prisma.recording.findMany({ select: { url: true } }),
+      prisma.gigMedia.findMany({ select: { url: true } }),
+      prisma.user.findMany({ where: { avatarUrl: { not: null } }, select: { avatarUrl: true } }),
+      prisma.bandMember.findMany({ where: { imageUrl: { not: null } }, select: { imageUrl: true } }),
+      prisma.timelineEvent.findMany({ where: { imageUrl: { not: null } }, select: { imageUrl: true } }),
+    ]);
+
+    // Collect all known URLs
+    const knownUrls = new Set();
+    for (const a of attachments) knownUrls.add(a.url);
+    for (const a of songAttachments) knownUrls.add(a.url);
+    for (const r of recordings) knownUrls.add(r.url);
+    for (const g of gigMedia) knownUrls.add(g.url);
+    for (const u of users) if (u.avatarUrl) knownUrls.add(u.avatarUrl);
+    for (const b of bandMembers) if (b.imageUrl) knownUrls.add(b.imageUrl);
+    for (const t of timelineEvents) if (t.imageUrl) knownUrls.add(t.imageUrl);
+
+    // Build URL set from R2 public URL + key
+    const r2PublicUrl = process.env.R2_PUBLIC_URL || '';
+    const orphans = r2Objects.filter(obj => {
+      const fullUrl = `${r2PublicUrl}/${obj.key}`;
+      return !knownUrls.has(fullUrl);
+    });
+
+    const totalOrphanBytes = orphans.reduce((sum, o) => sum + (o.size || 0), 0);
+
+    res.json({
+      totalR2Objects: r2Objects.length,
+      knownUrlCount: knownUrls.size,
+      orphanCount: orphans.length,
+      orphanBytes: totalOrphanBytes,
+      orphans: orphans.slice(0, 100).map(o => ({
+        key: o.key,
+        size: o.size,
+        lastModified: o.lastModified,
+      })),
+    });
+  } catch (error) {
+    console.error('Admin orphan scan error:', error);
+    res.status(500).json({ error: 'Failed to scan for orphans' });
+  }
+});
+
+// POST /api/admin/storage/cleanup — Delete orphaned R2 files
+router.post('/storage/cleanup', async (req, res) => {
+  try {
+    const r2Available = await isR2Configured();
+    if (!r2Available) {
+      return res.status(400).json({ error: 'R2 storage not configured' });
+    }
+
+    const { dryRun = true } = req.body;
+
+    // Reuse orphan detection logic
+    const r2Objects = await listAllObjects();
+
+    const [attachments, songAttachments, recordings, gigMedia, users, bandMembers, timelineEvents] = await Promise.all([
+      prisma.attachment.findMany({ select: { url: true } }),
+      prisma.songAttachment.findMany({ select: { url: true } }),
+      prisma.recording.findMany({ select: { url: true } }),
+      prisma.gigMedia.findMany({ select: { url: true } }),
+      prisma.user.findMany({ where: { avatarUrl: { not: null } }, select: { avatarUrl: true } }),
+      prisma.bandMember.findMany({ where: { imageUrl: { not: null } }, select: { imageUrl: true } }),
+      prisma.timelineEvent.findMany({ where: { imageUrl: { not: null } }, select: { imageUrl: true } }),
+    ]);
+
+    const knownUrls = new Set();
+    for (const a of attachments) knownUrls.add(a.url);
+    for (const a of songAttachments) knownUrls.add(a.url);
+    for (const r of recordings) knownUrls.add(r.url);
+    for (const g of gigMedia) knownUrls.add(g.url);
+    for (const u of users) if (u.avatarUrl) knownUrls.add(u.avatarUrl);
+    for (const b of bandMembers) if (b.imageUrl) knownUrls.add(b.imageUrl);
+    for (const t of timelineEvents) if (t.imageUrl) knownUrls.add(t.imageUrl);
+
+    const r2PublicUrl = process.env.R2_PUBLIC_URL || '';
+    const orphans = r2Objects.filter(obj => {
+      const fullUrl = `${r2PublicUrl}/${obj.key}`;
+      return !knownUrls.has(fullUrl);
+    });
+
+    if (dryRun) {
+      const totalBytes = orphans.reduce((sum, o) => sum + (o.size || 0), 0);
+      return res.json({
+        dryRun: true,
+        wouldDelete: orphans.length,
+        wouldFreeBytes: totalBytes,
+        files: orphans.slice(0, 50).map(o => o.key),
+      });
+    }
+
+    // Actually delete orphans
+    let deleted = 0;
+    let freedBytes = 0;
+    for (const orphan of orphans) {
+      try {
+        await deleteFile(orphan.key);
+        deleted++;
+        freedBytes += orphan.size || 0;
+      } catch (err) {
+        console.error(`Failed to delete orphan ${orphan.key}:`, err);
+      }
+    }
+
+    res.json({ deleted, freedBytes });
+  } catch (error) {
+    console.error('Admin cleanup error:', error);
+    res.status(500).json({ error: 'Failed to clean up orphans' });
+  }
+});
+
+// POST /api/admin/storage/recalculate — Recalculate storage usage per workspace
+router.post('/storage/recalculate', async (req, res) => {
+  try {
+    const workspaces = await prisma.workspace.findMany({ select: { id: true, name: true } });
+    const results = [];
+
+    for (const ws of workspaces) {
+      // Sum sizes from all models that store file URLs for this workspace
+      const [attachmentSum, songAttachmentSum, recordingCount, gigMediaCount] = await Promise.all([
+        prisma.attachment.aggregate({
+          where: { message: { channel: { workspaceId: ws.id } } },
+          _sum: { size: true },
+        }),
+        prisma.songAttachment.aggregate({
+          where: { song: { workspaceId: ws.id } },
+          _sum: { size: true },
+        }),
+        // Recordings and GigMedia don't have size fields, estimate from count
+        prisma.recording.count({ where: { workspaceId: ws.id } }),
+        prisma.gigMedia.count({ where: { gig: { workspaceId: ws.id } } }),
+      ]);
+
+      const totalBytes = BigInt(attachmentSum._sum.size || 0) +
+        BigInt(songAttachmentSum._sum.size || 0);
+      // Recordings/GigMedia lack size fields; count only for awareness
+
+      await prisma.workspace.update({
+        where: { id: ws.id },
+        data: { storageUsedBytes: totalBytes },
+      });
+
+      results.push({
+        id: ws.id,
+        name: ws.name,
+        storageUsedBytes: totalBytes.toString(),
+        recordingsWithoutSize: recordingCount,
+        gigMediaWithoutSize: gigMediaCount,
+      });
+    }
+
+    res.json({ recalculated: results.length, workspaces: results });
+  } catch (error) {
+    console.error('Admin recalculate error:', error);
+    res.status(500).json({ error: 'Failed to recalculate storage' });
   }
 });
 

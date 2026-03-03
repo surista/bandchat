@@ -219,6 +219,7 @@
       <button class="tab active" data-tab="overview">Overview</button>
       <button class="tab" data-tab="users">Users</button>
       <button class="tab" data-tab="workspaces">Workspaces</button>
+      <button class="tab" data-tab="storage">Storage</button>
     </div>
 
     <div class="content">
@@ -265,11 +266,42 @@
                 <th>Members</th>
                 <th>Channels</th>
                 <th>Messages</th>
+                <th>Storage</th>
                 <th>Created</th>
               </tr>
             </thead>
             <tbody id="workspacesTable"></tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- Storage Tab -->
+      <div class="tab-panel" id="tab-storage">
+        <div class="stats-grid" id="storageStatsGrid"></div>
+        <div class="table-header" style="margin-top:24px">
+          <h2>Workspace Storage</h2>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr><th>Workspace</th><th>Storage Used</th></tr>
+            </thead>
+            <tbody id="storageWorkspaceTable"></tbody>
+          </table>
+        </div>
+        <div class="table-header" style="margin-top:24px">
+          <h2>Orphan Cleanup (R2)</h2>
+        </div>
+        <div id="orphanSection" style="padding:16px">
+          <p id="orphanStatus" style="color:var(--text-secondary);margin-bottom:12px">Click scan to check for orphaned files.</p>
+          <button class="btn-sm" id="scanOrphansBtn">Scan for Orphans</button>
+          <button class="btn-sm" id="cleanupDryBtn" style="display:none;margin-left:8px">Dry Run</button>
+          <button class="btn-sm" id="cleanupBtn" style="display:none;margin-left:8px;background:var(--red)">Delete Orphans</button>
+          <div id="orphanResults" style="margin-top:12px"></div>
+        </div>
+        <div style="padding:16px;margin-top:8px">
+          <button class="btn-sm" id="recalcBtn">Recalculate Storage</button>
+          <span id="recalcStatus" style="color:var(--text-secondary);margin-left:12px"></span>
         </div>
       </div>
     </div>
@@ -403,6 +435,7 @@
         document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
         if (tab.dataset.tab === 'users') loadUsers();
         if (tab.dataset.tab === 'workspaces') loadWorkspaces();
+        if (tab.dataset.tab === 'storage') loadStorageStats();
       });
     });
 
@@ -582,7 +615,7 @@
         const tbody = document.getElementById('workspacesTable');
 
         if (workspaces.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No workspaces found</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No workspaces found</td></tr>';
           return;
         }
 
@@ -592,6 +625,7 @@
             <td>${w._count.members}</td>
             <td>${w._count.channels}</td>
             <td>${fmt(w.messageCount)}</td>
+            <td>${fmtBytes(Number(w.storageUsedBytes || 0))}</td>
             <td>${fmtDate(w.createdAt)}</td>
           </tr>
         `).join('');
@@ -603,6 +637,105 @@
     document.getElementById('workspaceSearch').addEventListener('input', (e) => {
       clearTimeout(workspaceSearchTimer);
       workspaceSearchTimer = setTimeout(() => loadWorkspaces(e.target.value), 300);
+    });
+
+    // Format bytes to human-readable
+    function fmtBytes(bytes) {
+      if (bytes === 0) return '0 B';
+      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(1024));
+      return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
+    }
+
+    // Storage tab
+    async function loadStorageStats() {
+      try {
+        const data = await api('/admin/storage/stats');
+        const total = Number(data.totalTrackedBytes || 0);
+        const grid = document.getElementById('storageStatsGrid');
+        grid.innerHTML = `
+          <div class="stat-card">
+            <div class="stat-label">Total Tracked Storage</div>
+            <div class="stat-value">${fmtBytes(total)}</div>
+            <div class="stat-sub">Across ${data.workspaces.length} workspaces</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">R2 Status</div>
+            <div class="stat-value" style="font-size:24px">${data.r2Available ? 'Connected' : 'Not Configured'}</div>
+            <div class="stat-sub" style="color:${data.r2Available ? 'var(--green)' : 'var(--yellow)'}">
+              ${data.r2Available ? 'Cloudflare R2 active' : 'Set R2 env vars to enable'}
+            </div>
+          </div>
+        `;
+
+        const tbody = document.getElementById('storageWorkspaceTable');
+        tbody.innerHTML = data.workspaces.map(w => `
+          <tr>
+            <td><strong>${esc(w.name)}</strong></td>
+            <td>${fmtBytes(Number(w.storageUsedBytes || 0))}</td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error('Failed to load storage stats:', err);
+      }
+    }
+
+    // Orphan scan
+    document.getElementById('scanOrphansBtn').addEventListener('click', async () => {
+      const status = document.getElementById('orphanStatus');
+      status.textContent = 'Scanning...';
+      try {
+        const data = await api('/admin/storage/orphans');
+        status.textContent = `Found ${data.orphanCount} orphans (${fmtBytes(data.orphanBytes)}) out of ${data.totalR2Objects} R2 objects. ${data.knownUrlCount} URLs tracked in DB.`;
+        if (data.orphanCount > 0) {
+          document.getElementById('cleanupDryBtn').style.display = '';
+          document.getElementById('cleanupBtn').style.display = '';
+          document.getElementById('orphanResults').innerHTML = data.orphans.map(o =>
+            `<div style="font-size:12px;color:var(--text-secondary)">${esc(o.key)} (${fmtBytes(o.size)})</div>`
+          ).join('');
+        }
+      } catch (err) {
+        status.textContent = 'Scan failed: ' + (err.message || 'R2 not configured');
+      }
+    });
+
+    // Dry run cleanup
+    document.getElementById('cleanupDryBtn').addEventListener('click', async () => {
+      try {
+        const data = await api('/admin/storage/cleanup', { method: 'POST', body: JSON.stringify({ dryRun: true }) });
+        document.getElementById('orphanStatus').textContent =
+          `Dry run: would delete ${data.wouldDelete} files, freeing ${fmtBytes(data.wouldFreeBytes)}`;
+      } catch (err) {
+        document.getElementById('orphanStatus').textContent = 'Dry run failed: ' + err.message;
+      }
+    });
+
+    // Actual cleanup
+    document.getElementById('cleanupBtn').addEventListener('click', async () => {
+      if (!confirm('Delete all orphaned R2 files? This cannot be undone.')) return;
+      try {
+        const data = await api('/admin/storage/cleanup', { method: 'POST', body: JSON.stringify({ dryRun: false }) });
+        document.getElementById('orphanStatus').textContent =
+          `Deleted ${data.deleted} files, freed ${fmtBytes(data.freedBytes)}`;
+        document.getElementById('cleanupDryBtn').style.display = 'none';
+        document.getElementById('cleanupBtn').style.display = 'none';
+        document.getElementById('orphanResults').innerHTML = '';
+      } catch (err) {
+        document.getElementById('orphanStatus').textContent = 'Cleanup failed: ' + err.message;
+      }
+    });
+
+    // Recalculate storage
+    document.getElementById('recalcBtn').addEventListener('click', async () => {
+      const status = document.getElementById('recalcStatus');
+      status.textContent = 'Recalculating...';
+      try {
+        const data = await api('/admin/storage/recalculate', { method: 'POST' });
+        status.textContent = `Recalculated ${data.recalculated} workspaces`;
+        loadStorageStats();
+      } catch (err) {
+        status.textContent = 'Failed: ' + err.message;
+      }
     });
 
     // Keyboard shortcut: Escape closes modal

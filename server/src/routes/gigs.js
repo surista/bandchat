@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import rateLimit from 'express-rate-limit';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
+import { deleteFile, isR2Url } from '../lib/storage.js';
 import { parseICS, parseICSMultiple } from '../lib/icsParser.js';
 
 const router = express.Router();
@@ -1287,6 +1288,11 @@ router.delete('/:gigId/media/:mediaId', authenticate, async (req, res) => {
     const isMember = media.gig.workspace.members.some(m => m.userId === req.user.id);
     if (!isMember) {
       return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    // Clean up R2 file
+    if (isR2Url(media.url)) {
+      try { await deleteFile(media.url); } catch { /* best effort */ }
     }
 
     await prisma.gigMedia.delete({

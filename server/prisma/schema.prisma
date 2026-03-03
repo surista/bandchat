@@ -77,6 +77,7 @@ model Workspace {
   inviteCodeExpiresAt DateTime?
   inviteMaxUses       Int?      // null = unlimited
   inviteUsedCount     Int       @default(0)
+  storageUsedBytes    BigInt    @default(0)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 

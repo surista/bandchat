@@ -1,6 +1,8 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
+import { isAllowedUploadUrl } from '../lib/validateUrl.js';
+import { deleteFile, isR2Url } from '../lib/storage.js';
 
 const router = express.Router();
 
@@ -89,14 +91,10 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       return res.status(400).json({ error: 'Type must be audio or video' });
     }
 
-    // Validate that URL is a valid Cloudinary URL
-    try {
-      const parsedUrl = new URL(url);
-      if (!parsedUrl.hostname.endsWith('cloudinary.com')) {
-        return res.status(400).json({ error: 'Invalid attachment URL' });
-      }
-    } catch {
-      return res.status(400).json({ error: 'Invalid URL' });
+    // Validate that URL is from an allowed upload provider
+    const urlCheck = isAllowedUploadUrl(url);
+    if (!urlCheck.valid) {
+      return res.status(400).json({ error: urlCheck.error || 'Invalid URL' });
     }
 
     // Verify song belongs to workspace if provided
@@ -246,6 +244,11 @@ router.delete('/:recordingId', authenticate, async (req, res) => {
     // Only creator or admin can delete
     if (recording.createdById !== req.user.id && membership.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Clean up R2 file
+    if (isR2Url(recording.url)) {
+      try { await deleteFile(recording.url); } catch { /* best effort */ }
     }
 
     await prisma.recording.delete({

@@ -2,6 +2,8 @@ import express from 'express';
 import { authenticate, isChannelMember } from '../middleware/auth.js';
 import { messageLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
+import { isAllowedUploadUrl } from '../lib/validateUrl.js';
+import { deleteFile, isR2Url } from '../lib/storage.js';
 import { sendPushToUser } from './push.js';
 
 const router = express.Router();
@@ -281,13 +283,7 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
         ...(hasAttachments && {
           attachments: {
             create: attachments.filter(att => {
-              // Only allow Cloudinary URLs for attachments
-              try {
-                const url = new URL(att.url);
-                return url.hostname.endsWith('cloudinary.com');
-              } catch {
-                return false;
-              }
+              return isAllowedUploadUrl(att.url).valid;
             }).map(att => ({
               type: att.type,
               url: att.url,
@@ -472,6 +468,25 @@ router.delete('/:messageId', authenticate, async (req, res) => {
 
     if (!isAuthor && membership.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Cannot delete this message' });
+    }
+
+    // Clean up R2 files and track storage before cascade delete
+    const attachments = await prisma.attachment.findMany({
+      where: { messageId: req.params.messageId },
+      select: { url: true, size: true },
+    });
+    let freedBytes = 0;
+    for (const att of attachments) {
+      if (isR2Url(att.url)) {
+        try { await deleteFile(att.url); } catch { /* best effort */ }
+      }
+      freedBytes += att.size || 0;
+    }
+    if (freedBytes > 0) {
+      await prisma.workspace.update({
+        where: { id: message.channel.workspaceId },
+        data: { storageUsedBytes: { decrement: BigInt(freedBytes) } },
+      }).catch(() => {});
     }
 
     await prisma.message.delete({
