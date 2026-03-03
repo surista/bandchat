@@ -17,7 +17,7 @@ function ChannelItem({ channel, isDM, dmMembers, onPress, unreadCount }) {
       );
     }
     return (
-      <Text style={[styles.channelIcon, { color: colors.textSecondary }]}>
+      <Text style={[styles.channelIcon, { color: colors.channelListText }]}>
         {channel.isPrivate ? '\u{1F512}' : '#'}
       </Text>
     );
@@ -28,7 +28,7 @@ function ChannelItem({ channel, isDM, dmMembers, onPress, unreadCount }) {
 
   return (
     <TouchableOpacity
-      style={[styles.container, { backgroundColor: colors.bgSecondary }]}
+      style={styles.container}
       onPress={onPress}
       activeOpacity={0.6}
       accessibilityRole="button"
@@ -38,7 +38,7 @@ function ChannelItem({ channel, isDM, dmMembers, onPress, unreadCount }) {
       <Text
         style={[
           styles.name,
-          { color: hasUnread ? colors.textPrimary : colors.textSecondary },
+          { color: hasUnread ? colors.channelListTextBold : colors.channelListText },
           hasUnread && styles.nameBold,
         ]}
         numberOfLines={1}

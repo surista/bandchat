@@ -48,8 +48,8 @@ export default function AppStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: colors.bgSecondary },
-        headerTintColor: colors.textPrimary,
+        headerStyle: { backgroundColor: colors.headerBg },
+        headerTintColor: '#ffffff',
         headerTitleStyle: { fontWeight: '600' },
         contentStyle: { backgroundColor: colors.bgPrimary },
       }}

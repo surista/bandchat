@@ -486,8 +486,8 @@ export default function ChannelListScreen({ navigation, route }) {
           accessibilityLabel={`${item.label}, ${isCollapsed ? 'collapsed' : 'expanded'}`}
         >
           <Text style={styles.bandCategoryIcon}>{item.icon}</Text>
-          <Text style={[styles.bandCategoryLabel, { color: colors.textSecondary }]}>{item.label}</Text>
-          <Text style={[styles.bandCategoryArrow, { color: colors.textSecondary }]}>
+          <Text style={[styles.bandCategoryLabel, { color: colors.channelListText }]}>{item.label}</Text>
+          <Text style={[styles.bandCategoryArrow, { color: colors.channelListText }]}>
             {isCollapsed ? '\u25B6' : '\u25BC'}
           </Text>
         </TouchableOpacity>
@@ -503,8 +503,8 @@ export default function ChannelListScreen({ navigation, route }) {
           accessibilityLabel={item.label}
         >
           <Text style={styles.bandItemIcon}>{item.icon}</Text>
-          <Text style={[styles.bandItemLabel, { color: colors.textPrimary }]}>{item.label}</Text>
-          <Text style={[styles.bandItemArrow, { color: colors.textSecondary }]}>{'\u203A'}</Text>
+          <Text style={[styles.bandItemLabel, { color: colors.channelListTextBold }]}>{item.label}</Text>
+          <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
         </TouchableOpacity>
       );
     }
@@ -539,11 +539,11 @@ export default function ChannelListScreen({ navigation, route }) {
           disabled={!isCollapsible}
         >
           {isCollapsible && (
-            <Text style={[styles.collapseIcon, { color: colors.textSecondary }]}>
+            <Text style={[styles.collapseIcon, { color: colors.channelListText }]}>
               {isCollapsed ? '\u25B6' : '\u25BC'}
             </Text>
           )}
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+          <Text style={[styles.sectionTitle, { color: colors.channelListText }]}>
             {section.title}
           </Text>
         </TouchableOpacity>
@@ -553,7 +553,7 @@ export default function ChannelListScreen({ navigation, route }) {
             onPress={() => setShowCreateChannel(true)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={[styles.addIcon, { color: colors.textSecondary }]}>+</Text>
+            <Text style={[styles.addIcon, { color: colors.channelListText }]}>+</Text>
           </TouchableOpacity>
         )}
         {section.showNewDM && !isCollapsed && (
@@ -562,7 +562,7 @@ export default function ChannelListScreen({ navigation, route }) {
             onPress={openNewDM}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={[styles.addIcon, { color: colors.textSecondary }]}>+</Text>
+            <Text style={[styles.addIcon, { color: colors.channelListText }]}>+</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -571,7 +571,7 @@ export default function ChannelListScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.channelListBg }]} edges={['bottom']}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -580,7 +580,7 @@ export default function ChannelListScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.channelListBg }]} edges={['bottom']}>
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
