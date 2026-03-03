@@ -15,18 +15,20 @@ const ACTIONS = [
   { key: 'reply', label: 'Reply in Thread', icon: '\u{1F4AC}' },
   { key: 'react', label: 'Add Reaction', icon: '\u{1F600}' },
   { key: 'pin', label: 'Pin Message', icon: '\u{1F4CC}' },
+  { key: 'save', label: 'Save Image', icon: '\u{2B07}\u{FE0F}', imageOnly: true },
   { key: 'copy', label: 'Copy Text', icon: '\u{1F4CB}' },
   { key: 'edit', label: 'Edit Message', icon: '\u{270F}\u{FE0F}', ownOnly: true },
   { key: 'delete', label: 'Delete Message', icon: '\u{1F5D1}\u{FE0F}', ownOnly: true, destructive: true },
   { key: 'report', label: 'Report Message', icon: '\u{26A0}\u{FE0F}', notOwn: true, destructive: true },
 ];
 
-function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwnMessage, isPinned, hideReply }) {
+function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwnMessage, isPinned, hideReply, hasImageAttachment }) {
   const { colors } = useTheme();
 
   const filteredActions = ACTIONS.filter(a =>
     (!a.ownOnly || isOwnMessage) && (!a.notOwn || !isOwnMessage) &&
-    !(hideReply && a.key === 'reply')
+    !(hideReply && a.key === 'reply') &&
+    (!a.imageOnly || hasImageAttachment)
   ).map(a => a.key === 'pin' ? { ...a, label: isPinned ? 'Unpin Message' : 'Pin Message' } : a);
 
   const handleQuickReaction = (emoji) => {

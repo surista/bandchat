@@ -45,6 +45,7 @@ export default {
         'RECORD_AUDIO',
         'READ_CALENDAR',
         'WRITE_CALENDAR',
+        'WRITE_EXTERNAL_STORAGE',
         'VIBRATE',
         'INTERNET',
         'ACCESS_NETWORK_STATE',
@@ -67,6 +68,7 @@ export default {
       'expo-calendar',
       'expo-image-picker',
       'expo-notifications',
+      'expo-media-library',
     ],
   },
 };

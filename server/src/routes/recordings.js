@@ -246,9 +246,15 @@ router.delete('/:recordingId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
-    // Clean up R2 file
+    // Clean up R2 file and decrement storage
     if (isR2Url(recording.url)) {
       try { await deleteFile(recording.url); } catch { /* best effort */ }
+    }
+    if (recording.size) {
+      await prisma.workspace.update({
+        where: { id: recording.workspaceId },
+        data: { storageUsedBytes: { decrement: BigInt(recording.size) } },
+      }).catch(() => {});
     }
 
     await prisma.recording.delete({

@@ -445,6 +445,7 @@ model GigMedia {
   gigId        String
   type         String   // 'image', 'video', 'youtube', 'link'
   url          String
+  size         Int?     // File size in bytes
   caption      String?
   uploadedById String?
   createdAt    DateTime @default(now())
@@ -765,6 +766,7 @@ model Recording {
   url         String   // Cloudinary URL
   type        String   // 'audio', 'video'
   duration    Int?     // Duration in seconds
+  size        Int?     // File size in bytes
   songId      String?  // Optional link to a song
   workspaceId        String
   createdById        String?

@@ -8,10 +8,14 @@ import {
   useWindowDimensions,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
+import * as MediaLibrary from 'expo-media-library';
+import * as FileSystem from 'expo-file-system';
 
 function ImageViewer({ visible, imageUrl, onClose }) {
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const handleClose = useCallback(() => {
@@ -19,11 +23,42 @@ function ImageViewer({ visible, imageUrl, onClose }) {
     onClose();
   }, [onClose]);
 
+  const handleSave = useCallback(async () => {
+    try {
+      setSaving(true);
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Allow BandChat to save photos to your library.');
+        return;
+      }
+      let filename = imageUrl.split('/').pop()?.split('?')[0] || '';
+      if (!filename || !filename.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+        filename = `image-${Date.now()}.jpg`;
+      }
+      const localUri = FileSystem.cacheDirectory + filename;
+      await FileSystem.downloadAsync(imageUrl, localUri);
+      await MediaLibrary.saveToLibraryAsync(localUri);
+      Alert.alert('Saved', 'Image saved to your photo library.');
+    } catch (err) {
+      console.error('Failed to save image:', err);
+      Alert.alert('Error', 'Failed to save image.');
+    } finally {
+      setSaving(false);
+    }
+  }, [imageUrl]);
+
   if (!imageUrl) return null;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <View style={styles.container}>
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Save image to photo library">
+          {saving ? (
+            <ActivityIndicator size="small" color="#ffffff" />
+          ) : (
+            <Text style={styles.saveText}>{'\u2B07'}</Text>
+          )}
+        </TouchableOpacity>
         <TouchableOpacity style={styles.closeButton} onPress={handleClose} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Close image viewer">
           <Text style={styles.closeText}>{'\u2715'}</Text>
         </TouchableOpacity>
@@ -64,6 +99,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   closeText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  saveButton: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    zIndex: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  saveText: {
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '600',

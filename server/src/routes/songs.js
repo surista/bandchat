@@ -593,6 +593,25 @@ router.delete('/:songId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
+    // Before cascade delete: clean up R2 files + decrement storage
+    const songAttachments = await prisma.songAttachment.findMany({
+      where: { songId: req.params.songId },
+      select: { url: true, size: true },
+    });
+    let freedBytes = 0;
+    for (const att of songAttachments) {
+      if (isR2Url(att.url)) {
+        try { await deleteFile(att.url); } catch { /* best effort */ }
+      }
+      freedBytes += att.size || 0;
+    }
+    if (freedBytes > 0) {
+      await prisma.workspace.update({
+        where: { id: song.workspaceId },
+        data: { storageUsedBytes: { decrement: BigInt(freedBytes) } },
+      }).catch(() => {});
+    }
+
     await prisma.song.delete({
       where: { id: req.params.songId }
     });

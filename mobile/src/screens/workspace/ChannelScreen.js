@@ -14,6 +14,8 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
+import * as MediaLibrary from 'expo-media-library';
+import * as FileSystem from 'expo-file-system';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
@@ -486,6 +488,30 @@ export default function ChannelScreen({ navigation, route }) {
           ]
         );
         break;
+      case 'save':
+        (async () => {
+          try {
+            const img = actionMessage.attachments?.find(a => a.type === 'IMAGE');
+            if (!img?.url) break;
+            const { status } = await MediaLibrary.requestPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert('Permission needed', 'Allow BandChat to save photos to your library.');
+              break;
+            }
+            let filename = img.url.split('/').pop()?.split('?')[0] || '';
+            if (!filename || !filename.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+              filename = `image-${Date.now()}.jpg`;
+            }
+            const localUri = FileSystem.cacheDirectory + filename;
+            await FileSystem.downloadAsync(img.url, localUri);
+            await MediaLibrary.saveToLibraryAsync(localUri);
+            Alert.alert('Saved', 'Image saved to your photo library.');
+          } catch (err) {
+            console.error('Failed to save image:', err);
+            Alert.alert('Error', 'Failed to save image.');
+          }
+        })();
+        break;
       case 'report':
         setReportReason('');
         setShowReportModal(true);
@@ -725,6 +751,7 @@ export default function ChannelScreen({ navigation, route }) {
         onQuickReaction={handleAddReaction}
         isOwnMessage={actionMessage?.author?.id === user?.id}
         isPinned={actionMessage ? pinnedMessageIds.has(actionMessage.id) : false}
+        hasImageAttachment={actionMessage?.attachments?.some(a => a.type === 'IMAGE')}
       />
 
       {/* Emoji Picker */}

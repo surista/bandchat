@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, Text, Image, StyleSheet, Platform, Animated, PanResponder } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, Image, StyleSheet, Platform, Animated, PanResponder, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
 import { useTheme } from '../context/ThemeContext';
@@ -146,6 +146,40 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
       });
     }
   }, []);
+
+  const takePhoto = useCallback(async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Camera access is needed to take photos.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      quality: 0.8,
+      allowsEditing: false,
+    });
+
+    if (!result.canceled && result.assets?.[0]) {
+      const asset = result.assets[0];
+      setAttachment({
+        uri: asset.uri,
+        filename: asset.fileName || `photo-${Date.now()}.jpg`,
+        mimeType: asset.mimeType || 'image/jpeg',
+        width: asset.width,
+        height: asset.height,
+        isVideo: false,
+      });
+    }
+  }, []);
+
+  const showAttachOptions = useCallback(() => {
+    Alert.alert('Attach', null, [
+      { text: 'Take Photo', onPress: takePhoto },
+      { text: 'Photo Library', onPress: pickMedia },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }, [takePhoto, pickMedia]);
 
   const removeAttachment = useCallback(() => {
     setAttachment(null);
@@ -319,7 +353,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
         <View style={styles.inputRow}>
           {/* Attachment button */}
           {!editingMessage && (
-            <TouchableOpacity style={styles.attachButton} onPress={pickMedia} activeOpacity={0.6} hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }} accessibilityRole="button" accessibilityLabel="Attach media">
+            <TouchableOpacity style={styles.attachButton} onPress={showAttachOptions} activeOpacity={0.6} hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }} accessibilityRole="button" accessibilityLabel="Attach media">
               <Text style={[styles.attachIcon, { color: colors.textSecondary }]}>+</Text>
             </TouchableOpacity>
           )}

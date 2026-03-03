@@ -1038,7 +1038,26 @@ router.delete('/:gigId', authenticate, async (req, res) => {
       }
     }
 
-    // Delete the gig first (this will cascade delete GigSetlist entries)
+    // Before cascade delete: clean up R2 files + decrement storage
+    const gigMediaFiles = await prisma.gigMedia.findMany({
+      where: { gigId: req.params.gigId },
+      select: { url: true, size: true },
+    });
+    let freedBytes = 0;
+    for (const m of gigMediaFiles) {
+      if (isR2Url(m.url)) {
+        try { await deleteFile(m.url); } catch { /* best effort */ }
+      }
+      freedBytes += m.size || 0;
+    }
+    if (freedBytes > 0) {
+      await prisma.workspace.update({
+        where: { id: gig.workspaceId },
+        data: { storageUsedBytes: { decrement: BigInt(freedBytes) } },
+      }).catch(() => {});
+    }
+
+    // Delete the gig (this will cascade delete GigSetlist entries, GigMedia, etc.)
     await prisma.gig.delete({
       where: { id: req.params.gigId }
     });
@@ -1290,9 +1309,15 @@ router.delete('/:gigId/media/:mediaId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
-    // Clean up R2 file
+    // Clean up R2 file and decrement storage
     if (isR2Url(media.url)) {
       try { await deleteFile(media.url); } catch { /* best effort */ }
+    }
+    if (media.size) {
+      await prisma.workspace.update({
+        where: { id: media.gig.workspaceId },
+        data: { storageUsedBytes: { decrement: BigInt(media.size) } },
+      }).catch(() => {});
     }
 
     await prisma.gigMedia.delete({

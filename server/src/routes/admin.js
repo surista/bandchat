@@ -287,6 +287,35 @@ router.get('/storage/stats', async (req, res) => {
   }
 });
 
+// Shared helper: find orphaned R2 files (not referenced by any DB record)
+async function findOrphans() {
+  const r2Objects = await listAllObjects();
+
+  const [attachments, songAttachments, recordings, gigMedia, users, bandMembers, timelineEvents] = await Promise.all([
+    prisma.attachment.findMany({ select: { url: true } }),
+    prisma.songAttachment.findMany({ select: { url: true } }),
+    prisma.recording.findMany({ select: { url: true } }),
+    prisma.gigMedia.findMany({ select: { url: true } }),
+    prisma.user.findMany({ where: { avatarUrl: { not: null } }, select: { avatarUrl: true } }),
+    prisma.bandMember.findMany({ where: { imageUrl: { not: null } }, select: { imageUrl: true } }),
+    prisma.timelineEvent.findMany({ where: { imageUrl: { not: null } }, select: { imageUrl: true } }),
+  ]);
+
+  const knownUrls = new Set();
+  for (const a of attachments) knownUrls.add(a.url);
+  for (const a of songAttachments) knownUrls.add(a.url);
+  for (const r of recordings) knownUrls.add(r.url);
+  for (const g of gigMedia) knownUrls.add(g.url);
+  for (const u of users) if (u.avatarUrl) knownUrls.add(u.avatarUrl);
+  for (const b of bandMembers) if (b.imageUrl) knownUrls.add(b.imageUrl);
+  for (const t of timelineEvents) if (t.imageUrl) knownUrls.add(t.imageUrl);
+
+  const r2PublicUrl = process.env.R2_PUBLIC_URL || '';
+  const orphans = r2Objects.filter(obj => !knownUrls.has(`${r2PublicUrl}/${obj.key}`));
+
+  return { r2Objects, knownUrls, orphans };
+}
+
 // GET /api/admin/storage/orphans — Find orphaned R2 files
 router.get('/storage/orphans', async (req, res) => {
   try {
@@ -295,37 +324,7 @@ router.get('/storage/orphans', async (req, res) => {
       return res.status(400).json({ error: 'R2 storage not configured' });
     }
 
-    // Get all R2 objects
-    const r2Objects = await listAllObjects();
-
-    // Get all URLs stored in the database (across all models with file URLs)
-    const [attachments, songAttachments, recordings, gigMedia, users, bandMembers, timelineEvents] = await Promise.all([
-      prisma.attachment.findMany({ select: { url: true } }),
-      prisma.songAttachment.findMany({ select: { url: true } }),
-      prisma.recording.findMany({ select: { url: true } }),
-      prisma.gigMedia.findMany({ select: { url: true } }),
-      prisma.user.findMany({ where: { avatarUrl: { not: null } }, select: { avatarUrl: true } }),
-      prisma.bandMember.findMany({ where: { imageUrl: { not: null } }, select: { imageUrl: true } }),
-      prisma.timelineEvent.findMany({ where: { imageUrl: { not: null } }, select: { imageUrl: true } }),
-    ]);
-
-    // Collect all known URLs
-    const knownUrls = new Set();
-    for (const a of attachments) knownUrls.add(a.url);
-    for (const a of songAttachments) knownUrls.add(a.url);
-    for (const r of recordings) knownUrls.add(r.url);
-    for (const g of gigMedia) knownUrls.add(g.url);
-    for (const u of users) if (u.avatarUrl) knownUrls.add(u.avatarUrl);
-    for (const b of bandMembers) if (b.imageUrl) knownUrls.add(b.imageUrl);
-    for (const t of timelineEvents) if (t.imageUrl) knownUrls.add(t.imageUrl);
-
-    // Build URL set from R2 public URL + key
-    const r2PublicUrl = process.env.R2_PUBLIC_URL || '';
-    const orphans = r2Objects.filter(obj => {
-      const fullUrl = `${r2PublicUrl}/${obj.key}`;
-      return !knownUrls.has(fullUrl);
-    });
-
+    const { r2Objects, knownUrls, orphans } = await findOrphans();
     const totalOrphanBytes = orphans.reduce((sum, o) => sum + (o.size || 0), 0);
 
     res.json({
@@ -354,34 +353,7 @@ router.post('/storage/cleanup', async (req, res) => {
     }
 
     const { dryRun = true } = req.body;
-
-    // Reuse orphan detection logic
-    const r2Objects = await listAllObjects();
-
-    const [attachments, songAttachments, recordings, gigMedia, users, bandMembers, timelineEvents] = await Promise.all([
-      prisma.attachment.findMany({ select: { url: true } }),
-      prisma.songAttachment.findMany({ select: { url: true } }),
-      prisma.recording.findMany({ select: { url: true } }),
-      prisma.gigMedia.findMany({ select: { url: true } }),
-      prisma.user.findMany({ where: { avatarUrl: { not: null } }, select: { avatarUrl: true } }),
-      prisma.bandMember.findMany({ where: { imageUrl: { not: null } }, select: { imageUrl: true } }),
-      prisma.timelineEvent.findMany({ where: { imageUrl: { not: null } }, select: { imageUrl: true } }),
-    ]);
-
-    const knownUrls = new Set();
-    for (const a of attachments) knownUrls.add(a.url);
-    for (const a of songAttachments) knownUrls.add(a.url);
-    for (const r of recordings) knownUrls.add(r.url);
-    for (const g of gigMedia) knownUrls.add(g.url);
-    for (const u of users) if (u.avatarUrl) knownUrls.add(u.avatarUrl);
-    for (const b of bandMembers) if (b.imageUrl) knownUrls.add(b.imageUrl);
-    for (const t of timelineEvents) if (t.imageUrl) knownUrls.add(t.imageUrl);
-
-    const r2PublicUrl = process.env.R2_PUBLIC_URL || '';
-    const orphans = r2Objects.filter(obj => {
-      const fullUrl = `${r2PublicUrl}/${obj.key}`;
-      return !knownUrls.has(fullUrl);
-    });
+    const { orphans } = await findOrphans();
 
     if (dryRun) {
       const totalBytes = orphans.reduce((sum, o) => sum + (o.size || 0), 0);
@@ -421,7 +393,7 @@ router.post('/storage/recalculate', async (req, res) => {
 
     for (const ws of workspaces) {
       // Sum sizes from all models that store file URLs for this workspace
-      const [attachmentSum, songAttachmentSum, recordingCount, gigMediaCount] = await Promise.all([
+      const [attachmentSum, songAttachmentSum, recordingSum, gigMediaSum] = await Promise.all([
         prisma.attachment.aggregate({
           where: { message: { channel: { workspaceId: ws.id } } },
           _sum: { size: true },
@@ -430,14 +402,20 @@ router.post('/storage/recalculate', async (req, res) => {
           where: { song: { workspaceId: ws.id } },
           _sum: { size: true },
         }),
-        // Recordings and GigMedia don't have size fields, estimate from count
-        prisma.recording.count({ where: { workspaceId: ws.id } }),
-        prisma.gigMedia.count({ where: { gig: { workspaceId: ws.id } } }),
+        prisma.recording.aggregate({
+          where: { workspaceId: ws.id },
+          _sum: { size: true },
+        }),
+        prisma.gigMedia.aggregate({
+          where: { gig: { workspaceId: ws.id } },
+          _sum: { size: true },
+        }),
       ]);
 
       const totalBytes = BigInt(attachmentSum._sum.size || 0) +
-        BigInt(songAttachmentSum._sum.size || 0);
-      // Recordings/GigMedia lack size fields; count only for awareness
+        BigInt(songAttachmentSum._sum.size || 0) +
+        BigInt(recordingSum._sum.size || 0) +
+        BigInt(gigMediaSum._sum.size || 0);
 
       await prisma.workspace.update({
         where: { id: ws.id },
@@ -448,8 +426,6 @@ router.post('/storage/recalculate', async (req, res) => {
         id: ws.id,
         name: ws.name,
         storageUsedBytes: totalBytes.toString(),
-        recordingsWithoutSize: recordingCount,
-        gigMediaWithoutSize: gigMediaCount,
       });
     }
 
