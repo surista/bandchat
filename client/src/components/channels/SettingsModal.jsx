@@ -1464,8 +1464,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     Choose which types of notifications you receive for this workspace.
                   </p>
                   {notifPrefsLoading ? (
-                    <div className="flex justify-center py-8">
-                      <Skeleton.Text lines={5} />
+                    <div className="space-y-3 py-8 px-4">
+                      {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
                     </div>
                   ) : notifPrefs ? (
                     <div className="bg-[var(--color-modal-card)] rounded-lg divide-y divide-[var(--color-modal-border)]">
