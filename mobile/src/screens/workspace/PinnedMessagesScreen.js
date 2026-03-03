@@ -14,10 +14,27 @@ import ErrorState from '../../components/ErrorState';
 import api from '../../services/api';
 import { format } from 'date-fns';
 
-export default function PinnedMessagesScreen({ route }) {
+export default function PinnedMessagesScreen({ navigation, route }) {
   const { channelId } = route.params;
   const { colors } = useTheme();
   const { socket } = useSocket();
+
+  // Ensure back button is always visible
+  useEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={{ marginRight: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <Text style={{ fontSize: 16, color: colors.primary }}>← Back</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors]);
 
   const [pins, setPins] = useState([]);
   const [loading, setLoading] = useState(true);

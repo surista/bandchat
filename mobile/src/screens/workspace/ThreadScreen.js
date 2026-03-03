@@ -185,7 +185,8 @@ export default function ThreadScreen({ route }) {
 
     switch (action) {
       case 'react':
-        setShowEmojiPicker(true);
+        // Delay to let the action sheet Modal fully close before opening emoji picker Modal
+        setTimeout(() => setShowEmojiPicker(true), 400);
         break;
       case 'copy':
         if (actionMessage.content) {

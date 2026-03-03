@@ -438,7 +438,8 @@ export default function ChannelScreen({ navigation, route }) {
         navigation.navigate('Thread', { parentMessage: actionMessage, channelId: channel.id, workspaceId });
         break;
       case 'react':
-        setShowEmojiPicker(true);
+        // Delay to let the action sheet Modal fully close before opening emoji picker Modal
+        setTimeout(() => setShowEmojiPicker(true), 400);
         break;
       case 'pin':
         (async () => {

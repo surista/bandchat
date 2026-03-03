@@ -38,6 +38,23 @@ export default function ChannelSettingsScreen({ navigation, route }) {
   // Add member modal
   const [showAddMember, setShowAddMember] = useState(false);
 
+  // Ensure back button is always visible
+  useEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={{ marginRight: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <Text style={{ fontSize: 16, color: colors.primary }}>← Back</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors]);
+
   useEffect(() => {
     const loadData = async () => {
       try {
