@@ -87,6 +87,14 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       } finally {
         if (!cancelled) {
           setLoading(false);
+          // Fallback scroll: ensure we reach the bottom after React renders messages
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              if (!cancelled && messagesContainerRef.current) {
+                messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+              }
+            });
+          });
         }
       }
     };
