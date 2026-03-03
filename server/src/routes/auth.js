@@ -34,10 +34,11 @@ const hashRefreshToken = (token) => {
  * @param {string} refreshToken - The refresh token to set
  */
 const setRefreshTokenCookie = (res, refreshToken) => {
+  const isProduction = process.env.NODE_ENV === 'production';
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax', // 'none' required for cross-origin Railway deployment
     maxAge: 14 * 24 * 60 * 60 * 1000, // 14 days
     path: '/api/auth'
   });
@@ -48,10 +49,11 @@ const setRefreshTokenCookie = (res, refreshToken) => {
  * @param {import("express").Response} res - Express response
  */
 const clearRefreshTokenCookie = (res) => {
+  const isProduction = process.env.NODE_ENV === 'production';
   res.clearCookie('refreshToken', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     path: '/api/auth'
   });
 };
@@ -880,6 +882,7 @@ router.post('/logout-all', authenticate, async (req, res) => {
       where: { userId: req.user.id }
     });
 
+    clearRefreshTokenCookie(res);
     res.json({ message: 'Logged out of all sessions' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to logout' });

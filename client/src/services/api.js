@@ -31,11 +31,12 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 class ApiService {
   constructor() {
     this.accessToken = localStorage.getItem('accessToken');
-    // Refresh token is now stored in an httpOnly cookie (set by server).
-    // We no longer store or read it from localStorage.
+    // Primary: refresh token in httpOnly cookie (set by server).
+    // Fallback: also keep in memory for cross-origin deployments where cookies may be blocked.
+    this._refreshToken = null;
     // Clean up legacy refreshToken from localStorage (one-time migration).
     localStorage.removeItem('refreshToken');
-    // _hasSession indicates we may have a valid cookie-based session.
+    // _hasSession indicates we may have a valid session.
     this._hasSession = !!this.accessToken;
     this._refreshPromise = null;
   }
@@ -51,14 +52,16 @@ class ApiService {
     }
   }
 
-  setTokens(accessToken) {
+  setTokens(accessToken, refreshToken) {
     this.accessToken = accessToken;
+    if (refreshToken) this._refreshToken = refreshToken;
     this._hasSession = true;
     localStorage.setItem('accessToken', accessToken);
   }
 
   clearTokens() {
     this.accessToken = null;
+    this._refreshToken = null;
     this._hasSession = false;
     localStorage.removeItem('accessToken');
   }
@@ -130,16 +133,20 @@ class ApiService {
 
   async refreshAccessToken() {
     try {
+      // Send refresh token in body as fallback for cross-origin deployments
+      // where httpOnly cookies may be blocked by SameSite policy.
+      // Server checks cookie first, then falls back to body.
+      const body = this._refreshToken ? { refreshToken: this._refreshToken } : {};
       const response = await fetch(`${API_URL}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', // Send httpOnly cookie
-        body: JSON.stringify({}) // Body required for POST, cookie carries the token
+        credentials: 'include',
+        body: JSON.stringify(body)
       });
 
       if (response.ok) {
         const data = await response.json();
-        this.setTokens(data.accessToken);
+        this.setTokens(data.accessToken, data.refreshToken);
         return true;
       }
 
@@ -162,7 +169,7 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ email, password, displayName })
     });
-    this.setTokens(data.accessToken);
+    this.setTokens(data.accessToken, data.refreshToken);
     return data;
   }
 
@@ -171,17 +178,19 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ email, password })
     });
-    this.setTokens(data.accessToken);
+    this.setTokens(data.accessToken, data.refreshToken);
     return data;
   }
 
   async logout() {
-    // Revoke refresh token on server (cookie sent automatically)
+    // Revoke refresh token on server (cookie + body fallback)
     try {
+      const body = this._refreshToken ? { refreshToken: this._refreshToken } : {};
       await fetch(`${API_URL}/auth/logout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include' // Send httpOnly cookie for server-side revocation
+        credentials: 'include',
+        body: JSON.stringify(body)
       });
     } catch {
       // Ignore errors - still clear local tokens
@@ -234,7 +243,7 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ credential })
     });
-    this.setTokens(data.accessToken);
+    this.setTokens(data.accessToken, data.refreshToken);
     return data;
   }
 
