@@ -785,7 +785,7 @@ function SetlistList({ workspaceId, workspaceName }) {
               Setlists help you organize songs for gigs and rehearsals. Add MC sections, set breaks, and see total duration.
             </p>
             <button
-              onClick={() => { setEditingSetlist(null); setShowBuilder(true); }}
+              onClick={() => setShowCreateModal(true)}
               className="btn bg-green-600 hover:bg-green-700 text-white"
             >
               + Create Setlist
