@@ -10,7 +10,7 @@ import useLongPress from '../../hooks/useLongPress';
 import Skeleton from '../common/Skeleton';
 
 // Compact single-line row for list view
-function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, onContextMenu }) {
+function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, onDelete, onContextMenu }) {
   const canEdit = !gig.isExternal && (!gig.isLocked || isAdmin);
   const longPress = useLongPress({
     onLongPress: (pos) => onContextMenu(pos),
@@ -68,13 +68,22 @@ function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, on
       {/* Quick actions on hover */}
       <div className="w-16 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity flex justify-end gap-1">
         {canEdit && (
-          <button
-            onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] px-1"
-            title="Edit"
-          >
-            ✏️
-          </button>
+          <>
+            <button
+              onClick={(e) => { e.stopPropagation(); onEdit(); }}
+              className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] px-1"
+              title="Edit"
+            >
+              ✏️
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              className="text-xs text-[var(--color-text-muted)] hover:text-red-400 px-1"
+              title="Delete"
+            >
+              🗑️
+            </button>
+          </>
         )}
       </div>
     </div>
@@ -1234,6 +1243,7 @@ function GigCalendar({ workspaceId, workspace }) {
                     getTypeColor={getTypeColor}
                     formatTimeRange={formatTimeRange}
                     onEdit={() => { setEditingGig(gig); setShowForm(true); }}
+                    onDelete={() => setDeleteGigId(gig.id)}
                     onContextMenu={(pos) => setGigContextMenu({ gigId: gig.id, ...pos })}
                   />
                 ))}
