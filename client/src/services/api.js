@@ -104,8 +104,10 @@ class ApiService {
           const retryResponse = await fetch(url, { ...options, headers, credentials: 'include' });
           return this.handleResponse(retryResponse);
         }
-        // Refresh failed - redirect to login
-        window.location.href = '/login';
+        // Refresh failed — only redirect if tokens were cleared (definitive auth failure)
+        if (!this._hasSession) {
+          window.location.href = '/login';
+        }
         throw new Error('Session expired. Please log in again.');
       }
 
@@ -141,10 +143,15 @@ class ApiService {
         return true;
       }
 
-      this.clearTokens();
+      // Only clear tokens on definitive auth failures (401/403)
+      // Don't clear on server errors (500) or rate limits (429) — those are transient
+      if (response.status === 401 || response.status === 403) {
+        this.clearTokens();
+      }
       return false;
     } catch {
-      this.clearTokens();
+      // Network error (server down, deploy in progress) — don't clear tokens
+      // The next request will retry the refresh
       return false;
     }
   }
