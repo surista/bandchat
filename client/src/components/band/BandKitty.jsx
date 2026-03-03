@@ -514,16 +514,15 @@ function BandKitty({ workspaceId }) {
       )}
 
       {/* Delete Confirmation */}
-      {deleteConfirm && (
-        <ConfirmDialog
-          title="Delete Transaction"
-          message={`Are you sure you want to delete "${deleteConfirm.description}"?`}
-          confirmLabel="Delete"
-          confirmStyle="danger"
-          onConfirm={() => handleDelete(deleteConfirm.id)}
-          onCancel={() => setDeleteConfirm(null)}
-        />
-      )}
+      <ConfirmDialog
+        isOpen={deleteConfirm !== null}
+        title="Delete Transaction"
+        message={`Are you sure you want to delete "${deleteConfirm?.description}"?`}
+        confirmText="Delete"
+        confirmVariant="danger"
+        onConfirm={() => handleDelete(deleteConfirm.id)}
+        onCancel={() => setDeleteConfirm(null)}
+      />
     </div>
   );
 }

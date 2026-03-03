@@ -128,7 +128,7 @@ function PollsList({ workspaceId }) {
               Make band decisions together. Create polls to vote on new songs, gig dates, or anything else.
             </p>
             <button
-              onClick={() => { setEditingPoll(null); setShowForm(true); }}
+              onClick={() => setShowForm(true)}
               className="btn bg-green-600 hover:bg-green-700 text-white"
             >
               + Create Poll

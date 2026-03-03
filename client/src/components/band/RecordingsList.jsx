@@ -429,7 +429,7 @@ export default function RecordingsList({ workspaceId }) {
             Capture song ideas, demos, rehearsal takes, or live recordings to share with your band.
           </p>
           <button
-            onClick={() => { setEditingRecording(null); setShowForm(true); }}
+            onClick={() => setShowRecorder(true)}
             className="btn bg-green-600 hover:bg-green-700 text-white"
           >
             + Add Recording
