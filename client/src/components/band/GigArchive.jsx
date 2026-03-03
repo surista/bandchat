@@ -27,6 +27,7 @@ function GigArchive({ workspaceId, isAdmin }) {
   const [lightboxImage, setLightboxImage] = useState(null); // For image lightbox
   const [dragActive, setDragActive] = useState(false);
   const [showEditDetails, setShowEditDetails] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
   const [editFee, setEditFee] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [editDate, setEditDate] = useState('');
@@ -412,6 +413,7 @@ function GigArchive({ workspaceId, isAdmin }) {
   const handleOpenEditDetails = async (entry) => {
     const gig = await ensureGigExists(entry);
     if (gig) {
+      setEditTitle(gig.title || '');
       setEditFee(gig.pay?.toString() || '');
       setEditNotes(gig.notes || '');
       setEditDate(gig.date ? new Date(gig.date).toISOString().split('T')[0] : '');
@@ -426,6 +428,7 @@ function GigArchive({ workspaceId, isAdmin }) {
     setUploading(true);
     try {
       await api.updateGig(selectedGig.id, {
+        title: editTitle || undefined,
         date: editDate || undefined,
         pay: editFee ? parseFloat(editFee) : null,
         notes: editNotes || null
@@ -436,7 +439,8 @@ function GigArchive({ workspaceId, isAdmin }) {
       if (selectedEntry?.gig?.id === selectedGig.id) {
         setSelectedEntry(prev => ({
           ...prev,
-          gig: { ...prev.gig, date: editDate, pay: editFee ? parseFloat(editFee) : null, notes: editNotes || null }
+          title: editTitle || prev.title,
+          gig: { ...prev.gig, title: editTitle || prev.gig?.title, date: editDate, pay: editFee ? parseFloat(editFee) : null, notes: editNotes || null }
         }));
       }
     } catch (err) {
@@ -1550,6 +1554,18 @@ function GigArchive({ workspaceId, isAdmin }) {
               </button>
             </div>
             <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder="Gig name"
+                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)]"
+                />
+              </div>
               <div>
                 <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
                   Date

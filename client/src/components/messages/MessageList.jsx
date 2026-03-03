@@ -583,7 +583,7 @@ function MessageList({
               ...
             </button>
             {/* Actions - visible on hover (desktop only), hidden on mobile (use long-press context menu) */}
-            <div className="absolute right-2 -top-3 transition-opacity opacity-0 group-hover:opacity-100 focus-within:opacity-100 hidden sm:block">
+            <div className={`absolute right-2 -top-3 transition-opacity hidden sm:block ${reactionPickerMessageId === message.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus-within:opacity-100'}`}>
               {reactionPickerMessageId === message.id && (
                 <div className="absolute right-0 bottom-full mb-1 z-10">
                   <ReactionPicker
