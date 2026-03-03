@@ -56,6 +56,7 @@ export default function ChannelScreen({ navigation, route }) {
   const [workspaceMembers, setWorkspaceMembers] = useState([]);
   const [pinnedMessageIds, setPinnedMessageIds] = useState(new Set());
   const [uploadProgress, setUploadProgress] = useState(null);
+  const [lastReadAt, setLastReadAt] = useState(null);
 
   const channelIdRef = useRef(channel.id);
   const userIdRef = useRef(user?.id);
@@ -123,6 +124,9 @@ export default function ChannelScreen({ navigation, route }) {
   // Load messages → mark read → join socket (exact order from web)
   useEffect(() => {
     let cancelled = false;
+
+    // Capture lastRead before marking channel as read (for "New messages" divider)
+    setLastReadAt(channel.lastRead || null);
 
     const init = async () => {
       setLoading(true);
@@ -563,6 +567,17 @@ export default function ChannelScreen({ navigation, route }) {
     setViewingImage(url);
   }, []);
 
+  // Compute first unread message index (in original message order)
+  const firstUnreadId = useMemo(() => {
+    if (!lastReadAt) return null;
+    const lastReadTime = new Date(lastReadAt).getTime();
+    const msg = messages.find(m =>
+      m.author?.id !== user?.id &&
+      new Date(m.createdAt).getTime() > lastReadTime
+    );
+    return msg?.id || null;
+  }, [messages, lastReadAt, user?.id]);
+
   // Prepare data for inverted FlatList
   const invertedMessages = useMemo(() => [...messages].reverse(), [messages]);
 
@@ -587,6 +602,7 @@ export default function ChannelScreen({ navigation, route }) {
     const grouped = isGrouped(item, index);
     const showDate = needsDateSeparator(item, index);
     const isLastOwn = item.id === lastOwnMessageId;
+    const isFirstUnread = item.id === firstUnreadId;
 
     return (
       <View>
@@ -594,6 +610,14 @@ export default function ChannelScreen({ navigation, route }) {
           <Text style={[styles.seenByText, { color: colors.textSecondary }]}>
             Seen by {seenByCount}
           </Text>
+        )}
+        {/* Unread divider — shown below the message in inverted list (visually above) */}
+        {isFirstUnread && (
+          <View style={styles.unreadDivider}>
+            <View style={styles.unreadLine} />
+            <Text style={styles.unreadText}>New messages</Text>
+            <View style={styles.unreadLine} />
+          </View>
         )}
         <MessageBubble
           message={item}
@@ -615,7 +639,7 @@ export default function ChannelScreen({ navigation, route }) {
         )}
       </View>
     );
-  }, [isGrouped, needsDateSeparator, colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, lastOwnMessageId, seenByCount, workspaceMembers]);
+  }, [isGrouped, needsDateSeparator, colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, lastOwnMessageId, seenByCount, workspaceMembers, firstUnreadId]);
 
   const renderFooter = useCallback(() => {
     if (!loadingMore) return null;
@@ -784,6 +808,23 @@ const styles = StyleSheet.create({
   loadingMore: {
     paddingVertical: 16,
     alignItems: 'center',
+  },
+  unreadDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginVertical: 8,
+  },
+  unreadLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#ef4444',
+  },
+  unreadText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#ef4444',
+    paddingHorizontal: 12,
   },
   dateSeparator: {
     flexDirection: 'row',
