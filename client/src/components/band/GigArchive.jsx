@@ -30,6 +30,9 @@ function GigArchive({ workspaceId, isAdmin }) {
   const [editFee, setEditFee] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [editDate, setEditDate] = useState('');
+  const [showSetlistPicker, setShowSetlistPicker] = useState(false);
+  const [availableSetlists, setAvailableSetlists] = useState([]);
+  const [setlistSearch, setSetlistSearch] = useState('');
 
   useEffect(() => {
     loadData();
@@ -41,6 +44,8 @@ function GigArchive({ workspaceId, isAdmin }) {
       if (e.key === 'Escape') {
         if (lightboxImage) {
           setLightboxImage(null);
+        } else if (showSetlistPicker) {
+          setShowSetlistPicker(false);
         } else if (showEditDetails) {
           setShowEditDetails(false);
         } else if (showEditPerformers) {
@@ -54,7 +59,7 @@ function GigArchive({ workspaceId, isAdmin }) {
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [lightboxImage, showEditDetails, showEditPerformers, showAddMedia, selectedEntry]);
+  }, [lightboxImage, showSetlistPicker, showEditDetails, showEditPerformers, showAddMedia, selectedEntry]);
 
   const loadData = async () => {
     try {
@@ -452,6 +457,77 @@ function GigArchive({ workspaceId, isAdmin }) {
       await loadData();
       setSelectedGig(null);
       setShowEditDetails(false);
+      setSelectedEntry(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Open setlist picker and fetch available setlists
+  const openSetlistPicker = async () => {
+    setShowSetlistPicker(true);
+    setSetlistSearch('');
+    try {
+      const data = await api.getSetlists(workspaceId);
+      setAvailableSetlists(data);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  // Link an existing setlist to the current gig
+  const handleLinkSetlist = async (setlistId) => {
+    setShowSetlistPicker(false);
+    setUploading(true);
+    try {
+      let gig = selectedEntry.gig;
+      if (!selectedEntry.hasFormalGig || !gig) {
+        gig = await ensureGigExists(selectedEntry);
+        if (!gig) return;
+      }
+      await api.updateGig(gig.id, { setlistId });
+      await loadData();
+      // Update selectedEntry to reflect the change
+      setSelectedEntry(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Create a new blank setlist and link it to the current gig
+  const handleCreateAndLinkSetlist = async () => {
+    setUploading(true);
+    try {
+      let gig = selectedEntry.gig;
+      if (!selectedEntry.hasFormalGig || !gig) {
+        gig = await ensureGigExists(selectedEntry);
+        if (!gig) return;
+      }
+      const newSetlist = await api.createSetlist(workspaceId, {
+        name: selectedEntry.title || 'New Setlist',
+        performedAt: selectedEntry.date?.toISOString()
+      });
+      await api.updateGig(gig.id, { setlistId: newSetlist.id });
+      await loadData();
+      setSelectedEntry(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Unlink setlist from the current gig
+  const handleUnlinkSetlist = async () => {
+    if (!selectedEntry.gig) return;
+    setUploading(true);
+    try {
+      await api.updateGig(selectedEntry.gig.id, { setlistId: null });
+      await loadData();
       setSelectedEntry(null);
     } catch (err) {
       setError(err.message);
@@ -964,11 +1040,55 @@ function GigArchive({ workspaceId, isAdmin }) {
                 )}
 
                 {/* Setlist */}
-                {selectedEntry.setlist && (
-                  <div>
-                    <h3 className="text-[var(--color-text-primary)] font-semibold mb-3 flex items-center gap-2">
-                      <span className="text-xl">📋</span> Setlist
-                    </h3>
+                <div>
+                  <h3 className="text-[var(--color-text-primary)] font-semibold mb-3 flex items-center gap-2">
+                    <span className="text-xl">📋</span> Setlist
+                    {selectedEntry.setlist && selectedEntry.gig && (
+                      <button
+                        onClick={() => showSetlistPicker ? setShowSetlistPicker(false) : openSetlistPicker()}
+                        className="ml-auto text-xs text-[var(--color-primary)] hover:underline"
+                      >
+                        {showSetlistPicker ? 'Cancel' : 'Change'}
+                      </button>
+                    )}
+                  </h3>
+
+                  {/* Setlist picker */}
+                  {showSetlistPicker && (
+                    <div className="bg-[var(--color-bg-secondary)] rounded-lg p-3 mb-3">
+                      <input
+                        type="text"
+                        value={setlistSearch}
+                        onChange={(e) => setSetlistSearch(e.target.value)}
+                        placeholder="Search setlists..."
+                        className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] text-sm mb-2"
+                        autoFocus
+                      />
+                      <div className="max-h-48 overflow-y-auto space-y-1">
+                        {availableSetlists
+                          .filter(s => !setlistSearch || s.name.toLowerCase().includes(setlistSearch.toLowerCase()))
+                          .sort((a, b) => new Date(b.performedAt || b.createdAt) - new Date(a.performedAt || a.createdAt))
+                          .map(s => {
+                            const songCount = s.songs?.filter(sg => sg.type === 'SONG' || !sg.type).length || 0;
+                            return (
+                              <button
+                                key={s.id}
+                                onClick={() => handleLinkSetlist(s.id)}
+                                className="w-full text-left px-3 py-2 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors flex items-center justify-between"
+                              >
+                                <span className="text-[var(--color-text-primary)] text-sm truncate">{s.name}</span>
+                                <span className="text-[var(--color-text-muted)] text-xs ml-2 flex-shrink-0">{songCount} songs</span>
+                              </button>
+                            );
+                          })}
+                        {availableSetlists.filter(s => !setlistSearch || s.name.toLowerCase().includes(setlistSearch.toLowerCase())).length === 0 && (
+                          <p className="text-[var(--color-text-muted)] text-sm text-center py-2">No setlists found</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedEntry.setlist ? (
                     <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4">
                       {selectedEntry.setlist.songs?.filter(s => s.type === 'SONG' || !s.type).length > 0 ? (
                         <ol className="space-y-1">
@@ -988,11 +1108,41 @@ function GigArchive({ workspaceId, isAdmin }) {
                             ))}
                         </ol>
                       ) : (
-                        <p className="text-[var(--color-text-muted)] text-center py-4">No songs in setlist</p>
+                        <div className="text-center py-4">
+                          <p className="text-[var(--color-text-muted)] mb-3">No songs in setlist</p>
+                          {selectedEntry.gig && (
+                            <button
+                              onClick={handleUnlinkSetlist}
+                              className="text-xs text-red-400 hover:underline"
+                            >
+                              Unlink setlist
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4">
+                      <p className="text-[var(--color-text-muted)] text-center mb-3">No setlist linked</p>
+                      <div className="flex gap-2 justify-center">
+                        <button
+                          onClick={openSetlistPicker}
+                          className="px-3 py-1.5 bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] text-sm rounded hover:bg-[var(--color-border)] transition-colors"
+                          disabled={uploading}
+                        >
+                          Link Existing Setlist
+                        </button>
+                        <button
+                          onClick={handleCreateAndLinkSetlist}
+                          className="px-3 py-1.5 bg-[var(--color-primary)] text-white text-sm rounded hover:opacity-90 transition-opacity"
+                          disabled={uploading}
+                        >
+                          + Create New Setlist
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {/* Media Gallery */}
                 {selectedEntry.gig?.media?.length > 0 && (
