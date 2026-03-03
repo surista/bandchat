@@ -202,11 +202,11 @@ export default function ThreadScreen({ route }) {
         (async () => {
           try {
             const img = actionMessage.attachments?.find(a => a.type === 'IMAGE');
-            if (!img?.url) break;
+            if (!img?.url) return;
             const { status } = await MediaLibrary.requestPermissionsAsync();
             if (status !== 'granted') {
               Alert.alert('Permission needed', 'Allow BandChat to save photos to your library.');
-              break;
+              return;
             }
             let filename = img.url.split('/').pop()?.split('?')[0] || '';
             if (!filename || !filename.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
