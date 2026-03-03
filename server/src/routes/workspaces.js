@@ -1495,7 +1495,7 @@ router.get('/:workspaceId/export', authenticate, isWorkspaceAdmin, async (req, r
   }
 });
 
-// Relink orphaned messages (from Slack import) to actual workspace members by display name
+// Relink orphaned messages and sync band member avatars to user profiles
 router.post('/:workspaceId/relink-messages', authenticate, isWorkspaceAdmin, async (req, res) => {
   try {
     const { workspaceId } = req.params;
@@ -1503,7 +1503,7 @@ router.post('/:workspaceId/relink-messages', authenticate, isWorkspaceAdmin, asy
     // Get workspace members with display names
     const members = await prisma.workspaceMember.findMany({
       where: { workspaceId },
-      include: { user: { select: { id: true, displayName: true } } }
+      include: { user: { select: { id: true, displayName: true, avatarUrl: true } } }
     });
 
     // Build display name → userId map (case-insensitive, first match wins)
@@ -1515,7 +1515,7 @@ router.post('/:workspaceId/relink-messages', authenticate, isWorkspaceAdmin, asy
       }
     }
 
-    // Find orphaned messages in this workspace (authorId null, removedUserName set)
+    // 1. Relink orphaned messages (authorId null, removedUserName set)
     const orphanedMessages = await prisma.message.findMany({
       where: {
         authorId: null,
@@ -1541,10 +1541,30 @@ router.post('/:workspaceId/relink-messages', authenticate, isWorkspaceAdmin, asy
       }
     }
 
+    // 2. Sync BandMember imageUrl → User avatarUrl for linked members without an avatar
+    const bandMembers = await prisma.bandMember.findMany({
+      where: {
+        workspaceId,
+        linkedUserId: { not: null },
+        imageUrl: { not: null }
+      },
+      select: { linkedUserId: true, imageUrl: true }
+    });
+
+    let avatarsSynced = 0;
+    for (const bm of bandMembers) {
+      const result = await prisma.user.updateMany({
+        where: { id: bm.linkedUserId, avatarUrl: null },
+        data: { avatarUrl: bm.imageUrl }
+      });
+      avatarsSynced += result.count;
+    }
+
     res.json({
       total: orphanedMessages.length,
       relinked,
       unmatched: orphanedMessages.length - relinked,
+      avatarsSynced,
       summary: relinkSummary
     });
   } catch (error) {

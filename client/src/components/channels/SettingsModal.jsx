@@ -1543,8 +1543,10 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     </p>
                     {relinkResult && (
                       <div className="mb-4 p-3 bg-green-900/30 border border-green-700 rounded text-sm text-green-300">
-                        Relinked {relinkResult.relinked} of {relinkResult.total} orphaned messages.
-                        {relinkResult.unmatched > 0 && ` ${relinkResult.unmatched} could not be matched.`}
+                        {relinkResult.relinked > 0 && <div>Relinked {relinkResult.relinked} of {relinkResult.total} orphaned messages.</div>}
+                        {relinkResult.avatarsSynced > 0 && <div>Synced {relinkResult.avatarsSynced} band member avatars to user profiles.</div>}
+                        {relinkResult.relinked === 0 && !relinkResult.avatarsSynced && <div>No changes needed — all messages and avatars are up to date.</div>}
+                        {relinkResult.unmatched > 0 && <div>{relinkResult.unmatched} messages could not be matched.</div>}
                       </div>
                     )}
                     <button

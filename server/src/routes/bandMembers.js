@@ -273,6 +273,16 @@ router.put('/:memberId', authenticate, async (req, res) => {
       });
     }
 
+    // Sync band member image to linked user's avatarUrl if they don't have one
+    const effectiveLinkedUser = linkedUserId !== undefined ? linkedUserId : existing.linkedUserId;
+    const effectiveImageUrl = imageUrl !== undefined ? imageUrl : existing.imageUrl;
+    if (effectiveLinkedUser && effectiveImageUrl) {
+      await prisma.user.updateMany({
+        where: { id: effectiveLinkedUser, avatarUrl: null },
+        data: { avatarUrl: effectiveImageUrl }
+      });
+    }
+
     // Fetch updated member with stints and linkedUser
     const member = await prisma.bandMember.findUnique({
       where: { id: req.params.memberId },
