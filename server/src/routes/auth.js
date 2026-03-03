@@ -509,7 +509,7 @@ router.post('/link-google', authenticate, async (req, res) => {
 });
 
 // Refresh token (rate limited to prevent token enumeration)
-router.post('/refresh', authLimiter, async (req, res) => {
+router.post('/refresh', apiLimiter, async (req, res) => {
   try {
     // Check httpOnly cookie first (web clients), then fall back to body (mobile clients)
     const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
