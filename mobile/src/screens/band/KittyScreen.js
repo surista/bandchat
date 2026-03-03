@@ -33,6 +33,8 @@ const EXPENSE_CATEGORIES = [
   { key: 'travel', label: 'Travel' },
   { key: 'rehearsal', label: 'Rehearsal Space' },
   { key: 'studio', label: 'Studio' },
+  { key: 'noruma', label: 'Noruma' },
+  { key: 'bar_tab', label: 'Bar Tab' },
   { key: 'promo', label: 'Promotion' },
   { key: 'other', label: 'Other' },
 ];
@@ -85,10 +87,10 @@ export default function KittyScreen({ navigation, route }) {
   const [showForm, setShowForm] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [txType, setTxType] = useState('GIG_PAY');
+  const [txType, setTxType] = useState('EXPENSE');
   const [txAmount, setTxAmount] = useState('');
   const [txDescription, setTxDescription] = useState('');
-  const [txCategory, setTxCategory] = useState('');
+  const [txCategory, setTxCategory] = useState('studio');
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
@@ -169,10 +171,10 @@ export default function KittyScreen({ navigation, route }) {
 
   const resetForm = useCallback(() => {
     setEditingTx(null);
-    setTxType('GIG_PAY');
+    setTxType('EXPENSE');
     setTxAmount('');
     setTxDescription('');
-    setTxCategory('');
+    setTxCategory('studio');
   }, []);
 
   const filteredTransactions = useMemo(() => {
@@ -208,6 +210,24 @@ export default function KittyScreen({ navigation, route }) {
       .filter(t => t.type === 'EXPENSE')
       .reduce((sum, t) => sum + t.amount, 0);
   }, [kitty?.transactions]);
+
+  // Running balance: iterate oldest→newest, income adds, expense subtracts
+  const runningBalanceMap = useMemo(() => {
+    const txs = kitty?.transactions || [];
+    if (!txs.length) return {};
+    const reversed = [...txs].reverse();
+    let balance = kitty?.startingBalance || 0;
+    const map = {};
+    for (const tx of reversed) {
+      if (tx.type === 'EXPENSE') {
+        balance -= tx.amount;
+      } else {
+        balance += tx.amount;
+      }
+      map[tx.id] = balance;
+    }
+    return map;
+  }, [kitty?.transactions, kitty?.startingBalance]);
 
   const handleSaveTransaction = useCallback(async () => {
     const amount = parseFloat(txAmount);
@@ -319,12 +339,19 @@ export default function KittyScreen({ navigation, route }) {
             </Text>
           ) : null}
         </View>
-        <Text style={[styles.txAmount, { color: isExpense ? '#ef4444' : '#22c55e' }]}>
-          {isExpense ? '-' : '+'}{formatAmount(item.amount, currency)}
-        </Text>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={[styles.txAmount, { color: isExpense ? '#ef4444' : '#22c55e' }]}>
+            {isExpense ? '-' : '+'}{formatAmount(item.amount, currency)}
+          </Text>
+          {runningBalanceMap[item.id] !== undefined && (
+            <Text style={[styles.txBalance, { color: runningBalanceMap[item.id] >= 0 ? colors.textSecondary : '#ef4444' }]}>
+              Bal: {formatAmount(runningBalanceMap[item.id], currency)}
+            </Text>
+          )}
+        </View>
       </TouchableOpacity>
     );
-  }, [colors, currency, handleLongPress]);
+  }, [colors, currency, handleLongPress, runningBalanceMap]);
 
   if (loading) {
     return (
@@ -623,6 +650,7 @@ const styles = StyleSheet.create({
   txMeta: { fontSize: 12, marginTop: 2 },
   txCreator: { fontSize: 11, marginTop: 1 },
   txAmount: { fontSize: 16, fontWeight: '800' },
+  txBalance: { fontSize: 11, marginTop: 2 },
   // Empty
   emptyIcon: { fontSize: 40, marginBottom: 12 },
   emptyText: { fontSize: 16, fontWeight: '600' },

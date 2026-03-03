@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
 import api from '../../services/api';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -16,6 +16,8 @@ const EXPENSE_CATEGORIES = [
   { id: 'travel', label: 'Travel' },
   { id: 'rehearsal', label: 'Rehearsal Space' },
   { id: 'studio', label: 'Studio' },
+  { id: 'noruma', label: 'Noruma' },
+  { id: 'bar_tab', label: 'Bar Tab' },
   { id: 'promo', label: 'Promotion' },
   { id: 'other', label: 'Other' }
 ];
@@ -58,7 +60,7 @@ function BandKitty({ workspaceId }) {
   const [formAmount, setFormAmount] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formDate, setFormDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [formCategory, setFormCategory] = useState('other');
+  const [formCategory, setFormCategory] = useState('studio');
   const [formLoading, setFormLoading] = useState(false);
 
   // Settings state
@@ -158,7 +160,7 @@ function BandKitty({ workspaceId }) {
     setFormAmount('');
     setFormDescription('');
     setFormDate(format(new Date(), 'yyyy-MM-dd'));
-    setFormCategory('other');
+    setFormCategory('studio');
   };
 
   const openEditForm = (transaction) => {
@@ -187,6 +189,24 @@ function BandKitty({ workspaceId }) {
     groups[month].push(t);
     return groups;
   }, {});
+
+  // Running balance: iterate oldest→newest, income adds, expense subtracts
+  const runningBalanceMap = useMemo(() => {
+    const txs = kitty?.transactions || [];
+    if (!txs.length) return {};
+    const reversed = [...txs].reverse();
+    let balance = kitty?.startingBalance || 0;
+    const map = {};
+    for (const tx of reversed) {
+      if (tx.type === 'EXPENSE') {
+        balance -= tx.amount;
+      } else {
+        balance += tx.amount;
+      }
+      map[tx.id] = balance;
+    }
+    return map;
+  }, [kitty?.transactions, kitty?.startingBalance]);
 
   if (loading) {
     return (
@@ -314,8 +334,15 @@ function BandKitty({ workspaceId }) {
                           )}
                         </div>
                       </div>
-                      <div className={`text-lg font-semibold ${typeInfo.color}`}>
-                        {typeInfo.positive ? '+' : '-'}{getCurrencySymbol()}{t.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <div className="text-right">
+                        <div className={`text-lg font-semibold ${typeInfo.color}`}>
+                          {typeInfo.positive ? '+' : '-'}{getCurrencySymbol()}{t.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                        {runningBalanceMap[t.id] !== undefined && (
+                          <div className={`text-xs ${runningBalanceMap[t.id] >= 0 ? 'text-gray-400' : 'text-red-400'}`}>
+                            Bal: {getCurrencySymbol()}{runningBalanceMap[t.id].toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </div>
+                        )}
                       </div>
                       {!t.gigId && (
                         <div className="flex gap-1">

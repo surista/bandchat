@@ -5,6 +5,7 @@ import api from '../../services/api';
 import Footer from '../common/Footer';
 import Modal from '../common/Modal';
 import OnboardingWizard from './OnboardingWizard';
+import WorkspaceImportWizard from './WorkspaceImportWizard';
 
 function WorkspaceList() {
   const { user, logout } = useAuth();
@@ -12,6 +13,7 @@ function WorkspaceList() {
   const [workspaces, setWorkspaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState('');
@@ -76,6 +78,12 @@ function WorkspaceList() {
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-bold text-white">Your Workspaces</h2>
           <div className="flex gap-2">
+            <button
+              onClick={() => setShowImport(true)}
+              className="btn btn-secondary"
+            >
+              Import Workspace
+            </button>
             <button
               onClick={() => setShowJoin(true)}
               className="btn btn-secondary"
@@ -177,6 +185,16 @@ function WorkspaceList() {
             navigate(`/workspace/${workspace.id}`);
           }}
           onClose={() => setShowOnboarding(false)}
+        />
+      )}
+
+      {showImport && (
+        <WorkspaceImportWizard
+          onComplete={(workspaceId) => {
+            setShowImport(false);
+            navigate(`/workspace/${workspaceId}`);
+          }}
+          onClose={() => setShowImport(false)}
         />
       )}
     </div>

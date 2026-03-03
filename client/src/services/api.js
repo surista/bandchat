@@ -1438,6 +1438,39 @@ class ApiService {
     });
   }
 
+  // Workspace Import (from BandChat export JSON)
+  async parseWorkspaceExport(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const url = `${API_URL}/workspace-import/parse`;
+    const headers = {};
+    if (this.accessToken) {
+      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || `Upload failed (${response.status})`);
+    }
+
+    return response.json();
+  }
+
+  async executeWorkspaceImport(config) {
+    return this.request('/workspace-import/execute', {
+      method: 'POST',
+      body: JSON.stringify(config)
+    });
+  }
+
   // ICS Calendar Import
   async previewICS(workspaceId, icsContent) {
     return this.request(`/gigs/workspace/${workspaceId}/preview-ics`, {

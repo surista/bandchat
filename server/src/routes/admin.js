@@ -2,7 +2,7 @@ import express from 'express';
 import { authenticate, isSystemAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 import { listAllObjects, deleteFile, isConfigured as isR2Configured } from '../lib/storage.js';
-import { createBackup, listBackups, getBackupStream, cleanupOldBackups } from '../services/backup.js';
+import { createBackup, listBackups, getBackupStream, cleanupOldBackups, previewBackup, restoreFromBackup } from '../services/backup.js';
 
 const router = express.Router();
 
@@ -491,6 +491,48 @@ router.get('/backups/download/:filename', async (req, res) => {
   } catch (error) {
     console.error('Backup download error:', error);
     res.status(404).json({ error: 'Backup not found' });
+  }
+});
+
+// POST /api/admin/backups/restore-preview — Preview a backup's contents before restoring
+router.post('/backups/restore-preview', async (req, res) => {
+  try {
+    const { key } = req.body;
+    if (!key) {
+      return res.status(400).json({ error: 'Missing backup key' });
+    }
+
+    const preview = await previewBackup(key);
+    res.json(preview);
+  } catch (error) {
+    console.error('Backup preview error:', error);
+    res.status(500).json({ error: 'Failed to preview backup: ' + error.message });
+  }
+});
+
+// POST /api/admin/backups/restore — Restore the database from a backup
+router.post('/backups/restore', async (req, res) => {
+  try {
+    const { key, confirmPhrase } = req.body;
+
+    if (!key) {
+      return res.status(400).json({ error: 'Missing backup key' });
+    }
+    if (confirmPhrase !== 'RESTORE DATABASE') {
+      return res.status(400).json({ error: 'Invalid confirmation phrase. Type "RESTORE DATABASE" to confirm.' });
+    }
+
+    console.log(`DATABASE RESTORE initiated by ${req.user.email} from backup: ${key}`);
+
+    const result = await restoreFromBackup(key, (stage, detail) => {
+      console.log(`Restore [${stage}]: ${detail}`);
+    });
+
+    console.log(`DATABASE RESTORE complete. Safety backup: ${result.safetyBackupKey}`);
+    res.json(result);
+  } catch (error) {
+    console.error('Database restore error:', error);
+    res.status(500).json({ error: 'Restore failed: ' + error.message });
   }
 });
 

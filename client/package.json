@@ -1,7 +1,7 @@
 {
   "name": "bandchat-client",
   "private": true,
-  "version": "1.04.04",
+  "version": "1.04.05",
   "type": "module",
   "engines": {
     "node": ">=18"
