@@ -427,9 +427,9 @@ router.post('/execute', authenticate, async (req, res) => {
 
           if (bm.stints?.length) {
             await prisma.instrumentStint.createMany({
-              data: bm.stints.map(s => ({
-                instrument: s.instrument,
-                startDate: s.startDate ? new Date(s.startDate) : null,
+              data: bm.stints.filter(s => s.startDate).map(s => ({
+                instruments: s.instruments || (s.instrument ? [s.instrument] : []),
+                startDate: new Date(s.startDate),
                 endDate: s.endDate ? new Date(s.endDate) : null,
                 bandMemberId: member.id,
               })),
@@ -928,7 +928,7 @@ router.post('/execute', authenticate, async (req, res) => {
     res.json({ ...results, duration });
   } catch (error) {
     console.error('Workspace import error:', error);
-    res.status(500).json({ error: 'Failed to import workspace data: ' + error.message });
+    res.status(500).json({ error: 'Failed to import workspace data' });
   }
 });
 

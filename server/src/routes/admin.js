@@ -511,6 +511,8 @@ router.post('/backups/restore-preview', async (req, res) => {
 });
 
 // POST /api/admin/backups/restore — Restore the database from a backup
+let restoreInProgress = false;
+
 router.post('/backups/restore', async (req, res) => {
   try {
     const { key, confirmPhrase } = req.body;
@@ -521,7 +523,11 @@ router.post('/backups/restore', async (req, res) => {
     if (confirmPhrase !== 'RESTORE DATABASE') {
       return res.status(400).json({ error: 'Invalid confirmation phrase. Type "RESTORE DATABASE" to confirm.' });
     }
+    if (restoreInProgress) {
+      return res.status(409).json({ error: 'A restore operation is already in progress' });
+    }
 
+    restoreInProgress = true;
     console.log(`DATABASE RESTORE initiated by ${req.user.email} from backup: ${key}`);
 
     const result = await restoreFromBackup(key, (stage, detail) => {
@@ -533,6 +539,8 @@ router.post('/backups/restore', async (req, res) => {
   } catch (error) {
     console.error('Database restore error:', error);
     res.status(500).json({ error: 'Restore failed: ' + error.message });
+  } finally {
+    restoreInProgress = false;
   }
 });
 

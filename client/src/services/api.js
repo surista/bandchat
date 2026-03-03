@@ -1446,6 +1446,13 @@ class ApiService {
 
   // Workspace Import (from BandChat export JSON)
   async parseWorkspaceExport(file) {
+    if (this._hasSession && this.isTokenExpiringSoon()) {
+      if (!this._refreshPromise) {
+        this._refreshPromise = this.refreshAccessToken().finally(() => { this._refreshPromise = null; });
+      }
+      await this._refreshPromise;
+    }
+
     const formData = new FormData();
     formData.append('file', file);
 

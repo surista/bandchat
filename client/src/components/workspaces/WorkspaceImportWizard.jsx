@@ -297,8 +297,8 @@ function renderUsersStep({ parseResult, userMapping, setUserMapping }) {
             </tr>
           </thead>
           <tbody>
-            {members.map(m => (
-              <tr key={m.displayName} style={{ borderTop: '1px solid var(--color-border)' }}>
+            {members.map((m, idx) => (
+              <tr key={m.email || idx} style={{ borderTop: '1px solid var(--color-border)' }}>
                 <td style={{ padding: '10px 12px', color: 'var(--color-text-primary)', fontWeight: 500 }}>
                   {m.displayName}
                 </td>

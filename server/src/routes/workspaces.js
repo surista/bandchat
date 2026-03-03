@@ -1413,8 +1413,9 @@ router.get('/:workspaceId/export', authenticate, isWorkspaceAdmin, async (req, r
       })),
       bandMembers: workspace.bandMembers.map(bm => ({
         name: bm.name, imageUrl: bm.imageUrl, notes: bm.notes,
+        isGuest: bm.isGuest, linkedUserId: bm.linkedUserId,
         stints: bm.stints.map(i => ({
-          instrument: i.instrument, startDate: i.startDate, endDate: i.endDate
+          instruments: i.instruments, startDate: i.startDate, endDate: i.endDate
         }))
       })),
       contacts: workspace.contacts.map(c => ({

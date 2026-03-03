@@ -600,6 +600,8 @@ export async function restoreFromBackup(key, onProgress) {
           name: bm.name,
           imageUrl: bm.imageUrl || null,
           notes: bm.notes || null,
+          isGuest: bm.isGuest || false,
+          linkedUserId: bm.linkedUserId || null,
           userId: bm.userId || null,
           workspaceId: bm.workspaceId,
           createdAt: bm.createdAt ? new Date(bm.createdAt) : new Date(),
@@ -611,7 +613,7 @@ export async function restoreFromBackup(key, onProgress) {
         await tx.instrumentStint.createMany({
           data: bm.stints.map(s => ({
             id: s.id,
-            instrument: s.instrument,
+            instruments: s.instruments || (s.instrument ? [s.instrument] : []),
             startDate: s.startDate ? new Date(s.startDate) : null,
             endDate: s.endDate ? new Date(s.endDate) : null,
             bandMemberId: bm.id,

@@ -5,10 +5,10 @@ import ConfirmDialog from '../common/ConfirmDialog';
 import Skeleton from '../common/Skeleton';
 
 const TRANSACTION_TYPES = [
-  { id: 'GIG_PAY', label: 'Gig Pay', icon: '🎤', color: 'text-green-400', positive: true },
-  { id: 'FEE', label: 'Fee', icon: '💵', color: 'text-green-400', positive: true },
-  { id: 'EXPENSE', label: 'Expense', icon: '💸', color: 'text-red-400', positive: false },
-  { id: 'OTHER_INCOME', label: 'Other Income', icon: '💰', color: 'text-green-400', positive: true }
+  { id: 'GIG_PAY', label: 'Gig Pay', icon: '🎤', positive: true },
+  { id: 'FEE', label: 'Fee', icon: '💵', positive: true },
+  { id: 'EXPENSE', label: 'Expense', icon: '💸', positive: false },
+  { id: 'OTHER_INCOME', label: 'Other Income', icon: '💰', positive: true }
 ];
 
 const EXPENSE_CATEGORIES = [
@@ -69,10 +69,10 @@ function BandKitty({ workspaceId }) {
   const [settingsCurrency, setSettingsCurrency] = useState('USD');
   const [settingsLoading, setSettingsLoading] = useState(false);
 
-  const getCurrencySymbol = () => {
+  const currencySymbol = useMemo(() => {
     const curr = CURRENCIES.find(c => c.code === (kitty?.currency || 'USD'));
     return curr?.symbol || '$';
-  };
+  }, [kitty?.currency]);
 
   useEffect(() => {
     loadKitty();
@@ -175,20 +175,39 @@ function BandKitty({ workspaceId }) {
 
   const getTypeInfo = (type) => TRANSACTION_TYPES.find(t => t.id === type) || TRANSACTION_TYPES[0];
 
-  const filteredTransactions = kitty?.transactions?.filter(t => {
-    if (filterType === 'all') return true;
-    if (filterType === 'income') return ['GIG_PAY', 'FEE', 'OTHER_INCOME'].includes(t.type);
-    if (filterType === 'expense') return t.type === 'EXPENSE';
-    return true;
-  }) || [];
+  const filteredTransactions = useMemo(() => {
+    const txs = kitty?.transactions || [];
+    if (filterType === 'income') return txs.filter(t => ['GIG_PAY', 'FEE', 'OTHER_INCOME'].includes(t.type));
+    if (filterType === 'expense') return txs.filter(t => t.type === 'EXPENSE');
+    return txs;
+  }, [kitty?.transactions, filterType]);
 
-  // Group transactions by month
-  const groupedTransactions = filteredTransactions.reduce((groups, t) => {
-    const month = format(new Date(t.date), 'MMMM yyyy');
-    if (!groups[month]) groups[month] = [];
-    groups[month].push(t);
-    return groups;
-  }, {});
+  const groupedTransactions = useMemo(() => {
+    return filteredTransactions.reduce((groups, t) => {
+      const month = format(new Date(t.date), 'MMMM yyyy');
+      if (!groups[month]) groups[month] = [];
+      groups[month].push(t);
+      return groups;
+    }, {});
+  }, [filteredTransactions]);
+
+  const totalIncome = useMemo(() => {
+    return (kitty?.transactions || [])
+      .filter(t => ['GIG_PAY', 'FEE', 'OTHER_INCOME'].includes(t.type))
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [kitty?.transactions]);
+
+  const totalExpenses = useMemo(() => {
+    return (kitty?.transactions || [])
+      .filter(t => t.type === 'EXPENSE')
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [kitty?.transactions]);
+
+  const totalGigPay = useMemo(() => {
+    return (kitty?.transactions || [])
+      .filter(t => t.type === 'GIG_PAY')
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [kitty?.transactions]);
 
   // Running balance: iterate oldest→newest, income adds, expense subtracts
   const runningBalanceMap = useMemo(() => {
@@ -208,6 +227,8 @@ function BandKitty({ workspaceId }) {
     return map;
   }, [kitty?.transactions, kitty?.startingBalance]);
 
+  const fmt = (n) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
   if (loading) {
     return (
       <div className="space-y-4 p-4">
@@ -217,31 +238,31 @@ function BandKitty({ workspaceId }) {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-900 min-h-0">
+    <div className="flex-1 flex flex-col bg-[var(--color-bg-primary)] min-h-0">
       {/* Header */}
-      <div className="flex-shrink-0 p-4 border-b border-gray-700">
+      <div className="flex-shrink-0 p-4 border-b border-[var(--color-border)]">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <h2 className="text-xl font-bold text-[var(--color-text-primary)] flex items-center gap-2">
               <span>💰</span> Band Kitty
             </h2>
             <div className={`text-3xl font-bold mt-2 ${(kitty?.currentBalance || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {getCurrencySymbol()}{(kitty?.currentBalance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {currencySymbol}{fmt(kitty?.currentBalance || 0)}
             </div>
-            <div className="text-xs text-gray-500 mt-1">
-              Starting balance: {getCurrencySymbol()}{kitty?.startingBalance?.toFixed(2) || '0.00'} as of {kitty?.balanceAsOfDate ? format(new Date(kitty.balanceAsOfDate), 'MMM d, yyyy') : '-'}
+            <div className="text-xs text-[var(--color-text-muted)] mt-1">
+              Starting balance: {currencySymbol}{kitty?.startingBalance?.toFixed(2) || '0.00'} as of {kitty?.balanceAsOfDate ? format(new Date(kitty.balanceAsOfDate), 'MMM d, yyyy') : '-'}
             </div>
           </div>
           <div className="flex gap-2">
             <button
               onClick={() => setShowSettings(true)}
-              className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+              className="px-3 py-1.5 text-sm bg-[var(--color-bg-tertiary)] hover:brightness-110 text-[var(--color-text-secondary)] rounded transition-colors"
             >
               Settings
             </button>
             <button
               onClick={() => { resetForm(); setShowForm(true); }}
-              className="px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 rounded transition-colors"
+              className="px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
             >
               + Add Transaction
             </button>
@@ -250,22 +271,22 @@ function BandKitty({ workspaceId }) {
 
         {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-gray-800 rounded-lg p-3">
-            <div className="text-xs text-gray-400">Total Income</div>
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-3">
+            <div className="text-xs text-[var(--color-text-muted)]">Total Income</div>
             <div className="text-lg font-semibold text-green-400">
-              {getCurrencySymbol()}{(kitty?.transactions?.filter(t => ['GIG_PAY', 'FEE', 'OTHER_INCOME'].includes(t.type)).reduce((sum, t) => sum + t.amount, 0) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {currencySymbol}{fmt(totalIncome)}
             </div>
           </div>
-          <div className="bg-gray-800 rounded-lg p-3">
-            <div className="text-xs text-gray-400">Total Expenses</div>
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-3">
+            <div className="text-xs text-[var(--color-text-muted)]">Total Expenses</div>
             <div className="text-lg font-semibold text-red-400">
-              {getCurrencySymbol()}{(kitty?.transactions?.filter(t => t.type === 'EXPENSE').reduce((sum, t) => sum + t.amount, 0) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {currencySymbol}{fmt(totalExpenses)}
             </div>
           </div>
-          <div className="bg-gray-800 rounded-lg p-3">
-            <div className="text-xs text-gray-400">Gig Payments</div>
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-3">
+            <div className="text-xs text-[var(--color-text-muted)]">Gig Payments</div>
             <div className="text-lg font-semibold text-blue-400">
-              {getCurrencySymbol()}{(kitty?.transactions?.filter(t => t.type === 'GIG_PAY').reduce((sum, t) => sum + t.amount, 0) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {currencySymbol}{fmt(totalGigPay)}
             </div>
           </div>
         </div>
@@ -278,8 +299,8 @@ function BandKitty({ workspaceId }) {
               onClick={() => setFilterType(filter)}
               className={`px-3 py-1 text-sm rounded-full transition-colors ${
                 filterType === filter
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  ? 'bg-[var(--color-primary)] text-white'
+                  : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:brightness-110'
               }`}
             >
               {filter === 'all' ? 'All' : filter === 'income' ? 'Income' : 'Expenses'}
@@ -297,26 +318,26 @@ function BandKitty({ workspaceId }) {
         )}
 
         {Object.keys(groupedTransactions).length === 0 ? (
-          <div className="text-center text-gray-500 py-8">
+          <div className="text-center text-[var(--color-text-muted)] py-8">
             No transactions yet.
             {' Click "Add Transaction" to get started.'}
           </div>
         ) : (
           Object.entries(groupedTransactions).map(([month, transactions]) => (
             <div key={month} className="mb-6">
-              <h3 className="text-sm font-medium text-gray-400 mb-2">{month}</h3>
+              <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-2">{month}</h3>
               <div className="space-y-2">
                 {transactions.map(t => {
                   const typeInfo = getTypeInfo(t.type);
                   return (
                     <div
                       key={t.id}
-                      className="bg-gray-800 rounded-lg p-3 flex items-center gap-3"
+                      className="bg-[var(--color-bg-secondary)] rounded-lg p-3 flex items-center gap-3"
                     >
                       <div className="text-2xl">{typeInfo.icon}</div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-white truncate">{t.description}</div>
-                        <div className="text-xs text-gray-400 flex items-center gap-2">
+                        <div className="font-medium text-[var(--color-text-primary)] truncate">{t.description}</div>
+                        <div className="text-xs text-[var(--color-text-muted)] flex items-center gap-2">
                           <span>{format(new Date(t.date), 'MMM d, yyyy')}</span>
                           <span>•</span>
                           <span>{typeInfo.label}</span>
@@ -335,12 +356,12 @@ function BandKitty({ workspaceId }) {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className={`text-lg font-semibold ${typeInfo.color}`}>
-                          {typeInfo.positive ? '+' : '-'}{getCurrencySymbol()}{t.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        <div className={`text-lg font-semibold ${typeInfo.positive ? 'text-green-400' : 'text-red-400'}`}>
+                          {typeInfo.positive ? '+' : '-'}{currencySymbol}{fmt(t.amount)}
                         </div>
                         {runningBalanceMap[t.id] !== undefined && (
-                          <div className={`text-xs ${runningBalanceMap[t.id] >= 0 ? 'text-gray-400' : 'text-red-400'}`}>
-                            Bal: {getCurrencySymbol()}{runningBalanceMap[t.id].toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          <div className={`text-xs ${runningBalanceMap[t.id] >= 0 ? 'text-[var(--color-text-muted)]' : 'text-red-400'}`}>
+                            Bal: {currencySymbol}{fmt(runningBalanceMap[t.id])}
                           </div>
                         )}
                       </div>
@@ -348,7 +369,7 @@ function BandKitty({ workspaceId }) {
                         <div className="flex gap-1">
                           <button
                             onClick={() => openEditForm(t)}
-                            className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
+                            className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] rounded transition-colors"
                             title="Edit"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -357,7 +378,7 @@ function BandKitty({ workspaceId }) {
                           </button>
                           <button
                             onClick={() => setDeleteConfirm(t)}
-                            className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded transition-colors"
+                            className="p-1.5 text-[var(--color-text-muted)] hover:text-red-400 hover:bg-[var(--color-bg-tertiary)] rounded transition-colors"
                             title="Delete"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -377,20 +398,20 @@ function BandKitty({ workspaceId }) {
 
       {/* Transaction Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg w-full max-w-md max-h-modal overflow-y-auto">
-            <div className="p-4 border-b border-gray-700">
-              <h3 className="text-lg font-semibold text-white">
+        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) resetForm(); }}>
+          <div className="modal-content max-w-md max-h-modal overflow-y-auto">
+            <div className="p-4 border-b border-[var(--color-border)]">
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
                 {editingTransaction ? 'Edit Transaction' : 'Add Transaction'}
               </h3>
             </div>
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Type</label>
+                <label className="block text-sm text-[var(--color-text-muted)] mb-1">Type</label>
                 <select
                   value={formType}
                   onChange={(e) => setFormType(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 text-white"
+                  className="modal-input w-full"
                 >
                   {TRANSACTION_TYPES.map(type => (
                     <option key={type.id} value={type.id}>
@@ -402,11 +423,11 @@ function BandKitty({ workspaceId }) {
 
               {formType === 'EXPENSE' && (
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Category</label>
+                  <label className="block text-sm text-[var(--color-text-muted)] mb-1">Category</label>
                   <select
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 text-white"
+                    className="modal-input w-full"
                   >
                     {EXPENSE_CATEGORIES.map(cat => (
                       <option key={cat.id} value={cat.id}>{cat.label}</option>
@@ -416,37 +437,37 @@ function BandKitty({ workspaceId }) {
               )}
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Amount ({getCurrencySymbol()})</label>
+                <label className="block text-sm text-[var(--color-text-muted)] mb-1">Amount ({currencySymbol})</label>
                 <input
                   type="number"
                   step="0.01"
                   min="0"
                   value={formAmount}
                   onChange={(e) => setFormAmount(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 text-white"
+                  className="modal-input w-full"
                   placeholder="0.00"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Description (optional)</label>
+                <label className="block text-sm text-[var(--color-text-muted)] mb-1">Description (optional)</label>
                 <input
                   type="text"
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 text-white"
+                  className="modal-input w-full"
                   placeholder="e.g., New guitar strings"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Date</label>
+                <label className="block text-sm text-[var(--color-text-muted)] mb-1">Date</label>
                 <input
                   type="date"
                   value={formDate}
                   onChange={(e) => setFormDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 text-white"
+                  className="modal-input w-full"
                 />
               </div>
 
@@ -454,14 +475,14 @@ function BandKitty({ workspaceId }) {
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                  className="flex-1 px-4 py-2 bg-[var(--color-bg-tertiary)] hover:brightness-110 text-[var(--color-text-primary)] rounded transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={formLoading}
-                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 rounded transition-colors disabled:opacity-50"
+                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition-colors disabled:opacity-50"
                 >
                   {formLoading ? 'Saving...' : editingTransaction ? 'Save Changes' : 'Add Transaction'}
                 </button>
@@ -473,18 +494,18 @@ function BandKitty({ workspaceId }) {
 
       {/* Settings Modal */}
       {showSettings && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg w-full max-w-md">
-            <div className="p-4 border-b border-gray-700">
-              <h3 className="text-lg font-semibold text-white">Kitty Settings</h3>
+        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowSettings(false); }}>
+          <div className="modal-content max-w-md">
+            <div className="p-4 border-b border-[var(--color-border)]">
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Kitty Settings</h3>
             </div>
             <form onSubmit={handleSaveSettings} className="p-4 space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Currency</label>
+                <label className="block text-sm text-[var(--color-text-muted)] mb-1">Currency</label>
                 <select
                   value={settingsCurrency}
                   onChange={(e) => setSettingsCurrency(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 text-white"
+                  className="modal-input w-full"
                 >
                   {CURRENCIES.map(c => (
                     <option key={c.code} value={c.code}>
@@ -495,27 +516,27 @@ function BandKitty({ workspaceId }) {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Starting Balance ({getCurrencySymbol()})</label>
+                <label className="block text-sm text-[var(--color-text-muted)] mb-1">Starting Balance ({currencySymbol})</label>
                 <input
                   type="number"
                   step="0.01"
                   value={settingsBalance}
                   onChange={(e) => setSettingsBalance(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 text-white"
+                  className="modal-input w-full"
                   placeholder="0.00"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-[var(--color-text-muted)] mt-1">
                   The band's balance before any tracked transactions
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Balance As Of Date</label>
+                <label className="block text-sm text-[var(--color-text-muted)] mb-1">Balance As Of Date</label>
                 <input
                   type="date"
                   value={settingsDate}
                   onChange={(e) => setSettingsDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 rounded border border-gray-600 text-white"
+                  className="modal-input w-full"
                 />
               </div>
 
@@ -523,14 +544,14 @@ function BandKitty({ workspaceId }) {
                 <button
                   type="button"
                   onClick={() => setShowSettings(false)}
-                  className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded transition-colors"
+                  className="flex-1 px-4 py-2 bg-[var(--color-bg-tertiary)] hover:brightness-110 text-[var(--color-text-primary)] rounded transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={settingsLoading}
-                  className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded transition-colors disabled:opacity-50"
+                  className="flex-1 px-4 py-2 bg-[var(--color-primary)] hover:brightness-110 text-white rounded transition-colors disabled:opacity-50"
                 >
                   {settingsLoading ? 'Saving...' : 'Save Settings'}
                 </button>
