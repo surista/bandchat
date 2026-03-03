@@ -3,7 +3,7 @@ import api from '../../services/api';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ImageLightbox from '../common/ImageLightbox';
 
-function GigArchive({ workspaceId }) {
+function GigArchive({ workspaceId, isAdmin }) {
   const [setlists, setSetlists] = useState([]);
   const [gigs, setGigs] = useState([]);
   const [bandMembers, setBandMembers] = useState([]);
@@ -450,6 +450,7 @@ function GigArchive({ workspaceId }) {
     try {
       await api.deleteGig(selectedGig.id);
       await loadData();
+      setSelectedGig(null);
       setShowEditDetails(false);
       setSelectedEntry(null);
     } catch (err) {
@@ -669,7 +670,7 @@ function GigArchive({ workspaceId }) {
                 <div
                   key={entry.id}
                   onClick={() => setSelectedEntry(entry)}
-                  className="bg-[var(--color-bg-primary)] rounded-lg border border-[var(--color-border)] p-4 hover:border-[var(--color-text-muted)] hover:bg-[var(--color-bg-secondary)] transition-colors cursor-pointer"
+                  className="group bg-[var(--color-bg-primary)] rounded-lg border border-[var(--color-border)] p-4 hover:border-[var(--color-text-muted)] hover:bg-[var(--color-bg-secondary)] transition-colors cursor-pointer"
                 >
                   {/* Header with title and date */}
                   <div className="flex items-start justify-between mb-2">
@@ -685,9 +686,20 @@ function GigArchive({ workspaceId }) {
                         </p>
                       )}
                     </div>
-                    {gig?.media?.length > 0 && (
-                      <span className="text-blue-400 text-sm">📸 {gig.media.length}</span>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {gig?.media?.length > 0 && (
+                        <span className="text-blue-400 text-sm">📸 {gig.media.length}</span>
+                      )}
+                      {isAdmin && hasFormalGig && gig && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSelectedGig(gig); setShowDeleteGigConfirm(true); }}
+                          className="text-[var(--color-text-muted)] hover:text-red-400 text-sm px-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Delete gig"
+                        >
+                          🗑️
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Stats badges */}
@@ -1487,7 +1499,7 @@ function GigArchive({ workspaceId }) {
         confirmText="Delete"
         confirmVariant="danger"
         onConfirm={handleDeleteGig}
-        onCancel={() => setShowDeleteGigConfirm(false)}
+        onCancel={() => { setShowDeleteGigConfirm(false); setSelectedGig(null); }}
       />
     </div>
   );
