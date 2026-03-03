@@ -220,6 +220,7 @@
       <button class="tab" data-tab="users">Users</button>
       <button class="tab" data-tab="workspaces">Workspaces</button>
       <button class="tab" data-tab="storage">Storage</button>
+      <button class="tab" data-tab="backups">Backups</button>
     </div>
 
     <div class="content">
@@ -302,6 +303,28 @@
         <div style="padding:16px;margin-top:8px">
           <button class="btn-sm" id="recalcBtn">Recalculate Storage</button>
           <span id="recalcStatus" style="color:var(--text-secondary);margin-left:12px"></span>
+        </div>
+      </div>
+
+      <!-- Backups Tab -->
+      <div class="tab-panel" id="tab-backups">
+        <div class="table-header">
+          <h2>Database Backups</h2>
+          <button class="btn-sm" id="backupNowBtn">Backup Now</button>
+        </div>
+        <p id="backupStatus" style="color:var(--text-secondary);padding:0 16px 12px;font-size:13px">
+          Backups run automatically every 24 hours. Retention: 7 daily + 4 weekly.
+        </p>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr><th>Date</th><th>Size</th><th>Compressed</th><th></th></tr>
+            </thead>
+            <tbody id="backupsTable"></tbody>
+          </table>
+        </div>
+        <div id="backupProgress" style="display:none;padding:16px;color:var(--text-secondary)">
+          Creating backup... this may take a moment.
         </div>
       </div>
     </div>
@@ -436,6 +459,7 @@
         if (tab.dataset.tab === 'users') loadUsers();
         if (tab.dataset.tab === 'workspaces') loadWorkspaces();
         if (tab.dataset.tab === 'storage') loadStorageStats();
+        if (tab.dataset.tab === 'backups') loadBackups();
       });
     });
 
@@ -735,6 +759,79 @@
         loadStorageStats();
       } catch (err) {
         status.textContent = 'Failed: ' + err.message;
+      }
+    });
+
+    // Backups tab
+    async function loadBackups() {
+      const tbody = document.getElementById('backupsTable');
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Loading...</td></tr>';
+      try {
+        const data = await api('/admin/backups');
+        if (!data.r2Available) {
+          tbody.innerHTML = '<tr><td colspan="4" class="empty-state">R2 storage not configured. Backups require Cloudflare R2.</td></tr>';
+          document.getElementById('backupNowBtn').disabled = true;
+          return;
+        }
+        if (data.backups.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No backups yet</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.backups.map(b => {
+          const filename = b.key.replace('backups/', '');
+          return `<tr>
+            <td>${fmtDate(b.lastModified)}</td>
+            <td>${fmtBytes(b.size)}</td>
+            <td>gzip</td>
+            <td><button class="btn-sm" data-download="${esc(filename)}">Download</button></td>
+          </tr>`;
+        }).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="4" class="empty-state">Failed to load backups: ${esc(err.message)}</td></tr>`;
+      }
+    }
+
+    // Event delegation for backup downloads (needs auth header)
+    document.getElementById('backupsTable').addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-download]');
+      if (!btn) return;
+      const filename = btn.dataset.download;
+      btn.disabled = true;
+      btn.textContent = 'Downloading...';
+      try {
+        const res = await fetch(`/api/admin/backups/download/${encodeURIComponent(filename)}`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        alert('Download failed: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Download';
+      }
+    });
+
+    // Backup Now button
+    document.getElementById('backupNowBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('backupNowBtn');
+      const progress = document.getElementById('backupProgress');
+      btn.disabled = true;
+      progress.style.display = 'block';
+      try {
+        const result = await api('/admin/backups', { method: 'POST' });
+        progress.style.display = 'none';
+        btn.disabled = false;
+        loadBackups();
+      } catch (err) {
+        progress.textContent = 'Backup failed: ' + (err.message || 'Unknown error');
+        btn.disabled = false;
       }
     });
 

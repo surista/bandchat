@@ -1000,9 +1000,7 @@ function GigArchive({ workspaceId, isAdmin }) {
                     </div>
                     {selectedEntry.setlist.performers?.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
-                        {selectedEntry.setlist.performers.map(member => {
-                          const instruments = [...new Set(member.stints?.flatMap(s => s.instruments || (s.instrument ? [s.instrument] : [])) || [])];
-                          return (
+                        {selectedEntry.setlist.performers.map(member => (
                           <div
                             key={member.id}
                             className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-bg-secondary)] rounded-full"
@@ -1019,14 +1017,11 @@ function GigArchive({ workspaceId, isAdmin }) {
                               </div>
                             )}
                             <span className="text-[var(--color-text-primary)] text-sm">{member.name}</span>
-                            {member.isGuest ? (
+                            {member.isGuest && (
                               <span className="text-purple-400 text-xs">(Guest)</span>
-                            ) : (
-                              <span className="text-[var(--color-text-muted)] text-xs">({instruments.join(', ') || 'Unknown'})</span>
                             )}
                           </div>
-                          );
-                        })}
+                        ))}
                       </div>
                     ) : (
                       <button

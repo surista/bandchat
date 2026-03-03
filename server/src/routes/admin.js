@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticate, isSystemAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 import { listAllObjects, deleteFile, isConfigured as isR2Configured } from '../lib/storage.js';
+import { createBackup, listBackups, getBackupStream, cleanupOldBackups } from '../services/backup.js';
 
 const router = express.Router();
 
@@ -433,6 +434,63 @@ router.post('/storage/recalculate', async (req, res) => {
   } catch (error) {
     console.error('Admin recalculate error:', error);
     res.status(500).json({ error: 'Failed to recalculate storage' });
+  }
+});
+
+// POST /api/admin/backups — Trigger a manual backup
+router.post('/backups', async (req, res) => {
+  try {
+    const r2Available = await isR2Configured();
+    if (!r2Available) {
+      return res.status(400).json({ error: 'R2 storage not configured. Cannot create backup.' });
+    }
+
+    console.log('Manual backup triggered by', req.user.email);
+    const result = await createBackup();
+    console.log(`Backup complete: ${result.key} (${(result.size / 1024).toFixed(1)} KB)`);
+
+    // Run cleanup after backup
+    const cleanup = await cleanupOldBackups();
+
+    res.json({ ...result, cleanup });
+  } catch (error) {
+    console.error('Backup error:', error);
+    res.status(500).json({ error: 'Backup failed: ' + error.message });
+  }
+});
+
+// GET /api/admin/backups — List all backups
+router.get('/backups', async (req, res) => {
+  try {
+    const r2Available = await isR2Configured();
+    if (!r2Available) {
+      return res.json({ backups: [], r2Available: false });
+    }
+
+    const backups = await listBackups();
+    res.json({ backups, r2Available: true });
+  } catch (error) {
+    console.error('List backups error:', error);
+    res.status(500).json({ error: 'Failed to list backups' });
+  }
+});
+
+// GET /api/admin/backups/download/:filename — Download a backup file
+router.get('/backups/download/:filename', async (req, res) => {
+  try {
+    const key = `backups/${req.params.filename}`;
+    const { stream, size, contentType } = await getBackupStream(key);
+
+    res.set({
+      'Content-Type': contentType || 'application/gzip',
+      'Content-Disposition': `attachment; filename="${req.params.filename}"`,
+    });
+    if (size) res.set('Content-Length', size);
+
+    stream.pipe(res);
+  } catch (error) {
+    console.error('Backup download error:', error);
+    res.status(404).json({ error: 'Backup not found' });
   }
 });
 

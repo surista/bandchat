@@ -6,6 +6,8 @@ import { Server } from 'socket.io';
 import { createApp } from './app.js';
 import { setupSocketHandlers } from './socket/handlers.js';
 import prisma from './lib/prisma.js';
+import { createBackup, cleanupOldBackups } from './services/backup.js';
+import { isConfigured as isR2Configured } from './lib/storage.js';
 
 const app = createApp();
 const httpServer = createServer(app);
@@ -45,6 +47,27 @@ httpServer.listen(PORT, () => {
       console.error('Refresh token cleanup error:', err);
     }
   }, 60 * 60 * 1000);
+
+  // Daily database backup to R2 (first run 60s after start, then every 24h)
+  const runScheduledBackup = async () => {
+    try {
+      const r2Available = await isR2Configured();
+      if (!r2Available) return;
+
+      console.log('Starting scheduled backup...');
+      const result = await createBackup();
+      console.log(`Scheduled backup complete: ${result.key} (${(result.size / 1024).toFixed(1)} KB, ${result.stats.messages} messages)`);
+
+      const cleanup = await cleanupOldBackups();
+      if (cleanup.deleted > 0) console.log(`Backup cleanup: deleted ${cleanup.deleted} old backups`);
+    } catch (err) {
+      console.error('Scheduled backup error:', err);
+    }
+  };
+  setTimeout(() => {
+    runScheduledBackup();
+    setInterval(runScheduledBackup, 24 * 60 * 60 * 1000);
+  }, 60 * 1000);
 });
 
 // Graceful shutdown
