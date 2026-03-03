@@ -70,6 +70,9 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
   const [editMemberLoading, setEditMemberLoading] = useState(false);
   // Slack import
   const [showSlackImport, setShowSlackImport] = useState(false);
+  // Relink messages
+  const [relinkLoading, setRelinkLoading] = useState(false);
+  const [relinkResult, setRelinkResult] = useState(null);
   // Notification preferences
   const [notifPrefs, setNotifPrefs] = useState(null);
   const [notifPrefsLoading, setNotifPrefsLoading] = useState(false);
@@ -1528,6 +1531,39 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                       }}
                     >
                       Start Import Wizard
+                    </button>
+                  </div>
+
+                  <div className="bg-[var(--color-modal-card)] rounded-lg p-6 text-center">
+                    <div className="text-4xl mb-3">🔗</div>
+                    <h3 className="text-lg font-bold text-[var(--color-text-primary)] mb-2">Relink Imported Messages</h3>
+                    <p className="text-[var(--color-text-muted)] text-sm mb-4 leading-relaxed">
+                      Match orphaned imported messages to current workspace members by display name.
+                      This fixes avatars and profiles on historical messages.
+                    </p>
+                    {relinkResult && (
+                      <div className="mb-4 p-3 bg-green-900/30 border border-green-700 rounded text-sm text-green-300">
+                        Relinked {relinkResult.relinked} of {relinkResult.total} orphaned messages.
+                        {relinkResult.unmatched > 0 && ` ${relinkResult.unmatched} could not be matched.`}
+                      </div>
+                    )}
+                    <button
+                      className="btn bg-gray-600 hover:bg-gray-500 text-white"
+                      disabled={relinkLoading}
+                      onClick={async () => {
+                        setRelinkLoading(true);
+                        setRelinkResult(null);
+                        try {
+                          const result = await api.relinkMessages(workspace.id);
+                          setRelinkResult(result);
+                        } catch (err) {
+                          setRelinkResult({ total: 0, relinked: 0, unmatched: 0, error: err.message });
+                        } finally {
+                          setRelinkLoading(false);
+                        }
+                      }}
+                    >
+                      {relinkLoading ? 'Relinking...' : 'Relink Messages'}
                     </button>
                   </div>
                 </div>

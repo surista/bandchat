@@ -1495,4 +1495,62 @@ router.get('/:workspaceId/export', authenticate, isWorkspaceAdmin, async (req, r
   }
 });
 
+// Relink orphaned messages (from Slack import) to actual workspace members by display name
+router.post('/:workspaceId/relink-messages', authenticate, isWorkspaceAdmin, async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+
+    // Get workspace members with display names
+    const members = await prisma.workspaceMember.findMany({
+      where: { workspaceId },
+      include: { user: { select: { id: true, displayName: true } } }
+    });
+
+    // Build display name → userId map (case-insensitive, first match wins)
+    const nameMap = new Map();
+    for (const m of members) {
+      const name = m.user.displayName?.toLowerCase();
+      if (name && !nameMap.has(name)) {
+        nameMap.set(name, m.user.id);
+      }
+    }
+
+    // Find orphaned messages in this workspace (authorId null, removedUserName set)
+    const orphanedMessages = await prisma.message.findMany({
+      where: {
+        authorId: null,
+        removedUserName: { not: null },
+        channel: { workspaceId }
+      },
+      select: { id: true, removedUserName: true }
+    });
+
+    let relinked = 0;
+    const relinkSummary = {};
+
+    for (const msg of orphanedMessages) {
+      const userId = nameMap.get(msg.removedUserName?.toLowerCase());
+      if (userId) {
+        await prisma.message.update({
+          where: { id: msg.id },
+          data: { authorId: userId, removedUserName: null }
+        });
+        relinked++;
+        const name = msg.removedUserName;
+        relinkSummary[name] = (relinkSummary[name] || 0) + 1;
+      }
+    }
+
+    res.json({
+      total: orphanedMessages.length,
+      relinked,
+      unmatched: orphanedMessages.length - relinked,
+      summary: relinkSummary
+    });
+  } catch (error) {
+    console.error('Relink messages error:', error);
+    res.status(500).json({ error: 'Failed to relink messages' });
+  }
+});
+
 export default router;

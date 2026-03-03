@@ -301,6 +301,12 @@ class ApiService {
     });
   }
 
+  async relinkMessages(workspaceId) {
+    return this.request(`/workspaces/${workspaceId}/relink-messages`, {
+      method: 'POST'
+    });
+  }
+
   async leaveWorkspace(id) {
     return this.request(`/workspaces/${id}/leave`, {
       method: 'POST'

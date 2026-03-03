@@ -281,6 +281,23 @@ router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceAdmin, as
     });
     const workspaceMemberIds = new Set(workspaceMembers.map(m => m.userId));
 
+    // Copy Slack avatars to mapped BandChat users who don't have one
+    const slackUserMap = new Map(session.slackUsers.map(su => [su.id, su]));
+    for (const [slackId, bcId] of Object.entries(userMapping || {})) {
+      if (!bcId || !workspaceMemberIds.has(bcId)) continue;
+      const slackUser = slackUserMap.get(slackId);
+      const slackAvatar = slackUser?.profile?.image_192 || slackUser?.profile?.image_72;
+      if (!slackAvatar) continue;
+      try {
+        await prisma.user.updateMany({
+          where: { id: bcId, avatarUrl: null },
+          data: { avatarUrl: slackAvatar }
+        });
+      } catch {
+        // Non-critical — skip avatar copy failures
+      }
+    }
+
     const results = {
       channelsCreated: 0,
       channelsSkipped: 0,
