@@ -61,7 +61,11 @@ export default function ReactionPicker({ onSelect, onClose }) {
     }
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, [onClose]);
 
   const handleSelect = (emoji) => {

@@ -607,7 +607,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       {showMembers && (
         <>
           <div className="fixed inset-0 z-40 bg-black/50 md:bg-transparent" onClick={() => setShowMembers(false)} />
-          <div className="fixed inset-0 z-50 md:left-auto md:w-80 md:border-l md:border-[var(--color-border)]">
+          <div className="fixed inset-0 z-50 md:left-auto md:w-80 md:border-l md:border-[var(--color-border)] safe-area-top bg-[var(--color-bg-secondary)]">
             <ChannelMembersPanel
               channel={channel}
               workspace={workspace}
@@ -621,7 +621,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       {showPinned && (
         <>
           <div className="fixed inset-0 z-40 bg-black/50 md:bg-transparent" onClick={() => setShowPinned(false)} />
-          <div className="fixed inset-0 z-50 md:left-auto md:w-80 md:border-l md:border-[var(--color-border)]">
+          <div className="fixed inset-0 z-50 md:left-auto md:w-80 md:border-l md:border-[var(--color-border)] safe-area-top bg-[var(--color-bg-secondary)]">
             <PinnedMessagesPanel
               pinnedMessages={pinnedMessages}
               onUnpin={handleUnpinMessage}

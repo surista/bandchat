@@ -682,6 +682,19 @@ function MessageList({
       onCancel={() => setDeleteMessageId(null)}
     />
 
+    {/* Mobile Reaction Picker (triggered from context menu) */}
+    {reactionPickerMessageId && (
+      <div className="sm:hidden fixed inset-0 z-[10000]">
+        <div className="absolute inset-0 bg-black/50" onClick={() => setReactionPickerMessageId(null)} />
+        <div className="absolute bottom-0 left-0 right-0 pb-[env(safe-area-inset-bottom)]">
+          <ReactionPicker
+            onSelect={(emoji) => handleReactionSelect(reactionPickerMessageId, emoji)}
+            onClose={() => setReactionPickerMessageId(null)}
+          />
+        </div>
+      </div>
+    )}
+
     <ContextMenu
       isOpen={msgContextMenu !== null}
       position={msgContextMenu || { x: 0, y: 0 }}
