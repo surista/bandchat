@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { Resend } from 'resend';
 import { OAuth2Client } from 'google-auth-library';
 import { authenticate } from '../middleware/auth.js';
-import { authLimiter, tokenLimiter } from '../middleware/rateLimit.js';
+import { apiLimiter, authLimiter, tokenLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 
