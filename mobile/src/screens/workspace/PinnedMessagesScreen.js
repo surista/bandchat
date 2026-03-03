@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
+  Image,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -81,6 +83,14 @@ export default function PinnedMessagesScreen({ navigation, route }) {
     };
   }, [socket, channelId]);
 
+  const handleUnpin = useCallback(async (messageId) => {
+    try {
+      await api.unpinMessage(messageId);
+    } catch (err) {
+      Alert.alert('Error', 'Failed to unpin message');
+    }
+  }, []);
+
   const renderPin = useCallback(({ item }) => {
     const msg = item.message;
     if (!msg) return null;
@@ -88,11 +98,20 @@ export default function PinnedMessagesScreen({ navigation, route }) {
     return (
       <View style={[styles.pinCard, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}>
         <View style={styles.pinHeader}>
+          {msg.author?.avatarUrl ? (
+            <Image source={{ uri: msg.author.avatarUrl }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatarFallback, { backgroundColor: colors.primary }]}>
+              <Text style={styles.avatarInitial}>
+                {(msg.author?.displayName || '?')[0].toUpperCase()}
+              </Text>
+            </View>
+          )}
           <Text style={[styles.authorName, { color: colors.textPrimary }]} numberOfLines={1}>
-            {msg.author?.displayName || 'Unknown'}
+            {msg.author?.displayName || msg.removedUserName || 'Deleted User'}
           </Text>
           <Text style={[styles.pinDate, { color: colors.textSecondary }]}>
-            {item.createdAt ? format(new Date(item.createdAt), 'MMM d, yyyy') : ''}
+            {item.createdAt ? format(new Date(item.createdAt), 'MMM d, yyyy h:mm a') : ''}
           </Text>
         </View>
         {msg.content ? (
@@ -105,14 +124,19 @@ export default function PinnedMessagesScreen({ navigation, route }) {
             {msg.attachments.length} attachment{msg.attachments.length > 1 ? 's' : ''}
           </Text>
         )}
-        {item.pinnedBy && (
-          <Text style={[styles.pinnedBy, { color: colors.textSecondary }]}>
-            Pinned by {item.pinnedBy.displayName}
-          </Text>
-        )}
+        <View style={styles.pinFooter}>
+          {item.pinnedBy && (
+            <Text style={[styles.pinnedBy, { color: colors.textSecondary }]}>
+              Pinned by {item.pinnedBy.displayName}
+            </Text>
+          )}
+          <TouchableOpacity onPress={() => handleUnpin(item.messageId)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Unpin message">
+            <Text style={[styles.unpinButton, { color: colors.primary }]}>Unpin</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
-  }, [colors]);
+  }, [colors, handleUnpin]);
 
   if (loading) {
     return (
@@ -168,11 +192,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 6,
   },
+  avatar: { width: 28, height: 28, borderRadius: 14, marginRight: 8 },
+  avatarFallback: { width: 28, height: 28, borderRadius: 14, marginRight: 8, justifyContent: 'center', alignItems: 'center' },
+  avatarInitial: { color: '#fff', fontSize: 13, fontWeight: '700' },
   authorName: { fontSize: 14, fontWeight: '700', flex: 1 },
   pinDate: { fontSize: 12, marginLeft: 8 },
   messageContent: { fontSize: 15, lineHeight: 21 },
   attachmentHint: { fontSize: 13, marginTop: 4, fontStyle: 'italic' },
-  pinnedBy: { fontSize: 12, marginTop: 8 },
+  pinFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
+  pinnedBy: { fontSize: 12 },
+  unpinButton: { fontSize: 13, fontWeight: '600' },
   emptyContainer: { alignItems: 'center' },
   emptyIcon: { fontSize: 48, marginBottom: 12 },
   emptyTitle: { fontSize: 18, fontWeight: '700', marginBottom: 6 },

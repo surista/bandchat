@@ -237,7 +237,7 @@ All communication and reference features work on both:
 
 | Area | Parity | Notes |
 |------|--------|-------|
-| Messaging | 95% | Mobile missing: pinned messages panel, link previews |
+| Messaging | 98% | Full parity — pinned messages, link previews, reactions all working |
 | Songs | 90% | Web has Song Suggestions; both have bulk import |
 | Setlists | 85% | Web has advanced drag-drop; mobile has print/share |
 | Gigs/Calendar | 90% | Web has month view; mobile has iCal subscribe |
