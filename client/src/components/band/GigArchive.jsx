@@ -542,38 +542,35 @@ function GigArchive({ workspaceId, isAdmin }) {
 
   // Ensure a gig exists for this entry (either find existing or create new)
   const ensureGigExists = async (entry) => {
-    if (entry.hasFormalGig && entry.gig) {
+    // If this entry already has a gig, always use it
+    if (entry.gig?.id) {
       return entry.gig;
     }
 
-    // First, look for an existing unlinked gig with matching date/title
-    // This prevents creating duplicates when gig was created separately from setlist
+    // Look for an existing gig with matching date/title (linked or unlinked)
     const entryDate = entry.date ? new Date(entry.date).toDateString() : null;
-    const existingGig = gigs.find(g => {
+    const existingGig = entryDate && gigs.find(g => {
       if (g.type !== 'GIG') return false;
-      // Already linked to a setlist - skip
-      if (g.setlistId || (g.setlists && g.setlists.length > 0)) return false;
-      // Match by date (same day) and title or venue
       const gigDate = new Date(g.date).toDateString();
       if (gigDate !== entryDate) return false;
-      // Match by title or venue
       return (g.title && entry.title && g.title.toLowerCase() === entry.title.toLowerCase()) ||
              (g.venue && entry.venue && g.venue.toLowerCase() === entry.venue.toLowerCase());
     });
 
     if (existingGig) {
-      // Link existing gig to this setlist
-      try {
-        await api.updateGig(existingGig.id, { setlistId: entry.setlist.id });
-        await loadData();
-        return { ...existingGig, setlistId: entry.setlist.id };
-      } catch (err) {
-        setError(err.message);
-        return null;
+      // Link existing gig to this setlist if it has one
+      if (entry.setlist?.id) {
+        try {
+          await api.updateGig(existingGig.id, { setlistId: entry.setlist.id });
+          await loadData();
+        } catch (err) {
+          setError(err.message);
+        }
       }
+      return existingGig;
     }
 
-    // No existing gig found - create a new one linked to this setlist
+    // No existing gig found - create a new one
     try {
       const gigData = {
         title: entry.title,
@@ -581,7 +578,7 @@ function GigArchive({ workspaceId, isAdmin }) {
         venue: entry.venue || null,
         type: 'GIG',
         status: entry.date && entry.date < new Date() ? 'COMPLETED' : 'SCHEDULED',
-        setlistId: entry.setlist.id
+        ...(entry.setlist?.id ? { setlistId: entry.setlist.id } : {})
       };
       const newGig = await api.createGig(workspaceId, gigData);
       await loadData();
