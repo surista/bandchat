@@ -5,6 +5,7 @@ import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
 
 const STEPS = ['upload', 'users', 'channels', 'options', 'review', 'progress', 'results'];
+const UPDATE_STEPS = ['upload', 'updateProgress', 'updateResults'];
 
 const STEP_LABELS = {
   upload: 'Upload',
@@ -13,7 +14,9 @@ const STEP_LABELS = {
   options: 'Options',
   review: 'Review',
   progress: 'Importing',
-  results: 'Results'
+  results: 'Results',
+  updateProgress: 'Downloading Files',
+  updateResults: 'Results'
 };
 
 export default function SlackImportWizard({ workspace, onClose }) {
@@ -21,6 +24,7 @@ export default function SlackImportWizard({ workspace, onClose }) {
   const toast = useToast();
 
   const [step, setStep] = useState('upload');
+  const [mode, setMode] = useState('full'); // 'full' or 'update-files'
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -47,7 +51,9 @@ export default function SlackImportWizard({ workspace, onClose }) {
 
   // Progress & Results
   const [progress, setProgress] = useState({ stage: '', current: 0, total: 0, detail: '' });
+  const [fileProgress, setFileProgress] = useState({ current: 0, total: 0, detail: '' });
   const [importResult, setImportResult] = useState(null);
+  const [fileResult, setFileResult] = useState(null);
   const importSessionIdRef = useRef(null);
 
   // Listen for socket progress events
@@ -60,6 +66,16 @@ export default function SlackImportWizard({ workspace, onClose }) {
     };
     socket.on('slack-import:progress', handler);
     return () => socket.off('slack-import:progress', handler);
+  }, [socket]);
+
+  // Listen for file update progress events
+  useEffect(() => {
+    if (!socket) return;
+    const handler = (data) => {
+      setFileProgress(data);
+    };
+    socket.on('slack-import:file-progress', handler);
+    return () => socket.off('slack-import:file-progress', handler);
   }, [socket]);
 
   // Handle file selection (drop or click)
@@ -130,6 +146,24 @@ export default function SlackImportWizard({ workspace, onClose }) {
     }
   }, [workspace.id, userMapping, channelSelection, options, toast]);
 
+  // Execute file update only
+  const handleUpdateFiles = useCallback(async () => {
+    if (!file) return;
+    setMode('update-files');
+    setStep('updateProgress');
+    setFileProgress({ current: 0, total: 0, detail: 'Parsing export...' });
+    setError(null);
+    try {
+      const result = await api.updateSlackFiles(workspace.id, file);
+      setFileResult(result);
+      setStep('updateResults');
+    } catch (err) {
+      setError(err.message);
+      setStep('upload');
+      toast.error('File update failed: ' + err.message);
+    }
+  }, [file, workspace.id, toast]);
+
   // Filtered users for display
   const displayUsers = useMemo(() => {
     if (!parseResult) return [];
@@ -198,25 +232,27 @@ export default function SlackImportWizard({ workspace, onClose }) {
             </div>
           )}
 
-          {step === 'upload' && renderUploadStep({ file, loading, dragOver, setDragOver, handleFile, handleUpload, setFile, setError })}
+          {step === 'upload' && renderUploadStep({ file, loading, dragOver, setDragOver, handleFile, handleUpload, handleUpdateFiles, setFile, setError })}
           {step === 'users' && renderUsersStep({ displayUsers, parseResult, userMapping, setUserMapping, showBots, setShowBots })}
           {step === 'channels' && renderChannelsStep({ displayChannels, channelSelection, setChannelSelection, channelSearch, setChannelSearch })}
           {step === 'options' && renderOptionsStep({ options, setOptions })}
           {step === 'review' && renderReviewStep({ reviewStats, parseResult })}
           {step === 'progress' && renderProgressStep({ progress })}
           {step === 'results' && renderResultsStep({ importResult })}
+          {step === 'updateProgress' && renderUpdateProgressStep({ fileProgress })}
+          {step === 'updateResults' && renderUpdateResultsStep({ fileResult })}
         </div>
 
         {/* Footer */}
-        {step !== 'progress' && (
+        {step !== 'progress' && step !== 'updateProgress' && (
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 24px', borderTop: '1px solid var(--color-modal-border)' }}>
             <div>
-              {currentStepIndex > 0 && currentStepIndex < 5 && (
+              {currentStepIndex > 0 && currentStepIndex < 5 && mode === 'full' && (
                 <button className="btn btn-secondary" onClick={() => setStep(STEPS[currentStepIndex - 1])}>Back</button>
               )}
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
-              {step === 'results' ? (
+              {step === 'results' || step === 'updateResults' ? (
                 <button className="btn btn-primary" onClick={onClose}>Done</button>
               ) : step === 'review' ? (
                 <button className="btn btn-primary" onClick={handleImport} disabled={loading}>Start Import</button>
@@ -235,7 +271,7 @@ export default function SlackImportWizard({ workspace, onClose }) {
 
 // --- Step renderers ---
 
-function renderUploadStep({ file, loading, dragOver, setDragOver, handleFile, handleUpload, setFile, setError }) {
+function renderUploadStep({ file, loading, dragOver, setDragOver, handleFile, handleUpload, handleUpdateFiles, setFile, setError }) {
   return (
     <div>
       <p style={{ color: 'var(--color-text-secondary)', marginBottom: '20px', fontSize: '14px', lineHeight: '1.5' }}>
@@ -286,11 +322,33 @@ function renderUploadStep({ file, loading, dragOver, setDragOver, handleFile, ha
       </div>
 
       {file && (
-        <div style={{ display: 'flex', gap: '8px', marginTop: '16px', justifyContent: 'center' }}>
-          <button className="btn btn-secondary" onClick={() => { setFile(null); setError(null); }}>Clear</button>
-          <button className="btn btn-primary" onClick={handleUpload} disabled={loading}>
-            {loading ? 'Parsing...' : 'Upload & Parse'}
-          </button>
+        <div style={{ marginTop: '20px' }}>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '16px' }}>
+            <button className="btn btn-secondary" onClick={() => { setFile(null); setError(null); }}>Clear</button>
+            <button className="btn btn-primary" onClick={handleUpload} disabled={loading}>
+              {loading ? 'Parsing...' : 'Full Import →'}
+            </button>
+          </div>
+
+          <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '16px', marginTop: '8px' }}>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '13px', marginBottom: '12px', textAlign: 'center' }}>
+              Already imported? Download files from a previous import:
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={handleUpdateFiles}
+                disabled={loading}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <span>📷</span> Update Files Only
+              </button>
+            </div>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginTop: '8px', textAlign: 'center' }}>
+              Downloads images/files from Slack and attaches them to existing messages.
+              <br />Does not create channels, users, or gigs.
+            </p>
+          </div>
         </div>
       )}
     </div>
@@ -641,6 +699,101 @@ function renderResultsStep({ importResult }) {
 
       <p style={{ color: 'var(--color-text-secondary)', fontSize: '13px', marginTop: '16px', textAlign: 'center' }}>
         Refresh the page to see your imported channels in the sidebar.
+      </p>
+    </div>
+  );
+}
+
+function renderUpdateProgressStep({ fileProgress }) {
+  const percent = fileProgress.total > 0 ? Math.round((fileProgress.current / fileProgress.total) * 100) : 0;
+
+  return (
+    <div style={{ textAlign: 'center', padding: '40px 0' }}>
+      <div style={{ fontSize: '40px', marginBottom: '16px' }}>📥</div>
+
+      <h3 style={{ color: 'var(--color-text-primary)', fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>
+        Downloading Files from Slack...
+      </h3>
+
+      <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px', marginBottom: '24px' }}>
+        {fileProgress.detail}
+      </p>
+
+      {/* Progress bar */}
+      <div style={{
+        width: '100%', maxWidth: '400px', margin: '0 auto', height: '8px',
+        backgroundColor: 'var(--color-bg-tertiary)', borderRadius: '4px', overflow: 'hidden'
+      }}>
+        <div style={{
+          width: `${percent}%`, height: '100%', backgroundColor: 'var(--color-primary)',
+          borderRadius: '4px', transition: 'width 0.3s ease'
+        }} />
+      </div>
+
+      <p style={{ color: 'var(--color-text-secondary)', fontSize: '13px', marginTop: '8px' }}>
+        {fileProgress.current} / {fileProgress.total} messages &middot; {percent}%
+      </p>
+
+      <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginTop: '16px' }}>
+        This may take a while depending on how many files need to be downloaded.
+      </p>
+    </div>
+  );
+}
+
+function renderUpdateResultsStep({ fileResult }) {
+  if (!fileResult) return null;
+
+  const stats = [
+    { label: 'Messages matched', value: fileResult.messagesMatched, icon: '✅' },
+    { label: 'Messages not found', value: fileResult.messagesNotFound, icon: '❓' },
+    { label: 'Files downloaded', value: fileResult.filesDownloaded, icon: '📥' },
+    { label: 'Files skipped', value: fileResult.filesSkipped, icon: '⏭️' },
+    { label: 'Files failed', value: fileResult.filesFailed, icon: '❌' },
+    { label: 'Attachments created', value: fileResult.attachmentsCreated, icon: '📎' }
+  ];
+
+  return (
+    <div>
+      <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+        <div style={{ fontSize: '48px', marginBottom: '8px' }}>📷</div>
+        <h3 style={{ color: 'var(--color-text-primary)', fontSize: '20px', fontWeight: 700, margin: 0 }}>
+          File Update Complete!
+        </h3>
+        <p style={{ color: 'var(--color-text-secondary)', fontSize: '14px', marginTop: '4px' }}>
+          Completed in {fileResult.duration}s
+        </p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '16px' }}>
+        {stats.map(({ label, value, icon }) => (
+          <div key={label} style={{
+            backgroundColor: 'var(--color-bg-secondary)', borderRadius: '8px', padding: '14px',
+            textAlign: 'center', border: '1px solid var(--color-border)'
+          }}>
+            <div style={{ fontSize: '18px' }}>{icon}</div>
+            <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-text-primary)' }}>{value}</div>
+            <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {fileResult.errors?.length > 0 && (
+        <div style={{ backgroundColor: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '14px', marginTop: '12px' }}>
+          <p style={{ color: '#ef4444', fontWeight: 600, fontSize: '14px', marginBottom: '8px' }}>
+            {fileResult.errors.length} error{fileResult.errors.length !== 1 ? 's' : ''} during download:
+          </p>
+          <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--color-text-secondary)', fontSize: '13px' }}>
+            {fileResult.errors.slice(0, 10).map((err, i) => (
+              <li key={i}>{err.file}: {err.error}</li>
+            ))}
+            {fileResult.errors.length > 10 && <li>...and {fileResult.errors.length - 10} more</li>}
+          </ul>
+        </div>
+      )}
+
+      <p style={{ color: 'var(--color-text-secondary)', fontSize: '13px', marginTop: '16px', textAlign: 'center' }}>
+        Refresh the page to see the updated messages with images.
       </p>
     </div>
   );

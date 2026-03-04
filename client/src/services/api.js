@@ -1455,6 +1455,38 @@ class ApiService {
     });
   }
 
+  async updateSlackFiles(workspaceId, file) {
+    if (this._hasSession && this.isTokenExpiringSoon()) {
+      if (!this._refreshPromise) {
+        this._refreshPromise = this.refreshAccessToken().finally(() => { this._refreshPromise = null; });
+      }
+      await this._refreshPromise;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const url = `${API_URL}/slack-import/workspace/${workspaceId}/update-files`;
+    const headers = {};
+    if (this.accessToken) {
+      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+      credentials: 'include'
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}`);
+    }
+
+    return response.json();
+  }
+
   // Workspace Import (from BandChat export JSON)
   async parseWorkspaceExport(file) {
     if (this._hasSession && this.isTokenExpiringSoon()) {

@@ -9,6 +9,7 @@ import prisma from '../lib/prisma.js';
 import { authenticate, isWorkspaceAdmin } from '../middleware/auth.js';
 import { convertSlackText } from '../services/slackTextConverter.js';
 import slackEmojiMap from '../services/slackEmojiMap.js';
+import { uploadFile } from '../lib/storage.js';
 
 const router = express.Router();
 
@@ -539,6 +540,271 @@ router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceAdmin, as
     res.status(500).json({ error: 'Failed to import Slack data' });
   }
 });
+
+/**
+ * Update existing messages with file attachments from a Slack export.
+ * This ONLY downloads files and creates attachments - no channels, users, or gigs.
+ */
+router.post('/workspace/:workspaceId/update-files', authenticate, isWorkspaceAdmin,
+  zipUpload.single('file'),
+  async (req, res) => {
+    const startTime = Date.now();
+    const io = req.app.get('io');
+    const userId = req.user.id;
+    const { workspaceId } = req.params;
+
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No ZIP file uploaded' });
+      }
+
+      const zip = new AdmZip(req.file.buffer);
+      const entries = zip.getEntries();
+      const entryMap = new Map(entries.map(e => [e.entryName.replace(/\\/g, '/'), e]));
+
+      // Parse users.json and channels.json
+      let slackUsers = [];
+      let slackChannels = [];
+      const channelDirs = new Map();
+
+      for (const entry of entries) {
+        const name = entry.entryName.replace(/\\/g, '/');
+        if (name === 'users.json') {
+          slackUsers = JSON.parse(entry.getData().toString('utf8'));
+        } else if (name === 'channels.json') {
+          slackChannels = JSON.parse(entry.getData().toString('utf8'));
+        } else if (!entry.isDirectory && name.endsWith('.json')) {
+          const parts = name.split('/');
+          if (parts.length === 2) {
+            const dirName = parts[0];
+            if (!channelDirs.has(dirName)) channelDirs.set(dirName, []);
+            channelDirs.get(dirName).push(name);
+          }
+        }
+      }
+
+      // Get existing BandChat channels in this workspace
+      const bcChannels = await prisma.channel.findMany({
+        where: { workspaceId },
+        select: { id: true, name: true }
+      });
+
+      // Build mapping: normalized channel name → BandChat channel ID
+      const channelNameToId = new Map();
+      for (const ch of bcChannels) {
+        // Try exact match and common variations from import
+        channelNameToId.set(ch.name.toLowerCase(), ch.id);
+        channelNameToId.set(ch.name.toLowerCase().replace(/-slack$/, ''), ch.id);
+      }
+
+      // Build Slack user ID → BandChat user ID mapping by email
+      const bcUsers = await prisma.user.findMany({
+        where: { workspaces: { some: { workspaceId } } },
+        select: { id: true, email: true }
+      });
+      const emailToUserId = new Map(bcUsers.filter(u => u.email).map(u => [u.email.toLowerCase(), u.id]));
+
+      const slackUserToBC = new Map();
+      for (const su of slackUsers) {
+        const email = su.profile?.email?.toLowerCase();
+        if (email && emailToUserId.has(email)) {
+          slackUserToBC.set(su.id, emailToUserId.get(email));
+        }
+      }
+
+      const results = {
+        messagesMatched: 0,
+        messagesNotFound: 0,
+        filesDownloaded: 0,
+        filesSkipped: 0,
+        filesFailed: 0,
+        attachmentsCreated: 0,
+        errors: []
+      };
+
+      const emitProgress = (current, total, detail) => {
+        io.to(`user:${userId}`).emit('slack-import:file-progress', {
+          current, total, detail
+        });
+      };
+
+      // Collect all messages with files across all channels
+      const messagesWithFiles = [];
+      for (const slackChannel of slackChannels) {
+        const channelFiles = channelDirs.get(slackChannel.name) || [];
+        for (const filePath of channelFiles) {
+          const entry = entryMap.get(filePath);
+          if (!entry) continue;
+          try {
+            const msgs = JSON.parse(entry.getData().toString('utf8'));
+            if (Array.isArray(msgs)) {
+              for (const msg of msgs) {
+                if (msg.type === 'message' && msg.files && msg.files.length > 0) {
+                  messagesWithFiles.push({
+                    msg,
+                    slackChannelName: slackChannel.name
+                  });
+                }
+              }
+            }
+          } catch { /* skip unparseable files */ }
+        }
+      }
+
+      emitProgress(0, messagesWithFiles.length, `Found ${messagesWithFiles.length} messages with files`);
+
+      // Process each message with files
+      for (let i = 0; i < messagesWithFiles.length; i++) {
+        const { msg, slackChannelName } = messagesWithFiles[i];
+
+        if (i % 10 === 0) {
+          emitProgress(i, messagesWithFiles.length, `Processing ${slackChannelName}...`);
+        }
+
+        // Find matching BandChat channel
+        const normalizedName = slackChannelName.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/--+/g, '-');
+        const bcChannelId = channelNameToId.get(normalizedName) || channelNameToId.get(slackChannelName.toLowerCase());
+
+        if (!bcChannelId) {
+          results.messagesNotFound++;
+          continue;
+        }
+
+        // Find matching BandChat user
+        const bcAuthorId = slackUserToBC.get(msg.user) || null;
+
+        // Calculate timestamp from Slack ts
+        const slackTimestamp = new Date(parseFloat(msg.ts) * 1000);
+        const timestampLow = new Date(slackTimestamp.getTime() - 2000); // 2 sec tolerance
+        const timestampHigh = new Date(slackTimestamp.getTime() + 2000);
+
+        // Find matching message
+        const matchingMessage = await prisma.message.findFirst({
+          where: {
+            channelId: bcChannelId,
+            ...(bcAuthorId ? { authorId: bcAuthorId } : {}),
+            createdAt: {
+              gte: timestampLow,
+              lte: timestampHigh
+            }
+          },
+          include: { attachments: true }
+        });
+
+        if (!matchingMessage) {
+          results.messagesNotFound++;
+          continue;
+        }
+
+        results.messagesMatched++;
+
+        // Process each file in the message
+        for (const file of msg.files) {
+          if (file.mode === 'tombstone') {
+            results.filesSkipped++;
+            continue;
+          }
+
+          // Check if attachment already exists
+          const existingAttachment = matchingMessage.attachments.find(
+            a => a.filename === (file.name || file.title || 'file')
+          );
+          if (existingAttachment) {
+            results.filesSkipped++;
+            continue;
+          }
+
+          // Get download URL (try various Slack URL fields)
+          const downloadUrl = file.url_private_download || file.url_private || file.url_download;
+          if (!downloadUrl) {
+            results.filesSkipped++;
+            continue;
+          }
+
+          try {
+            // Download file from Slack
+            const response = await fetch(downloadUrl);
+            if (!response.ok) {
+              results.filesFailed++;
+              results.errors.push({
+                type: 'download',
+                file: file.name,
+                error: `HTTP ${response.status}`
+              });
+              continue;
+            }
+
+            const buffer = Buffer.from(await response.arrayBuffer());
+            results.filesDownloaded++;
+
+            // Determine file type
+            const mimeType = file.mimetype || 'application/octet-stream';
+            let attachmentType = 'DOCUMENT';
+            let category = 'documents';
+
+            if (mimeType.startsWith('image/')) {
+              attachmentType = 'IMAGE';
+              category = 'images';
+            } else if (mimeType.startsWith('video/')) {
+              attachmentType = 'VIDEO';
+              category = 'videos';
+            } else if (mimeType.startsWith('audio/')) {
+              attachmentType = 'AUDIO';
+              category = 'audio';
+            }
+
+            // Upload to R2
+            const filename = file.name || file.title || 'file';
+            const { url, size } = await uploadFile(buffer, filename, mimeType, category);
+
+            // Create attachment record
+            await prisma.attachment.create({
+              data: {
+                messageId: matchingMessage.id,
+                type: attachmentType,
+                url,
+                filename,
+                size
+              }
+            });
+            results.attachmentsCreated++;
+
+            // Optionally remove the [📎 filename] placeholder from message content
+            const placeholder = `[📎 ${filename}]`;
+            if (matchingMessage.content.includes(placeholder)) {
+              const newContent = matchingMessage.content
+                .replace(placeholder, '')
+                .replace(/\n\n+/g, '\n')
+                .trim();
+
+              if (newContent && newContent !== '(empty message)') {
+                await prisma.message.update({
+                  where: { id: matchingMessage.id },
+                  data: { content: newContent || '(attached file)' }
+                });
+              }
+            }
+          } catch (err) {
+            results.filesFailed++;
+            results.errors.push({
+              type: 'upload',
+              file: file.name,
+              error: err.message
+            });
+          }
+        }
+      }
+
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      emitProgress(messagesWithFiles.length, messagesWithFiles.length, 'Complete!');
+
+      res.json({ ...results, duration });
+    } catch (error) {
+      console.error('Slack file update error:', error);
+      res.status(500).json({ error: 'Failed to update files from Slack export' });
+    }
+  }
+);
 
 /**
  * Build a Prisma message create data object from a Slack message.
