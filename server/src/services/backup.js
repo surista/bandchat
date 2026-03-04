@@ -1,10 +1,15 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { promisify } from 'util';
 import { gzip, gunzip } from 'zlib';
+import { Resend } from 'resend';
 import prisma from '../lib/prisma.js';
 
 const gzipAsync = promisify(gzip);
 const gunzipAsync = promisify(gunzip);
+
+// Email alerting
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@bandchat.app';
 
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
 const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
@@ -1114,5 +1119,160 @@ export async function restoreFromBackup(key, onProgress) {
     success: true,
     safetyBackupKey: safetyResult.key,
     stats: backup.stats,
+  };
+}
+
+/**
+ * Verify a backup by reading it back and checking structure + integrity.
+ * @param {string} key - R2 object key
+ * @returns {{ valid: boolean, errors: string[], entityCounts: object }}
+ */
+export async function verifyBackup(key) {
+  const errors = [];
+
+  try {
+    if (!key.startsWith(BACKUP_PREFIX)) {
+      return { valid: false, errors: ['Invalid backup key'], entityCounts: {} };
+    }
+
+    const client = getClient();
+    const response = await client.send(new GetObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: key,
+    }));
+
+    // Read the full stream
+    const chunks = [];
+    for await (const chunk of response.Body) {
+      chunks.push(chunk);
+    }
+    const compressed = Buffer.concat(chunks);
+
+    // Verify decompression
+    let decompressed;
+    try {
+      decompressed = await gunzipAsync(compressed);
+    } catch (err) {
+      return { valid: false, errors: ['Failed to decompress: ' + err.message], entityCounts: {} };
+    }
+
+    // Verify JSON parsing
+    let backup;
+    try {
+      backup = JSON.parse(decompressed.toString('utf8'));
+    } catch (err) {
+      return { valid: false, errors: ['Failed to parse JSON: ' + err.message], entityCounts: {} };
+    }
+
+    // Check required structure
+    if (!backup.version) errors.push('Missing version field');
+    if (!backup.createdAt) errors.push('Missing createdAt field');
+    if (!backup.data) errors.push('Missing data field');
+    if (!backup.stats) errors.push('Missing stats field');
+
+    if (!backup.data) {
+      return { valid: false, errors, entityCounts: {} };
+    }
+
+    const data = backup.data;
+    const entityCounts = {
+      users: data.users?.length || 0,
+      workspaces: data.workspaces?.length || 0,
+      channels: data.channels?.length || 0,
+      messages: data.messages?.length || 0,
+      songs: data.songs?.length || 0,
+      setlists: data.setlists?.length || 0,
+      gigs: data.gigs?.length || 0,
+      bandMembers: data.bandMembers?.length || 0,
+    };
+
+    // Basic sanity checks
+    if (entityCounts.users === 0) errors.push('No users in backup');
+    if (entityCounts.workspaces === 0) errors.push('No workspaces in backup');
+
+    // Verify stats match actual counts
+    if (backup.stats.users !== entityCounts.users) {
+      errors.push(`Stats mismatch: users (${backup.stats.users} vs ${entityCounts.users})`);
+    }
+    if (backup.stats.messages !== entityCounts.messages) {
+      errors.push(`Stats mismatch: messages (${backup.stats.messages} vs ${entityCounts.messages})`);
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+      entityCounts,
+      size: compressed.length,
+      uncompressedSize: decompressed.length,
+    };
+  } catch (err) {
+    return { valid: false, errors: ['Verification failed: ' + err.message], entityCounts: {} };
+  }
+}
+
+/**
+ * Send an email alert for backup failures.
+ * @param {string} type - 'failure' or 'verification_failed'
+ * @param {object} details - Error details
+ */
+export async function sendBackupAlert(type, details) {
+  if (!resend) {
+    console.warn('Cannot send backup alert: Resend not configured');
+    return;
+  }
+
+  const subject = type === 'failure'
+    ? '[BandChat] Backup Failed'
+    : '[BandChat] Backup Verification Failed';
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #ef4444;">${type === 'failure' ? 'Backup Failed' : 'Backup Verification Failed'}</h2>
+      <p>A scheduled backup encountered an issue:</p>
+      <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+        <tr><td style="padding: 8px 0; color: #6b7280; width: 120px;">Time</td><td style="padding: 8px 0; font-weight: 600;">${new Date().toISOString()}</td></tr>
+        <tr><td style="padding: 8px 0; color: #6b7280;">Error</td><td style="padding: 8px 0; font-weight: 600; color: #ef4444;">${details.error || 'Unknown'}</td></tr>
+        ${details.key ? `<tr><td style="padding: 8px 0; color: #6b7280;">Backup Key</td><td style="padding: 8px 0;">${details.key}</td></tr>` : ''}
+        ${details.errors?.length ? `<tr><td style="padding: 8px 0; color: #6b7280;">Details</td><td style="padding: 8px 0;">${details.errors.join('<br>')}</td></tr>` : ''}
+      </table>
+      <p style="color: #6b7280; font-size: 14px;">Please check the server logs and R2 storage for more details.</p>
+    </div>
+  `;
+
+  try {
+    await resend.emails.send({
+      from: `BandChat <noreply@${process.env.RESEND_DOMAIN || 'resend.dev'}>`,
+      to: ADMIN_EMAIL,
+      subject,
+      html,
+    });
+    console.log(`Backup alert sent to ${ADMIN_EMAIL}`);
+  } catch (err) {
+    console.error('Failed to send backup alert email:', err);
+  }
+}
+
+/**
+ * Create a backup with automatic verification and alerting.
+ * @returns {{ key: string, size: number, timestamp: string, stats: object, verified: boolean }}
+ */
+export async function createBackupWithVerification() {
+  const result = await createBackup();
+
+  // Verify the backup
+  const verification = await verifyBackup(result.key);
+
+  if (!verification.valid) {
+    console.error('Backup verification failed:', verification.errors);
+    await sendBackupAlert('verification_failed', {
+      key: result.key,
+      errors: verification.errors,
+    });
+  }
+
+  return {
+    ...result,
+    verified: verification.valid,
+    verificationErrors: verification.errors,
   };
 }

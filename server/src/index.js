@@ -6,7 +6,7 @@ import { Server } from 'socket.io';
 import { createApp } from './app.js';
 import { setupSocketHandlers } from './socket/handlers.js';
 import prisma from './lib/prisma.js';
-import { createBackup, cleanupOldBackups } from './services/backup.js';
+import { createBackupWithVerification, cleanupOldBackups, sendBackupAlert } from './services/backup.js';
 import { isConfigured as isR2Configured } from './lib/storage.js';
 
 const app = createApp();
@@ -75,14 +75,21 @@ httpServer.listen(PORT, async () => {
       const r2Available = await isR2Configured();
       if (!r2Available) return;
 
-      console.log('Starting scheduled backup...');
-      const result = await createBackup();
-      console.log(`Scheduled backup complete: ${result.key} (${(result.size / 1024).toFixed(1)} KB, ${result.stats.messages} messages)`);
+      console.log('Starting scheduled backup with verification...');
+      const result = await createBackupWithVerification();
+
+      if (result.verified) {
+        console.log(`Scheduled backup complete: ${result.key} (${(result.size / 1024).toFixed(1)} KB, ${result.stats.messages} messages) ✓ verified`);
+      } else {
+        console.warn(`Scheduled backup created but verification failed: ${result.key}`, result.verificationErrors);
+      }
 
       const cleanup = await cleanupOldBackups();
       if (cleanup.deleted > 0) console.log(`Backup cleanup: deleted ${cleanup.deleted} old backups`);
     } catch (err) {
       console.error('Scheduled backup error:', err);
+      // Send alert on failure
+      await sendBackupAlert('failure', { error: err.message }).catch(e => console.error('Failed to send backup alert:', e));
     }
   };
   setTimeout(() => {
