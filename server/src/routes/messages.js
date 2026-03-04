@@ -125,7 +125,7 @@ router.get('/channel/:channelId', authenticate, isChannelMember, async (req, res
         // Use a single query with LATERAL join for efficient batch counting
         const customCounts = await prisma.$queryRaw`
           WITH thread_reads AS (
-            SELECT * FROM (VALUES ${Prisma.sql.join(
+            SELECT * FROM (VALUES ${Prisma.join(
               pairs.map(p => Prisma.sql`(${p.parentId}::uuid, ${p.lastRead}::timestamp)`),
               Prisma.sql`, `
             )}) AS t("parentId", "lastRead")
