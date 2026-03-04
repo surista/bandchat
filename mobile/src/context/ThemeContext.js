@@ -258,9 +258,10 @@ export function ThemeProvider({ children }) {
   const colors = useMemo(() => {
     const theme = themes[currentTheme] || themes.default;
     const structural = structuralColors[mode];
+    // Use neutral modal colors for consistent text readability regardless of theme
     const modalColors = mode === 'light'
       ? { modalBg: '#ffffff', modalCard: '#f3f4f6', modalBorder: '#d1d5db' }
-      : { modalBg: theme.modalBg, modalCard: theme.modalCard, modalBorder: theme.modalBorder };
+      : { modalBg: '#1f1f23', modalCard: '#2a2a30', modalBorder: '#3f3f46' };
 
     const channelListColors = {
       headerBg: theme.sidebar,

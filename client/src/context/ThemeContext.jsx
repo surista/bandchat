@@ -202,15 +202,17 @@ export function ThemeProvider({ children }) {
     root.style.setProperty('--color-accent-hover', theme.accentHover);
     root.style.setProperty('--color-primary', theme.primary);
     root.style.setProperty('--color-primary-hover', theme.primaryHover);
-    // In light mode, use light modal colors regardless of theme
+    // Use neutral modal colors for consistent readability regardless of theme
+    // Theme colors only affect sidebar/accent - modals stay neutral for text contrast
     if (mode === 'light') {
       root.style.setProperty('--color-modal-bg', '#ffffff');
       root.style.setProperty('--color-modal-card', '#f3f4f6');
       root.style.setProperty('--color-modal-border', '#d1d5db');
     } else {
-      root.style.setProperty('--color-modal-bg', theme.modalBg);
-      root.style.setProperty('--color-modal-card', theme.modalCard);
-      root.style.setProperty('--color-modal-border', theme.modalBorder);
+      // Dark mode: use neutral dark grays instead of theme colors
+      root.style.setProperty('--color-modal-bg', '#1f1f23');
+      root.style.setProperty('--color-modal-card', '#2a2a30');
+      root.style.setProperty('--color-modal-border', '#3f3f46');
     }
 
     // Structural colors for dark/light mode
