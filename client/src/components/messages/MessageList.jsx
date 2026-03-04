@@ -47,8 +47,8 @@ function isValidHttpUrl(urlString) {
  * embeds (Google Docs, YouTube), images, videos, and @mentions.
  */
 const MessageContent = React.memo(({ content, message, onOpenLightbox, members }) => {
-  // URL regex that excludes trailing punctuation often found after URLs in text
-  const urlRegex = /(https?:\/\/[^\s\[\]<>]+?)(?=[)\].,;:!?"'\s]|$)/g;
+  // URL regex: match URLs but stop at brackets/whitespace or punctuation followed by whitespace/end
+  const urlRegex = /(https?:\/\/[^\s\[\]<>]+?)(?=[\[\])\s]|[.,;:!?"'](?:\s|$)|$)/g;
   const parts = content.split(urlRegex);
 
   return parts.map((part, i) => {
