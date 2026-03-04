@@ -28,6 +28,16 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
   const initial = displayName.charAt(0).toUpperCase();
   const avatarColor = getAvatarColor(displayName);
   const isPending = message.pending;
+
+  // Resolve avatar: author's own avatarUrl, or fallback to workspace member's (includes BandMember)
+  const resolvedAvatarUrl = useMemo(() => {
+    if (author.avatarUrl) return author.avatarUrl;
+    if (author.id && members) {
+      const match = members.find(m => m.user?.id === author.id);
+      return match?.user?.avatarUrl || null;
+    }
+    return null;
+  }, [author.avatarUrl, author.id, members]);
   const isEdited = message.updatedAt && message.updatedAt !== message.createdAt;
   const [avatarError, setAvatarError] = useState(false);
 
@@ -89,9 +99,9 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
       accessibilityLabel={`${displayName}: ${message.content || 'attachment'}`}
     >
       <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
-        {author.avatarUrl && !avatarError ? (
+        {resolvedAvatarUrl && !avatarError ? (
           <Image
-            source={{ uri: author.avatarUrl }}
+            source={{ uri: resolvedAvatarUrl }}
             style={styles.avatarImage}
             accessibilityLabel={`${displayName} avatar`}
             onError={() => setAvatarError(true)}

@@ -153,6 +153,19 @@ router.get('/:workspaceId', authenticate, isWorkspaceMember, async (req, res) =>
       }
     });
 
+    // Augment user avatars with BandMember imageUrl fallback
+    const userIds = workspace.members.map(m => m.user.id);
+    const bandMembers = await prisma.bandMember.findMany({
+      where: { workspaceId: workspace.id, linkedUserId: { in: userIds }, imageUrl: { not: null } },
+      select: { linkedUserId: true, imageUrl: true }
+    });
+    const bandAvatarMap = new Map(bandMembers.map(bm => [bm.linkedUserId, bm.imageUrl]));
+    for (const member of workspace.members) {
+      if (!member.user.avatarUrl && bandAvatarMap.has(member.user.id)) {
+        member.user.avatarUrl = bandAvatarMap.get(member.user.id);
+      }
+    }
+
     // Strip invite fields for non-admins
     const membership = workspace.members?.find(m => m.userId === req.user.id);
     if (membership?.role !== 'ADMIN') {
@@ -946,8 +959,15 @@ router.get('/:workspaceId/members/:userId/profile', authenticate, isWorkspaceMem
     // Determine if this is a guest (no linked band member with stints)
     const isGuest = linkedBandMembers.length === 0 || linkedBandMembers.every(bm => !bm.stints || bm.stints.length === 0);
 
+    // Augment avatar with BandMember imageUrl fallback
+    const userResponse = { ...membership.user };
+    if (!userResponse.avatarUrl && linkedBandMembers.length > 0) {
+      const bmWithImage = linkedBandMembers.find(bm => bm.imageUrl);
+      if (bmWithImage) userResponse.avatarUrl = bmWithImage.imageUrl;
+    }
+
     res.json({
-      user: membership.user,
+      user: userResponse,
       role: membership.role,
       joinedAt: membership.joinedAt,
       bandJoinDate: isGuest ? null : bandJoinDate, // Only for regular members with stints

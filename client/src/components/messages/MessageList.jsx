@@ -199,6 +199,17 @@ function MessageList({
   const [seenByCount, setSeenByCount] = useState(null);
   const [seenByMessageId, setSeenByMessageId] = useState(null);
 
+  // Build avatar lookup from workspace members (includes BandMember fallback)
+  const memberAvatarMap = useMemo(() => {
+    const map = new Map();
+    if (members) {
+      for (const m of members) {
+        if (m.user?.avatarUrl) map.set(m.user.id, m.user.avatarUrl);
+      }
+    }
+    return map;
+  }, [members]);
+
   // Find the last message by the current user and fetch seen-by count
   const lastOwnMessage = useMemo(() => {
     if (!currentUser?.id || !messages.length) return null;
@@ -382,15 +393,18 @@ function MessageList({
           >
             {/* Avatar */}
             <div className="w-9 h-9 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white font-medium">
-              {message.author?.avatarUrl ? (
-                <img
-                  src={message.author.avatarUrl}
-                  alt={message.author?.displayName || message.removedUserName || 'Deleted User'}
-                  className="w-full h-full rounded object-cover"
-                />
-              ) : (
-                (message.author?.displayName || message.removedUserName || 'Deleted User').charAt(0).toUpperCase()
-              )}
+              {(() => {
+                const avatarSrc = message.author?.avatarUrl || (message.author?.id && memberAvatarMap.get(message.author.id));
+                return avatarSrc ? (
+                  <img
+                    src={avatarSrc}
+                    alt={message.author?.displayName || message.removedUserName || 'Deleted User'}
+                    className="w-full h-full rounded object-cover"
+                  />
+                ) : (
+                  (message.author?.displayName || message.removedUserName || 'Deleted User').charAt(0).toUpperCase()
+                );
+              })()}
             </div>
 
             {/* Content */}

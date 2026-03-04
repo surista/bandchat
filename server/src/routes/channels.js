@@ -288,6 +288,25 @@ router.get('/:channelId', authenticate, isChannelMember, async (req, res) => {
       }
     });
 
+    // Augment user avatars with BandMember imageUrl fallback
+    if (channel?.members?.length) {
+      const userIdsWithoutAvatar = channel.members
+        .filter(m => m.user && !m.user.avatarUrl)
+        .map(m => m.user.id);
+      if (userIdsWithoutAvatar.length > 0) {
+        const bandMembers = await prisma.bandMember.findMany({
+          where: { workspaceId: channel.workspaceId, linkedUserId: { in: userIdsWithoutAvatar }, imageUrl: { not: null } },
+          select: { linkedUserId: true, imageUrl: true }
+        });
+        const bandAvatarMap = new Map(bandMembers.map(bm => [bm.linkedUserId, bm.imageUrl]));
+        for (const member of channel.members) {
+          if (!member.user.avatarUrl && bandAvatarMap.has(member.user.id)) {
+            member.user.avatarUrl = bandAvatarMap.get(member.user.id);
+          }
+        }
+      }
+    }
+
     res.json(channel);
   } catch (error) {
     res.status(500).json({ error: 'Failed to get channel' });

@@ -32,6 +32,14 @@ function ThreadView({ message, channelId, onClose, onThreadRead, members }) {
     onSwipeRight: onClose,
   });
 
+  // Build avatar lookup from workspace members (includes BandMember fallback)
+  const memberAvatarMap = new Map();
+  if (members) {
+    for (const m of members) {
+      if (m.user?.avatarUrl) memberAvatarMap.set(m.user.id, m.user.avatarUrl);
+    }
+  }
+
   useEffect(() => {
     loadReplies();
     // Mark thread as read on open (only if there are unread replies)
@@ -303,11 +311,14 @@ function ThreadView({ message, channelId, onClose, onThreadRead, members }) {
       <div className="p-4 border-b border-[var(--color-border)] group relative">
         <div className="flex gap-3">
           <div className="w-9 h-9 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white font-medium">
-            {message.author?.avatarUrl ? (
-              <img src={message.author.avatarUrl} alt={message.author.displayName} className="w-full h-full rounded object-cover" />
-            ) : (
-              (message.author?.displayName || message.removedUserName || 'Deleted User').charAt(0).toUpperCase()
-            )}
+            {(() => {
+              const avatarSrc = message.author?.avatarUrl || (message.author?.id && memberAvatarMap.get(message.author.id));
+              return avatarSrc ? (
+                <img src={avatarSrc} alt={message.author?.displayName || 'User'} className="w-full h-full rounded object-cover" />
+              ) : (
+                (message.author?.displayName || message.removedUserName || 'Deleted User').charAt(0).toUpperCase()
+              );
+            })()}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2">
@@ -368,11 +379,14 @@ function ThreadView({ message, channelId, onClose, onThreadRead, members }) {
             {replies.map((reply) => (
               <div key={reply.id} className="flex gap-3 group relative">
                 <div className="w-8 h-8 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white text-sm font-medium">
-                  {reply.author?.avatarUrl ? (
-                    <img src={reply.author.avatarUrl} alt={reply.author.displayName} className="w-full h-full rounded object-cover" />
-                  ) : (
-                    (reply.author?.displayName || reply.removedUserName || 'Deleted User').charAt(0).toUpperCase()
-                  )}
+                  {(() => {
+                    const avatarSrc = reply.author?.avatarUrl || (reply.author?.id && memberAvatarMap.get(reply.author.id));
+                    return avatarSrc ? (
+                      <img src={avatarSrc} alt={reply.author?.displayName || 'User'} className="w-full h-full rounded object-cover" />
+                    ) : (
+                      (reply.author?.displayName || reply.removedUserName || 'Deleted User').charAt(0).toUpperCase()
+                    );
+                  })()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2">
