@@ -1,5 +1,4 @@
 import express from 'express';
-import { Prisma } from '@prisma/client';
 import { authenticate, isChannelMember } from '../middleware/auth.js';
 import { messageLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
@@ -113,30 +112,21 @@ router.get('/channel/:channelId', authenticate, isChannelMember, async (req, res
         });
       }
 
-      // For threads with custom per-thread read timestamps, use a batched raw query
-      // to avoid N+1 (one query per thread)
+      // For threads with custom per-thread read timestamps, query each one
+      // (N is typically small - only threads where user has a custom read position)
       if (threadsWithCustomRead.length > 0) {
-        // Build a VALUES list for batch processing: (parentId, lastReadTimestamp)
-        const pairs = threadsWithCustomRead.map(id => ({
-          parentId: id,
-          lastRead: threadReadMap[id]
-        }));
-
-        // Use a single query with LATERAL join for efficient batch counting
-        const customCounts = await prisma.$queryRaw`
-          WITH thread_reads AS (
-            SELECT * FROM (VALUES ${Prisma.join(
-              pairs.map(p => Prisma.sql`(${p.parentId}::uuid, ${p.lastRead}::timestamp)`),
-              Prisma.sql`, `
-            )}) AS t("parentId", "lastRead")
-          )
-          SELECT tr."parentId", COUNT(m.id)::int as count
-          FROM thread_reads tr
-          LEFT JOIN "Message" m ON m."parentId" = tr."parentId"
-            AND m."createdAt" > tr."lastRead"
-            AND m."authorId" != ${req.user.id}
-          GROUP BY tr."parentId"
-        `;
+        const customCounts = await Promise.all(
+          threadsWithCustomRead.map(async (parentId) => {
+            const count = await prisma.message.count({
+              where: {
+                parentId,
+                authorId: { not: req.user.id },
+                createdAt: { gt: threadReadMap[parentId] }
+              }
+            });
+            return { parentId, count };
+          })
+        );
 
         customCounts.forEach(row => {
           unreadMap[row.parentId] = row.count || 0;
