@@ -3,7 +3,7 @@
  * Manages user authentication state, login/logout, and session persistence.
  */
 
-import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../services/api';
 
 /**
@@ -81,19 +81,19 @@ export function AuthProvider({ children }) {
     initAuth();
   }, []);
 
-  const signup = async (email, password, displayName) => {
+  const signup = useCallback(async (email, password, displayName) => {
     const data = await api.signup(email, password, displayName);
     setUser(data.user);
     return data;
-  };
+  }, []);
 
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     const data = await api.login(email, password);
     setUser(data.user);
     return data;
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await api.logout();
     } catch (err) {
@@ -101,17 +101,17 @@ export function AuthProvider({ children }) {
     } finally {
       setUser(null);
     }
-  };
+  }, []);
 
-  const googleLogin = async (credential) => {
+  const googleLogin = useCallback(async (credential) => {
     const data = await api.googleAuth(credential);
     setUser(data.user);
     return data;
-  };
+  }, []);
 
-  const updateUser = (userData) => {
+  const updateUser = useCallback((userData) => {
     setUser(prev => ({ ...prev, ...userData }));
-  };
+  }, []);
 
   const value = useMemo(() => ({
     user,
@@ -122,7 +122,7 @@ export function AuthProvider({ children }) {
     logout,
     updateUser,
     isAuthenticated: !!user
-  }), [user, loading]);
+  }), [user, loading, signup, login, googleLogin, logout, updateUser]);
 
   return (
     <AuthContext.Provider value={value}>

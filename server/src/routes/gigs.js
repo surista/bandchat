@@ -181,7 +181,7 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
     const workspaceId = req.params.workspaceId;
     const now = new Date();
 
-    // Get all setlists with performedAt dates and full song details
+    // Get setlists with performedAt dates and full song details (limit 500 for performance)
     const performedSetlists = await prisma.setlist.findMany({
       where: {
         workspaceId,
@@ -197,7 +197,8 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
           }
         }
       },
-      orderBy: { performedAt: 'asc' }
+      orderBy: { performedAt: 'asc' },
+      take: 500
     });
 
     const totalGigs = performedSetlists.length;

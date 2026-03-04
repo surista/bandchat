@@ -18,6 +18,31 @@ import { buildMentionRegex } from '../../utils/parseMentions';
 import api from '../../services/api';
 
 /**
+ * Validates a URL string for safety before rendering as a link.
+ * Prevents javascript: URLs, data: URLs, and malformed URLs.
+ */
+function isValidHttpUrl(urlString) {
+  try {
+    const url = new URL(urlString);
+    // Only allow http/https protocols
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return false;
+    }
+    // Block URLs with credentials in them (user:pass@host)
+    if (url.username || url.password) {
+      return false;
+    }
+    // Must have a valid hostname (at least one dot for TLD)
+    if (!url.hostname || (!url.hostname.includes('.') && url.hostname !== 'localhost')) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Memoized component for rendering message content with URL detection,
  * embeds (Google Docs, YouTube), images, videos, and @mentions.
  */
@@ -27,6 +52,12 @@ const MessageContent = React.memo(({ content, message, onOpenLightbox, members }
 
   return parts.map((part, i) => {
     if (part.match(urlRegex)) {
+      // Validate URL before rendering as a link
+      if (!isValidHttpUrl(part)) {
+        // Render as plain text if invalid
+        return <span key={i}>{part}</span>;
+      }
+
       // Check if it's a Google Doc/Sheet using proper URL parsing
       let isGoogleDoc = false;
       try {

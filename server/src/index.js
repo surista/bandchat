@@ -33,8 +33,29 @@ setupSocketHandlers(io);
 
 const PORT = process.env.PORT || 3001;
 
-httpServer.listen(PORT, () => {
+// One-time database setup (idempotent - safe to run on every deploy)
+async function setupDatabase() {
+  try {
+    // Enable pg_trgm extension and create trigram index for fast text search
+    await prisma.$executeRawUnsafe(`CREATE EXTENSION IF NOT EXISTS pg_trgm`);
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX CONCURRENTLY IF NOT EXISTS "Message_content_trgm_idx"
+      ON "Message" USING gin (content gin_trgm_ops)
+    `);
+    console.log('Database setup complete (trigram index ready)');
+  } catch (err) {
+    // Index may already exist or CONCURRENTLY may fail in transaction - that's OK
+    if (!err.message?.includes('already exists')) {
+      console.error('Database setup warning:', err.message);
+    }
+  }
+}
+
+httpServer.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
+
+  // Run database setup
+  await setupDatabase();
 
   // Clean up expired refresh tokens every hour
   setInterval(async () => {

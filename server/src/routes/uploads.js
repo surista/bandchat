@@ -73,34 +73,54 @@ const upload = multer({
 });
 
 /**
- * Check workspace storage quota before upload.
+ * Atomically check quota and reserve storage space.
+ * Uses a transaction to prevent race conditions where concurrent uploads
+ * could both pass the quota check before either increments the counter.
  * Returns null if OK, or an error response object if over quota.
  */
-const checkStorageQuota = async (workspaceId, fileSize) => {
+const reserveStorageQuota = async (workspaceId, fileSize) => {
   if (!workspaceId) return null;
 
-  const workspace = await prisma.workspace.findUnique({
-    where: { id: workspaceId },
-    select: { storageUsedBytes: true },
-  });
-  if (!workspace) return null;
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Lock the row and get current usage
+      const workspace = await tx.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { storageUsedBytes: true },
+      });
+      if (!workspace) return; // No workspace = no quota check
 
-  const used = workspace.storageUsedBytes ?? 0n;
-  if (used + BigInt(fileSize) > DEFAULT_STORAGE_QUOTA) {
-    return { error: 'Storage quota exceeded. Free tier allows 2 GB per workspace.' };
+      const used = workspace.storageUsedBytes ?? 0n;
+      if (used + BigInt(fileSize) > DEFAULT_STORAGE_QUOTA) {
+        throw new Error('QUOTA_EXCEEDED');
+      }
+
+      // Atomically increment within the same transaction
+      await tx.workspace.update({
+        where: { id: workspaceId },
+        data: { storageUsedBytes: { increment: BigInt(fileSize) } },
+      });
+    }, {
+      isolationLevel: 'Serializable', // Ensures no concurrent modifications
+    });
+    return null;
+  } catch (error) {
+    if (error.message === 'QUOTA_EXCEEDED') {
+      return { error: 'Storage quota exceeded. Free tier allows 2 GB per workspace.' };
+    }
+    throw error;
   }
-  return null;
 };
 
 /**
- * Increment workspace storage counter after a successful upload.
+ * Release reserved storage if upload fails after reservation.
  */
-const trackStorageUsage = async (workspaceId, fileSize) => {
+const releaseStorageQuota = async (workspaceId, fileSize) => {
   if (!workspaceId) return;
 
   await prisma.workspace.update({
     where: { id: workspaceId },
-    data: { storageUsedBytes: { increment: BigInt(fileSize) } },
+    data: { storageUsedBytes: { decrement: BigInt(fileSize) } },
   });
 };
 
@@ -128,19 +148,22 @@ router.post('/', authenticate, uploadLimiter, upload.single('file'), async (req,
       });
     }
 
-    // Check workspace storage quota if workspaceId provided
+    // Atomically check and reserve storage quota
     const workspaceId = req.body.workspaceId || req.query.workspaceId;
-    const quotaError = await checkStorageQuota(workspaceId, req.file.size);
+    const quotaError = await reserveStorageQuota(workspaceId, req.file.size);
     if (quotaError) {
       return res.status(413).json(quotaError);
     }
 
-    // Upload to R2
-    const folder = fileCategory === 'IMAGE' ? 'images' : fileCategory === 'AUDIO' ? 'audio' : 'video';
-    const result = await uploadFile(req.file.buffer, req.file.originalname, detectedType, folder);
-
-    // Track storage usage
-    await trackStorageUsage(workspaceId, req.file.size);
+    // Upload to R2 (release reservation if upload fails)
+    let result;
+    try {
+      const folder = fileCategory === 'IMAGE' ? 'images' : fileCategory === 'AUDIO' ? 'audio' : 'video';
+      result = await uploadFile(req.file.buffer, req.file.originalname, detectedType, folder);
+    } catch (uploadError) {
+      await releaseStorageQuota(workspaceId, req.file.size);
+      throw uploadError;
+    }
 
     res.json({
       url: result.url,
@@ -185,22 +208,25 @@ router.post('/multiple', authenticate, uploadLimiter, upload.array('files', 5), 
       fileValidations.push({ file, detectedType, fileCategory });
     }
 
-    // Check workspace storage quota for total batch size
+    // Atomically check and reserve storage quota for total batch size
     const workspaceId = req.body.workspaceId || req.query.workspaceId;
-    const quotaError = await checkStorageQuota(workspaceId, totalSize);
+    const quotaError = await reserveStorageQuota(workspaceId, totalSize);
     if (quotaError) {
       return res.status(413).json(quotaError);
     }
 
-    // Upload all files to R2
-    const uploadPromises = fileValidations.map(({ file, detectedType, fileCategory }) => {
-      const folder = fileCategory === 'IMAGE' ? 'images' : fileCategory === 'AUDIO' ? 'audio' : 'video';
-      return uploadFile(file.buffer, file.originalname, detectedType, folder);
-    });
-    const results = await Promise.all(uploadPromises);
-
-    // Track storage usage for total batch
-    await trackStorageUsage(workspaceId, totalSize);
+    // Upload all files to R2 (release reservation if any upload fails)
+    let results;
+    try {
+      const uploadPromises = fileValidations.map(({ file, detectedType, fileCategory }) => {
+        const folder = fileCategory === 'IMAGE' ? 'images' : fileCategory === 'AUDIO' ? 'audio' : 'video';
+        return uploadFile(file.buffer, file.originalname, detectedType, folder);
+      });
+      results = await Promise.all(uploadPromises);
+    } catch (uploadError) {
+      await releaseStorageQuota(workspaceId, totalSize);
+      throw uploadError;
+    }
 
     const files = results.map((result, index) => ({
       url: result.url,

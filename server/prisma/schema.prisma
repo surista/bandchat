@@ -214,6 +214,8 @@ model Attachment {
   createdAt DateTime       @default(now())
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
 }
 
 enum Role {
@@ -460,6 +462,7 @@ model GigMedia {
   uploadedBy User? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
 
   @@index([gigId])
+  @@index([uploadedById])
 }
 
 model GigSong {

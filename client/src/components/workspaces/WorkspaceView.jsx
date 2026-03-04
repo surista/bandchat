@@ -12,12 +12,51 @@ import Skeleton from '../common/Skeleton';
 import ErrorMessage from '../common/ErrorMessage';
 import useSwipeGesture from '../../hooks/useSwipeGesture';
 
+// Error component for failed chunk loads
+function ChunkLoadError({ onRetry }) {
+  return (
+    <div className="flex flex-col items-center justify-center p-8 text-center">
+      <div className="text-4xl mb-4">&#x26a0;&#xfe0f;</div>
+      <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
+        Failed to load component
+      </h3>
+      <p className="text-[var(--color-text-muted)] max-w-sm mb-4">
+        This may happen after an app update. Try refreshing to get the latest version.
+      </p>
+      <div className="flex gap-3">
+        <button
+          onClick={onRetry}
+          className="px-4 py-2 rounded bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] hover:bg-[var(--color-border)] transition-colors"
+        >
+          Try Again
+        </button>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 transition-colors"
+        >
+          Refresh Page
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // Retry dynamic import on failure (handles stale chunks after deploy)
-function lazyRetry(importFn) {
+// Returns a component that shows error UI on failure instead of abruptly reloading
+function lazyRetry(importFn, retries = 1) {
   return lazy(() =>
-    importFn().catch(() => {
-      window.location.reload();
-      return new Promise(() => {}); // never resolves — page is reloading
+    importFn().catch((error) => {
+      // Try once more before giving up
+      if (retries > 0) {
+        return new Promise((resolve) => setTimeout(resolve, 500))
+          .then(() => importFn())
+          .catch(() => {
+            // Final failure - return error component
+            return { default: () => <ChunkLoadError onRetry={() => window.location.reload()} /> };
+          });
+      }
+      // Return error component instead of reloading
+      return { default: () => <ChunkLoadError onRetry={() => window.location.reload()} /> };
     })
   );
 }

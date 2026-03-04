@@ -54,8 +54,25 @@ class ApiService {
   async setTokens(accessToken, refreshToken) {
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;
-    await storage.setItem('accessToken', accessToken);
-    await storage.setItem('refreshToken', refreshToken);
+
+    // Store tokens and track success
+    const [accessStored, refreshStored] = await Promise.all([
+      storage.setItem('accessToken', accessToken),
+      storage.setItem('refreshToken', refreshToken),
+    ]);
+
+    // Warn if storage failed - user may need to re-login on app restart
+    if (!accessStored || !refreshStored) {
+      console.error('Token storage failed:', {
+        accessStored,
+        refreshStored,
+        lastError: storage.getLastError(),
+      });
+      // Tokens are still in memory, so the current session works.
+      // But the user will need to re-authenticate on next app launch.
+    }
+
+    return accessStored && refreshStored;
   }
 
   async clearTokens() {

@@ -37,6 +37,7 @@ import practiceRoutes from './routes/practice.js';
 import workspaceImportRoutes from './routes/workspaceImport.js';
 import adminRoutes from './routes/admin.js';
 import { apiLimiter } from './middleware/rateLimit.js';
+import { requestIdMiddleware } from './middleware/requestId.js';
 
 export function createApp() {
   const app = express();
@@ -81,6 +82,9 @@ export function createApp() {
   }
 
   // Middleware
+  // Request ID for distributed tracing (add early so all requests get an ID)
+  app.use(requestIdMiddleware);
+
   app.use(helmet({
     contentSecurityPolicy: {
       directives: {
@@ -144,8 +148,8 @@ export function createApp() {
 
   // Global error handler (must be after all routes)
   app.use((err, req, res, next) => {
-    console.error(`Unhandled error on ${req.method} ${req.path}:`, err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error(`[${req.id}] Unhandled error on ${req.method} ${req.path}:`, err);
+    res.status(500).json({ error: 'Internal server error', requestId: req.id });
   });
 
   return app;

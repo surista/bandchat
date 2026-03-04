@@ -112,21 +112,33 @@ router.get('/channel/:channelId', authenticate, isChannelMember, async (req, res
         });
       }
 
-      // For threads with custom per-thread read timestamps, query individually
+      // For threads with custom per-thread read timestamps, use a batched raw query
+      // to avoid N+1 (one query per thread)
       if (threadsWithCustomRead.length > 0) {
-        const customCounts = await Promise.all(threadsWithCustomRead.map(async (id) => {
-          const lastRead = threadReadMap[id];
-          const count = await prisma.message.count({
-            where: {
-              parentId: id,
-              createdAt: { gt: lastRead },
-              authorId: { not: req.user.id }
-            }
-          });
-          return [id, count];
+        // Build a VALUES list for batch processing: (parentId, lastReadTimestamp)
+        const pairs = threadsWithCustomRead.map(id => ({
+          parentId: id,
+          lastRead: threadReadMap[id]
         }));
-        customCounts.forEach(([id, count]) => {
-          unreadMap[id] = count;
+
+        // Use a single query with LATERAL join for efficient batch counting
+        const customCounts = await prisma.$queryRaw`
+          WITH thread_reads AS (
+            SELECT * FROM (VALUES ${prisma.sql.join(
+              pairs.map(p => prisma.sql`(${p.parentId}::uuid, ${p.lastRead}::timestamp)`),
+              prisma.sql`, `
+            )}) AS t("parentId", "lastRead")
+          )
+          SELECT tr."parentId", COUNT(m.id)::int as count
+          FROM thread_reads tr
+          LEFT JOIN "Message" m ON m."parentId" = tr."parentId"
+            AND m."createdAt" > tr."lastRead"
+            AND m."authorId" != ${req.user.id}
+          GROUP BY tr."parentId"
+        `;
+
+        customCounts.forEach(row => {
+          unreadMap[row.parentId] = row.count || 0;
         });
       }
     }
