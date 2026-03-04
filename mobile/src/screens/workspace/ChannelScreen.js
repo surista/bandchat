@@ -608,13 +608,16 @@ export default function ChannelScreen({ navigation, route }) {
   const invertedMessages = useMemo(() => [...messages].reverse(), [messages]);
 
   const isGrouped = useCallback((message, index) => {
-    const nextIdx = index - 1;
-    if (nextIdx < 0) return false;
-    const prevMsg = invertedMessages[nextIdx];
-    if (!prevMsg || !message.author || !prevMsg.author) return false;
-    if (prevMsg.author.id !== message.author.id) return false;
-    const timeDiff = new Date(prevMsg.createdAt) - new Date(message.createdAt);
-    return Math.abs(timeDiff) < GROUP_THRESHOLD_MS;
+    // In inverted list, index + 1 is the older message visually above
+    const olderIdx = index + 1;
+    if (olderIdx >= invertedMessages.length) return false;
+    const olderMsg = invertedMessages[olderIdx];
+    if (!olderMsg || !message.author || !olderMsg.author) return false;
+    if (olderMsg.author.id !== message.author.id) return false;
+    // Break grouping across different days
+    if (!isSameDay(new Date(message.createdAt), new Date(olderMsg.createdAt))) return false;
+    const timeDiff = Math.abs(new Date(message.createdAt) - new Date(olderMsg.createdAt));
+    return timeDiff < GROUP_THRESHOLD_MS;
   }, [invertedMessages]);
 
   const needsDateSeparator = useCallback((message, index) => {
