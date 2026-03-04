@@ -36,6 +36,7 @@ switch (bumpType) {
 
 // Update client/package.json
 clientPkg.version = newVersion;
+clientPkg.displayVersion = newVersion;
 writeFileSync(clientPkgPath, JSON.stringify(clientPkg, null, 2) + '\n');
 
 // Update server/package.json
