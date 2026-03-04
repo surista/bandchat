@@ -182,7 +182,7 @@ export default function ChannelListScreen({ navigation, route }) {
       setChannelGroups(groups);
       setDirectMessages(dms);
     } catch (err) {
-      console.error('Failed to load workspace data:', err);
+      // silently fail
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -352,7 +352,7 @@ export default function ChannelListScreen({ navigation, route }) {
       setNewChannelPrivate(false);
       handleChannelPress(channel, false);
     } catch (err) {
-      console.error('Failed to create channel:', err);
+      // silently fail
     } finally {
       setCreating(false);
     }
@@ -366,7 +366,7 @@ export default function ChannelListScreen({ navigation, route }) {
       const ws = await api.getWorkspace(workspaceId);
       setMembers((ws.members || []).filter(m => m.userId !== user?.id));
     } catch (err) {
-      console.error('Failed to load members:', err);
+      // silently fail
     }
   }, [workspaceId, user?.id]);
 
@@ -379,7 +379,7 @@ export default function ChannelListScreen({ navigation, route }) {
       setSelectedMemberIds([]);
       handleChannelPress(dm, true);
     } catch (err) {
-      console.error('Failed to create DM:', err);
+      // silently fail
     } finally {
       setCreating(false);
     }

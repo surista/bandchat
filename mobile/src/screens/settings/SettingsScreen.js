@@ -20,8 +20,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
-
-const APP_BASE_URL = 'https://bandchat.vercel.app';
+import { APP_BASE_URL } from '../../utils/constants';
 
 function SettingsRow({ icon, label, onPress, color, colors, showArrow = true }) {
   return (

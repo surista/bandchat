@@ -511,6 +511,14 @@ router.put('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, asyn
     const { workspaceId, userId } = req.params;
     const { role, displayName, email } = req.body;
 
+    // Verify target user is a workspace member
+    const targetMember = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId, workspaceId } }
+    });
+    if (!targetMember) {
+      return res.status(404).json({ error: 'User is not a member of this workspace' });
+    }
+
     // Handle role update
     if (role) {
       if (!['ADMIN', 'MEMBER'].includes(role)) {

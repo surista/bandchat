@@ -78,7 +78,7 @@ export default function PollsScreen({ navigation, route }) {
       const data = await api.getPolls(workspaceId, { includeCompleted: showClosed });
       setPolls(data);
     } catch (err) {
-      console.error('Failed to load polls:', err);
+      // silently fail
     } finally {
       setLoading(false);
       setRefreshing(false);

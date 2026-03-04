@@ -29,7 +29,7 @@ export function AuthProvider({ children }) {
             if (fetchError.type === 'NETWORK' || fetchError.type === 'TIMEOUT') {
               // Keep tokens but mark as offline - user can retry later
               setIsOffline(true);
-              console.warn('App started offline, keeping stored tokens');
+              // App started offline, keeping stored tokens
             } else {
               // Auth error (token invalid) - clear tokens
               await api.clearTokens();
@@ -39,7 +39,6 @@ export function AuthProvider({ children }) {
         }
       } catch (tokenError) {
         // Failed to load tokens from storage
-        console.error('Failed to load tokens:', tokenError);
         setError('Failed to load saved session');
       } finally {
         setLoading(false);
@@ -92,7 +91,7 @@ export function AuthProvider({ children }) {
     try {
       await api.logout();
     } catch (err) {
-      console.error('Logout API failed:', err);
+      // silently fail
     } finally {
       setUser(null);
     }

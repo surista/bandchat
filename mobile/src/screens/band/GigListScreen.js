@@ -21,6 +21,11 @@ import { mediumImpact, successNotification } from '../../utils/haptics';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import api from '../../services/api';
 
+function getCurrencySymbol(code) {
+  const symbols = { USD: '$', GBP: '£', EUR: '€', JPY: '¥', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', CHF: 'CHF ' };
+  return symbols[code] || code + ' ';
+}
+
 const TYPE_FILTERS = [
   { key: 'all', label: 'All' },
   { key: 'GIG', label: 'Gigs' },
@@ -83,6 +88,9 @@ export default function GigListScreen({ navigation, route }) {
   const [calendarUrl, setCalendarUrl] = useState('');
   const [calendarLoading, setCalendarLoading] = useState(false);
 
+  // Currency
+  const [currencySymbol, setCurrencySymbol] = useState('$');
+
   // Availability
   const [availability, setAvailability] = useState({});
   const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
@@ -90,6 +98,13 @@ export default function GigListScreen({ navigation, route }) {
 
   const loadingRef = useRef(loading);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
+
+  // Load workspace currency
+  useEffect(() => {
+    api.getWorkspace(workspaceId).then(ws => {
+      setCurrencySymbol(getCurrencySymbol(ws.currency || 'USD'));
+    }).catch(() => {});
+  }, [workspaceId]);
 
   const handleSubscribeCalendar = useCallback(async () => {
     setCalendarLoading(true);
@@ -162,7 +177,7 @@ export default function GigListScreen({ navigation, route }) {
       }
       setAvailability(availMap);
     } catch (err) {
-      console.error('Failed to load gigs:', err);
+      // silently fail
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -389,7 +404,7 @@ export default function GigListScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel={`Set availability: ${statusInfo?.label || 'Not set'}`}
               >
-                <Text style={[styles.availabilityText, { color: statusInfo?.color || colors.textMuted }]}>
+                <Text style={[styles.availabilityText, { color: statusInfo?.color || colors.textSecondary }]}>
                   {statusInfo ? `${statusInfo.icon} ${statusInfo.label}` : '+ Avail'}
                 </Text>
               </TouchableOpacity>
@@ -411,7 +426,7 @@ export default function GigListScreen({ navigation, route }) {
           ) : null}
 
           {item.pay ? (
-            <Text style={styles.gigPay}>${item.pay.toLocaleString()}</Text>
+            <Text style={styles.gigPay}>{currencySymbol}{item.pay.toLocaleString()}</Text>
           ) : null}
 
           {setlistNames.length > 0 ? (
@@ -486,7 +501,7 @@ export default function GigListScreen({ navigation, route }) {
 
       {/* Desktop feature hint */}
       <View style={[styles.desktopHint, { backgroundColor: colors.bgTertiary }]}>
-        <Text style={[styles.desktopHintText, { color: colors.textMuted }]}>
+        <Text style={[styles.desktopHintText, { color: colors.textSecondary }]}>
           Import calendar invites from web app
         </Text>
       </View>

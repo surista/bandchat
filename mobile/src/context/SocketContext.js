@@ -17,6 +17,7 @@ export function SocketProvider({ children }) {
   const [error, setError] = useState(null);
   const reconnectAttempts = useRef(0);
   const reconnectTimeout = useRef(null);
+  const refreshingToken = useRef(false);
 
   useEffect(() => {
     // Don't connect if not authenticated, no token, or offline
@@ -60,6 +61,9 @@ export function SocketProvider({ children }) {
       reconnectAttempts.current++;
 
       if (socketError.message?.includes('Authentication') || socketError.message?.includes('token')) {
+        // Prevent concurrent token refresh attempts
+        if (refreshingToken.current) return;
+        refreshingToken.current = true;
         try {
           const refreshed = await api.refreshAccessToken();
           if (refreshed) {
@@ -70,6 +74,8 @@ export function SocketProvider({ children }) {
           }
         } catch (e) {
           setError('Authentication failed');
+        } finally {
+          refreshingToken.current = false;
         }
       } else if (reconnectAttempts.current >= MAX_RECONNECT_ATTEMPTS) {
         setError('Connection failed after multiple attempts');

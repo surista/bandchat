@@ -109,7 +109,7 @@ export default function StatsScreen({ navigation, route }) {
       const data = await api.getGigStats(workspaceId);
       setStats(data);
     } catch (err) {
-      console.error('Failed to load stats:', err);
+      // silently fail
     } finally {
       setLoading(false);
       setRefreshing(false);

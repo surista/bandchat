@@ -62,7 +62,7 @@ function RecommendationsTab({ workspaceId, colors }) {
         const result = await api.getSongRecommendations(workspaceId);
         setData(result);
       } catch (err) {
-        console.error('Failed to load recommendations:', err);
+        // silently fail
       } finally {
         setLoading(false);
       }
@@ -161,7 +161,7 @@ function MashupsTab({ workspaceId, colors }) {
         const data = await api.getSongs(workspaceId);
         setSongs(data.filter(s => s.key || s.bpm));
       } catch (err) {
-        console.error('Failed to load songs:', err);
+        // silently fail
       }
     })();
   }, [workspaceId]);
@@ -174,7 +174,7 @@ function MashupsTab({ workspaceId, colors }) {
       const data = await api.getMashupSuggestions(workspaceId, song.id);
       setSuggestions(data);
     } catch (err) {
-      console.error('Failed to load mashup suggestions:', err);
+      // silently fail
     } finally {
       setLoading(false);
     }
@@ -282,7 +282,7 @@ function TransitionsTab({ workspaceId, colors }) {
         const data = await api.getTransitions(workspaceId);
         setTransitions(data);
       } catch (err) {
-        console.error('Failed to load transitions:', err);
+        // silently fail
       } finally {
         setLoading(false);
       }
@@ -343,7 +343,7 @@ function OptimizerTab({ workspaceId, colors }) {
         const data = await api.getSongs(workspaceId);
         setSongs(data.filter(s => s.key || s.bpm));
       } catch (err) {
-        console.error('Failed to load songs:', err);
+        // silently fail
       } finally {
         setLoadingSongs(false);
       }

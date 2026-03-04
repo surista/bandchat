@@ -47,7 +47,6 @@ export default function MedleyDetailScreen({ navigation, route }) {
         setMedley(data);
         populateForm(data);
       } catch (err) {
-        console.error('Failed to load medley:', err);
         Alert.alert('Error', 'Failed to load medley');
         navigation.goBack();
       } finally {
@@ -62,7 +61,7 @@ export default function MedleyDetailScreen({ navigation, route }) {
       const songs = await api.getSongs(workspaceId);
       setAllSongs(songs);
     } catch (err) {
-      console.error('Failed to load songs:', err);
+      // silently fail
     } finally {
       setLoadingSongs(false);
     }

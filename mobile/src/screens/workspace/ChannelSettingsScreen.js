@@ -69,7 +69,7 @@ export default function ChannelSettingsScreen({ navigation, route }) {
         const membership = ws.members?.find(m => m.userId === user?.id);
         setIsAdmin(membership?.role === 'ADMIN');
       } catch (err) {
-        console.error('Failed to load channel data:', err);
+        // silently fail
       } finally {
         setLoading(false);
       }
@@ -87,7 +87,6 @@ export default function ChannelSettingsScreen({ navigation, route }) {
       await api.muteChannel(channel.id, newMuted);
     } catch (err) {
       setIsMuted(!newMuted);
-      console.error('Failed to toggle mute:', err);
     }
   }, [isMuted, channel.id]);
 

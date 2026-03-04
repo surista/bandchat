@@ -84,7 +84,7 @@ export default function AchievementsScreen({ navigation, route }) {
       setMyAchievements(my);
       setLeaderboard(lb);
     } catch (err) {
-      console.error('Failed to load achievements:', err);
+      // silently fail
     } finally {
       setLoading(false);
       setRefreshing(false);

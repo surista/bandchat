@@ -67,7 +67,6 @@ function AudioPlayer({ url, colors }) {
       setSound(newSound);
       setPlaying(true);
     } catch (err) {
-      console.error('Failed to play audio:', err);
       Alert.alert('Error', 'Failed to play audio');
     } finally {
       setLoading(false);
@@ -154,7 +153,6 @@ export default function RecordingDetailScreen({ navigation, route }) {
           navigation.goBack();
         }
       } catch (err) {
-        console.error('Failed to load recording:', err);
         Alert.alert('Error', 'Failed to load recording');
         navigation.goBack();
       } finally {
@@ -168,7 +166,7 @@ export default function RecordingDetailScreen({ navigation, route }) {
       const data = await api.getSongs(workspaceId);
       setSongs(data);
     } catch (err) {
-      console.error('Failed to load songs:', err);
+      // silently fail
     }
   }, [workspaceId]);
 
@@ -222,7 +220,7 @@ export default function RecordingDetailScreen({ navigation, route }) {
         setFileMimeType(asset.mimeType || 'application/octet-stream');
       }
     } catch (err) {
-      console.error('File picker error:', err);
+      // silently fail
     }
   }, []);
 

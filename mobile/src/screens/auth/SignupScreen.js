@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { APP_BASE_URL } from '../../utils/constants';
 
 export default function SignupScreen({ navigation }) {
   const { signup } = useAuth();
@@ -162,14 +163,14 @@ export default function SignupScreen({ navigation }) {
                 I agree to the{' '}
                 <Text
                   style={{ color: colors.primary }}
-                  onPress={() => Linking.openURL('https://bandchat.vercel.app/terms')}
+                  onPress={() => Linking.openURL(`${APP_BASE_URL}/terms`)}
                 >
                   Terms of Service
                 </Text>
                 {' '}and{' '}
                 <Text
                   style={{ color: colors.primary }}
-                  onPress={() => Linking.openURL('https://bandchat.vercel.app/privacy')}
+                  onPress={() => Linking.openURL(`${APP_BASE_URL}/privacy`)}
                 >
                   Privacy Policy
                 </Text>
@@ -206,15 +207,15 @@ export default function SignupScreen({ navigation }) {
 
           <View style={styles.footer}>
             <View style={styles.footerLinks}>
-              <TouchableOpacity onPress={() => Linking.openURL('https://bandchat.vercel.app/privacy')} accessibilityRole="link" accessibilityLabel="Privacy Policy">
+              <TouchableOpacity onPress={() => Linking.openURL(`${APP_BASE_URL}/privacy`)} accessibilityRole="link" accessibilityLabel="Privacy Policy">
                 <Text style={[styles.footerLink, { color: colors.textSecondary }]}>Privacy</Text>
               </TouchableOpacity>
               <Text style={[styles.footerDot, { color: colors.textSecondary }]}>{'\u00B7'}</Text>
-              <TouchableOpacity onPress={() => Linking.openURL('https://bandchat.vercel.app/terms')} accessibilityRole="link" accessibilityLabel="Terms of Service">
+              <TouchableOpacity onPress={() => Linking.openURL(`${APP_BASE_URL}/terms`)} accessibilityRole="link" accessibilityLabel="Terms of Service">
                 <Text style={[styles.footerLink, { color: colors.textSecondary }]}>Terms</Text>
               </TouchableOpacity>
               <Text style={[styles.footerDot, { color: colors.textSecondary }]}>{'\u00B7'}</Text>
-              <TouchableOpacity onPress={() => Linking.openURL('https://bandchat.vercel.app/support')} accessibilityRole="link" accessibilityLabel="Support">
+              <TouchableOpacity onPress={() => Linking.openURL(`${APP_BASE_URL}/support`)} accessibilityRole="link" accessibilityLabel="Support">
                 <Text style={[styles.footerLink, { color: colors.textSecondary }]}>Support</Text>
               </TouchableOpacity>
             </View>

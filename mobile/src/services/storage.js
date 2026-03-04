@@ -18,7 +18,6 @@ const storage = {
       return await SecureStore.getItemAsync(key);
     } catch (error) {
       this._lastError = { operation: 'get', key, error: error.message, timestamp: Date.now() };
-      console.warn(`SecureStore.getItem failed for "${key}":`, error.message);
       return null;
     }
   },
@@ -33,11 +32,6 @@ const storage = {
       return true;
     } catch (error) {
       this._lastError = { operation: 'set', key, error: error.message, timestamp: Date.now() };
-      console.error(`SecureStore.setItem failed for "${key}":`, error.message);
-      // This is critical for auth tokens - log enough detail to diagnose
-      if (key.includes('Token')) {
-        console.error('Token storage failed - user may need to re-authenticate on app restart');
-      }
       return false;
     }
   },
@@ -48,7 +42,6 @@ const storage = {
       return true;
     } catch (error) {
       this._lastError = { operation: 'remove', key, error: error.message, timestamp: Date.now() };
-      console.warn(`SecureStore.removeItem failed for "${key}":`, error.message);
       return false;
     }
   },

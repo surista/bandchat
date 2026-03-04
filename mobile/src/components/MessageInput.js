@@ -218,7 +218,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
         setRecordingDuration(prev => prev + 1);
       }, 1000);
     } catch (err) {
-      console.error('Failed to start recording:', err);
+      // silently fail
     }
   }, []);
 
@@ -255,7 +255,6 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
         });
       }
     } catch (err) {
-      console.error('Failed to stop recording:', err);
       setIsRecording(false);
       setRecordingDuration(0);
     }
@@ -281,7 +280,6 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
         playsInSilentModeIOS: true,
       });
     } catch (err) {
-      console.error('Failed to cancel recording:', err);
       setIsRecording(false);
       setRecordingDuration(0);
     }

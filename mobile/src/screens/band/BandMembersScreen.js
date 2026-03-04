@@ -119,7 +119,6 @@ export default function BandMembersScreen({ navigation, route }) {
       const data = await api.getBandMembers(workspaceId);
       setMembers(data);
     } catch (err) {
-      console.error('Failed to load members:', err);
       if (!members.current?.length && !members.former?.length && !members.guests?.length) {
         setError(err.message || 'Failed to load members');
       }

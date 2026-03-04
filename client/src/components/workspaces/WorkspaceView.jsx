@@ -141,7 +141,7 @@ const BAND_VIEW_EXTRA_PROPS = {
   availability: (ctx) => ({ workspace: ctx.workspace }),
   members: (ctx) => ({ workspace: ctx.workspace }),
   announcements: (ctx) => ({ workspace: ctx.workspace }),
-  archive: (ctx) => ({ isAdmin: ctx.isAdmin }),
+  archive: (ctx) => ({ isAdmin: ctx.isAdmin, workspace: ctx.workspace }),
   timeline: (ctx) => ({ isAdmin: ctx.isAdmin }),
   kitty: (ctx) => ({ isAdmin: ctx.isAdmin }),
 };

@@ -23,7 +23,7 @@ export default function BlockedUsersScreen() {
       const data = await api.getBlockedUsers();
       setBlockedUsers(data);
     } catch (err) {
-      console.error('Failed to load blocked users:', err);
+      // silently fail
     } finally {
       setLoading(false);
     }

@@ -73,7 +73,6 @@ export default function SongDetailScreen({ navigation, route }) {
         setSong(data);
         populateForm(data);
       } catch (err) {
-        console.error('Failed to load song:', err);
         Alert.alert('Error', 'Failed to load song');
         navigation.goBack();
       } finally {

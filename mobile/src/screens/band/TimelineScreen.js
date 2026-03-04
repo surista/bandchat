@@ -115,7 +115,6 @@ export default function TimelineScreen({ navigation, route }) {
       const membership = ws.members?.find(m => m.userId === user?.id);
       setIsAdmin(membership?.role === 'ADMIN');
     } catch (err) {
-      console.error('Failed to load timeline:', err);
       if (events.length === 0) {
         setError(err.message || 'Failed to load timeline');
       }

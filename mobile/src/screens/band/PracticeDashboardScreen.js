@@ -78,7 +78,7 @@ export default function PracticeDashboardScreen({ route }) {
       setNextCursor(practiceData.nextCursor);
       setSummary(summaryData);
     } catch (err) {
-      console.error('Failed to load practice data:', err);
+      // silently fail
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -102,7 +102,7 @@ export default function PracticeDashboardScreen({ route }) {
       setSessions(prev => [...prev, ...data.sessions]);
       setNextCursor(data.nextCursor);
     } catch (err) {
-      console.error('Failed to load more sessions:', err);
+      // silently fail
     } finally {
       setLoadingMore(false);
     }

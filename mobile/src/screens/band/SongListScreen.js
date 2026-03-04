@@ -105,7 +105,7 @@ export default function SongListScreen({ navigation, route }) {
       setSongs(data);
       if (summary) setPracticeSummary(summary);
     } catch (err) {
-      console.error('Failed to load songs:', err);
+      // silently fail
     } finally {
       setLoading(false);
       setRefreshing(false);

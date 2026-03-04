@@ -66,7 +66,6 @@ export default function SetlistDetailScreen({ navigation, route }) {
       setSetlist(data);
       setPerformers(perfs);
     } catch (err) {
-      console.error('Failed to load setlist:', err);
       Alert.alert('Error', 'Failed to load setlist');
       navigation.goBack();
     } finally {
@@ -183,7 +182,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
       const songs = await api.getSongs(workspaceId);
       setAllSongs(songs);
     } catch (err) {
-      console.error('Failed to load songs:', err);
+      // silently fail
     } finally {
       setLoadingSongs(false);
     }
@@ -252,7 +251,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
       const members = await api.getBandMembers(workspaceId);
       setBandMembers(members.filter(m => m.status === 'CURRENT'));
     } catch (err) {
-      console.error('Failed to load band members:', err);
+      // silently fail
     }
   }, [performers, workspaceId]);
 

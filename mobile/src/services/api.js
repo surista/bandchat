@@ -9,12 +9,13 @@ const UPLOAD_TIMEOUT = 120000; // 2 minutes for uploads
  * Fetch with timeout support
  */
 function fetchWithTimeout(url, options = {}, timeout = DEFAULT_TIMEOUT) {
-  return Promise.race([
-    fetch(url, options),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Request timed out')), timeout)
-    ),
-  ]);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  const signal = options.signal
+    ? options.signal  // Caller provided their own signal
+    : controller.signal;
+  return fetch(url, { ...options, signal })
+    .finally(() => clearTimeout(timer));
 }
 
 /**

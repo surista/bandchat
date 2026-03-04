@@ -103,7 +103,6 @@ export default function ContactsScreen({ navigation, route }) {
       const data = await api.getContacts(workspaceId, cat);
       setContacts(data);
     } catch (err) {
-      console.error('Failed to load contacts:', err);
       if (!contacts.length) setError(err.message || 'Failed to load contacts');
     } finally {
       setLoading(false);

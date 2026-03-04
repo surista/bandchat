@@ -49,7 +49,7 @@ export default function SearchScreen({ navigation, route }) {
         setChannels(ch);
         setMembers(ws.members || []);
       } catch (err) {
-        console.error('Failed to load filters:', err);
+        // silently fail
       }
     };
     loadFilters();
@@ -81,7 +81,6 @@ export default function SearchScreen({ navigation, route }) {
       const data = await api.searchMessages(workspaceId, q, channelId, authorId);
       setResults(data);
     } catch (err) {
-      console.error('Search failed:', err);
       setResults([]);
     } finally {
       setLoading(false);

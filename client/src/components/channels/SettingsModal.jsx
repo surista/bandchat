@@ -905,6 +905,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                             )}
                             <select
                               value={member.role}
+                              disabled={member.user.id === user?.id}
                               onChange={async (e) => {
                                 try {
                                   await api.updateMemberRole(

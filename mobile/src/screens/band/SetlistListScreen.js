@@ -80,7 +80,6 @@ export default function SetlistListScreen({ navigation, route }) {
       const data = await api.getSetlists(workspaceId);
       setSetlists(data);
     } catch (err) {
-      console.error('Failed to load setlists:', err);
       if (!setlists.length) setError(err.message || 'Failed to load setlists');
     } finally {
       setLoading(false);

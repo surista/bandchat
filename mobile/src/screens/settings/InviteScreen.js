@@ -42,7 +42,7 @@ export default function InviteScreen({ route }) {
       const membership = ws.members?.find(m => m.userId === user?.id);
       setIsAdmin(membership?.role === 'ADMIN');
     } catch (err) {
-      console.error('Failed to load invite data:', err);
+      // silently fail
     } finally {
       setLoading(false);
     }

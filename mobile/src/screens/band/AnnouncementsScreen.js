@@ -89,7 +89,6 @@ export default function AnnouncementsScreen({ navigation, route }) {
       const data = await api.getAnnouncements(workspaceId);
       setAnnouncements(data);
     } catch (err) {
-      console.error('Failed to load announcements:', err);
       if (!announcements.length) setError(err.message || 'Failed to load announcements');
     } finally {
       setLoading(false);

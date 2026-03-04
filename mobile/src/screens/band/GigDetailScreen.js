@@ -28,6 +28,11 @@ const ATTENDEE_STATUSES = ['ATTENDING', 'MAYBE', 'NOT_ATTENDING'];
 const ATTENDEE_LABELS = { ATTENDING: 'Going', MAYBE: 'Maybe', NOT_ATTENDING: 'Not Going' };
 const ATTENDEE_COLORS = { ATTENDING: '#22c55e', MAYBE: '#eab308', NOT_ATTENDING: '#ef4444' };
 
+function getCurrencySymbol(code) {
+  const symbols = { USD: '$', GBP: '£', EUR: '€', JPY: '¥', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', CHF: 'CHF ' };
+  return symbols[code] || code + ' ';
+}
+
 const GIG_TYPES = ['GIG', 'REHEARSAL', 'RECORDING', 'OTHER'];
 const GIG_STATUSES = ['SCHEDULED', 'COMPLETED', 'CANCELLED'];
 
@@ -67,6 +72,9 @@ export default function GigDetailScreen({ navigation, route }) {
   const [pay, setPay] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Currency
+  const [currencySymbol, setCurrencySymbol] = useState('$');
+
   // Media
   const [gigMedia, setGigMedia] = useState([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
@@ -76,6 +84,13 @@ export default function GigDetailScreen({ navigation, route }) {
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+
+  // Load workspace currency
+  useEffect(() => {
+    api.getWorkspace(workspaceId).then(ws => {
+      setCurrencySymbol(getCurrencySymbol(ws.currency || 'USD'));
+    }).catch(() => {});
+  }, [workspaceId]);
 
   useEffect(() => {
     if (isNew) return;
@@ -89,7 +104,6 @@ export default function GigDetailScreen({ navigation, route }) {
         setGigMedia(mediaData);
         populateForm(data);
       } catch (err) {
-        console.error('Failed to load gig:', err);
         Alert.alert('Error', 'Failed to load event');
         navigation.goBack();
       } finally {
@@ -277,7 +291,6 @@ export default function GigDetailScreen({ navigation, route }) {
       successNotification();
       Alert.alert('Added', `"${gig.title}" has been added to your calendar.`);
     } catch (err) {
-      console.error('Calendar error:', err);
       Alert.alert('Error', 'Failed to add event to calendar.');
     }
   }, [gig]);
@@ -632,7 +645,7 @@ export default function GigDetailScreen({ navigation, route }) {
       {gig?.pay ? (
         <View style={styles.viewSection}>
           <Text style={[styles.viewLabel, { color: colors.textSecondary }]}>Pay</Text>
-          <Text style={styles.payValue}>${gig.pay.toLocaleString()}</Text>
+          <Text style={styles.payValue}>{currencySymbol}{gig.pay.toLocaleString()}</Text>
         </View>
       ) : null}
 

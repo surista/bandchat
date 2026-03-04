@@ -67,7 +67,7 @@ export default function MemberProfileScreen({ route, navigation }) {
         navigation.setOptions({ title: data.user.displayName });
       }
     } catch (err) {
-      console.error('Failed to load member profile:', err);
+      // silently fail
     } finally {
       setLoading(false);
       setRefreshing(false);

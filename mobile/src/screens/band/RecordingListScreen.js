@@ -67,7 +67,7 @@ function InlineAudioPlayer({ url, colors }) {
       setSound(newSound);
       setPlaying(true);
     } catch (err) {
-      console.error('Failed to play audio:', err);
+      // silently fail
     } finally {
       setLoading(false);
     }
@@ -161,7 +161,6 @@ export default function RecordingListScreen({ navigation, route }) {
       setRecordings(recs);
       setSongs(songList);
     } catch (err) {
-      console.error('Failed to load recordings:', err);
       if (!recordings.length) setError(err.message || 'Failed to load recordings');
     } finally {
       setLoading(false);

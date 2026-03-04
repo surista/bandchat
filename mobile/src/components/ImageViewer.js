@@ -40,7 +40,6 @@ function ImageViewer({ visible, imageUrl, onClose }) {
       await MediaLibrary.saveToLibraryAsync(localUri);
       Alert.alert('Saved', 'Image saved to your photo library.');
     } catch (err) {
-      console.error('Failed to save image:', err);
       Alert.alert('Error', 'Failed to save image.');
     } finally {
       setSaving(false);

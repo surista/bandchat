@@ -41,6 +41,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const typingTimersRef = useRef({});
   const channelIdRef = useRef(channel.id);
   channelIdRef.current = channel.id;
   const userIdRef = useRef(user.id);
@@ -165,6 +166,8 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
         socket.off('reaction:removed', handleReactionRemoved);
         socket.off('message:pinned', handleMessagePinned);
         socket.off('message:unpinned', handleMessageUnpinned);
+        Object.values(typingTimersRef.current).forEach(clearTimeout);
+        typingTimersRef.current = {};
       };
     }
   }, [socket]);
@@ -260,11 +263,19 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
         }
         return prev;
       });
+      // Auto-clear after 5 seconds if no typing:stop received
+      clearTimeout(typingTimersRef.current[typingUser.id]);
+      typingTimersRef.current[typingUser.id] = setTimeout(() => {
+        setTypingUsers(prev => prev.filter(u => u.id !== typingUser.id));
+        delete typingTimersRef.current[typingUser.id];
+      }, 5000);
     }
   };
 
   const handleTypingStop = ({ channelId, userId }) => {
     if (channelId === channelIdRef.current) {
+      clearTimeout(typingTimersRef.current[userId]);
+      delete typingTimersRef.current[userId];
       setTypingUsers(prev => prev.filter(u => u.id !== userId));
     }
   };

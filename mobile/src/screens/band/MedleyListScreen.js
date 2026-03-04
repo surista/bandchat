@@ -53,7 +53,7 @@ export default function MedleyListScreen({ navigation, route }) {
       const data = await api.getMedleys(workspaceId);
       setMedleys(data);
     } catch (err) {
-      console.error('Failed to load medleys:', err);
+      // silently fail
     } finally {
       setLoading(false);
       setRefreshing(false);

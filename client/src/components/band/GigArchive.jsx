@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import api from '../../services/api';
+import { getCurrencySymbol } from '../../utils/currencies';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ImageLightbox from '../common/ImageLightbox';
 
-function GigArchive({ workspaceId, isAdmin }) {
+function GigArchive({ workspaceId, isAdmin, workspace }) {
   const [setlists, setSetlists] = useState([]);
   const [gigs, setGigs] = useState([]);
   const [bandMembers, setBandMembers] = useState([]);
@@ -970,7 +971,7 @@ function GigArchive({ workspaceId, isAdmin }) {
                     <div className="flex items-center justify-between">
                       <span className="text-[var(--color-text-muted)]">Fee</span>
                       <span className="text-[var(--color-text-primary)] font-medium">
-                        {selectedEntry.gig?.pay ? `¥${selectedEntry.gig.pay.toLocaleString()}` : '—'}
+                        {selectedEntry.gig?.pay ? `${getCurrencySymbol(workspace?.currency)}${selectedEntry.gig.pay.toLocaleString()}` : '—'}
                       </span>
                     </div>
                     {selectedEntry.gig?.notes && (

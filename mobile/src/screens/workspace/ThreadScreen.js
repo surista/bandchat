@@ -53,7 +53,7 @@ export default function ThreadScreen({ route }) {
         setReplies(data.replies || []);
         await api.markThreadRead(parentMessage.id);
       } catch (err) {
-        console.error('Failed to load thread:', err);
+        // silently fail
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -165,7 +165,6 @@ export default function ThreadScreen({ route }) {
       ));
     } catch (err) {
       setReplies(prev => prev.filter(r => r.id !== optimisticReply.id));
-      console.error('Failed to send reply:', err);
     }
   }, [user, channelId, parentMessage.id]);
 
@@ -217,7 +216,6 @@ export default function ThreadScreen({ route }) {
             await MediaLibrary.saveToLibraryAsync(localUri);
             Alert.alert('Saved', 'Image saved to your photo library.');
           } catch (err) {
-            console.error('Failed to save image:', err);
             Alert.alert('Error', 'Failed to save image.');
           }
         })();
@@ -235,7 +233,7 @@ export default function ThreadScreen({ route }) {
                 try {
                   await api.deleteMessage(actionMessage.id);
                 } catch (err) {
-                  console.error('Failed to delete message:', err);
+                  // silently fail
                 }
               },
             },
@@ -251,7 +249,7 @@ export default function ThreadScreen({ route }) {
     try {
       await api.addReaction(actionMessage.id, emoji);
     } catch (err) {
-      console.error('Failed to add reaction:', err);
+      // silently fail
     }
     setActionMessage(null);
   }, [actionMessage]);
@@ -261,7 +259,7 @@ export default function ThreadScreen({ route }) {
     try {
       await api.updateMessage(messageId, content);
     } catch (err) {
-      console.error('Failed to edit message:', err);
+      // silently fail
     }
     setEditingMessage(null);
   }, []);
@@ -282,7 +280,7 @@ export default function ThreadScreen({ route }) {
         await api.addReaction(messageId, emoji);
       }
     } catch (err) {
-      console.error('Failed to toggle reaction:', err);
+      // silently fail
     }
   }, [parent, replies, user?.id]);
 

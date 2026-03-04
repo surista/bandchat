@@ -35,7 +35,7 @@ export default function GigGalleryScreen({ route }) {
       const data = await api.getGigMedia(gigId);
       setMedia(data);
     } catch (err) {
-      console.error('Failed to load gig media:', err);
+      // silently fail
     } finally {
       setLoading(false);
     }

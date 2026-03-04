@@ -24,6 +24,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
 
   const [members, setMembers] = useState([]);
   const [blockedIds, setBlockedIds] = useState(new Set());
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -46,8 +47,10 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
     try {
       const ws = await api.getWorkspace(workspaceId);
       setMembers(ws.members || []);
+      const me = (ws.members || []).find(m => m.userId === user?.id);
+      setIsAdmin(me?.role === 'ADMIN');
     } catch (err) {
-      console.error('Failed to load members:', err);
+      // silently fail
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -113,7 +116,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
           displayName: item.user?.displayName,
         })}
         onLongPress={() => {
-          if (!isCurrentUser) {
+          if (!isCurrentUser && isAdmin) {
             mediumImpact();
             setSelectedMember(item);
             setShowActions(true);

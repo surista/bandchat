@@ -326,7 +326,7 @@ function AudioAttachment({ url, filename }) {
         setSound(newSound);
         setPlaying(true);
       } catch (err) {
-        console.error('Failed to play audio:', err);
+        // silently fail
       }
     }
   };

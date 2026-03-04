@@ -146,7 +146,7 @@ export default function ChannelScreen({ navigation, route }) {
 
         if (!cancelled) joinChannel(channel.id);
       } catch (err) {
-        console.error('Failed to load messages:', err);
+        // silently fail
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -201,6 +201,7 @@ export default function ChannelScreen({ navigation, route }) {
       setMessages(prev => prev.filter(m => m.id !== messageId));
     };
 
+    const typingTimers = {};
     const handleTypingStart = ({ channelId, user: typingUser }) => {
       if (channelId !== channelIdRef.current) return;
       if (typingUser.id === userIdRef.current) return;
@@ -208,10 +209,18 @@ export default function ChannelScreen({ navigation, route }) {
         if (prev.find(u => u.id === typingUser.id)) return prev;
         return [...prev, typingUser];
       });
+      // Auto-clear after 5 seconds if no typing:stop received
+      clearTimeout(typingTimers[typingUser.id]);
+      typingTimers[typingUser.id] = setTimeout(() => {
+        setTypingUsers(prev => prev.filter(u => u.id !== typingUser.id));
+        delete typingTimers[typingUser.id];
+      }, 5000);
     };
 
     const handleTypingStop = ({ channelId, userId }) => {
       if (channelId !== channelIdRef.current) return;
+      clearTimeout(typingTimers[userId]);
+      delete typingTimers[userId];
       setTypingUsers(prev => prev.filter(u => u.id !== userId));
     };
 
@@ -252,7 +261,7 @@ export default function ChannelScreen({ navigation, route }) {
           setHasMore(data.hasMore);
           setNextCursor(data.nextCursor);
         }
-      }).catch(err => console.warn('Failed to refresh on reconnect:', err.message));
+      }).catch(() => {});
 
       // Flush offline queue
       try {
@@ -307,6 +316,7 @@ export default function ChannelScreen({ navigation, route }) {
       socket.off('message:pinned', handleMessagePinned);
       socket.off('message:unpinned', handleMessageUnpinned);
       socket.off('connect', handleReconnect);
+      Object.values(typingTimers).forEach(clearTimeout);
     };
   }, [socket, joinChannel]);
 
@@ -335,7 +345,7 @@ export default function ChannelScreen({ navigation, route }) {
       setHasMore(data.hasMore);
       setNextCursor(data.nextCursor);
     } catch (err) {
-      console.error('Failed to load more messages:', err);
+      // silently fail
     } finally {
       loadingMoreRef.current = false;
       setLoadingMore(false);
@@ -386,7 +396,6 @@ export default function ChannelScreen({ navigation, route }) {
       } else {
         setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
       }
-      console.error('Failed to send message:', err);
     }
   }, [user, channel.id]);
 
@@ -415,7 +424,6 @@ export default function ChannelScreen({ navigation, route }) {
       ));
     } catch (err) {
       setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
-      console.error('Failed to send voice message:', err);
     }
   }, [user, channel.id]);
 
@@ -481,7 +489,7 @@ export default function ChannelScreen({ navigation, route }) {
                 try {
                   await api.deleteMessage(actionMessage.id);
                 } catch (err) {
-                  console.error('Failed to delete message:', err);
+                  // silently fail
                 }
               },
             },
@@ -507,7 +515,6 @@ export default function ChannelScreen({ navigation, route }) {
             await MediaLibrary.saveToLibraryAsync(localUri);
             Alert.alert('Saved', 'Image saved to your photo library.');
           } catch (err) {
-            console.error('Failed to save image:', err);
             Alert.alert('Error', 'Failed to save image.');
           }
         })();
@@ -549,7 +556,7 @@ export default function ChannelScreen({ navigation, route }) {
     try {
       await api.addReaction(actionMessage.id, emoji);
     } catch (err) {
-      console.error('Failed to add reaction:', err);
+      // silently fail
     }
     setActionMessage(null);
   }, [actionMessage]);
@@ -559,7 +566,7 @@ export default function ChannelScreen({ navigation, route }) {
     try {
       await api.updateMessage(messageId, content);
     } catch (err) {
-      console.error('Failed to edit message:', err);
+      // silently fail
     }
     setEditingMessage(null);
   }, []);
@@ -584,7 +591,7 @@ export default function ChannelScreen({ navigation, route }) {
         await api.addReaction(messageId, emoji);
       }
     } catch (err) {
-      console.error('Failed to toggle reaction:', err);
+      // silently fail
     }
   }, [user?.id]);
 
