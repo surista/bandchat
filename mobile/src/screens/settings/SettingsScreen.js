@@ -181,7 +181,7 @@ export default function SettingsScreen({ navigation, route }) {
                 label="Import from Slack"
                 onPress={() => Alert.alert(
                   'Desktop Feature',
-                  'Slack workspace import is available on the web app at bandchat.app',
+                  'Slack workspace import is available on the web app at bandchat.vercel.app',
                   [{ text: 'OK' }]
                 )}
                 colors={colors}
@@ -203,14 +203,14 @@ export default function SettingsScreen({ navigation, route }) {
           <SettingsRow
             icon={'\uD83D\uDD12'}
             label="Privacy Policy"
-            onPress={() => Linking.openURL('https://bandchat.app/privacy')}
+            onPress={() => Linking.openURL('https://bandchat.vercel.app/privacy')}
             colors={colors}
           />
           <View style={[styles.separator, { backgroundColor: colors.border }]} />
           <SettingsRow
             icon={'\uD83D\uDCC4'}
             label="Terms of Service"
-            onPress={() => Linking.openURL('https://bandchat.app/terms')}
+            onPress={() => Linking.openURL('https://bandchat.vercel.app/terms')}
             colors={colors}
           />
         </View>
