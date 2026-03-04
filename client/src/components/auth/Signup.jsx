@@ -13,6 +13,7 @@ function Signup() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -157,7 +158,7 @@ function Signup() {
             </div>
           </div>
 
-          <div className="mb-6">
+          <div className="mb-4">
             <label htmlFor="confirmPassword" className="block text-gray-700 font-medium mb-2">
               Confirm Password
             </label>
@@ -175,20 +176,28 @@ function Signup() {
             </div>
           </div>
 
+          <label className="flex items-start gap-3 mb-6 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={agreedToTerms}
+              onChange={(e) => setAgreedToTerms(e.target.checked)}
+              className="mt-1 w-4 h-4 rounded border-gray-300 text-[#4A154B] focus:ring-[#4A154B]"
+            />
+            <span className="text-sm text-gray-600">
+              I agree to the{' '}
+              <Link to="/terms" className="text-[#4A154B] hover:underline">Terms of Service</Link>
+              {' '}and{' '}
+              <Link to="/privacy" className="text-[#4A154B] hover:underline">Privacy Policy</Link>
+            </span>
+          </label>
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !agreedToTerms}
             className="w-full bg-[#4A154B] text-white py-3 rounded font-medium hover:bg-[#3D1140] transition-colors disabled:opacity-50"
           >
             {loading ? 'Creating account...' : 'Create Account'}
           </button>
-
-          <p className="text-center mt-3 text-xs text-gray-400">
-            By creating an account, you agree to our{' '}
-            <Link to="/terms" className="text-[#4A154B] hover:underline">Terms of Service</Link>
-            {' '}and{' '}
-            <Link to="/privacy" className="text-[#4A154B] hover:underline">Privacy Policy</Link>.
-          </p>
 
           <p className="text-center mt-6 text-gray-600">
             Already have an account?{' '}

@@ -26,6 +26,7 @@ export default function SignupScreen({ navigation }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const handleSubmit = async () => {
     if (!displayName.trim() || !email.trim() || !password) return;
@@ -147,9 +148,38 @@ export default function SignupScreen({ navigation }) {
             />
 
             <TouchableOpacity
-              style={[styles.button, { backgroundColor: colors.primary }, loading && styles.buttonDisabled]}
+              style={styles.termsRow}
+              onPress={() => setAgreedToTerms(!agreedToTerms)}
+              activeOpacity={0.7}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: agreedToTerms }}
+              accessibilityLabel="Agree to Terms of Service and Privacy Policy"
+            >
+              <View style={[styles.checkbox, { borderColor: colors.border, backgroundColor: agreedToTerms ? colors.primary : 'transparent' }]}>
+                {agreedToTerms && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={[styles.termsText, { color: colors.textSecondary }]}>
+                I agree to the{' '}
+                <Text
+                  style={{ color: colors.primary }}
+                  onPress={() => Linking.openURL('https://bandchat.app/terms')}
+                >
+                  Terms of Service
+                </Text>
+                {' '}and{' '}
+                <Text
+                  style={{ color: colors.primary }}
+                  onPress={() => Linking.openURL('https://bandchat.app/privacy')}
+                >
+                  Privacy Policy
+                </Text>
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: colors.primary }, (loading || !agreedToTerms) && styles.buttonDisabled]}
               onPress={handleSubmit}
-              disabled={loading}
+              disabled={loading || !agreedToTerms}
               activeOpacity={0.8}
               accessibilityRole="button"
               accessibilityLabel="Create account"
@@ -270,6 +300,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   showHideText: { fontSize: 14, fontWeight: '500' },
+  termsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+    marginTop: 4,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderWidth: 2,
+    marginRight: 10,
+    marginTop: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkmark: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  termsText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+  },
   footer: {
     alignItems: 'center',
     marginTop: 24,
