@@ -1,12 +1,15 @@
 {
   "name": "mobile",
-  "version": "1.04.26",
+  "version": "1.04.27",
   "main": "index.js",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "bump:patch": "node ../client/scripts/bump-version.js patch",
+    "bump:minor": "node ../client/scripts/bump-version.js minor",
+    "bump:major": "node ../client/scripts/bump-version.js major"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

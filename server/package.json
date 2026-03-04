@@ -1,6 +1,6 @@
 {
   "name": "bandchat-server",
-  "version": "1.04.26",
+  "version": "1.04.27",
   "description": "BandChat backend API",
   "main": "src/index.js",
   "type": "module",
@@ -11,6 +11,9 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
+    "bump:patch": "node ../client/scripts/bump-version.js patch",
+    "bump:minor": "node ../client/scripts/bump-version.js minor",
+    "bump:major": "node ../client/scripts/bump-version.js major",
     "test": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:verbose": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --verbose",
     "test:file": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js"
