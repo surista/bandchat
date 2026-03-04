@@ -182,6 +182,51 @@ function Footer({ theme = 'dark' }) {
               <div className="border-b border-[var(--color-modal-border)] pb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded">NEW</span>
+                  <span className="text-sm text-gray-500">v1.04.27</span>
+                </div>
+                <h4 className="font-medium text-white mb-1">Quality & Polish</h4>
+                <p className="text-sm text-gray-400">
+                  Per-workspace currency support, typing indicator timeouts, admin role guards, message density settings, and dozens of bug fixes across web and mobile.
+                </p>
+              </div>
+              <div className="border-b border-[var(--color-modal-border)] pb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm text-gray-500">v1.04.11</span>
+                </div>
+                <h4 className="font-medium text-white mb-1">App Store Launch</h4>
+                <p className="text-sm text-gray-400">
+                  BandChat is now on iOS! Content moderation, account deletion, terms agreement, and App Store compliance.
+                </p>
+              </div>
+              <div className="border-b border-[var(--color-modal-border)] pb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm text-gray-500">v1.04.05</span>
+                </div>
+                <h4 className="font-medium text-white mb-1">Backups & Admin Tools</h4>
+                <p className="text-sm text-gray-400">
+                  Automated R2 backups with alerting, admin database restore, workspace import, and band kitty enhancements.
+                </p>
+              </div>
+              <div className="border-b border-[var(--color-modal-border)] pb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm text-gray-500">v1.04.00</span>
+                </div>
+                <h4 className="font-medium text-white mb-1">Session & Stability</h4>
+                <p className="text-sm text-gray-400">
+                  Fixed session expiry with secure cookie auth, resilient token refresh, gig archive linking, and empty state improvements.
+                </p>
+              </div>
+              <div className="border-b border-[var(--color-modal-border)] pb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm text-gray-500">v1.03.81</span>
+                </div>
+                <h4 className="font-medium text-white mb-1">Practice Dashboard</h4>
+                <p className="text-sm text-gray-400">
+                  Track your practice streaks and history on the web, push notification deep-linking, and improved empty states across all list views.
+                </p>
+              </div>
+              <div className="border-b border-[var(--color-modal-border)] pb-4">
+                <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.03.52</span>
                 </div>
                 <h4 className="font-medium text-white mb-1">Mobile App & Security</h4>
@@ -191,29 +236,11 @@ function Footer({ theme = 'dark' }) {
               </div>
               <div className="border-b border-[var(--color-modal-border)] pb-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm text-gray-500">v1.03.50</span>
-                </div>
-                <h4 className="font-medium text-white mb-1">Safety & Privacy</h4>
-                <p className="text-sm text-gray-400">
-                  Report messages, block users, and new Privacy Policy & Terms of Service pages for a safer community.
-                </p>
-              </div>
-              <div className="border-b border-[var(--color-modal-border)] pb-4">
-                <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.03.48</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">Onboarding Wizard</h4>
+                <h4 className="font-medium text-white mb-1">Onboarding & Slack Import</h4>
                 <p className="text-sm text-gray-400">
-                  New 5-step workspace setup with channel suggestions, email invites, and optional Slack import.
-                </p>
-              </div>
-              <div className="border-b border-[var(--color-modal-border)] pb-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm text-gray-500">v1.03.45</span>
-                </div>
-                <h4 className="font-medium text-white mb-1">Slack Import</h4>
-                <p className="text-sm text-gray-400">
-                  Import your entire Slack workspace — channels, messages, and history — with the admin import wizard.
+                  5-step workspace setup wizard with channel suggestions and email invites. Import your entire Slack workspace — channels, messages, and history.
                 </p>
               </div>
               <div className="border-b border-[var(--color-modal-border)] pb-4">

@@ -49,7 +49,7 @@ function SectionHeader({ title, colors }) {
 export default function SettingsScreen({ navigation, route }) {
   const { workspaceId } = route.params;
   const { user, logout } = useAuth();
-  const { colors } = useTheme();
+  const { colors, messageDensity, setMessageDensity } = useTheme();
   const [isAdmin, setIsAdmin] = useState(false);
   const [workspaceName, setWorkspaceName] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -192,6 +192,20 @@ export default function SettingsScreen({ navigation, route }) {
             onPress={() => navigation.navigate('Notifications', { workspaceId })}
             colors={colors}
           />
+          <View style={[styles.separator, { backgroundColor: colors.border }]} />
+          <SettingsRow
+            icon={'\u2630'}
+            label={`Message Density (${messageDensity.charAt(0).toUpperCase() + messageDensity.slice(1)})`}
+            onPress={() => {
+              Alert.alert('Message Density', 'Choose how much space messages take up.', [
+                { text: 'Comfortable', onPress: () => setMessageDensity('comfortable') },
+                { text: 'Default', onPress: () => setMessageDensity('default') },
+                { text: 'Compact', onPress: () => setMessageDensity('compact') },
+                { text: 'Cancel', style: 'cancel' },
+              ]);
+            }}
+            colors={colors}
+          />
         </View>
 
         {/* Workspace */}
@@ -280,6 +294,13 @@ export default function SettingsScreen({ navigation, route }) {
             icon={'\uD83D\uDCC4'}
             label="Terms of Service"
             onPress={() => Linking.openURL(`${APP_BASE_URL}/terms`)}
+            colors={colors}
+          />
+          <View style={[styles.separator, { backgroundColor: colors.border }]} />
+          <SettingsRow
+            icon={'\u2709\uFE0F'}
+            label="Send Feedback"
+            onPress={() => Linking.openURL('mailto:admin@bandchat.app?subject=BandChat Feedback')}
             colors={colors}
           />
         </View>

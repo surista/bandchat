@@ -24,7 +24,7 @@ function formatDurationMmSs(ms) {
 }
 
 function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress, members }) {
-  const { colors } = useTheme();
+  const { colors, density } = useTheme();
   const author = message.author || {};
   const displayName = author.displayName || message.removedUserName || 'Deleted User';
   const initial = displayName.charAt(0).toUpperCase();
@@ -70,16 +70,16 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
   if (isGrouped) {
     return (
       <Pressable
-        style={[styles.groupedContainer, isPending && styles.pending]}
+        style={[styles.groupedContainer, { paddingTop: density.groupedPaddingTop, paddingBottom: density.groupedPaddingBottom }, isPending && styles.pending]}
         onLongPress={handleLongPress}
         delayLongPress={400}
         accessibilityRole="button"
         accessibilityLabel={`Message: ${message.content || 'attachment'}`}
       >
-        <View style={styles.groupedSpacer} />
+        <View style={{ width: density.groupedSpacerWidth }} />
         <View style={styles.contentContainer}>
           {message.content ? (
-            <Text style={[styles.content, { color: colors.textPrimary }]}>
+            <Text style={[styles.content, { color: colors.textPrimary, fontSize: density.contentFontSize, lineHeight: density.contentLineHeight }]}>
               {renderContent(message.content)}
               {isEdited && <Text style={[styles.edited, { color: colors.textSecondary }]}> (edited)</Text>}
             </Text>
@@ -95,27 +95,27 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
 
   return (
     <Pressable
-      style={[styles.container, isPending && styles.pending]}
+      style={[styles.container, { paddingTop: density.containerPaddingTop, paddingBottom: density.containerPaddingBottom }, isPending && styles.pending]}
       onLongPress={handleLongPress}
       delayLongPress={400}
       accessibilityRole="button"
       accessibilityLabel={`${displayName}: ${message.content || 'attachment'}`}
     >
-      <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
+      <View style={[styles.avatar, { backgroundColor: avatarColor, width: density.avatarSize, height: density.avatarSize }]}>
         {resolvedAvatarUrl && !avatarError ? (
           <Image
             source={{ uri: resolvedAvatarUrl }}
-            style={styles.avatarImage}
+            style={[styles.avatarImage, { width: density.avatarSize, height: density.avatarSize }]}
             accessibilityLabel={`${displayName} avatar`}
             onError={() => setAvatarError(true)}
           />
         ) : (
-          <Text style={styles.avatarText}>{initial}</Text>
+          <Text style={[styles.avatarText, { fontSize: density.avatarSize * 0.42 }]}>{initial}</Text>
         )}
       </View>
       <View style={styles.contentContainer}>
         <View style={styles.header}>
-          <Text style={[styles.authorName, { color: colors.textPrimary }]}>
+          <Text style={[styles.authorName, { color: colors.textPrimary, fontSize: density.authorFontSize }]}>
             {displayName}
           </Text>
           <Text style={[styles.timestamp, { color: colors.textSecondary }]}>
@@ -123,7 +123,7 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
           </Text>
         </View>
         {message.content ? (
-          <Text style={[styles.content, { color: colors.textPrimary }]}>
+          <Text style={[styles.content, { color: colors.textPrimary, fontSize: density.contentFontSize, lineHeight: density.contentLineHeight }]}>
             {renderContent(message.content)}
             {isEdited && <Text style={[styles.edited, { color: colors.textSecondary }]}> (edited)</Text>}
           </Text>

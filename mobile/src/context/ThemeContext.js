@@ -214,10 +214,47 @@ const structuralColors = {
 
 const ThemeContext = createContext(null);
 
+const DENSITY_VALUES = {
+  comfortable: {
+    containerPaddingTop: 12,
+    containerPaddingBottom: 8,
+    groupedPaddingTop: 4,
+    groupedPaddingBottom: 4,
+    avatarSize: 40,
+    groupedSpacerWidth: 50,
+    contentFontSize: 16,
+    contentLineHeight: 24,
+    authorFontSize: 16,
+  },
+  default: {
+    containerPaddingTop: 8,
+    containerPaddingBottom: 4,
+    groupedPaddingTop: 1,
+    groupedPaddingBottom: 1,
+    avatarSize: 36,
+    groupedSpacerWidth: 46,
+    contentFontSize: 15,
+    contentLineHeight: 21,
+    authorFontSize: 15,
+  },
+  compact: {
+    containerPaddingTop: 4,
+    containerPaddingBottom: 2,
+    groupedPaddingTop: 0,
+    groupedPaddingBottom: 0,
+    avatarSize: 28,
+    groupedSpacerWidth: 38,
+    contentFontSize: 14,
+    contentLineHeight: 19,
+    authorFontSize: 13,
+  },
+};
+
 export function ThemeProvider({ children }) {
   const systemColorScheme = useColorScheme();
   const [currentTheme, setCurrentTheme] = useState('default');
   const [mode, setMode] = useState(systemColorScheme === 'light' ? 'light' : 'dark');
+  const [messageDensity, setMessageDensityState] = useState('default');
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -225,9 +262,13 @@ export function ThemeProvider({ children }) {
       try {
         const savedTheme = await AsyncStorage.getItem('bandchat-theme');
         const savedMode = await AsyncStorage.getItem('bandchat-mode');
+        const savedDensity = await AsyncStorage.getItem('bandchat-density');
         if (savedTheme && themes[savedTheme]) setCurrentTheme(savedTheme);
         if (savedMode) {
           setMode(savedMode);
+        }
+        if (savedDensity && DENSITY_VALUES[savedDensity]) {
+          setMessageDensityState(savedDensity);
         }
       } catch {
         // Use defaults
@@ -242,8 +283,15 @@ export function ThemeProvider({ children }) {
     if (loaded) {
       AsyncStorage.setItem('bandchat-theme', currentTheme);
       AsyncStorage.setItem('bandchat-mode', mode);
+      AsyncStorage.setItem('bandchat-density', messageDensity);
     }
-  }, [currentTheme, mode, loaded]);
+  }, [currentTheme, mode, messageDensity, loaded]);
+
+  const setMessageDensity = useCallback((density) => {
+    if (DENSITY_VALUES[density]) {
+      setMessageDensityState(density);
+    }
+  }, []);
 
   const setTheme = useCallback((themeId) => {
     if (themes[themeId]) {
@@ -278,6 +326,8 @@ export function ThemeProvider({ children }) {
     };
   }, [currentTheme, mode]);
 
+  const density = useMemo(() => DENSITY_VALUES[messageDensity] || DENSITY_VALUES.default, [messageDensity]);
+
   const contextValue = useMemo(() => ({
     currentTheme,
     setTheme,
@@ -285,7 +335,10 @@ export function ThemeProvider({ children }) {
     mode,
     toggleMode,
     colors,
-  }), [currentTheme, setTheme, mode, toggleMode, colors]);
+    messageDensity,
+    setMessageDensity,
+    density,
+  }), [currentTheme, setTheme, mode, toggleMode, colors, messageDensity, setMessageDensity, density]);
 
   return (
     <ThemeContext.Provider value={contextValue}>
