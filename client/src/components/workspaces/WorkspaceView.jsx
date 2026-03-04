@@ -749,6 +749,7 @@ function WorkspaceView() {
               </Suspense>
             ) : selectedChannel ? (
               <ChannelView
+                key={selectedChannel.id}
                 channel={selectedChannel}
                 workspace={workspace}
                 onOpenThread={setSelectedThread}
