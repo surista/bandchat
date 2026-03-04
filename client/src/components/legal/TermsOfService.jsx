@@ -13,7 +13,7 @@ export default function TermsOfService() {
           </div>
           <div className="bg-white rounded-xl p-6 sm:p-10 text-gray-800">
             <h1 className="text-3xl font-bold mb-2 text-gray-900">Terms of Service</h1>
-            <p className="text-gray-500 text-sm mb-8">Last updated: March 1, 2026</p>
+            <p className="text-gray-500 text-sm mb-8">Last updated: March 4, 2026</p>
 
             <div className="space-y-6 text-[15px] leading-relaxed">
               <section>
@@ -72,13 +72,28 @@ export default function TermsOfService() {
               </section>
 
               <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">6. Content Moderation</h2>
-                <p>
-                  Workspace administrators can manage content within their workspaces, including
-                  deleting messages and removing members. Users can report objectionable content
-                  and block other users. We reserve the right to remove content or suspend accounts
-                  that violate these terms.
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">6. Content Moderation & Zero Tolerance Policy</h2>
+                <p className="mb-3 font-medium text-red-700 bg-red-50 p-3 rounded-lg">
+                  BandChat has zero tolerance for objectionable content or abusive users. Violations
+                  will result in immediate account suspension or termination.
                 </p>
+                <p className="mb-2">Objectionable content includes, but is not limited to:</p>
+                <ul className="list-disc pl-6 space-y-1 mb-3">
+                  <li>Hate speech, discrimination, or content promoting violence</li>
+                  <li>Harassment, bullying, or threats directed at other users</li>
+                  <li>Sexually explicit or pornographic material</li>
+                  <li>Content that exploits or endangers minors</li>
+                  <li>Spam, scams, or fraudulent content</li>
+                  <li>Content that infringes on intellectual property rights</li>
+                </ul>
+                <p className="mb-2"><strong>Reporting:</strong> Users can report objectionable content by long-pressing
+                  (mobile) or right-clicking (web) on any message and selecting "Report". All reports
+                  are reviewed by our team within 24 hours.</p>
+                <p className="mb-2"><strong>Blocking:</strong> Users can block abusive users via their profile.
+                  Blocked users' content is immediately hidden from your view.</p>
+                <p><strong>Enforcement:</strong> We will remove objectionable content and take action against
+                  violating accounts within 24 hours of a valid report. Actions may include content removal,
+                  temporary suspension, or permanent account termination.</p>
               </section>
 
               <section>
