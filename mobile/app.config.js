@@ -16,7 +16,7 @@ export default {
     ios: {
       supportsTablet: false,
       bundleIdentifier: 'com.bandchat.mobile',
-      buildNumber: '10411',
+      buildNumber: '10412',
       infoPlist: {
         NSCameraUsageDescription: 'BandChat needs camera access to take photos for your profile and messages.',
         NSPhotoLibraryUsageDescription: 'BandChat needs photo library access to share images in messages and set your profile picture.',
@@ -30,7 +30,7 @@ export default {
     },
     android: {
       package: 'com.bandchat.mobile',
-      versionCode: 10411,
+      versionCode: 10412,
       adaptiveIcon: {
         backgroundColor: '#1f2937',
         foregroundImage: './assets/android-icon-foreground.png',
