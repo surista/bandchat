@@ -31,6 +31,7 @@ function ChannelItem({ channel, isDM, dmMembers, onPress, unreadCount }) {
       style={styles.container}
       onPress={onPress}
       activeOpacity={0.6}
+      delayPressIn={80}
       accessibilityRole="button"
       accessibilityLabel={`${isDM ? 'Direct message with' : 'Channel'} ${displayName}${hasUnread ? `, ${unreadCount} unread` : ''}`}
     >

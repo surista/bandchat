@@ -343,7 +343,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead, members }) {
           {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
         </div>
         {/* Reaction button for parent message */}
-        <div className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute right-4 top-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
           {reactionPickerMessageId === message.id && (
             <div className="absolute right-0 top-full mt-1 z-10">
               <ReactionPicker
@@ -470,7 +470,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead, members }) {
                   />
                 </div>
                 {/* Reaction button for reply */}
-                <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute right-0 top-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
                   {reactionPickerMessageId === reply.id && (
                     <div className="absolute right-0 top-full mt-1 z-10">
                       <ReactionPicker

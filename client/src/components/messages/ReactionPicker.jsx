@@ -56,7 +56,11 @@ export default function ReactionPicker({ onSelect, onClose }) {
   useEffect(() => {
     function handleClickOutside(event) {
       if (pickerRef.current && !pickerRef.current.contains(event.target)) {
-        onClose?.();
+        // Only close if this picker instance is actually visible (not hidden by CSS)
+        // Prevents hidden mobile picker from closing the desktop picker and vice versa
+        if (pickerRef.current.offsetWidth > 0) {
+          onClose?.();
+        }
       }
     }
 
