@@ -404,10 +404,10 @@ export default function GigDetailScreen({ navigation, route }) {
             style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
             onPress={() => setShowDatePicker(true)}
             accessibilityRole="button"
-            accessibilityLabel={`Date: ${format(date, 'EEEE, MMM d, yyyy')}`}
+            accessibilityLabel={`Date: ${format(date, 'EEEE, dd-MMM-yyyy')}`}
           >
             <Text style={{ color: colors.textPrimary, fontSize: 15 }}>
-              {format(date, 'EEEE, MMM d, yyyy')}
+              {format(date, 'EEEE, dd-MMM-yyyy')}
             </Text>
           </TouchableOpacity>
 
@@ -610,7 +610,7 @@ export default function GigDetailScreen({ navigation, route }) {
       <View style={styles.viewSection}>
         <Text style={[styles.viewLabel, { color: colors.textSecondary }]}>Date & Time</Text>
         <Text style={[styles.viewValue, { color: colors.textPrimary }]}>
-          {gig?.date ? format(parseISO(gig.date), 'EEEE, MMMM d, yyyy') : 'No date'}
+          {gig?.date ? format(parseISO(gig.date), 'EEEE, dd-MMM-yyyy') : 'No date'}
         </Text>
         {(gig?.startTime || gig?.endTime) && (
           <Text style={[styles.viewValueSecondary, { color: colors.textSecondary }]}>

@@ -27,7 +27,7 @@ function SetlistCard({ setlist, onTap, onEdit, onDuplicate, onDelete, onContextM
           <h3 className="text-[var(--color-text-primary)] font-medium truncate">{setlist.name}</h3>
           {(setlist.performedAt || setlist.venue) && (
             <p className="text-[var(--color-text-muted)] text-xs truncate">
-              {setlist.performedAt && new Date(setlist.performedAt).toLocaleDateString()}
+              {setlist.performedAt && format(new Date(setlist.performedAt), 'dd-MMM-yyyy')}
               {setlist.performedAt && setlist.venue && ' · '}
               {setlist.venue}
             </p>
@@ -475,8 +475,8 @@ function SetlistList({ workspaceId, workspaceName }) {
     }
 
     const dateStr = setlist.performedAt
-      ? format(new Date(setlist.performedAt), 'EEEE, MMMM d, yyyy')
-      : format(new Date(), 'EEEE, MMMM d, yyyy');
+      ? format(new Date(setlist.performedAt), 'EEEE, dd-MMM-yyyy')
+      : format(new Date(), 'EEEE, dd-MMM-yyyy');
 
     const setlistItems = setlist.songs || [];
     const songCount = setlistItems.filter(i => i.type !== 'MC' && i.type !== 'SET_BREAK').length;
@@ -1119,7 +1119,7 @@ function SetlistList({ workspaceId, workspaceName }) {
                 <h3 className="text-xl font-bold text-[var(--color-text-primary)]">{viewingSetlist.name}</h3>
                 {(viewingSetlist.performedAt || viewingSetlist.venue || viewingSetlist.startTime) && (
                   <p className="text-[var(--color-text-muted)] text-sm">
-                    {viewingSetlist.performedAt && new Date(viewingSetlist.performedAt).toLocaleDateString()}
+                    {viewingSetlist.performedAt && format(new Date(viewingSetlist.performedAt), 'dd-MMM-yyyy')}
                     {viewingSetlist.startTime && (
                       <span className="text-cyan-400"> at {formatTime12h(viewingSetlist.startTime)}</span>
                     )}

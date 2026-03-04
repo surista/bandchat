@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../../services/api';
+import { formatDate } from '../../utils/formatDate';
 import Skeleton from '../common/Skeleton';
 
 export default function Achievements({ workspaceId }) {
@@ -74,14 +75,6 @@ export default function Achievements({ workspaceId }) {
   function getEarnedIds(type) {
     if (type === 'band') return new Set(bandAchievements.map(a => a.achievementId));
     return new Set(myAchievements.map(a => a.achievementId));
-  }
-
-  function formatDate(dateStr) {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
   }
 
   const bandDefs = allDefinitions.filter(a => a.isBandWide);

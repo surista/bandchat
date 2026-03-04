@@ -143,11 +143,12 @@ function BandMembersList({ workspaceId, workspace }) {
       lg: 'ring-2 ring-offset-2',
     };
 
-    if (member.imageUrl) {
+    const avatarSrc = member.imageUrl || member.linkedUser?.avatarUrl;
+    if (avatarSrc) {
       return (
         <div className={`relative ${sizeClasses[size]} flex-shrink-0`}>
           <img
-            src={member.imageUrl}
+            src={avatarSrc}
             alt={member.name}
             className={`${sizeClasses[size]} rounded-full object-cover ${ringClasses[size]} ring-offset-[var(--color-bg-primary)] ${isCurrent ? 'ring-emerald-500/50' : 'ring-gray-600/50'} transition-all duration-200 hover:ring-emerald-400 hover:scale-105`}
           />

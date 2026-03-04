@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
+import { formatDate } from '../../utils/formatDate';
 
 const CURRENCY_SYMBOLS = {
   USD: '$', EUR: '\u20AC', GBP: '\u00A3', JPY: '\u00A5', CAD: 'C$', AUD: 'A$',
@@ -38,15 +39,6 @@ function GigStats({ workspaceId }) {
       return `${hours}h ${mins}m`;
     }
     return `${mins}m`;
-  };
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return 'N/A';
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
   };
 
   const loadSetlistDetail = async (setlistId) => {

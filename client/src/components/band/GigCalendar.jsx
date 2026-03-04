@@ -27,7 +27,7 @@ function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, on
       {/* Date */}
       <div className="w-24 flex-shrink-0 text-sm">
         <span className="text-[var(--color-text-primary)] font-medium">
-          {format(new Date(gig.date), 'MMM d')}
+          {format(new Date(gig.date), 'dd-MMM')}
         </span>
         <span className="text-[var(--color-text-muted)] ml-1">
           {format(new Date(gig.date), 'EEE')}
@@ -1289,6 +1289,7 @@ function GigCalendar({ workspaceId, workspace }) {
           }}
           isAdmin={isAdmin}
           workspaceId={workspaceId}
+          workspace={workspace}
           workspaceMembers={workspace?.members || []}
           previousEvents={gigs}
         />

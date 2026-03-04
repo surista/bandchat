@@ -10,6 +10,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { format } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 
@@ -32,7 +33,7 @@ function formatDateHeader(dateStr) {
 
   if (d.getTime() === today.getTime()) return 'Today';
   if (d.getTime() === yesterday.getTime()) return 'Yesterday';
-  return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  return format(date, 'EEE, dd-MMM-yyyy');
 }
 
 function groupByDate(sessions) {

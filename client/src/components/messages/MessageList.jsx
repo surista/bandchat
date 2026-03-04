@@ -253,7 +253,7 @@ function MessageList({
     const d = new Date(date);
     if (isToday(d)) return 'Today';
     if (isYesterday(d)) return 'Yesterday';
-    return format(d, 'EEEE, MMMM d');
+    return format(d, 'EEEE, dd-MMM-yyyy');
   };
 
   const shouldShowDateHeader = (message, index) => {

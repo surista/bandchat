@@ -264,7 +264,7 @@ function ThreadView({ message, channelId, onClose, onThreadRead, members }) {
     }
   };
 
-  const formatTime = (date) => format(new Date(date), 'MMM d, h:mm a');
+  const formatTime = (date) => format(new Date(date), 'dd-MMM-yyyy, h:mm a');
 
   const renderMentionContent = (text) => {
     if (!text) return null;

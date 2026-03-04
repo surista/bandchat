@@ -111,7 +111,7 @@ export default function PinnedMessagesScreen({ navigation, route }) {
             {msg.author?.displayName || msg.removedUserName || 'Deleted User'}
           </Text>
           <Text style={[styles.pinDate, { color: colors.textSecondary }]}>
-            {item.createdAt ? format(new Date(item.createdAt), 'MMM d, yyyy h:mm a') : ''}
+            {item.createdAt ? format(new Date(item.createdAt), 'dd-MMM-yyyy h:mm a') : ''}
           </Text>
         </View>
         {msg.content ? (

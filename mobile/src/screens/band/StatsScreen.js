@@ -44,7 +44,7 @@ function getCurrencySymbol(code) {
 function formatDateShort(dateStr) {
   if (!dateStr) return '';
   try {
-    return format(parseISO(dateStr), 'MMM d, yyyy');
+    return format(parseISO(dateStr), 'dd-MMM-yyyy');
   } catch {
     return dateStr;
   }

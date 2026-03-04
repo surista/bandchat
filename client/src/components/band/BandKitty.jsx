@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import api from '../../services/api';
 import ConfirmDialog from '../common/ConfirmDialog';
 import Skeleton from '../common/Skeleton';
+import { CURRENCIES, getCurrencySymbol } from '../../utils/currencies';
 
 const TRANSACTION_TYPES = [
   { id: 'GIG_PAY', label: 'Gig Pay', icon: '🎤', positive: true },
@@ -22,28 +23,7 @@ const EXPENSE_CATEGORIES = [
   { id: 'other', label: 'Other' }
 ];
 
-const CURRENCIES = [
-  { code: 'USD', symbol: '$', name: 'US Dollar' },
-  { code: 'EUR', symbol: '€', name: 'Euro' },
-  { code: 'GBP', symbol: '£', name: 'British Pound' },
-  { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
-  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar' },
-  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
-  { code: 'CHF', symbol: 'Fr', name: 'Swiss Franc' },
-  { code: 'CNY', symbol: '¥', name: 'Chinese Yuan' },
-  { code: 'SEK', symbol: 'kr', name: 'Swedish Krona' },
-  { code: 'NZD', symbol: 'NZ$', name: 'New Zealand Dollar' },
-  { code: 'MXN', symbol: 'MX$', name: 'Mexican Peso' },
-  { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar' },
-  { code: 'HKD', symbol: 'HK$', name: 'Hong Kong Dollar' },
-  { code: 'NOK', symbol: 'kr', name: 'Norwegian Krone' },
-  { code: 'KRW', symbol: '₩', name: 'South Korean Won' },
-  { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
-  { code: 'BRL', symbol: 'R$', name: 'Brazilian Real' },
-  { code: 'ZAR', symbol: 'R', name: 'South African Rand' },
-  { code: 'PHP', symbol: '₱', name: 'Philippine Peso' },
-  { code: 'THB', symbol: '฿', name: 'Thai Baht' }
-];
+// CURRENCIES imported from ../../utils/currencies
 
 function BandKitty({ workspaceId }) {
   const [kitty, setKitty] = useState(null);
@@ -69,10 +49,7 @@ function BandKitty({ workspaceId }) {
   const [settingsCurrency, setSettingsCurrency] = useState('USD');
   const [settingsLoading, setSettingsLoading] = useState(false);
 
-  const currencySymbol = useMemo(() => {
-    const curr = CURRENCIES.find(c => c.code === (kitty?.currency || 'USD'));
-    return curr?.symbol || '$';
-  }, [kitty?.currency]);
+  const currencySymbol = useMemo(() => getCurrencySymbol(kitty?.currency), [kitty?.currency]);
 
   useEffect(() => {
     loadKitty();
@@ -250,7 +227,7 @@ function BandKitty({ workspaceId }) {
               {currencySymbol}{fmt(kitty?.currentBalance || 0)}
             </div>
             <div className="text-xs text-[var(--color-text-muted)] mt-1">
-              Starting balance: {currencySymbol}{kitty?.startingBalance?.toFixed(2) || '0.00'} as of {kitty?.balanceAsOfDate ? format(new Date(kitty.balanceAsOfDate), 'MMM d, yyyy') : '-'}
+              Starting balance: {currencySymbol}{kitty?.startingBalance?.toFixed(2) || '0.00'} as of {kitty?.balanceAsOfDate ? format(new Date(kitty.balanceAsOfDate), 'dd-MMM-yyyy') : '-'}
             </div>
           </div>
           <div className="flex gap-2">
@@ -338,7 +315,7 @@ function BandKitty({ workspaceId }) {
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-[var(--color-text-primary)] truncate">{t.description}</div>
                         <div className="text-xs text-[var(--color-text-muted)] flex items-center gap-2">
-                          <span>{format(new Date(t.date), 'MMM d, yyyy')}</span>
+                          <span>{format(new Date(t.date), 'dd-MMM-yyyy')}</span>
                           <span>•</span>
                           <span>{typeInfo.label}</span>
                           {t.category && (

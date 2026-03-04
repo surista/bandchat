@@ -81,7 +81,13 @@ model Workspace {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
-  calendarToken String?   @unique
+  calendarToken    String?   @unique
+  currency         String    @default("USD")
+  defaultEventType String    @default("GIG")
+  defaultStartTime String    @default("19:00")
+  defaultEndTime   String    @default("21:00")
+  defaultVenue     String?
+
   members       WorkspaceMember[]
   channels      Channel[]
   channelGroups ChannelGroup[]

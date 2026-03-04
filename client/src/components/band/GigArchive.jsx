@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { format } from 'date-fns';
 import api from '../../services/api';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ImageLightbox from '../common/ImageLightbox';
@@ -755,11 +756,7 @@ function GigArchive({ workspaceId, isAdmin }) {
                       <h3 className="text-[var(--color-text-primary)] font-medium truncate">{title}</h3>
                       {date && (
                         <p className="text-[var(--color-text-muted)] text-sm">
-                          {date.toLocaleDateString('en-GB', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: '2-digit'
-                          }).replace(/ /g, '-')}
+                          {format(date, 'dd-MMM-yyyy')}
                         </p>
                       )}
                     </div>
@@ -908,7 +905,7 @@ function GigArchive({ workspaceId, isAdmin }) {
               </h2>
               {selectedEntry.date && (
                 <p className="text-purple-200 text-lg">
-                  {selectedEntry.date.toLocaleDateString('en-GB', { weekday: 'long' })}, {selectedEntry.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/ /g, '-')}
+                  {format(selectedEntry.date, 'EEEE, dd-MMM-yyyy')}
                 </p>
               )}
               {selectedEntry.gig?.notes && (
@@ -966,7 +963,7 @@ function GigArchive({ workspaceId, isAdmin }) {
                       <span className="text-[var(--color-text-muted)]">Date</span>
                       <span className="text-[var(--color-text-primary)] font-medium">
                         {selectedEntry.date
-                          ? selectedEntry.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }).replace(/ /g, '-')
+                          ? format(selectedEntry.date, 'dd-MMM-yyyy')
                           : '—'}
                       </span>
                     </div>

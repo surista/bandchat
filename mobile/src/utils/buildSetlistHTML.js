@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 import { formatDuration } from './formatDuration';
 
 /**
@@ -9,12 +10,7 @@ import { formatDuration } from './formatDuration';
  * @returns {string} HTML string
  */
 export function buildSetlistHTML(setlistName, items, options = {}) {
-  const date = options.date || new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const date = options.date || format(new Date(), 'EEEE, dd-MMM-yyyy');
 
   const songItems = items.filter(i => i.type === 'SONG' || (!i.type && i.song));
   const totalSongs = songItems.length;

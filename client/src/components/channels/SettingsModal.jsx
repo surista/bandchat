@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
+import { CURRENCIES } from '../../utils/currencies';
 import BandMemberForm from '../band/BandMembers/BandMemberForm';
 import Skeleton from '../common/Skeleton';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -73,6 +74,19 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
   // Relink messages
   const [relinkLoading, setRelinkLoading] = useState(false);
   const [relinkResult, setRelinkResult] = useState(null);
+  const [orphanedAuthors, setOrphanedAuthors] = useState(null);
+  const [orphanLoading, setOrphanLoading] = useState(false);
+  const [manualMappings, setManualMappings] = useState({});
+  const [applyLoading, setApplyLoading] = useState(false);
+  const [applyResult, setApplyResult] = useState(null);
+  // Workspace defaults
+  const [wsDefaultsLoading, setWsDefaultsLoading] = useState(false);
+  const [wsCurrency, setWsCurrency] = useState(workspace?.currency || 'USD');
+  const [wsEventType, setWsEventType] = useState(workspace?.defaultEventType || 'GIG');
+  const [wsStartTime, setWsStartTime] = useState(workspace?.defaultStartTime || '19:00');
+  const [wsEndTime, setWsEndTime] = useState(workspace?.defaultEndTime || '21:00');
+  const [wsVenue, setWsVenue] = useState(workspace?.defaultVenue || '');
+  const [wsDefaultsSaved, setWsDefaultsSaved] = useState(false);
   // Notification preferences
   const [notifPrefs, setNotifPrefs] = useState(null);
   const [notifPrefsLoading, setNotifPrefsLoading] = useState(false);
@@ -1234,6 +1248,74 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     <p className="text-xs text-[var(--color-text-muted)] mt-2">{workspace.members?.length || 0} members</p>
                   </div>
 
+                  {/* Workspace Defaults (Admin only) */}
+                  {isAdmin && (
+                    <div className="bg-[var(--color-modal-card)] rounded-lg p-5 border border-[var(--color-modal-border)]">
+                      <h4 className="text-lg font-medium text-[var(--color-text-primary)] mb-4">Workspace Defaults</h4>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="modal-label">Currency</label>
+                          <select value={wsCurrency} onChange={(e) => setWsCurrency(e.target.value)} className="modal-input">
+                            {CURRENCIES.map(c => (
+                              <option key={c.code} value={c.code}>{c.symbol} - {c.name} ({c.code})</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="modal-label">Default Event Type</label>
+                          <select value={wsEventType} onChange={(e) => setWsEventType(e.target.value)} className="modal-input">
+                            <option value="GIG">Gig</option>
+                            <option value="REHEARSAL">Rehearsal</option>
+                            <option value="RECORDING">Recording</option>
+                            <option value="OTHER">Other</option>
+                          </select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="modal-label">Default Start Time</label>
+                            <input type="time" value={wsStartTime} onChange={(e) => setWsStartTime(e.target.value)} className="modal-input" />
+                          </div>
+                          <div>
+                            <label className="modal-label">Default End Time</label>
+                            <input type="time" value={wsEndTime} onChange={(e) => setWsEndTime(e.target.value)} className="modal-input" />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="modal-label">Default Venue</label>
+                          <input type="text" value={wsVenue} onChange={(e) => setWsVenue(e.target.value)} className="modal-input" placeholder="e.g., Ebisu Noah" />
+                        </div>
+                        {wsDefaultsSaved && (
+                          <div className="text-green-400 text-sm">Defaults saved.</div>
+                        )}
+                        <button
+                          className="btn bg-green-600 hover:bg-green-700 text-white"
+                          disabled={wsDefaultsLoading}
+                          onClick={async () => {
+                            setWsDefaultsLoading(true);
+                            setWsDefaultsSaved(false);
+                            try {
+                              await api.updateWorkspace(workspace.id, {
+                                currency: wsCurrency,
+                                defaultEventType: wsEventType,
+                                defaultStartTime: wsStartTime,
+                                defaultEndTime: wsEndTime,
+                                defaultVenue: wsVenue
+                              });
+                              setWsDefaultsSaved(true);
+                              if (onRefreshWorkspace) onRefreshWorkspace();
+                            } catch (err) {
+                              setWsActionError(err.message);
+                            } finally {
+                              setWsDefaultsLoading(false);
+                            }
+                          }}
+                        >
+                          {wsDefaultsLoading ? 'Saving...' : 'Save Defaults'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {wsActionError && (
                     <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded-lg">
                       {wsActionError}
@@ -1573,6 +1655,115 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     >
                       {relinkLoading ? 'Relinking...' : 'Relink Messages'}
                     </button>
+                  </div>
+
+                  <div className="bg-[var(--color-modal-card)] rounded-lg p-6">
+                    <div className="text-4xl mb-3 text-center">🗺️</div>
+                    <h3 className="text-lg font-bold text-[var(--color-text-primary)] mb-2 text-center">Manual Message Mapping</h3>
+                    <p className="text-[var(--color-text-muted)] text-sm mb-4 leading-relaxed text-center">
+                      Manually assign orphaned Slack names to workspace members when auto-matching can't find a match.
+                    </p>
+
+                    {!orphanedAuthors ? (
+                      <div className="text-center">
+                        <button
+                          className="btn bg-gray-600 hover:bg-gray-500 text-white"
+                          disabled={orphanLoading}
+                          onClick={async () => {
+                            setOrphanLoading(true);
+                            try {
+                              const data = await api.getOrphanedAuthors(workspace.id);
+                              setOrphanedAuthors(data);
+                              setManualMappings({});
+                              setApplyResult(null);
+                            } catch (err) {
+                              console.error('Failed to load orphaned authors:', err);
+                            } finally {
+                              setOrphanLoading(false);
+                            }
+                          }}
+                        >
+                          {orphanLoading ? 'Loading...' : 'Load Orphaned Names'}
+                        </button>
+                      </div>
+                    ) : orphanedAuthors.orphanedNames.length === 0 ? (
+                      <div className="text-center text-green-400 text-sm">
+                        No orphaned messages found — all messages are linked.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="text-xs text-[var(--color-text-muted)] mb-2">
+                          {orphanedAuthors.orphanedNames.length} unmatched name{orphanedAuthors.orphanedNames.length !== 1 ? 's' : ''}
+                        </div>
+                        <div className="max-h-64 overflow-y-auto space-y-2">
+                          {orphanedAuthors.orphanedNames.map(({ name, count }) => (
+                            <div key={name} className="flex items-center gap-3 bg-[var(--color-bg-primary)] rounded p-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-[var(--color-text-primary)] text-sm">{name}</div>
+                                <div className="text-xs text-[var(--color-text-muted)]">{count.toLocaleString()} messages</div>
+                              </div>
+                              <select
+                                className="modal-input text-sm py-1 px-2 max-w-[180px]"
+                                value={manualMappings[name] || ''}
+                                onChange={(e) => {
+                                  setManualMappings(prev => {
+                                    if (e.target.value) return { ...prev, [name]: e.target.value };
+                                    const next = { ...prev };
+                                    delete next[name];
+                                    return next;
+                                  });
+                                }}
+                              >
+                                <option value="">-- Select --</option>
+                                <optgroup label="Workspace Members">
+                                  {orphanedAuthors.workspaceMembers.map(m => (
+                                    <option key={m.userId} value={m.userId}>{m.displayName}</option>
+                                  ))}
+                                </optgroup>
+                                {orphanedAuthors.bandMembers.length > 0 && (
+                                  <optgroup label="Band Members">
+                                    {orphanedAuthors.bandMembers.map(bm => (
+                                      <option key={bm.id} value={bm.linkedUserId}>
+                                        {bm.name}{bm.displayName && bm.displayName !== bm.name ? ` (${bm.displayName})` : ''}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                )}
+                              </select>
+                            </div>
+                          ))}
+                        </div>
+
+                        {applyResult && (
+                          <div className={`p-3 ${applyResult.error ? 'bg-red-900/30 border-red-700 text-red-300' : 'bg-green-900/30 border-green-700 text-green-300'} border rounded text-sm`}>
+                            {applyResult.error || `Mapped ${applyResult.totalMapped.toLocaleString()} messages.`}
+                          </div>
+                        )}
+
+                        <button
+                          className="btn bg-green-600 hover:bg-green-700 text-white w-full"
+                          disabled={applyLoading || Object.keys(manualMappings).length === 0}
+                          onClick={async () => {
+                            setApplyLoading(true);
+                            setApplyResult(null);
+                            try {
+                              const result = await api.applyMessageMappings(workspace.id, manualMappings);
+                              setApplyResult(result);
+                              // Refresh the orphan list
+                              const data = await api.getOrphanedAuthors(workspace.id);
+                              setOrphanedAuthors(data);
+                              setManualMappings({});
+                            } catch (err) {
+                              setApplyResult({ error: err.message });
+                            } finally {
+                              setApplyLoading(false);
+                            }
+                          }}
+                        >
+                          {applyLoading ? 'Applying...' : `Apply Mappings (${Object.keys(manualMappings).length} selected)`}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

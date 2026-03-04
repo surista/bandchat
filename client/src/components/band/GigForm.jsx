@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import api from '../../services/api';
+import { getCurrencySymbol } from '../../utils/currencies';
 
 // Generate Google Calendar URL
 const getGoogleCalendarUrl = (gig) => {
@@ -33,7 +34,7 @@ const getGoogleCalendarUrl = (gig) => {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 };
 
-function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmin, workspaceId, workspaceMembers = [], previousEvents = [] }) {
+function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmin, workspaceId, workspace, workspaceMembers = [], previousEvents = [] }) {
   const getDefaultDate = () => {
     if (gig?.date) return format(new Date(gig.date), 'yyyy-MM-dd');
     if (defaultDate) return format(defaultDate, 'yyyy-MM-dd');
@@ -68,11 +69,11 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
 
   const [formData, setFormData] = useState({
     title: gig?.title || '',
-    type: gig?.type || 'REHEARSAL',
+    type: gig?.type || workspace?.defaultEventType || 'REHEARSAL',
     startDate: getDefaultDate(),
-    startTime: getTimeFromDate(gig?.date, '19:00'),
-    endTime: getTimeFromDate(gig?.endDate, '21:00'),
-    venue: gig?.venue || '',
+    startTime: getTimeFromDate(gig?.date, workspace?.defaultStartTime || '19:00'),
+    endTime: getTimeFromDate(gig?.endDate, workspace?.defaultEndTime || '21:00'),
+    venue: gig?.venue || (gig ? '' : workspace?.defaultVenue || ''),
     address: gig?.address || '',
     notes: gig?.notes || '',
     pay: gig?.pay || '',
@@ -310,7 +311,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                 >
                   <span>
                     {formData.startDate
-                      ? format(new Date(formData.startDate + 'T00:00:00'), 'd-MMM-yyyy')
+                      ? format(new Date(formData.startDate + 'T00:00:00'), 'dd-MMM-yyyy')
                       : 'Select date'}
                   </span>
                   <span className="text-gray-500">📅</span>
@@ -720,7 +721,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
 
               {formData.type === 'GIG' && (
                 <div>
-                  <label className="modal-label">Pay ($)</label>
+                  <label className="modal-label">Pay ({getCurrencySymbol(workspace?.currency)})</label>
                   <input
                     type="number"
                     value={formData.pay}

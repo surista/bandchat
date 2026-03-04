@@ -204,7 +204,7 @@ export default function SetlistListScreen({ navigation, route }) {
         </Text>
         {(item.performedAt || item.venue) && (
           <Text style={[styles.setlistMeta, { color: colors.textSecondary }]} numberOfLines={1}>
-            {item.performedAt ? format(new Date(item.performedAt), 'MMM d, yyyy') : ''}
+            {item.performedAt ? format(new Date(item.performedAt), 'dd-MMM-yyyy') : ''}
             {item.performedAt && item.venue ? ' \u00B7 ' : ''}
             {item.venue || ''}
           </Text>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
+import { formatDate } from '../../utils/formatDate';
 import { useToast } from '../../context/ToastContext';
 import ConfirmDialog from '../common/ConfirmDialog';
 import Skeleton from '../common/Skeleton';
@@ -136,14 +137,6 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
   function getEventIcon(type) {
     const found = EVENT_TYPES.find(t => t.value === type);
     return found ? found.icon : '📌';
-  }
-
-  function formatDate(dateStr) {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
   }
 
   // Group events by year

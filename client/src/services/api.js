@@ -307,6 +307,17 @@ class ApiService {
     });
   }
 
+  async getOrphanedAuthors(workspaceId) {
+    return this.request(`/workspaces/${workspaceId}/orphaned-authors`);
+  }
+
+  async applyMessageMappings(workspaceId, mappings) {
+    return this.request(`/workspaces/${workspaceId}/apply-message-mappings`, {
+      method: 'POST',
+      body: JSON.stringify({ mappings })
+    });
+  }
+
   async leaveWorkspace(id) {
     return this.request(`/workspaces/${id}/leave`, {
       method: 'POST'

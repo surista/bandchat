@@ -44,14 +44,14 @@ function BandTimeline({ members, onMemberClick, findUserByName }) {
     let minYear = currentYear;
     let maxYear = currentYear;
 
-    // Find year range from all stints
+    // Find year range from all stints (use full years for grid lines)
     members.forEach((m) => {
       if (m.stints && m.stints.length > 0) {
         m.stints.forEach((stint) => {
-          const startYear = new Date(stint.startDate).getFullYear();
-          const endYear = stint.endDate ? new Date(stint.endDate).getFullYear() : currentYear;
-          minYear = Math.min(minYear, startYear);
-          maxYear = Math.max(maxYear, endYear);
+          const sy = new Date(stint.startDate).getFullYear();
+          const ey = stint.endDate ? new Date(stint.endDate).getFullYear() : currentYear;
+          minYear = Math.min(minYear, sy);
+          maxYear = Math.max(maxYear, ey);
         });
       }
     });
@@ -111,9 +111,15 @@ function BandTimeline({ members, onMemberClick, findUserByName }) {
   const chartHeight = sortedMembers.length * rowHeight + 40;
   const svgHeight = chartHeight + 20;
 
-  // Helper: convert year to X position (0 = minYear, chartWidth = maxYear)
+  // Helper: convert fractional year to X position (0 = minYear, chartWidth = maxYear)
   const yearToX = (year) => {
     return ((year - minYear) / (maxYear - minYear)) * chartWidth;
+  };
+
+  // Convert a date to a fractional year (e.g., July 2022 = 2022.5)
+  const dateToFractionalYear = (dateStr) => {
+    const d = new Date(dateStr);
+    return d.getFullYear() + d.getMonth() / 12;
   };
 
   // Avatar component for timeline
@@ -122,7 +128,8 @@ function BandTimeline({ members, onMemberClick, findUserByName }) {
     const color = getInstrumentColor(primaryInstrument);
     const isCurrent = member.stints.some(s => !s.endDate);
 
-    if (member.imageUrl) {
+    const avatarSrc = member.imageUrl || member.linkedUser?.avatarUrl;
+    if (avatarSrc) {
       return (
         <g>
           {/* Circular clip path */}
@@ -142,7 +149,7 @@ function BandTimeline({ members, onMemberClick, findUserByName }) {
           />
           {/* Avatar image */}
           <image
-            href={member.imageUrl}
+            href={avatarSrc}
             x={x}
             y={y}
             width={avatarSize}
@@ -274,10 +281,10 @@ function BandTimeline({ members, onMemberClick, findUserByName }) {
                 {/* Timeline bars - one per stint */}
                 <g transform={`translate(${labelWidth}, 0)`}>
                   {member.stints.map((stint, stintIdx) => {
-                    const startYear = new Date(stint.startDate).getFullYear();
-                    const endYear = stint.endDate ? new Date(stint.endDate).getFullYear() : currentYear;
-                    const startX = yearToX(startYear);
-                    const endX = yearToX(endYear + 1); // +1 to include the full end year
+                    const startFrac = dateToFractionalYear(stint.startDate);
+                    const endFrac = stint.endDate ? dateToFractionalYear(stint.endDate) : currentYear + new Date().getMonth() / 12;
+                    const startX = yearToX(startFrac);
+                    const endX = yearToX(endFrac);
                     const barWidth = endX - startX - 4;
                     const instruments = stint.instruments || (stint.instrument ? [stint.instrument] : []);
                     const primaryInstrument = instruments[0] || 'Unknown';

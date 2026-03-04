@@ -171,16 +171,43 @@ router.get('/:workspaceId', authenticate, isWorkspaceMember, async (req, res) =>
 // Update workspace
 router.put('/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, currency, defaultEventType, defaultStartTime, defaultEndTime, defaultVenue } = req.body;
 
     if (name && name.trim().length > 100) {
       return res.status(400).json({ error: 'Workspace name must be 100 characters or less' });
     }
 
+    const validCurrencies = ['USD','EUR','GBP','JPY','AUD','CAD','CHF','CNY','SEK','NZD','MXN','SGD','HKD','NOK','KRW','INR','BRL','ZAR','PHP','THB'];
+    if (currency && !validCurrencies.includes(currency)) {
+      return res.status(400).json({ error: 'Invalid currency code' });
+    }
+
+    const validTypes = ['GIG','REHEARSAL','RECORDING','OTHER'];
+    if (defaultEventType && !validTypes.includes(defaultEventType)) {
+      return res.status(400).json({ error: 'Invalid event type' });
+    }
+
+    const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
+    if (defaultStartTime && !timeRegex.test(defaultStartTime)) {
+      return res.status(400).json({ error: 'Invalid start time format' });
+    }
+    if (defaultEndTime && !timeRegex.test(defaultEndTime)) {
+      return res.status(400).json({ error: 'Invalid end time format' });
+    }
+
+    if (defaultVenue !== undefined && defaultVenue && defaultVenue.length > 200) {
+      return res.status(400).json({ error: 'Venue must be 200 characters or less' });
+    }
+
     const workspace = await prisma.workspace.update({
       where: { id: req.params.workspaceId },
       data: {
-        ...(name && { name: name.trim() })
+        ...(name && { name: name.trim() }),
+        ...(currency && { currency }),
+        ...(defaultEventType && { defaultEventType }),
+        ...(defaultStartTime && { defaultStartTime }),
+        ...(defaultEndTime && { defaultEndTime }),
+        ...(defaultVenue !== undefined && { defaultVenue: defaultVenue || null }),
       }
     });
 
@@ -1516,6 +1543,18 @@ router.post('/:workspaceId/relink-messages', authenticate, isWorkspaceAdmin, asy
       }
     }
 
+    // Also map BandMember.name → linkedUserId (handles "Simon" → Simon's userId)
+    const bmLinked = await prisma.bandMember.findMany({
+      where: { workspaceId, linkedUserId: { not: null } },
+      select: { name: true, linkedUserId: true }
+    });
+    for (const bm of bmLinked) {
+      const bmName = bm.name?.toLowerCase();
+      if (bmName && !nameMap.has(bmName)) {
+        nameMap.set(bmName, bm.linkedUserId);
+      }
+    }
+
     // 1. Relink orphaned messages (authorId null, removedUserName set)
     const orphanedMessages = await prisma.message.findMany({
       where: {
@@ -1530,7 +1569,18 @@ router.post('/:workspaceId/relink-messages', authenticate, isWorkspaceAdmin, asy
     const relinkSummary = {};
 
     for (const msg of orphanedMessages) {
-      const userId = nameMap.get(msg.removedUserName?.toLowerCase());
+      const rn = msg.removedUserName?.toLowerCase();
+      // Exact match first
+      let userId = nameMap.get(rn);
+      // Fuzzy: startsWith in both directions (e.g., "simon" matches "simon lucas")
+      if (!userId && rn) {
+        for (const [key, uid] of nameMap) {
+          if (key.startsWith(rn) || rn.startsWith(key)) {
+            userId = uid;
+            break;
+          }
+        }
+      }
       if (userId) {
         await prisma.message.update({
           where: { id: msg.id },
@@ -1571,6 +1621,103 @@ router.post('/:workspaceId/relink-messages', authenticate, isWorkspaceAdmin, asy
   } catch (error) {
     console.error('Relink messages error:', error);
     res.status(500).json({ error: 'Failed to relink messages' });
+  }
+});
+
+// Get orphaned author names for manual mapping
+router.get('/:workspaceId/orphaned-authors', authenticate, isWorkspaceAdmin, async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+
+    const orphans = await prisma.message.groupBy({
+      by: ['removedUserName'],
+      where: {
+        authorId: null,
+        removedUserName: { not: null },
+        channel: { workspaceId }
+      },
+      _count: { id: true },
+      orderBy: { _count: { id: 'desc' } }
+    });
+
+    const members = await prisma.workspaceMember.findMany({
+      where: { workspaceId },
+      include: { user: { select: { id: true, displayName: true, avatarUrl: true } } }
+    });
+
+    const bandMembers = await prisma.bandMember.findMany({
+      where: { workspaceId, linkedUserId: { not: null } },
+      select: {
+        id: true, name: true, linkedUserId: true, imageUrl: true,
+        linkedUser: { select: { id: true, displayName: true, avatarUrl: true } }
+      }
+    });
+
+    res.json({
+      orphanedNames: orphans.map(o => ({ name: o.removedUserName, count: o._count.id })),
+      workspaceMembers: members.map(m => ({
+        userId: m.user.id,
+        displayName: m.user.displayName,
+        avatarUrl: m.user.avatarUrl
+      })),
+      bandMembers: bandMembers.map(bm => ({
+        id: bm.id,
+        name: bm.name,
+        linkedUserId: bm.linkedUserId,
+        displayName: bm.linkedUser?.displayName,
+        avatarUrl: bm.imageUrl || bm.linkedUser?.avatarUrl
+      }))
+    });
+  } catch (error) {
+    console.error('Get orphaned authors error:', error);
+    res.status(500).json({ error: 'Failed to get orphaned authors' });
+  }
+});
+
+// Apply manual message mappings
+router.post('/:workspaceId/apply-message-mappings', authenticate, isWorkspaceAdmin, async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const { mappings } = req.body;
+
+    if (!mappings || typeof mappings !== 'object' || Object.keys(mappings).length === 0) {
+      return res.status(400).json({ error: 'mappings object is required' });
+    }
+
+    // Validate all target userIds are workspace members
+    const memberUserIds = new Set(
+      (await prisma.workspaceMember.findMany({
+        where: { workspaceId },
+        select: { userId: true }
+      })).map(m => m.userId)
+    );
+
+    for (const userId of Object.values(mappings)) {
+      if (!memberUserIds.has(userId)) {
+        return res.status(400).json({ error: 'One or more target users are not workspace members' });
+      }
+    }
+
+    let totalMapped = 0;
+    const summary = {};
+
+    for (const [removedName, userId] of Object.entries(mappings)) {
+      const result = await prisma.message.updateMany({
+        where: {
+          authorId: null,
+          removedUserName: removedName,
+          channel: { workspaceId }
+        },
+        data: { authorId: userId, removedUserName: null }
+      });
+      totalMapped += result.count;
+      summary[removedName] = result.count;
+    }
+
+    res.json({ totalMapped, summary });
+  } catch (error) {
+    console.error('Apply message mappings error:', error);
+    res.status(500).json({ error: 'Failed to apply mappings' });
   }
 });
 

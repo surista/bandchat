@@ -27,7 +27,7 @@ function StatBox({ label, value, colors }) {
 function formatDate(dateStr) {
   if (!dateStr) return null;
   try {
-    return format(parseISO(dateStr), 'MMM d, yyyy');
+    return format(parseISO(dateStr), 'dd-MMM-yyyy');
   } catch {
     return dateStr;
   }

@@ -326,7 +326,7 @@ export default function AvailabilityScreen({ navigation, route }) {
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]}>
-              {selectedDate ? format(parseISO(selectedDate), 'EEEE, MMM d') : ''}
+              {selectedDate ? format(parseISO(selectedDate), 'EEEE, dd-MMM') : ''}
             </Text>
             {saving ? (
               <ActivityIndicator color={colors.primary} style={{ padding: 20 }} />
@@ -374,7 +374,7 @@ export default function AvailabilityScreen({ navigation, route }) {
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]}>
-              {selectedDate ? format(parseISO(selectedDate), 'EEEE, MMM d') : ''}
+              {selectedDate ? format(parseISO(selectedDate), 'EEEE, dd-MMM') : ''}
             </Text>
             {loadingDetail ? (
               <ActivityIndicator color={colors.primary} style={{ padding: 20 }} />

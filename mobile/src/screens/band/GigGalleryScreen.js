@@ -57,7 +57,7 @@ export default function GigGalleryScreen({ route }) {
     const isImage = item.type === 'image';
     const uploaderName = item.uploadedBy?.displayName || 'Unknown';
     const uploadDate = item.createdAt
-      ? format(parseISO(item.createdAt), 'MMM d')
+      ? format(parseISO(item.createdAt), 'dd-MMM')
       : '';
 
     return (

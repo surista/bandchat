@@ -17,7 +17,7 @@ function formatTimestamp(dateStr) {
   const date = new Date(dateStr);
   if (isToday(date)) return format(date, 'h:mm a');
   if (isYesterday(date)) return 'Yesterday';
-  return format(date, 'MMM d');
+  return format(date, 'dd-MMM');
 }
 
 export default function SearchScreen({ navigation, route }) {

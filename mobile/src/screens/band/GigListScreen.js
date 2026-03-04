@@ -50,7 +50,7 @@ const AVAILABILITY_STATUS = {
 function formatGigDate(dateStr) {
   try {
     const d = parseISO(dateStr);
-    return format(d, 'EEEE, MMM d');
+    return format(d, 'EEEE, dd-MMM');
   } catch {
     return dateStr;
   }
@@ -651,7 +651,7 @@ export default function GigListScreen({ navigation, route }) {
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]}>Set Availability</Text>
             <Text style={[styles.availabilityDateLabel, { color: colors.textSecondary }]}>
-              {availabilityDate ? format(parseISO(availabilityDate), 'EEEE, MMMM d, yyyy') : ''}
+              {availabilityDate ? format(parseISO(availabilityDate), 'EEEE, dd-MMM-yyyy') : ''}
             </Text>
             <TouchableOpacity
               style={[styles.availabilityOption, { backgroundColor: '#22c55e20' }]}

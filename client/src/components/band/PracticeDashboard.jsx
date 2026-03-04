@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { format } from 'date-fns';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -23,7 +24,7 @@ function formatDateHeader(dateStr) {
 
   if (d.getTime() === today.getTime()) return 'Today';
   if (d.getTime() === yesterday.getTime()) return 'Yesterday';
-  return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  return format(date, 'EEE, dd-MMM-yyyy');
 }
 
 function groupByDate(sessions) {

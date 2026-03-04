@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import api from '../../services/api';
+import { formatDate } from '../../utils/formatDate';
 import { useAuth } from '../../context/AuthContext';
 import Modal from './Modal';
 
@@ -67,14 +68,6 @@ export default function MemberProfile({ userId, workspaceId, onClose, onStartDM 
     } finally {
       setBlockLoading(false);
     }
-  }
-
-  function formatDate(dateStr) {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
   }
 
   function handleStartDM() {
@@ -289,7 +282,7 @@ export default function MemberProfile({ userId, workspaceId, onClose, onStartDM 
                     >
                       <div className="font-medium text-white text-sm">{event.title}</div>
                       <div className="text-xs text-gray-400 mt-0.5">
-                        {format(new Date(event.date), 'd-MMM-yyyy')}
+                        {format(new Date(event.date), 'dd-MMM-yyyy')}
                         {event.venue && ` • ${event.venue}`}
                       </div>
                     </div>

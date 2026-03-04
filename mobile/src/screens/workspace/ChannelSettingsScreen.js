@@ -254,7 +254,7 @@ export default function ChannelSettingsScreen({ navigation, route }) {
               </Text>
               {channelData.createdAt && (
                 <Text style={[styles.channelCreated, { color: colors.textSecondary }]}>
-                  Created {format(new Date(channelData.createdAt), 'MMM d, yyyy')}
+                  Created {format(new Date(channelData.createdAt), 'dd-MMM-yyyy')}
                 </Text>
               )}
             </View>

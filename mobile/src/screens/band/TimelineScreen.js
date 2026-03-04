@@ -46,7 +46,7 @@ function getEventLabel(eventType) {
 function formatEventDate(dateStr) {
   if (!dateStr) return '';
   try {
-    return format(new Date(dateStr), 'MMM d, yyyy');
+    return format(new Date(dateStr), 'dd-MMM-yyyy');
   } catch {
     return dateStr;
   }
@@ -406,10 +406,10 @@ export default function TimelineScreen({ navigation, route }) {
             style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
             onPress={() => setShowDatePicker(true)}
             accessibilityRole="button"
-            accessibilityLabel={`Date: ${format(formDate, 'EEEE, MMM d, yyyy')}`}
+            accessibilityLabel={`Date: ${format(formDate, 'EEEE, dd-MMM-yyyy')}`}
           >
             <Text style={{ color: colors.textPrimary, fontSize: 15 }}>
-              {format(formDate, 'EEEE, MMM d, yyyy')}
+              {format(formDate, 'EEEE, dd-MMM-yyyy')}
             </Text>
           </TouchableOpacity>
 

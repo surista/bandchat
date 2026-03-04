@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useLayoutEffect, useRef } fr
 import {
   View,
   Text,
+  Image,
   SectionList,
   TextInput,
   TouchableOpacity,
@@ -258,7 +259,11 @@ export default function BandMembersScreen({ navigation, route }) {
         accessibilityLabel={`${item.name}. Long press for options`}
       >
         <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-          <Text style={styles.avatarText}>{getInitial(item.name)}</Text>
+          {(item.imageUrl || item.linkedUser?.avatarUrl) ? (
+            <Image source={{ uri: item.imageUrl || item.linkedUser.avatarUrl }} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.avatarText}>{getInitial(item.name)}</Text>
+          )}
         </View>
         <View style={styles.memberInfo}>
           <Text style={[styles.memberName, { color: colors.textPrimary }]}>{item.name}</Text>
@@ -535,6 +540,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   avatarText: { color: '#ffffff', fontSize: 18, fontWeight: '700' },
+  avatarImage: { width: 44, height: 44, borderRadius: 22 },
   memberInfo: { flex: 1 },
   memberName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
   memberDate: { fontSize: 13, marginBottom: 4 },

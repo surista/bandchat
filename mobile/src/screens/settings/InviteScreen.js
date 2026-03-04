@@ -15,6 +15,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
+import formatDate from '../../utils/formatDate';
 
 export default function InviteScreen({ route }) {
   const { workspaceId } = route.params;
@@ -133,7 +134,7 @@ export default function InviteScreen({ route }) {
 
           {inviteData?.expiresAt && (
             <Text style={[styles.meta, { color: colors.textSecondary }]}>
-              Expires: {new Date(inviteData.expiresAt).toLocaleDateString()}
+              Expires: {formatDate(inviteData.expiresAt)}
             </Text>
           )}
           {inviteData?.usedCount != null && (
