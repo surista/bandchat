@@ -47,11 +47,12 @@ function isValidHttpUrl(urlString) {
  * embeds (Google Docs, YouTube), images, videos, and @mentions.
  */
 const MessageContent = React.memo(({ content, message, onOpenLightbox, members }) => {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  // URL regex that excludes trailing punctuation often found after URLs in text
+  const urlRegex = /(https?:\/\/[^\s\[\]<>]+?)(?=[)\].,;:!?"'\s]|$)/g;
   const parts = content.split(urlRegex);
 
   return parts.map((part, i) => {
-    if (part.match(urlRegex)) {
+    if (part.match(/^https?:\/\//)) {
       // Validate URL before rendering as a link
       if (!isValidHttpUrl(part)) {
         // Render as plain text if invalid
