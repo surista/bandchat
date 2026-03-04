@@ -1,11 +1,13 @@
 import { memo, useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, Image, TouchableOpacity, Pressable, Animated, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, Pressable, Animated, Linking, StyleSheet } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { format, isToday, isYesterday } from 'date-fns';
 import { useTheme } from '../context/ThemeContext';
 import LinkPreview from './LinkPreview';
 import getAvatarColor from '../utils/getAvatarColor';
 import { buildMentionRegex } from '../utils/parseMentions';
+
+const YT_REGEX = /(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/|m\.youtube\.com\/watch\?v=)([\w-]{11})/;
 
 function formatTimestamp(dateStr) {
   const date = new Date(dateStr);
@@ -82,7 +84,8 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
               {isEdited && <Text style={[styles.edited, { color: colors.textSecondary }]}> (edited)</Text>}
             </Text>
           ) : null}
-          {message.content ? <LinkPreview content={message.content} /> : null}
+          <YouTubeThumbnail content={message.content} colors={colors} />
+          {message.content && !YT_REGEX.test(message.content) ? <LinkPreview content={message.content} /> : null}
           {renderAttachments(message.attachments, onImagePress)}
           {renderReactions(message.reactions, colors, message.id, onReactionPress)}
         </View>
@@ -125,7 +128,8 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
             {isEdited && <Text style={[styles.edited, { color: colors.textSecondary }]}> (edited)</Text>}
           </Text>
         ) : null}
-        {message.content ? <LinkPreview content={message.content} /> : null}
+        <YouTubeThumbnail content={message.content} colors={colors} />
+        {message.content && !YT_REGEX.test(message.content) ? <LinkPreview content={message.content} /> : null}
         {renderAttachments(message.attachments, onImagePress)}
         {renderReactions(message.reactions, colors, message.id, onReactionPress)}
         {message._count?.replies > 0 && (
@@ -139,6 +143,71 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
     </Pressable>
   );
 }
+
+function YouTubeThumbnail({ content, colors }) {
+  if (!content) return null;
+  const urls = content.match(/(https?:\/\/[^\s]+)/g);
+  if (!urls) return null;
+
+  const ytEmbeds = [];
+  for (const url of urls) {
+    const match = url.match(YT_REGEX);
+    if (match) ytEmbeds.push({ videoId: match[1], url });
+  }
+  if (ytEmbeds.length === 0) return null;
+
+  return ytEmbeds.map(({ videoId, url }) => (
+    <TouchableOpacity
+      key={videoId}
+      style={ytStyles.container}
+      onPress={() => Linking.openURL(url).catch(() => {})}
+      activeOpacity={0.8}
+    >
+      <Image
+        source={{ uri: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` }}
+        style={ytStyles.thumbnail}
+        resizeMode="cover"
+      />
+      <View style={ytStyles.playOverlay}>
+        <View style={ytStyles.playButton}>
+          <Text style={ytStyles.playIcon}>{'\u25B6'}</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  ));
+}
+
+const ytStyles = StyleSheet.create({
+  container: {
+    marginTop: 6,
+    borderRadius: 8,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  thumbnail: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: 8,
+  },
+  playOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(220, 38, 38, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playIcon: {
+    color: '#ffffff',
+    fontSize: 20,
+    marginLeft: 3,
+  },
+});
 
 function renderAttachments(attachments, onImagePress) {
   if (!attachments || attachments.length === 0) return null;

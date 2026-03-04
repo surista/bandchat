@@ -604,32 +604,26 @@ export default function ChannelScreen({ navigation, route }) {
     return msg?.id || null;
   }, [messages, lastReadAt, user?.id]);
 
-  // Prepare data for inverted FlatList
-  const invertedMessages = useMemo(() => [...messages].reverse(), [messages]);
+  // Prepare data for inverted FlatList with precomputed grouping
+  const invertedMessages = useMemo(() => {
+    const reversed = [...messages].reverse();
+    return reversed.map((msg, i) => {
+      const olderMsg = reversed[i + 1];
+      let grouped = false;
+      if (olderMsg && msg.author && olderMsg.author) {
+        const sameAuthor = olderMsg.author.id === msg.author.id;
+        const sameDay = isSameDay(new Date(msg.createdAt), new Date(olderMsg.createdAt));
+        const timeDiff = Math.abs(new Date(msg.createdAt) - new Date(olderMsg.createdAt));
+        grouped = sameAuthor && sameDay && timeDiff < GROUP_THRESHOLD_MS;
+      }
+      const showDate = !olderMsg || !isSameDay(new Date(msg.createdAt), new Date(olderMsg.createdAt));
+      return { ...msg, _grouped: grouped, _showDate: showDate };
+    });
+  }, [messages]);
 
-  const isGrouped = useCallback((message, index) => {
-    // In inverted list, index + 1 is the older message visually above
-    const olderIdx = index + 1;
-    if (olderIdx >= invertedMessages.length) return false;
-    const olderMsg = invertedMessages[olderIdx];
-    if (!olderMsg || !message.author || !olderMsg.author) return false;
-    if (olderMsg.author.id !== message.author.id) return false;
-    // Break grouping across different days
-    if (!isSameDay(new Date(message.createdAt), new Date(olderMsg.createdAt))) return false;
-    const timeDiff = Math.abs(new Date(message.createdAt) - new Date(olderMsg.createdAt));
-    return timeDiff < GROUP_THRESHOLD_MS;
-  }, [invertedMessages]);
-
-  const needsDateSeparator = useCallback((message, index) => {
-    const olderIdx = index + 1;
-    if (olderIdx >= invertedMessages.length) return true;
-    const olderMsg = invertedMessages[olderIdx];
-    return !isSameDay(new Date(message.createdAt), new Date(olderMsg.createdAt));
-  }, [invertedMessages]);
-
-  const renderItem = useCallback(({ item, index }) => {
-    const grouped = isGrouped(item, index);
-    const showDate = needsDateSeparator(item, index);
+  const renderItem = useCallback(({ item }) => {
+    const grouped = item._grouped;
+    const showDate = item._showDate;
     const isLastOwn = item.id === lastOwnMessageId;
     const isFirstUnread = item.id === firstUnreadId;
 
@@ -648,15 +642,6 @@ export default function ChannelScreen({ navigation, route }) {
             <View style={styles.unreadLine} />
           </View>
         )}
-        <MessageBubble
-          message={item}
-          isGrouped={grouped}
-          onLongPress={handleLongPress}
-          onReplyPress={handleReplyPress}
-          onImagePress={handleImagePress}
-          onReactionPress={handleReactionPress}
-          members={workspaceMembers}
-        />
         {showDate && (
           <View style={styles.dateSeparator}>
             <View style={[styles.dateLine, { backgroundColor: colors.border }]} />
@@ -666,9 +651,18 @@ export default function ChannelScreen({ navigation, route }) {
             <View style={[styles.dateLine, { backgroundColor: colors.border }]} />
           </View>
         )}
+        <MessageBubble
+          message={item}
+          isGrouped={grouped}
+          onLongPress={handleLongPress}
+          onReplyPress={handleReplyPress}
+          onImagePress={handleImagePress}
+          onReactionPress={handleReactionPress}
+          members={workspaceMembers}
+        />
       </View>
     );
-  }, [isGrouped, needsDateSeparator, colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, lastOwnMessageId, seenByCount, workspaceMembers, firstUnreadId]);
+  }, [colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, lastOwnMessageId, seenByCount, workspaceMembers, firstUnreadId]);
 
   const renderFooter = useCallback(() => {
     if (!loadingMore) return null;

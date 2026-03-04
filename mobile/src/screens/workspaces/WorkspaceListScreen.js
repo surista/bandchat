@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
+import Constants from 'expo-constants';
 import api from '../../services/api';
 
 export default function WorkspaceListScreen({ navigation, route }) {
@@ -206,6 +207,11 @@ export default function WorkspaceListScreen({ navigation, route }) {
           />
         }
       />
+
+      {/* Version */}
+      <Text style={[styles.versionText, { color: colors.textSecondary }]}>
+        v{Constants.expoConfig?.version || '1.0.0'}
+      </Text>
 
       {/* Create Workspace Modal */}
       <Modal visible={showCreate} transparent animationType="fade" onRequestClose={() => setShowCreate(false)}>
@@ -459,5 +465,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  versionText: {
+    fontSize: 12,
+    textAlign: 'center',
+    paddingVertical: 8,
+    opacity: 0.6,
   },
 });
