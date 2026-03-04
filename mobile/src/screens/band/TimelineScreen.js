@@ -113,7 +113,7 @@ export default function TimelineScreen({ navigation, route }) {
       ]);
       setEvents(timeline);
       const membership = ws.members?.find(m => m.userId === user?.id);
-      setIsAdmin(membership?.role === 'admin');
+      setIsAdmin(membership?.role === 'ADMIN');
     } catch (err) {
       console.error('Failed to load timeline:', err);
       if (events.length === 0) {

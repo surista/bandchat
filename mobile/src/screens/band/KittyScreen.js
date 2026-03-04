@@ -160,7 +160,7 @@ export default function KittyScreen({ navigation, route }) {
       ]);
       setKitty(data);
       const membership = ws.members?.find(m => m.userId === user?.id);
-      setIsAdmin(membership?.role === 'admin');
+      setIsAdmin(membership?.role === 'ADMIN');
     } catch (err) {
       console.error('Failed to load kitty:', err);
     } finally {

@@ -23,6 +23,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
   const { colors } = useTheme();
 
   const [members, setMembers] = useState([]);
+  const [blockedIds, setBlockedIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -34,6 +35,12 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
   // Remove confirmation
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [postAction, setPostAction] = useState('keep');
+
+  useEffect(() => {
+    api.getBlockedUsers().then(blocks => {
+      setBlockedIds(new Set(blocks.map(b => b.blockedUserId)));
+    }).catch(() => {});
+  }, []);
 
   const loadMembers = useCallback(async () => {
     try {
@@ -58,7 +65,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
 
   const handleToggleRole = useCallback(async () => {
     if (!selectedMember) return;
-    const newRole = selectedMember.role === 'admin' ? 'member' : 'admin';
+    const newRole = selectedMember.role === 'ADMIN' ? 'MEMBER' : 'ADMIN';
     setUpdating(true);
     try {
       await api.updateMemberRole(workspaceId, selectedMember.userId, newRole);
@@ -125,12 +132,12 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
               {isCurrentUser ? ' (You)' : ''}
             </Text>
             <View style={[styles.roleBadge, {
-              backgroundColor: item.role === 'admin' ? colors.primary + '20' : colors.bgTertiary,
+              backgroundColor: item.role === 'ADMIN' ? colors.primary + '20' : colors.bgTertiary,
             }]}>
               <Text style={[styles.roleText, {
-                color: item.role === 'admin' ? colors.primary : colors.textSecondary,
+                color: item.role === 'ADMIN' ? colors.primary : colors.textSecondary,
               }]}>
-                {item.role === 'admin' ? 'Admin' : 'Member'}
+                {item.role === 'ADMIN' ? 'Admin' : 'Member'}
               </Text>
             </View>
           </View>
@@ -154,12 +161,12 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
       <View style={[styles.countBar, { backgroundColor: colors.bgSecondary }]}>
         <Text style={[styles.countText, { color: colors.textSecondary }]}>
-          {members.length} member{members.length !== 1 ? 's' : ''}
+          {members.filter(m => !blockedIds.has(m.userId)).length} member{members.filter(m => !blockedIds.has(m.userId)).length !== 1 ? 's' : ''}
         </Text>
       </View>
 
       <FlatList
-        data={members}
+        data={members.filter(m => !blockedIds.has(m.userId))}
         keyExtractor={(item) => item.userId}
         renderItem={renderMember}
         contentContainerStyle={styles.listContent}
@@ -192,7 +199,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
               disabled={updating}
             >
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>
-                {selectedMember?.role === 'admin' ? 'Demote to Member' : 'Promote to Admin'}
+                {selectedMember?.role === 'ADMIN' ? 'Demote to Member' : 'Promote to Admin'}
               </Text>
             </TouchableOpacity>
 

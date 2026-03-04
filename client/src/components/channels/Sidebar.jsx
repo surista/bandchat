@@ -207,6 +207,7 @@ function Sidebar({
   // Member profile
   const [showProfileUserId, setShowProfileUserId] = useState(null);
   const [showAllMembers, setShowAllMembers] = useState(false);
+  const [blockedIds, setBlockedIds] = useState(new Set());
   // Context menu for channels/sections (admin only)
   const [contextMenu, setContextMenu] = useState(null); // { type: 'channel' | 'section', id, name, x, y }
   const [renameModal, setRenameModal] = useState(null); // { type: 'channel' | 'section', id, name }
@@ -222,6 +223,12 @@ function Sidebar({
   useEffect(() => {
     localStorage.setItem(`collapsedSections:${workspace.id}`, JSON.stringify(collapsedSections));
   }, [collapsedSections, workspace.id]);
+
+  useEffect(() => {
+    api.getBlockedUsers().then(blocks => {
+      setBlockedIds(new Set(blocks.map(b => b.blockedUserId)));
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     // Check if notifications are already enabled
@@ -303,6 +310,13 @@ function Sidebar({
   const isAdmin = useMemo(() => {
     return workspace?.members?.find(m => m.user?.id === user?.id)?.role === 'ADMIN';
   }, [workspace, user]);
+
+  // Filter blocked users from sidebar members list
+  const visibleMembers = useMemo(() => {
+    if (!workspace?.members) return [];
+    if (blockedIds.size === 0) return workspace.members;
+    return workspace.members.filter(m => !blockedIds.has(m.user?.id));
+  }, [workspace?.members, blockedIds]);
 
   // Drag and drop setup for channels and groups (admin only)
   const [activeChannel, setActiveChannel] = useState(null);
@@ -858,7 +872,7 @@ function Sidebar({
               ▶
             </span>
             <span className="text-sm font-bold uppercase tracking-wide">
-              MEMBERS ({workspace.members?.length || 0})
+              MEMBERS ({visibleMembers.length})
             </span>
           </button>
           {!collapsedSections.members && workspace.members?.find(m => m.user.id === user?.id)?.role === 'ADMIN' && (
@@ -875,7 +889,7 @@ function Sidebar({
 
         {!collapsedSections.members && (
           <div className="space-y-0.5 ml-2">
-            {((showAllMembers ? workspace.members : workspace.members?.slice(0, 10)) || []).map((member) => (
+            {(showAllMembers ? visibleMembers : visibleMembers.slice(0, 10)).map((member) => (
               <MemberHoverCard
                 key={member.user.id}
                 userId={member.user.id}
@@ -907,12 +921,12 @@ function Sidebar({
                 </button>
               </MemberHoverCard>
             ))}
-            {workspace.members?.length > 10 && (
+            {visibleMembers.length > 10 && (
               <button
                 onClick={() => setShowAllMembers(prev => !prev)}
                 className="px-4 py-1 text-gray-500 hover:text-gray-300 text-sm"
               >
-                {showAllMembers ? 'Show less' : `+${workspace.members.length - 10} more`}
+                {showAllMembers ? 'Show less' : `+${visibleMembers.length - 10} more`}
               </button>
             )}
           </div>

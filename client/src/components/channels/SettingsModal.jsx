@@ -225,12 +225,12 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-[var(--color-modal-border)] justify-center overflow-x-auto" role="tablist">
+            <div className="flex border-b border-[var(--color-modal-border)] justify-center flex-wrap" role="tablist">
               <button
                 role="tab"
                 aria-selected={settingsTab === 'profile'}
                 onClick={() => setSettingsTab('profile')}
-                className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
+                className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'profile'
                     ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
                     : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
@@ -242,7 +242,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 role="tab"
                 aria-selected={settingsTab === 'workspace'}
                 onClick={() => setSettingsTab('workspace')}
-                className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
+                className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'workspace'
                     ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
                     : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
@@ -254,7 +254,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 role="tab"
                 aria-selected={settingsTab === 'theme'}
                 onClick={() => setSettingsTab('theme')}
-                className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
+                className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'theme'
                     ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
                     : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
@@ -266,7 +266,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 role="tab"
                 aria-selected={settingsTab === 'notifications'}
                 onClick={() => setSettingsTab('notifications')}
-                className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
+                className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'notifications'
                     ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
                     : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
@@ -280,7 +280,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     role="tab"
                     aria-selected={settingsTab === 'members'}
                     onClick={() => setSettingsTab('members')}
-                    className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
+                    className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
                       settingsTab === 'members'
                         ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
                         : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
@@ -292,7 +292,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     role="tab"
                     aria-selected={settingsTab === 'bandmembers'}
                     onClick={() => setSettingsTab('bandmembers')}
-                    className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
+                    className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
                       settingsTab === 'bandmembers'
                         ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
                         : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
@@ -304,7 +304,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     role="tab"
                     aria-selected={settingsTab === 'import'}
                     onClick={() => setSettingsTab('import')}
-                    className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
+                    className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
                       settingsTab === 'import'
                         ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
                         : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
@@ -318,7 +318,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 role="tab"
                 aria-selected={settingsTab === 'whatsnew'}
                 onClick={() => setSettingsTab('whatsnew')}
-                className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
+                className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'whatsnew'
                     ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
                     : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
@@ -330,7 +330,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 role="tab"
                 aria-selected={settingsTab === 'about'}
                 onClick={() => setSettingsTab('about')}
-                className={`px-3 pt-2.5 pb-3 font-medium whitespace-nowrap transition-colors text-sm ${
+                className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
                   settingsTab === 'about'
                     ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
                     : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'

@@ -176,12 +176,12 @@ export default function MemberProfileScreen({ route, navigation }) {
         ) : null}
         <View style={styles.badgeRow}>
           <View style={[styles.roleBadge, {
-            backgroundColor: role === 'admin' ? colors.primary + '20' : colors.bgTertiary,
+            backgroundColor: role === 'ADMIN' ? colors.primary + '20' : colors.bgTertiary,
           }]}>
             <Text style={[styles.roleText, {
-              color: role === 'admin' ? colors.primary : colors.textSecondary,
+              color: role === 'ADMIN' ? colors.primary : colors.textSecondary,
             }]}>
-              {role === 'admin' ? 'Admin' : 'Member'}
+              {role === 'ADMIN' ? 'Admin' : 'Member'}
             </Text>
           </View>
           {isGuest && (

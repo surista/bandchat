@@ -3,7 +3,9 @@ import {
   View,
   Text,
   ScrollView,
+  TextInput,
   TouchableOpacity,
+  Modal,
   Alert,
   ActivityIndicator,
   Linking,
@@ -18,6 +20,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
+
+const APP_BASE_URL = 'https://bandchat.vercel.app';
 
 function SettingsRow({ icon, label, onPress, color, colors, showArrow = true }) {
   return (
@@ -48,13 +52,18 @@ export default function SettingsScreen({ navigation, route }) {
   const { user, logout } = useAuth();
   const { colors } = useTheme();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [workspaceName, setWorkspaceName] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const checkRole = async () => {
       try {
         const ws = await api.getWorkspace(workspaceId);
+        setWorkspaceName(ws.name || '');
         const membership = ws.members?.find(m => m.userId === user?.id);
-        setIsAdmin(membership?.role === 'admin');
+        setIsAdmin(membership?.role === 'ADMIN');
       } catch {
         // Default to non-admin
       }
@@ -74,6 +83,45 @@ export default function SettingsScreen({ navigation, route }) {
       },
     ]);
   }, [logout]);
+
+  const handleLeaveWorkspace = useCallback(() => {
+    Alert.alert(
+      'Leave Workspace',
+      `Are you sure you want to leave "${workspaceName}"? You will lose access to all channels and messages.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Leave',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.leaveWorkspace(workspaceId);
+              navigation.reset({ index: 0, routes: [{ name: 'WorkspaceList' }] });
+            } catch (err) {
+              Alert.alert('Error', err.message || 'Failed to leave workspace');
+            }
+          },
+        },
+      ]
+    );
+  }, [workspaceId, workspaceName, navigation]);
+
+  const handleDeleteWorkspace = useCallback(async () => {
+    if (deleteConfirmText.trim() !== workspaceName) {
+      Alert.alert('Error', 'Workspace name does not match');
+      return;
+    }
+    setDeleting(true);
+    try {
+      await api.deleteWorkspace(workspaceId);
+      setShowDeleteModal(false);
+      navigation.reset({ index: 0, routes: [{ name: 'WorkspaceList' }] });
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to delete workspace');
+    } finally {
+      setDeleting(false);
+    }
+  }, [workspaceId, workspaceName, deleteConfirmText, navigation]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
@@ -181,7 +229,7 @@ export default function SettingsScreen({ navigation, route }) {
                 label="Import from Slack"
                 onPress={() => Alert.alert(
                   'Desktop Feature',
-                  'Slack workspace import is available on the web app at bandchat.vercel.app',
+                  `Slack workspace import is available on the web app at ${APP_BASE_URL}`,
                   [{ text: 'OK' }]
                 )}
                 colors={colors}
@@ -193,6 +241,28 @@ export default function SettingsScreen({ navigation, route }) {
                 onPress={() => navigation.navigate('Invite', { workspaceId })}
                 colors={colors}
               />
+              <View style={[styles.separator, { backgroundColor: colors.border }]} />
+            </>
+          )}
+          <SettingsRow
+            icon={'\uD83D\uDEAA'}
+            label="Leave Workspace"
+            onPress={handleLeaveWorkspace}
+            color="#f59e0b"
+            colors={colors}
+            showArrow={false}
+          />
+          {isAdmin && (
+            <>
+              <View style={[styles.separator, { backgroundColor: colors.border }]} />
+              <SettingsRow
+                icon={'\uD83D\uDDD1\uFE0F'}
+                label="Delete Workspace"
+                onPress={() => { setDeleteConfirmText(''); setShowDeleteModal(true); }}
+                color="#ef4444"
+                colors={colors}
+                showArrow={false}
+              />
             </>
           )}
         </View>
@@ -203,14 +273,14 @@ export default function SettingsScreen({ navigation, route }) {
           <SettingsRow
             icon={'\uD83D\uDD12'}
             label="Privacy Policy"
-            onPress={() => Linking.openURL('https://bandchat.vercel.app/privacy')}
+            onPress={() => Linking.openURL(`${APP_BASE_URL}/privacy`)}
             colors={colors}
           />
           <View style={[styles.separator, { backgroundColor: colors.border }]} />
           <SettingsRow
             icon={'\uD83D\uDCC4'}
             label="Terms of Service"
-            onPress={() => Linking.openURL('https://bandchat.vercel.app/terms')}
+            onPress={() => Linking.openURL(`${APP_BASE_URL}/terms`)}
             colors={colors}
           />
         </View>
@@ -232,6 +302,51 @@ export default function SettingsScreen({ navigation, route }) {
           BandChat Mobile v{Constants.expoConfig?.version || '1.0.0'}
         </Text>
       </ScrollView>
+
+      {/* Delete Workspace Confirmation Modal */}
+      <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Delete Workspace</Text>
+            <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
+              This will permanently delete "{workspaceName}" and all its data. Type the workspace name to confirm:
+            </Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+              value={deleteConfirmText}
+              onChangeText={setDeleteConfirmText}
+              placeholder={workspaceName}
+              placeholderTextColor={colors.textSecondary}
+              autoFocus
+              accessibilityLabel="Type workspace name to confirm deletion"
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
+                onPress={() => setShowDeleteModal(false)}
+                disabled={deleting}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel"
+              >
+                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#ef4444' }, deleteConfirmText.trim() !== workspaceName && { opacity: 0.5 }]}
+                onPress={handleDeleteWorkspace}
+                disabled={deleting || deleteConfirmText.trim() !== workspaceName}
+                accessibilityRole="button"
+                accessibilityLabel="Delete workspace"
+              >
+                {deleting ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <Text style={styles.modalButtonTextWhite}>Delete</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -283,4 +398,26 @@ const styles = StyleSheet.create({
   rowArrow: { fontSize: 22, fontWeight: '300' },
   separator: { height: StyleSheet.hairlineWidth, marginLeft: 50 },
   version: { fontSize: 13, textAlign: 'center', marginTop: 32 },
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalContent: { borderRadius: 12, padding: 24 },
+  modalTitle: { fontSize: 20, fontWeight: '700', marginBottom: 8 },
+  modalDesc: { fontSize: 15, marginBottom: 16, lineHeight: 22 },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  modalActions: { flexDirection: 'row', gap: 10 },
+  modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  modalButtonText: { fontSize: 15, fontWeight: '600' },
+  modalButtonTextWhite: { fontSize: 15, fontWeight: '600', color: '#ffffff' },
 });

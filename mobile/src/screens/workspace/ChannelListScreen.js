@@ -29,6 +29,7 @@ const BAND_CATEGORIES = [
       { id: 'band-setlists', key: 'setlists', label: 'Setlists', icon: '\uD83C\uDFB6' },
       { id: 'band-medleys', key: 'medleys', label: 'Medleys', icon: '\uD83C\uDFB6' },
       { id: 'band-recordings', key: 'recordings', label: 'Recordings', icon: '\uD83C\uDFA4' },
+      { id: 'band-practice', key: 'practice', label: 'Practice', icon: '\uD83C\uDFAF' },
       { id: 'band-intelligence', key: 'intelligence', label: 'Song Intelligence', icon: '\uD83E\uDDE0' },
     ],
   },
@@ -406,6 +407,7 @@ export default function ChannelListScreen({ navigation, route }) {
       achievements: 'Achievements',
       kitty: 'Kitty',
       intelligence: 'SongIntelligence',
+      practice: 'PracticeDashboard',
     };
     navigation.navigate(screenMap[key], { workspaceId });
   }, [navigation, workspaceId]);

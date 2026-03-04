@@ -67,7 +67,7 @@ export default function ChannelSettingsScreen({ navigation, route }) {
         setIsMuted(ch.isMuted || false);
         setWorkspaceMembers(ws.members || []);
         const membership = ws.members?.find(m => m.userId === user?.id);
-        setIsAdmin(membership?.role === 'admin');
+        setIsAdmin(membership?.role === 'ADMIN');
       } catch (err) {
         console.error('Failed to load channel data:', err);
       } finally {

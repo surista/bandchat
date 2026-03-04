@@ -40,7 +40,7 @@ export default function InviteScreen({ route }) {
       ]);
       setInviteData(invite);
       const membership = ws.members?.find(m => m.userId === user?.id);
-      setIsAdmin(membership?.role === 'admin');
+      setIsAdmin(membership?.role === 'ADMIN');
     } catch (err) {
       console.error('Failed to load invite data:', err);
     } finally {
