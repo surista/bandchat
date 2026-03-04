@@ -13,9 +13,10 @@ function injectSwVersion() {
       const swPath = resolve(__dirname, 'dist/sw.js');
       try {
         let swContent = readFileSync(swPath, 'utf-8');
-        swContent = swContent.replace(/'__APP_VERSION__'/g, `'${pkg.version}'`);
+        const displayVer = pkg.displayVersion || pkg.version;
+        swContent = swContent.replace(/'__APP_VERSION__'/g, `'${displayVer}'`);
         writeFileSync(swPath, swContent);
-        console.log(`Injected version ${pkg.version} into service worker`);
+        console.log(`Injected version ${displayVer} into service worker`);
       } catch (e) {
         console.warn('Could not inject version into SW:', e.message);
       }
@@ -26,7 +27,7 @@ function injectSwVersion() {
 export default defineConfig({
   plugins: [react(), injectSwVersion()],
   define: {
-    __APP_VERSION__: JSON.stringify(pkg.version)
+    __APP_VERSION__: JSON.stringify(pkg.displayVersion || pkg.version)
   },
   server: {
     port: 5173,
