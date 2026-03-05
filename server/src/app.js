@@ -65,12 +65,24 @@ export function createApp() {
 
   // Admin dashboard — standalone HTML with its own CSP (served before Helmet)
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const adminImgSrc = ['self', 'data:', 'https://res.cloudinary.com', r2CspDomain].filter(Boolean).join(' ');
+  const adminDir = path.join(__dirname, 'admin');
+
+  // Serve admin static assets (CSS, JS) with proper CSP
+  app.use('/admin', express.static(adminDir, {
+    setHeaders: (res, filePath) => {
+      // Set CSP for all admin assets
+      res.setHeader('Content-Security-Policy',
+        `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://res.cloudinary.com${r2CspDomain ? ' ' + r2CspDomain : ''}; connect-src 'self'; frame-ancestors 'none'; media-src 'self' https://res.cloudinary.com${r2CspDomain ? ' ' + r2CspDomain : ''}`
+      );
+    }
+  }));
+
+  // Serve admin dashboard HTML
   app.get('/admin', (req, res) => {
     res.setHeader('Content-Security-Policy',
-      `default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: https://res.cloudinary.com${r2CspDomain ? ' ' + r2CspDomain : ''}; connect-src 'self'; frame-ancestors 'none'; media-src 'self' https://res.cloudinary.com${r2CspDomain ? ' ' + r2CspDomain : ''}`
+      `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://res.cloudinary.com${r2CspDomain ? ' ' + r2CspDomain : ''}; connect-src 'self'; frame-ancestors 'none'; media-src 'self' https://res.cloudinary.com${r2CspDomain ? ' ' + r2CspDomain : ''}`
     );
-    res.sendFile(path.join(__dirname, 'admin', 'index.html'));
+    res.sendFile(path.join(adminDir, 'index.html'));
   });
 
   // Build img/media source lists for CSP

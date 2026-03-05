@@ -1,0 +1,630 @@
+// BandChat Admin Dashboard JavaScript
+
+// State
+let token = null;
+let currentUser = null;
+let refreshTimer = null;
+let tokenRefreshTimer = null;
+let userSearchTimer = null;
+let workspaceSearchTimer = null;
+let cachedUsers = [];
+let restoreKey = null;
+
+// API helper
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(`/api${path}`, { ...opts, headers });
+  if (res.status === 401) { handleLogout(); throw new Error('Unauthorized'); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+// Token refresh (access token expires in 15min, refresh every 12min)
+async function refreshAccessToken() {
+  try {
+    const res = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' });
+    const data = await res.json().catch(() => ({}));
+    if (data.accessToken) {
+      token = data.accessToken;
+    } else {
+      handleLogout();
+    }
+  } catch {
+    handleLogout();
+  }
+}
+
+// Format helpers
+function fmt(n) { return (n || 0).toLocaleString(); }
+function fmtDate(d) { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); }
+
+// XSS protection
+function esc(str) {
+  if (!str) return '';
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// Format bytes to human-readable
+function fmtBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return (bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
+}
+
+// Login
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  const errorEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+
+  btn.disabled = true;
+  errorEl.textContent = '';
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+      credentials: 'include',
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.error) throw new Error(data.error || `Login failed (${res.status})`);
+    if (!data.accessToken) throw new Error('No token received');
+
+    token = data.accessToken;
+    currentUser = data.user;
+
+    // Verify system admin access
+    await api('/admin/stats');
+    showDashboard();
+  } catch (err) {
+    if (err.message === 'Unauthorized' || err.message === 'System admin access required') {
+      errorEl.textContent = 'Access denied. System admin required.';
+    } else {
+      errorEl.textContent = err.message || 'Login failed';
+    }
+    token = null;
+    currentUser = null;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function showDashboard() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  document.getElementById('adminName').textContent = currentUser?.displayName || '';
+  loadStats();
+  refreshTimer = setInterval(loadStats, 60000);
+  tokenRefreshTimer = setInterval(refreshAccessToken, 12 * 60 * 1000);
+}
+
+function handleLogout() {
+  token = null;
+  currentUser = null;
+  cachedUsers = [];
+  if (refreshTimer) clearInterval(refreshTimer);
+  if (tokenRefreshTimer) clearInterval(tokenRefreshTimer);
+  document.getElementById('loginScreen').style.display = '';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('loginError').textContent = '';
+}
+
+// Tabs
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+    if (tab.dataset.tab === 'users') loadUsers();
+    if (tab.dataset.tab === 'workspaces') loadWorkspaces();
+    if (tab.dataset.tab === 'storage') loadStorageStats();
+    if (tab.dataset.tab === 'backups') loadBackups();
+  });
+});
+
+// Overview Stats
+async function loadStats() {
+  try {
+    const s = await api('/admin/stats');
+    document.getElementById('statsGrid').innerHTML = `
+      <div class="stat-card">
+        <div class="stat-label">Total Users</div>
+        <div class="stat-value">${fmt(s.users.total)}</div>
+        <div class="stat-sub"><span>+${fmt(s.users.last7d)}</span> last 7d &middot; <span>+${fmt(s.users.last30d)}</span> last 30d</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Workspaces</div>
+        <div class="stat-value">${fmt(s.workspaces.total)}</div>
+        <div class="stat-sub"><span>+${fmt(s.workspaces.last7d)}</span> last 7d &middot; <span>+${fmt(s.workspaces.last30d)}</span> last 30d</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Messages</div>
+        <div class="stat-value">${fmt(s.messages.total)}</div>
+        <div class="stat-sub"><span>+${fmt(s.messages.last7d)}</span> last 7d &middot; <span>+${fmt(s.messages.last30d)}</span> last 30d</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Active Users (7d)</div>
+        <div class="stat-value">${fmt(s.activeUsers7d)}</div>
+        <div class="stat-sub">Users with recent sessions</div>
+      </div>
+    `;
+    const providers = Object.entries(s.authProviders).map(([k,v]) => `${esc(k)}: ${v}`).join(', ');
+    document.getElementById('statsGridSecondary').innerHTML = `
+      <div class="stat-card">
+        <div class="stat-label">Songs</div>
+        <div class="stat-value">${fmt(s.songs)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Setlists</div>
+        <div class="stat-value">${fmt(s.setlists)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Gigs</div>
+        <div class="stat-value">${fmt(s.gigs)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Auth Providers</div>
+        <div class="stat-value" style="font-size:16px">${providers || 'N/A'}</div>
+      </div>
+    `;
+  } catch (err) {
+    console.error('Failed to load stats:', err);
+  }
+}
+
+// Users — event delegation instead of inline onclick (XSS-safe)
+async function loadUsers(search) {
+  try {
+    const q = search ? `?search=${encodeURIComponent(search)}` : '';
+    const data = await api(`/admin/users${q}`);
+    cachedUsers = data.users;
+    const tbody = document.getElementById('usersTable');
+
+    if (cachedUsers.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No users found</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = cachedUsers.map(u => `
+      <tr style="cursor:pointer" data-user-id="${esc(u.id)}">
+        <td>
+          <strong>${esc(u.displayName)}</strong>
+          ${u.isSystemAdmin ? '<span class="badge badge-admin">SYSTEM ADMIN</span>' : ''}
+        </td>
+        <td>${esc(u.email)}</td>
+        <td>
+          <span class="badge badge-${esc(u.authProvider)}">${esc(u.authProvider)}</span>
+          ${u.emailVerified ? '<span class="badge badge-verified">verified</span>' : ''}
+        </td>
+        <td>${u._count.workspaces}</td>
+        <td>${fmtDate(u.createdAt)}</td>
+        <td>
+          <button class="toggle-btn" data-toggle-id="${esc(u.id)}">
+            ${u.isSystemAdmin ? 'Revoke Admin' : 'Grant Admin'}
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    console.error('Failed to load users:', err);
+  }
+}
+
+// Event delegation for user table clicks
+document.getElementById('usersTable').addEventListener('click', (e) => {
+  const toggleBtn = e.target.closest('[data-toggle-id]');
+  if (toggleBtn) {
+    e.stopPropagation();
+    const userId = toggleBtn.dataset.toggleId;
+    const user = cachedUsers.find(u => u.id === userId);
+    if (user) toggleAdmin(userId, user.displayName, user.isSystemAdmin);
+    return;
+  }
+  const row = e.target.closest('[data-user-id]');
+  if (row) showUserDetail(row.dataset.userId);
+});
+
+document.getElementById('userSearch').addEventListener('input', (e) => {
+  clearTimeout(userSearchTimer);
+  userSearchTimer = setTimeout(() => loadUsers(e.target.value), 300);
+});
+
+// User detail modal
+async function showUserDetail(userId) {
+  try {
+    const u = await api(`/admin/users/${userId}`);
+    document.getElementById('modalUserName').textContent = u.displayName;
+
+    let html = `
+      <div class="detail-row"><span class="detail-label">Email</span><span class="detail-value">${esc(u.email)}</span></div>
+      <div class="detail-row"><span class="detail-label">Provider</span><span class="detail-value">${esc(u.authProvider)}</span></div>
+      <div class="detail-row"><span class="detail-label">Verified</span><span class="detail-value">${u.emailVerified ? 'Yes' : 'No'}</span></div>
+      <div class="detail-row"><span class="detail-label">System Admin</span><span class="detail-value">${u.isSystemAdmin ? 'Yes' : 'No'}</span></div>
+      <div class="detail-row"><span class="detail-label">Joined</span><span class="detail-value">${fmtDate(u.createdAt)}</span></div>
+      <div class="detail-row"><span class="detail-label">Messages Created</span><span class="detail-value">${fmt(u._count.messages)}</span></div>
+      <div class="detail-row"><span class="detail-label">Songs Created</span><span class="detail-value">${fmt(u._count.songs)}</span></div>
+      <div class="detail-row"><span class="detail-label">Gigs Created</span><span class="detail-value">${fmt(u._count.gigs)}</span></div>
+    `;
+
+    if (u.bio) {
+      html += `<div class="detail-row"><span class="detail-label">Bio</span><span class="detail-value">${esc(u.bio)}</span></div>`;
+    }
+
+    if (u.workspaces?.length) {
+      html += '<div class="detail-section"><h4>Workspaces</h4>';
+      u.workspaces.forEach(wm => {
+        html += `<div class="detail-row">
+          <span class="detail-value">${esc(wm.workspace.name)}</span>
+          <span class="badge badge-${wm.role === 'ADMIN' ? 'admin' : 'local'}">${esc(wm.role)}</span>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    document.getElementById('modalUserContent').innerHTML = html;
+    document.getElementById('userModal').classList.add('open');
+  } catch (err) {
+    console.error('Failed to load user detail:', err);
+  }
+}
+
+function closeUserModal() {
+  document.getElementById('userModal').classList.remove('open');
+}
+
+document.getElementById('userModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeUserModal();
+});
+
+// Toggle admin
+async function toggleAdmin(userId, displayName, currentStatus) {
+  const action = currentStatus ? 'revoke system admin from' : 'grant system admin to';
+  if (!confirm(`Are you sure you want to ${action} ${displayName}?`)) return;
+
+  try {
+    await api(`/admin/users/${userId}/toggle-admin`, { method: 'POST' });
+    loadUsers(document.getElementById('userSearch').value);
+  } catch (err) {
+    alert(err.message || 'Failed to update admin status');
+  }
+}
+
+// Workspaces
+async function loadWorkspaces(search) {
+  try {
+    const q = search ? `?search=${encodeURIComponent(search)}` : '';
+    const data = await api(`/admin/workspaces${q}`);
+    const workspaces = data.workspaces;
+    const tbody = document.getElementById('workspacesTable');
+
+    if (workspaces.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No workspaces found</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = workspaces.map(w => `
+      <tr>
+        <td><strong>${esc(w.name)}</strong></td>
+        <td>${w._count.members}</td>
+        <td>${w._count.channels}</td>
+        <td>${fmt(w.messageCount)}</td>
+        <td>${fmtBytes(Number(w.storageUsedBytes || 0))}</td>
+        <td>${fmtDate(w.createdAt)}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    console.error('Failed to load workspaces:', err);
+  }
+}
+
+document.getElementById('workspaceSearch').addEventListener('input', (e) => {
+  clearTimeout(workspaceSearchTimer);
+  workspaceSearchTimer = setTimeout(() => loadWorkspaces(e.target.value), 300);
+});
+
+// Storage tab
+async function loadStorageStats() {
+  try {
+    const data = await api('/admin/storage/stats');
+    const total = Number(data.totalTrackedBytes || 0);
+    const grid = document.getElementById('storageStatsGrid');
+    grid.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-label">Total Tracked Storage</div>
+        <div class="stat-value">${fmtBytes(total)}</div>
+        <div class="stat-sub">Across ${data.workspaces.length} workspaces</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">R2 Status</div>
+        <div class="stat-value" style="font-size:24px">${data.r2Available ? 'Connected' : 'Not Configured'}</div>
+        <div class="stat-sub" style="color:${data.r2Available ? 'var(--green)' : 'var(--yellow)'}">
+          ${data.r2Available ? 'Cloudflare R2 active' : 'Set R2 env vars to enable'}
+        </div>
+      </div>
+    `;
+
+    const tbody = document.getElementById('storageWorkspaceTable');
+    tbody.innerHTML = data.workspaces.map(w => `
+      <tr>
+        <td><strong>${esc(w.name)}</strong></td>
+        <td>${fmtBytes(Number(w.storageUsedBytes || 0))}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    console.error('Failed to load storage stats:', err);
+  }
+}
+
+// Orphan scan
+document.getElementById('scanOrphansBtn').addEventListener('click', async () => {
+  const status = document.getElementById('orphanStatus');
+  status.textContent = 'Scanning...';
+  try {
+    const data = await api('/admin/storage/orphans');
+    status.textContent = `Found ${data.orphanCount} orphans (${fmtBytes(data.orphanBytes)}) out of ${data.totalR2Objects} R2 objects. ${data.knownUrlCount} URLs tracked in DB.`;
+    if (data.orphanCount > 0) {
+      document.getElementById('cleanupDryBtn').style.display = '';
+      document.getElementById('cleanupBtn').style.display = '';
+      document.getElementById('orphanResults').innerHTML = data.orphans.map(o =>
+        `<div style="font-size:12px;color:var(--text-secondary)">${esc(o.key)} (${fmtBytes(o.size)})</div>`
+      ).join('');
+    }
+  } catch (err) {
+    status.textContent = 'Scan failed: ' + (err.message || 'R2 not configured');
+  }
+});
+
+// Dry run cleanup
+document.getElementById('cleanupDryBtn').addEventListener('click', async () => {
+  try {
+    const data = await api('/admin/storage/cleanup', { method: 'POST', body: JSON.stringify({ dryRun: true }) });
+    document.getElementById('orphanStatus').textContent =
+      `Dry run: would delete ${data.wouldDelete} files, freeing ${fmtBytes(data.wouldFreeBytes)}`;
+  } catch (err) {
+    document.getElementById('orphanStatus').textContent = 'Dry run failed: ' + err.message;
+  }
+});
+
+// Actual cleanup
+document.getElementById('cleanupBtn').addEventListener('click', async () => {
+  if (!confirm('Delete all orphaned R2 files? This cannot be undone.')) return;
+  try {
+    const data = await api('/admin/storage/cleanup', { method: 'POST', body: JSON.stringify({ dryRun: false }) });
+    document.getElementById('orphanStatus').textContent =
+      `Deleted ${data.deleted} files, freed ${fmtBytes(data.freedBytes)}`;
+    document.getElementById('cleanupDryBtn').style.display = 'none';
+    document.getElementById('cleanupBtn').style.display = 'none';
+    document.getElementById('orphanResults').innerHTML = '';
+  } catch (err) {
+    document.getElementById('orphanStatus').textContent = 'Cleanup failed: ' + err.message;
+  }
+});
+
+// Recalculate storage
+document.getElementById('recalcBtn').addEventListener('click', async () => {
+  const status = document.getElementById('recalcStatus');
+  status.textContent = 'Recalculating...';
+  try {
+    const data = await api('/admin/storage/recalculate', { method: 'POST' });
+    status.textContent = `Recalculated ${data.recalculated} workspaces`;
+    loadStorageStats();
+  } catch (err) {
+    status.textContent = 'Failed: ' + err.message;
+  }
+});
+
+// Backups tab
+async function loadBackups() {
+  const tbody = document.getElementById('backupsTable');
+  tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Loading...</td></tr>';
+  try {
+    const data = await api('/admin/backups');
+    if (!data.r2Available) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-state">R2 storage not configured. Backups require Cloudflare R2.</td></tr>';
+      document.getElementById('backupNowBtn').disabled = true;
+      return;
+    }
+    if (data.backups.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No backups yet</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.backups.map(b => {
+      const filename = b.key.replace('backups/', '');
+      return `<tr>
+        <td>${fmtDate(b.lastModified)}</td>
+        <td>${fmtBytes(b.size)}</td>
+        <td>gzip</td>
+        <td>
+          <button class="btn-sm" data-download="${esc(filename)}">Download</button>
+          <button class="btn-restore" data-restore-key="${esc(b.key)}">Restore</button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="4" class="empty-state">Failed to load backups: ${esc(err.message)}</td></tr>`;
+  }
+}
+
+// Event delegation for backup downloads (needs auth header)
+document.getElementById('backupsTable').addEventListener('click', async (e) => {
+  const downloadBtn = e.target.closest('[data-download]');
+  if (downloadBtn) {
+    const filename = downloadBtn.dataset.download;
+    downloadBtn.disabled = true;
+    downloadBtn.textContent = 'Downloading...';
+    try {
+      const res = await fetch(`/api/admin/backups/download/${encodeURIComponent(filename)}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Download failed: ' + err.message);
+    } finally {
+      downloadBtn.disabled = false;
+      downloadBtn.textContent = 'Download';
+    }
+    return;
+  }
+
+  const restoreBtn = e.target.closest('[data-restore-key]');
+  if (restoreBtn) {
+    e.stopPropagation();
+    openRestoreModal(restoreBtn.dataset.restoreKey);
+  }
+});
+
+// Backup Now button
+document.getElementById('backupNowBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('backupNowBtn');
+  const progress = document.getElementById('backupProgress');
+  btn.disabled = true;
+  progress.style.display = 'block';
+  try {
+    await api('/admin/backups', { method: 'POST' });
+    progress.style.display = 'none';
+    btn.disabled = false;
+    loadBackups();
+  } catch (err) {
+    progress.textContent = 'Backup failed: ' + (err.message || 'Unknown error');
+    btn.disabled = false;
+  }
+});
+
+// --- Restore functionality ---
+async function openRestoreModal(key) {
+  restoreKey = key;
+  const modal = document.getElementById('restoreModal');
+  const content = document.getElementById('restoreModalContent');
+  content.innerHTML = '<div class="restore-progress"><div class="spinner"></div><p>Loading backup preview...</p></div>';
+  modal.classList.add('open');
+
+  try {
+    const preview = await api('/admin/backups/restore-preview', {
+      method: 'POST',
+      body: JSON.stringify({ key })
+    });
+
+    const counts = preview.entityCounts || {};
+    const statItems = Object.entries(counts)
+      .filter(([, v]) => v > 0)
+      .map(([k, v]) => `<div class="restore-stat"><div class="restore-stat-value">${fmt(v)}</div><div class="restore-stat-label">${esc(k)}</div></div>`)
+      .join('');
+
+    content.innerHTML = `
+      <p style="color:var(--text-secondary);font-size:14px;margin-bottom:8px">
+        Backup from <strong>${esc(preview.createdAt ? fmtDate(preview.createdAt) : 'unknown')}</strong> (version ${preview.version || '?'})
+      </p>
+      <div class="restore-stats">${statItems}</div>
+      <div class="restore-warning">
+        <strong>Warning:</strong> This will completely replace the current database with the backup data.
+        All current data will be lost. A safety backup will be created first.<br><br>
+        <strong>Important:</strong> Passwords are not included in backups. Local-auth users must use password reset after restore.
+        Google OAuth users can sign in normally. All sessions will be invalidated.
+      </div>
+      <label style="display:block;font-size:13px;color:var(--text-secondary);margin-top:16px">
+        Type <strong>RESTORE DATABASE</strong> to confirm:
+      </label>
+      <input class="confirm-input" id="restoreConfirmInput" placeholder="RESTORE DATABASE" autocomplete="off" spellcheck="false">
+      <button class="btn-danger" id="restoreExecuteBtn" disabled>Restore Database</button>
+    `;
+
+    document.getElementById('restoreConfirmInput').addEventListener('input', (e) => {
+      document.getElementById('restoreExecuteBtn').disabled = e.target.value !== 'RESTORE DATABASE';
+    });
+
+    document.getElementById('restoreExecuteBtn').addEventListener('click', executeRestore);
+  } catch (err) {
+    content.innerHTML = `<p style="color:var(--red)">Failed to load backup preview: ${esc(err.message)}</p>`;
+  }
+}
+
+async function executeRestore() {
+  const content = document.getElementById('restoreModalContent');
+  content.innerHTML = `
+    <div class="restore-progress">
+      <div class="spinner"></div>
+      <p id="restoreProgressText">Creating safety backup...</p>
+      <p style="font-size:12px;color:var(--text-secondary);margin-top:8px">This may take several minutes. Do not close this page.</p>
+    </div>
+  `;
+
+  try {
+    const result = await api('/admin/backups/restore', {
+      method: 'POST',
+      body: JSON.stringify({ key: restoreKey, confirmPhrase: 'RESTORE DATABASE' })
+    });
+
+    content.innerHTML = `
+      <div style="text-align:center;padding:24px 0">
+        <div style="font-size:40px;margin-bottom:12px">✅</div>
+        <h3 style="color:var(--green);margin-bottom:8px">Database Restored Successfully</h3>
+        <p style="color:var(--text-secondary);font-size:14px;margin-bottom:16px">
+          Safety backup saved as:<br>
+          <code style="font-size:12px;color:var(--text-primary)">${esc(result.safetyBackupKey)}</code>
+        </p>
+        <p style="color:var(--text-secondary);font-size:13px;margin-bottom:20px">
+          All sessions have been invalidated. You will be logged out in 5 seconds.
+        </p>
+      </div>
+    `;
+
+    // Auto-logout after 5 seconds (sessions are wiped)
+    setTimeout(() => {
+      handleLogout();
+      closeRestoreModal();
+    }, 5000);
+  } catch (err) {
+    content.innerHTML = `
+      <div style="text-align:center;padding:24px 0">
+        <div style="font-size:40px;margin-bottom:12px">❌</div>
+        <h3 style="color:var(--red);margin-bottom:8px">Restore Failed</h3>
+        <p style="color:var(--text-secondary);font-size:14px">${esc(err.message)}</p>
+        <button class="btn-sm" style="margin-top:16px" id="closeRestoreErrorBtn">Close</button>
+      </div>
+    `;
+    document.getElementById('closeRestoreErrorBtn').addEventListener('click', closeRestoreModal);
+  }
+}
+
+function closeRestoreModal() {
+  document.getElementById('restoreModal').classList.remove('open');
+  restoreKey = null;
+}
+
+document.getElementById('restoreModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeRestoreModal();
+});
+
+// Keyboard shortcut: Escape closes modals
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeUserModal();
+    closeRestoreModal();
+  }
+});
+
+// Logout button handler
+document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+
+// User modal close button
+document.getElementById('userModalCloseBtn').addEventListener('click', closeUserModal);
+
+// Restore modal close button
+document.getElementById('restoreModalCloseBtn').addEventListener('click', closeRestoreModal);

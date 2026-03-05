@@ -3,6 +3,7 @@ import { authenticate, isWorkspaceMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 import { deleteFile, isR2Url } from '../lib/storage.js';
+import { isValidUUID, isValidRecordingType } from '../lib/validators.js';
 
 const router = express.Router();
 
@@ -12,8 +13,22 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
     const { songId, type } = req.query;
 
     const where = { workspaceId: req.params.workspaceId };
-    if (songId) where.songId = songId;
-    if (type) where.type = type;
+
+    // Validate songId if provided
+    if (songId) {
+      if (!isValidUUID(songId)) {
+        return res.status(400).json({ error: 'Invalid song ID format' });
+      }
+      where.songId = songId;
+    }
+
+    // Validate type if provided
+    if (type) {
+      if (!isValidRecordingType(type)) {
+        return res.status(400).json({ error: 'Invalid type. Must be audio or video' });
+      }
+      where.type = type;
+    }
 
     const recordings = await prisma.recording.findMany({
       where,
@@ -39,30 +54,35 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 // Get recordings for a specific song
 router.get('/song/:songId', authenticate, async (req, res) => {
   try {
-    const song = await prisma.song.findUnique({
-      where: { id: req.params.songId }
+    const { songId } = req.params;
+
+    // Validate songId format first
+    if (!isValidUUID(songId)) {
+      return res.status(400).json({ error: 'Invalid song ID format' });
+    }
+
+    // Single query that verifies both song existence AND workspace membership
+    // This prevents information leakage about songs in other workspaces
+    const song = await prisma.song.findFirst({
+      where: {
+        id: songId,
+        workspace: {
+          members: {
+            some: { userId: req.user.id }
+          }
+        }
+      },
+      select: { id: true }
     });
 
+    // Return same error whether song doesn't exist or user isn't a member
+    // This prevents enumeration attacks
     if (!song) {
       return res.status(404).json({ error: 'Song not found' });
     }
 
-    // Verify workspace membership
-    const membership = await prisma.workspaceMember.findUnique({
-      where: {
-        userId_workspaceId: {
-          userId: req.user.id,
-          workspaceId: song.workspaceId
-        }
-      }
-    });
-
-    if (!membership) {
-      return res.status(403).json({ error: 'Not a workspace member' });
-    }
-
     const recordings = await prisma.recording.findMany({
-      where: { songId: req.params.songId },
+      where: { songId },
       include: {
         createdBy: {
           select: { id: true, displayName: true, avatarUrl: true }
@@ -146,27 +166,40 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
 // Update a recording
 router.put('/:recordingId', authenticate, async (req, res) => {
   try {
-    const recording = await prisma.recording.findUnique({
-      where: { id: req.params.recordingId }
+    const { recordingId } = req.params;
+
+    // Validate recordingId format
+    if (!isValidUUID(recordingId)) {
+      return res.status(400).json({ error: 'Invalid recording ID format' });
+    }
+
+    // Single query that fetches recording AND verifies workspace membership
+    const recording = await prisma.recording.findFirst({
+      where: {
+        id: recordingId,
+        workspace: {
+          members: {
+            some: { userId: req.user.id }
+          }
+        }
+      },
+      include: {
+        workspace: {
+          select: {
+            members: {
+              where: { userId: req.user.id },
+              select: { role: true }
+            }
+          }
+        }
+      }
     });
 
     if (!recording) {
       return res.status(404).json({ error: 'Recording not found' });
     }
 
-    // Check workspace membership
-    const membership = await prisma.workspaceMember.findUnique({
-      where: {
-        userId_workspaceId: {
-          userId: req.user.id,
-          workspaceId: recording.workspaceId
-        }
-      }
-    });
-
-    if (!membership) {
-      return res.status(403).json({ error: 'Not a workspace member' });
-    }
+    const membership = recording.workspace.members[0];
 
     // Only creator or admin can update
     if (recording.createdById !== req.user.id && membership.role !== 'ADMIN') {
@@ -219,27 +252,40 @@ router.put('/:recordingId', authenticate, async (req, res) => {
 // Delete a recording
 router.delete('/:recordingId', authenticate, async (req, res) => {
   try {
-    const recording = await prisma.recording.findUnique({
-      where: { id: req.params.recordingId }
+    const { recordingId } = req.params;
+
+    // Validate recordingId format
+    if (!isValidUUID(recordingId)) {
+      return res.status(400).json({ error: 'Invalid recording ID format' });
+    }
+
+    // Single query that fetches recording AND verifies workspace membership
+    const recording = await prisma.recording.findFirst({
+      where: {
+        id: recordingId,
+        workspace: {
+          members: {
+            some: { userId: req.user.id }
+          }
+        }
+      },
+      include: {
+        workspace: {
+          select: {
+            members: {
+              where: { userId: req.user.id },
+              select: { role: true }
+            }
+          }
+        }
+      }
     });
 
     if (!recording) {
       return res.status(404).json({ error: 'Recording not found' });
     }
 
-    // Check workspace membership
-    const membership = await prisma.workspaceMember.findUnique({
-      where: {
-        userId_workspaceId: {
-          userId: req.user.id,
-          workspaceId: recording.workspaceId
-        }
-      }
-    });
-
-    if (!membership) {
-      return res.status(403).json({ error: 'Not a workspace member' });
-    }
+    const membership = recording.workspace.members[0];
 
     // Only creator or admin can delete
     if (recording.createdById !== req.user.id && membership.role !== 'ADMIN') {
