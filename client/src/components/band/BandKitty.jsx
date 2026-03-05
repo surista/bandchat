@@ -171,19 +171,19 @@ function BandKitty({ workspaceId }) {
   const totalIncome = useMemo(() => {
     return (kitty?.transactions || [])
       .filter(t => ['GIG_PAY', 'FEE', 'OTHER_INCOME'].includes(t.type))
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + Number(t.amount), 0);
   }, [kitty?.transactions]);
 
   const totalExpenses = useMemo(() => {
     return (kitty?.transactions || [])
       .filter(t => t.type === 'EXPENSE')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + Number(t.amount), 0);
   }, [kitty?.transactions]);
 
   const totalGigPay = useMemo(() => {
     return (kitty?.transactions || [])
       .filter(t => t.type === 'GIG_PAY')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + Number(t.amount), 0);
   }, [kitty?.transactions]);
 
   // Running balance: iterate oldest→newest, income adds, expense subtracts
@@ -191,20 +191,21 @@ function BandKitty({ workspaceId }) {
     const txs = kitty?.transactions || [];
     if (!txs.length) return {};
     const reversed = [...txs].reverse();
-    let balance = kitty?.startingBalance || 0;
+    let balance = Number(kitty?.startingBalance) || 0;
     const map = {};
     for (const tx of reversed) {
       if (tx.type === 'EXPENSE') {
-        balance -= tx.amount;
+        balance -= Number(tx.amount);
       } else {
-        balance += tx.amount;
+        balance += Number(tx.amount);
       }
       map[tx.id] = balance;
     }
     return map;
   }, [kitty?.transactions, kitty?.startingBalance]);
 
-  const fmt = (n) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // Convert Decimal/string to number and format
+  const fmt = (n) => Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   if (loading) {
     return (
@@ -227,7 +228,7 @@ function BandKitty({ workspaceId }) {
               {currencySymbol}{fmt(kitty?.currentBalance || 0)}
             </div>
             <div className="text-xs text-[var(--color-text-muted)] mt-1">
-              Starting balance: {currencySymbol}{kitty?.startingBalance?.toFixed(2) || '0.00'} as of {kitty?.balanceAsOfDate ? format(new Date(kitty.balanceAsOfDate), 'dd-MMM-yyyy') : '-'}
+              Starting balance: {currencySymbol}{Number(kitty?.startingBalance || 0).toFixed(2)} as of {kitty?.balanceAsOfDate ? format(new Date(kitty.balanceAsOfDate), 'dd-MMM-yyyy') : '-'}
             </div>
           </div>
           <div className="flex gap-2">

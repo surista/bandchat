@@ -787,9 +787,9 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
                         {formatTotalDuration(totalDuration)}
                       </span>
                     )}
-                    {gig?.pay > 0 && (
+                    {Number(gig?.pay) > 0 && (
                       <span className="px-2 py-0.5 bg-yellow-600/20 text-yellow-400 text-xs rounded">
-                        ¥{gig.pay.toLocaleString()}
+                        ¥{Number(gig.pay).toLocaleString()}
                       </span>
                     )}
                   </div>
@@ -935,9 +935,9 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
                           {selectedEntry.gig.media.length} photos/videos
                         </span>
                       )}
-                      {selectedEntry.gig?.pay > 0 && (
+                      {Number(selectedEntry.gig?.pay) > 0 && (
                         <span className="px-3 py-1 bg-yellow-600/20 text-yellow-400 text-sm rounded-full">
-                          ¥{selectedEntry.gig.pay.toLocaleString()}
+                          ¥{Number(selectedEntry.gig.pay).toLocaleString()}
                         </span>
                       )}
                     </>
@@ -971,7 +971,7 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
                     <div className="flex items-center justify-between">
                       <span className="text-[var(--color-text-muted)]">Fee</span>
                       <span className="text-[var(--color-text-primary)] font-medium">
-                        {selectedEntry.gig?.pay ? `${getCurrencySymbol(workspace?.currency)}${selectedEntry.gig.pay.toLocaleString()}` : '—'}
+                        {selectedEntry.gig?.pay ? `${getCurrencySymbol(workspace?.currency)}${Number(selectedEntry.gig.pay).toLocaleString()}` : '—'}
                       </span>
                     </div>
                     {selectedEntry.gig?.notes && (

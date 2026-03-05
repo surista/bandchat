@@ -211,9 +211,9 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
             </p>
           )}
 
-          {gig.pay && (
+          {Number(gig.pay) > 0 && (
             <p className="text-green-400 text-sm mt-1">
-              💰 ¥{gig.pay}
+              💰 ¥{Number(gig.pay).toLocaleString()}
             </p>
           )}
 

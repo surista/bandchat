@@ -669,10 +669,10 @@ export default function GigDetailScreen({ navigation, route }) {
       )}
 
       {/* Pay */}
-      {gig?.pay ? (
+      {Number(gig?.pay) > 0 ? (
         <View style={styles.viewSection}>
           <Text style={[styles.viewLabel, { color: colors.textSecondary }]}>Pay</Text>
-          <Text style={styles.payValue}>{currencySymbol}{gig.pay.toLocaleString()}</Text>
+          <Text style={styles.payValue}>{currencySymbol}{Number(gig.pay).toLocaleString()}</Text>
         </View>
       ) : null}
 
