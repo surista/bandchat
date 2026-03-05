@@ -11,7 +11,9 @@ import {
   RefreshControl,
   TouchableOpacity,
   StyleSheet,
+  Alert,
 } from 'react-native';
+import { mediumImpact, successNotification } from '../../utils/haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../context/AuthContext';
@@ -75,6 +77,15 @@ export default function ChannelListScreen({ navigation, route }) {
   const [collapsedBand, setCollapsedBand] = useState(false);
   const [collapsedBandCats, setCollapsedBandCats] = useState({});
   const [collapsedDMs, setCollapsedDMs] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Channel group management (admin)
+  const [showGroupActions, setShowGroupActions] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [showGroupModal, setShowGroupModal] = useState(false);
+  const [groupName, setGroupName] = useState('');
+  const [editingGroup, setEditingGroup] = useState(null);
+  const [savingGroup, setSavingGroup] = useState(false);
 
   // Load persisted collapse state
   useEffect(() => {
@@ -181,13 +192,16 @@ export default function ChannelListScreen({ navigation, route }) {
       setChannels(ch);
       setChannelGroups(groups);
       setDirectMessages(dms);
+      // Check admin status
+      const membership = ws.members?.find(m => m.userId === user?.id);
+      setIsAdmin(membership?.role === 'ADMIN');
     } catch (err) {
       // silently fail
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [workspaceId]);
+  }, [workspaceId, user?.id]);
 
   useEffect(() => {
     loadData();
@@ -391,6 +405,82 @@ export default function ChannelListScreen({ navigation, route }) {
     );
   }, []);
 
+  // Channel Group CRUD handlers
+  const handleCreateGroup = useCallback(async () => {
+    const name = groupName.trim();
+    if (!name) return;
+    setSavingGroup(true);
+    try {
+      await api.createChannelGroup(workspaceId, name);
+      successNotification();
+      setShowGroupModal(false);
+      setGroupName('');
+      loadData();
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to create section');
+    } finally {
+      setSavingGroup(false);
+    }
+  }, [groupName, workspaceId, loadData]);
+
+  const handleRenameGroup = useCallback(async () => {
+    const name = groupName.trim();
+    if (!name || !editingGroup) return;
+    setSavingGroup(true);
+    try {
+      await api.updateChannelGroup(editingGroup.id, { name });
+      successNotification();
+      setShowGroupModal(false);
+      setGroupName('');
+      setEditingGroup(null);
+      loadData();
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to rename section');
+    } finally {
+      setSavingGroup(false);
+    }
+  }, [groupName, editingGroup, loadData]);
+
+  const handleDeleteGroup = useCallback(async () => {
+    if (!selectedGroup) return;
+    Alert.alert(
+      'Delete Section',
+      `Delete "${selectedGroup.name}"? Channels in this section will become ungrouped.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.deleteChannelGroup(selectedGroup.id);
+              successNotification();
+              loadData();
+            } catch (err) {
+              Alert.alert('Error', err.message || 'Failed to delete section');
+            }
+            setShowGroupActions(false);
+            setSelectedGroup(null);
+          },
+        },
+      ]
+    );
+  }, [selectedGroup, loadData]);
+
+  const openGroupRenameModal = useCallback(() => {
+    if (!selectedGroup) return;
+    setEditingGroup(selectedGroup);
+    setGroupName(selectedGroup.name);
+    setShowGroupActions(false);
+    setShowGroupModal(true);
+  }, [selectedGroup]);
+
+  const openNewGroupModal = useCallback(() => {
+    setEditingGroup(null);
+    setGroupName('');
+    setShowGroupModal(true);
+  }, []);
+
   const handleBandItemPress = useCallback((key) => {
     const screenMap = {
       songs: 'SongList',
@@ -532,11 +622,20 @@ export default function ChannelListScreen({ navigation, route }) {
         : section.isDM
           ? () => setCollapsedDMs(prev => !prev)
           : undefined;
+    const handleLongPress = section.isGroup && isAdmin
+      ? () => {
+          mediumImpact();
+          setSelectedGroup({ id: section.groupId, name: section.title });
+          setShowGroupActions(true);
+        }
+      : undefined;
     return (
       <View style={styles.sectionHeaderRow}>
         <TouchableOpacity
           style={styles.sectionHeader}
           onPress={handlePress}
+          onLongPress={handleLongPress}
+          delayLongPress={400}
           activeOpacity={isCollapsible ? 0.6 : 1}
           disabled={!isCollapsible}
         >
@@ -550,13 +649,26 @@ export default function ChannelListScreen({ navigation, route }) {
           </Text>
         </TouchableOpacity>
         {section.showCreate && (
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setShowCreateChannel(true)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Text style={[styles.addIcon, { color: colors.channelListText }]}>+</Text>
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            {isAdmin && (
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={openNewGroupModal}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Create section"
+              >
+                <Text style={[styles.addIcon, { color: colors.channelListText }]}>{'\uD83D\uDCC1'}</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setShowCreateChannel(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={[styles.addIcon, { color: colors.channelListText }]}>+</Text>
+            </TouchableOpacity>
+          </View>
         )}
         {section.showNewDM && !isCollapsed && (
           <TouchableOpacity
@@ -569,7 +681,7 @@ export default function ChannelListScreen({ navigation, route }) {
         )}
       </View>
     );
-  }, [collapsedGroups, collapsedBand, collapsedDMs, toggleGroup, colors, openNewDM]);
+  }, [collapsedGroups, collapsedBand, collapsedDMs, toggleGroup, colors, openNewDM, isAdmin, openNewGroupModal]);
 
   if (loading) {
     return (
@@ -710,6 +822,81 @@ export default function ChannelListScreen({ navigation, route }) {
         </View>
       </Modal>
 
+      {/* Group Actions Modal (Rename/Delete) */}
+      <Modal visible={showGroupActions} transparent animationType="fade" onRequestClose={() => setShowGroupActions(false)}>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowGroupActions(false)}
+        >
+          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
+            <Text style={[styles.actionSheetTitle, { color: colors.textPrimary }]}>
+              {selectedGroup?.name}
+            </Text>
+            <TouchableOpacity
+              style={styles.actionItem}
+              onPress={openGroupRenameModal}
+            >
+              <Text style={[styles.actionText, { color: colors.textPrimary }]}>Rename Section</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionItem}
+              onPress={handleDeleteGroup}
+            >
+              <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete Section</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionItem, styles.cancelAction, { borderTopColor: colors.border }]}
+              onPress={() => setShowGroupActions(false)}
+            >
+              <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Group Create/Edit Modal */}
+      <Modal visible={showGroupModal} transparent animationType="fade" onRequestClose={() => setShowGroupModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
+              {editingGroup ? 'Rename Section' : 'New Section'}
+            </Text>
+            <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Section Name</Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+              placeholder="e.g., Projects"
+              placeholderTextColor={colors.textSecondary}
+              value={groupName}
+              onChangeText={setGroupName}
+              autoFocus
+              autoCapitalize="words"
+              editable={!savingGroup}
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
+                onPress={() => { setShowGroupModal(false); setGroupName(''); setEditingGroup(null); }}
+                disabled={savingGroup}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.primary }]}
+                onPress={editingGroup ? handleRenameGroup : handleCreateGroup}
+                disabled={savingGroup || !groupName.trim()}
+              >
+                {savingGroup ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <Text style={styles.modalButtonTextWhite}>{editingGroup ? 'Save' : 'Create'}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Onboarding Overlay */}
       {showOnboarding && (
         <OnboardingOverlay onComplete={handleOnboardingComplete} />
@@ -760,6 +947,37 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '300',
     lineHeight: 24,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  // Action sheet styles
+  actionSheet: {
+    borderRadius: 12,
+    marginHorizontal: 16,
+    overflow: 'hidden',
+  },
+  actionSheetTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(128,128,128,0.3)',
+  },
+  actionItem: {
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  actionText: {
+    fontSize: 17,
+    fontWeight: '500',
+  },
+  cancelAction: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: 8,
   },
   // Modal styles
   modalOverlay: {

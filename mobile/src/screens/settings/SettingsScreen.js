@@ -11,16 +11,27 @@ import {
   Linking,
   Image,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
+import { successNotification } from '../../utils/haptics';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
 import { APP_BASE_URL } from '../../utils/constants';
+
+const CURRENCIES = ['USD', 'GBP', 'EUR', 'JPY', 'AUD', 'CAD', 'NZD', 'CHF', 'ZAR'];
+const EVENT_TYPES = [
+  { value: 'GIG', label: 'Gig' },
+  { value: 'REHEARSAL', label: 'Rehearsal' },
+  { value: 'RECORDING', label: 'Recording' },
+  { value: 'OTHER', label: 'Other' },
+];
 
 function SettingsRow({ icon, label, onPress, color, colors, showArrow = true }) {
   return (
@@ -56,6 +67,15 @@ export default function SettingsScreen({ navigation, route }) {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
 
+  // Workspace defaults state
+  const [showDefaultsModal, setShowDefaultsModal] = useState(false);
+  const [wsCurrency, setWsCurrency] = useState('USD');
+  const [wsEventType, setWsEventType] = useState('GIG');
+  const [wsStartTime, setWsStartTime] = useState('19:00');
+  const [wsEndTime, setWsEndTime] = useState('21:00');
+  const [wsVenue, setWsVenue] = useState('');
+  const [savingDefaults, setSavingDefaults] = useState(false);
+
   useEffect(() => {
     const checkRole = async () => {
       try {
@@ -63,6 +83,12 @@ export default function SettingsScreen({ navigation, route }) {
         setWorkspaceName(ws.name || '');
         const membership = ws.members?.find(m => m.userId === user?.id);
         setIsAdmin(membership?.role === 'ADMIN');
+        // Load workspace defaults
+        setWsCurrency(ws.currency || 'USD');
+        setWsEventType(ws.defaultEventType || 'GIG');
+        setWsStartTime(ws.defaultStartTime || '19:00');
+        setWsEndTime(ws.defaultEndTime || '21:00');
+        setWsVenue(ws.defaultVenue || '');
       } catch {
         // Default to non-admin
       }
@@ -121,6 +147,26 @@ export default function SettingsScreen({ navigation, route }) {
       setDeleting(false);
     }
   }, [workspaceId, workspaceName, deleteConfirmText, navigation]);
+
+  const handleSaveDefaults = useCallback(async () => {
+    setSavingDefaults(true);
+    try {
+      await api.updateWorkspace(workspaceId, {
+        currency: wsCurrency,
+        defaultEventType: wsEventType,
+        defaultStartTime: wsStartTime,
+        defaultEndTime: wsEndTime,
+        defaultVenue: wsVenue || null,
+      });
+      successNotification();
+      Alert.alert('Saved', 'Workspace defaults updated');
+      setShowDefaultsModal(false);
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to save defaults');
+    } finally {
+      setSavingDefaults(false);
+    }
+  }, [workspaceId, wsCurrency, wsEventType, wsStartTime, wsEndTime, wsVenue]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
@@ -255,6 +301,13 @@ export default function SettingsScreen({ navigation, route }) {
                 colors={colors}
               />
               <View style={[styles.separator, { backgroundColor: colors.border }]} />
+              <SettingsRow
+                icon={'\u2699\uFE0F'}
+                label="Workspace Defaults"
+                onPress={() => setShowDefaultsModal(true)}
+                colors={colors}
+              />
+              <View style={[styles.separator, { backgroundColor: colors.border }]} />
             </>
           )}
           <SettingsRow
@@ -367,6 +420,103 @@ export default function SettingsScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
+
+      {/* Workspace Defaults Modal */}
+      <Modal visible={showDefaultsModal} transparent animationType="fade" onRequestClose={() => setShowDefaultsModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Workspace Defaults</Text>
+
+            {/* Currency */}
+            <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Currency</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+              {CURRENCIES.map(cur => (
+                <TouchableOpacity
+                  key={cur}
+                  style={[styles.chip, { backgroundColor: wsCurrency === cur ? colors.primary : colors.bgTertiary }]}
+                  onPress={() => setWsCurrency(cur)}
+                  disabled={savingDefaults}
+                >
+                  <Text style={[styles.chipText, { color: wsCurrency === cur ? '#ffffff' : colors.textPrimary }]}>{cur}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Event Type */}
+            <Text style={[styles.modalLabel, { color: colors.textSecondary, marginTop: 16 }]}>Default Event Type</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+              {EVENT_TYPES.map(et => (
+                <TouchableOpacity
+                  key={et.value}
+                  style={[styles.chip, { backgroundColor: wsEventType === et.value ? colors.primary : colors.bgTertiary }]}
+                  onPress={() => setWsEventType(et.value)}
+                  disabled={savingDefaults}
+                >
+                  <Text style={[styles.chipText, { color: wsEventType === et.value ? '#ffffff' : colors.textPrimary }]}>{et.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Default Times */}
+            <View style={styles.timeRow}>
+              <View style={styles.timeCol}>
+                <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Start Time</Text>
+                <TextInput
+                  style={[styles.timeInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                  value={wsStartTime}
+                  onChangeText={setWsStartTime}
+                  placeholder="19:00"
+                  placeholderTextColor={colors.textSecondary}
+                  editable={!savingDefaults}
+                />
+              </View>
+              <View style={styles.timeCol}>
+                <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>End Time</Text>
+                <TextInput
+                  style={[styles.timeInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                  value={wsEndTime}
+                  onChangeText={setWsEndTime}
+                  placeholder="21:00"
+                  placeholderTextColor={colors.textSecondary}
+                  editable={!savingDefaults}
+                />
+              </View>
+            </View>
+
+            {/* Default Venue */}
+            <Text style={[styles.modalLabel, { color: colors.textSecondary, marginTop: 8 }]}>Default Venue</Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+              value={wsVenue}
+              onChangeText={setWsVenue}
+              placeholder="Leave blank for none"
+              placeholderTextColor={colors.textSecondary}
+              editable={!savingDefaults}
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
+                onPress={() => setShowDefaultsModal(false)}
+                disabled={savingDefaults}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.primary }]}
+                onPress={handleSaveDefaults}
+                disabled={savingDefaults}
+              >
+                {savingDefaults ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <Text style={styles.modalButtonTextWhite}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -440,4 +590,25 @@ const styles = StyleSheet.create({
   modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
   modalButtonText: { fontSize: 15, fontWeight: '600' },
   modalButtonTextWhite: { fontSize: 15, fontWeight: '600', color: '#ffffff' },
+  modalLabel: { fontSize: 14, fontWeight: '500', marginBottom: 8 },
+  // Chip styles for currency/event type
+  chipScroll: { marginBottom: 8 },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
+    marginRight: 8,
+  },
+  chipText: { fontSize: 14, fontWeight: '600' },
+  // Time row
+  timeRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
+  timeCol: { flex: 1 },
+  timeInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 16,
+    textAlign: 'center',
+  },
 });

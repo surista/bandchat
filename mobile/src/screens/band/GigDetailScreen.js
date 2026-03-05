@@ -59,6 +59,8 @@ export default function GigDetailScreen({ navigation, route }) {
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(isNew || startEditing);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
 
   // Form
   const [title, setTitle] = useState('');
@@ -85,12 +87,14 @@ export default function GigDetailScreen({ navigation, route }) {
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
 
-  // Load workspace currency
+  // Load workspace currency and admin status
   useEffect(() => {
     api.getWorkspace(workspaceId).then(ws => {
       setCurrencySymbol(getCurrencySymbol(ws.currency || 'USD'));
+      const membership = ws.members?.find(m => m.userId === user?.id);
+      setIsAdmin(membership?.role === 'ADMIN');
     }).catch(() => {});
-  }, [workspaceId]);
+  }, [workspaceId, user?.id]);
 
   useEffect(() => {
     if (isNew) return;
@@ -126,6 +130,7 @@ export default function GigDetailScreen({ navigation, route }) {
     setAddress(data.address || '');
     setPay(data.pay ? String(data.pay) : '');
     setNotes(data.notes || '');
+    setIsLocked(data.isLocked || false);
   }, []);
 
   useLayoutEffect(() => {
@@ -139,7 +144,8 @@ export default function GigDetailScreen({ navigation, route }) {
   }, [navigation, isNew, editing, gig]);
 
   useLayoutEffect(() => {
-    if (!isNew && !editing && !loading) {
+    const canEdit = !gig?.isLocked || isAdmin;
+    if (!isNew && !editing && !loading && canEdit) {
       navigation.setOptions({
         headerRight: () => (
           <TouchableOpacity onPress={() => setEditing(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Edit event">
@@ -150,7 +156,7 @@ export default function GigDetailScreen({ navigation, route }) {
     } else {
       navigation.setOptions({ headerRight: undefined });
     }
-  }, [navigation, isNew, editing, loading, colors.primary]);
+  }, [navigation, isNew, editing, loading, colors.primary, gig?.isLocked, isAdmin]);
 
   const handleSave = useCallback(async () => {
     const errors = {};
@@ -177,6 +183,7 @@ export default function GigDetailScreen({ navigation, route }) {
       address: address.trim() || null,
       pay: pay ? parseFloat(pay) : null,
       notes: notes.trim() || null,
+      ...(isAdmin && { isLocked }),
     };
     try {
       if (isNew) {
@@ -516,6 +523,21 @@ export default function GigDetailScreen({ navigation, route }) {
             accessibilityLabel="Notes"
           />
 
+          {isAdmin && (
+            <TouchableOpacity
+              style={styles.checkboxRow}
+              onPress={() => setIsLocked(prev => !prev)}
+              activeOpacity={0.6}
+              accessibilityRole="button"
+              accessibilityLabel={`Lock event, ${isLocked ? 'checked' : 'unchecked'}`}
+            >
+              <View style={[styles.checkbox, { borderColor: colors.border }, isLocked && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+                {isLocked && <Text style={styles.checkmark}>{'\u2713'}</Text>}
+              </View>
+              <Text style={[styles.checkboxLabel, { color: colors.textPrimary }]}>Lock event (prevents member edits)</Text>
+            </TouchableOpacity>
+          )}
+
           <View style={styles.formActions}>
             <TouchableOpacity
               style={[styles.formButton, { backgroundColor: colors.bgTertiary }]}
@@ -607,7 +629,7 @@ export default function GigDetailScreen({ navigation, route }) {
       style={[styles.container, { backgroundColor: colors.bgPrimary }]}
       contentContainerStyle={styles.viewContent}
     >
-      {/* Type + Status badges */}
+      {/* Type + Status + Lock badges */}
       <View style={styles.viewBadgeRow}>
         <View style={[styles.typeBadge, { backgroundColor: typeColor + '25' }]}>
           <Text style={[styles.typeBadgeText, { color: typeColor }]}>{gig?.type}</Text>
@@ -615,6 +637,11 @@ export default function GigDetailScreen({ navigation, route }) {
         {gig?.status && gig.status !== 'SCHEDULED' && (
           <View style={[styles.typeBadge, { backgroundColor: statusColor + '25' }]}>
             <Text style={[styles.typeBadgeText, { color: statusColor }]}>{gig.status}</Text>
+          </View>
+        )}
+        {gig?.isLocked && (
+          <View style={[styles.typeBadge, { backgroundColor: '#64748b25' }]}>
+            <Text style={[styles.typeBadgeText, { color: '#64748b' }]}>{'\uD83D\uDD12'} Locked</Text>
           </View>
         )}
       </View>
@@ -899,4 +926,16 @@ const styles = StyleSheet.create({
   dateShortcutsContent: { gap: 8 },
   dateChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1 },
   dateChipText: { fontSize: 13, fontWeight: '500' },
+  checkboxRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16, marginBottom: 8 },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  checkmark: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  checkboxLabel: { fontSize: 15 },
 });

@@ -17,6 +17,7 @@ import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import { mediumImpact, successNotification } from '../../utils/haptics';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import api from '../../services/api';
@@ -71,8 +72,10 @@ function formatTimeRange(startTime, endTime) {
 export default function GigListScreen({ navigation, route }) {
   const { workspaceId } = route.params;
   const { colors } = useTheme();
+  const { user } = useAuth();
 
   const [gigs, setGigs] = useState([]);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [otherGigs, setOtherGigs] = useState([]);
   const [showAllBands, setShowAllBands] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -99,12 +102,14 @@ export default function GigListScreen({ navigation, route }) {
   const loadingRef = useRef(loading);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
 
-  // Load workspace currency
+  // Load workspace currency and admin status
   useEffect(() => {
     api.getWorkspace(workspaceId).then(ws => {
       setCurrencySymbol(getCurrencySymbol(ws.currency || 'USD'));
+      const membership = ws.members?.find(m => m.userId === user?.id);
+      setIsAdmin(membership?.role === 'ADMIN');
     }).catch(() => {});
-  }, [workspaceId]);
+  }, [workspaceId, user?.id]);
 
   const handleSubscribeCalendar = useCallback(async () => {
     setCalendarLoading(true);
@@ -381,6 +386,7 @@ export default function GigListScreen({ navigation, route }) {
               ]}
               numberOfLines={1}
             >
+              {item.isLocked && <Text style={{ color: '#64748b' }}>{'\uD83D\uDD12'} </Text>}
               {item.title}
             </Text>
             <View style={[styles.typeBadge, { backgroundColor: typeColor + '25' }]}>
@@ -601,20 +607,24 @@ export default function GigListScreen({ navigation, route }) {
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+              {selectedGig?.isLocked && <Text>{'\uD83D\uDD12'} </Text>}
               {selectedGig?.title}
             </Text>
-            <TouchableOpacity
-              style={styles.actionItem}
-              onPress={() => {
-                setShowActions(false);
-                navigation.navigate('GigDetail', { gigId: selectedGig?.id, workspaceId, editing: true });
-                setSelectedGig(null);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Edit event"
-            >
-              <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
-            </TouchableOpacity>
+            {/* Only show Edit/Delete if user is admin OR gig is not locked */}
+            {(isAdmin || !selectedGig?.isLocked) && (
+              <TouchableOpacity
+                style={styles.actionItem}
+                onPress={() => {
+                  setShowActions(false);
+                  navigation.navigate('GigDetail', { gigId: selectedGig?.id, workspaceId, editing: true });
+                  setSelectedGig(null);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Edit event"
+              >
+                <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={styles.actionItem} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate event">
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Duplicate</Text>
             </TouchableOpacity>
@@ -633,14 +643,21 @@ export default function GigListScreen({ navigation, route }) {
                 <Text style={[styles.actionText, { color: colors.primary }]}>Set Availability</Text>
               </TouchableOpacity>
             )}
-            {selectedGig?.status === 'SCHEDULED' && (
+            {selectedGig?.status === 'SCHEDULED' && (isAdmin || !selectedGig?.isLocked) && (
               <TouchableOpacity style={styles.actionItem} onPress={handleComplete} accessibilityRole="button" accessibilityLabel="Mark event as complete">
                 <Text style={[styles.actionText, { color: '#22c55e' }]}>{'\u2713'} Mark Complete</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete event">
-              <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
-            </TouchableOpacity>
+            {(isAdmin || !selectedGig?.isLocked) && (
+              <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete event">
+                <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
+              </TouchableOpacity>
+            )}
+            {selectedGig?.isLocked && !isAdmin && (
+              <View style={styles.actionItem}>
+                <Text style={[styles.actionText, { color: colors.textSecondary }]}>This event is locked by an admin</Text>
+              </View>
+            )}
             <TouchableOpacity
               style={[styles.actionItem, styles.actionCancel]}
               onPress={() => { setShowActions(false); setSelectedGig(null); }}

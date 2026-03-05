@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import useDebounce from '../../hooks/useDebounce';
 import ErrorState from '../../components/ErrorState';
 import getInitial from '../../utils/getInitial';
@@ -66,8 +67,10 @@ function getDateRange(member) {
 export default function BandMembersScreen({ navigation, route }) {
   const { workspaceId } = route.params;
   const { colors } = useTheme();
+  const { user } = useAuth();
 
   const [members, setMembers] = useState({ current: [], former: [], guests: [] });
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -100,7 +103,7 @@ export default function BandMembersScreen({ navigation, route }) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerRight: () => (
+      headerRight: () => isAdmin ? (
         <TouchableOpacity
           onPress={() => openCreateModal()}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -109,9 +112,9 @@ export default function BandMembersScreen({ navigation, route }) {
         >
           <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
         </TouchableOpacity>
-      ),
+      ) : null,
     });
-  }, [navigation, colors.primary]);
+  }, [navigation, colors.primary, isAdmin]);
 
   const loadMembers = useCallback(async () => {
     setError(null);
@@ -131,6 +134,14 @@ export default function BandMembersScreen({ navigation, route }) {
   useEffect(() => {
     loadMembers();
   }, [loadMembers]);
+
+  // Check if current user is workspace admin
+  useEffect(() => {
+    api.getWorkspace(workspaceId).then(ws => {
+      const membership = ws.members?.find(m => m.userId === user?.id);
+      setIsAdmin(membership?.role === 'ADMIN');
+    }).catch(() => {});
+  }, [workspaceId, user?.id]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -367,7 +378,9 @@ export default function BandMembersScreen({ navigation, route }) {
             <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>{search ? 'No matching members' : 'No members yet'}</Text>
             {!search && (
               <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
-                Build your band roster. Tap + to add current, former, or guest musicians.
+                {isAdmin
+                  ? 'Build your band roster. Tap + to add current, former, or guest musicians.'
+                  : 'Your band roster will appear here once an admin adds members.'}
               </Text>
             )}
           </View>
@@ -484,12 +497,16 @@ export default function BandMembersScreen({ navigation, route }) {
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
               {selectedMember?.name}
             </Text>
-            <TouchableOpacity style={styles.actionItem} onPress={() => openEditModal(selectedMember)} accessibilityRole="button" accessibilityLabel="Edit member">
-              <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete member">
-              <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
-            </TouchableOpacity>
+            {isAdmin && (
+              <>
+                <TouchableOpacity style={styles.actionItem} onPress={() => openEditModal(selectedMember)} accessibilityRole="button" accessibilityLabel="Edit member">
+                  <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete member">
+                  <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
+                </TouchableOpacity>
+              </>
+            )}
             <TouchableOpacity
               style={[styles.actionItem, styles.actionCancel]}
               onPress={() => { setShowActions(false); setSelectedMember(null); }}

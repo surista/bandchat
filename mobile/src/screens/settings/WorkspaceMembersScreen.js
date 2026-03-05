@@ -3,6 +3,7 @@ import {
   View,
   Text,
   FlatList,
+  TextInput,
   TouchableOpacity,
   Modal,
   Alert,
@@ -13,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { mediumImpact } from '../../utils/haptics';
+import { mediumImpact, successNotification } from '../../utils/haptics';
 import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
 
@@ -36,6 +37,13 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
   // Remove confirmation
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const [postAction, setPostAction] = useState('keep');
+
+  // Password reset
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   useEffect(() => {
     api.getBlockedUsers().then(blocks => {
@@ -102,6 +110,46 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
     setPostAction('keep');
     setShowRemoveConfirm(true);
   }, []);
+
+  const clearPasswordFields = useCallback(() => {
+    setNewPassword('');
+    setConfirmPassword('');
+    setAdminPassword('');
+  }, []);
+
+  const openPasswordReset = useCallback(() => {
+    clearPasswordFields();
+    setShowActions(false);
+    setShowPasswordReset(true);
+  }, [clearPasswordFields]);
+
+  const handleResetPassword = useCallback(async () => {
+    if (newPassword.length < 8) {
+      Alert.alert('Error', 'Password must be at least 8 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+    if (!adminPassword) {
+      Alert.alert('Error', 'Enter your admin password to confirm');
+      return;
+    }
+    setResettingPassword(true);
+    try {
+      await api.adminResetPassword(workspaceId, selectedMember.userId, newPassword, adminPassword);
+      successNotification();
+      Alert.alert('Success', 'Password reset. User has been logged out of all devices.');
+      setShowPasswordReset(false);
+      clearPasswordFields();
+      setSelectedMember(null);
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to reset password');
+    } finally {
+      setResettingPassword(false);
+    }
+  }, [newPassword, confirmPassword, adminPassword, workspaceId, selectedMember, clearPasswordFields]);
 
   const renderMember = useCallback(({ item }) => {
     const displayName = item.user?.displayName || 'Unknown';
@@ -208,6 +256,14 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
 
             <TouchableOpacity
               style={styles.actionItem}
+              onPress={openPasswordReset}
+              disabled={updating}
+            >
+              <Text style={[styles.actionText, { color: colors.primary }]}>Reset Password</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionItem}
               onPress={openRemoveConfirm}
               disabled={updating}
             >
@@ -270,6 +326,78 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
                   <ActivityIndicator color="#ffffff" size="small" />
                 ) : (
                   <Text style={styles.modalButtonTextWhite}>Remove</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Password Reset Modal */}
+      <Modal visible={showPasswordReset} transparent animationType="fade" onRequestClose={() => { setShowPasswordReset(false); clearPasswordFields(); }}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Reset Password</Text>
+            <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
+              Set a new password for {selectedMember?.user?.displayName || 'this member'}
+            </Text>
+
+            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>New Password</Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+              value={newPassword}
+              onChangeText={setNewPassword}
+              placeholder="At least 8 characters"
+              placeholderTextColor={colors.textSecondary}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!resettingPassword}
+            />
+
+            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Confirm Password</Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              placeholder="Re-enter password"
+              placeholderTextColor={colors.textSecondary}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!resettingPassword}
+            />
+
+            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Your Admin Password</Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+              value={adminPassword}
+              onChangeText={setAdminPassword}
+              placeholder="Verify your identity"
+              placeholderTextColor={colors.textSecondary}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!resettingPassword}
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
+                onPress={() => { setShowPasswordReset(false); clearPasswordFields(); }}
+                disabled={resettingPassword}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.primary }]}
+                onPress={handleResetPassword}
+                disabled={resettingPassword || !newPassword || !confirmPassword || !adminPassword}
+              >
+                {resettingPassword ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <Text style={styles.modalButtonTextWhite}>Reset</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -367,4 +495,12 @@ const styles = StyleSheet.create({
   modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
   modalButtonText: { fontSize: 15, fontWeight: '600' },
   modalButtonTextWhite: { fontSize: 15, fontWeight: '600', color: '#ffffff' },
+  inputLabel: { fontSize: 14, fontWeight: '500', marginBottom: 6, marginTop: 12 },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+  },
 });
