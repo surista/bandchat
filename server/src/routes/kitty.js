@@ -28,12 +28,14 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
       });
     }
 
-    // Calculate current balance
-    const balance = Math.round((kitty.startingBalance + kitty.transactions.reduce((sum, t) => {
+    // Calculate current balance (convert Decimal to Number for arithmetic)
+    const startingBal = Number(kitty.startingBalance) || 0;
+    const balance = Math.round((startingBal + kitty.transactions.reduce((sum, t) => {
+      const amt = Number(t.amount) || 0;
       if (t.type === 'GIG_PAY' || t.type === 'OTHER_INCOME' || t.type === 'FEE') {
-        return sum + t.amount;
+        return sum + amt;
       }
-      return sum - Math.abs(t.amount); // EXPENSE subtracts
+      return sum - Math.abs(amt); // EXPENSE subtracts
     }, 0)) * 100) / 100;
 
     res.json({ ...kitty, currentBalance: balance });
