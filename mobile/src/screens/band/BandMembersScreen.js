@@ -256,17 +256,28 @@ export default function BandMembersScreen({ navigation, route }) {
     return result;
   }, [members, debouncedSearch, segment]);
 
+  const handleMemberPress = useCallback((item) => {
+    if (item.linkedUserId) {
+      navigation.navigate('MemberProfile', {
+        workspaceId,
+        userId: item.linkedUserId,
+        displayName: item.name,
+      });
+    }
+  }, [navigation, workspaceId]);
+
   const renderMember = useCallback(({ item }) => {
     const instruments = getInstruments(item);
     const dateRange = getDateRange(item);
     return (
       <TouchableOpacity
         style={[styles.memberCard, { backgroundColor: colors.bgSecondary }]}
-        onLongPress={() => { setSelectedMember(item); setShowActions(true); }}
+        onPress={() => handleMemberPress(item)}
+        onLongPress={isAdmin ? () => { setSelectedMember(item); setShowActions(true); } : undefined}
         delayLongPress={400}
         activeOpacity={0.7}
         accessibilityRole="button"
-        accessibilityLabel={`${item.name}. Long press for options`}
+        accessibilityLabel={`${item.name}${item.linkedUserId ? '. Tap to view profile' : ''}${isAdmin ? '. Long press for options' : ''}`}
       >
         <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
           {(item.imageUrl || item.linkedUser?.avatarUrl) ? (
@@ -276,7 +287,10 @@ export default function BandMembersScreen({ navigation, route }) {
           )}
         </View>
         <View style={styles.memberInfo}>
-          <Text style={[styles.memberName, { color: colors.textPrimary }]}>{item.name}</Text>
+          <View style={styles.nameRow}>
+            <Text style={[styles.memberName, { color: item.linkedUserId ? colors.primary : colors.textPrimary }]}>{item.name}</Text>
+            {item.linkedUserId && <Text style={styles.linkedIcon}>{'\uD83D\uDC64'}</Text>}
+          </View>
           {dateRange ? (
             <Text style={[styles.memberDate, { color: colors.textSecondary }]}>{dateRange}</Text>
           ) : null}
@@ -292,7 +306,7 @@ export default function BandMembersScreen({ navigation, route }) {
         </View>
       </TouchableOpacity>
     );
-  }, [colors]);
+  }, [colors, handleMemberPress, isAdmin]);
 
   const renderSectionHeader = useCallback(({ section }) => (
     <View style={styles.sectionHeader}>
@@ -558,6 +572,8 @@ const styles = StyleSheet.create({
   avatarText: { color: '#ffffff', fontSize: 18, fontWeight: '700' },
   avatarImage: { width: 44, height: 44, borderRadius: 22 },
   memberInfo: { flex: 1 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  linkedIcon: { fontSize: 14 },
   memberName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
   memberDate: { fontSize: 13, marginBottom: 4 },
   instrumentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
