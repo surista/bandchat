@@ -13,6 +13,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
@@ -28,6 +29,7 @@ export default function ThreadScreen({ route }) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const { socket, startTyping, stopTyping } = useSocket();
+  const headerHeight = useHeaderHeight();
 
   const [parent, setParent] = useState(parentMessage);
   const [replies, setReplies] = useState([]);
@@ -335,7 +337,7 @@ export default function ThreadScreen({ route }) {
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.bgPrimary }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
       <FlatList
         data={listData}

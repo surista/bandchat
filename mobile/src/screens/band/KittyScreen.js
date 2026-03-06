@@ -74,7 +74,7 @@ function getCurrencySymbol(code) {
 
 function formatAmount(amount, currency) {
   const sym = getCurrencySymbol(currency);
-  return `${sym}${Math.abs(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `${sym}${Math.abs(Number(amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatMonth(dateStr) {
@@ -216,13 +216,13 @@ export default function KittyScreen({ navigation, route }) {
   const totalIncome = useMemo(() => {
     return (kitty?.transactions || [])
       .filter(t => t.type !== 'EXPENSE')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + Number(t.amount), 0);
   }, [kitty?.transactions]);
 
   const totalExpenses = useMemo(() => {
     return (kitty?.transactions || [])
       .filter(t => t.type === 'EXPENSE')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + Number(t.amount), 0);
   }, [kitty?.transactions]);
 
   // Running balance: iterate oldest→newest, income adds, expense subtracts
@@ -230,13 +230,13 @@ export default function KittyScreen({ navigation, route }) {
     const txs = kitty?.transactions || [];
     if (!txs.length) return {};
     const reversed = [...txs].reverse();
-    let balance = kitty?.startingBalance || 0;
+    let balance = Number(kitty?.startingBalance) || 0;
     const map = {};
     for (const tx of reversed) {
       if (tx.type === 'EXPENSE') {
-        balance -= tx.amount;
+        balance -= Number(tx.amount);
       } else {
-        balance += tx.amount;
+        balance += Number(tx.amount);
       }
       map[tx.id] = balance;
     }
