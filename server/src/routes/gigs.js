@@ -484,7 +484,7 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
     res.json({
       totalGigs,
       totalRehearsals,
-      totalRevenue: revenue._sum.pay || 0,
+      totalRevenue: Number(revenue._sum.pay) || 0,
       currency: kitty?.currency || 'USD',
       mostPlayedSongs: mostPlayedWithDetails,
       songsNeverPlayed: neverPlayed,
