@@ -30,6 +30,80 @@ const getInviteExpiration = (hours = 24) => {
   return new Date(Date.now() + hours * 60 * 60 * 1000);
 };
 
+/**
+ * Auto-elevate the longest-tenured non-admin member to admin.
+ * Tie-breaker: alphabetical order by displayName.
+ * @param {string} workspaceId - The workspace to check
+ * @param {string} excludeUserId - User ID to exclude (the one leaving/being removed)
+ * @returns {Promise<{userId: string, displayName: string}|null>} - Elevated user info or null if no candidates
+ */
+const autoElevateAdmin = async (workspaceId, excludeUserId) => {
+  // Find the longest-tenured non-admin member (excluding the departing user)
+  const candidate = await prisma.workspaceMember.findFirst({
+    where: {
+      workspaceId,
+      role: 'MEMBER',
+      userId: { not: excludeUserId }
+    },
+    orderBy: [
+      { joinedAt: 'asc' },  // Longest-tenured first
+    ],
+    include: {
+      user: { select: { id: true, displayName: true } }
+    }
+  });
+
+  if (!candidate) {
+    // No non-admin members to elevate; check if there are other admins
+    const otherAdmin = await prisma.workspaceMember.findFirst({
+      where: {
+        workspaceId,
+        role: 'ADMIN',
+        userId: { not: excludeUserId }
+      }
+    });
+
+    if (otherAdmin) {
+      // Another admin exists, no elevation needed
+      return null;
+    }
+
+    // No candidates and no other admins - workspace would be orphaned
+    return null;
+  }
+
+  // If there are multiple candidates with same joinedAt, get all and sort alphabetically
+  const candidates = await prisma.workspaceMember.findMany({
+    where: {
+      workspaceId,
+      role: 'MEMBER',
+      userId: { not: excludeUserId },
+      joinedAt: candidate.joinedAt
+    },
+    include: {
+      user: { select: { id: true, displayName: true } }
+    }
+  });
+
+  // Sort alphabetically by displayName for tie-breaker
+  candidates.sort((a, b) =>
+    (a.user.displayName || '').localeCompare(b.user.displayName || '')
+  );
+
+  const elevatedMember = candidates[0];
+
+  // Promote to admin
+  await prisma.workspaceMember.update({
+    where: { userId_workspaceId: { userId: elevatedMember.userId, workspaceId } },
+    data: { role: 'ADMIN' }
+  });
+
+  return {
+    userId: elevatedMember.userId,
+    displayName: elevatedMember.user.displayName
+  };
+};
+
 // Get all workspaces for current user
 router.get('/', authenticate, async (req, res) => {
   try {
@@ -263,13 +337,20 @@ router.post('/:workspaceId/leave', authenticate, isWorkspaceMember, async (req, 
       where: { userId_workspaceId: { userId, workspaceId } }
     });
 
+    let elevatedUser = null;
     if (membership.role === 'ADMIN') {
       const adminCount = await prisma.workspaceMember.count({
         where: { workspaceId, role: 'ADMIN' }
       });
 
       if (adminCount === 1) {
-        return res.status(400).json({ error: 'You are the last admin. Transfer the admin role to another member before leaving.' });
+        // Try to auto-elevate another member
+        elevatedUser = await autoElevateAdmin(workspaceId, userId);
+        if (!elevatedUser) {
+          return res.status(400).json({
+            error: 'You are the last admin and there are no other members to promote. Delete the workspace instead.'
+          });
+        }
       }
     }
 
@@ -277,7 +358,21 @@ router.post('/:workspaceId/leave', authenticate, isWorkspaceMember, async (req, 
       where: { userId_workspaceId: { userId, workspaceId } }
     });
 
-    res.json({ message: 'Left workspace' });
+    // Notify via socket if admin was elevated
+    if (elevatedUser) {
+      const io = req.app.get('io');
+      io.to(`workspace:${workspaceId}`).emit('member:elevated', {
+        workspaceId,
+        userId: elevatedUser.userId,
+        displayName: elevatedUser.displayName,
+        reason: 'Previous admin left the workspace'
+      });
+    }
+
+    res.json({
+      message: 'Left workspace',
+      ...(elevatedUser && { elevatedAdmin: elevatedUser })
+    });
   } catch (error) {
     console.error('Leave workspace error:', error);
     res.status(500).json({ error: 'Failed to leave workspace' });
@@ -525,14 +620,16 @@ router.put('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, asyn
         return res.status(400).json({ error: 'Invalid role' });
       }
 
-      // Can't demote yourself if you're the only admin
-      if (userId === req.user.id && role === 'MEMBER') {
+      // Check if demoting an admin would leave the workspace without any admins
+      if (role === 'MEMBER' && targetMember.role === 'ADMIN') {
         const adminCount = await prisma.workspaceMember.count({
           where: { workspaceId, role: 'ADMIN' }
         });
 
         if (adminCount === 1) {
-          return res.status(400).json({ error: 'Cannot demote the only admin' });
+          return res.status(400).json({
+            error: 'Cannot demote the only admin. Promote another member first.'
+          });
         }
       }
 
@@ -667,17 +764,6 @@ router.delete('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, a
     const { postAction, mergeUserId } = req.query;
     // postAction: 'keep' | 'hide' | 'delete' | 'anonymize' | 'merge'
 
-    // Can't remove yourself if you're the only admin
-    if (userId === req.user.id) {
-      const adminCount = await prisma.workspaceMember.count({
-        where: { workspaceId, role: 'ADMIN' }
-      });
-
-      if (adminCount === 1) {
-        return res.status(400).json({ error: 'Cannot remove the only admin' });
-      }
-    }
-
     // Verify user is a member
     const membership = await prisma.workspaceMember.findUnique({
       where: { userId_workspaceId: { userId, workspaceId } }
@@ -685,6 +771,24 @@ router.delete('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, a
 
     if (!membership) {
       return res.status(404).json({ error: 'User is not a member of this workspace' });
+    }
+
+    // Check if removing this user would leave the workspace without an admin
+    let elevatedUser = null;
+    if (membership.role === 'ADMIN') {
+      const adminCount = await prisma.workspaceMember.count({
+        where: { workspaceId, role: 'ADMIN' }
+      });
+
+      if (adminCount === 1) {
+        // This is the last admin - try to auto-elevate another member
+        elevatedUser = await autoElevateAdmin(workspaceId, userId);
+        if (!elevatedUser) {
+          return res.status(400).json({
+            error: 'Cannot remove the only admin. No other members available to promote.'
+          });
+        }
+      }
     }
 
     // Get all channel IDs in this workspace
@@ -753,7 +857,20 @@ router.delete('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, a
       userId
     });
 
-    res.json({ message: 'Member removed successfully' });
+    // Notify if admin was auto-elevated
+    if (elevatedUser) {
+      io.to(`workspace:${workspaceId}`).emit('member:elevated', {
+        workspaceId,
+        userId: elevatedUser.userId,
+        displayName: elevatedUser.displayName,
+        reason: 'Previous admin was removed from the workspace'
+      });
+    }
+
+    res.json({
+      message: 'Member removed successfully',
+      ...(elevatedUser && { elevatedAdmin: elevatedUser })
+    });
   } catch (error) {
     console.error('Remove member error:', error);
     res.status(500).json({ error: 'Failed to remove member' });
