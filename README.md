@@ -9,7 +9,7 @@ A real-time communication and management app for bands. Think Slack, but built s
 - **Direct Messages** — Private 1-on-1 and group conversations
 - **Threads** — Reply to specific messages in-line
 - **Reactions** — Emoji reactions on messages
-- **File Sharing** — Upload images, audio, and files up to 10MB via Cloudinary
+- **File Sharing** — Upload images, audio, and files up to 10MB via Cloudflare R2
 - **Voice Messages** — Record and send audio messages
 - **Link Previews** — Automatic rich previews for shared URLs
 - **Search** — Full-text search across all channels, DMs, and messages
@@ -25,6 +25,7 @@ A real-time communication and management app for bands. Think Slack, but built s
 - **Setlists** — Drag-and-drop song ordering with automatic duration calculation, MC sections, and PDF export
 - **Medleys** — Group songs into medleys within setlists
 - **Calendar** — Schedule gigs, rehearsals, and recording sessions with venue, address, pay tracking, device calendar sync, and iCal feed
+- **Upcoming Event Banner** — Next gig/rehearsal always visible at the top of the sidebar with pinned Calendar shortcut
 - **Gig Management** — Track attendance, mark gigs complete, view gig history, live mode during performances
 - **Practice Dashboard** — Log practice sessions, track streaks and total time, view history grouped by date
 - **Stats** — Gigs played, total revenue, most played songs, songs never performed, band achievements
@@ -82,7 +83,7 @@ See `mobile/ROADMAP.md` for detailed feature breakdown.
 - Prisma ORM with PostgreSQL (40+ models)
 - Socket.IO (real-time messaging)
 - JWT Authentication (access tokens + httpOnly cookie refresh tokens)
-- Cloudinary (image/file uploads with magic byte validation)
+- Cloudflare R2 (file uploads with magic byte validation)
 - Web Push (VAPID)
 - Resend (transactional email)
 - Helmet + CSP, rate limiting, SSRF protection
@@ -185,7 +186,7 @@ bandchat/
 │   └── package.json
 ├── server/                 # Express backend
 │   ├── src/
-│   │   ├── routes/         # 26 route modules
+│   │   ├── routes/         # 27 route modules
 │   │   ├── middleware/      # Auth, rate limiting
 │   │   ├── services/       # Slack text converter, emoji map
 │   │   ├── socket/         # Real-time event handlers

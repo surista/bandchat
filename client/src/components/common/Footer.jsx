@@ -182,6 +182,33 @@ function Footer({ theme = 'dark' }) {
               <div className="border-b border-[var(--color-modal-border)] pb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded">NEW</span>
+                  <span className="text-sm text-gray-500">v1.04.39</span>
+                </div>
+                <h4 className="font-medium text-white mb-1">Upcoming Event Banner & Calendar Shortcut</h4>
+                <p className="text-sm text-gray-400">
+                  Your next gig or rehearsal is now always visible at the top of the sidebar. Color-coded banner with quick access to the Calendar on both web and mobile.
+                </p>
+              </div>
+              <div className="border-b border-[var(--color-modal-border)] pb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm text-gray-500">v1.04.37</span>
+                </div>
+                <h4 className="font-medium text-white mb-1">Calendar Improvements</h4>
+                <p className="text-sm text-gray-400">
+                  Sort calendar events newest-first by default with a toggle to switch order. Tap band members to view profiles, badges, and stats on mobile.
+                </p>
+              </div>
+              <div className="border-b border-[var(--color-modal-border)] pb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm text-gray-500">v1.04.33</span>
+                </div>
+                <h4 className="font-medium text-white mb-1">Security & Admin Fixes</h4>
+                <p className="text-sm text-gray-400">
+                  CSP hardening, input validation, currency precision with Decimal types, admin auto-elevation, and mobile admin feature parity (gig locking, channel sections, workspace defaults).
+                </p>
+              </div>
+              <div className="border-b border-[var(--color-modal-border)] pb-4">
+                <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.04.27</span>
                 </div>
                 <h4 className="font-medium text-white mb-1">Quality & Polish</h4>

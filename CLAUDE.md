@@ -115,6 +115,7 @@ bandchat/
 - Song repertoire with bulk import, async metadata enrichment, and lyrics
 - Drag-and-drop setlist builder with MC sections, medleys, and PDF export
 - Calendar for gigs/rehearsals with device calendar sync and iCal feed
+- Upcoming event banner with pinned Calendar shortcut in sidebar
 - Gig attendance tracking, completion, history, and live mode
 - Practice tracker with streaks and timezone-aware calculations
 - Band member timeline, availability, and achievements

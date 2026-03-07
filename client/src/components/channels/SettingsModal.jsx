@@ -1439,38 +1439,47 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-4 border border-[var(--color-modal-border)]">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded">NEW</span>
-                      <span className="text-sm text-[var(--color-text-muted)]">v1.01.22</span>
+                      <span className="text-sm text-[var(--color-text-muted)]">v1.04.39</span>
                     </div>
-                    <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Bulk Song Import with Metadata</h4>
+                    <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Upcoming Event Banner</h4>
                     <p className="text-sm text-[var(--color-text-muted)]">
-                      Import multiple songs at once! Paste a list of songs and we'll automatically fetch BPM, key, and duration.
+                      Your next gig or rehearsal is always visible at the top of the sidebar with a color-coded banner. Pinned Calendar shortcut for quick access.
                     </p>
                   </div>
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-4 border border-[var(--color-modal-border)]">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm text-[var(--color-text-muted)]">v1.01.20</span>
+                      <span className="text-sm text-[var(--color-text-muted)]">v1.04.37</span>
                     </div>
-                    <h4 className="font-medium text-[var(--color-text-primary)] mb-1">MC Sections in Setlists</h4>
+                    <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Calendar & Profiles</h4>
                     <p className="text-sm text-[var(--color-text-muted)]">
-                      Add talking/banter breaks between songs in your setlists with customizable durations.
+                      Sort calendar events newest-first with a toggle, tap band members to view profiles and stats, and security hardening across the platform.
                     </p>
                   </div>
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-4 border border-[var(--color-modal-border)]">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm text-[var(--color-text-muted)]">v1.01.18</span>
+                      <span className="text-sm text-[var(--color-text-muted)]">v1.04.27</span>
                     </div>
-                    <h4 className="font-medium text-[var(--color-text-primary)] mb-1">12 New Themes</h4>
+                    <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Quality & Polish</h4>
                     <p className="text-sm text-[var(--color-text-muted)]">
-                      Customize your sidebar with 12 beautiful color themes including Aubergine, Ocean, Forest, and more.
+                      Per-workspace currency, message density settings, admin role guards, and dozens of bug fixes across web and mobile.
                     </p>
                   </div>
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-4 border border-[var(--color-modal-border)]">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm text-[var(--color-text-muted)]">v1.01.15</span>
+                      <span className="text-sm text-[var(--color-text-muted)]">v1.04.11</span>
                     </div>
-                    <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Band Features</h4>
+                    <h4 className="font-medium text-[var(--color-text-primary)] mb-1">App Store Launch</h4>
                     <p className="text-sm text-[var(--color-text-muted)]">
-                      Songs, Setlists, Calendar, and Stats - everything you need to organize your band.
+                      BandChat on iOS! Content moderation, account deletion, and App Store compliance.
+                    </p>
+                  </div>
+                  <div className="bg-[var(--color-modal-card)] rounded-lg p-4 border border-[var(--color-modal-border)]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm text-[var(--color-text-muted)]">v1.01</span>
+                    </div>
+                    <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Band Features & Themes</h4>
+                    <p className="text-sm text-[var(--color-text-muted)]">
+                      Songs, setlists, calendar, stats, bulk import with metadata, MC sections, 20+ themes, and Slack workspace import.
                     </p>
                   </div>
                 </div>

@@ -113,6 +113,14 @@
 - Add gig to device calendar (expo-calendar integration)
 - Desktop-only feature hints (Audio Analyzer, Slack Import)
 
+### Phase 16 — Navigation & Admin Parity
+- Upcoming event banner (sticky, color-coded by event type, tap to view detail)
+- Pinned Calendar shortcut at top of channel list
+- Calendar sort order toggle (newest first by default)
+- Tap band member to view profile, badges, and stats
+- Admin feature parity: gig locking, channel sections, workspace defaults, password reset
+- Security hardening: CSP, input validation, Decimal currency precision
+
 ---
 
 ## Platform-Specific Features
@@ -146,7 +154,7 @@ All core features (messaging, songs, setlists, gigs, practice, polls, bulk impor
 
 | Area | Parity | Notes |
 |------|--------|-------|
-| Messaging | 95% | Mobile missing: pinned messages panel, link previews |
+| Messaging | 98% | Full parity — pinned messages, link previews, reactions all working |
 | Songs | 90% | Web has Song Suggestions; both have bulk import |
 | Setlists | 85% | Web has advanced drag-drop; mobile has print/share |
 | Gigs/Calendar | 90% | Web has month view; mobile has iCal subscribe |
