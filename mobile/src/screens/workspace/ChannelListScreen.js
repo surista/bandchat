@@ -78,6 +78,7 @@ export default function ChannelListScreen({ navigation, route }) {
   const [collapsedBandCats, setCollapsedBandCats] = useState({});
   const [collapsedDMs, setCollapsedDMs] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [nextGig, setNextGig] = useState(null);
 
   // Channel group management (admin)
   const [showGroupActions, setShowGroupActions] = useState(false);
@@ -182,16 +183,18 @@ export default function ChannelListScreen({ navigation, route }) {
 
   const loadData = useCallback(async () => {
     try {
-      const [ws, ch, groups, dms] = await Promise.all([
+      const [ws, ch, groups, dms, gig] = await Promise.all([
         api.getWorkspace(workspaceId),
         api.getChannels(workspaceId),
         api.getChannelGroups(workspaceId),
         api.getDMs(workspaceId),
+        api.getNextGig(workspaceId).catch(() => null),
       ]);
       setWorkspace(ws);
       setChannels(ch);
       setChannelGroups(groups);
       setDirectMessages(dms);
+      setNextGig(gig);
       // Check admin status
       const membership = ws.members?.find(m => m.userId === user?.id);
       setIsAdmin(membership?.role === 'ADMIN');
@@ -702,6 +705,54 @@ export default function ChannelListScreen({ navigation, route }) {
         renderSectionHeader={renderSectionHeader}
         stickySectionHeadersEnabled={false}
         contentContainerStyle={styles.listContent}
+        ListHeaderComponent={
+          <View>
+            {/* Next upcoming event banner */}
+            {nextGig && (
+              <TouchableOpacity
+                style={[
+                  styles.nextGigBanner,
+                  {
+                    backgroundColor: nextGig.type === 'GIG' ? 'rgba(34,197,94,0.15)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.15)' : 'rgba(168,85,247,0.15)',
+                    borderColor: nextGig.type === 'GIG' ? 'rgba(34,197,94,0.3)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.3)' : 'rgba(168,85,247,0.3)',
+                  },
+                ]}
+                onPress={() => navigation.navigate('GigDetail', { workspaceId, gigId: nextGig.id })}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Next event: ${nextGig.title}`}
+              >
+                <View style={styles.nextGigRow}>
+                  <Text style={styles.nextGigIcon}>
+                    {nextGig.type === 'GIG' ? '🎸' : nextGig.type === 'REHEARSAL' ? '🥁' : '📅'}
+                  </Text>
+                  <Text style={[styles.nextGigTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                    {nextGig.title}
+                  </Text>
+                </View>
+                <View style={styles.nextGigRow}>
+                  <Text style={[styles.nextGigMeta, { color: colors.textSecondary }]}>
+                    {new Date(nextGig.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                    {nextGig.startTime ? ` · ${nextGig.startTime}` : ''}
+                    {nextGig.venue ? ` · ${nextGig.venue}` : ''}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            )}
+            {/* Pinned Calendar shortcut */}
+            <TouchableOpacity
+              style={styles.calendarShortcut}
+              onPress={() => navigation.navigate('GigList', { workspaceId })}
+              activeOpacity={0.6}
+              accessibilityRole="button"
+              accessibilityLabel="Calendar"
+            >
+              <Text style={styles.calendarShortcutIcon}>📅</Text>
+              <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]}>Calendar</Text>
+              <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
+            </TouchableOpacity>
+          </View>
+        }
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -1124,5 +1175,47 @@ const styles = StyleSheet.create({
   bandItemArrow: {
     fontSize: 22,
     fontWeight: '300',
+  },
+  nextGigBanner: {
+    marginHorizontal: 12,
+    marginTop: 12,
+    marginBottom: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  nextGigRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  nextGigIcon: {
+    fontSize: 14,
+  },
+  nextGigTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
+  },
+  nextGigMeta: {
+    fontSize: 12,
+    marginTop: 2,
+    marginLeft: 20,
+  },
+  calendarShortcut: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  calendarShortcutIcon: {
+    fontSize: 16,
+  },
+  calendarShortcutLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    flex: 1,
   },
 });

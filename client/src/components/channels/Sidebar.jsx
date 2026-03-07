@@ -215,6 +215,8 @@ function Sidebar({
   const [renameLoading, setRenameLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { type: 'channel' | 'section', id, name }
   const [deleteLoading, setDeleteLoading] = useState(false);
+  // Next upcoming gig banner
+  const [nextGig, setNextGig] = useState(null);
 
   useEffect(() => {
     localStorage.setItem(`collapsedGroups:${workspace.id}`, JSON.stringify(collapsedGroups));
@@ -229,6 +231,17 @@ function Sidebar({
       setBlockedIds(new Set(blocks.map(b => b.blockedUserId)));
     }).catch(() => {});
   }, []);
+
+  // Fetch next upcoming gig
+  useEffect(() => {
+    if (!workspace?.id) return;
+    const fetchNextGig = () => {
+      api.getNextGig(workspace.id).then(setNextGig).catch(() => setNextGig(null));
+    };
+    fetchNextGig();
+    const interval = setInterval(fetchNextGig, 5 * 60 * 1000); // refresh every 5 min
+    return () => clearInterval(interval);
+  }, [workspace?.id]);
 
   useEffect(() => {
     // Check if notifications are already enabled
@@ -565,6 +578,37 @@ function Sidebar({
 
       {/* Channels List */}
       <div className="flex-1 overflow-y-auto py-4">
+        {/* Next upcoming event banner */}
+        {nextGig && (
+          <button
+            onClick={() => onSelectBandView?.('calendar')}
+            className="mx-3 mb-3 px-3 py-2 rounded-lg text-left transition-colors hover:brightness-110"
+            style={{
+              background: nextGig.type === 'GIG' ? 'rgba(34,197,94,0.15)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.15)' : 'rgba(168,85,247,0.15)',
+              border: `1px solid ${nextGig.type === 'GIG' ? 'rgba(34,197,94,0.3)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.3)' : 'rgba(168,85,247,0.3)'}`,
+            }}
+          >
+            <div className="flex items-center gap-2 text-xs">
+              <span>{nextGig.type === 'GIG' ? '🎸' : nextGig.type === 'REHEARSAL' ? '🥁' : '📅'}</span>
+              <span className="font-semibold text-white truncate">{nextGig.title}</span>
+            </div>
+            <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
+              <span>{new Date(nextGig.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+              {nextGig.startTime && <span>· {nextGig.startTime}</span>}
+              {nextGig.venue && <span className="truncate">· {nextGig.venue}</span>}
+            </div>
+          </button>
+        )}
+
+        {/* Pinned Calendar shortcut */}
+        <button
+          onClick={() => onSelectBandView?.('calendar')}
+          className={`channel-item w-full mx-2 mb-2 ${activeBandView === 'calendar' ? 'active' : ''}`}
+        >
+          <span className="text-gray-400">📅</span>
+          <span className="flex-1 truncate">Calendar</span>
+        </button>
+
         <div className="px-4 mb-2 flex items-center justify-between">
           <button
             onClick={() => toggleSectionCollapse('channels')}

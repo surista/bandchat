@@ -90,6 +90,34 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
   }
 });
 
+// Get the next upcoming gig/rehearsal for a workspace
+router.get('/workspace/:workspaceId/next', authenticate, isWorkspaceMember, async (req, res) => {
+  try {
+    const gig = await prisma.gig.findFirst({
+      where: {
+        workspaceId: req.params.workspaceId,
+        status: 'SCHEDULED',
+        date: { gte: new Date() },
+        isPersonal: false,
+      },
+      include: {
+        setlists: {
+          include: {
+            setlist: { select: { id: true, name: true } }
+          },
+          orderBy: { setNumber: 'asc' }
+        }
+      },
+      orderBy: { date: 'asc' },
+    });
+
+    res.json(gig || null);
+  } catch (error) {
+    console.error('Get next gig error:', error);
+    res.status(500).json({ error: 'Failed to get next gig' });
+  }
+});
+
 // Get gigs from all user's workspaces (for cross-workspace calendar view)
 router.get('/all-workspaces', authenticate, async (req, res) => {
   try {

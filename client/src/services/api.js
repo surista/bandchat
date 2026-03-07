@@ -847,6 +847,10 @@ class ApiService {
     return this.request(`/gigs/workspace/${workspaceId}${query ? `?${query}` : ''}`);
   }
 
+  async getNextGig(workspaceId) {
+    return this.request(`/gigs/workspace/${workspaceId}/next`);
+  }
+
   async getGigsFromAllWorkspaces(excludeWorkspaceId = null, filters = {}) {
     const params = new URLSearchParams();
     if (excludeWorkspaceId) params.append('excludeWorkspaceId', excludeWorkspaceId);
