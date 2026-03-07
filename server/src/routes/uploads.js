@@ -7,11 +7,9 @@ import { authenticate } from '../middleware/auth.js';
 import { uploadFile } from '../lib/storage.js';
 import prisma from '../lib/prisma.js';
 
-// L1: Limit input pixels to prevent decompression bombs (100 megapixels)
-sharp.limitInputPixels(100_000_000);
-
 const THUMBNAIL_MAX_WIDTH = 400;
 const THUMBNAIL_QUALITY = 80;
+const MAX_INPUT_PIXELS = 100_000_000; // 100 megapixels - prevent decompression bombs
 
 /**
  * Generate a thumbnail from an image buffer.
@@ -19,7 +17,7 @@ const THUMBNAIL_QUALITY = 80;
  */
 async function generateThumbnail(imageBuffer) {
   try {
-    const image = sharp(imageBuffer, { limitInputPixels: 100_000_000 });
+    const image = sharp(imageBuffer, { limitInputPixels: MAX_INPUT_PIXELS });
     const metadata = await image.metadata();
     const origWidth = metadata.width || 0;
     const origHeight = metadata.height || 0;
