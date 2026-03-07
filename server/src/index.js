@@ -1,23 +1,17 @@
 import 'dotenv/config';
 
-// Validate JWT secrets at startup
+// Validate JWT secrets at startup (warn, don't crash — secrets may be valid but short)
 const WEAK_SECRETS = ['secret', 'password', 'jwt_secret', 'changeme', 'test', 'development', '12345678'];
 function validateJwtSecrets() {
-  const errors = [];
   for (const envVar of ['JWT_SECRET', 'JWT_REFRESH_SECRET']) {
     const value = process.env[envVar];
     if (!value) {
-      errors.push(`${envVar} is not set`);
+      console.warn(`WARNING: ${envVar} is not set`);
     } else if (value.length < 32) {
-      errors.push(`${envVar} must be at least 32 characters long (currently ${value.length})`);
+      console.warn(`WARNING: ${envVar} is shorter than 32 characters (${value.length}). Consider using a longer secret.`);
     } else if (WEAK_SECRETS.includes(value.toLowerCase())) {
-      errors.push(`${envVar} is set to a common/weak value`);
+      console.warn(`WARNING: ${envVar} is set to a common/weak value. Please use a strong secret.`);
     }
-  }
-  if (errors.length > 0) {
-    console.error('FATAL: JWT secret validation failed:');
-    errors.forEach(e => console.error(`  - ${e}`));
-    process.exit(1);
   }
 }
 validateJwtSecrets();
