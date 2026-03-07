@@ -698,6 +698,52 @@ export default function ChannelListScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.channelListBg }]} edges={['bottom']}>
+      {/* Sticky: Next upcoming event banner + Calendar shortcut */}
+      <View style={[styles.stickyHeader, { backgroundColor: colors.channelListBg, borderBottomColor: colors.border }]}>
+        {nextGig && (
+          <TouchableOpacity
+            style={[
+              styles.nextGigBanner,
+              {
+                backgroundColor: nextGig.type === 'GIG' ? 'rgba(34,197,94,0.15)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.15)' : 'rgba(168,85,247,0.15)',
+                borderColor: nextGig.type === 'GIG' ? 'rgba(34,197,94,0.3)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.3)' : 'rgba(168,85,247,0.3)',
+              },
+            ]}
+            onPress={() => navigation.navigate('GigDetail', { workspaceId, gigId: nextGig.id })}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Next event: ${nextGig.title}`}
+          >
+            <View style={styles.nextGigRow}>
+              <Text style={styles.nextGigIcon}>
+                {nextGig.type === 'GIG' ? '🎸' : nextGig.type === 'REHEARSAL' ? '🥁' : '📅'}
+              </Text>
+              <Text style={[styles.nextGigTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                {nextGig.title}
+              </Text>
+            </View>
+            <View style={styles.nextGigRow}>
+              <Text style={[styles.nextGigMeta, { color: colors.textSecondary }]}>
+                {new Date(nextGig.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                {nextGig.startTime ? ` · ${nextGig.startTime}` : ''}
+                {nextGig.venue ? ` · ${nextGig.venue}` : ''}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={styles.calendarShortcut}
+          onPress={() => navigation.navigate('GigList', { workspaceId })}
+          activeOpacity={0.6}
+          accessibilityRole="button"
+          accessibilityLabel="Calendar"
+        >
+          <Text style={styles.calendarShortcutIcon}>📅</Text>
+          <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]}>Calendar</Text>
+          <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
+        </TouchableOpacity>
+      </View>
+
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
@@ -705,54 +751,6 @@ export default function ChannelListScreen({ navigation, route }) {
         renderSectionHeader={renderSectionHeader}
         stickySectionHeadersEnabled={false}
         contentContainerStyle={styles.listContent}
-        ListHeaderComponent={
-          <View>
-            {/* Next upcoming event banner */}
-            {nextGig && (
-              <TouchableOpacity
-                style={[
-                  styles.nextGigBanner,
-                  {
-                    backgroundColor: nextGig.type === 'GIG' ? 'rgba(34,197,94,0.15)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.15)' : 'rgba(168,85,247,0.15)',
-                    borderColor: nextGig.type === 'GIG' ? 'rgba(34,197,94,0.3)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.3)' : 'rgba(168,85,247,0.3)',
-                  },
-                ]}
-                onPress={() => navigation.navigate('GigDetail', { workspaceId, gigId: nextGig.id })}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel={`Next event: ${nextGig.title}`}
-              >
-                <View style={styles.nextGigRow}>
-                  <Text style={styles.nextGigIcon}>
-                    {nextGig.type === 'GIG' ? '🎸' : nextGig.type === 'REHEARSAL' ? '🥁' : '📅'}
-                  </Text>
-                  <Text style={[styles.nextGigTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-                    {nextGig.title}
-                  </Text>
-                </View>
-                <View style={styles.nextGigRow}>
-                  <Text style={[styles.nextGigMeta, { color: colors.textSecondary }]}>
-                    {new Date(nextGig.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                    {nextGig.startTime ? ` · ${nextGig.startTime}` : ''}
-                    {nextGig.venue ? ` · ${nextGig.venue}` : ''}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            )}
-            {/* Pinned Calendar shortcut */}
-            <TouchableOpacity
-              style={styles.calendarShortcut}
-              onPress={() => navigation.navigate('GigList', { workspaceId })}
-              activeOpacity={0.6}
-              accessibilityRole="button"
-              accessibilityLabel="Calendar"
-            >
-              <Text style={styles.calendarShortcutIcon}>📅</Text>
-              <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]}>Calendar</Text>
-              <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
-            </TouchableOpacity>
-          </View>
-        }
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -1175,6 +1173,10 @@ const styles = StyleSheet.create({
   bandItemArrow: {
     fontSize: 22,
     fontWeight: '300',
+  },
+  stickyHeader: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingBottom: 4,
   },
   nextGigBanner: {
     marginHorizontal: 12,
