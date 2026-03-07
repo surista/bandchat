@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
+import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 
 const router = express.Router();
 
@@ -25,8 +26,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
           select: {
             id: true,
             displayName: true,
-            avatarUrl: true,
-            email: true
+            avatarUrl: true
           }
         }
       },
@@ -76,6 +76,13 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (re
       }
     }
 
+    if (imageUrl) {
+      const urlCheck = isAllowedUploadUrl(imageUrl);
+      if (!urlCheck.valid) {
+        return res.status(400).json({ error: urlCheck.error || 'Invalid image URL' });
+      }
+    }
+
     // Validate linkedUserId if provided
     if (linkedUserId) {
       const linkedMember = await prisma.workspaceMember.findUnique({
@@ -117,8 +124,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (re
           select: {
             id: true,
             displayName: true,
-            avatarUrl: true,
-            email: true
+            avatarUrl: true
           }
         }
       }
@@ -199,6 +205,13 @@ router.put('/:memberId', authenticate, async (req, res) => {
 
     if (!membership || membership.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    if (imageUrl) {
+      const urlCheck = isAllowedUploadUrl(imageUrl);
+      if (!urlCheck.valid) {
+        return res.status(400).json({ error: urlCheck.error || 'Invalid image URL' });
+      }
     }
 
     // Validate linkedUserId if provided
@@ -294,8 +307,7 @@ router.put('/:memberId', authenticate, async (req, res) => {
           select: {
             id: true,
             displayName: true,
-            avatarUrl: true,
-            email: true
+            avatarUrl: true
           }
         }
       }

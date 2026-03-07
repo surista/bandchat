@@ -1,3 +1,4 @@
+import { isSafeUrl } from '../../utils/urlSafety';
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -250,10 +251,15 @@ function ContactCard({ contact, onEdit, onDelete }) {
           </a>
         )}
         {contact.website && (
-          <a href={contact.website} target="_blank" rel="noopener noreferrer" className="block text-blue-400 hover:text-blue-300 truncate">
-            {contact.website.replace(/^https?:\/\//, '')}
-          </a>
+          isSafeUrl(contact.website) ? (
+            <a href={contact.website} target="_blank" rel="noopener noreferrer" className="block text-blue-400 hover:text-blue-300 truncate">
+              {contact.website.replace(/^https?:\/\//, '')}
+            </a>
+          ) : (
+            <span className="block text-[var(--color-text-secondary)] truncate">{contact.website}</span>
+          )
         )}
+
         {contact.address && (
           <p className="text-[var(--color-text-muted)] truncate">{contact.address}</p>
         )}

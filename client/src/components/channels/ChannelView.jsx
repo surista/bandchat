@@ -37,6 +37,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   const [showMembers, setShowMembers] = useState(false);
   const [pinnedMessages, setPinnedMessages] = useState([]);
   const [showPinned, setShowPinned] = useState(false);
+  const [savedMessageIds, setSavedMessageIds] = useState(new Set());
   const lastReadAtRef = useRef(null);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -102,6 +103,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
 
     init();
     loadPinnedMessages();
+    loadSavedMessageIds();
 
     return () => {
       cancelled = true;
@@ -344,6 +346,37 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
 
   const pinnedMessageIds = useMemo(() => new Set(pinnedMessages.map(p => p.messageId)), [pinnedMessages]);
 
+  const loadSavedMessageIds = async () => {
+    try {
+      const data = await api.getSavedMessages(channel.workspaceId);
+      setSavedMessageIds(new Set(data.map(s => s.messageId)));
+    } catch (err) {
+      console.error('Failed to load saved messages:', err);
+    }
+  };
+
+  const handleSaveMessage = async (messageId) => {
+    try {
+      await api.saveMessage(messageId);
+      setSavedMessageIds(prev => new Set([...prev, messageId]));
+    } catch (err) {
+      console.error('Failed to save message:', err);
+    }
+  };
+
+  const handleUnsaveMessage = async (messageId) => {
+    try {
+      await api.unsaveMessage(messageId);
+      setSavedMessageIds(prev => {
+        const next = new Set(prev);
+        next.delete(messageId);
+        return next;
+      });
+    } catch (err) {
+      console.error('Failed to unsave message:', err);
+    }
+  };
+
   const scrollToBottom = (instant = false) => {
     // Use requestAnimationFrame to ensure DOM is updated
     requestAnimationFrame(() => {
@@ -405,7 +438,10 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
           type: file.type,
           url: file.url,
           filename: file.filename,
-          size: file.size
+          size: file.size,
+          ...(file.thumbnailUrl && { thumbnailUrl: file.thumbnailUrl }),
+          ...(file.width && { width: file.width }),
+          ...(file.height && { height: file.height })
         }));
       }
 
@@ -587,6 +623,9 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
               onPinMessage={handlePinMessage}
               onUnpinMessage={handleUnpinMessage}
               pinnedMessageIds={pinnedMessageIds}
+              onSaveMessage={handleSaveMessage}
+              onUnsaveMessage={handleUnsaveMessage}
+              savedMessageIds={savedMessageIds}
               lastReadAt={lastReadAtRef.current}
               members={workspace?.members || []}
             />

@@ -49,8 +49,8 @@ function ResetPassword() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      setError('Password must be at least 8 characters with uppercase, lowercase, and a number');
       return;
     }
 
@@ -138,7 +138,7 @@ function ResetPassword() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple focus:border-transparent pr-12"
-                      placeholder="At least 6 characters"
+                      placeholder="Min 8 chars, upper + lower + number"
                       minLength={6}
                       required
                     />

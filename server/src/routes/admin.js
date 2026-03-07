@@ -1,4 +1,6 @@
 import express from 'express';
+import path from 'path';
+import rateLimit from 'express-rate-limit';
 import { authenticate, isSystemAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 import { listAllObjects, deleteFile, isConfigured as isR2Configured } from '../lib/storage.js';
@@ -6,8 +8,17 @@ import { createBackup, listBackups, getBackupStream, cleanupOldBackups, previewB
 
 const router = express.Router();
 
-// All admin routes require authentication + system admin
-router.use(authenticate, isSystemAdmin);
+// Dedicated admin rate limiter: 30 requests per minute
+const adminLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  skip: process.env.NODE_ENV === 'test' ? () => true : undefined,
+  message: { error: 'Too many admin requests, please try again later' },
+  keyGenerator: (req) => req.user?.id || req.ip,
+});
+
+// All admin routes require authentication + system admin + rate limiting
+router.use(authenticate, isSystemAdmin, adminLimiter);
 
 // GET /api/admin/stats — Dashboard overview
 router.get('/stats', async (req, res) => {
@@ -455,7 +466,8 @@ router.post('/backups', async (req, res) => {
     res.json({ ...result, cleanup });
   } catch (error) {
     console.error('Backup error:', error);
-    res.status(500).json({ error: 'Backup failed: ' + error.message });
+    console.error('Backup details:', error.message);
+    res.status(500).json({ error: 'Backup failed' });
   }
 });
 
@@ -478,12 +490,18 @@ router.get('/backups', async (req, res) => {
 // GET /api/admin/backups/download/:filename — Download a backup file
 router.get('/backups/download/:filename', async (req, res) => {
   try {
-    const key = `backups/${req.params.filename}`;
+    // Path traversal protection: sanitize filename
+    const filename = path.basename(req.params.filename);
+    if (filename !== req.params.filename || filename.includes('..')) {
+      return res.status(400).json({ error: 'Invalid filename' });
+    }
+
+    const key = `backups/${filename}`;
     const { stream, size, contentType } = await getBackupStream(key);
 
     res.set({
       'Content-Type': contentType || 'application/gzip',
-      'Content-Disposition': `attachment; filename="${req.params.filename}"`,
+      'Content-Disposition': `attachment; filename="${filename}"`,
     });
     if (size) res.set('Content-Length', size);
 
@@ -506,7 +524,8 @@ router.post('/backups/restore-preview', async (req, res) => {
     res.json(preview);
   } catch (error) {
     console.error('Backup preview error:', error);
-    res.status(500).json({ error: 'Failed to preview backup: ' + error.message });
+    console.error('Preview details:', error.message);
+    res.status(500).json({ error: 'Failed to preview backup' });
   }
 });
 
@@ -538,7 +557,8 @@ router.post('/backups/restore', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Database restore error:', error);
-    res.status(500).json({ error: 'Restore failed: ' + error.message });
+    console.error('Restore details:', error.message);
+    res.status(500).json({ error: 'Restore failed' });
   } finally {
     restoreInProgress = false;
   }

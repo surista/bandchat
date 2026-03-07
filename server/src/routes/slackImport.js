@@ -17,6 +17,10 @@ const router = express.Router();
 const importSessions = new Map();
 const SESSION_TTL = 30 * 60 * 1000;
 
+// Zip bomb protection limits
+const MAX_EXTRACTED_SIZE = 500 * 1024 * 1024; // 500MB max extracted size
+const MAX_ZIP_ENTRIES = 10000; // Max number of entries in ZIP
+
 async function storeSession(id, userId, data) {
   // Remove any existing session for this user (limit 1 per user)
   for (const [key, val] of importSessions) {
@@ -95,6 +99,20 @@ router.post('/workspace/:workspaceId/parse', authenticate, isWorkspaceAdmin,
 
       const zip = new AdmZip(req.file.buffer);
       const entries = zip.getEntries();
+
+      // Zip bomb protection: check entry count
+      if (entries.length > MAX_ZIP_ENTRIES) {
+        return res.status(400).json({ error: `ZIP contains too many entries (${entries.length}). Maximum allowed is ${MAX_ZIP_ENTRIES}.` });
+      }
+
+      // Zip bomb protection: check total extracted size
+      let totalExtractedSize = 0;
+      for (const entry of entries) {
+        totalExtractedSize += entry.header.size;
+        if (totalExtractedSize > MAX_EXTRACTED_SIZE) {
+          return res.status(400).json({ error: 'ZIP extracted size exceeds 500MB limit. This may be a zip bomb.' });
+        }
+      }
 
       // Find and parse users.json and channels.json
       let slackUsers = [];

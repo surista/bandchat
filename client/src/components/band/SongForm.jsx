@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { isSafeUrl } from '../../utils/urlSafety';
 import api from '../../services/api';
 import ConfirmDialog from '../common/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
@@ -469,7 +470,7 @@ Example:
                         <span className="text-xl">{getFileIcon(attachment.type)}</span>
                         <div className="min-w-0">
                           <a
-                            href={attachment.url}
+                            href={isSafeUrl(attachment.url) ? attachment.url : "#"}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-blue-400 hover:text-blue-300 truncate block"

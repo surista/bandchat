@@ -24,8 +24,8 @@ function Signup() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      setError('Password must be at least 8 characters with uppercase, lowercase, and a number');
       return;
     }
 
@@ -144,7 +144,7 @@ function Signup() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple text-base pr-12"
-                placeholder="At least 6 characters"
+                placeholder="Min 8 chars, upper + lower + number"
                 required
               />
               <button

@@ -1,5 +1,6 @@
-import { memo, useState, useEffect, useRef, useMemo } from 'react';
+import { memo, useState, useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { View, Text, Image, TouchableOpacity, Pressable, Animated, Linking, StyleSheet } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { Video, ResizeMode } from 'expo-av';
 import { format, isToday, isYesterday } from 'date-fns';
 import { useTheme } from '../context/ThemeContext';
@@ -23,13 +24,18 @@ function formatDurationMmSs(ms) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress, members }) {
+const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress, onSwipeReply, onSwipeReact, members }, ref) {
   const { colors, density } = useTheme();
+  const swipeableRef = useRef(null);
   const author = message.author || {};
   const displayName = author.displayName || message.removedUserName || 'Deleted User';
   const initial = displayName.charAt(0).toUpperCase();
   const avatarColor = getAvatarColor(displayName);
   const isPending = message.pending;
+
+  useImperativeHandle(ref, () => ({
+    close: () => swipeableRef.current?.close(),
+  }));
 
   // Resolve avatar: author's own avatarUrl, or fallback to workspace member's (includes BandMember)
   const resolvedAvatarUrl = useMemo(() => {
@@ -67,8 +73,63 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
     return result;
   };
 
+  const renderLeftActions = (progress) => {
+    const translateX = progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [-60, 0],
+    });
+    return (
+      <Animated.View style={[swipeStyles.leftAction, { transform: [{ translateX }] }]}>
+        <Text style={swipeStyles.actionIcon}>💬</Text>
+        <Text style={swipeStyles.actionLabel}>Reply</Text>
+      </Animated.View>
+    );
+  };
+
+  const renderRightActions = (progress) => {
+    const translateX = progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [60, 0],
+    });
+    return (
+      <Animated.View style={[swipeStyles.rightAction, { transform: [{ translateX }] }]}>
+        <Text style={swipeStyles.actionIcon}>👍</Text>
+        <Text style={swipeStyles.actionLabel}>React</Text>
+      </Animated.View>
+    );
+  };
+
+  const handleSwipeLeft = () => {
+    if (onSwipeReply && !isPending) {
+      onSwipeReply(message);
+    }
+    swipeableRef.current?.close();
+  };
+
+  const handleSwipeRight = () => {
+    if (onSwipeReact && !isPending) {
+      onSwipeReact(message.id, '👍');
+    }
+    swipeableRef.current?.close();
+  };
+
+  const swipeEnabled = !isPending && (onSwipeReply || onSwipeReact);
+
   if (isGrouped) {
     return (
+      <Swipeable
+        ref={swipeableRef}
+        enabled={swipeEnabled}
+        renderLeftActions={onSwipeReply ? renderLeftActions : undefined}
+        renderRightActions={onSwipeReact ? renderRightActions : undefined}
+        onSwipeableOpen={(direction) => {
+          if (direction === 'left') handleSwipeLeft();
+          else handleSwipeRight();
+        }}
+        overshootLeft={false}
+        overshootRight={false}
+        friction={2}
+      >
       <Pressable
         style={[styles.groupedContainer, { paddingTop: density.groupedPaddingTop, paddingBottom: density.groupedPaddingBottom }, isPending && styles.pending]}
         onLongPress={handleLongPress}
@@ -90,10 +151,24 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
           {renderReactions(message.reactions, colors, message.id, onReactionPress)}
         </View>
       </Pressable>
+      </Swipeable>
     );
   }
 
   return (
+    <Swipeable
+      ref={swipeableRef}
+      enabled={swipeEnabled}
+      renderLeftActions={onSwipeReply ? renderLeftActions : undefined}
+      renderRightActions={onSwipeReact ? renderRightActions : undefined}
+      onSwipeableOpen={(direction) => {
+        if (direction === 'left') handleSwipeLeft();
+        else handleSwipeRight();
+      }}
+      overshootLeft={false}
+      overshootRight={false}
+      friction={2}
+    >
     <Pressable
       style={[styles.container, { paddingTop: density.containerPaddingTop, paddingBottom: density.containerPaddingBottom }, isPending && styles.pending]}
       onLongPress={handleLongPress}
@@ -141,8 +216,9 @@ function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImageP
         )}
       </View>
     </Pressable>
+    </Swipeable>
   );
-}
+});
 
 function YouTubeThumbnail({ content, colors }) {
   if (!content) return null;
@@ -224,7 +300,7 @@ function renderAttachments(attachments, onImagePress) {
               accessibilityLabel="View attached image"
             >
               <Image
-                source={{ uri: att.url }}
+                source={{ uri: att.thumbnailUrl || att.url }}
                 style={styles.attachmentImage}
                 resizeMode="cover"
                 accessibilityLabel="Attached image"
@@ -408,6 +484,34 @@ function renderReactions(reactions, colors, messageId, onReactionPress) {
     </View>
   );
 }
+
+const swipeStyles = StyleSheet.create({
+  leftAction: {
+    width: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#3b82f6',
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+  },
+  rightAction: {
+    width: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#22c55e',
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
+  },
+  actionIcon: {
+    fontSize: 20,
+  },
+  actionLabel: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+});
 
 export default memo(MessageBubble);
 

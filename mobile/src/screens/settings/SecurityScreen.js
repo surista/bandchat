@@ -48,8 +48,8 @@ export default function SecurityScreen() {
       Alert.alert('Required', 'Please fill in all password fields');
       return;
     }
-    if (newPassword.length < 8) {
-      Alert.alert('Invalid', 'New password must be at least 8 characters');
+    if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      Alert.alert('Invalid', 'Password must be at least 8 characters with uppercase, lowercase, and a number');
       return;
     }
     if (newPassword !== confirmPassword) {

@@ -563,8 +563,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         className="modal-input"
-                        placeholder="At least 6 characters"
-                        minLength={6}
+                        placeholder="Min 8 chars, upper + lower + number"
+                        minLength={8}
                         maxLength={128}
                         required
                       />
@@ -1439,6 +1439,24 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-4 border border-[var(--color-modal-border)]">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded">NEW</span>
+                      <span className="text-sm text-[var(--color-text-muted)]">v1.04.40</span>
+                    </div>
+                    <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Security Hardening</h4>
+                    <p className="text-sm text-[var(--color-text-muted)]">
+                      Comprehensive security audit: authorization on all delete/update operations, URL injection prevention, Socket.IO hardening, password complexity, refresh token rotation, input validation, and sanitized error messages.
+                    </p>
+                  </div>
+                  <div className="bg-[var(--color-modal-card)] rounded-lg p-4 border border-[var(--color-modal-border)]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm text-[var(--color-text-muted)]">v1.04.39</span>
+                    </div>
+                    <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Performance & Bookmarks</h4>
+                    <p className="text-sm text-[var(--color-text-muted)]">
+                      Save messages privately with bookmarks. Image thumbnails for faster loading. API caching, lazy-loaded routes, message virtualization. Mobile swipe gestures and quick actions.
+                    </p>
+                  </div>
+                  <div className="bg-[var(--color-modal-card)] rounded-lg p-4 border border-[var(--color-modal-border)]">
+                    <div className="flex items-center gap-2 mb-2">
                       <span className="text-sm text-[var(--color-text-muted)]">v1.04.39</span>
                     </div>
                     <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Upcoming Event Banner</h4>
@@ -1831,8 +1849,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 <button
                   onClick={async () => {
                     if (!resetAdminPassword || !resetNewPassword) return;
-                    if (resetNewPassword.length < 6) {
-                      toast.warning('Password must be at least 6 characters');
+                    if (resetNewPassword.length < 8 || !/[A-Z]/.test(resetNewPassword) || !/[a-z]/.test(resetNewPassword) || !/[0-9]/.test(resetNewPassword)) {
+                      toast.warning('Password must be at least 8 characters with uppercase, lowercase, and a number');
                       return;
                     }
                     try {

@@ -104,14 +104,16 @@ bandchat/
 - Prisma ORM with PostgreSQL (40+ models)
 - Socket.IO (real-time)
 - JWT Authentication (access tokens + httpOnly cookie refresh tokens)
-- Cloudflare R2 (file uploads via @aws-sdk/client-s3, with magic byte validation)
+- Cloudflare R2 (file uploads via @aws-sdk/client-s3, with magic byte validation and MIME-based extensions)
 - Web Push Notifications (VAPID)
 - Resend (transactional email)
-- cookie-parser, Helmet + CSP, rate limiting
+- cookie-parser, Helmet + CSP, rate limiting (per-route: auth, refresh, admin)
+- JWT secret strength validation at startup
+- Socket.IO hardening (maxHttpBufferSize, payload validation, connection limiting, room eviction)
 
 ### Key Features
-- Real-time messaging with channels, DMs, threads, reactions, and voice messages
-- File/image/audio sharing (up to 10MB) with link previews and photo gallery
+- Real-time messaging with channels, DMs, threads, reactions, voice messages, and saved messages (bookmarks)
+- File/image/audio sharing (up to 10MB) with auto-generated thumbnails, link previews, and photo gallery
 - Song repertoire with bulk import, async metadata enrichment, and lyrics
 - Drag-and-drop setlist builder with MC sections, medleys, and PDF export
 - Calendar for gigs/rehearsals with device calendar sync and iCal feed
@@ -145,8 +147,8 @@ Legacy (still accepted for existing URLs): `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_
 
 - New uploads go to Cloudflare R2 via `server/src/lib/storage.js` (S3-compatible API)
 - Legacy Cloudinary URLs still work — URL validation accepts both domains (`server/src/lib/validateUrl.js`)
-- Per-workspace storage tracking: `Workspace.storageUsedBytes` (BigInt, incremented on upload, decremented on delete)
-- Storage quota enforcement: checked before upload in `uploads.js` (default 2GB per workspace)
+- Per-workspace storage tracking: `Workspace.storageUsedBytes` (BigInt, incremented on upload, decremented on delete with underflow protection)
+- Storage quota enforcement: checked before upload in `uploads.js` (default 2GB per workspace, workspaceId required)
 - R2 file cleanup: when records are deleted (messages, recordings, songs, gig media), the R2 file is also deleted
 - Orphan detection: admin dashboard can scan for R2 files with no matching DB record
 - Admin endpoints: `/api/admin/storage/stats`, `/api/admin/storage/orphans`, `/api/admin/storage/cleanup`, `/api/admin/storage/recalculate`
@@ -218,6 +220,8 @@ These features leverage native device capabilities:
 | **Add gig to device calendar** | Native calendar integration via Expo Calendar |
 | **Camera for gig photos** | Direct capture vs upload |
 | **Haptic feedback** | Touch-specific feedback |
+| **Swipe gestures** | Swipe right to reply, left to quick-react |
+| **Quick actions** | 3D Touch / long-press app icon shortcuts |
 | **Gig gallery** | Browse and manage gig photos |
 | **Message reporting** | Report objectionable content |
 | **Print & Share setlists** | expo-print integration |
@@ -238,7 +242,7 @@ All communication and reference features work on both:
 
 | Area | Parity | Notes |
 |------|--------|-------|
-| Messaging | 98% | Full parity — pinned messages, link previews, reactions all working |
+| Messaging | 99% | Full parity — pinned messages, saved messages, link previews, reactions, swipe gestures (mobile) |
 | Songs | 90% | Web has Song Suggestions; both have bulk import |
 | Setlists | 85% | Web has advanced drag-drop; mobile has print/share |
 | Gigs/Calendar | 90% | Web has month view; mobile has iCal subscribe |

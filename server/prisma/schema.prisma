@@ -58,6 +58,7 @@ model User {
   blocksReceived          BlockedUser[]   @relation("blocksReceived")
   practiceSessions        PracticeSession[]
   uploadedGigMedia        GigMedia[]
+  savedMessages           SavedMessage[]
 }
 
 model RefreshToken {
@@ -202,6 +203,7 @@ model Message {
   reactions       Reaction[]
   threadReads     ThreadRead[]
   pinnedMessages  PinnedMessage[]
+  savedMessages   SavedMessage[]
   reports         Report[]
 
   @@index([channelId, createdAt])
@@ -210,13 +212,16 @@ model Message {
 }
 
 model Attachment {
-  id        String         @id @default(uuid())
-  messageId String
-  type      AttachmentType
-  url       String
-  filename  String
-  size      Int?
-  createdAt DateTime       @default(now())
+  id           String         @id @default(uuid())
+  messageId    String
+  type         AttachmentType
+  url          String
+  filename     String
+  size         Int?
+  thumbnailUrl String?
+  width        Int?
+  height       Int?
+  createdAt    DateTime       @default(now())
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
@@ -287,6 +292,19 @@ model PinnedMessage {
 
   @@unique([messageId, channelId])
   @@index([channelId])
+}
+
+model SavedMessage {
+  id        String   @id @default(uuid())
+  userId    String
+  messageId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, messageId])
+  @@index([userId])
 }
 
 // Band Features

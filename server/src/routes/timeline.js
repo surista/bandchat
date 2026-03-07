@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
+import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 
 const router = express.Router();
 
@@ -39,6 +40,13 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
     const validTypes = ['formation', 'first_gig', 'gig', 'rehearsal', 'member_joined', 'member_left', 'album_release', 'milestone', 'custom'];
     if (!validTypes.includes(eventType)) {
       return res.status(400).json({ error: 'Invalid event type' });
+    }
+
+    if (imageUrl) {
+      const urlCheck = isAllowedUploadUrl(imageUrl);
+      if (!urlCheck.valid) {
+        return res.status(400).json({ error: urlCheck.error || 'Invalid image URL' });
+      }
     }
 
     const event = await prisma.timelineEvent.create({
@@ -100,6 +108,13 @@ router.put('/:eventId', authenticate, async (req, res) => {
     }
 
     const { title, description, eventType, eventDate, imageUrl } = req.body;
+
+    if (imageUrl) {
+      const urlCheck = isAllowedUploadUrl(imageUrl);
+      if (!urlCheck.valid) {
+        return res.status(400).json({ error: urlCheck.error || 'Invalid image URL' });
+      }
+    }
 
     const updated = await prisma.timelineEvent.update({
       where: { id: req.params.eventId },

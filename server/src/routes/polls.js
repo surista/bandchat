@@ -90,6 +90,14 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       return res.status(400).json({ error: 'Maximum 20 options allowed' });
     }
 
+    // Input length validation for option text
+    if (description && description.length > 2000) return res.status(400).json({ error: 'Description must be 2,000 characters or less' });
+    for (const opt of options) {
+      if (typeof opt !== 'string' || opt.length > 200) {
+        return res.status(400).json({ error: 'Each option must be 200 characters or less' });
+      }
+    }
+
     const poll = await prisma.poll.create({
       data: {
         question,

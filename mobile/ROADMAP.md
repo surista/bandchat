@@ -121,6 +121,34 @@
 - Admin feature parity: gig locking, channel sections, workspace defaults, password reset
 - Security hardening: CSP, input validation, Decimal currency precision
 
+### Phase 17 — Performance & New Features
+- Message bookmarks (save/unsave, Saved Messages screen, shortcut in channel list)
+- Swipe gestures on messages (swipe right to reply, left to quick-react with thumbs up)
+- App icon quick actions via expo-quick-actions (Next Gig, New Message, Calendar)
+- Image thumbnails generated server-side with sharp for faster loading
+- Web: API response caching with TTL, lazy-loaded auth/legal routes, message virtualization (150-message DOM cap)
+
+### Phase 18 — Security Hardening
+- Authorization checks on song/setlist/contact/medley delete (creator or admin only)
+- Gig media delete authorization (uploader or admin only)
+- Gig completion idempotency (prevent duplicate kitty transactions)
+- URL injection prevention on gig media, band member images, timeline images
+- Socket.IO: room eviction on member removal, payload type validation, maxHttpBufferSize, connection limiting
+- Refresh token rotation with reuse detection
+- Password complexity requirements (uppercase, lowercase, number)
+- JWT secret strength validation at startup
+- Input length limits across all route modules
+- Zip bomb protection in Slack import
+- Sharp decompression bomb limits on image processing
+- MIME-based file extensions on upload (ignore user-provided extension)
+- Attachment type/size validation, thumbnailUrl validation
+- Storage quota underflow protection, required workspaceId on uploads
+- Push notification URL validation (prevent open redirect)
+- Client-side URL safety checks (prevent javascript: protocol in hrefs)
+- Admin rate limiting, error message sanitization, path traversal prevention
+- Source maps disabled in production builds
+- npm audit fixes (react-router-dom, rollup)
+
 ---
 
 ## Platform-Specific Features
@@ -144,6 +172,8 @@ Some features are intentionally available on only one platform:
 | Gig gallery | Browse gig photos |
 | Message reporting | Report objectionable content |
 | Print & Share setlists | expo-print integration |
+| Swipe gestures | Swipe right to reply, left to quick-react |
+| Quick actions | 3D Touch / long-press app icon shortcuts |
 
 ### Both Platforms
 All core features (messaging, songs, setlists, gigs, practice, polls, bulk import, data export, etc.) are available on both web and mobile.
@@ -154,7 +184,7 @@ All core features (messaging, songs, setlists, gigs, practice, polls, bulk impor
 
 | Area | Parity | Notes |
 |------|--------|-------|
-| Messaging | 98% | Full parity — pinned messages, link previews, reactions all working |
+| Messaging | 99% | Full parity — pinned messages, saved messages, link previews, reactions, swipe gestures |
 | Songs | 90% | Web has Song Suggestions; both have bulk import |
 | Setlists | 85% | Web has advanced drag-drop; mobile has print/share |
 | Gigs/Calendar | 90% | Web has month view; mobile has iCal subscribe |

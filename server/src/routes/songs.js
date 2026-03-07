@@ -4,6 +4,7 @@ import { isWorkspaceMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 import { deleteFile, isR2Url } from '../lib/storage.js';
+import { safeDecrementStorage } from './uploads.js';
 import songBPMScraperService from '../services/songbpm-scraper.js';
 import deezerService from '../services/deezer.js';
 import itunesService from '../services/itunes.js';
@@ -593,6 +594,10 @@ router.delete('/:songId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
+    if (song.createdById !== req.user.id && membership.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only the creator or an admin can delete songs' });
+    }
+
     // Before cascade delete: clean up R2 files + decrement storage
     const songAttachments = await prisma.songAttachment.findMany({
       where: { songId: req.params.songId },
@@ -606,10 +611,7 @@ router.delete('/:songId', authenticate, async (req, res) => {
       freedBytes += att.size || 0;
     }
     if (freedBytes > 0) {
-      await prisma.workspace.update({
-        where: { id: song.workspaceId },
-        data: { storageUsedBytes: { decrement: BigInt(freedBytes) } },
-      }).catch(() => {});
+      await safeDecrementStorage(song.workspaceId, freedBytes).catch(() => {});
     }
 
     await prisma.song.delete({
@@ -734,15 +736,16 @@ router.delete('/:songId/attachments/:attachmentId', authenticate, async (req, re
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
+    if (attachment.song.createdById !== req.user.id && membership.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only the song creator or an admin can delete attachments' });
+    }
+
     // Clean up R2 file and track storage
     if (isR2Url(attachment.url)) {
       try { await deleteFile(attachment.url); } catch { /* best effort */ }
     }
     if (attachment.size) {
-      await prisma.workspace.update({
-        where: { id: attachment.song.workspaceId },
-        data: { storageUsedBytes: { decrement: BigInt(attachment.size) } },
-      }).catch(() => {});
+      await safeDecrementStorage(attachment.song.workspaceId, attachment.size).catch(() => {});
     }
 
     await prisma.songAttachment.delete({

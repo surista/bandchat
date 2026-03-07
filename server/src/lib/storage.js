@@ -2,6 +2,33 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command, 
 import { randomUUID } from 'crypto';
 import path from 'path';
 
+
+/**
+ * Map detected MIME types to safe file extensions.
+ * Used instead of the user-provided filename extension to prevent
+ * extension spoofing (e.g., uploading a .exe with image magic bytes).
+ */
+const MIME_TO_EXT = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/gif': '.gif',
+  'image/webp': '.webp',
+  'audio/mpeg': '.mp3',
+  'audio/mp3': '.mp3',
+  'audio/wav': '.wav',
+  'audio/ogg': '.ogg',
+  'audio/webm': '.webm',
+  'audio/aac': '.aac',
+  'audio/m4a': '.m4a',
+  'audio/x-m4a': '.m4a',
+  'audio/mp4': '.m4a',
+  'video/mp4': '.mp4',
+  'video/quicktime': '.mov',
+  'video/webm': '.webm',
+  'video/x-msvideo': '.avi',
+  'video/x-matroska': '.mkv',
+};
+
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
 const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
 const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
@@ -37,7 +64,8 @@ function getClient() {
  */
 export async function uploadFile(buffer, originalFilename, contentType, category) {
   const client = getClient();
-  const ext = path.extname(originalFilename) || '';
+  // L2: Derive extension from detected MIME type, not user-provided filename
+  const ext = MIME_TO_EXT[contentType] || path.extname(originalFilename) || '';
   const key = `${category}/${randomUUID()}${ext}`;
 
   await client.send(new PutObjectCommand({

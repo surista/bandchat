@@ -182,6 +182,24 @@ function Footer({ theme = 'dark' }) {
               <div className="border-b border-[var(--color-modal-border)] pb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded">NEW</span>
+                  <span className="text-sm text-gray-500">v1.04.40</span>
+                </div>
+                <h4 className="font-medium text-white mb-1">Security Hardening</h4>
+                <p className="text-sm text-gray-400">
+                  Comprehensive security audit with 43 fixes: authorization checks on all delete/update operations, URL injection prevention, Socket.IO hardening (room eviction, payload validation, connection limits), password complexity requirements, refresh token rotation, input length limits, zip bomb protection, and sanitized error messages.
+                </p>
+              </div>
+              <div className="border-b border-[var(--color-modal-border)] pb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm text-gray-500">v1.04.39</span>
+                </div>
+                <h4 className="font-medium text-white mb-1">Performance & Bookmarks</h4>
+                <p className="text-sm text-gray-400">
+                  Message bookmarks — save messages privately and find them in "Saved Messages". Image thumbnails for faster loading. API response caching, lazy-loaded routes, and message virtualization for smoother performance. Mobile: swipe right to reply, left to quick-react, plus app icon quick actions.
+                </p>
+              </div>
+              <div className="border-b border-[var(--color-modal-border)] pb-4">
+                <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.04.39</span>
                 </div>
                 <h4 className="font-medium text-white mb-1">Upcoming Event Banner & Calendar Shortcut</h4>

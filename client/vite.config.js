@@ -29,6 +29,9 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.displayVersion || pkg.version)
   },
+  build: {
+    sourcemap: false
+  },
   server: {
     port: 5173,
     proxy: {

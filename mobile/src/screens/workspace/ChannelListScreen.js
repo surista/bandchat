@@ -742,6 +742,17 @@ export default function ChannelListScreen({ navigation, route }) {
           <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]}>Calendar</Text>
           <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.calendarShortcut}
+          onPress={() => navigation.navigate('SavedMessages', { workspaceId })}
+          activeOpacity={0.6}
+          accessibilityRole="button"
+          accessibilityLabel="Saved Messages"
+        >
+          <Text style={styles.calendarShortcutIcon}>🔖</Text>
+          <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]}>Saved Messages</Text>
+          <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
+        </TouchableOpacity>
       </View>
 
       <SectionList

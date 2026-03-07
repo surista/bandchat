@@ -35,8 +35,8 @@ export default function SignupScreen({ navigation }) {
       setError('Passwords do not match');
       return;
     }
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      setError('Password must be at least 8 characters with uppercase, lowercase, and a number');
       return;
     }
     setError('');
@@ -109,7 +109,7 @@ export default function SignupScreen({ navigation }) {
             <View style={styles.passwordWrapper}>
               <TextInput
                 style={[styles.input, styles.passwordInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-                placeholder="At least 8 characters"
+                placeholder="Min 8, upper + lower + number"
                 placeholderTextColor={colors.textSecondary}
                 value={password}
                 onChangeText={setPassword}

@@ -5,6 +5,11 @@ import prisma from '../lib/prisma.js';
 
 const router = express.Router();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@bandchat.app';
 
 // Get blocked users
@@ -80,8 +85,8 @@ router.post('/', authenticate, async (req, res) => {
             <h2 style="color: #f59e0b;">User Blocked</h2>
             <p>A user has blocked another user in BandChat.</p>
             <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
-              <tr><td style="padding: 8px 0; color: #6b7280; width: 120px;">Blocked by</td><td style="padding: 8px 0; font-weight: 600;">${blocker?.displayName || 'Unknown'} (${blocker?.email || 'N/A'})</td></tr>
-              <tr><td style="padding: 8px 0; color: #6b7280;">Blocked user</td><td style="padding: 8px 0; font-weight: 600;">${blocked?.displayName || 'Unknown'} (${blocked?.email || 'N/A'})</td></tr>
+              <tr><td style="padding: 8px 0; color: #6b7280; width: 120px;">Blocked by</td><td style="padding: 8px 0; font-weight: 600;">${escapeHtml(blocker?.displayName) || 'Unknown'} (${escapeHtml(blocker?.email) || 'N/A'})</td></tr>
+              <tr><td style="padding: 8px 0; color: #6b7280;">Blocked user</td><td style="padding: 8px 0; font-weight: 600;">${escapeHtml(blocked?.displayName) || 'Unknown'} (${escapeHtml(blocked?.email) || 'N/A'})</td></tr>
               <tr><td style="padding: 8px 0; color: #6b7280;">Date</td><td style="padding: 8px 0;">${new Date().toLocaleString()}</td></tr>
             </table>
             <p style="color: #6b7280; font-size: 14px;">This notification is sent per App Store content moderation requirements. Consider reviewing if multiple users block the same person.</p>

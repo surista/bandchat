@@ -9,12 +9,13 @@ A real-time communication and management app for bands. Think Slack, but built s
 - **Direct Messages** — Private 1-on-1 and group conversations
 - **Threads** — Reply to specific messages in-line
 - **Reactions** — Emoji reactions on messages
-- **File Sharing** — Upload images, audio, and files up to 10MB via Cloudflare R2
+- **File Sharing** — Upload images, audio, and files up to 10MB via Cloudflare R2 with auto-generated thumbnails
 - **Voice Messages** — Record and send audio messages
 - **Link Previews** — Automatic rich previews for shared URLs
 - **Search** — Full-text search across all channels, DMs, and messages
 - **Push Notifications** — Web push for mentions, DMs, and replies
 - **Quick Reactions** — Fast emoji reactions on messages
+- **Saved Messages** — Bookmark messages privately for quick reference later
 - **Seen By** — See who has read your messages
 - **Announcements** — Pin important messages with optional expiry
 - **Polls** — Create polls for band decisions
@@ -59,7 +60,7 @@ A real-time communication and management app for bands. Think Slack, but built s
 React single-page app deployed as a static site.
 
 ### Mobile App (iOS & Android)
-Native mobile app built with Expo/React Native. 40+ screens covering all features including offline support, haptic feedback, and push notifications.
+Native mobile app built with Expo/React Native. 40+ screens covering all features including offline support, haptic feedback, push notifications, swipe gestures (reply/react), and app icon quick actions.
 
 See `mobile/ROADMAP.md` for detailed feature breakdown.
 
@@ -86,7 +87,9 @@ See `mobile/ROADMAP.md` for detailed feature breakdown.
 - Cloudflare R2 (file uploads with magic byte validation)
 - Web Push (VAPID)
 - Resend (transactional email)
-- Helmet + CSP, rate limiting, SSRF protection
+- Helmet + CSP, per-route rate limiting, SSRF protection
+- JWT secret validation, refresh token rotation, password complexity enforcement
+- Socket.IO hardening (payload validation, connection limits, room eviction)
 
 ## Environment Variables
 

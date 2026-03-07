@@ -1,17 +1,39 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
-import Login from './components/auth/Login';
-import Signup from './components/auth/Signup';
-import ForgotPassword from './components/auth/ForgotPassword';
-import ResetPassword from './components/auth/ResetPassword';
-import VerifyEmailChange from './components/auth/VerifyEmailChange';
 import WorkspaceList from './components/workspaces/WorkspaceList';
 import WorkspaceView from './components/workspaces/WorkspaceView';
-import JoinWorkspace from './components/workspaces/JoinWorkspace';
 import UpdatePrompt from './components/common/UpdatePrompt';
-import PrivacyPolicy from './components/legal/PrivacyPolicy';
-import TermsOfService from './components/legal/TermsOfService';
-import Support from './components/legal/Support';
+
+// Lazy-loaded pages (only loaded when navigating to their routes)
+function lazyRetry(importFn) {
+  return lazy(() =>
+    importFn().catch(() =>
+      new Promise((resolve) => setTimeout(resolve, 500))
+        .then(() => importFn())
+        .catch(() => ({ default: () => (
+          <div className="min-h-screen bg-slack-purple flex items-center justify-center">
+            <div className="text-center text-white">
+              <p className="mb-4">Failed to load page.</p>
+              <button onClick={() => window.location.reload()} className="px-4 py-2 bg-white/20 rounded hover:bg-white/30">
+                Refresh Page
+              </button>
+            </div>
+          </div>
+        )}))
+    )
+  );
+}
+
+const Login = lazyRetry(() => import('./components/auth/Login'));
+const Signup = lazyRetry(() => import('./components/auth/Signup'));
+const ForgotPassword = lazyRetry(() => import('./components/auth/ForgotPassword'));
+const ResetPassword = lazyRetry(() => import('./components/auth/ResetPassword'));
+const VerifyEmailChange = lazyRetry(() => import('./components/auth/VerifyEmailChange'));
+const JoinWorkspace = lazyRetry(() => import('./components/workspaces/JoinWorkspace'));
+const PrivacyPolicy = lazyRetry(() => import('./components/legal/PrivacyPolicy'));
+const TermsOfService = lazyRetry(() => import('./components/legal/TermsOfService'));
+const Support = lazyRetry(() => import('./components/legal/Support'));
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -45,6 +67,11 @@ function App() {
   return (
     <>
       <UpdatePrompt />
+      <Suspense fallback={
+        <div className="min-h-screen bg-slack-purple flex items-center justify-center">
+          <div className="text-white text-xl">Loading...</div>
+        </div>
+      }>
       <Routes>
       <Route
         path="/login"
@@ -110,6 +137,7 @@ function App() {
         }
       />
     </Routes>
+    </Suspense>
     </>
   );
 }

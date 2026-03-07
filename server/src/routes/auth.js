@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { Resend } from 'resend';
 import { OAuth2Client } from 'google-auth-library';
 import { authenticate } from '../middleware/auth.js';
-import { apiLimiter, authLimiter, tokenLimiter } from '../middleware/rateLimit.js';
+import { apiLimiter, authLimiter, tokenLimiter, refreshLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 
@@ -15,6 +15,31 @@ const googleClient = process.env.GOOGLE_CLIENT_ID ? new OAuth2Client(process.env
 
 // Minimum password length (increased from 6 to 8 for better security)
 const MIN_PASSWORD_LENGTH = 8;
+
+/**
+ * Validates password complexity beyond minimum length.
+ * Requires at least one uppercase letter, one lowercase letter, and one number.
+ * @param {string} password - The password to validate
+ * @returns {{valid: boolean, error?: string}}
+ */
+const validatePasswordComplexity = (password) => {
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return { valid: false, error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` };
+  }
+  if (password.length > 128) {
+    return { valid: false, error: 'Password must be 128 characters or less' };
+  }
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, error: 'Password must contain at least one uppercase letter' };
+  }
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, error: 'Password must contain at least one lowercase letter' };
+  }
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, error: 'Password must contain at least one number' };
+  }
+  return { valid: true };
+};
 
 /**
  * Hash a refresh token for secure storage.
@@ -93,7 +118,7 @@ const validateDisplayName = (displayName) => {
 const sendVerificationEmail = async (email, token) => {
   if (!resend) {
     if (process.env.NODE_ENV !== 'production') {
-      console.log('Email not configured. Verification token:', token);
+      console.log('Email not configured. Verification email would be sent to:', email);
     }
     return;
   }
@@ -164,12 +189,9 @@ router.post('/signup', authLimiter, async (req, res) => {
       return res.status(400).json({ error: displayNameCheck.error });
     }
 
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
-    }
-
-    if (password.length > 128) {
-      return res.status(400).json({ error: 'Password must be 128 characters or less' });
+    const passwordCheck = validatePasswordComplexity(password);
+    if (!passwordCheck.valid) {
+      return res.status(400).json({ error: passwordCheck.error });
     }
 
     const existingUser = await prisma.user.findUnique({
@@ -511,7 +533,7 @@ router.post('/link-google', authenticate, async (req, res) => {
 });
 
 // Refresh token (rate limited to prevent token enumeration)
-router.post('/refresh', apiLimiter, async (req, res) => {
+router.post('/refresh', refreshLimiter, async (req, res) => {
   try {
     // Check httpOnly cookie first (web clients), then fall back to body (mobile clients)
     const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
@@ -664,12 +686,12 @@ router.put('/password', authenticate, authLimiter, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
-    if (!newPassword || newPassword.length < MIN_PASSWORD_LENGTH) {
-      return res.status(400).json({ error: `New password must be at least ${MIN_PASSWORD_LENGTH} characters` });
+    if (!newPassword) {
+      return res.status(400).json({ error: 'New password is required' });
     }
-
-    if (newPassword.length > 128) {
-      return res.status(400).json({ error: 'Password must be 128 characters or less' });
+    const passwordCheck = validatePasswordComplexity(newPassword);
+    if (!passwordCheck.valid) {
+      return res.status(400).json({ error: passwordCheck.error });
     }
 
     const user = await prisma.user.findUnique({
@@ -722,15 +744,16 @@ router.post('/change-email', authenticate, async (req, res) => {
       where: { id: req.user.id }
     });
 
-    // Require password verification if user has a password
-    if (user.password) {
-      if (!password) {
-        return res.status(400).json({ error: 'Password is required to change email' });
-      }
-      const validPassword = await bcrypt.compare(password, user.password);
-      if (!validPassword) {
-        return res.status(401).json({ error: 'Password is incorrect' });
-      }
+    // Require password verification for email changes
+    if (!user.password) {
+      return res.status(400).json({ error: 'Please set a password on your account before changing your email' });
+    }
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required to change email' });
+    }
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ error: 'Password is incorrect' });
     }
 
     // Check if new email is already in use
@@ -776,7 +799,7 @@ router.post('/change-email', authenticate, async (req, res) => {
       });
     } else {
       if (process.env.NODE_ENV !== 'production') {
-        console.log('Email not configured. Verification token:', verificationToken);
+        console.log('Email not configured. Email change verification would be sent to:', newEmail);
       }
     }
 
@@ -893,7 +916,7 @@ router.post('/logout-all', authenticate, async (req, res) => {
 const sendPasswordResetEmail = async (email, token) => {
   if (!resend) {
     if (process.env.NODE_ENV !== 'production') {
-      console.log('Email not configured. Password reset token:', token);
+      console.log('Email not configured. Password reset email would be sent.');
     }
     return;
   }
@@ -965,12 +988,9 @@ router.post('/reset-password', authLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Token and password are required' });
     }
 
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` });
-    }
-
-    if (password.length > 128) {
-      return res.status(400).json({ error: 'Password must be 128 characters or less' });
+    const passwordCheck = validatePasswordComplexity(password);
+    if (!passwordCheck.valid) {
+      return res.status(400).json({ error: passwordCheck.error });
     }
 
     // Hash the incoming token to compare against stored hash

@@ -4,7 +4,9 @@ import rateLimit from 'express-rate-limit';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 import { deleteFile, isR2Url } from '../lib/storage.js';
+import { safeDecrementStorage } from './uploads.js';
 import { parseICS, parseICSMultiple } from '../lib/icsParser.js';
+import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 
 const router = express.Router();
 
@@ -22,6 +24,12 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
       return res.status(400).json({ error: 'Invalid to date' });
     }
 
+    // Validate enum query params against allowed values
+    const VALID_GIG_TYPES = ['GIG', 'REHEARSAL', 'RECORDING', 'OTHER'];
+    const VALID_GIG_STATUSES = ['SCHEDULED', 'COMPLETED', 'CANCELLED'];
+    const validType = type && VALID_GIG_TYPES.includes(type) ? type : undefined;
+    const validStatus = status && VALID_GIG_STATUSES.includes(status) ? status : undefined;
+
     // Filter: show non-personal events OR personal events created by current user
     const where = {
       workspaceId: req.params.workspaceId,
@@ -29,8 +37,8 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
         { isPersonal: false },
         { isPersonal: true, createdById: req.user.id }
       ],
-      ...(type && { type }),
-      ...(status && { status }),
+      ...(validType && { type: validType }),
+      ...(validStatus && { status: validStatus }),
       ...(from || to) && {
         date: {
           ...(from && { gte: new Date(from) }),
@@ -918,6 +926,10 @@ router.put('/:gigId/complete', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Gig not found' });
     }
 
+    if (existingGig.status === 'COMPLETED') {
+      return res.status(400).json({ error: 'Gig is already completed' });
+    }
+
     // Verify user is a workspace member
     const membership = await prisma.workspaceMember.findUnique({
       where: { userId_workspaceId: { userId: req.user.id, workspaceId: existingGig.workspaceId } }
@@ -1080,10 +1092,7 @@ router.delete('/:gigId', authenticate, async (req, res) => {
       freedBytes += m.size || 0;
     }
     if (freedBytes > 0) {
-      await prisma.workspace.update({
-        where: { id: gig.workspaceId },
-        data: { storageUsedBytes: { decrement: BigInt(freedBytes) } },
-      }).catch(() => {});
+      await safeDecrementStorage(gig.workspaceId, freedBytes).catch(() => {});
     }
 
     // Delete the gig (this will cascade delete GigSetlist entries, GigMedia, etc.)
@@ -1278,14 +1287,9 @@ router.post('/:gigId/media', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
-    // Validate URL format and require HTTPS
-    try {
-      const parsedUrl = new URL(url);
-      if (!['https:', 'http:'].includes(parsedUrl.protocol)) {
-        return res.status(400).json({ error: 'Invalid URL' });
-      }
-    } catch {
-      return res.status(400).json({ error: 'Invalid URL' });
+    const urlCheck = isAllowedUploadUrl(url);
+    if (!urlCheck.valid) {
+      return res.status(400).json({ error: urlCheck.error || 'Invalid URL' });
     }
 
     const media = await prisma.gigMedia.create({
@@ -1333,9 +1337,16 @@ router.delete('/:gigId/media/:mediaId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Media not found' });
     }
 
-    const isMember = media.gig.workspace.members.some(m => m.userId === req.user.id);
-    if (!isMember) {
+    const membership = media.gig.workspace.members.find(m => m.userId === req.user.id);
+    if (!membership) {
       return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    // L5: Only the uploader or a workspace admin can delete gig media
+    const isUploader = media.uploadedById === req.user.id;
+    const isAdmin = membership.role === 'ADMIN';
+    if (!isUploader && !isAdmin) {
+      return res.status(403).json({ error: 'Only the uploader or an admin can delete media' });
     }
 
     // Clean up R2 file and decrement storage
@@ -1343,10 +1354,7 @@ router.delete('/:gigId/media/:mediaId', authenticate, async (req, res) => {
       try { await deleteFile(media.url); } catch { /* best effort */ }
     }
     if (media.size) {
-      await prisma.workspace.update({
-        where: { id: media.gig.workspaceId },
-        data: { storageUsedBytes: { decrement: BigInt(media.size) } },
-      }).catch(() => {});
+      await safeDecrementStorage(media.gig.workspaceId, media.size).catch(() => {});
     }
 
     await prisma.gigMedia.delete({

@@ -1,3 +1,4 @@
+import { isSafeUrl } from '../../utils/urlSafety';
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
@@ -105,12 +106,12 @@ function SongCard({ song, onEdit, onDelete, onContextMenu, practiceSummary }) {
 
       {(song.youtubeUrl || song.spotifyUrl) && (
         <div className="flex gap-2 mt-3">
-          {song.youtubeUrl && (
+          {song.youtubeUrl && isSafeUrl(song.youtubeUrl) && (
             <a href={song.youtubeUrl} target="_blank" rel="noopener noreferrer" className="text-red-400 hover:text-red-300 text-sm">
               YouTube
             </a>
           )}
-          {song.spotifyUrl && (
+          {song.spotifyUrl && isSafeUrl(song.spotifyUrl) && (
             <a href={song.spotifyUrl} target="_blank" rel="noopener noreferrer" className="text-green-400 hover:text-green-300 text-sm">
               Spotify
             </a>

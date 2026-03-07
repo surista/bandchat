@@ -1,5 +1,28 @@
 import 'dotenv/config';
 
+// Validate JWT secrets at startup
+const WEAK_SECRETS = ['secret', 'password', 'jwt_secret', 'changeme', 'test', 'development', '12345678'];
+function validateJwtSecrets() {
+  const errors = [];
+  for (const envVar of ['JWT_SECRET', 'JWT_REFRESH_SECRET']) {
+    const value = process.env[envVar];
+    if (!value) {
+      errors.push(`${envVar} is not set`);
+    } else if (value.length < 32) {
+      errors.push(`${envVar} must be at least 32 characters long (currently ${value.length})`);
+    } else if (WEAK_SECRETS.includes(value.toLowerCase())) {
+      errors.push(`${envVar} is set to a common/weak value`);
+    }
+  }
+  if (errors.length > 0) {
+    console.error('FATAL: JWT secret validation failed:');
+    errors.forEach(e => console.error(`  - ${e}`));
+    process.exit(1);
+  }
+}
+validateJwtSecrets();
+
+
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 
@@ -22,7 +45,8 @@ const io = new Server(httpServer, {
     origin: allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     credentials: true
-  }
+  },
+  maxHttpBufferSize: 1e6 // 1MB - prevent oversized payloads
 });
 
 // Make io accessible to routes

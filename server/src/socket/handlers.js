@@ -74,6 +74,14 @@ const RATE_LIMITS = {
   'workspace:join': { max: 10, windowMs: 60000 }
 };
 
+// L19: Per-user connection limit
+const MAX_CONNECTIONS_PER_USER = 5;
+
+// M10: Payload validation helper
+function isNonEmptyString(val) {
+  return typeof val === "string" && val.length > 0;
+}
+
 export const setupSocketHandlers = (io) => {
   // Authentication middleware for socket connections
   io.use(async (socket, next) => {
@@ -90,7 +98,7 @@ export const setupSocketHandlers = (io) => {
         where: { id: decoded.userId },
         select: {
           id: true,
-          email: true,
+          // L20: email removed - not needed for socket operations
           displayName: true,
           avatarUrl: true
         }
@@ -113,6 +121,19 @@ export const setupSocketHandlers = (io) => {
 
     // Join user's personal room for direct notifications
     socket.join(`user:${user.id}`);
+
+    // L19: Per-user connection limit - disconnect oldest if over limit
+    const allSockets = await io.fetchSockets();
+    const userSockets = allSockets.filter(s => s.user && s.user.id === user.id);
+    if (userSockets.length > MAX_CONNECTIONS_PER_USER) {
+      const excess = userSockets.length - MAX_CONNECTIONS_PER_USER;
+      const oldestSockets = userSockets
+        .filter(s => s.id !== socket.id)
+        .slice(0, excess);
+      for (const oldSocket of oldestSockets) {
+        oldSocket.disconnect(true);
+      }
+    }
 
     // Get user's workspaces and join their rooms
     const memberships = await prisma.workspaceMember.findMany({
@@ -147,6 +168,9 @@ export const setupSocketHandlers = (io) => {
 
     // Handle joining a channel
     socket.on('channel:join', async (channelId) => {
+      // M10: Validate channelId
+      if (!isNonEmptyString(channelId)) return;
+
       // Rate limit check
       if (!rateLimiter.isAllowed(user.id, 'channel:join', RATE_LIMITS['channel:join'].max, RATE_LIMITS['channel:join'].windowMs)) {
         return; // Silently drop rate-limited requests
@@ -193,6 +217,9 @@ export const setupSocketHandlers = (io) => {
 
     // Handle leaving a channel
     socket.on('channel:leave', (channelId) => {
+      // M10: Validate channelId
+      if (!isNonEmptyString(channelId)) return;
+
       if (!rateLimiter.isAllowed(user.id, 'channel:leave', RATE_LIMITS['channel:leave'].max, RATE_LIMITS['channel:leave'].windowMs)) {
         return;
       }
@@ -201,6 +228,9 @@ export const setupSocketHandlers = (io) => {
 
     // Handle typing indicator (verify socket is in the channel room)
     socket.on('typing:start', async (channelId) => {
+      // M10: Validate channelId
+      if (!isNonEmptyString(channelId)) return;
+
       if (!rateLimiter.isAllowed(user.id, 'typing:start', RATE_LIMITS['typing:start'].max, RATE_LIMITS['typing:start'].windowMs)) {
         return;
       }
@@ -215,6 +245,9 @@ export const setupSocketHandlers = (io) => {
     });
 
     socket.on('typing:stop', (channelId) => {
+      // M10: Validate channelId
+      if (!isNonEmptyString(channelId)) return;
+
       if (!rateLimiter.isAllowed(user.id, 'typing:stop', RATE_LIMITS['typing:stop'].max, RATE_LIMITS['typing:stop'].windowMs)) {
         return;
       }
@@ -239,6 +272,9 @@ export const setupSocketHandlers = (io) => {
     // Handle presence updates (validate status against allowed values)
     const VALID_STATUSES = ['online', 'away', 'busy', 'offline'];
     socket.on('presence:update', async (status) => {
+      // M10: Validate status
+      if (!isNonEmptyString(status)) return;
+
       if (!rateLimiter.isAllowed(user.id, 'presence:update', RATE_LIMITS['presence:update'].max, RATE_LIMITS['presence:update'].windowMs)) {
         return;
       }
@@ -255,6 +291,9 @@ export const setupSocketHandlers = (io) => {
 
     // Handle joining a workspace (after accepting an invite)
     socket.on('workspace:join', async (workspaceId) => {
+      // M10: Validate workspaceId
+      if (!isNonEmptyString(workspaceId)) return;
+
       if (!rateLimiter.isAllowed(user.id, 'workspace:join', RATE_LIMITS['workspace:join'].max, RATE_LIMITS['workspace:join'].windowMs)) {
         return;
       }
@@ -305,3 +344,49 @@ export const setupSocketHandlers = (io) => {
     }
   });
 };
+
+/**
+ * M9: Force-evict a user from a Socket.IO room.
+ * Call this after removing a member from a workspace or channel.
+ * @param {import('socket.io').Server} io - Socket.IO server instance
+ * @param {string} userId - User ID to evict
+ * @param {string} roomName - Room name (e.g., 'workspace:abc123' or 'channel:xyz789')
+ */
+export async function forceLeaveRoom(io, userId, roomName) {
+  try {
+    const sockets = await io.fetchSockets();
+    for (const s of sockets) {
+      if (s.user && s.user.id === userId && s.rooms.has(roomName)) {
+        s.leave(roomName);
+      }
+    }
+  } catch (error) {
+    console.error(`Failed to evict user ${userId} from room ${roomName}:`, error);
+  }
+}
+
+/**
+ * M9: Force-evict a user from a workspace room AND all its channel rooms.
+ * Call this after removing a member from a workspace.
+ * @param {import('socket.io').Server} io - Socket.IO server instance
+ * @param {string} userId - User ID to evict
+ * @param {string} workspaceId - Workspace ID
+ * @param {string[]} channelIds - Channel IDs in the workspace to also leave
+ */
+export async function forceLeaveWorkspace(io, userId, workspaceId, channelIds = []) {
+  try {
+    const sockets = await io.fetchSockets();
+    for (const s of sockets) {
+      if (s.user && s.user.id === userId) {
+        s.leave(`workspace:${workspaceId}`);
+        for (const channelId of channelIds) {
+          s.leave(`channel:${channelId}`);
+        }
+        // Notify the client so it can update its UI
+        s.emit('workspace:removed', { workspaceId });
+      }
+    }
+  } catch (error) {
+    console.error(`Failed to evict user ${userId} from workspace ${workspaceId}:`, error);
+  }
+}

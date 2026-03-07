@@ -39,6 +39,8 @@ class ApiService {
     // _hasSession indicates we may have a valid session.
     this._hasSession = !!this.accessToken;
     this._refreshPromise = null;
+    // In-memory response cache: endpoint -> { data, timestamp }
+    this._cache = new Map();
   }
 
   isTokenExpiringSoon() {
@@ -63,6 +65,7 @@ class ApiService {
     this.accessToken = null;
     this._refreshToken = null;
     this._hasSession = false;
+    this._cache.clear();
     localStorage.removeItem('accessToken');
   }
 
@@ -75,6 +78,14 @@ class ApiService {
         });
       }
       await this._refreshPromise;
+    }
+
+    // Invalidate cache on mutations (POST/PUT/PATCH/DELETE)
+    if (options.method && options.method !== 'GET') {
+      // Extract the resource path to invalidate related cache entries
+      // e.g. /channels/workspace/abc123 → invalidate /channels/ entries
+      const resourceBase = endpoint.split('/').slice(0, 2).join('/');
+      this.invalidateCache(resourceBase);
     }
 
     const url = `${API_URL}${endpoint}`;
@@ -129,6 +140,34 @@ class ApiService {
     }
 
     return data;
+  }
+
+  /**
+   * Cached GET request — returns cached data if within TTL, otherwise fetches fresh.
+   * @param {string} endpoint - API endpoint
+   * @param {number} ttlMs - Cache TTL in milliseconds (default 60s)
+   */
+  async cachedRequest(endpoint, ttlMs = 60000) {
+    const cached = this._cache.get(endpoint);
+    if (cached && Date.now() - cached.timestamp < ttlMs) {
+      return cached.data;
+    }
+    const data = await this.request(endpoint);
+    this._cache.set(endpoint, { data, timestamp: Date.now() });
+    return data;
+  }
+
+  /** Invalidate cache entries matching a prefix pattern */
+  invalidateCache(pattern) {
+    if (!pattern) {
+      this._cache.clear();
+      return;
+    }
+    for (const key of this._cache.keys()) {
+      if (key.includes(pattern)) {
+        this._cache.delete(key);
+      }
+    }
   }
 
   async refreshAccessToken() {
@@ -285,7 +324,7 @@ class ApiService {
   }
 
   async getWorkspace(id) {
-    return this.request(`/workspaces/${id}`);
+    return this.cachedRequest(`/workspaces/${id}`, 30000);
   }
 
   async updateWorkspace(id, data) {
@@ -385,7 +424,7 @@ class ApiService {
 
   // Channels
   async getChannels(workspaceId) {
-    return this.request(`/channels/workspace/${workspaceId}`);
+    return this.cachedRequest(`/channels/workspace/${workspaceId}`, 30000);
   }
 
   async createChannel(workspaceId, data) {
@@ -440,7 +479,7 @@ class ApiService {
 
   // Direct Messages
   async getDMs(workspaceId) {
-    return this.request(`/channels/workspace/${workspaceId}/dms`);
+    return this.cachedRequest(`/channels/workspace/${workspaceId}/dms`, 30000);
   }
 
   async createOrGetDM(workspaceId, userIds) {
@@ -452,7 +491,7 @@ class ApiService {
 
   // Channel Groups
   async getChannelGroups(workspaceId) {
-    return this.request(`/channel-groups/workspace/${workspaceId}`);
+    return this.cachedRequest(`/channel-groups/workspace/${workspaceId}`, 60000);
   }
 
   async createChannelGroup(workspaceId, name) {
@@ -595,6 +634,19 @@ class ApiService {
     return this.request(`/messages/channel/${channelId}/pins`);
   }
 
+  // Saved messages (bookmarks)
+  async saveMessage(messageId) {
+    return this.request(`/messages/${messageId}/save`, { method: 'POST' });
+  }
+
+  async unsaveMessage(messageId) {
+    return this.request(`/messages/${messageId}/save`, { method: 'DELETE' });
+  }
+
+  async getSavedMessages(workspaceId) {
+    return this.request(`/messages/workspace/${workspaceId}/saved`);
+  }
+
   // File uploads
   async uploadFile(file) {
     if (this._hasSession && this.isTokenExpiringSoon()) {
@@ -662,7 +714,7 @@ class ApiService {
 
   // Songs
   async getSongs(workspaceId) {
-    return this.request(`/songs/workspace/${workspaceId}`);
+    return this.cachedRequest(`/songs/workspace/${workspaceId}`, 60000);
   }
 
   async createSong(workspaceId, data) {
@@ -939,7 +991,7 @@ class ApiService {
 
   // Band Members
   async getBandMembers(workspaceId) {
-    return this.request(`/band-members/workspace/${workspaceId}`);
+    return this.cachedRequest(`/band-members/workspace/${workspaceId}`, 60000);
   }
 
   async createBandMember(workspaceId, data) {

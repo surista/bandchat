@@ -124,8 +124,8 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
   }, [clearPasswordFields]);
 
   const handleResetPassword = useCallback(async () => {
-    if (newPassword.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters');
+    if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      Alert.alert('Error', 'Password must be at least 8 characters with uppercase, lowercase, and a number');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -347,7 +347,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
               style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
               value={newPassword}
               onChangeText={setNewPassword}
-              placeholder="At least 8 characters"
+              placeholder="Min 8, upper + lower + number"
               placeholderTextColor={colors.textSecondary}
               secureTextEntry
               autoCapitalize="none"

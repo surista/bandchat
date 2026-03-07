@@ -4,7 +4,12 @@ import { messageLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 import { deleteFile, isR2Url } from '../lib/storage.js';
+import { safeDecrementStorage } from './uploads.js';
 import { sendPushToUser } from './push.js';
+
+// L7: Allowed attachment types and size limits for validation
+const ALLOWED_ATTACHMENT_TYPES = ['IMAGE', 'AUDIO', 'VIDEO'];
+const MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024; // 50MB (video max)
 
 const router = express.Router();
 
@@ -286,12 +291,23 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
         ...(hasAttachments && {
           attachments: {
             create: attachments.filter(att => {
-              return isAllowedUploadUrl(att.url).valid;
+              // Validate URL is from allowed upload provider
+              if (!isAllowedUploadUrl(att.url).valid) return false;
+              // L7: Validate attachment type is one of the allowed values
+              if (!att.type || !ALLOWED_ATTACHMENT_TYPES.includes(att.type)) return false;
+              // L7: Validate size is a reasonable positive number
+              if (typeof att.size !== 'number' || att.size <= 0 || att.size > MAX_ATTACHMENT_SIZE) return false;
+              // L3: Validate thumbnailUrl if provided
+              if (att.thumbnailUrl && !isAllowedUploadUrl(att.thumbnailUrl).valid) return false;
+              return true;
             }).map(att => ({
               type: att.type,
               url: att.url,
               filename: att.filename,
-              size: att.size
+              size: att.size,
+              ...(att.thumbnailUrl && { thumbnailUrl: att.thumbnailUrl }),
+              ...(att.width && { width: att.width }),
+              ...(att.height && { height: att.height })
             }))
           }
         })
@@ -486,10 +502,7 @@ router.delete('/:messageId', authenticate, async (req, res) => {
       freedBytes += att.size || 0;
     }
     if (freedBytes > 0) {
-      await prisma.workspace.update({
-        where: { id: message.channel.workspaceId },
-        data: { storageUsedBytes: { decrement: BigInt(freedBytes) } },
-      }).catch(() => {});
+      await safeDecrementStorage(message.channel.workspaceId, freedBytes).catch(() => {});
     }
 
     await prisma.message.delete({
@@ -1066,6 +1079,136 @@ router.post('/:messageId/thread-read', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Mark thread read error:', error);
     res.status(500).json({ error: 'Failed to mark thread as read' });
+  }
+});
+
+// Save (bookmark) a message
+router.post('/:messageId/save', authenticate, async (req, res) => {
+  try {
+    const message = await prisma.message.findUnique({
+      where: { id: req.params.messageId },
+      include: { channel: true }
+    });
+
+    if (!message) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+
+    // Verify workspace membership
+    const workspaceMember = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: message.channel.workspaceId
+        }
+      }
+    });
+
+    if (!workspaceMember) {
+      return res.status(403).json({ error: 'Not a member of this workspace' });
+    }
+
+    const saved = await prisma.savedMessage.upsert({
+      where: {
+        userId_messageId: {
+          userId: req.user.id,
+          messageId: req.params.messageId
+        }
+      },
+      update: {},
+      create: {
+        userId: req.user.id,
+        messageId: req.params.messageId
+      }
+    });
+
+    res.status(201).json(saved);
+  } catch (error) {
+    console.error('Save message error:', error);
+    res.status(500).json({ error: 'Failed to save message' });
+  }
+});
+
+// Unsave (unbookmark) a message
+router.delete('/:messageId/save', authenticate, async (req, res) => {
+  try {
+    const saved = await prisma.savedMessage.findUnique({
+      where: {
+        userId_messageId: {
+          userId: req.user.id,
+          messageId: req.params.messageId
+        }
+      }
+    });
+
+    if (!saved) {
+      return res.status(404).json({ error: 'Message is not saved' });
+    }
+
+    await prisma.savedMessage.delete({
+      where: { id: saved.id }
+    });
+
+    res.json({ message: 'Message unsaved' });
+  } catch (error) {
+    console.error('Unsave message error:', error);
+    res.status(500).json({ error: 'Failed to unsave message' });
+  }
+});
+
+// Get saved messages for current user in a workspace
+router.get('/workspace/:workspaceId/saved', authenticate, async (req, res) => {
+  try {
+    const workspaceMember = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: req.params.workspaceId
+        }
+      }
+    });
+
+    if (!workspaceMember) {
+      return res.status(403).json({ error: 'Not a member of this workspace' });
+    }
+
+    const savedMessages = await prisma.savedMessage.findMany({
+      where: {
+        userId: req.user.id,
+        message: {
+          channel: {
+            workspaceId: req.params.workspaceId
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        message: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                displayName: true,
+                avatarUrl: true
+              }
+            },
+            attachments: true,
+            channel: {
+              select: {
+                id: true,
+                name: true,
+                type: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    res.json(savedMessages);
+  } catch (error) {
+    console.error('Get saved messages error:', error);
+    res.status(500).json({ error: 'Failed to get saved messages' });
   }
 });
 

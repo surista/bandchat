@@ -5,6 +5,7 @@ import { Linking } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as QuickActions from 'expo-quick-actions';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { AuthProvider } from './src/context/AuthContext';
 import { SocketProvider } from './src/context/SocketContext';
@@ -96,6 +97,44 @@ function AppContent() {
     });
 
     return () => notificationService.cleanup();
+  }, []);
+
+  // Quick actions (3D Touch / long press app icon)
+  useEffect(() => {
+    QuickActions.setItems([
+      {
+        id: 'next_gig',
+        title: 'Next Gig',
+        icon: 'symbol:calendar',
+      },
+      {
+        id: 'new_message',
+        title: 'New Message',
+        icon: 'symbol:message',
+      },
+      {
+        id: 'calendar',
+        title: 'Calendar',
+        icon: 'symbol:calendar.badge.clock',
+      },
+    ]).catch(() => {});
+
+    const sub = QuickActions.addListener((action) => {
+      if (!navigationRef.current) return;
+      switch (action.id) {
+        case 'next_gig':
+        case 'calendar':
+          // Navigate to workspace first, then gig list
+          // User needs to be on a workspace; we'll use the last-used workspace
+          navigationRef.current.navigate('WorkspaceList');
+          break;
+        case 'new_message':
+          navigationRef.current.navigate('WorkspaceList');
+          break;
+      }
+    });
+
+    return () => sub.remove();
   }, []);
 
   // Deep linking

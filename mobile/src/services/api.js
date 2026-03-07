@@ -610,6 +610,19 @@ class ApiService {
     return this.request(`/messages/channel/${channelId}/pins`);
   }
 
+  // Saved messages (bookmarks)
+  async saveMessage(messageId) {
+    return this.request(`/messages/${messageId}/save`, { method: 'POST' });
+  }
+
+  async unsaveMessage(messageId) {
+    return this.request(`/messages/${messageId}/save`, { method: 'DELETE' });
+  }
+
+  async getSavedMessages(workspaceId) {
+    return this.request(`/messages/workspace/${workspaceId}/saved`);
+  }
+
   // Songs
   async getSongs(workspaceId) {
     return this.request(`/songs/workspace/${workspaceId}`);

@@ -33,6 +33,17 @@ export const tokenLimiter = rateLimit({
   legacyHeaders: false
 });
 
+
+// Stricter limit for refresh token endpoint (prevent token abuse)
+export const refreshLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
+  skip: skipInTest,
+  message: { error: 'Too many refresh attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 // Limit for sending messages
 export const messageLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute

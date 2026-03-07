@@ -3,6 +3,7 @@ import { authenticate, isWorkspaceMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 import { deleteFile, isR2Url } from '../lib/storage.js';
+import { safeDecrementStorage } from './uploads.js';
 import { isValidUUID, isValidRecordingType } from '../lib/validators.js';
 
 const router = express.Router();
@@ -297,10 +298,7 @@ router.delete('/:recordingId', authenticate, async (req, res) => {
       try { await deleteFile(recording.url); } catch { /* best effort */ }
     }
     if (recording.size) {
-      await prisma.workspace.update({
-        where: { id: recording.workspaceId },
-        data: { storageUsedBytes: { decrement: BigInt(recording.size) } },
-      }).catch(() => {});
+      await safeDecrementStorage(recording.workspaceId, recording.size).catch(() => {});
     }
 
     await prisma.recording.delete({

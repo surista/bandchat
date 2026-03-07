@@ -178,6 +178,10 @@ router.put('/:medleyId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
+    if (existing.createdById !== req.user.id && member.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only the creator or an admin can update medleys' });
+    }
+
     // If songIds provided, update the songs
     if (songIds !== undefined) {
       if (songIds.length < 2) {
@@ -334,6 +338,10 @@ router.delete('/:medleyId', authenticate, async (req, res) => {
     });
     if (!member) {
       return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    if (medley.createdById !== req.user.id && member.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only the creator or an admin can delete medleys' });
     }
 
     await prisma.medley.delete({

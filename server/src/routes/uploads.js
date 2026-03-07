@@ -1,10 +1,44 @@
 import express from 'express';
 import multer from 'multer';
 import fileType from 'file-type';
+import sharp from 'sharp';
 import { rateLimit } from 'express-rate-limit';
 import { authenticate } from '../middleware/auth.js';
 import { uploadFile } from '../lib/storage.js';
 import prisma from '../lib/prisma.js';
+
+// L1: Limit input pixels to prevent decompression bombs (100 megapixels)
+sharp.limitInputPixels(100_000_000);
+
+const THUMBNAIL_MAX_WIDTH = 400;
+const THUMBNAIL_QUALITY = 80;
+
+/**
+ * Generate a thumbnail from an image buffer.
+ * Returns { buffer, width, height } for the thumbnail, plus original dimensions.
+ */
+async function generateThumbnail(imageBuffer) {
+  try {
+    const image = sharp(imageBuffer, { limitInputPixels: 100_000_000 });
+    const metadata = await image.metadata();
+    const origWidth = metadata.width || 0;
+    const origHeight = metadata.height || 0;
+
+    // Only generate thumbnail if image is wider than threshold
+    if (origWidth <= THUMBNAIL_MAX_WIDTH) {
+      return { thumbnail: null, width: origWidth, height: origHeight };
+    }
+
+    const thumbBuffer = await image
+      .resize(THUMBNAIL_MAX_WIDTH, null, { withoutEnlargement: true })
+      .jpeg({ quality: THUMBNAIL_QUALITY })
+      .toBuffer();
+
+    return { thumbnail: thumbBuffer, width: origWidth, height: origHeight };
+  } catch {
+    return { thumbnail: null, width: null, height: null };
+  }
+}
 
 const router = express.Router();
 
@@ -114,13 +148,34 @@ const reserveStorageQuota = async (workspaceId, fileSize) => {
 
 /**
  * Release reserved storage if upload fails after reservation.
+ * Uses safe decrement to prevent underflow below 0.
  */
 const releaseStorageQuota = async (workspaceId, fileSize) => {
   if (!workspaceId) return;
 
+  await safeDecrementStorage(workspaceId, fileSize);
+};
+
+/**
+ * Safely decrement storage, preventing underflow below 0.
+ * Exported so other routes can use the same safe pattern.
+ */
+export const safeDecrementStorage = async (workspaceId, bytes) => {
+  if (!workspaceId || !bytes || bytes <= 0) return;
+
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { storageUsedBytes: true },
+  });
+  if (!workspace) return;
+
+  const current = workspace.storageUsedBytes ?? 0n;
+  const decrement = BigInt(bytes);
+  const newValue = current > decrement ? current - decrement : 0n;
+
   await prisma.workspace.update({
     where: { id: workspaceId },
-    data: { storageUsedBytes: { decrement: BigInt(fileSize) } },
+    data: { storageUsedBytes: newValue },
   });
 };
 
@@ -148,8 +203,13 @@ router.post('/', authenticate, uploadLimiter, upload.single('file'), async (req,
       });
     }
 
-    // Atomically check and reserve storage quota
+    // Require workspaceId so storage quota is always enforced
     const workspaceId = req.body.workspaceId || req.query.workspaceId;
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'workspaceId is required' });
+    }
+
+    // Atomically check and reserve storage quota
     const quotaError = await reserveStorageQuota(workspaceId, req.file.size);
     if (quotaError) {
       return res.status(413).json(quotaError);
@@ -157,9 +217,23 @@ router.post('/', authenticate, uploadLimiter, upload.single('file'), async (req,
 
     // Upload to R2 (release reservation if upload fails)
     let result;
+    let thumbnailUrl = null;
+    let width = null;
+    let height = null;
     try {
       const folder = fileCategory === 'IMAGE' ? 'images' : fileCategory === 'AUDIO' ? 'audio' : 'video';
       result = await uploadFile(req.file.buffer, req.file.originalname, detectedType, folder);
+
+      // Generate thumbnail for images
+      if (fileCategory === 'IMAGE') {
+        const thumbData = await generateThumbnail(req.file.buffer);
+        width = thumbData.width;
+        height = thumbData.height;
+        if (thumbData.thumbnail) {
+          const thumbResult = await uploadFile(thumbData.thumbnail, `thumb_${req.file.originalname}`, 'image/jpeg', 'thumbnails');
+          thumbnailUrl = thumbResult.url;
+        }
+      }
     } catch (uploadError) {
       await releaseStorageQuota(workspaceId, req.file.size);
       throw uploadError;
@@ -169,11 +243,14 @@ router.post('/', authenticate, uploadLimiter, upload.single('file'), async (req,
       url: result.url,
       filename: req.file.originalname,
       size: req.file.size,
-      type: fileCategory
+      type: fileCategory,
+      ...(thumbnailUrl && { thumbnailUrl }),
+      ...(width && { width }),
+      ...(height && { height })
     });
   } catch (error) {
     console.error('Upload error:', error);
-    res.status(500).json({ error: error.message || 'Failed to upload file' });
+    res.status(500).json({ error: 'Failed to upload file' });
   }
 });
 
@@ -208,8 +285,13 @@ router.post('/multiple', authenticate, uploadLimiter, upload.array('files', 5), 
       fileValidations.push({ file, detectedType, fileCategory });
     }
 
-    // Atomically check and reserve storage quota for total batch size
+    // Require workspaceId so storage quota is always enforced
     const workspaceId = req.body.workspaceId || req.query.workspaceId;
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'workspaceId is required' });
+    }
+
+    // Atomically check and reserve storage quota for total batch size
     const quotaError = await reserveStorageQuota(workspaceId, totalSize);
     if (quotaError) {
       return res.status(413).json(quotaError);
@@ -218,9 +300,22 @@ router.post('/multiple', authenticate, uploadLimiter, upload.array('files', 5), 
     // Upload all files to R2 (release reservation if any upload fails)
     let results;
     try {
-      const uploadPromises = fileValidations.map(({ file, detectedType, fileCategory }) => {
+      const uploadPromises = fileValidations.map(async ({ file, detectedType, fileCategory }) => {
         const folder = fileCategory === 'IMAGE' ? 'images' : fileCategory === 'AUDIO' ? 'audio' : 'video';
-        return uploadFile(file.buffer, file.originalname, detectedType, folder);
+        const result = await uploadFile(file.buffer, file.originalname, detectedType, folder);
+        let thumbnailUrl = null;
+        let width = null;
+        let height = null;
+        if (fileCategory === 'IMAGE') {
+          const thumbData = await generateThumbnail(file.buffer);
+          width = thumbData.width;
+          height = thumbData.height;
+          if (thumbData.thumbnail) {
+            const thumbResult = await uploadFile(thumbData.thumbnail, `thumb_${file.originalname}`, 'image/jpeg', 'thumbnails');
+            thumbnailUrl = thumbResult.url;
+          }
+        }
+        return { ...result, thumbnailUrl, width, height };
       });
       results = await Promise.all(uploadPromises);
     } catch (uploadError) {
@@ -232,7 +327,10 @@ router.post('/multiple', authenticate, uploadLimiter, upload.array('files', 5), 
       url: result.url,
       filename: req.files[index].originalname,
       size: req.files[index].size,
-      type: fileValidations[index].fileCategory
+      type: fileValidations[index].fileCategory,
+      ...(result.thumbnailUrl && { thumbnailUrl: result.thumbnailUrl }),
+      ...(result.width && { width: result.width }),
+      ...(result.height && { height: result.height })
     }));
 
     res.json({ files });
@@ -251,7 +349,8 @@ router.use((error, req, res, next) => {
     return res.status(400).json({ error: error.message });
   }
   if (error) {
-    return res.status(400).json({ error: error.message });
+    console.error('Upload middleware error:', error.message);
+    return res.status(400).json({ error: 'Invalid file upload' });
   }
   next();
 });

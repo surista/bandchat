@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { Resend } from 'resend';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
+import { forceLeaveWorkspace } from '../socket/handlers.js';
 
 const router = express.Router();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -358,9 +359,16 @@ router.post('/:workspaceId/leave', authenticate, isWorkspaceMember, async (req, 
       where: { userId_workspaceId: { userId, workspaceId } }
     });
 
+    // M9: Force-evict the leaving user from workspace socket rooms
+    const io = req.app.get('io');
+    const wsChannels = await prisma.channel.findMany({
+      where: { workspaceId },
+      select: { id: true }
+    });
+    await forceLeaveWorkspace(io, userId, workspaceId, wsChannels.map(c => c.id));
+
     // Notify via socket if admin was elevated
     if (elevatedUser) {
-      const io = req.app.get('io');
       io.to(`workspace:${workspaceId}`).emit('member:elevated', {
         workspaceId,
         userId: elevatedUser.userId,
@@ -850,8 +858,11 @@ router.delete('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, a
       where: { userId_workspaceId: { userId, workspaceId } }
     });
 
-    // Notify via socket
+    // M9: Force-evict the removed user from workspace socket rooms
     const io = req.app.get('io');
+    await forceLeaveWorkspace(io, userId, workspaceId, channelIds);
+
+    // Notify remaining members via socket
     io.to(`workspace:${workspaceId}`).emit('member:removed', {
       workspaceId,
       userId
@@ -1527,8 +1538,7 @@ router.get('/:workspaceId/export', authenticate, isWorkspaceAdmin, async (req, r
     const exportData = {
       exportDate: new Date().toISOString(),
       workspace: {
-        name: workspace.name, createdAt: workspace.createdAt,
-        inviteCode: workspace.inviteCode
+        name: workspace.name, createdAt: workspace.createdAt
       },
       members: workspace.members.map(m => ({
         displayName: m.user.displayName, email: m.user.email,

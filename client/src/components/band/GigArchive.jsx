@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { isSafeUrl } from '../../utils/urlSafety';
 import { format } from 'date-fns';
 import api from '../../services/api';
 import { getCurrencySymbol } from '../../utils/currencies';
@@ -1162,7 +1163,7 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
                               </button>
                             ) : item.type === 'youtube' ? (
                               <a
-                                href={item.url}
+                                href={isSafeUrl(item.url) ? item.url : "#"}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="w-full h-full block relative"
@@ -1189,7 +1190,7 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
                               />
                             ) : (
                               <a
-                                href={item.url}
+                                href={isSafeUrl(item.url) ? item.url : "#"}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center justify-center w-full h-full bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] transition-colors"

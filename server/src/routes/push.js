@@ -195,10 +195,37 @@ router.put('/preferences/:workspaceId', authenticate, async (req, res) => {
   }
 });
 
+// Validate that a push notification URL is safe (relative path or app domain only)
+function sanitizePushUrl(url) {
+  if (!url) return undefined;
+  // Allow relative paths (e.g., /workspace/...)
+  if (url.startsWith('/')) return url;
+  // Allow app domain URLs
+  const allowedOrigins = [
+    process.env.CLIENT_URL,
+    process.env.VITE_API_URL
+  ].filter(Boolean);
+  try {
+    const parsed = new URL(url);
+    if (allowedOrigins.some(origin => parsed.origin === new URL(origin).origin)) {
+      return url;
+    }
+  } catch {
+    // Not a valid URL — reject
+  }
+  // Discard arbitrary external URLs to prevent open redirect via push notifications
+  return undefined;
+}
+
 // Helper function to send push notification to a user
 // options: { category: 'mention'|'dm'|'gig'|'announcement'|'channel', workspaceId: string }
 export const sendPushToUser = async (userId, payload, options = {}) => {
   if (!process.env.VAPID_PUBLIC_KEY) return;
+
+  // Sanitize URL in payload to prevent open redirect
+  if (payload.url) {
+    payload.url = sanitizePushUrl(payload.url);
+  }
 
   try {
     // Check if user has snoozed notifications

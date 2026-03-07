@@ -59,6 +59,7 @@ export default function ChannelScreen({ navigation, route }) {
   const [lastOwnMessageId, setLastOwnMessageId] = useState(null);
   const [workspaceMembers, setWorkspaceMembers] = useState([]);
   const [pinnedMessageIds, setPinnedMessageIds] = useState(new Set());
+  const [savedMessageIds, setSavedMessageIds] = useState(new Set());
   const [uploadProgress, setUploadProgress] = useState(null);
   const [lastReadAt, setLastReadAt] = useState(null);
 
@@ -124,6 +125,13 @@ export default function ChannelScreen({ navigation, route }) {
       setPinnedMessageIds(new Set(pins.map(p => p.messageId)));
     }).catch(() => {});
   }, [channel.id]);
+
+  // Load saved message IDs
+  useEffect(() => {
+    api.getSavedMessages(workspaceId).then(saved => {
+      setSavedMessageIds(new Set(saved.map(s => s.messageId)));
+    }).catch(() => {});
+  }, [workspaceId]);
 
   // Load messages → mark read → join socket (exact order from web)
   useEffect(() => {
@@ -470,6 +478,25 @@ export default function ChannelScreen({ navigation, route }) {
           }
         })();
         break;
+      case 'bookmark':
+        (async () => {
+          try {
+            if (savedMessageIds.has(actionMessage.id)) {
+              await api.unsaveMessage(actionMessage.id);
+              setSavedMessageIds(prev => {
+                const next = new Set(prev);
+                next.delete(actionMessage.id);
+                return next;
+              });
+            } else {
+              await api.saveMessage(actionMessage.id);
+              setSavedMessageIds(prev => new Set([...prev, actionMessage.id]));
+            }
+          } catch (err) {
+            Alert.alert('Error', err.message || 'Failed to save/unsave message');
+          }
+        })();
+        break;
       case 'copy':
         if (actionMessage.content) {
           Clipboard.setStringAsync(actionMessage.content);
@@ -526,7 +553,7 @@ export default function ChannelScreen({ navigation, route }) {
         setShowReportModal(true);
         break;
     }
-  }, [actionMessage, navigation, channel.id, workspaceId, pinnedMessageIds]);
+  }, [actionMessage, navigation, channel.id, workspaceId, pinnedMessageIds, savedMessageIds]);
 
   // Submit report
   const handleSubmitReport = useCallback(async () => {
@@ -667,6 +694,10 @@ export default function ChannelScreen({ navigation, route }) {
           onReplyPress={handleReplyPress}
           onImagePress={handleImagePress}
           onReactionPress={handleReactionPress}
+          onSwipeReply={handleReplyPress}
+          onSwipeReact={(messageId, emoji) => {
+            api.addReaction(messageId, emoji).catch(() => {});
+          }}
           members={workspaceMembers}
         />
       </View>
@@ -757,6 +788,7 @@ export default function ChannelScreen({ navigation, route }) {
         onQuickReaction={handleAddReaction}
         isOwnMessage={actionMessage?.author?.id === user?.id}
         isPinned={actionMessage ? pinnedMessageIds.has(actionMessage.id) : false}
+        isBookmarked={actionMessage ? savedMessageIds.has(actionMessage.id) : false}
         hasImageAttachment={actionMessage?.attachments?.some(a => a.type === 'IMAGE')}
       />
 

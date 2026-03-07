@@ -215,6 +215,9 @@ function MessageList({
   onPinMessage,
   onUnpinMessage,
   pinnedMessageIds,
+  onSaveMessage,
+  onUnsaveMessage,
+  savedMessageIds,
   lastReadAt,
   members
 }) {
@@ -392,10 +395,27 @@ function MessageList({
       onTouchEnd={messageLongPress.onTouchEnd}
       onTouchCancel={messageLongPress.onTouchCancel}
     >
-      {messages.map((message, index) => (
-        <div key={message.id}>
+      {(() => {
+        // Cap rendered messages to avoid DOM bloat — show most recent 150
+        const MAX_RENDERED = 150;
+        const truncated = messages.length > MAX_RENDERED;
+        const visibleMessages = truncated ? messages.slice(messages.length - MAX_RENDERED) : messages;
+        return (
+          <>
+            {truncated && (
+              <div className="text-center py-3">
+                <span className="text-xs text-[var(--color-text-muted)]">
+                  Showing latest {MAX_RENDERED} of {messages.length} messages
+                </span>
+              </div>
+            )}
+            {visibleMessages.map((message, index) => {
+              // Adjust index for date header checks against the full array
+              const fullIndex = truncated ? index + (messages.length - MAX_RENDERED) : index;
+              return (
+                <div key={message.id}>
           {/* Date Header */}
-          {shouldShowDateHeader(message, index) && (
+          {shouldShowDateHeader(message, fullIndex) && (
             <div className="flex items-center my-4">
               <div className="flex-1 border-t border-[var(--color-border)]" />
               <span className="px-4 text-xs text-[var(--color-text-muted)] font-medium">
@@ -406,7 +426,7 @@ function MessageList({
           )}
 
           {/* Unread Divider */}
-          {index === firstUnreadIndex && (
+          {fullIndex === firstUnreadIndex && (
             <div className="unread-divider flex items-center my-3">
               <div className="flex-1 border-t border-red-500" />
               <span className="px-3 text-xs text-red-500 font-semibold">New messages</span>
@@ -503,7 +523,7 @@ function MessageList({
                       {att.type === 'IMAGE' && (
                         <div className="relative inline-block group/img">
                           <img
-                            src={att.url}
+                            src={att.thumbnailUrl || att.url}
                             alt={att.filename}
                             className="max-w-full md:max-w-md max-h-80 rounded cursor-pointer"
                             loading="lazy"
@@ -682,6 +702,25 @@ function MessageList({
                     📌
                   </button>
                 )}
+                {onSaveMessage && onUnsaveMessage && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (savedMessageIds?.has(message.id)) {
+                        onUnsaveMessage(message.id);
+                      } else {
+                        onSaveMessage(message.id);
+                      }
+                    }}
+                    className={`p-2 sm:p-1.5 hover:bg-[var(--color-bg-secondary)] rounded min-w-[36px] sm:min-w-0 ${
+                      savedMessageIds?.has(message.id) ? 'text-blue-400' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                    }`}
+                    title={savedMessageIds?.has(message.id) ? 'Unsave message' : 'Save message'}
+                    aria-label={savedMessageIds?.has(message.id) ? 'Unsave message' : 'Save message'}
+                  >
+                    🔖
+                  </button>
+                )}
                 {message.author?.id === currentUser.id && (
                   <>
                     <button
@@ -712,7 +751,11 @@ function MessageList({
             </div>
           </div>
         </div>
-      ))}
+              );
+            })}
+          </>
+        );
+      })()}
     </div>
 
     <ConfirmDialog
@@ -755,6 +798,7 @@ function MessageList({
           { label: 'Add Reaction', icon: '😀', onClick: () => setReactionPickerMessageId(msg.id) },
           { label: 'Copy Text', icon: '📋', onClick: () => handleCopyText(msg.id) },
           { label: isPinned ? 'Unpin Message' : 'Pin Message', icon: '📌', onClick: () => isPinned ? onUnpinMessage?.(msg.id) : onPinMessage?.(msg.id), show: !!(onPinMessage && onUnpinMessage) },
+          { label: savedMessageIds?.has(msg.id) ? 'Unsave Message' : 'Save Message', icon: '🔖', onClick: () => savedMessageIds?.has(msg.id) ? onUnsaveMessage?.(msg.id) : onSaveMessage?.(msg.id), show: !!(onSaveMessage && onUnsaveMessage) },
           { divider: true, label: 'divider', onClick: () => {}, show: isOwn },
           { label: 'Edit Message', icon: '✏️', onClick: () => handleStartEdit(msg), show: isOwn },
           { label: 'Delete Message', icon: '🗑️', variant: 'danger', onClick: () => setDeleteMessageId(msg.id), show: isOwn },

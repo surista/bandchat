@@ -114,8 +114,9 @@ router.get('/', authenticate, linkPreviewLimiter, async (req, res) => {
     return res.status(400).json({ error: 'URL parameter required' });
   }
 
-  // SSRF protection
-  if (await isPrivateUrl(url)) {
+  // SSRF protection: validate URL and get resolved IP
+  const urlValidation = await validateUrl(url);
+  if (urlValidation.blocked) {
     return res.status(400).json({ error: 'Invalid URL' });
   }
 

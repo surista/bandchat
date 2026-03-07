@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useLayoutEffect, useRef } from 'react';
+import { isSafeUrl } from '../../utils/urlSafety';
 import {
   View,
   Text,
@@ -209,7 +210,9 @@ export default function ContactsScreen({ navigation, route }) {
     if (type === 'email') url = `mailto:${value}`;
     else if (type === 'phone') url = `tel:${value}`;
     else if (type === 'website') {
-      url = value.startsWith('http') ? value : `https://${value}`;
+      const candidate = value.startsWith('http') ? value : `https://${value}`;
+      if (!isSafeUrl(candidate)) return;
+      url = candidate;
     }
     if (url) Linking.openURL(url).catch(() => {});
   }, []);

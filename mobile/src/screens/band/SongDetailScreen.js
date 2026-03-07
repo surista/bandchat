@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useLayoutEffect } from 'react';
+import { isSafeUrl } from '../../utils/urlSafety';
 import {
   View,
   Text,
@@ -488,12 +489,12 @@ export default function SongDetailScreen({ navigation, route }) {
       {(song?.youtubeUrl || song?.spotifyUrl) && (
         <View style={styles.linksRow}>
           {song.youtubeUrl ? (
-            <TouchableOpacity style={styles.linkButton} onPress={() => Linking.openURL(song.youtubeUrl)} accessibilityRole="button" accessibilityLabel="Open on YouTube">
+            <TouchableOpacity style={styles.linkButton} onPress={() => isSafeUrl(song.youtubeUrl) && Linking.openURL(song.youtubeUrl)} accessibilityRole="button" accessibilityLabel="Open on YouTube">
               <Text style={styles.youtubeLink}>YouTube</Text>
             </TouchableOpacity>
           ) : null}
           {song.spotifyUrl ? (
-            <TouchableOpacity style={styles.linkButton} onPress={() => Linking.openURL(song.spotifyUrl)} accessibilityRole="button" accessibilityLabel="Open on Spotify">
+            <TouchableOpacity style={styles.linkButton} onPress={() => isSafeUrl(song.spotifyUrl) && Linking.openURL(song.spotifyUrl)} accessibilityRole="button" accessibilityLabel="Open on Spotify">
               <Text style={styles.spotifyLink}>Spotify</Text>
             </TouchableOpacity>
           ) : null}

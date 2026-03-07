@@ -60,6 +60,10 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       return res.status(400).json({ error: 'Name is required' });
     }
 
+    // Input length validation
+    if (name.length > 200) return res.status(400).json({ error: 'Name must be 200 characters or less' });
+    if (description && description.length > 5000) return res.status(400).json({ error: 'Description must be 5,000 characters or less' });
+
     const setlist = await prisma.setlist.create({
       data: {
         name,
@@ -178,6 +182,10 @@ router.put('/:setlistId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
+    // Input length validation
+    if (name && name.length > 200) return res.status(400).json({ error: 'Name must be 200 characters or less' });
+    if (description && description.length > 5000) return res.status(400).json({ error: 'Description must be 5,000 characters or less' });
+
     const setlist = await prisma.setlist.update({
       where: { id: req.params.setlistId },
       data: {
@@ -231,6 +239,10 @@ router.delete('/:setlistId', authenticate, async (req, res) => {
 
     if (!member) {
       return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    if (setlist.createdById !== req.user.id && member.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only the creator or an admin can delete setlists' });
     }
 
     await prisma.setlist.delete({

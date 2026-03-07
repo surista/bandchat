@@ -603,10 +603,19 @@ function Sidebar({
         {/* Pinned Calendar shortcut */}
         <button
           onClick={() => onSelectBandView?.('calendar')}
-          className={`channel-item w-full mx-2 mb-2 ${activeBandView === 'calendar' ? 'active' : ''}`}
+          className={`channel-item w-full mx-2 mb-1 ${activeBandView === 'calendar' ? 'active' : ''}`}
         >
           <span className="text-gray-400">📅</span>
           <span className="flex-1 truncate">Calendar</span>
+        </button>
+
+        {/* Saved Messages shortcut */}
+        <button
+          onClick={() => onSelectBandView?.('saved')}
+          className={`channel-item w-full mx-2 mb-2 ${activeBandView === 'saved' ? 'active' : ''}`}
+        >
+          <span className="text-gray-400">🔖</span>
+          <span className="flex-1 truncate">Saved Messages</span>
         </button>
 
         <div className="px-4 mb-2 flex items-center justify-between">

@@ -45,6 +45,8 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
     if (phone && phone.length > 50) return res.status(400).json({ error: 'Phone must be 50 characters or less' });
     if (email && email.length > 255) return res.status(400).json({ error: 'Email must be 255 characters or less' });
     if (notes && notes.length > 2000) return res.status(400).json({ error: 'Notes must be 2,000 characters or less' });
+    if (website && website.length > 500) return res.status(400).json({ error: 'Website must be 500 characters or less' });
+    if (address && address.length > 500) return res.status(400).json({ error: 'Address must be 500 characters or less' });
 
     const contact = await prisma.contact.create({
       data: {
@@ -129,6 +131,14 @@ router.put('/:contactId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
+    // Input length validation
+    if (name && name.length > 200) return res.status(400).json({ error: 'Name must be 200 characters or less' });
+    if (phone && phone.length > 50) return res.status(400).json({ error: 'Phone must be 50 characters or less' });
+    if (email && email.length > 255) return res.status(400).json({ error: 'Email must be 255 characters or less' });
+    if (notes && notes.length > 2000) return res.status(400).json({ error: 'Notes must be 2,000 characters or less' });
+    if (website && website.length > 500) return res.status(400).json({ error: 'Website must be 500 characters or less' });
+    if (address && address.length > 500) return res.status(400).json({ error: 'Address must be 500 characters or less' });
+
     const contact = await prisma.contact.update({
       where: { id: req.params.contactId },
       data: {
@@ -175,6 +185,10 @@ router.delete('/:contactId', authenticate, async (req, res) => {
     });
     if (!membership) {
       return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    if (contact.createdById !== req.user.id && membership.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only the creator or an admin can delete contacts' });
     }
 
     await prisma.contact.delete({

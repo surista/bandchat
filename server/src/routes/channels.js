@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin, isChannelMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
+import { forceLeaveRoom } from '../socket/handlers.js';
 
 const router = express.Router();
 
@@ -177,6 +178,10 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       return res.status(400).json({ error: 'Channel name is required' });
     }
 
+    // Input length validation
+    if (name.length > 200) return res.status(400).json({ error: 'Channel name must be 200 characters or less' });
+    if (description && description.length > 5000) return res.status(400).json({ error: 'Description must be 5,000 characters or less' });
+
     // Validate channel name (lowercase, no spaces)
     const channelName = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
@@ -341,6 +346,10 @@ router.put('/:channelId', authenticate, isChannelMember, async (req, res) => {
       return res.status(403).json({ error: 'Only admins or the channel creator can update this channel' });
     }
 
+    // Input length validation
+    if (name && name.length > 200) return res.status(400).json({ error: 'Channel name must be 200 characters or less' });
+    if (description && description.length > 5000) return res.status(400).json({ error: 'Description must be 5,000 characters or less' });
+
     // Validate channel name if provided
     let sanitizedName;
     if (name) {
@@ -497,8 +506,11 @@ router.delete('/:channelId/members/:userId', authenticate, isChannelMember, asyn
       }
     });
 
-    // Notify channel
+    // M9: Force-evict the removed user from the channel socket room
     const io = req.app.get('io');
+    await forceLeaveRoom(io, userId, `channel:${channelId}`);
+
+    // Notify channel
     io.to(`channel:${channelId}`).emit('channel:member:removed', {
       channelId,
       userId

@@ -176,6 +176,10 @@ router.put('/:announcementId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
+    // Input length validation
+    if (title && title.length > 200) return res.status(400).json({ error: 'Title must be 200 characters or less' });
+    if (content && content.length > 10000) return res.status(400).json({ error: 'Content must be 10,000 characters or less' });
+
     const announcement = await prisma.announcement.update({
       where: { id: req.params.announcementId },
       data: {
