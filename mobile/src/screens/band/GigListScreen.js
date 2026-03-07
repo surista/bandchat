@@ -81,6 +81,7 @@ export default function GigListScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [typeFilter, setTypeFilter] = useState('all');
+  const [sortNewest, setSortNewest] = useState(true);
 
   // Action sheet
   const [selectedGig, setSelectedGig] = useState(null);
@@ -214,7 +215,7 @@ export default function GigListScreen({ navigation, route }) {
     const sorted = allGigs.sort((a, b) => {
       const da = a.date ? new Date(a.date) : new Date(0);
       const db = b.date ? new Date(b.date) : new Date(0);
-      return da - db;
+      return sortNewest ? db - da : da - db;
     });
 
     const monthMap = {};
@@ -232,7 +233,7 @@ export default function GigListScreen({ navigation, route }) {
     }
 
     return Object.entries(monthMap).map(([title, data]) => ({ title, data }));
-  }, [gigs, otherGigs]);
+  }, [gigs, otherGigs, sortNewest]);
 
   const handleDuplicate = useCallback(async () => {
     if (!selectedGig) return;
@@ -501,6 +502,18 @@ export default function GigListScreen({ navigation, route }) {
         >
           <Text style={[styles.filterChipText, { color: showAllBands ? '#ffffff' : colors.textSecondary }]}>
             All Bands
+          </Text>
+        </TouchableOpacity>
+        <View style={[styles.filterDivider, { backgroundColor: colors.border }]} />
+        <TouchableOpacity
+          style={[styles.filterChip, { backgroundColor: colors.bgTertiary }]}
+          onPress={() => setSortNewest(prev => !prev)}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={`Sort: ${sortNewest ? 'Newest first' : 'Oldest first'}`}
+        >
+          <Text style={[styles.filterChipText, { color: colors.textSecondary }]}>
+            {sortNewest ? '\u2193 Newest' : '\u2191 Oldest'}
           </Text>
         </TouchableOpacity>
       </ScrollView>

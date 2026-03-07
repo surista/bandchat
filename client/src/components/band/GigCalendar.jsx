@@ -293,6 +293,7 @@ function GigCalendar({ workspaceId, workspace }) {
   const [view, setView] = useState(() => window.innerWidth < 768 ? 'list' : 'calendar');
   const [listMode, setListMode] = useState('compact'); // 'compact' or 'cards'
   const [filterType, setFilterType] = useState('');
+  const [sortNewest, setSortNewest] = useState(true);
   const [deleteGigId, setDeleteGigId] = useState(null);
   const [gigContextMenu, setGigContextMenu] = useState(null); // { gigId, x, y }
 
@@ -755,8 +756,9 @@ function GigCalendar({ workspaceId, workspace }) {
     if (showOtherWorkspaces) {
       combined.push(...otherWorkspaceGigs);
     }
-    return combined.sort((a, b) => new Date(a.date) - new Date(b.date));
-  }, [gigs, otherWorkspaceGigs, showOtherWorkspaces]);
+    const sorted = combined.sort((a, b) => new Date(a.date) - new Date(b.date));
+    return sortNewest ? sorted.reverse() : sorted;
+  }, [gigs, otherWorkspaceGigs, showOtherWorkspaces, sortNewest]);
 
   const gigsByDate = useMemo(() => {
     const map = {};
@@ -966,6 +968,13 @@ function GigCalendar({ workspaceId, workspace }) {
               <option value="RECORDING">Recording</option>
               <option value="OTHER">Other</option>
             </select>
+            <button
+              onClick={() => setSortNewest(prev => !prev)}
+              className="px-3 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded text-[var(--color-text-secondary)] text-sm hover:text-[var(--color-text-primary)] transition-colors"
+              title={sortNewest ? 'Showing newest first' : 'Showing oldest first'}
+            >
+              {sortNewest ? '↓ Newest' : '↑ Oldest'}
+            </button>
             <div className="flex bg-[var(--color-bg-tertiary)] rounded overflow-hidden">
               <button
                 onClick={() => setView('calendar')}
