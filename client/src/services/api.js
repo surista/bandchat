@@ -674,6 +674,7 @@ class ApiService {
     const response = await fetch(url, {
       method: 'POST',
       headers,
+      credentials: 'include',
       body: formData
     });
 
@@ -707,6 +708,7 @@ class ApiService {
     const response = await fetch(url, {
       method: 'POST',
       headers,
+      credentials: 'include',
       body: formData
     });
 
@@ -1454,7 +1456,7 @@ class ApiService {
   async exportUserData() {
     const url = `${API_URL}/auth/export`;
     const headers = { Authorization: `Bearer ${this.accessToken}` };
-    const response = await fetch(url, { headers });
+    const response = await fetch(url, { headers, credentials: 'include' });
     if (!response.ok) {
       const data = await response.json();
       throw new Error(data.error || 'Export failed');
@@ -1471,7 +1473,7 @@ class ApiService {
   async exportWorkspaceData(workspaceId) {
     const url = `${API_URL}/workspaces/${workspaceId}/export`;
     const headers = { Authorization: `Bearer ${this.accessToken}` };
-    const response = await fetch(url, { headers });
+    const response = await fetch(url, { headers, credentials: 'include' });
     if (!response.ok) {
       const data = await response.json();
       throw new Error(data.error || 'Export failed');
