@@ -1508,17 +1508,9 @@ class ApiService {
     return this.request(`/subscriptions/${workspaceId}/plan`);
   }
 
-  async verifyPurchase(workspaceId, platform, receipt, productId) {
-    return this.request(`/subscriptions/${workspaceId}/verify-purchase`, {
+  async activatePurchase(workspaceId) {
+    return this.request(`/subscriptions/${workspaceId}/activate`, {
       method: 'POST',
-      body: JSON.stringify({ platform, receipt, productId }),
-    });
-  }
-
-  async restorePurchases(workspaceId, platform, receipts) {
-    return this.request(`/subscriptions/${workspaceId}/restore`, {
-      method: 'POST',
-      body: JSON.stringify({ platform, receipts }),
     });
   }
 }

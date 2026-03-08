@@ -66,6 +66,7 @@ export default function SettingsScreen({ navigation, route }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [effectivePlan, setEffectivePlan] = useState('FREE');
 
   // Workspace defaults state
   const [showDefaultsModal, setShowDefaultsModal] = useState(false);
@@ -89,6 +90,7 @@ export default function SettingsScreen({ navigation, route }) {
         setWsStartTime(ws.defaultStartTime || '19:00');
         setWsEndTime(ws.defaultEndTime || '21:00');
         setWsVenue(ws.defaultVenue || '');
+        setEffectivePlan(ws.effectivePlan || 'FREE');
       } catch {
         // Default to non-admin
       }
@@ -202,7 +204,7 @@ export default function SettingsScreen({ navigation, route }) {
         <View style={styles.group}>
           <SettingsRow
             icon="⭐"
-            label="Upgrade to Pro"
+            label={effectivePlan === 'PRO' ? 'Pro Plan' : 'Upgrade to Pro'}
             onPress={() => navigation.navigate('Upgrade', { workspaceId })}
             colors={colors}
           />

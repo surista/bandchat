@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,20 +10,18 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Purchases from 'react-native-purchases';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 
-// Product IDs — must match App Store Connect / Google Play Console
+// Product IDs — must match App Store Connect / Google Play Console and RevenueCat dashboard
 const PRODUCT_IDS = {
   monthly: 'bandchat_pro_monthly',
   annual: 'bandchat_pro_annual',
   lifetime: 'bandchat_pro_lifetime',
 };
 
-const SUBSCRIPTION_SKUS = [PRODUCT_IDS.monthly, PRODUCT_IDS.annual];
-const PRODUCT_SKUS = [PRODUCT_IDS.lifetime];
-
-// Fallback prices (shown while loading real prices from store)
+// Fallback prices shown while real prices load from RevenueCat
 const FALLBACK_PRICES = {
   [PRODUCT_IDS.monthly]: '$4.99/mo',
   [PRODUCT_IDS.annual]: '$39.99/yr',
@@ -52,13 +50,15 @@ export default function UpgradeScreen({ route }) {
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(null);
   const [restoring, setRestoring] = useState(false);
-  const [iapAvailable, setIapAvailable] = useState(false);
-  const [iapHook, setIapHook] = useState(null);
-  const [storeProducts, setStoreProducts] = useState({});
+  // Map of productId -> RevenueCat Package object
+  const [packages, setPackages] = useState({});
+  // Map of productId -> formatted price string
+  const [storePrices, setStorePrices] = useState({});
 
-  // Load plan status
+  // Load plan status and RevenueCat offerings in parallel on mount
   useEffect(() => {
     loadPlan();
+    loadOfferings();
   }, [workspaceId]);
 
   const loadPlan = async () => {
@@ -72,77 +72,65 @@ export default function UpgradeScreen({ route }) {
     }
   };
 
-  // Try to initialize IAP
-  useEffect(() => {
-    let cleanup = null;
-    const initIAP = async () => {
-      try {
-        // Dynamic import — expo-iap requires native build
-        const { useIAP } = await import('expo-iap');
-        setIapAvailable(true);
-      } catch {
-        console.log('expo-iap not available (requires native build)');
-        setIapAvailable(false);
+  const loadOfferings = async () => {
+    try {
+      const offerings = await Purchases.getOfferings();
+      const current = offerings.current;
+      if (!current) return;
+
+      const pkgMap = {};
+      const priceMap = {};
+
+      for (const pkg of current.availablePackages) {
+        const productId = pkg.product.identifier;
+        pkgMap[productId] = pkg;
+        // RevenueCat provides a pre-formatted price string e.g. "$4.99"
+        const priceString = pkg.product.priceString || '';
+        if (productId === PRODUCT_IDS.monthly && priceString) {
+          priceMap[productId] = `${priceString}/mo`;
+        } else if (productId === PRODUCT_IDS.annual && priceString) {
+          priceMap[productId] = `${priceString}/yr`;
+        } else if (priceString) {
+          priceMap[productId] = priceString;
+        }
       }
-    };
-    initIAP();
-    return () => { if (cleanup) cleanup(); };
-  }, []);
+
+      setPackages(pkgMap);
+      setStorePrices(priceMap);
+    } catch (err) {
+      // Offerings may fail in Expo Go or simulators — fall back to hardcoded prices silently
+      console.log('RevenueCat offerings unavailable:', err.message);
+    }
+  };
+
+  const getPrice = (productId) => {
+    return storePrices[productId] || FALLBACK_PRICES[productId];
+  };
 
   const handlePurchase = async (productId) => {
-    if (!iapAvailable) {
-      Alert.alert('Not Available', 'In-app purchases require a native build. Please install the app from the App Store or Google Play.');
-      return;
-    }
-
     setPurchasing(productId);
     try {
-      // Dynamic import for purchase flow
-      const expoIap = await import('expo-iap');
-      const platform = Platform.OS === 'ios' ? 'APPLE' : 'GOOGLE';
-      const isSubscription = SUBSCRIPTION_SKUS.includes(productId);
+      // Tag this purchase with the workspace so the server can sync the plan
+      await Purchases.setAttributes({ workspaceId });
 
-      const result = await expoIap.requestPurchase({
-        request: {
-          apple: { sku: productId },
-          google: { skus: [productId] },
-        },
-        type: isSubscription ? 'subs' : 'in-app',
-      });
-
-      // Get receipt/transaction data
-      const purchase = Array.isArray(result) ? result[0] : result;
-      if (!purchase) {
-        throw new Error('Purchase was cancelled');
+      const pkg = packages[productId];
+      if (!pkg) {
+        throw new Error('Product not available. Please check your connection and try again.');
       }
 
-      // Send receipt to server for validation
-      const receipt = purchase.transactionId || purchase.purchaseToken || '';
-      const serverResult = await api.verifyPurchase(workspaceId, platform, receipt, productId);
+      const { customerInfo } = await Purchases.purchasePackage(pkg);
 
-      // Finish the transaction with the store
-      await expoIap.finishTransaction({
-        purchase: {
-          id: purchase.id,
-          productId: purchase.productId,
-          transactionId: purchase.transactionId,
-          purchaseToken: purchase.purchaseToken || null,
-          platform: purchase.platform,
-          store: purchase.store,
-          transactionDate: purchase.transactionDate,
-          purchaseState: purchase.purchaseState,
-          isAutoRenewing: purchase.isAutoRenewing,
-          quantity: purchase.quantity,
-        },
-        isConsumable: false,
-      });
-
-      // Refresh plan data
-      await loadPlan();
-
-      Alert.alert('Welcome to Pro!', 'All features are now unlocked for this workspace.');
+      if (customerInfo.entitlements.active['pro']) {
+        // Sync the activated plan to the BandChat server
+        await api.activatePurchase(workspaceId);
+        await loadPlan();
+        Alert.alert('Welcome to Pro!', 'All features are now unlocked for this workspace.');
+      } else {
+        Alert.alert('Purchase Issue', 'Purchase completed but Pro entitlement was not found. Please restore purchases or contact support.');
+      }
     } catch (err) {
-      if (err.message?.includes('cancelled') || err.code === 'user-cancelled') {
+      // PurchaseCancelledError has userCancelled = true
+      if (err.userCancelled) {
         // User cancelled — no alert needed
       } else {
         Alert.alert('Purchase Failed', err.message || 'Something went wrong. Please try again.');
@@ -153,39 +141,20 @@ export default function UpgradeScreen({ route }) {
   };
 
   const handleRestore = async () => {
-    if (!iapAvailable) {
-      Alert.alert('Not Available', 'In-app purchases require a native build.');
-      return;
-    }
-
     setRestoring(true);
     try {
-      const expoIap = await import('expo-iap');
-      const platform = Platform.OS === 'ios' ? 'APPLE' : 'GOOGLE';
+      // Tag this restore attempt with the workspace
+      await Purchases.setAttributes({ workspaceId });
 
-      // Restore from store
-      await expoIap.restorePurchases();
+      const customerInfo = await Purchases.restorePurchases();
 
-      // Get available purchases
-      const purchases = await expoIap.getAvailablePurchases({
-        alsoPublishToEventListenerIOS: false,
-        onlyIncludeActiveItemsIOS: true,
-      });
-
-      if (purchases.length === 0) {
-        Alert.alert('No Purchases Found', 'No previous purchases were found for this account.');
-        return;
-      }
-
-      // Send to server for validation
-      const receipts = purchases.map(p => p.transactionId || p.purchaseToken || '');
-      const result = await api.restorePurchases(workspaceId, platform, receipts);
-
-      if (result.restored) {
+      if (customerInfo.entitlements.active['pro']) {
+        // Sync restored plan to the server
+        await api.activatePurchase(workspaceId);
         await loadPlan();
         Alert.alert('Restored', 'Your Pro plan has been restored.');
       } else {
-        Alert.alert('Not Restored', 'No active Pro subscription was found for this workspace.');
+        Alert.alert('No Active Subscription', 'No active Pro subscription was found for this Apple ID / Google account.');
       }
     } catch (err) {
       Alert.alert('Restore Failed', err.message || 'Something went wrong. Please try again.');
@@ -195,10 +164,6 @@ export default function UpgradeScreen({ route }) {
   };
 
   const isPro = planData?.effectivePlan === 'PRO';
-
-  const getPrice = (productId) => {
-    return storeProducts[productId] || FALLBACK_PRICES[productId];
-  };
 
   if (loading) {
     return (
@@ -211,6 +176,7 @@ export default function UpgradeScreen({ route }) {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
+
         {/* Current Plan Status */}
         {isPro ? (
           <View style={[styles.statusCard, { backgroundColor: '#059669', borderColor: '#059669' }]}>
@@ -218,8 +184,9 @@ export default function UpgradeScreen({ route }) {
             <Text style={[styles.statusTitle, { color: '#fff' }]}>You're on Pro!</Text>
             <Text style={[styles.statusDesc, { color: 'rgba(255,255,255,0.85)' }]}>
               All features are unlocked for this workspace.
-              {planData.planExpiresAt && `\nRenews ${new Date(planData.planExpiresAt).toLocaleDateString()}`}
-              {!planData.planExpiresAt && planData.plan === 'PRO' && '\nLifetime access'}
+              {planData.planExpiresAt
+                ? `\nRenews ${new Date(planData.planExpiresAt).toLocaleDateString()}`
+                : '\nLifetime access'}
             </Text>
           </View>
         ) : (
@@ -242,7 +209,7 @@ export default function UpgradeScreen({ route }) {
                 colors={colors}
                 onPress={() => handlePurchase(PRODUCT_IDS.monthly)}
                 loading={purchasing === PRODUCT_IDS.monthly}
-                disabled={!!purchasing}
+                disabled={!!purchasing || restoring}
               />
               <PricingCard
                 title="Annual"
@@ -252,7 +219,7 @@ export default function UpgradeScreen({ route }) {
                 colors={colors}
                 onPress={() => handlePurchase(PRODUCT_IDS.annual)}
                 loading={purchasing === PRODUCT_IDS.annual}
-                disabled={!!purchasing}
+                disabled={!!purchasing || restoring}
                 highlighted
               />
               <PricingCard
@@ -262,7 +229,7 @@ export default function UpgradeScreen({ route }) {
                 colors={colors}
                 onPress={() => handlePurchase(PRODUCT_IDS.lifetime)}
                 loading={purchasing === PRODUCT_IDS.lifetime}
-                disabled={!!purchasing}
+                disabled={!!purchasing || restoring}
               />
             </View>
           </>
@@ -282,7 +249,7 @@ export default function UpgradeScreen({ route }) {
           ))}
         </View>
 
-        {/* Free Tier Info */}
+        {/* Free Tier Usage */}
         {!isPro && planData && (
           <View style={[styles.usageSection, { backgroundColor: colors.bgSecondary }]}>
             <Text style={[styles.usageTitle, { color: colors.textPrimary }]}>Current Usage (Free)</Text>
@@ -299,7 +266,7 @@ export default function UpgradeScreen({ route }) {
           <TouchableOpacity
             style={styles.restoreButton}
             onPress={handleRestore}
-            disabled={restoring}
+            disabled={restoring || !!purchasing}
             accessibilityRole="button"
             accessibilityLabel="Restore purchases"
           >

@@ -3,7 +3,7 @@ export default {
     name: 'BandChat',
     slug: 'bandchat',
     scheme: 'bandchat',
-    version: '1.04.44',
+    version: '1.04.45',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'dark',
@@ -16,7 +16,7 @@ export default {
     ios: {
       supportsTablet: false,
       bundleIdentifier: 'com.bandchat.mobile',
-      buildNumber: '10444',
+      buildNumber: '10445',
       infoPlist: {
         NSCameraUsageDescription: 'BandChat needs camera access to take photos for your profile and messages.',
         NSPhotoLibraryUsageDescription: 'BandChat needs photo library access to share images in messages and set your profile picture.',
@@ -30,7 +30,7 @@ export default {
     },
     android: {
       package: 'com.bandchat.mobile',
-      versionCode: 10444,
+      versionCode: 10445,
       adaptiveIcon: {
         backgroundColor: '#1f2937',
         foregroundImage: './assets/android-icon-foreground.png',
@@ -57,6 +57,8 @@ export default {
     extra: {
       apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api',
       socketUrl: process.env.EXPO_PUBLIC_SOCKET_URL || 'http://localhost:3001',
+      revenueCatApiKeyIos: process.env.EXPO_PUBLIC_REVENUECAT_IOS || '',
+      revenueCatApiKeyAndroid: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID || '',
       eas: {
         projectId: 'd4038ff4-1904-4b0d-98a0-d8bcab2cb00f',
       },
@@ -70,7 +72,7 @@ export default {
       'expo-notifications',
       'expo-media-library',
       'expo-quick-actions',
-      'expo-iap',
+      'react-native-purchases',
       [
         'expo-build-properties',
         {

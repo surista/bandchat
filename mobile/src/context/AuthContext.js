@@ -1,7 +1,22 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+import Purchases from 'react-native-purchases';
 import api from '../services/api';
 
 const AuthContext = createContext(null);
+
+const configureRevenueCat = async (userId) => {
+  try {
+    const apiKey = Platform.OS === 'ios'
+      ? Constants.expoConfig?.extra?.revenueCatApiKeyIos
+      : Constants.expoConfig?.extra?.revenueCatApiKeyAndroid;
+    if (!apiKey) return;
+    Purchases.configure({ apiKey, appUserID: userId });
+  } catch (err) {
+    console.warn('RevenueCat configure failed:', err.message);
+  }
+};
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -24,6 +39,7 @@ export function AuthProvider({ children }) {
             const userData = await api.getMe();
             setUser(userData);
             setIsOffline(false);
+            await configureRevenueCat(userData.id);
           } catch (fetchError) {
             // Check if it's a network/timeout error (app started offline)
             if (fetchError.type === 'NETWORK' || fetchError.type === 'TIMEOUT') {
@@ -63,6 +79,7 @@ export function AuthProvider({ children }) {
       const userData = await api.getMe();
       setUser(userData);
       setIsOffline(false);
+      await configureRevenueCat(userData.id);
     } catch (fetchError) {
       if (fetchError.type === 'NETWORK' || fetchError.type === 'TIMEOUT') {
         setIsOffline(true);
@@ -78,18 +95,21 @@ export function AuthProvider({ children }) {
   const signup = useCallback(async (email, password, displayName) => {
     const data = await api.signup(email, password, displayName);
     setUser(data.user);
+    await configureRevenueCat(data.user.id);
     return data;
   }, []);
 
   const login = useCallback(async (email, password) => {
     const data = await api.login(email, password);
     setUser(data.user);
+    await configureRevenueCat(data.user.id);
     return data;
   }, []);
 
   const logout = useCallback(async () => {
     try {
       await api.logout();
+      await Purchases.logOut();
     } catch (err) {
       // silently fail
     } finally {
