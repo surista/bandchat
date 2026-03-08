@@ -432,7 +432,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
 
       // Upload files if any
       if (files.length > 0) {
-        const uploadPromises = files.map(file => api.uploadFile(file));
+        const uploadPromises = files.map(file => api.uploadFile(file, channel.workspaceId));
         const uploadedFiles = await Promise.all(uploadPromises);
         attachments = uploadedFiles.map(file => ({
           type: file.type,

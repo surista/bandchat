@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { isWorkspaceMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
+import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
 
 const router = express.Router();
 
@@ -58,6 +59,16 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
 
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
+    }
+
+    // Check plan setlist limit
+    const workspace = await prisma.workspace.findUnique({ where: { id: req.params.workspaceId }, select: { plan: true, planExpiresAt: true } });
+    const limits = getPlanLimits(workspace);
+    if (limits.maxSetlists !== Infinity) {
+      const setlistCount = await prisma.setlist.count({ where: { workspaceId: req.params.workspaceId } });
+      if (setlistCount >= limits.maxSetlists) {
+        return res.status(403).json({ error: `Free plan allows up to ${limits.maxSetlists} setlists. Upgrade to Pro for unlimited.`, upgrade: true });
+      }
     }
 
     // Input length validation
@@ -289,6 +300,16 @@ router.post('/:setlistId/duplicate', authenticate, async (req, res) => {
 
     if (!member) {
       return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    // Check plan setlist limit
+    const workspace = await prisma.workspace.findUnique({ where: { id: source.workspaceId }, select: { plan: true, planExpiresAt: true } });
+    const limits = getPlanLimits(workspace);
+    if (limits.maxSetlists !== Infinity) {
+      const setlistCount = await prisma.setlist.count({ where: { workspaceId: source.workspaceId } });
+      if (setlistCount >= limits.maxSetlists) {
+        return res.status(403).json({ error: `Free plan allows up to ${limits.maxSetlists} setlists. Upgrade to Pro for unlimited.`, upgrade: true });
+      }
     }
 
     // Create new setlist with copied data
@@ -634,6 +655,16 @@ router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceMember, a
       return res.status(400).json({ error: 'Songs array is required' });
     }
 
+    // Check plan setlist limit
+    const wsForPlan = await prisma.workspace.findUnique({ where: { id: req.params.workspaceId }, select: { plan: true, planExpiresAt: true } });
+    const planLimits = getPlanLimits(wsForPlan);
+    if (planLimits.maxSetlists !== Infinity) {
+      const setlistCount = await prisma.setlist.count({ where: { workspaceId: req.params.workspaceId } });
+      if (setlistCount >= planLimits.maxSetlists) {
+        return res.status(403).json({ error: `Free plan allows up to ${planLimits.maxSetlists} setlists. Upgrade to Pro for unlimited.`, upgrade: true });
+      }
+    }
+
     // Get all songs in the workspace for matching
     const workspaceSongs = await prisma.song.findMany({
       where: { workspaceId: req.params.workspaceId }
@@ -763,6 +794,16 @@ router.post('/workspace/:workspaceId/import-multiset', authenticate, isWorkspace
 
     if (!baseName) {
       return res.status(400).json({ error: 'Base name is required' });
+    }
+
+    // Check plan setlist limit
+    const wsForPlan2 = await prisma.workspace.findUnique({ where: { id: req.params.workspaceId }, select: { plan: true, planExpiresAt: true } });
+    const planLimits2 = getPlanLimits(wsForPlan2);
+    if (planLimits2.maxSetlists !== Infinity) {
+      const setlistCount = await prisma.setlist.count({ where: { workspaceId: req.params.workspaceId } });
+      if (setlistCount >= planLimits2.maxSetlists) {
+        return res.status(403).json({ error: `Free plan allows up to ${planLimits2.maxSetlists} setlists. Upgrade to Pro for unlimited.`, upgrade: true });
+      }
     }
 
     // Get all songs in the workspace for matching

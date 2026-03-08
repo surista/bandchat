@@ -242,7 +242,7 @@ export default function RecordingDetailScreen({ navigation, route }) {
 
       if (fileUri) {
         setUploading(true);
-        const uploadResult = await api.uploadFile(fileUri, fileName, fileMimeType);
+        const uploadResult = await api.uploadFile(fileUri, fileName, fileMimeType, workspaceId);
         fileUrl = uploadResult.url || uploadResult.fileUrl;
         type = fileMimeType?.startsWith('video') ? 'video' : 'audio';
         setUploading(false);

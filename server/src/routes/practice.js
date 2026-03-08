@@ -1,11 +1,28 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
+import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
 
 const router = express.Router();
 
+// Middleware to check practice feature access
+const requirePracticeFeature = async (req, res, next) => {
+  try {
+    const workspaceId = req.params.workspaceId;
+    if (!workspaceId) return next();
+    const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { plan: true, planExpiresAt: true } });
+    const limits = getPlanLimits(workspace);
+    if (!limits.features.practice) {
+      return res.status(403).json({ error: 'Practice Tracker is a Pro feature. Upgrade to unlock.', upgrade: true });
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Log a practice session
-router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
+router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, requirePracticeFeature, async (req, res) => {
   try {
     const { songId, duration, notes, practicedAt } = req.body;
 
@@ -51,7 +68,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
 });
 
 // Get my practice sessions
-router.get('/workspace/:workspaceId/me', authenticate, isWorkspaceMember, async (req, res) => {
+router.get('/workspace/:workspaceId/me', authenticate, isWorkspaceMember, requirePracticeFeature, async (req, res) => {
   try {
     const { cursor, limit = 20 } = req.query;
     const take = Math.min(parseInt(limit) || 20, 100);
@@ -89,7 +106,7 @@ router.get('/workspace/:workspaceId/me', authenticate, isWorkspaceMember, async 
 });
 
 // Get practice summary (per-song stats + streak)
-router.get('/workspace/:workspaceId/summary', authenticate, isWorkspaceMember, async (req, res) => {
+router.get('/workspace/:workspaceId/summary', authenticate, isWorkspaceMember, requirePracticeFeature, async (req, res) => {
   try {
     const workspaceId = req.params.workspaceId;
     const userId = req.user.id;
@@ -189,6 +206,13 @@ router.delete('/:sessionId', authenticate, async (req, res) => {
 
     if (!session) {
       return res.status(404).json({ error: 'Practice session not found' });
+    }
+
+    // Check practice feature access
+    const workspace = await prisma.workspace.findUnique({ where: { id: session.workspaceId }, select: { plan: true, planExpiresAt: true } });
+    const planLimits = getPlanLimits(workspace);
+    if (!planLimits.features.practice) {
+      return res.status(403).json({ error: 'Practice Tracker is a Pro feature. Upgrade to unlock.', upgrade: true });
     }
 
     if (session.userId !== req.user.id) {

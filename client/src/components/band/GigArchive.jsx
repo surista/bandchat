@@ -258,7 +258,7 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         setUploadProgress(`Uploading ${i + 1} of ${files.length}...`);
-        const result = await api.uploadFile(file);
+        const result = await api.uploadFile(file, workspaceId);
         const newMedia = await api.addGigMedia(selectedGig.id, {
           type: file.type.startsWith('video') ? 'video' : 'image',
           url: result.url,

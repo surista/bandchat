@@ -197,6 +197,17 @@ export default function SettingsScreen({ navigation, route }) {
           <Text style={[styles.rowArrow, { color: colors.textSecondary }]}>{'\u203A'}</Text>
         </TouchableOpacity>
 
+        {/* Subscription */}
+        <SectionHeader title="SUBSCRIPTION" colors={colors} />
+        <View style={styles.group}>
+          <SettingsRow
+            icon="⭐"
+            label="Upgrade to Pro"
+            onPress={() => navigation.navigate('Upgrade', { workspaceId })}
+            colors={colors}
+          />
+        </View>
+
         {/* Account */}
         <SectionHeader title="ACCOUNT" colors={colors} />
         <View style={styles.group}>

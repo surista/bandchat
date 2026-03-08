@@ -7,6 +7,7 @@ import { deleteFile, isR2Url } from '../lib/storage.js';
 import { safeDecrementStorage } from './uploads.js';
 import { parseICS, parseICSMultiple } from '../lib/icsParser.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
+import { getPlanLimits } from '../lib/planLimits.js';
 
 const router = express.Router();
 
@@ -216,6 +217,13 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
   try {
     const workspaceId = req.params.workspaceId;
     const now = new Date();
+
+    // Check plan feature access
+    const wsForStats = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { plan: true, planExpiresAt: true } });
+    const statsLimits = getPlanLimits(wsForStats);
+    if (!statsLimits.features.stats) {
+      return res.status(403).json({ error: 'Stats is a Pro feature. Upgrade to unlock.', upgrade: true });
+    }
 
     // Get setlists with performedAt dates and full song details (limit 500 for performance)
     const performedSetlists = await prisma.setlist.findMany({

@@ -320,7 +320,7 @@ export default function GigDetailScreen({ navigation, route }) {
       for (const asset of result.assets) {
         const filename = asset.fileName || `media_${Date.now()}.jpg`;
         const mimeType = asset.mimeType || (asset.type === 'video' ? 'video/mp4' : 'image/jpeg');
-        const uploaded = await api.uploadFile(asset.uri, filename, mimeType);
+        const uploaded = await api.uploadFile(asset.uri, filename, mimeType, workspaceId);
         const mediaType = asset.type === 'video' ? 'video' : 'image';
         await api.addGigMedia(gigId, {
           type: mediaType,

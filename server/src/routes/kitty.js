@@ -1,11 +1,28 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
+import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
 
 const router = express.Router();
 
+// Middleware to check kitty feature access
+const requireKittyFeature = async (req, res, next) => {
+  try {
+    const workspaceId = req.params.workspaceId;
+    if (!workspaceId) return next(); // Non-workspace routes (transaction update/delete) check inline
+    const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { plan: true, planExpiresAt: true } });
+    const limits = getPlanLimits(workspace);
+    if (!limits.features.kitty) {
+      return res.status(403).json({ error: 'Band Kitty is a Pro feature. Upgrade to unlock.', upgrade: true });
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Get band kitty with transactions
-router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
+router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, requireKittyFeature, async (req, res) => {
   try {
     let kitty = await prisma.bandKitty.findUnique({
       where: { workspaceId: req.params.workspaceId },
@@ -46,7 +63,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 });
 
 // Update kitty settings
-router.put('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => {
+router.put('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, requireKittyFeature, async (req, res) => {
   try {
     const { startingBalance, balanceAsOfDate, currency } = req.body;
 
@@ -76,7 +93,7 @@ router.put('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (req
 });
 
 // Create transaction
-router.post('/workspace/:workspaceId/transactions', authenticate, isWorkspaceMember, async (req, res) => {
+router.post('/workspace/:workspaceId/transactions', authenticate, isWorkspaceMember, requireKittyFeature, async (req, res) => {
   try {
     const { type, category, amount, description, date, gigId } = req.body;
 
@@ -144,6 +161,13 @@ router.put('/transactions/:transactionId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
+    // Check kitty feature access
+    const wsForPlan = await prisma.workspace.findUnique({ where: { id: existing.kitty.workspaceId }, select: { plan: true, planExpiresAt: true } });
+    const planLimits = getPlanLimits(wsForPlan);
+    if (!planLimits.features.kitty) {
+      return res.status(403).json({ error: 'Band Kitty is a Pro feature. Upgrade to unlock.', upgrade: true });
+    }
+
     // Check workspace membership
     const membership = await prisma.workspaceMember.findUnique({
       where: {
@@ -198,6 +222,13 @@ router.delete('/transactions/:transactionId', authenticate, async (req, res) => 
 
     if (!existing) {
       return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    // Check kitty feature access
+    const wsForPlan = await prisma.workspace.findUnique({ where: { id: existing.kitty.workspaceId }, select: { plan: true, planExpiresAt: true } });
+    const planLimits = getPlanLimits(wsForPlan);
+    if (!planLimits.features.kitty) {
+      return res.status(403).json({ error: 'Band Kitty is a Pro feature. Upgrade to unlock.', upgrade: true });
     }
 
     // Check workspace membership

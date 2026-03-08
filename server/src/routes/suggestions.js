@@ -1,8 +1,25 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
+import { getPlanLimits } from '../lib/planLimits.js';
 
 const router = express.Router();
+
+// Middleware to check Song Intelligence feature access
+const requireSongIntelligence = async (req, res, next) => {
+  try {
+    const workspaceId = req.params.workspaceId;
+    if (!workspaceId) return next();
+    const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { plan: true, planExpiresAt: true } });
+    const limits = getPlanLimits(workspace);
+    if (!limits.features.songIntelligence) {
+      return res.status(403).json({ error: 'Song Intelligence is a Pro feature. Upgrade to unlock.', upgrade: true });
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
 
 // Key compatibility chart (circle of fifths distance)
 const KEY_CIRCLE = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
@@ -58,7 +75,7 @@ function getBpmCompatibility(bpm1, bpm2) {
 }
 
 // Get mashup suggestions for a song
-router.get('/workspace/:workspaceId/mashups/:songId', authenticate, isWorkspaceMember, async (req, res) => {
+router.get('/workspace/:workspaceId/mashups/:songId', authenticate, isWorkspaceMember, requireSongIntelligence, async (req, res) => {
   try {
     const sourceSong = await prisma.song.findFirst({
       where: {
@@ -158,7 +175,7 @@ router.get('/workspace/:workspaceId/mashups/:songId', authenticate, isWorkspaceM
 });
 
 // Get all compatible transitions for setlist optimization
-router.get('/workspace/:workspaceId/transitions', authenticate, isWorkspaceMember, async (req, res) => {
+router.get('/workspace/:workspaceId/transitions', authenticate, isWorkspaceMember, requireSongIntelligence, async (req, res) => {
   try {
     const { minScore = 50 } = req.query;
 
@@ -216,7 +233,7 @@ router.get('/workspace/:workspaceId/transitions', authenticate, isWorkspaceMembe
 });
 
 // Get song suggestions based on repertoire analysis
-router.get('/workspace/:workspaceId/recommendations', authenticate, isWorkspaceMember, async (req, res) => {
+router.get('/workspace/:workspaceId/recommendations', authenticate, isWorkspaceMember, requireSongIntelligence, async (req, res) => {
   try {
     const { limit = 20 } = req.query;
 
@@ -382,7 +399,7 @@ router.get('/workspace/:workspaceId/recommendations', authenticate, isWorkspaceM
 });
 
 // Suggest optimal setlist order based on musical flow
-router.post('/workspace/:workspaceId/optimize-setlist', authenticate, isWorkspaceMember, async (req, res) => {
+router.post('/workspace/:workspaceId/optimize-setlist', authenticate, isWorkspaceMember, requireSongIntelligence, async (req, res) => {
   try {
     const { songIds } = req.body;
 

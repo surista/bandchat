@@ -648,7 +648,7 @@ class ApiService {
   }
 
   // File uploads
-  async uploadFile(file) {
+  async uploadFile(file, workspaceId) {
     if (this._hasSession && this.isTokenExpiringSoon()) {
       if (!this._refreshPromise) {
         this._refreshPromise = this.refreshAccessToken().finally(() => { this._refreshPromise = null; });
@@ -658,6 +658,7 @@ class ApiService {
 
     const formData = new FormData();
     formData.append('file', file);
+    if (workspaceId) formData.append('workspaceId', workspaceId);
 
     const url = `${API_URL}/uploads`;
     const headers = {};
@@ -680,7 +681,7 @@ class ApiService {
     return response.json();
   }
 
-  async uploadFiles(files) {
+  async uploadFiles(files, workspaceId) {
     if (this._hasSession && this.isTokenExpiringSoon()) {
       if (!this._refreshPromise) {
         this._refreshPromise = this.refreshAccessToken().finally(() => { this._refreshPromise = null; });
@@ -690,6 +691,7 @@ class ApiService {
 
     const formData = new FormData();
     files.forEach(file => formData.append('files', file));
+    if (workspaceId) formData.append('workspaceId', workspaceId);
 
     const url = `${API_URL}/uploads/multiple`;
     const headers = {};

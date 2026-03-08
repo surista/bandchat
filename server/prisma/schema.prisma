@@ -92,6 +92,14 @@ model Workspace {
   defaultEndTime   String    @default("21:00")
   defaultVenue     String?
 
+  // Subscription
+  plan              String    @default("FREE")   // "FREE" or "PRO"
+  planSource        String?                       // "APPLE", "GOOGLE", "STRIPE", "MANUAL"
+  planProductId     String?                       // IAP product ID
+  planExpiresAt     DateTime?                     // null = lifetime or free
+  planOriginalTxId  String?   @unique             // prevents duplicate redemption
+  planUpdatedAt     DateTime?
+
   members       WorkspaceMember[]
   channels      Channel[]
   channelGroups ChannelGroup[]

@@ -143,7 +143,7 @@ export default function RecordingsList({ workspaceId }) {
         type: recordedBlob.type
       });
 
-      const uploadResult = await api.uploadFile(file);
+      const uploadResult = await api.uploadFile(file, workspaceId);
 
       // Create recording record
       await api.createRecording(workspaceId, {

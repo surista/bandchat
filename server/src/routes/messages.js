@@ -6,6 +6,7 @@ import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 import { deleteFile, isR2Url } from '../lib/storage.js';
 import { safeDecrementStorage } from './uploads.js';
 import { sendPushToUser } from './push.js';
+import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
 
 // L7: Allowed attachment types and size limits for validation
 const ALLOWED_ATTACHMENT_TYPES = ['IMAGE', 'AUDIO', 'VIDEO'];
@@ -33,6 +34,14 @@ router.get('/channel/:channelId', authenticate, isChannelMember, async (req, res
     const { cursor, limit = 50 } = req.query;
     const take = Math.min(parseInt(limit) || 50, 100);
 
+    // Check message retention limit based on plan
+    const channel = await prisma.channel.findUnique({ where: { id: req.params.channelId }, select: { workspaceId: true } });
+    const workspace = await prisma.workspace.findUnique({ where: { id: channel.workspaceId }, select: { plan: true, planExpiresAt: true } });
+    const limits = getPlanLimits(workspace);
+    const retentionFilter = limits.messageRetentionDays
+      ? { gte: new Date(Date.now() - limits.messageRetentionDays * 86400000) }
+      : undefined;
+
     // Get blocked user IDs for filtering
     const blockedUsers = await prisma.blockedUser.findMany({
       where: { blockerId: req.user.id },
@@ -44,7 +53,8 @@ router.get('/channel/:channelId', authenticate, isChannelMember, async (req, res
       where: {
         channelId: req.params.channelId,
         parentId: null, // Only get top-level messages
-        ...(blockedIds.length > 0 && { authorId: { notIn: blockedIds } })
+        ...(blockedIds.length > 0 && { authorId: { notIn: blockedIds } }),
+        ...(retentionFilter && { createdAt: retentionFilter })
       },
       take: take + 1, // Get one extra to check if there are more
       ...(cursor && {

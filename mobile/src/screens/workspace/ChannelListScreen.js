@@ -294,6 +294,10 @@ export default function ChannelListScreen({ navigation, route }) {
       loadData();
     };
 
+    const handlePlanUpdated = (data) => {
+      setWorkspace(prev => prev ? { ...prev, effectivePlan: data.effectivePlan, plan: data.plan, planLimits: data.planLimits } : prev);
+    };
+
     socket.on('channel:created', handleChannelCreated);
     socket.on('channel:deleted', handleChannelDeleted);
     socket.on('dm:created', handleDMCreated);
@@ -302,6 +306,7 @@ export default function ChannelListScreen({ navigation, route }) {
     socket.on('message:new', handleNewMessage);
     socket.on('message:reply', handleReplyMessage);
     socket.on('connect', handleReconnect);
+    socket.on('plan:updated', handlePlanUpdated);
 
     return () => {
       socket.off('channel:created', handleChannelCreated);
@@ -312,6 +317,7 @@ export default function ChannelListScreen({ navigation, route }) {
       socket.off('message:new', handleNewMessage);
       socket.off('message:reply', handleReplyMessage);
       socket.off('connect', handleReconnect);
+      socket.off('plan:updated', handlePlanUpdated);
     };
   }, [socket, workspaceId, user?.id, loadData, joinWorkspace, navigation]);
 
@@ -484,7 +490,15 @@ export default function ChannelListScreen({ navigation, route }) {
     setShowGroupModal(true);
   }, []);
 
+  const PRO_ONLY_FEATURES = ['kitty', 'stats', 'intelligence', 'practice'];
+
   const handleBandItemPress = useCallback((key) => {
+    // Gate pro-only features
+    if (PRO_ONLY_FEATURES.includes(key) && workspace?.effectivePlan !== 'PRO') {
+      navigation.navigate('Upgrade', { workspaceId });
+      return;
+    }
+
     const screenMap = {
       songs: 'SongList',
       setlists: 'SetlistList',
@@ -503,7 +517,7 @@ export default function ChannelListScreen({ navigation, route }) {
       practice: 'PracticeDashboard',
     };
     navigation.navigate(screenMap[key], { workspaceId });
-  }, [navigation, workspaceId]);
+  }, [navigation, workspaceId, workspace?.effectivePlan]);
 
   // Organize channels into groups
   const sections = useMemo(() => {
@@ -599,6 +613,9 @@ export default function ChannelListScreen({ navigation, route }) {
         >
           <Text style={styles.bandItemIcon}>{item.icon}</Text>
           <Text style={[styles.bandItemLabel, { color: colors.channelListTextBold }]}>{item.label}</Text>
+          {PRO_ONLY_FEATURES.includes(item.key) && workspace?.effectivePlan !== 'PRO' && (
+            <Text style={[styles.bandItemArrow, { color: colors.channelListText, marginRight: 4 }]}>PRO</Text>
+          )}
           <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
         </TouchableOpacity>
       );

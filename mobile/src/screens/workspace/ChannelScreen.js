@@ -386,7 +386,8 @@ export default function ChannelScreen({ navigation, route }) {
         setUploadProgress(0);
         const uploaded = await api.uploadFileWithProgress(
           attachment.uri, attachment.filename, attachment.mimeType,
-          (progress) => setUploadProgress(progress)
+          (progress) => setUploadProgress(progress),
+          workspaceId
         );
         setUploadProgress(null);
         uploadedAttachments = [uploaded];
@@ -427,7 +428,7 @@ export default function ChannelScreen({ navigation, route }) {
     setMessages(prev => [...prev, optimisticMessage]);
 
     try {
-      const uploaded = await api.uploadFile(uri, filename, 'audio/m4a');
+      const uploaded = await api.uploadFile(uri, filename, 'audio/m4a', workspaceId);
       const savedMessage = await api.sendMessage(channel.id, '', null, [uploaded]);
       setMessages(prev => prev.map(m =>
         m.id === optimisticMessage.id ? savedMessage : m

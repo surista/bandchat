@@ -6,6 +6,7 @@ import { rateLimit } from 'express-rate-limit';
 import { authenticate } from '../middleware/auth.js';
 import { uploadFile } from '../lib/storage.js';
 import prisma from '../lib/prisma.js';
+import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
 
 const THUMBNAIL_MAX_WIDTH = 400;
 const THUMBNAIL_QUALITY = 80;
@@ -59,9 +60,6 @@ const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_AUDIO_TYPES, ...ALLOWE
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_AUDIO_SIZE = 30 * 1024 * 1024; // 30MB
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
-
-// Storage quota: 2 GB default (can be adjusted per tier later)
-const DEFAULT_STORAGE_QUOTA = 2n * 1024n * 1024n * 1024n; // 2 GB in bytes
 
 // Use memory storage
 const memStorage = multer.memoryStorage();
@@ -118,12 +116,13 @@ const reserveStorageQuota = async (workspaceId, fileSize) => {
       // Lock the row and get current usage
       const workspace = await tx.workspace.findUnique({
         where: { id: workspaceId },
-        select: { storageUsedBytes: true },
+        select: { storageUsedBytes: true, plan: true, planExpiresAt: true },
       });
       if (!workspace) return; // No workspace = no quota check
 
+      const limits = getPlanLimits(workspace);
       const used = workspace.storageUsedBytes ?? 0n;
-      if (used + BigInt(fileSize) > DEFAULT_STORAGE_QUOTA) {
+      if (used + BigInt(fileSize) > limits.storageBytes) {
         throw new Error('QUOTA_EXCEEDED');
       }
 
@@ -138,7 +137,7 @@ const reserveStorageQuota = async (workspaceId, fileSize) => {
     return null;
   } catch (error) {
     if (error.message === 'QUOTA_EXCEEDED') {
-      return { error: 'Storage quota exceeded. Free tier allows 2 GB per workspace.' };
+      return { error: 'Storage limit reached. Upgrade to Pro for more storage.', upgrade: true };
     }
     throw error;
   }
@@ -201,16 +200,13 @@ router.post('/', authenticate, uploadLimiter, upload.single('file'), async (req,
       });
     }
 
-    // Require workspaceId so storage quota is always enforced
+    // Check workspace storage quota if workspaceId provided
     const workspaceId = req.body.workspaceId || req.query.workspaceId;
-    if (!workspaceId) {
-      return res.status(400).json({ error: 'workspaceId is required' });
-    }
-
-    // Atomically check and reserve storage quota
-    const quotaError = await reserveStorageQuota(workspaceId, req.file.size);
-    if (quotaError) {
-      return res.status(413).json(quotaError);
+    if (workspaceId) {
+      const quotaError = await reserveStorageQuota(workspaceId, req.file.size);
+      if (quotaError) {
+        return res.status(413).json(quotaError);
+      }
     }
 
     // Upload to R2 (release reservation if upload fails)
@@ -283,16 +279,13 @@ router.post('/multiple', authenticate, uploadLimiter, upload.array('files', 5), 
       fileValidations.push({ file, detectedType, fileCategory });
     }
 
-    // Require workspaceId so storage quota is always enforced
+    // Check workspace storage quota if workspaceId provided
     const workspaceId = req.body.workspaceId || req.query.workspaceId;
-    if (!workspaceId) {
-      return res.status(400).json({ error: 'workspaceId is required' });
-    }
-
-    // Atomically check and reserve storage quota for total batch size
-    const quotaError = await reserveStorageQuota(workspaceId, totalSize);
-    if (quotaError) {
-      return res.status(413).json(quotaError);
+    if (workspaceId) {
+      const quotaError = await reserveStorageQuota(workspaceId, totalSize);
+      if (quotaError) {
+        return res.status(413).json(quotaError);
+      }
     }
 
     // Upload all files to R2 (release reservation if any upload fails)

@@ -773,6 +773,7 @@ function WorkspaceView() {
               <ThreadView
                 message={selectedThread}
                 channelId={selectedChannel?.id}
+                workspaceId={workspace?.id}
                 onClose={() => setSelectedThread(null)}
                 members={workspace?.members || []}
                 onThreadRead={(messageId) => {

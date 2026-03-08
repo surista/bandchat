@@ -7,11 +7,27 @@ import os from 'os';
 import AdmZip from 'adm-zip';
 import prisma from '../lib/prisma.js';
 import { authenticate, isWorkspaceAdmin } from '../middleware/auth.js';
+import { getPlanLimits } from '../lib/planLimits.js';
 import { convertSlackText } from '../services/slackTextConverter.js';
 import slackEmojiMap from '../services/slackEmojiMap.js';
 import { uploadFile } from '../lib/storage.js';
 
 const router = express.Router();
+
+// Middleware to check Slack import feature access
+const requireSlackImportFeature = async (req, res, next) => {
+  try {
+    const workspaceId = req.params.workspaceId;
+    const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { plan: true, planExpiresAt: true } });
+    const limits = getPlanLimits(workspace);
+    if (!limits.features.slackImport) {
+      return res.status(403).json({ error: 'Slack Import is a Pro feature. Upgrade to unlock.', upgrade: true });
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
 
 // In-memory session metadata (ZIP stored on disk, not in memory)
 const importSessions = new Map();
@@ -89,7 +105,7 @@ const SYSTEM_SUBTYPES = new Set([
 /**
  * Parse a Slack export ZIP and return metadata for the wizard.
  */
-router.post('/workspace/:workspaceId/parse', authenticate, isWorkspaceAdmin,
+router.post('/workspace/:workspaceId/parse', authenticate, isWorkspaceAdmin, requireSlackImportFeature,
   zipUpload.single('file'),
   async (req, res) => {
     try {
@@ -233,7 +249,7 @@ router.post('/workspace/:workspaceId/parse', authenticate, isWorkspaceAdmin,
 /**
  * Execute the Slack import with the admin's configuration.
  */
-router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceAdmin, async (req, res) => {
+router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceAdmin, requireSlackImportFeature, async (req, res) => {
   const startTime = Date.now();
   const io = req.app.get('io');
   const userId = req.user.id;
@@ -563,7 +579,7 @@ router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceAdmin, as
  * Update existing messages with file attachments from a Slack export.
  * This ONLY downloads files and creates attachments - no channels, users, or gigs.
  */
-router.post('/workspace/:workspaceId/update-files', authenticate, isWorkspaceAdmin,
+router.post('/workspace/:workspaceId/update-files', authenticate, isWorkspaceAdmin, requireSlackImportFeature,
   zipUpload.single('file'),
   async (req, res) => {
     const startTime = Date.now();

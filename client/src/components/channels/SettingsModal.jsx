@@ -198,7 +198,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
     setAvatarUploading(true);
     setSettingsError('');
     try {
-      const result = await api.uploadFile(file);
+      const result = await api.uploadFile(file, workspace.id);
       setEditAvatarUrl(result.url);
     } catch (err) {
       setSettingsError(err.message || 'Failed to upload avatar');
@@ -1069,6 +1069,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                         }}
                         loading={profileLoading}
                         workspaceMembers={workspace?.members || []}
+                        workspaceId={workspace?.id}
                       />
                     </div>
                   ) : (

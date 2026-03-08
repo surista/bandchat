@@ -35,6 +35,7 @@ import reportRoutes from './routes/reports.js';
 import blockRoutes from './routes/blocks.js';
 import practiceRoutes from './routes/practice.js';
 import workspaceImportRoutes from './routes/workspaceImport.js';
+import subscriptionRoutes from './routes/subscriptions.js';
 import adminRoutes from './routes/admin.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
@@ -151,6 +152,7 @@ export function createApp() {
   app.use('/api/blocks', blockRoutes);
   app.use('/api/practice', practiceRoutes);
   app.use('/api/workspace-import', workspaceImportRoutes);
+  app.use('/api/subscriptions', subscriptionRoutes);
   app.use('/api/admin', adminRoutes);
 
   // Health check

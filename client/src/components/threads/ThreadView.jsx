@@ -13,7 +13,7 @@ import { formatFileSize } from '../../utils/format';
 import { MAX_IMAGE_SIZE, MAX_AUDIO_SIZE, isImageFile, isAudioFile } from '../../utils/fileValidation';
 import { buildMentionRegex } from '../../utils/parseMentions';
 
-function ThreadView({ message, channelId, onClose, onThreadRead, members }) {
+function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, members }) {
   const { user } = useAuth();
   const { socket } = useSocket();
   const [replies, setReplies] = useState([]);
@@ -252,10 +252,10 @@ function ThreadView({ message, channelId, onClose, onThreadRead, members }) {
       let attachments = [];
       if (selectedFiles.length > 0) {
         if (selectedFiles.length === 1) {
-          const uploaded = await api.uploadFile(selectedFiles[0]);
+          const uploaded = await api.uploadFile(selectedFiles[0], workspaceId);
           attachments = [{ type: uploaded.type, url: uploaded.url, filename: uploaded.filename, size: uploaded.size }];
         } else {
-          const result = await api.uploadFiles(selectedFiles);
+          const result = await api.uploadFiles(selectedFiles, workspaceId);
           attachments = result.files.map(f => ({ type: f.type, url: f.url, filename: f.filename, size: f.size }));
         }
       }

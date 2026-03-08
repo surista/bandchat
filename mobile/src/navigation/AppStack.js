@@ -31,6 +31,7 @@ import EditProfileScreen from '../screens/settings/EditProfileScreen';
 import SecurityScreen from '../screens/settings/SecurityScreen';
 import AppearanceScreen from '../screens/settings/AppearanceScreen';
 import NotificationsScreen from '../screens/settings/NotificationsScreen';
+import UpgradeScreen from '../screens/settings/UpgradeScreen';
 import WorkspaceMembersScreen from '../screens/settings/WorkspaceMembersScreen';
 import InviteScreen from '../screens/settings/InviteScreen';
 import BlockedUsersScreen from '../screens/settings/BlockedUsersScreen';
@@ -118,6 +119,7 @@ export default function AppStack() {
       <Stack.Screen name="WorkspaceMembers" component={WorkspaceMembersScreen} options={{ title: 'Members' }} />
       <Stack.Screen name="Invite" component={InviteScreen} options={{ title: 'Invite People' }} />
       <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} options={{ title: 'Blocked Users' }} />
+      <Stack.Screen name="Upgrade" component={UpgradeScreen} options={{ title: 'Upgrade to Pro' }} />
 
       {/* Members */}
       <Stack.Screen name="MemberProfile" component={MemberProfileScreen} options={{ title: 'Member' }} />

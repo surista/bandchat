@@ -1349,10 +1349,11 @@ class ApiService {
   }
 
   // File uploads
-  async uploadFile(uri, filename, mimeType) {
+  async uploadFile(uri, filename, mimeType, workspaceId) {
     await this.ensureFreshToken();
     const formData = new FormData();
     formData.append('file', { uri, name: filename, type: mimeType });
+    if (workspaceId) formData.append('workspaceId', workspaceId);
 
     const url = `${API_URL}/uploads`;
     const headers = {};
@@ -1374,12 +1375,13 @@ class ApiService {
     return response.json();
   }
 
-  async uploadFileWithProgress(uri, filename, mimeType, onProgress) {
+  async uploadFileWithProgress(uri, filename, mimeType, onProgress, workspaceId) {
     await this.ensureFreshToken();
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       const formData = new FormData();
       formData.append('file', { uri, name: filename, type: mimeType });
+      if (workspaceId) formData.append('workspaceId', workspaceId);
 
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable && onProgress) {
@@ -1416,12 +1418,13 @@ class ApiService {
     });
   }
 
-  async uploadFiles(files) {
+  async uploadFiles(files, workspaceId) {
     await this.ensureFreshToken();
     const formData = new FormData();
     files.forEach(file => {
       formData.append('files', { uri: file.uri, name: file.filename, type: file.mimeType });
     });
+    if (workspaceId) formData.append('workspaceId', workspaceId);
 
     const url = `${API_URL}/uploads/multiple`;
     const headers = {};
@@ -1498,6 +1501,25 @@ class ApiService {
 
   async getBlockedUsers() {
     return this.request('/blocks');
+  }
+
+  // Subscriptions
+  async getWorkspacePlan(workspaceId) {
+    return this.request(`/subscriptions/${workspaceId}/plan`);
+  }
+
+  async verifyPurchase(workspaceId, platform, receipt, productId) {
+    return this.request(`/subscriptions/${workspaceId}/verify-purchase`, {
+      method: 'POST',
+      body: JSON.stringify({ platform, receipt, productId }),
+    });
+  }
+
+  async restorePurchases(workspaceId, platform, receipts) {
+    return this.request(`/subscriptions/${workspaceId}/restore`, {
+      method: 'POST',
+      body: JSON.stringify({ platform, receipts }),
+    });
   }
 }
 

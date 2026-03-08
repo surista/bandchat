@@ -61,7 +61,7 @@ const createImage = (url) =>
     image.src = url;
   });
 
-function BandMemberForm({ member, onSave, onCancel, loading, workspaceMembers = [] }) {
+function BandMemberForm({ member, onSave, onCancel, loading, workspaceMembers = [], workspaceId }) {
   const toast = useToast();
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
@@ -152,7 +152,7 @@ function BandMemberForm({ member, onSave, onCancel, loading, workspaceMembers = 
       const file = new File([croppedBlob], 'avatar.jpg', { type: 'image/jpeg' });
 
       // Upload to server
-      const result = await api.uploadFile(file);
+      const result = await api.uploadFile(file, workspaceId);
       setImageUrl(result.url);
 
       // Clean up

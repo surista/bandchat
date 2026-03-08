@@ -6,6 +6,7 @@ import { Resend } from 'resend';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 import { forceLeaveWorkspace } from '../socket/handlers.js';
+import { getEffectivePlan, getPlanLimits, serializePlanLimits } from '../lib/planLimits.js';
 
 const router = express.Router();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -123,6 +124,8 @@ router.get('/', authenticate, async (req, res) => {
 
     res.json(workspaces.map(wm => ({
       ...wm.workspace,
+      effectivePlan: getEffectivePlan(wm.workspace),
+      planLimits: serializePlanLimits(getPlanLimits(wm.workspace)),
       role: wm.role,
       joinedAt: wm.joinedAt
     })));
@@ -183,6 +186,8 @@ router.post('/', authenticate, async (req, res) => {
       }
     });
 
+    workspace.effectivePlan = getEffectivePlan(workspace);
+    workspace.planLimits = serializePlanLimits(getPlanLimits(workspace));
     res.status(201).json(workspace);
   } catch (error) {
     console.error('Create workspace error:', error);
@@ -249,6 +254,9 @@ router.get('/:workspaceId', authenticate, isWorkspaceMember, async (req, res) =>
       delete workspace.inviteMaxUses;
       delete workspace.inviteUsedCount;
     }
+
+    workspace.effectivePlan = getEffectivePlan(workspace);
+    workspace.planLimits = serializePlanLimits(getPlanLimits(workspace));
 
     res.json(workspace);
   } catch (error) {
@@ -420,6 +428,15 @@ router.post('/join/:inviteCode', inviteJoinLimiter, authenticate, async (req, re
 
     if (existingMember) {
       return res.status(400).json({ error: 'Already a member of this workspace' });
+    }
+
+    // Check plan member limit
+    const limits = getPlanLimits(workspace);
+    if (limits.maxMembers !== Infinity) {
+      const memberCount = await prisma.workspaceMember.count({ where: { workspaceId: workspace.id } });
+      if (memberCount >= limits.maxMembers) {
+        return res.status(403).json({ error: `This workspace has reached its ${limits.maxMembers}-member limit. Ask an admin to upgrade to Pro.`, upgrade: true });
+      }
     }
 
     // Add user to workspace and all public channels

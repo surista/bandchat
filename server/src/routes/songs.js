@@ -5,6 +5,7 @@ import prisma from '../lib/prisma.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 import { deleteFile, isR2Url } from '../lib/storage.js';
 import { safeDecrementStorage } from './uploads.js';
+import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
 import songBPMScraperService from '../services/songbpm-scraper.js';
 import deezerService from '../services/deezer.js';
 import itunesService from '../services/itunes.js';
@@ -47,6 +48,16 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
 
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
+    }
+
+    // Check plan song limit
+    const workspace = await prisma.workspace.findUnique({ where: { id: req.params.workspaceId }, select: { plan: true, planExpiresAt: true } });
+    const limits = getPlanLimits(workspace);
+    if (limits.maxSongs !== Infinity) {
+      const songCount = await prisma.song.count({ where: { workspaceId: req.params.workspaceId } });
+      if (songCount >= limits.maxSongs) {
+        return res.status(403).json({ error: `Free plan allows up to ${limits.maxSongs} songs. Upgrade to Pro for unlimited.`, upgrade: true });
+      }
     }
 
     if (youtubeUrl && !youtubeUrl.startsWith('https://')) return res.status(400).json({ error: 'YouTube URL must use HTTPS' });
@@ -378,6 +389,17 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
 
     if (songs.length > 200) {
       return res.status(400).json({ error: 'Maximum 200 songs per import' });
+    }
+
+    // Check plan song limit
+    const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { plan: true, planExpiresAt: true } });
+    const limits = getPlanLimits(workspace);
+    if (limits.maxSongs !== Infinity) {
+      const currentSongCount = await prisma.song.count({ where: { workspaceId } });
+      if (currentSongCount + songs.length > limits.maxSongs) {
+        const remaining = Math.max(0, limits.maxSongs - currentSongCount);
+        return res.status(403).json({ error: `Free plan allows up to ${limits.maxSongs} songs. You have ${currentSongCount} and are trying to add ${songs.length}. ${remaining > 0 ? `You can add ${remaining} more.` : 'Upgrade to Pro for unlimited.'}`, upgrade: true });
+      }
     }
 
     // Prevent concurrent metadata fetching for the same workspace
