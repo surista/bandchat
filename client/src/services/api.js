@@ -327,6 +327,10 @@ class ApiService {
     return this.cachedRequest(`/workspaces/${id}`, 30000);
   }
 
+  async getWorkspacePlan(workspaceId) {
+    return this.request(`/subscriptions/${workspaceId}/plan`);
+  }
+
   async updateWorkspace(id, data) {
     return this.request(`/workspaces/${id}`, {
       method: 'PUT',

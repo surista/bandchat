@@ -10,6 +10,7 @@ import ThreadView from '../threads/ThreadView';
 import MobileNav from '../navigation/MobileNav';
 import Skeleton from '../common/Skeleton';
 import ErrorMessage from '../common/ErrorMessage';
+import UpgradePrompt from '../common/UpgradePrompt';
 import useSwipeGesture from '../../hooks/useSwipeGesture';
 
 // Error component for failed chunk loads
@@ -135,6 +136,14 @@ const BAND_VIEW_COMPONENTS = {
   analyzer: AudioAnalyzer,
   practice: PracticeDashboard,
   saved: SavedMessages,
+};
+
+/** Band views that require a Pro plan */
+const PRO_ONLY_VIEWS = {
+  kitty: { feature: 'Band Kitty', description: 'Track shared band finances, expenses, and contributions.' },
+  stats: { feature: 'Gig Stats', description: 'View gig statistics, revenue tracking, and performance insights.' },
+  practice: { feature: 'Practice Dashboard', description: 'Track practice streaks, set goals, and build consistency.' },
+  suggestions: { feature: 'Song Intelligence', description: 'Get AI-powered song suggestions based on your repertoire.' },
 };
 
 /** Props that need extra data beyond workspaceId */
@@ -279,6 +288,9 @@ function WorkspaceView() {
       socket.on('dm:created', handleDMCreated);
       socket.on('message:new', handleNewMessage);
       socket.on('message:reply', handleReplyUnread);
+      socket.on('plan:updated', (data) => {
+        setWorkspace(prev => prev ? { ...prev, effectivePlan: data.effectivePlan, planLimits: data.planLimits } : prev);
+      });
       socket.io.on('reconnect', handleReconnect);
 
       return () => {
@@ -294,6 +306,7 @@ function WorkspaceView() {
         socket.off('dm:created', handleDMCreated);
         socket.off('message:new', handleNewMessage);
         socket.off('message:reply', handleReplyUnread);
+        socket.off('plan:updated');
         socket.io.off('reconnect', handleReconnect);
       };
     }
@@ -741,6 +754,12 @@ function WorkspaceView() {
           {/* Channel View or Band View */}
           <div className={`flex-1 flex flex-col min-h-0 ${selectedThread ? 'hidden md:flex' : ''}`}>
             {activeBandView ? (
+              PRO_ONLY_VIEWS[activeBandView] && workspace?.effectivePlan !== 'PRO' ? (
+                <UpgradePrompt
+                  feature={PRO_ONLY_VIEWS[activeBandView].feature}
+                  description={PRO_ONLY_VIEWS[activeBandView].description}
+                />
+              ) : (
               <Suspense fallback={<div className="flex-1 flex items-center justify-center"><Skeleton type="channel" /></div>}>
                 {(() => {
                   const BandComponent = BAND_VIEW_COMPONENTS[activeBandView];
@@ -750,6 +769,7 @@ function WorkspaceView() {
                   return <BandComponent key={keyProp} workspaceId={workspaceId} {...extraProps} />;
                 })()}
               </Suspense>
+              )
             ) : selectedChannel ? (
               <ChannelView
                 key={selectedChannel.id}

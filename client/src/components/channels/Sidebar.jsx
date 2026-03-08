@@ -897,16 +897,23 @@ function Sidebar({
                 </button>
                 {!collapsedSections[category.key] && (
                   <div className="space-y-0.5 ml-3">
-                    {category.items.map(item => (
-                      <button
-                        key={item.id}
-                        onClick={() => onSelectBandView?.(item.id)}
-                        className={`channel-item w-full ${activeBandView === item.id ? 'active' : ''}`}
-                      >
-                        <span className="text-gray-400">{item.icon}</span>
-                        <span className="flex-1 truncate">{item.label}</span>
-                      </button>
-                    ))}
+                    {category.items.map(item => {
+                      const isProOnly = ['kitty', 'stats', 'practice', 'suggestions'].includes(item.id);
+                      const isFree = workspace?.effectivePlan !== 'PRO';
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => onSelectBandView?.(item.id)}
+                          className={`channel-item w-full ${activeBandView === item.id ? 'active' : ''}`}
+                        >
+                          <span className="text-gray-400">{item.icon}</span>
+                          <span className="flex-1 truncate">{item.label}</span>
+                          {isProOnly && isFree && (
+                            <span className="text-[10px] font-bold bg-yellow-600/20 text-yellow-500 px-1.5 py-0.5 rounded">PRO</span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>

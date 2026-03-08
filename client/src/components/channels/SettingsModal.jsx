@@ -328,6 +328,18 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
               </button>
               <button
                 role="tab"
+                aria-selected={settingsTab === 'plan'}
+                onClick={() => setSettingsTab('plan')}
+                className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
+                  settingsTab === 'plan'
+                    ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                }`}
+              >
+                Plan
+              </button>
+              <button
+                role="tab"
                 aria-selected={settingsTab === 'about'}
                 onClick={() => setSettingsTab('about')}
                 className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
@@ -712,11 +724,15 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                   </div>
                   <p className="text-[var(--color-text-muted)] mb-4">Choose a theme for your sidebar</p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                    {Object.entries(themes).map(([id, theme]) => (
+                    {Object.entries(themes).map(([id, theme]) => {
+                      const FREE_THEME_IDS = ['default', 'midnight', 'ocean'];
+                      const isLocked = workspace?.effectivePlan !== 'PRO' && !FREE_THEME_IDS.includes(id);
+                      return (
                       <button
                         key={id}
-                        onClick={() => setTheme(id)}
+                        onClick={() => !isLocked && setTheme(id)}
                         className={`p-3 rounded-lg border-2 transition-all ${
+                          isLocked ? 'opacity-50 cursor-not-allowed' :
                           currentTheme === id
                             ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/30'
                             : 'border-[var(--color-modal-border)] hover:border-[var(--color-border)]'
@@ -737,13 +753,14 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                           />
                         </div>
                         <div className="text-xs font-medium text-[var(--color-text-secondary)]">
-                          {theme.name}
+                          {isLocked ? '🔒 ' : ''}{theme.name}
                         </div>
                         {currentTheme === id && (
                           <div className="text-xs text-[var(--color-primary)] mt-1">Active</div>
                         )}
                       </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1501,6 +1518,86 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                       Songs, setlists, calendar, stats, bulk import with metadata, MC sections, 20+ themes, and Slack workspace import.
                     </p>
                   </div>
+                </div>
+              )}
+
+              {/* Plan Tab */}
+              {settingsTab === 'plan' && (
+                <div className="space-y-6">
+                  {/* Current Plan */}
+                  <div className={`p-4 rounded-lg border-2 ${
+                    workspace?.effectivePlan === 'PRO'
+                      ? 'border-green-500/30 bg-green-900/10'
+                      : 'border-[var(--color-border)] bg-[var(--color-bg-secondary)]'
+                  }`}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-2xl">{workspace?.effectivePlan === 'PRO' ? '⭐' : '🆓'}</span>
+                      <div>
+                        <h3 className="text-lg font-bold text-[var(--color-text-primary)]">
+                          {workspace?.effectivePlan === 'PRO' ? 'Pro Plan' : 'Free Plan'}
+                        </h3>
+                        {workspace?.effectivePlan === 'PRO' && workspace?.planSource && (
+                          <p className="text-xs text-[var(--color-text-muted)]">
+                            via {workspace.planSource === 'APPLE' ? 'App Store' : workspace.planSource === 'GOOGLE' ? 'Google Play' : workspace.planSource}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {workspace?.effectivePlan !== 'PRO' ? (
+                    <>
+                      {/* Feature comparison for free users */}
+                      <div>
+                        <h4 className="text-sm font-medium text-[var(--color-text-primary)] mb-3">Unlock with Pro</h4>
+                        <div className="space-y-2">
+                          {[
+                            'Unlimited members',
+                            'Unlimited songs & setlists',
+                            'Full message history',
+                            '5GB storage',
+                            'Band Kitty (shared finances)',
+                            'Gig Stats & revenue tracking',
+                            'Practice Dashboard',
+                            'Song Intelligence',
+                            'Slack workspace import',
+                            'All 20+ themes',
+                            'PDF export',
+                          ].map(feature => (
+                            <div key={feature} className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+                              <span className="text-green-500">✓</span>
+                              {feature}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4">
+                        <p className="text-sm text-[var(--color-text-muted)]">
+                          Upgrade in the <strong className="text-[var(--color-text-primary)]">BandChat mobile app</strong> to unlock all Pro features.
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <div>
+                      <h4 className="text-sm font-medium text-[var(--color-text-primary)] mb-3">Your Pro features</h4>
+                      <div className="space-y-2">
+                        {[
+                          'Unlimited members',
+                          'Unlimited songs & setlists',
+                          'Full message history',
+                          '5GB storage',
+                          'All themes unlocked',
+                          'Band Kitty, Stats, Practice, Song Intelligence',
+                          'Slack import & PDF export',
+                        ].map(feature => (
+                          <div key={feature} className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+                            <span className="text-green-500">✓</span>
+                            {feature}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
