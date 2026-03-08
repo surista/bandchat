@@ -1207,7 +1207,7 @@ router.get('/workspace/:workspaceId/saved', authenticate, async (req, res) => {
               select: {
                 id: true,
                 name: true,
-                type: true
+                isDirect: true
               }
             }
           }
