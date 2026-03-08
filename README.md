@@ -11,58 +11,70 @@ A real-time communication and management app for bands. Think Slack, but built s
 - **Reactions** — Emoji reactions on messages
 - **File Sharing** — Upload images, audio, and files up to 10MB via Cloudflare R2 with auto-generated thumbnails
 - **Voice Messages** — Record and send audio messages
-- **Link Previews** — Automatic rich previews for shared URLs
-- **Search** — Full-text search across all channels, DMs, and messages
+- **Link Previews** — Automatic rich previews for shared URLs (with SSRF protection)
+- **Search** — Full-text search across all channels, DMs, and messages (trigram index)
 - **Push Notifications** — Web push for mentions, DMs, and replies
 - **Quick Reactions** — Fast emoji reactions on messages
 - **Saved Messages** — Bookmark messages privately for quick reference later
 - **Seen By** — See who has read your messages
-- **Announcements** — Pin important messages with optional expiry
+- **Announcements** — Pin important messages with optional expiry and acknowledgment tracking
 - **Polls** — Create polls for band decisions
 - **Photo Gallery** — Browse all shared images in a channel
 
 ### Band Management
-- **Songs** — Track your repertoire with title, artist, key, BPM, duration, lyrics, YouTube/Spotify links, notes, and bulk import with async metadata enrichment
-- **Setlists** — Drag-and-drop song ordering with automatic duration calculation, MC sections, and PDF export
+- **Songs** — Track your repertoire with title, artist, key, BPM, duration, lyrics, YouTube/Spotify links, notes, and bulk import with async metadata enrichment (iTunes, Spotify, Deezer, YouTube, SongBPM)
+- **Setlists** — Drag-and-drop song ordering with automatic duration calculation, MC sections, set breaks, and PDF export
 - **Medleys** — Group songs into medleys within setlists
 - **Calendar** — Schedule gigs, rehearsals, and recording sessions with venue, address, pay tracking, device calendar sync, and iCal feed
 - **Upcoming Event Banner** — Next gig/rehearsal always visible at the top of the sidebar with pinned Calendar shortcut
 - **Gig Management** — Track attendance, mark gigs complete, view gig history, live mode during performances
+- **Gig Gallery** — Photo/video collection per gig
 - **Practice Dashboard** — Log practice sessions, track streaks and total time, view history grouped by date
 - **Stats** — Gigs played, total revenue, most played songs, songs never performed, band achievements
 - **Band Members** — Timeline of current, former, and guest musicians with instrument tracking
 - **Availability** — Members can mark their availability for upcoming dates
 - **Contacts** — Shared contact list for venues, promoters, engineers, etc.
-- **Band Kitty** — Shared band finances tracking
+- **Band Kitty** — Shared band finances tracking (gig pay, expenses, fees)
 - **Recordings** — Track recordings linked to songs
 - **Timeline** — Band history timeline with milestones and achievements
 
 ### User & Workspace Features
 - **Google Sign-In** — Quick authentication with Google OAuth
-- **Email/Password Auth** — Traditional signup with email verification
+- **Email/Password Auth** — Traditional signup with email verification and password complexity enforcement
 - **Password Reset** — Forgot password flow via email
 - **Profile Customization** — Display name, avatar, bio
 - **Multiple Workspaces** — Create and join multiple band workspaces
 - **Workspace Onboarding** — Guided wizard for new workspaces (name, channels, invites, Slack import)
-- **Role-Based Access** — Admin and member roles
+- **Role-Based Access** — Admin and member roles with auto-elevation
 - **Workspace Settings** — Theme customization (20+ themes, dark/light mode, system theme sync), leave/delete workspace
 - **Notification Controls** — Per-workspace preferences, snooze notifications
 - **Slack Import** — Import channels, messages, threads, reactions, and gigs from a Slack export
 - **Data Export** — Export user data or full workspace data as JSON
-- **Account Deletion** — GDPR-compliant account deletion with data anonymization
+- **Account Deletion** — Soft-delete with 30-day grace period, then GDPR-compliant data anonymization
 - **Content Reporting** — Report objectionable messages (sent to admin via email)
 - **User Blocking** — Block users to hide their messages from your view
 - **Privacy Policy & Terms** — Accessible at /privacy and /terms
 
+### Subscriptions
+- **Per-workspace plans** — FREE and PRO tiers with configurable limits
+- **RevenueCat** — In-app purchases on iOS/Android (monthly, annual, lifetime)
+- **Plan enforcement** — Storage, member, song, and feature limits per plan
+
+### Admin Dashboard (`/admin`)
+- **Overview** — Platform stats with 7d/30d trends
+- **Users** — Search, detail view, toggle system admin
+- **Workspaces** — Search with member/channel/message/storage counts
+- **Storage** — R2 stats, orphan scan and cleanup, per-workspace usage, recalculate
+- **Backups** — Daily automated backups to R2 with verification, manual trigger, download, restore with safety backup
+- **Deleted Items** — Soft-deleted users/workspaces with restore and permanent purge
+
 ## Platforms
 
 ### Web Client
-React single-page app deployed as a static site.
+React single-page app deployed as a static site on Vercel. 64 components across 9 directories.
 
 ### Mobile App (iOS & Android)
-Native mobile app built with Expo/React Native. 40+ screens covering all features including offline support, haptic feedback, push notifications, swipe gestures (reply/react), and app icon quick actions.
-
-See `mobile/ROADMAP.md` for detailed feature breakdown.
+Native mobile app built with Expo/React Native. 44 screens and 15 shared components covering all features including offline support, haptic feedback, push notifications, swipe gestures (reply/react), and app icon quick actions.
 
 ## Tech Stack
 
@@ -77,19 +89,23 @@ See `mobile/ROADMAP.md` for detailed feature breakdown.
 - Expo SDK ~54 / React Native
 - React Navigation (native-stack)
 - Expo modules: Calendar, Contacts, Haptics, Notifications, Image Picker
+- RevenueCat (`react-native-purchases`) for in-app subscriptions
 - EAS Build for iOS/Android
 
 ### Server
 - Node.js / Express 4
-- Prisma ORM with PostgreSQL (40+ models)
+- Prisma ORM with PostgreSQL (45 models, 8 enums)
 - Socket.IO (real-time messaging)
-- JWT Authentication (access tokens + httpOnly cookie refresh tokens)
-- Cloudflare R2 (file uploads with magic byte validation)
+- JWT Authentication (access tokens + httpOnly cookie refresh tokens with rotation and reuse detection)
+- Cloudflare R2 (file uploads with magic byte validation, MIME-based extensions, server-side thumbnails via Sharp)
 - Web Push (VAPID)
 - Resend (transactional email)
-- Helmet + CSP, per-route rate limiting, SSRF protection
-- JWT secret validation, refresh token rotation, password complexity enforcement
+- RevenueCat (subscription management)
+- Helmet + CSP, per-route rate limiting, SSRF protection on link previews
+- JWT secret strength validation at startup
 - Socket.IO hardening (payload validation, connection limits, room eviction)
+- Prisma middleware for soft-delete auto-filtering
+- Background jobs: token cleanup (hourly), database backup (daily), soft-delete purge (daily)
 
 ## Environment Variables
 
@@ -99,14 +115,21 @@ DATABASE_URL=postgresql://...
 JWT_SECRET=your-secret-key
 JWT_REFRESH_SECRET=your-refresh-secret
 CLIENT_URL=http://localhost:5173
-CLOUDINARY_CLOUD_NAME=your-cloud-name
-CLOUDINARY_UPLOAD_PRESET=your-preset
+R2_ACCOUNT_ID=your-r2-account-id
+R2_ACCESS_KEY_ID=your-r2-access-key
+R2_SECRET_ACCESS_KEY=your-r2-secret-key
+R2_BUCKET_NAME=your-r2-bucket
+R2_PUBLIC_URL=https://your-r2-public-url
 VAPID_PUBLIC_KEY=your-vapid-public
 VAPID_PRIVATE_KEY=your-vapid-private
 VAPID_EMAIL=mailto:your@email.com
 GOOGLE_CLIENT_ID=your-google-client-id
 RESEND_API_KEY=your-resend-key
+REVENUECAT_SECRET_KEY=your-revenuecat-key
+REVENUECAT_WEBHOOK_SECRET=your-webhook-secret
 ```
+
+Legacy (still accepted for existing URLs): `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_UPLOAD_PRESET`
 
 ### Client (`client/.env`)
 ```
@@ -160,56 +183,56 @@ EXPO_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id
 
 ```
 bandchat/
-├── client/                 # React web frontend
+├── client/                     # React web frontend
 │   ├── src/
-│   │   ├── components/
-│   │   │   ├── auth/       # Login, Signup, Google Sign-In, Password Reset
-│   │   │   ├── band/       # Songs, Setlists, Calendar, Stats, Members
-│   │   │   ├── channels/   # Sidebar, ChannelView, ChannelMembersPanel
-│   │   │   ├── common/     # Shared components (MemberProfile, ConfirmDialog, etc.)
-│   │   │   ├── legal/      # Privacy, Terms
-│   │   │   ├── messages/   # MessageList, MessageInput, LinkPreviewCard
-│   │   │   ├── navigation/ # Navigation components
-│   │   │   ├── threads/    # ThreadView
-│   │   │   └── workspaces/ # WorkspaceList, WorkspaceView, SlackImportWizard
-│   │   ├── context/        # AuthContext, SocketContext, ThemeContext, ToastContext
-│   │   ├── hooks/          # Custom hooks (useLongPress, etc.)
-│   │   ├── services/       # API client, Push service, Haptic service
-│   │   └── styles/         # Tailwind CSS
+│   │   ├── components/         # 64 components across 9 subdirectories
+│   │   │   ├── auth/           # 6 components: Login, Signup, OAuth, Password Reset
+│   │   │   ├── band/           # 22 components: Songs, Setlists, Calendar, Stats, etc.
+│   │   │   ├── channels/       # 6 components: Sidebar, ChannelView, Settings, etc.
+│   │   │   ├── common/         # 12 shared components
+│   │   │   ├── legal/          # 3 components: Privacy, Terms, Support
+│   │   │   ├── messages/       # 6 components: MessageList, Input, Reactions, etc.
+│   │   │   ├── navigation/     # MobileNav
+│   │   │   ├── threads/        # ThreadView
+│   │   │   └── workspaces/     # 6 components: List, View, Import, Onboarding
+│   │   ├── context/            # 4 contexts: Auth, Socket, Theme, Toast
+│   │   ├── hooks/              # 3 hooks: useLongPress, useOnlineStatus, useSwipeGesture
+│   │   ├── services/           # 7 services: api, badge, haptic, push, platform, etc.
+│   │   └── styles/             # Tailwind CSS
 │   └── package.json
-├── mobile/                 # Expo/React Native mobile app
+├── mobile/                     # Expo/React Native mobile app
 │   ├── src/
-│   │   ├── screens/        # 40+ screens organized by feature
-│   │   ├── components/     # Shared mobile components
-│   │   ├── context/        # Auth, Socket, Theme, Toast contexts
-│   │   ├── services/       # API client (~1400 lines)
-│   │   └── utils/          # Haptics, helpers
-│   ├── app.config.js       # Expo configuration
-│   ├── eas.json            # EAS Build profiles
+│   │   ├── screens/            # 44 screens
+│   │   ├── components/         # 15 shared components
+│   │   ├── context/            # 4 contexts: Auth, Socket, Theme, Toast
+│   │   ├── services/           # ApiService (~1400 lines)
+│   │   └── utils/              # 9 utilities
+│   ├── app.config.js           # Expo configuration
+│   ├── eas.json                # EAS Build profiles
 │   └── package.json
-├── server/                 # Express backend
+├── server/                     # Express backend
 │   ├── src/
-│   │   ├── routes/         # 27 route modules
-│   │   ├── middleware/      # Auth, rate limiting
-│   │   ├── services/       # Slack text converter, emoji map
-│   │   ├── socket/         # Real-time event handlers
-│   │   ├── scripts/        # CLI utilities
-│   │   └── lib/            # Prisma client
+│   │   ├── routes/             # 29 route modules
+│   │   ├── middleware/         # 3 modules: auth, rateLimit, requestId
+│   │   ├── admin/              # Standalone admin dashboard (HTML/CSS/JS)
+│   │   ├── services/           # 8 services: backup, metadata enrichment, Slack conversion
+│   │   ├── socket/             # Real-time event handlers
+│   │   ├── scripts/            # 6 CLI utilities
+│   │   └── lib/                # 7 modules: prisma, storage, validators, planLimits, etc.
 │   ├── prisma/
-│   │   └── schema.prisma   # Database schema (40+ models)
+│   │   └── schema.prisma       # 45 models, 8 enums
 │   └── package.json
-├── CLAUDE.md               # AI assistant instructions
-└── README.md
+├── CLAUDE.md                   # AI assistant instructions
+├── CHANGELOG.md                # Version history
+└── README.md                   # This file
 ```
 
 ## Deployment
 
-Deployed on Railway with automatic deploys from the `main` branch:
-1. **PostgreSQL** — Database service
-2. **Server** — Node.js service (Express API + Socket.IO)
-3. **Client** — Static site (Vite build)
-
-Mobile app builds via EAS Build (Expo Application Services).
+- **Server**: Railway (Node.js service, auto-deploys from `main`)
+- **Client**: Vercel (static site, auto-deploys from `main`)
+- **Database**: Railway PostgreSQL
+- **Mobile**: EAS Build (Expo Application Services) for iOS TestFlight / Android
 
 ## License
 

@@ -1111,8 +1111,7 @@ router.delete('/account', authenticate, authLimiter, async (req, res) => {
       });
     }
 
-    // Capture display name and workspace IDs for post-deletion notifications
-    const displayName = user.displayName;
+    // Capture workspace IDs for post-deletion notifications
     const workspaceIds = adminMemberships.length > 0
       ? adminMemberships.map(m => m.workspaceId)
       : (await prisma.workspaceMember.findMany({
@@ -1120,63 +1119,15 @@ router.delete('/account', authenticate, authLimiter, async (req, res) => {
           select: { workspaceId: true }
         })).map(m => m.workspaceId);
 
-    // Anonymize and delete in a transaction
+    // Soft-delete: mark as deleted, revoke sessions (anonymization deferred to purge)
     await prisma.$transaction([
-      // Anonymize messages
-      prisma.message.updateMany({
-        where: { authorId: userId },
-        data: { removedUserName: displayName, authorId: null }
+      // Set deletedAt timestamp
+      prisma.user.update({
+        where: { id: userId },
+        data: { deletedAt: new Date() }
       }),
-      // Anonymize created content (10 models)
-      prisma.song.updateMany({
-        where: { createdById: userId },
-        data: { removedCreatorName: displayName, createdById: null }
-      }),
-      prisma.setlist.updateMany({
-        where: { createdById: userId },
-        data: { removedCreatorName: displayName, createdById: null }
-      }),
-      prisma.gig.updateMany({
-        where: { createdById: userId },
-        data: { removedCreatorName: displayName, createdById: null }
-      }),
-      prisma.medley.updateMany({
-        where: { createdById: userId },
-        data: { removedCreatorName: displayName, createdById: null }
-      }),
-      prisma.contact.updateMany({
-        where: { createdById: userId },
-        data: { removedCreatorName: displayName, createdById: null }
-      }),
-      prisma.announcement.updateMany({
-        where: { createdById: userId },
-        data: { removedCreatorName: displayName, createdById: null }
-      }),
-      prisma.poll.updateMany({
-        where: { createdById: userId },
-        data: { removedCreatorName: displayName, createdById: null }
-      }),
-      prisma.timelineEvent.updateMany({
-        where: { createdById: userId },
-        data: { removedCreatorName: displayName, createdById: null }
-      }),
-      prisma.recording.updateMany({
-        where: { createdById: userId },
-        data: { removedCreatorName: displayName, createdById: null }
-      }),
-      prisma.kittyTransaction.updateMany({
-        where: { createdById: userId },
-        data: { removedCreatorName: displayName, createdById: null }
-      }),
-      // Nullify pinned messages
-      prisma.pinnedMessage.updateMany({
-        where: { pinnedById: userId },
-        data: { pinnedById: null }
-      }),
-      // Delete user (cascades: WorkspaceMember, ChannelMember, Reaction, ThreadRead,
-      // PushSubscription, RefreshToken, AnnouncementAcknowledgment, PollVote,
-      // MemberAchievement, MemberAvailability, BandMember.linkedUserId -> SetNull)
-      prisma.user.delete({ where: { id: userId } })
+      // Revoke all refresh tokens so they can't log back in
+      prisma.refreshToken.deleteMany({ where: { userId } })
     ]);
 
     // Notify workspaces about the removed member
@@ -1192,7 +1143,7 @@ router.delete('/account', authenticate, authLimiter, async (req, res) => {
     // Clear the httpOnly cookie for web clients
     clearRefreshTokenCookie(res);
 
-    res.json({ message: 'Account deleted successfully' });
+    res.json({ message: 'Account scheduled for deletion. You have 30 days to contact support to restore it.' });
   } catch (error) {
     console.error('Delete account error:', error);
     res.status(500).json({ error: 'Failed to delete account' });

@@ -8,6 +8,7 @@ import ConfirmDialog from '../common/ConfirmDialog';
 import ContextMenu from '../common/ContextMenu';
 import useLongPress from '../../hooks/useLongPress';
 import Skeleton from '../common/Skeleton';
+import { getCurrencySymbol } from '../../utils/currencies';
 
 // Compact single-line row for list view
 function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, onDelete, onContextMenu }) {
@@ -213,7 +214,7 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
 
           {Number(gig.pay) > 0 && (
             <p className="text-green-400 text-sm mt-1">
-              💰 ¥{Number(gig.pay).toLocaleString()}
+              💰 {getCurrencySymbol(workspace?.currency)}{Number(gig.pay).toLocaleString()}
             </p>
           )}
 

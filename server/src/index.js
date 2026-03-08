@@ -24,7 +24,7 @@ import { createApp } from './app.js';
 import { setupSocketHandlers } from './socket/handlers.js';
 import prisma from './lib/prisma.js';
 import { createBackupWithVerification, cleanupOldBackups, sendBackupAlert } from './services/backup.js';
-import { isConfigured as isR2Configured } from './lib/storage.js';
+import { isConfigured as isR2Configured, deleteFile } from './lib/storage.js';
 
 const app = createApp();
 const httpServer = createServer(app);
@@ -114,6 +114,88 @@ httpServer.listen(PORT, async () => {
     runScheduledBackup();
     setInterval(runScheduledBackup, 24 * 60 * 60 * 1000);
   }, 60 * 1000);
+
+  // Daily soft-delete purge: permanently delete records older than 30 days
+  const SOFT_DELETE_GRACE_DAYS = 30;
+  const runSoftDeletePurge = async () => {
+    try {
+      const cutoff = new Date(Date.now() - SOFT_DELETE_GRACE_DAYS * 24 * 60 * 60 * 1000);
+
+      // Purge expired users
+      const expiredUsers = await prisma.user.findMany({
+        where: { deletedAt: { not: null, lt: cutoff } },
+        select: { id: true, displayName: true },
+      });
+      for (const user of expiredUsers) {
+        try {
+          await prisma.$transaction([
+            prisma.message.updateMany({ where: { authorId: user.id }, data: { removedUserName: user.displayName, authorId: null } }),
+            prisma.song.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
+            prisma.setlist.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
+            prisma.gig.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
+            prisma.medley.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
+            prisma.contact.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
+            prisma.announcement.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
+            prisma.poll.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
+            prisma.timelineEvent.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
+            prisma.recording.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
+            prisma.kittyTransaction.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
+            prisma.pinnedMessage.updateMany({ where: { pinnedById: user.id }, data: { pinnedById: null } }),
+            prisma.user.delete({ where: { id: user.id } }),
+          ]);
+          console.log(`Purged soft-deleted user: ${user.displayName} (${user.id})`);
+        } catch (err) {
+          console.error(`Failed to purge user ${user.id}:`, err);
+        }
+      }
+
+      // Purge expired workspaces
+      const expiredWorkspaces = await prisma.workspace.findMany({
+        where: { deletedAt: { not: null, lt: cutoff } },
+        select: { id: true, name: true },
+      });
+      for (const ws of expiredWorkspaces) {
+        try {
+          // Clean up R2 files
+          try {
+            const r2Available = await isR2Configured();
+            if (r2Available) {
+              const [attachments, songAttachments, recordings, gigMedia] = await Promise.all([
+                prisma.attachment.findMany({ where: { message: { channel: { workspaceId: ws.id } } }, select: { url: true } }),
+                prisma.songAttachment.findMany({ where: { song: { workspaceId: ws.id } }, select: { url: true } }),
+                prisma.recording.findMany({ where: { workspaceId: ws.id }, select: { url: true } }),
+                prisma.gigMedia.findMany({ where: { gig: { workspaceId: ws.id } }, select: { url: true } }),
+              ]);
+              const r2PublicUrl = process.env.R2_PUBLIC_URL || '';
+              const allUrls = [...attachments, ...songAttachments, ...recordings, ...gigMedia].map(r => r.url);
+              for (const url of allUrls) {
+                if (url.startsWith(r2PublicUrl)) {
+                  try { await deleteFile(url.replace(`${r2PublicUrl}/`, '')); } catch { /* best effort */ }
+                }
+              }
+            }
+          } catch (err) {
+            console.error(`R2 cleanup warning during workspace purge ${ws.id}:`, err);
+          }
+
+          await prisma.workspace.delete({ where: { id: ws.id } });
+          console.log(`Purged soft-deleted workspace: ${ws.name} (${ws.id})`);
+        } catch (err) {
+          console.error(`Failed to purge workspace ${ws.id}:`, err);
+        }
+      }
+
+      const total = expiredUsers.length + expiredWorkspaces.length;
+      if (total > 0) console.log(`Soft-delete purge complete: ${expiredUsers.length} users, ${expiredWorkspaces.length} workspaces`);
+    } catch (err) {
+      console.error('Soft-delete purge error:', err);
+    }
+  };
+  // Run purge 2 minutes after start, then every 24 hours
+  setTimeout(() => {
+    runSoftDeletePurge();
+    setInterval(runSoftDeletePurge, 24 * 60 * 60 * 1000);
+  }, 2 * 60 * 1000);
 });
 
 // Graceful shutdown

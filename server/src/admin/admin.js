@@ -129,6 +129,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (tab.dataset.tab === 'workspaces') loadWorkspaces();
     if (tab.dataset.tab === 'storage') loadStorageStats();
     if (tab.dataset.tab === 'backups') loadBackups();
+    if (tab.dataset.tab === 'deleted') loadDeleted();
   });
 });
 
@@ -617,6 +618,108 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeUserModal();
     closeRestoreModal();
+  }
+});
+
+// ==========================================
+// Deleted Items Tab
+// ==========================================
+
+async function loadDeleted() {
+  const usersTable = document.getElementById('deletedUsersTable');
+  const wsTable = document.getElementById('deletedWorkspacesTable');
+  usersTable.innerHTML = '<tr><td colspan="5" class="empty-state">Loading...</td></tr>';
+  wsTable.innerHTML = '<tr><td colspan="5" class="empty-state">Loading...</td></tr>';
+
+  try {
+    const data = await api('/admin/deleted');
+    document.getElementById('deletedGraceInfo').textContent = `${data.graceDays}-day grace period before permanent deletion`;
+
+    if (data.users.length === 0) {
+      usersTable.innerHTML = '<tr><td colspan="5" class="empty-state">No deleted users</td></tr>';
+    } else {
+      usersTable.innerHTML = data.users.map(u => `
+        <tr>
+          <td><strong>${esc(u.displayName)}</strong></td>
+          <td>${esc(u.email)}</td>
+          <td>${fmtDate(u.deletedAt)}</td>
+          <td><span class="badge ${u.daysRemaining <= 5 ? 'badge-admin' : 'badge-verified'}">${u.daysRemaining}d</span></td>
+          <td>
+            <button class="btn-sm" data-restore-user="${esc(u.id)}">Restore</button>
+            <button class="btn-sm" style="background:var(--red);margin-left:4px" data-purge-user="${esc(u.id)}" data-purge-name="${esc(u.displayName)}">Purge</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    if (data.workspaces.length === 0) {
+      wsTable.innerHTML = '<tr><td colspan="5" class="empty-state">No deleted workspaces</td></tr>';
+    } else {
+      wsTable.innerHTML = data.workspaces.map(w => `
+        <tr>
+          <td><strong>${esc(w.name)}</strong></td>
+          <td>${w._count.members}</td>
+          <td>${fmtDate(w.deletedAt)}</td>
+          <td><span class="badge ${w.daysRemaining <= 5 ? 'badge-admin' : 'badge-verified'}">${w.daysRemaining}d</span></td>
+          <td>
+            <button class="btn-sm" data-restore-ws="${esc(w.id)}">Restore</button>
+            <button class="btn-sm" style="background:var(--red);margin-left:4px" data-purge-ws="${esc(w.id)}" data-purge-name="${esc(w.name)}">Purge</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+  } catch (err) {
+    console.error('Failed to load deleted items:', err);
+    usersTable.innerHTML = `<tr><td colspan="5" class="empty-state">Failed to load: ${esc(err.message)}</td></tr>`;
+    wsTable.innerHTML = '';
+  }
+}
+
+// Event delegation for deleted users table
+document.getElementById('deletedUsersTable').addEventListener('click', async (e) => {
+  const restoreBtn = e.target.closest('[data-restore-user]');
+  if (restoreBtn) {
+    if (!confirm('Restore this user? They will be able to log in again.')) return;
+    try {
+      const result = await api(`/admin/users/${restoreBtn.dataset.restoreUser}/restore`, { method: 'POST' });
+      alert(result.message);
+      loadDeleted();
+    } catch (err) { alert('Restore failed: ' + err.message); }
+    return;
+  }
+  const purgeBtn = e.target.closest('[data-purge-user]');
+  if (purgeBtn) {
+    const name = purgeBtn.dataset.purgeName;
+    if (!confirm(`PERMANENTLY delete user "${name}"? This cannot be undone. All their data will be anonymized.`)) return;
+    try {
+      const result = await api(`/admin/users/${purgeBtn.dataset.purgeUser}/purge`, { method: 'DELETE' });
+      alert(result.message);
+      loadDeleted();
+    } catch (err) { alert('Purge failed: ' + err.message); }
+  }
+});
+
+// Event delegation for deleted workspaces table
+document.getElementById('deletedWorkspacesTable').addEventListener('click', async (e) => {
+  const restoreBtn = e.target.closest('[data-restore-ws]');
+  if (restoreBtn) {
+    if (!confirm('Restore this workspace? All members will regain access.')) return;
+    try {
+      const result = await api(`/admin/workspaces/${restoreBtn.dataset.restoreWs}/restore`, { method: 'POST' });
+      alert(result.message);
+      loadDeleted();
+    } catch (err) { alert('Restore failed: ' + err.message); }
+    return;
+  }
+  const purgeBtn = e.target.closest('[data-purge-ws]');
+  if (purgeBtn) {
+    const name = purgeBtn.dataset.purgeName;
+    if (!confirm(`PERMANENTLY delete workspace "${name}"? This cannot be undone. All channels, messages, songs, and files will be destroyed.`)) return;
+    try {
+      const result = await api(`/admin/workspaces/${purgeBtn.dataset.purgeWs}/purge`, { method: 'DELETE' });
+      alert(result.message);
+      loadDeleted();
+    } catch (err) { alert('Purge failed: ' + err.message); }
   }
 });
 

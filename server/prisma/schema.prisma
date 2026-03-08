@@ -24,11 +24,13 @@ model User {
   authProvider            String    @default("local")
   isSystemAdmin           Boolean   @default(false)
   notificationsSnoozedUntil DateTime? // null = active, future date = snoozed until then
+  deletedAt               DateTime?
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
 
   @@index([isSystemAdmin])
   @@index([authProvider])
+  @@index([deletedAt])
 
   workspaces              WorkspaceMember[]
   messages                Message[]
@@ -82,6 +84,7 @@ model Workspace {
   inviteMaxUses       Int?      // null = unlimited
   inviteUsedCount     Int       @default(0)
   storageUsedBytes    BigInt    @default(0)
+  deletedAt           DateTime?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -118,6 +121,8 @@ model Workspace {
   recordings          Recording[]
   bandKitty           BandKitty?
   practiceSessions    PracticeSession[]
+
+  @@index([deletedAt])
 }
 
 model ChannelGroup {

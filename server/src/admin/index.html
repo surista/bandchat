@@ -44,6 +44,7 @@
       <button class="tab" data-tab="workspaces">Workspaces</button>
       <button class="tab" data-tab="storage">Storage</button>
       <button class="tab" data-tab="backups">Backups</button>
+      <button class="tab" data-tab="deleted">Deleted</button>
     </div>
 
     <div class="content">
@@ -148,6 +149,46 @@
         </div>
         <div id="backupProgress" style="display:none;padding:16px;color:var(--text-secondary)">
           Creating backup... this may take a moment.
+        </div>
+      </div>
+
+      <!-- Deleted Items Tab -->
+      <div class="tab-panel" id="tab-deleted">
+        <div class="table-header">
+          <h2>Deleted Items</h2>
+          <span id="deletedGraceInfo" style="color:var(--text-secondary);font-size:13px"></span>
+        </div>
+
+        <h3 style="padding:16px 16px 8px;font-size:15px;color:var(--text-secondary)">Deleted Users</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th>Deleted</th>
+                <th>Days Left</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="deletedUsersTable"></tbody>
+          </table>
+        </div>
+
+        <h3 style="padding:24px 16px 8px;font-size:15px;color:var(--text-secondary)">Deleted Workspaces</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Workspace</th>
+                <th>Members</th>
+                <th>Deleted</th>
+                <th>Days Left</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="deletedWorkspacesTable"></tbody>
+          </table>
         </div>
       </div>
     </div>

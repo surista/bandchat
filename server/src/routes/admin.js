@@ -564,4 +564,193 @@ router.post('/backups/restore', async (req, res) => {
   }
 });
 
+// ==========================================
+// Soft-Delete: List / Restore / Purge
+// ==========================================
+
+const SOFT_DELETE_GRACE_DAYS = 30;
+
+// GET /api/admin/deleted — List soft-deleted users and workspaces
+router.get('/deleted', async (req, res) => {
+  try {
+    const [deletedUsers, deletedWorkspaces] = await Promise.all([
+      prisma.user.findMany({
+        where: { deletedAt: { not: null } },
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          avatarUrl: true,
+          deletedAt: true,
+          createdAt: true,
+          _count: { select: { workspaces: true, messages: true } },
+        },
+        orderBy: { deletedAt: 'desc' },
+      }),
+      prisma.workspace.findMany({
+        where: { deletedAt: { not: null } },
+        select: {
+          id: true,
+          name: true,
+          deletedAt: true,
+          createdAt: true,
+          _count: { select: { members: true, channels: true } },
+        },
+        orderBy: { deletedAt: 'desc' },
+      }),
+    ]);
+
+    const now = Date.now();
+    const formatItem = (item) => {
+      const deletedMs = new Date(item.deletedAt).getTime();
+      const daysElapsed = (now - deletedMs) / (1000 * 60 * 60 * 24);
+      const daysRemaining = Math.max(0, Math.ceil(SOFT_DELETE_GRACE_DAYS - daysElapsed));
+      return { ...item, daysRemaining };
+    };
+
+    res.json({
+      users: deletedUsers.map(formatItem),
+      workspaces: deletedWorkspaces.map(formatItem),
+      graceDays: SOFT_DELETE_GRACE_DAYS,
+    });
+  } catch (error) {
+    console.error('Admin deleted list error:', error);
+    res.status(500).json({ error: 'Failed to load deleted items' });
+  }
+});
+
+// POST /api/admin/users/:userId/restore — Restore a soft-deleted user
+router.post('/users/:userId/restore', async (req, res) => {
+  try {
+    const user = await prisma.user.findFirst({
+      where: { id: req.params.userId, deletedAt: { not: null } },
+      select: { id: true, displayName: true },
+    });
+    if (!user) {
+      return res.status(404).json({ error: 'Deleted user not found' });
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { deletedAt: null },
+    });
+
+    res.json({ message: `User "${user.displayName}" restored successfully` });
+  } catch (error) {
+    console.error('Admin user restore error:', error);
+    res.status(500).json({ error: 'Failed to restore user' });
+  }
+});
+
+// POST /api/admin/workspaces/:workspaceId/restore — Restore a soft-deleted workspace
+router.post('/workspaces/:workspaceId/restore', async (req, res) => {
+  try {
+    const workspace = await prisma.workspace.findFirst({
+      where: { id: req.params.workspaceId, deletedAt: { not: null } },
+      select: { id: true, name: true },
+    });
+    if (!workspace) {
+      return res.status(404).json({ error: 'Deleted workspace not found' });
+    }
+
+    await prisma.workspace.update({
+      where: { id: workspace.id },
+      data: { deletedAt: null },
+    });
+
+    res.json({ message: `Workspace "${workspace.name}" restored successfully` });
+  } catch (error) {
+    console.error('Admin workspace restore error:', error);
+    res.status(500).json({ error: 'Failed to restore workspace' });
+  }
+});
+
+// DELETE /api/admin/users/:userId/purge — Permanently delete a soft-deleted user
+router.delete('/users/:userId/purge', async (req, res) => {
+  try {
+    const user = await prisma.user.findFirst({
+      where: { id: req.params.userId, deletedAt: { not: null } },
+      select: { id: true, displayName: true },
+    });
+    if (!user) {
+      return res.status(404).json({ error: 'Deleted user not found' });
+    }
+
+    const userId = user.id;
+    const displayName = user.displayName;
+
+    // Anonymize and hard-delete (same logic as old account deletion)
+    await prisma.$transaction([
+      prisma.message.updateMany({
+        where: { authorId: userId },
+        data: { removedUserName: displayName, authorId: null },
+      }),
+      prisma.song.updateMany({ where: { createdById: userId }, data: { removedCreatorName: displayName, createdById: null } }),
+      prisma.setlist.updateMany({ where: { createdById: userId }, data: { removedCreatorName: displayName, createdById: null } }),
+      prisma.gig.updateMany({ where: { createdById: userId }, data: { removedCreatorName: displayName, createdById: null } }),
+      prisma.medley.updateMany({ where: { createdById: userId }, data: { removedCreatorName: displayName, createdById: null } }),
+      prisma.contact.updateMany({ where: { createdById: userId }, data: { removedCreatorName: displayName, createdById: null } }),
+      prisma.announcement.updateMany({ where: { createdById: userId }, data: { removedCreatorName: displayName, createdById: null } }),
+      prisma.poll.updateMany({ where: { createdById: userId }, data: { removedCreatorName: displayName, createdById: null } }),
+      prisma.timelineEvent.updateMany({ where: { createdById: userId }, data: { removedCreatorName: displayName, createdById: null } }),
+      prisma.recording.updateMany({ where: { createdById: userId }, data: { removedCreatorName: displayName, createdById: null } }),
+      prisma.kittyTransaction.updateMany({ where: { createdById: userId }, data: { removedCreatorName: displayName, createdById: null } }),
+      prisma.pinnedMessage.updateMany({ where: { pinnedById: userId }, data: { pinnedById: null } }),
+      prisma.user.delete({ where: { id: userId } }),
+    ]);
+
+    console.log(`Admin purged user: ${displayName} (${userId})`);
+    res.json({ message: `User "${displayName}" permanently deleted` });
+  } catch (error) {
+    console.error('Admin user purge error:', error);
+    res.status(500).json({ error: 'Failed to purge user' });
+  }
+});
+
+// DELETE /api/admin/workspaces/:workspaceId/purge — Permanently delete a soft-deleted workspace
+router.delete('/workspaces/:workspaceId/purge', async (req, res) => {
+  try {
+    const workspace = await prisma.workspace.findFirst({
+      where: { id: req.params.workspaceId, deletedAt: { not: null } },
+      select: { id: true, name: true },
+    });
+    if (!workspace) {
+      return res.status(404).json({ error: 'Deleted workspace not found' });
+    }
+
+    // Clean up R2 files for this workspace before hard delete
+    try {
+      const r2Available = await isR2Configured();
+      if (r2Available) {
+        const [attachments, songAttachments, recordings, gigMedia] = await Promise.all([
+          prisma.attachment.findMany({ where: { message: { channel: { workspaceId: workspace.id } } }, select: { url: true } }),
+          prisma.songAttachment.findMany({ where: { song: { workspaceId: workspace.id } }, select: { url: true } }),
+          prisma.recording.findMany({ where: { workspaceId: workspace.id }, select: { url: true } }),
+          prisma.gigMedia.findMany({ where: { gig: { workspaceId: workspace.id } }, select: { url: true } }),
+        ]);
+
+        const r2PublicUrl = process.env.R2_PUBLIC_URL || '';
+        const allUrls = [...attachments, ...songAttachments, ...recordings, ...gigMedia].map(r => r.url);
+        for (const url of allUrls) {
+          if (url.startsWith(r2PublicUrl)) {
+            const key = url.replace(`${r2PublicUrl}/`, '');
+            try { await deleteFile(key); } catch { /* best effort */ }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('R2 cleanup warning during workspace purge:', err);
+    }
+
+    // Cascade delete handles all child records
+    await prisma.workspace.delete({ where: { id: workspace.id } });
+
+    console.log(`Admin purged workspace: ${workspace.name} (${workspace.id})`);
+    res.json({ message: `Workspace "${workspace.name}" permanently deleted` });
+  } catch (error) {
+    console.error('Admin workspace purge error:', error);
+    res.status(500).json({ error: 'Failed to purge workspace' });
+  }
+});
+
 export default router;

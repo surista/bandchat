@@ -354,7 +354,7 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
     for (const gig of allGigs) {
       if (gig.pay && gig.pay > 0) {
         const prevRevenue = cumulativeRevenue;
-        cumulativeRevenue += gig.pay;
+        cumulativeRevenue += Number(gig.pay);
         if (prevRevenue === 0 && cumulativeRevenue > 0) {
           revenueMilestones['first'] = gig.date;
         }

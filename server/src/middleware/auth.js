@@ -12,8 +12,9 @@ export const authenticate = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
 
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
+    // Use raw query to bypass soft-delete middleware — we need to check deletedAt ourselves
+    const user = await prisma.user.findFirst({
+      where: { id: decoded.userId, deletedAt: null },
       select: {
         id: true,
         email: true,
@@ -24,7 +25,7 @@ export const authenticate = async (req, res, next) => {
     });
 
     if (!user) {
-      return res.status(401).json({ error: 'User not found' });
+      return res.status(401).json({ error: 'Account has been deleted' });
     }
 
     req.user = user;

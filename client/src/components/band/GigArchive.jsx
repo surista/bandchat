@@ -790,7 +790,7 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
                     )}
                     {Number(gig?.pay) > 0 && (
                       <span className="px-2 py-0.5 bg-yellow-600/20 text-yellow-400 text-xs rounded">
-                        ¥{Number(gig.pay).toLocaleString()}
+                        {getCurrencySymbol(workspace?.currency)}{Number(gig.pay).toLocaleString()}
                       </span>
                     )}
                   </div>
@@ -938,7 +938,7 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
                       )}
                       {Number(selectedEntry.gig?.pay) > 0 && (
                         <span className="px-3 py-1 bg-yellow-600/20 text-yellow-400 text-sm rounded-full">
-                          ¥{Number(selectedEntry.gig.pay).toLocaleString()}
+                          {getCurrencySymbol(workspace?.currency)}{Number(selectedEntry.gig.pay).toLocaleString()}
                         </span>
                       )}
                     </>
@@ -1575,7 +1575,7 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
               </div>
               <div>
                 <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
-                  Fee (¥)
+                  Fee ({getCurrencySymbol(workspace?.currency)})
                 </label>
                 <input
                   type="number"

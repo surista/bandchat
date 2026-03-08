@@ -316,11 +316,21 @@ router.put('/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => 
 // Delete workspace
 router.delete('/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => {
   try {
-    await prisma.workspace.delete({
-      where: { id: req.params.workspaceId }
+    const { workspaceId } = req.params;
+
+    // Soft-delete: set deletedAt instead of hard-deleting
+    await prisma.workspace.update({
+      where: { id: workspaceId },
+      data: { deletedAt: new Date() }
     });
 
-    res.json({ message: 'Workspace deleted' });
+    // Notify all members to leave the workspace room
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`workspace:${workspaceId}`).emit('workspace:deleted', { workspaceId });
+    }
+
+    res.json({ message: 'Workspace scheduled for deletion. An admin can restore it within 30 days.' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete workspace' });
   }
