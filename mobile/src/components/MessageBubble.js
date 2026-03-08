@@ -25,9 +25,12 @@ function formatDurationMmSs(ms) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+const SWIPE_COOLDOWN = 500; // ms between swipe actions
+
 const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress, onSwipeReply, onSwipeReact, members }, ref) {
   const { colors, density } = useTheme();
   const swipeableRef = useRef(null);
+  const lastSwipeTime = useRef(0);
   const author = message.author || {};
   const displayName = author.displayName || message.removedUserName || 'Deleted User';
   const initial = displayName.charAt(0).toUpperCase();
@@ -82,15 +85,17 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
     <RightAction drag={drag} />
   );
 
-  const handleSwipeLeft = () => {
-    if (onSwipeReply && !isPending) {
-      onSwipeReply(message);
+  const handleSwipeOpen = (direction) => {
+    const now = Date.now();
+    if (now - lastSwipeTime.current < SWIPE_COOLDOWN) {
+      swipeableRef.current?.close();
+      return;
     }
-    swipeableRef.current?.close();
-  };
+    lastSwipeTime.current = now;
 
-  const handleSwipeRight = () => {
-    if (onSwipeReact && !isPending) {
+    if (direction === 'left' && onSwipeReply && !isPending) {
+      onSwipeReply(message);
+    } else if (direction === 'right' && onSwipeReact && !isPending) {
       onSwipeReact(message.id, '👍');
     }
     swipeableRef.current?.close();
@@ -105,13 +110,12 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
         enabled={swipeEnabled}
         renderLeftActions={onSwipeReply ? renderLeftActions : undefined}
         renderRightActions={onSwipeReact ? renderRightActions : undefined}
-        onSwipeableOpen={(direction) => {
-          if (direction === 'left') handleSwipeLeft();
-          else handleSwipeRight();
-        }}
+        onSwipeableWillOpen={handleSwipeOpen}
         overshootLeft={false}
         overshootRight={false}
-        friction={2}
+        friction={2.5}
+        leftThreshold={40}
+        rightThreshold={40}
       >
       <Pressable
         style={[styles.groupedContainer, { paddingTop: density.groupedPaddingTop, paddingBottom: density.groupedPaddingBottom }, isPending && styles.pending]}
@@ -144,13 +148,12 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
       enabled={swipeEnabled}
       renderLeftActions={onSwipeReply ? renderLeftActions : undefined}
       renderRightActions={onSwipeReact ? renderRightActions : undefined}
-      onSwipeableOpen={(direction) => {
-        if (direction === 'left') handleSwipeLeft();
-        else handleSwipeRight();
-      }}
+      onSwipeableWillOpen={handleSwipeOpen}
       overshootLeft={false}
       overshootRight={false}
-      friction={2}
+      friction={2.5}
+      leftThreshold={40}
+      rightThreshold={40}
     >
     <Pressable
       style={[styles.container, { paddingTop: density.containerPaddingTop, paddingBottom: density.containerPaddingBottom }, isPending && styles.pending]}

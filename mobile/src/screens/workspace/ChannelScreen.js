@@ -696,9 +696,7 @@ export default function ChannelScreen({ navigation, route }) {
           onImagePress={handleImagePress}
           onReactionPress={handleReactionPress}
           onSwipeReply={handleReplyPress}
-          onSwipeReact={(messageId, emoji) => {
-            api.addReaction(messageId, emoji).catch(() => {});
-          }}
+          onSwipeReact={handleReactionPress}
           members={workspaceMembers}
         />
       </View>
