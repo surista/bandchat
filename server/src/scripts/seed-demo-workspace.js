@@ -922,12 +922,40 @@ async function main() {
       },
     });
 
-    // Link setlist via GigSetlist if specified
+    // Link setlist via GigSetlist
     if (gd.setlistIdx !== null) {
+      let linkedSetlistId = setlists[gd.setlistIdx].id;
+
+      // For completed gigs, create a performed copy of the setlist so stats count each gig
+      // (stats rely on setlists with performedAt, and each performance needs its own record)
+      if (gd.status === 'COMPLETED') {
+        const srcDef = setlistDefs[gd.setlistIdx];
+        const performed = await prisma.setlist.create({
+          data: {
+            name: `${srcDef.name} — ${venueData.venue}`,
+            description: srcDef.description,
+            workspaceId: workspace.id,
+            createdById: users[0].id,
+            performedAt: gigDate,
+            venue: venueData.venue,
+            songs: {
+              create: srcDef.items.map((item, idx) => ({
+                position: idx,
+                type: item.type,
+                songId: item.songIdx !== undefined ? songs[item.songIdx].id : null,
+                label: item.label || null,
+                duration: item.duration || null,
+              })),
+            },
+          },
+        });
+        linkedSetlistId = performed.id;
+      }
+
       await prisma.gigSetlist.create({
         data: {
           gigId: gig.id,
-          setlistId: setlists[gd.setlistIdx].id,
+          setlistId: linkedSetlistId,
           setNumber: 1,
         },
       });
