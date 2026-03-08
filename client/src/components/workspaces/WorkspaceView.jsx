@@ -140,10 +140,12 @@ const BAND_VIEW_COMPONENTS = {
 
 /** Band views that require a Pro plan */
 const PRO_ONLY_VIEWS = {
+  archive: { feature: 'Gig Archive', description: 'Browse your complete gig history with setlists, stats, and media.' },
   kitty: { feature: 'Band Kitty', description: 'Track shared band finances, expenses, and contributions.' },
   stats: { feature: 'Gig Stats', description: 'View gig statistics, revenue tracking, and performance insights.' },
   practice: { feature: 'Practice Dashboard', description: 'Track practice streaks, set goals, and build consistency.' },
   suggestions: { feature: 'Song Intelligence', description: 'Get AI-powered song suggestions based on your repertoire.' },
+  timeline: { feature: 'Band Timeline', description: 'View your band\'s history, milestones, and member journey.' },
 };
 
 /** Props that need extra data beyond workspaceId */

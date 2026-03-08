@@ -2,12 +2,19 @@ import express from 'express';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
+import { getPlanLimits } from '../lib/planLimits.js';
 
 const router = express.Router();
 
 // Get all timeline events for a workspace
 router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
+    const ws = await prisma.workspace.findUnique({ where: { id: req.params.workspaceId }, select: { plan: true, planExpiresAt: true } });
+    const limits = getPlanLimits(ws);
+    if (!limits.features.stats) {
+      return res.status(403).json({ error: 'Timeline is a Pro feature. Upgrade to unlock.', upgrade: true });
+    }
+
     const events = await prisma.timelineEvent.findMany({
       where: { workspaceId: req.params.workspaceId },
       include: {

@@ -22,10 +22,10 @@ const DEMO_PASSWORD = 'Demo1234';
 // ============================================================
 
 const MEMBERS = [
-  { email: 'alex@demo.bandchat.app', displayName: 'Alex Rivera', role: 'ADMIN', instruments: ['Guitar', 'Vocals'], avatarUrl: 'https://api.dicebear.com/9.x/adventurer/svg?seed=Alex&backgroundColor=b6e3f4' },
-  { email: 'sam@demo.bandchat.app', displayName: 'Sam Chen', role: 'MEMBER', instruments: ['Bass'], avatarUrl: 'https://api.dicebear.com/9.x/adventurer/svg?seed=Sam&backgroundColor=d1d4f9' },
-  { email: 'jordan@demo.bandchat.app', displayName: 'Jordan Blake', role: 'MEMBER', instruments: ['Drums', 'Percussion'], avatarUrl: 'https://api.dicebear.com/9.x/adventurer/svg?seed=Jordan&backgroundColor=c0aede' },
-  { email: 'taylor@demo.bandchat.app', displayName: 'Taylor Kim', role: 'MEMBER', instruments: ['Keys', 'Synth', 'Backing Vocals'], avatarUrl: 'https://api.dicebear.com/9.x/adventurer/svg?seed=Taylor&backgroundColor=ffd5dc' },
+  { email: 'alex@demo.bandchat.app', displayName: 'Alex Rivera', role: 'ADMIN', instruments: ['Guitar', 'Vocals'], avatarUrl: 'https://api.dicebear.com/9.x/adventurer/png?seed=Alex&backgroundColor=b6e3f4' },
+  { email: 'sam@demo.bandchat.app', displayName: 'Sam Chen', role: 'MEMBER', instruments: ['Bass'], avatarUrl: 'https://api.dicebear.com/9.x/adventurer/png?seed=Sam&backgroundColor=d1d4f9' },
+  { email: 'jordan@demo.bandchat.app', displayName: 'Jordan Blake', role: 'MEMBER', instruments: ['Drums', 'Percussion'], avatarUrl: 'https://api.dicebear.com/9.x/adventurer/png?seed=Jordan&backgroundColor=c0aede' },
+  { email: 'taylor@demo.bandchat.app', displayName: 'Taylor Kim', role: 'MEMBER', instruments: ['Keys', 'Synth', 'Backing Vocals'], avatarUrl: 'https://api.dicebear.com/9.x/adventurer/png?seed=Taylor&backgroundColor=ffd5dc' },
 ];
 
 const SONGS = [
@@ -761,7 +761,7 @@ async function main() {
       name: 'Chris Nakamura',
       workspaceId: workspace.id,
       notes: 'Original rhythm guitarist. Left in Oct 2024 over creative differences. Came back Jan 2026 as a part-time touring member for bigger shows.',
-      imageUrl: 'https://api.dicebear.com/9.x/adventurer/svg?seed=Chris&backgroundColor=ffdfba',
+      imageUrl: 'https://api.dicebear.com/9.x/adventurer/png?seed=Chris&backgroundColor=ffdfba',
       stints: {
         create: [
           { instruments: ['Rhythm Guitar'], startDate: new Date('2024-06-15'), endDate: new Date('2024-10-15') },
@@ -778,7 +778,7 @@ async function main() {
       workspaceId: workspace.id,
       isGuest: true,
       notes: 'Friend of Sam. Filled in on rhythm guitar for two shows in March 2025 while Alex had a hand injury. Great player — open to guesting again.',
-      imageUrl: 'https://api.dicebear.com/9.x/adventurer/svg?seed=Morgan&backgroundColor=c3fae8',
+      imageUrl: 'https://api.dicebear.com/9.x/adventurer/png?seed=Morgan&backgroundColor=c3fae8',
       stints: {
         create: {
           instruments: ['Guitar'],

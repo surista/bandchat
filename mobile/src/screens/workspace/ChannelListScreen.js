@@ -490,7 +490,7 @@ export default function ChannelListScreen({ navigation, route }) {
     setShowGroupModal(true);
   }, []);
 
-  const PRO_ONLY_FEATURES = ['kitty', 'stats', 'intelligence', 'practice'];
+  const PRO_ONLY_FEATURES = ['kitty', 'stats', 'intelligence', 'practice', 'timeline', 'achievements'];
 
   const handleBandItemPress = useCallback((key) => {
     // Gate pro-only features
