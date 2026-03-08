@@ -73,11 +73,14 @@ const CONTACTS = [
 ];
 
 const TIMELINE_EVENTS = [
-  { eventType: 'formation', title: 'Lunar Moth formed', description: 'Alex, Sam, and Jordan start jamming in a garage. The name comes from a late-night conversation about things that are beautiful but short-lived.', eventDate: new Date('2024-06-15') },
+  { eventType: 'formation', title: 'Lunar Moth formed', description: 'Alex, Sam, Jordan, and Chris start jamming in a garage. The name comes from a late-night conversation about things that are beautiful but short-lived.', eventDate: new Date('2024-06-15') },
   { eventType: 'first_gig', title: 'First gig at The Basement', description: 'Played to about 20 people in Tony\'s basement. Mostly friends but the energy was incredible.', eventDate: new Date('2024-09-20') },
-  { eventType: 'member_joined', title: 'Taylor joins the band', description: 'Taylor Kim joins on keys/synth after sitting in on a rehearsal. Immediately brings a new dimension to the sound.', eventDate: new Date('2024-11-01') },
+  { eventType: 'member_left', title: 'Chris leaves the band', description: 'Chris Nakamura departs over creative differences. Wanted to go heavier, rest of the band leaning indie/dreampop. No hard feelings — still comes to shows.', eventDate: new Date('2024-10-15') },
+  { eventType: 'member_joined', title: 'Taylor joins the band', description: 'Taylor Kim joins on keys/synth after sitting in on a rehearsal. Immediately brings a new dimension to the sound. The lineup finally clicks.', eventDate: new Date('2024-11-01') },
+  { eventType: 'milestone', title: 'Morgan fills in on guitar', description: 'Morgan Ellis (friend of Sam) guests on rhythm guitar for two shows while Alex recovers from a hand injury. Kills it both nights.', eventDate: new Date('2025-03-10') },
   { eventType: 'milestone', title: 'First festival set', description: 'Played the Moonlight Festival main stage to 200+ people. Biggest crowd yet.', eventDate: new Date('2025-07-12') },
   { eventType: 'album_release', title: '"Pale Satellite" EP released', description: '5-track EP released on Bandcamp and streaming. Recorded at Jam Space Studios over 3 weekends.', eventDate: new Date('2025-10-01') },
+  { eventType: 'member_joined', title: 'Chris rejoins as touring member', description: 'Chris Nakamura comes back as a part-time touring member for bigger shows. Plays rhythm guitar and adds backing vocals. The five-piece sound is massive.', eventDate: new Date('2026-01-15') },
 ];
 
 // Message templates per channel — realistic conversations
@@ -751,7 +754,42 @@ async function main() {
     });
     bandMembers.push(bm);
   }
-  console.log(`Created ${bandMembers.length} band members`);
+
+  // Chris Nakamura — original member, left Oct 2024, rejoined Jan 2026 as touring member
+  const chrisMember = await prisma.bandMember.create({
+    data: {
+      name: 'Chris Nakamura',
+      workspaceId: workspace.id,
+      notes: 'Original rhythm guitarist. Left in Oct 2024 over creative differences. Came back Jan 2026 as a part-time touring member for bigger shows.',
+      imageUrl: 'https://api.dicebear.com/9.x/adventurer/svg?seed=Chris&backgroundColor=ffdfba',
+      stints: {
+        create: [
+          { instruments: ['Rhythm Guitar'], startDate: new Date('2024-06-15'), endDate: new Date('2024-10-15') },
+          { instruments: ['Rhythm Guitar', 'Backing Vocals'], startDate: new Date('2026-01-15') },
+        ],
+      },
+    },
+  });
+
+  // Morgan Ellis — guest musician, filled in for 2 gigs in March 2025
+  const morganMember = await prisma.bandMember.create({
+    data: {
+      name: 'Morgan Ellis',
+      workspaceId: workspace.id,
+      isGuest: true,
+      notes: 'Friend of Sam. Filled in on rhythm guitar for two shows in March 2025 while Alex had a hand injury. Great player — open to guesting again.',
+      imageUrl: 'https://api.dicebear.com/9.x/adventurer/svg?seed=Morgan&backgroundColor=c3fae8',
+      stints: {
+        create: {
+          instruments: ['Guitar'],
+          startDate: new Date('2025-03-01'),
+          endDate: new Date('2025-03-20'),
+        },
+      },
+    },
+  });
+
+  console.log(`Created ${bandMembers.length + 2} band members (incl. 1 former/returned, 1 guest)`);
 
   // ---- SONGS ----
   const songs = [];
@@ -1083,7 +1121,7 @@ async function main() {
   console.log(`  Songs:           ${songs.length}`);
   console.log(`  Setlists:        ${setlists.length}`);
   console.log(`  Gigs:            ${gigs.length}`);
-  console.log(`  Band Members:    ${bandMembers.length}`);
+  console.log(`  Band Members:    ${bandMembers.length + 2} (incl. 1 former/returned, 1 guest)`);
   console.log(`  Contacts:        ${CONTACTS.length}`);
   console.log(`  Polls:           2`);
   console.log(`  Announcements:   2`);
