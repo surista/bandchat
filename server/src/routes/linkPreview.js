@@ -1,9 +1,41 @@
 import express from 'express';
-import dns from 'node:dns';
+import dns from 'node:dns/promises';
 import { rateLimit } from 'express-rate-limit';
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
+
+/**
+ * SSRF protection: validate URL scheme, resolve hostname, and block private IPs.
+ */
+async function validateUrl(urlString) {
+  try {
+    const parsed = new URL(urlString);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return { blocked: true };
+    }
+    // Resolve hostname to IP addresses
+    const { address } = await dns.lookup(parsed.hostname);
+    // Block private, loopback, and link-local ranges
+    if (
+      address.startsWith('127.') ||
+      address.startsWith('10.') ||
+      address.startsWith('192.168.') ||
+      address.startsWith('169.254.') ||
+      address === '0.0.0.0' ||
+      address === '::1' ||
+      address.startsWith('172.') && (() => {
+        const second = parseInt(address.split('.')[1], 10);
+        return second >= 16 && second <= 31;
+      })()
+    ) {
+      return { blocked: true };
+    }
+    return { blocked: false };
+  } catch {
+    return { blocked: true };
+  }
+}
 
 // In-memory LRU cache with 1h TTL and hard cap of 200 entries
 const cache = new Map();
