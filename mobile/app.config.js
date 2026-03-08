@@ -72,7 +72,6 @@ export default {
       'expo-notifications',
       'expo-media-library',
       'expo-quick-actions',
-      'react-native-purchases',
       [
         'expo-build-properties',
         {
