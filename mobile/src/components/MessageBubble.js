@@ -1,6 +1,7 @@
 import { memo, useState, useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { View, Text, Image, TouchableOpacity, Pressable, Animated, Linking, StyleSheet } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import Reanimated, { useAnimatedStyle, interpolate } from 'react-native-reanimated';
 import { Video, ResizeMode } from 'expo-av';
 import { format, isToday, isYesterday } from 'date-fns';
 import { useTheme } from '../context/ThemeContext';
@@ -73,31 +74,13 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
     return result;
   };
 
-  const renderLeftActions = (progress) => {
-    const translateX = progress.interpolate({
-      inputRange: [0, 1],
-      outputRange: [-60, 0],
-    });
-    return (
-      <Animated.View style={[swipeStyles.leftAction, { transform: [{ translateX }] }]}>
-        <Text style={swipeStyles.actionIcon}>💬</Text>
-        <Text style={swipeStyles.actionLabel}>Reply</Text>
-      </Animated.View>
-    );
-  };
+  const renderLeftActions = (_progress, drag) => (
+    <LeftAction drag={drag} />
+  );
 
-  const renderRightActions = (progress) => {
-    const translateX = progress.interpolate({
-      inputRange: [0, 1],
-      outputRange: [60, 0],
-    });
-    return (
-      <Animated.View style={[swipeStyles.rightAction, { transform: [{ translateX }] }]}>
-        <Text style={swipeStyles.actionIcon}>👍</Text>
-        <Text style={swipeStyles.actionLabel}>React</Text>
-      </Animated.View>
-    );
-  };
+  const renderRightActions = (_progress, drag) => (
+    <RightAction drag={drag} />
+  );
 
   const handleSwipeLeft = () => {
     if (onSwipeReply && !isPending) {
@@ -117,7 +100,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
 
   if (isGrouped) {
     return (
-      <Swipeable
+      <ReanimatedSwipeable
         ref={swipeableRef}
         enabled={swipeEnabled}
         renderLeftActions={onSwipeReply ? renderLeftActions : undefined}
@@ -151,12 +134,12 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
           {renderReactions(message.reactions, colors, message.id, onReactionPress)}
         </View>
       </Pressable>
-      </Swipeable>
+      </ReanimatedSwipeable>
     );
   }
 
   return (
-    <Swipeable
+    <ReanimatedSwipeable
       ref={swipeableRef}
       enabled={swipeEnabled}
       renderLeftActions={onSwipeReply ? renderLeftActions : undefined}
@@ -216,7 +199,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
         )}
       </View>
     </Pressable>
-    </Swipeable>
+    </ReanimatedSwipeable>
   );
 });
 
@@ -482,6 +465,30 @@ function renderReactions(reactions, colors, messageId, onReactionPress) {
         </TouchableOpacity>
       ))}
     </View>
+  );
+}
+
+function LeftAction({ drag }) {
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(drag.value, [0, 60], [-60, 0], 'clamp') }],
+  }));
+  return (
+    <Reanimated.View style={[swipeStyles.leftAction, animatedStyle]}>
+      <Text style={swipeStyles.actionIcon}>💬</Text>
+      <Text style={swipeStyles.actionLabel}>Reply</Text>
+    </Reanimated.View>
+  );
+}
+
+function RightAction({ drag }) {
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(drag.value, [-60, 0], [0, 60], 'clamp') }],
+  }));
+  return (
+    <Reanimated.View style={[swipeStyles.rightAction, animatedStyle]}>
+      <Text style={swipeStyles.actionIcon}>👍</Text>
+      <Text style={swipeStyles.actionLabel}>React</Text>
+    </Reanimated.View>
   );
 }
 
