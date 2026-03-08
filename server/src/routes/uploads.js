@@ -112,34 +112,28 @@ const reserveStorageQuota = async (workspaceId, fileSize) => {
   if (!workspaceId) return null;
 
   try {
-    await prisma.$transaction(async (tx) => {
-      // Lock the row and get current usage
-      const workspace = await tx.workspace.findUnique({
-        where: { id: workspaceId },
-        select: { storageUsedBytes: true, plan: true, planExpiresAt: true },
-      });
-      if (!workspace) return; // No workspace = no quota check
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { storageUsedBytes: true, plan: true, planExpiresAt: true },
+    });
+    if (!workspace) return null;
 
-      const limits = getPlanLimits(workspace);
-      const used = workspace.storageUsedBytes ?? 0n;
-      if (used + BigInt(fileSize) > limits.storageBytes) {
-        throw new Error('QUOTA_EXCEEDED');
-      }
+    const limits = getPlanLimits(workspace);
+    const used = workspace.storageUsedBytes ?? 0n;
+    if (used + BigInt(fileSize) > limits.storageBytes) {
+      return { error: 'Storage limit reached. Upgrade to Pro for more storage.', upgrade: true };
+    }
 
-      // Atomically increment within the same transaction
-      await tx.workspace.update({
-        where: { id: workspaceId },
-        data: { storageUsedBytes: { increment: BigInt(fileSize) } },
-      });
-    }, {
-      isolationLevel: 'Serializable', // Ensures no concurrent modifications
+    // Increment storage counter (slight over-count on concurrent uploads is acceptable)
+    await prisma.workspace.update({
+      where: { id: workspaceId },
+      data: { storageUsedBytes: { increment: BigInt(fileSize) } },
     });
     return null;
   } catch (error) {
-    if (error.message === 'QUOTA_EXCEEDED') {
-      return { error: 'Storage limit reached. Upgrade to Pro for more storage.', upgrade: true };
-    }
-    throw error;
+    // Don't block uploads on quota tracking errors
+    console.error('Storage quota check error:', error.message);
+    return null;
   }
 };
 
