@@ -2,7 +2,7 @@
 
 All notable changes to BandChat are documented here.
 
-## [1.04.48] - Unreleased
+## [1.04.49] - 2026-03-09
 
 ### Added
 - **Soft-delete system** for users and workspaces — 30-day grace period before permanent deletion
@@ -11,12 +11,19 @@ All notable changes to BandChat are documented here.
 - Admin API endpoints: list deleted, restore users/workspaces, purge users/workspaces
 - Daily scheduled purge job for records past the 30-day grace period
 - R2 file cleanup on workspace purge
+- **Demo workspace seeder** — `seed-demo-workspace.js` creates "Lunar Moth" band with 6 members, 460+ messages, songs, setlists, gigs, and all features populated
+- Former/guest band member support in demo data (member leaves, guest fills in, member returns)
+
+### Fixed
+- Hardcoded ¥ currency symbol in Gig Archive and Calendar — now uses workspace currency setting
+- Revenue showing as concatenated string instead of sum (Prisma Decimal → Number conversion)
 
 ### Changed
 - User account deletion now soft-deletes (sets `deletedAt`, revokes tokens) instead of immediate hard-delete
 - Workspace deletion now soft-deletes instead of immediate hard-delete
 - Auth middleware returns 401 "Account has been deleted" for soft-deleted users
 - Workspace delete emits `workspace:deleted` socket event to all members
+- Updated all documentation (CLAUDE.md, README.md, CHANGELOG.md)
 
 ## [1.04.47] - 2026-03-09
 
