@@ -12,8 +12,9 @@ import { handleDownload } from '../../utils/download';
 import { formatFileSize } from '../../utils/format';
 import { MAX_IMAGE_SIZE, MAX_AUDIO_SIZE, isImageFile, isAudioFile } from '../../utils/fileValidation';
 import { buildMentionRegex } from '../../utils/parseMentions';
+import MemberProfile from '../common/MemberProfile';
 
-function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, members }) {
+function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, members, onStartDM }) {
   const { user } = useAuth();
   const { socket } = useSocket();
   const [replies, setReplies] = useState([]);
@@ -26,6 +27,7 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
   const [previews, setPreviews] = useState([]);
   const [fileError, setFileError] = useState('');
   const [lightboxImage, setLightboxImage] = useState(null);
+  const [profileUserId, setProfileUserId] = useState(null);
   const repliesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const swipeRef = useSwipeGesture({
@@ -310,7 +312,10 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
       {/* Original Message */}
       <div className="p-4 border-b border-[var(--color-border)] group relative">
         <div className="flex gap-3">
-          <div className="w-9 h-9 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white font-medium">
+          <div
+            className={`w-9 h-9 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white font-medium ${message.author?.id ? 'cursor-pointer hover:opacity-80' : ''}`}
+            onClick={() => message.author?.id && setProfileUserId(message.author.id)}
+          >
             {(() => {
               const avatarSrc = message.author?.avatarUrl || (message.author?.id && memberAvatarMap.get(message.author.id));
               return avatarSrc ? (
@@ -322,7 +327,10 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2">
-              <span className="font-semibold text-[var(--color-text-primary)]">
+              <span
+                className={`font-semibold text-[var(--color-text-primary)] ${message.author?.id ? 'cursor-pointer hover:underline' : ''}`}
+                onClick={() => message.author?.id && setProfileUserId(message.author.id)}
+              >
                 {message.author?.displayName || message.removedUserName || 'Deleted User'}
               </span>
               <span className="text-xs text-[var(--color-text-muted)]">
@@ -378,7 +386,10 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
           <div className="p-4 space-y-4">
             {replies.map((reply) => (
               <div key={reply.id} className="flex gap-3 group relative">
-                <div className="w-8 h-8 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white text-sm font-medium">
+                <div
+                  className={`w-8 h-8 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white text-sm font-medium ${reply.author?.id ? 'cursor-pointer hover:opacity-80' : ''}`}
+                  onClick={() => reply.author?.id && setProfileUserId(reply.author.id)}
+                >
                   {(() => {
                     const avatarSrc = reply.author?.avatarUrl || (reply.author?.id && memberAvatarMap.get(reply.author.id));
                     return avatarSrc ? (
@@ -390,7 +401,10 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2">
-                    <span className="font-semibold text-[var(--color-text-primary)] text-sm">
+                    <span
+                      className={`font-semibold text-[var(--color-text-primary)] text-sm ${reply.author?.id ? 'cursor-pointer hover:underline' : ''}`}
+                      onClick={() => reply.author?.id && setProfileUserId(reply.author.id)}
+                    >
                       {reply.author?.displayName || reply.removedUserName || 'Deleted User'}
                     </span>
                     <span className="text-xs text-[var(--color-text-muted)]">
@@ -596,6 +610,15 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
           src={lightboxImage.src}
           alt={lightboxImage.alt}
           onClose={() => setLightboxImage(null)}
+        />
+      )}
+
+      {profileUserId && (
+        <MemberProfile
+          userId={profileUserId}
+          workspaceId={workspaceId}
+          onClose={() => setProfileUserId(null)}
+          onStartDM={profileUserId !== user?.id ? onStartDM : null}
         />
       )}
     </div>

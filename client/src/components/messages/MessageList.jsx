@@ -219,7 +219,8 @@ function MessageList({
   onUnsaveMessage,
   savedMessageIds,
   lastReadAt,
-  members
+  members,
+  onAvatarClick
 }) {
   const [editingId, setEditingId] = useState(null);
   const [editContent, setEditContent] = useState('');
@@ -444,7 +445,10 @@ function MessageList({
             }}
           >
             {/* Avatar */}
-            <div className="w-9 h-9 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white font-medium">
+            <div
+              className={`w-9 h-9 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white font-medium ${message.author?.id && onAvatarClick ? 'cursor-pointer hover:opacity-80' : ''}`}
+              onClick={() => message.author?.id && onAvatarClick?.(message.author.id)}
+            >
               {(() => {
                 const avatarSrc = message.author?.avatarUrl || (message.author?.id && memberAvatarMap.get(message.author.id));
                 return avatarSrc ? (
@@ -462,7 +466,10 @@ function MessageList({
             {/* Content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-2">
-                <span className="font-semibold text-[var(--color-text-primary)]">
+                <span
+                  className={`font-semibold text-[var(--color-text-primary)] ${message.author?.id && onAvatarClick ? 'cursor-pointer hover:underline' : ''}`}
+                  onClick={() => message.author?.id && onAvatarClick?.(message.author.id)}
+                >
                   {message.author?.displayName || message.removedUserName || 'Deleted User'}
                 </span>
                 <span className="text-xs text-[var(--color-text-muted)]">

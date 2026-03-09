@@ -578,45 +578,61 @@ function Sidebar({
 
       {/* Channels List */}
       <div className="flex-1 overflow-y-auto py-4">
-        {/* Next upcoming event banner */}
-        {nextGig && (
+        {/* Quick Links (collapsible) */}
+        <div className="px-4 mb-2 flex items-center justify-between">
           <button
-            onClick={() => onSelectBandView?.('calendar')}
-            className="mx-3 mb-3 px-3 py-2 rounded-lg text-left transition-colors hover:brightness-110"
-            style={{
-              background: nextGig.type === 'GIG' ? 'rgba(34,197,94,0.15)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.15)' : 'rgba(168,85,247,0.15)',
-              border: `1px solid ${nextGig.type === 'GIG' ? 'rgba(34,197,94,0.3)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.3)' : 'rgba(168,85,247,0.3)'}`,
-            }}
+            onClick={() => toggleSectionCollapse('quickLinks')}
+            className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors"
+            aria-expanded={!collapsedSections.quickLinks}
           >
-            <div className="flex items-center gap-2 text-xs">
-              <span>{nextGig.type === 'GIG' ? '🎸' : nextGig.type === 'REHEARSAL' ? '🥁' : '📅'}</span>
-              <span className="font-semibold text-white truncate">{nextGig.title}</span>
-            </div>
-            <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
-              <span>{new Date(nextGig.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-              {nextGig.startTime && <span>· {nextGig.startTime}</span>}
-              {nextGig.venue && <span className="truncate">· {nextGig.venue}</span>}
-            </div>
+            <span className={`transform transition-transform text-xs ${collapsedSections.quickLinks ? '' : 'rotate-90'}`}>▶</span>
+            <span className="text-xs font-semibold uppercase tracking-wide">Quick Links</span>
           </button>
+        </div>
+
+        {!collapsedSections.quickLinks && (
+          <>
+            {/* Next upcoming event banner */}
+            {nextGig && (
+              <button
+                onClick={() => onSelectBandView?.('calendar')}
+                className="mx-3 mb-3 px-3 py-2 rounded-lg text-left transition-colors hover:brightness-110"
+                style={{
+                  background: nextGig.type === 'GIG' ? 'rgba(34,197,94,0.15)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.15)' : 'rgba(168,85,247,0.15)',
+                  border: `1px solid ${nextGig.type === 'GIG' ? 'rgba(34,197,94,0.3)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.3)' : 'rgba(168,85,247,0.3)'}`,
+                }}
+              >
+                <div className="flex items-center gap-2 text-xs">
+                  <span>{nextGig.type === 'GIG' ? '🎸' : nextGig.type === 'REHEARSAL' ? '🥁' : '📅'}</span>
+                  <span className="font-semibold text-white truncate">{nextGig.title}</span>
+                </div>
+                <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
+                  <span>{new Date(nextGig.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                  {nextGig.startTime && <span>· {nextGig.startTime}</span>}
+                  {nextGig.venue && <span className="truncate">· {nextGig.venue}</span>}
+                </div>
+              </button>
+            )}
+
+            {/* Pinned Calendar shortcut */}
+            <button
+              onClick={() => onSelectBandView?.('calendar')}
+              className={`channel-item w-full mx-2 mb-1 ${activeBandView === 'calendar' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">📅</span>
+              <span className="flex-1 truncate">Calendar</span>
+            </button>
+
+            {/* Saved Messages shortcut */}
+            <button
+              onClick={() => onSelectBandView?.('saved')}
+              className={`channel-item w-full mx-2 mb-2 ${activeBandView === 'saved' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">🔖</span>
+              <span className="flex-1 truncate">Saved Messages</span>
+            </button>
+          </>
         )}
-
-        {/* Pinned Calendar shortcut */}
-        <button
-          onClick={() => onSelectBandView?.('calendar')}
-          className={`channel-item w-full mx-2 mb-1 ${activeBandView === 'calendar' ? 'active' : ''}`}
-        >
-          <span className="text-gray-400">📅</span>
-          <span className="flex-1 truncate">Calendar</span>
-        </button>
-
-        {/* Saved Messages shortcut */}
-        <button
-          onClick={() => onSelectBandView?.('saved')}
-          className={`channel-item w-full mx-2 mb-2 ${activeBandView === 'saved' ? 'active' : ''}`}
-        >
-          <span className="text-gray-400">🔖</span>
-          <span className="flex-1 truncate">Saved Messages</span>
-        </button>
 
         <div className="px-4 mb-2 flex items-center justify-between">
           <button

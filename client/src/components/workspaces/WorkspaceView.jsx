@@ -781,6 +781,7 @@ function WorkspaceView() {
                 onUpdateUnread={handleUpdateUnread}
                 openThreadId={selectedThread?.id || null}
                 onOpenSearch={handleOpenSearch}
+                onStartDM={handleStartDM}
               />
             ) : (
               <div className="flex-1 flex items-center justify-center text-gray-400">
@@ -816,6 +817,7 @@ function WorkspaceView() {
                     );
                   }
                 }}
+                onStartDM={handleStartDM}
               />
             </div>
           )}

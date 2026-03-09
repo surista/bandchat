@@ -112,7 +112,15 @@ export default function MemberProfile({ userId, workspaceId, onClose, onStartDM 
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h2 className="text-xl font-bold text-white">{profile.user.displayName}</h2>
-                <p className="text-gray-400 text-sm">{profile.user.email}</p>
+                <p
+                  className="text-gray-400 text-sm select-all cursor-pointer hover:text-gray-300"
+                  title="Click to copy email"
+                  onClick={() => {
+                    navigator.clipboard.writeText(profile.user.email);
+                  }}
+                >
+                  {profile.user.email}
+                </p>
               </div>
               <span className={`px-2 py-1 rounded text-xs ${
                 profile.role === 'ADMIN' ? 'bg-yellow-600 text-yellow-100' : 'bg-gray-600 text-gray-200'

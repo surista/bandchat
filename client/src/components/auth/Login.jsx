@@ -53,7 +53,7 @@ function Login() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <img
-              src="/icon-192.png"
+              src="/bc_icon_06.png"
               alt="BandChat"
               className="w-24 h-24 mx-auto mb-4 rounded-xl shadow-lg"
             />

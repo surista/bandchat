@@ -12,6 +12,7 @@ import MessageInput from '../messages/MessageInput';
 import ChannelMembersPanel from './ChannelMembersPanel';
 import PinnedMessagesPanel from './PinnedMessagesPanel';
 import Skeleton from '../common/Skeleton';
+import MemberProfile from '../common/MemberProfile';
 import useOnlineStatus from '../../hooks/useOnlineStatus';
 
 /**
@@ -24,7 +25,7 @@ import useOnlineStatus from '../../hooks/useOnlineStatus';
  * @param {function} props.onOpenThread - Callback when user clicks to open a thread
  * @param {function} props.onUpdateUnread - Callback to update unread count (called with 0 on channel select)
  */
-function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThreadId, onOpenSearch }) {
+function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThreadId, onOpenSearch, onStartDM }) {
   const { user } = useAuth();
   const { socket, joinChannel, leaveChannel, startTyping, stopTyping } = useSocket();
   const isOnline = useOnlineStatus();
@@ -38,6 +39,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   const [pinnedMessages, setPinnedMessages] = useState([]);
   const [showPinned, setShowPinned] = useState(false);
   const [savedMessageIds, setSavedMessageIds] = useState(new Set());
+  const [profileUserId, setProfileUserId] = useState(null);
   const lastReadAtRef = useRef(null);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -521,6 +523,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   };
 
   return (
+    <>
     <div className="flex-1 flex flex-col bg-[var(--color-bg-secondary)] min-h-0">
       {/* Channel Header */}
       <div className="h-14 border-b border-[var(--color-border)] px-4 flex items-center shrink-0">
@@ -628,6 +631,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
               savedMessageIds={savedMessageIds}
               lastReadAt={lastReadAtRef.current}
               members={workspace?.members || []}
+              onAvatarClick={setProfileUserId}
             />
             <div ref={messagesEndRef} />
           </>
@@ -689,6 +693,16 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
         </>
       )}
     </div>
+
+    {profileUserId && (
+      <MemberProfile
+        userId={profileUserId}
+        workspaceId={workspace?.id}
+        onClose={() => setProfileUserId(null)}
+        onStartDM={profileUserId !== user?.id ? onStartDM : null}
+      />
+    )}
+    </>
   );
 }
 

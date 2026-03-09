@@ -1606,7 +1606,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 <div className="space-y-6">
                   <div className="text-center py-4">
                     <img
-                      src="/icon-192.png"
+                      src="/bc_icon_06.png"
                       alt="BandChat"
                       className="w-20 h-20 mx-auto mb-3 rounded-xl shadow-lg"
                     />

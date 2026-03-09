@@ -34,6 +34,7 @@ const JoinWorkspace = lazyRetry(() => import('./components/workspaces/JoinWorksp
 const PrivacyPolicy = lazyRetry(() => import('./components/legal/PrivacyPolicy'));
 const TermsOfService = lazyRetry(() => import('./components/legal/TermsOfService'));
 const Support = lazyRetry(() => import('./components/legal/Support'));
+const LandingPage = lazyRetry(() => import('./components/landing/LandingPage'));
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -61,6 +62,20 @@ function PublicRoute({ children }) {
   }
 
   return !isAuthenticated ? children : <Navigate to="/" />;
+}
+
+function HomeRoute() {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slack-purple flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  return isAuthenticated ? <WorkspaceList /> : <LandingPage />;
 }
 
 function App() {
@@ -130,11 +145,7 @@ function App() {
       />
       <Route
         path="/"
-        element={
-          <PrivateRoute>
-            <WorkspaceList />
-          </PrivateRoute>
-        }
+        element={<HomeRoute />}
       />
     </Routes>
     </Suspense>
