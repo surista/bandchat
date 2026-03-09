@@ -185,6 +185,9 @@ router.get('/workspaces', async (req, res) => {
         select: {
           id: true,
           name: true,
+          plan: true,
+          planSource: true,
+          planExpiresAt: true,
           storageUsedBytes: true,
           createdAt: true,
           _count: {
@@ -235,6 +238,34 @@ router.get('/workspaces', async (req, res) => {
   } catch (error) {
     console.error('Admin workspaces error:', error);
     res.status(500).json({ error: 'Failed to load workspaces' });
+  }
+});
+
+// POST /api/admin/workspaces/:workspaceId/plan — Toggle workspace plan (FREE ↔ PRO)
+router.post('/workspaces/:workspaceId/plan', async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { id: true, name: true, plan: true },
+    });
+    if (!workspace) return res.status(404).json({ error: 'Workspace not found' });
+
+    const newPlan = workspace.plan === 'PRO' ? 'FREE' : 'PRO';
+    const updated = await prisma.workspace.update({
+      where: { id: workspaceId },
+      data: {
+        plan: newPlan,
+        planSource: newPlan === 'PRO' ? 'MANUAL' : null,
+        planExpiresAt: null,
+      },
+      select: { id: true, name: true, plan: true, planSource: true },
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Admin plan toggle error:', error);
+    res.status(500).json({ error: 'Failed to update plan' });
   }
 });
 

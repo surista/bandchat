@@ -313,17 +313,26 @@ async function loadWorkspaces(search) {
       return;
     }
 
-    tbody.innerHTML = workspaces.map(w => `
+    tbody.innerHTML = workspaces.map(w => {
+      const isPro = w.plan === 'PRO';
+      const planBadge = isPro
+        ? '<span style="background:#22c55e;color:#fff;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600">PRO</span>'
+        : '<span style="background:#6b7280;color:#fff;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600">FREE</span>';
+      const planBtn = isPro
+        ? `<button class="btn btn-sm" style="background:#6b7280" data-toggle-plan="${w.id}" data-ws-name="${esc(w.name)}">Revoke PRO</button>`
+        : `<button class="btn btn-sm" style="background:#22c55e" data-toggle-plan="${w.id}" data-ws-name="${esc(w.name)}">Grant PRO</button>`;
+      return `
       <tr>
-        <td><strong>${esc(w.name)}</strong></td>
+        <td><strong>${esc(w.name)}</strong> ${planBadge}</td>
         <td>${w._count.members}</td>
         <td>${w._count.channels}</td>
         <td>${fmt(w.messageCount)}</td>
         <td>${fmtBytes(Number(w.storageUsedBytes || 0))}</td>
         <td>${fmtDate(w.createdAt)}</td>
-        <td><button class="btn btn-danger btn-sm" data-delete-ws="${w.id}" data-ws-name="${esc(w.name)}">Delete</button></td>
+        <td>${planBtn} <button class="btn btn-danger btn-sm" data-delete-ws="${w.id}" data-ws-name="${esc(w.name)}">Delete</button></td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
   } catch (err) {
     console.error('Failed to load workspaces:', err);
   }
@@ -334,8 +343,22 @@ document.getElementById('workspaceSearch').addEventListener('input', (e) => {
   workspaceSearchTimer = setTimeout(() => loadWorkspaces(e.target.value), 300);
 });
 
-// Event delegation for workspace delete buttons
+// Event delegation for workspace buttons (plan toggle + delete)
 document.getElementById('workspacesTable').addEventListener('click', async (e) => {
+  const planBtn = e.target.closest('[data-toggle-plan]');
+  if (planBtn) {
+    const name = planBtn.dataset.wsName;
+    const action = planBtn.textContent.trim();
+    if (!confirm(`${action} for "${name}"?`)) return;
+    try {
+      const result = await api(`/admin/workspaces/${planBtn.dataset.togglePlan}/plan`, { method: 'POST' });
+      loadWorkspaces();
+    } catch (err) {
+      alert('Failed to update plan: ' + err.message);
+    }
+    return;
+  }
+
   const deleteBtn = e.target.closest('[data-delete-ws]');
   if (deleteBtn) {
     const name = deleteBtn.dataset.wsName;
