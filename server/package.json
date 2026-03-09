@@ -41,6 +41,9 @@
     "uuid": "^10.0.0",
     "web-push": "^3.6.7"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "devDependencies": {
     "@jest/globals": "^30.2.0",
     "cross-env": "^10.1.0",
