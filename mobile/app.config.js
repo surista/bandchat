@@ -3,7 +3,7 @@ export default {
     name: 'BandChat',
     slug: 'bandchat',
     scheme: 'bandchat',
-    version: '1.04.57',
+    version: '1.04.58',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'dark',
@@ -14,9 +14,9 @@ export default {
       backgroundColor: '#1f2937',
     },
     ios: {
-      supportsTablet: false,
+      supportsTablet: true,
       bundleIdentifier: 'com.bandchat.mobile',
-      buildNumber: '10457',
+      buildNumber: '10458',
       infoPlist: {
         NSCameraUsageDescription: 'BandChat needs camera access to take photos for your profile and messages.',
         NSPhotoLibraryUsageDescription: 'BandChat needs photo library access to share images in messages and set your profile picture.',
@@ -27,11 +27,16 @@ export default {
         NSFaceIDUsageDescription: 'BandChat uses Face ID to quickly unlock the app.',
         ITSAppUsesNonExemptEncryption: false,
         UIBackgroundModes: ['remote-notification'],
+        'UISupportedInterfaceOrientations~ipad': [
+          'UIInterfaceOrientationPortrait',
+          'UIInterfaceOrientationLandscapeLeft',
+          'UIInterfaceOrientationLandscapeRight',
+        ],
       },
     },
     android: {
       package: 'com.bandchat.mobile',
-      versionCode: 10457,
+      versionCode: 10458,
       adaptiveIcon: {
         backgroundColor: '#1f2937',
         foregroundImage: './assets/android-icon-foreground.png',

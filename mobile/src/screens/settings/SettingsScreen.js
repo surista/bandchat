@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
-  modalContent: { borderRadius: 12, padding: 24 },
+  modalContent: { borderRadius: 12, padding: 24, maxWidth: 500, width: '100%' },
   modalTitle: { fontSize: 20, fontWeight: '700', marginBottom: 8 },
   modalDesc: { fontSize: 15, marginBottom: 16, lineHeight: 22 },
   modalInput: {

@@ -106,6 +106,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 16,
     maxHeight: 350,
     paddingBottom: 34,
+    maxWidth: 500,
+    alignSelf: 'center',
+    width: '100%',
   },
   tabBar: {
     borderBottomWidth: StyleSheet.hairlineWidth,

@@ -134,13 +134,16 @@ router.get('/', authenticate, async (req, res) => {
       }
     });
 
-    res.json(workspaces.map(wm => ({
-      ...wm.workspace,
-      effectivePlan: getEffectivePlan(wm.workspace),
-      planLimits: serializePlanLimits(getPlanLimits(wm.workspace)),
-      role: wm.role,
-      joinedAt: wm.joinedAt
-    })));
+    // Filter out soft-deleted workspaces (Prisma middleware doesn't filter nested includes)
+    res.json(workspaces
+      .filter(wm => wm.workspace && !wm.workspace.deletedAt)
+      .map(wm => ({
+        ...wm.workspace,
+        effectivePlan: getEffectivePlan(wm.workspace),
+        planLimits: serializePlanLimits(getPlanLimits(wm.workspace)),
+        role: wm.role,
+        joinedAt: wm.joinedAt
+      })));
   } catch (error) {
     res.status(500).json({ error: 'Failed to get workspaces' });
   }

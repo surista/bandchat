@@ -15,8 +15,8 @@ import { useTheme } from '../../context/ThemeContext';
 import ImageViewer from '../../components/ImageViewer';
 import api from '../../services/api';
 
-const NUM_COLUMNS = 3;
 const GAP = 2;
+const TABLET_BREAKPOINT = 768;
 
 export default function GigGalleryScreen({ route }) {
   const { gigId, gigTitle } = route.params;
@@ -28,7 +28,8 @@ export default function GigGalleryScreen({ route }) {
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerImage, setViewerImage] = useState(null);
 
-  const itemSize = (screenWidth - GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
+  const numColumns = screenWidth >= TABLET_BREAKPOINT ? 5 : 3;
+  const itemSize = (screenWidth - GAP * (numColumns - 1)) / numColumns;
 
   const loadMedia = useCallback(async () => {
     try {
@@ -115,7 +116,8 @@ export default function GigGalleryScreen({ route }) {
         data={media}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        numColumns={NUM_COLUMNS}
+        key={numColumns}
+        numColumns={numColumns}
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={

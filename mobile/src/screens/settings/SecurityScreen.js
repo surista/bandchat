@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 24,
   },
-  modalContent: { borderRadius: 12, padding: 24 },
+  modalContent: { borderRadius: 12, padding: 24, maxWidth: 500, width: '100%' },
   modalTitle: { fontSize: 20, fontWeight: '700', marginBottom: 8 },
   modalDesc: { fontSize: 14, marginBottom: 20 },
   modalActions: { flexDirection: 'row', gap: 10 },

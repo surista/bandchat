@@ -133,6 +133,9 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 34,
     paddingHorizontal: 16,
+    maxWidth: 500,
+    alignSelf: 'center',
+    width: '100%',
   },
   quickReactionRow: {
     flexDirection: 'row',

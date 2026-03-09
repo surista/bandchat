@@ -19,7 +19,10 @@
         "ascAppId": "6759870253",
         "appleTeamId": "N7TWCNBX6C"
       },
-      "android": {}
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "internal"
+      }
     }
   }
 }

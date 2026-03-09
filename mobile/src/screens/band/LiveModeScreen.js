@@ -5,17 +5,16 @@ import {
   FlatList,
   TouchableOpacity,
   ScrollView,
-  Dimensions,
   StatusBar,
   StyleSheet,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { useKeepAwake } from 'expo-keep-awake';
 import { formatDuration } from '../../utils/formatDuration';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 export default function LiveModeScreen({ navigation, route }) {
+  const { width: screenWidth } = useWindowDimensions();
   const { setlistItems, setlistName } = route.params;
   useKeepAwake();
 
@@ -95,7 +94,7 @@ export default function LiveModeScreen({ navigation, route }) {
   const renderPage = useCallback(({ item }) => {
     if (item.type === 'SET_BREAK') {
       return (
-        <View style={[styles.page, { width: SCREEN_WIDTH }]}>
+        <View style={[styles.page, { width: screenWidth }]}>
           <View style={styles.breakContainer}>
             <Text style={styles.breakIcon}>&#9835;</Text>
             <Text style={styles.breakLabel}>{item.label || 'Break'}</Text>
@@ -109,7 +108,7 @@ export default function LiveModeScreen({ navigation, route }) {
 
     if (item.type === 'MC') {
       return (
-        <View style={[styles.page, { width: SCREEN_WIDTH }]}>
+        <View style={[styles.page, { width: screenWidth }]}>
           <View style={styles.breakContainer}>
             <Text style={styles.mcIcon}>{'\uD83C\uDFA4'}</Text>
             <Text style={styles.breakLabel}>{item.label || 'MC'}</Text>
@@ -124,7 +123,7 @@ export default function LiveModeScreen({ navigation, route }) {
     // Song page
     const song = item.song;
     return (
-      <View style={[styles.page, { width: SCREEN_WIDTH }]}>
+      <View style={[styles.page, { width: screenWidth }]}>
         <View style={styles.songHeader}>
           <Text style={styles.songTitle} numberOfLines={2}>{song?.title || 'Unknown'}</Text>
           {song?.artist ? (
@@ -209,8 +208,8 @@ export default function LiveModeScreen({ navigation, route }) {
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
         getItemLayout={(_, index) => ({
-          length: SCREEN_WIDTH,
-          offset: SCREEN_WIDTH * index,
+          length: screenWidth,
+          offset: screenWidth * index,
           index,
         })}
       />

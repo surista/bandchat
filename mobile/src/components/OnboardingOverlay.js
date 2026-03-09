@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
   Animated,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
@@ -34,6 +34,8 @@ const STEPS = [
 
 export default function OnboardingOverlay({ onComplete }) {
   const { colors } = useTheme();
+  const { width: screenWidth } = useWindowDimensions();
+  const cardWidth = Math.min(screenWidth - 48, 360);
   const [currentStep, setCurrentStep] = useState(0);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -80,7 +82,7 @@ export default function OnboardingOverlay({ onComplete }) {
       <Animated.View
         style={[
           styles.card,
-          { backgroundColor: colors.modalBg || colors.bgSecondary, opacity: fadeAnim },
+          { backgroundColor: colors.modalBg || colors.bgSecondary, opacity: fadeAnim, width: cardWidth },
         ]}
       >
         <Text style={styles.icon}>{step.icon}</Text>
@@ -138,8 +140,6 @@ export default function OnboardingOverlay({ onComplete }) {
   );
 }
 
-const { width } = Dimensions.get('window');
-
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -150,7 +150,6 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   card: {
-    width: Math.min(width - 48, 360),
     borderRadius: 16,
     padding: 28,
     alignItems: 'center',

@@ -27,7 +27,7 @@ function ActionSheet({ visible, title, actions, onClose }) {
 export default memo(ActionSheet);
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  sheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 34, paddingTop: 8 },
+  sheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: 34, paddingTop: 8, maxWidth: 500, alignSelf: 'center', width: '100%' },
   handle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
   title: { fontSize: 15, fontWeight: '600', paddingHorizontal: 20, paddingBottom: 12, textAlign: 'center' },
   actionItem: { paddingVertical: 14, paddingHorizontal: 20 },

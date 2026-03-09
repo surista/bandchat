@@ -29,6 +29,7 @@ import MessageActionSheet from '../../components/MessageActionSheet';
 import EmojiPicker from '../../components/EmojiPicker';
 import ImageViewer from '../../components/ImageViewer';
 import { format, isSameDay } from 'date-fns';
+import { useLayout } from '../../hooks/useLayout';
 
 const GROUP_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -39,6 +40,7 @@ export default function ChannelScreen({ navigation, route }) {
   const { socket, joinChannel, leaveChannel, startTyping, stopTyping } = useSocket();
   const toast = useToast();
   const headerHeight = useHeaderHeight();
+  const { isTablet, contentMaxWidth } = useLayout();
 
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -747,10 +749,11 @@ export default function ChannelScreen({ navigation, route }) {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
+      style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
+      <View style={[styles.chatContainer, isTablet && { maxWidth: contentMaxWidth }]}>
       <FlatList
         ref={flatListRef}
         data={invertedMessages}
@@ -793,7 +796,9 @@ export default function ChannelScreen({ navigation, route }) {
         editingMessage={editingMessage}
         onCancelEdit={handleCancelEdit}
         onSendEdit={handleSendEdit}
+        members={workspaceMembers}
       />
+      </View>
 
       {/* Action Sheet */}
       <MessageActionSheet
@@ -876,6 +881,13 @@ export default function ChannelScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  tabletContainer: {
+    alignItems: 'center',
+  },
+  chatContainer: {
+    flex: 1,
+    width: '100%',
   },
   loadingContainer: {
     flex: 1,
@@ -962,6 +974,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '100%',
+    maxWidth: 500,
     borderRadius: 12,
     padding: 20,
   },

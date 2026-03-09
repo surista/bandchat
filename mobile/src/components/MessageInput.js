@@ -1,18 +1,22 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, Text, Image, StyleSheet, Platform, Animated, PanResponder, Alert } from 'react-native';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { View, TextInput, TouchableOpacity, Text, Image, StyleSheet, Platform, Animated, PanResponder, Alert, FlatList } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
 import { useTheme } from '../context/ThemeContext';
 
 const MAX_HEIGHT = 120;
 
-export default function MessageInput({ onSend, onSendVoice, onTyping, editingMessage, onCancelEdit, onSendEdit }) {
+export default function MessageInput({ onSend, onSendVoice, onTyping, editingMessage, onCancelEdit, onSendEdit, members = [] }) {
   const { colors } = useTheme();
   const [text, setText] = useState('');
   const [inputHeight, setInputHeight] = useState(40);
   const [attachment, setAttachment] = useState(null);
+  const [mentionFilter, setMentionFilter] = useState('');
+  const [mentionStart, setMentionStart] = useState(-1);
+  const [showMentions, setShowMentions] = useState(false);
   const typingTimeoutRef = useRef(null);
   const inputRef = useRef(null);
+  const selectionRef = useRef({ start: 0, end: 0 });
 
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -87,8 +91,31 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
     }
   }, [editingMessage]);
 
+  const filteredMembers = useMemo(() => {
+    if (!showMentions || !mentionFilter) return members.map(m => m.user || m).slice(0, 8);
+    const lower = mentionFilter.toLowerCase();
+    return members
+      .map(m => m.user || m)
+      .filter(u => u.displayName?.toLowerCase().includes(lower))
+      .slice(0, 8);
+  }, [members, showMentions, mentionFilter]);
+
   const handleChangeText = useCallback((value) => {
     setText(value);
+
+    // Detect @mention trigger
+    const cursorPos = selectionRef.current?.start ?? value.length;
+    const textBeforeCursor = value.slice(0, cursorPos);
+    const mentionMatch = textBeforeCursor.match(/(^|\s)@(\w*)$/);
+    if (mentionMatch) {
+      setShowMentions(true);
+      setMentionStart(textBeforeCursor.lastIndexOf('@'));
+      setMentionFilter(mentionMatch[2]);
+    } else {
+      setShowMentions(false);
+      setMentionStart(-1);
+      setMentionFilter('');
+    }
 
     if (onTyping && !editingMessage) {
       onTyping(true);
@@ -98,6 +125,21 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
       }, 2000);
     }
   }, [onTyping, editingMessage]);
+
+  const insertMention = useCallback((displayName) => {
+    const before = text.slice(0, mentionStart);
+    const after = text.slice(selectionRef.current?.start ?? text.length);
+    const newText = `${before}@${displayName} ${after}`;
+    setText(newText);
+    setShowMentions(false);
+    setMentionStart(-1);
+    setMentionFilter('');
+    inputRef.current?.focus();
+  }, [text, mentionStart]);
+
+  const handleSelectionChange = useCallback((e) => {
+    selectionRef.current = e.nativeEvent.selection;
+  }, []);
 
   const handleSend = useCallback(() => {
     const trimmed = text.trim();
@@ -347,6 +389,34 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
         </View>
       )}
 
+      {/* Mention autocomplete dropdown */}
+      {showMentions && filteredMembers.length > 0 && !isRecording && (
+        <View style={[styles.mentionList, { backgroundColor: colors.bgTertiary, borderBottomColor: colors.border }]}>
+          <FlatList
+            data={filteredMembers}
+            keyExtractor={(item) => item.id}
+            keyboardShouldPersistTaps="always"
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[styles.mentionItem, { borderBottomColor: colors.border }]}
+                onPress={() => insertMention(item.displayName)}
+                accessibilityRole="button"
+                accessibilityLabel={`Mention ${item.displayName}`}
+              >
+                {item.avatarUrl ? (
+                  <Image source={{ uri: item.avatarUrl }} style={styles.mentionAvatar} />
+                ) : (
+                  <View style={[styles.mentionAvatarFallback, { backgroundColor: colors.primary }]}>
+                    <Text style={styles.mentionAvatarText}>{(item.displayName || '?')[0].toUpperCase()}</Text>
+                  </View>
+                )}
+                <Text style={[styles.mentionName, { color: colors.textPrimary }]}>{item.displayName}</Text>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      )}
+
       {!isRecording && (
         <View style={styles.inputRow}>
           {/* Attachment button */}
@@ -370,6 +440,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
             placeholderTextColor={colors.textSecondary}
             value={text}
             onChangeText={handleChangeText}
+            onSelectionChange={handleSelectionChange}
             onContentSizeChange={handleContentSizeChange}
             multiline
             textAlignVertical="center"
@@ -560,5 +631,39 @@ const styles = StyleSheet.create({
   },
   micIcon: {
     fontSize: 20,
+  },
+  mentionList: {
+    maxHeight: 200,
+    borderBottomWidth: 1,
+  },
+  mentionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  mentionAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    marginRight: 10,
+  },
+  mentionAvatarFallback: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    marginRight: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mentionAvatarText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  mentionName: {
+    fontSize: 15,
+    fontWeight: '500',
   },
 });
