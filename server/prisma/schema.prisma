@@ -61,6 +61,7 @@ model User {
   practiceSessions        PracticeSession[]
   uploadedGigMedia        GigMedia[]
   savedMessages           SavedMessage[]
+  expoPushTokens          ExpoPushToken[]
 }
 
 model RefreshToken {
@@ -260,6 +261,18 @@ model PushSubscription {
   endpoint  String   @unique
   p256dh    String
   auth      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ExpoPushToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  platform  String   // "ios" or "android"
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

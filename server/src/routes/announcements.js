@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
+import { sendPushToUser } from './push.js';
 
 const router = express.Router();
 
@@ -93,6 +94,21 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (re
     // Broadcast to workspace
     const io = req.app.get('io');
     io.to(`workspace:${req.params.workspaceId}`).emit('announcement:created', announcement);
+
+    // Send push notification to workspace members
+    const wsMembers = await prisma.workspaceMember.findMany({
+      where: { workspaceId: req.params.workspaceId, userId: { not: req.user.id } },
+      select: { userId: true }
+    });
+    wsMembers.forEach(m => {
+      sendPushToUser(m.userId, {
+        title: 'Announcement',
+        body: announcement.title.length > 100 ? announcement.title.substring(0, 100) + '...' : announcement.title,
+        tag: `announcement-${announcement.id}`,
+        url: `/workspace/${req.params.workspaceId}`,
+        workspaceId: req.params.workspaceId
+      }, { category: 'announcement', workspaceId: req.params.workspaceId });
+    });
 
     res.status(201).json(announcement);
   } catch (error) {

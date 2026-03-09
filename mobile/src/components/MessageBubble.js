@@ -27,7 +27,7 @@ function formatDurationMmSs(ms) {
 
 const SWIPE_COOLDOWN = 500; // ms between swipe actions
 
-const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress, onSwipeReply, onSwipeReact, members }, ref) {
+const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress, onSwipeReply, onSwipeReact, onAvatarPress, members }, ref) {
   const { colors, density } = useTheme();
   const swipeableRef = useRef(null);
   const lastSwipeTime = useRef(0);
@@ -162,7 +162,14 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
       accessibilityRole="button"
       accessibilityLabel={`${displayName}: ${message.content || 'attachment'}`}
     >
-      <View style={[styles.avatar, { backgroundColor: avatarColor, width: density.avatarSize, height: density.avatarSize }]}>
+      <TouchableOpacity
+        style={[styles.avatar, { backgroundColor: avatarColor, width: density.avatarSize, height: density.avatarSize }]}
+        onPress={() => author.id && onAvatarPress?.(author)}
+        activeOpacity={author.id && onAvatarPress ? 0.6 : 1}
+        disabled={!author.id || !onAvatarPress}
+        accessibilityRole="button"
+        accessibilityLabel={`View ${displayName} profile`}
+      >
         {resolvedAvatarUrl && !avatarError ? (
           <Image
             source={{ uri: resolvedAvatarUrl }}
@@ -173,7 +180,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
         ) : (
           <Text style={[styles.avatarText, { fontSize: density.avatarSize * 0.42 }]}>{initial}</Text>
         )}
-      </View>
+      </TouchableOpacity>
       <View style={styles.contentContainer}>
         <View style={styles.header}>
           <Text style={[styles.authorName, { color: colors.textPrimary, fontSize: density.authorFontSize }]}>

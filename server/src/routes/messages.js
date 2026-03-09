@@ -352,10 +352,31 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
       io.to(`channel:${req.params.channelId}`).emit('message:new', message);
     }
 
+    // Send push notification for DMs (to other participants)
+    const channel = req.channel;
+    if (channel.isDirect) {
+      const dmMembers = await prisma.channelMember.findMany({
+        where: { channelId: req.params.channelId, userId: { not: req.user.id } },
+        select: { userId: true }
+      });
+      const body = content
+        ? (content.length > 100 ? content.substring(0, 100) + '...' : content)
+        : 'Sent an attachment';
+      dmMembers.forEach(m => {
+        sendPushToUser(m.userId, {
+          title: req.user.displayName,
+          body,
+          tag: `dm-${req.params.channelId}`,
+          url: `/workspace/${channel.workspaceId}?channel=${req.params.channelId}`,
+          channelId: req.params.channelId,
+          workspaceId: channel.workspaceId
+        }, { category: 'dm', workspaceId: channel.workspaceId });
+      });
+    }
+
     // Extract mentions and notify
     // Check for @mentions by matching against workspace member display names
     if (content && content.includes('@')) {
-      const channel = req.channel;
       const workspaceMembers = await prisma.workspaceMember.findMany({
         where: { workspaceId: channel.workspaceId },
         include: {

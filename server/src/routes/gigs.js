@@ -8,6 +8,7 @@ import { safeDecrementStorage } from './uploads.js';
 import { parseICS, parseICSMultiple } from '../lib/icsParser.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 import { getPlanLimits } from '../lib/planLimits.js';
+import { sendPushToUser } from './push.js';
 
 const router = express.Router();
 
@@ -677,6 +678,23 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
     const io = req.app.get('io');
     io.to(`workspace:${req.params.workspaceId}`).emit('gig:created', gig);
 
+    // Send push notification to workspace members
+    const wsMembers = await prisma.workspaceMember.findMany({
+      where: { workspaceId: req.params.workspaceId, userId: { not: req.user.id } },
+      select: { userId: true }
+    });
+    const gigDateStr = gig.date ? new Date(gig.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    const pushBody = [gig.title, gigDateStr, gig.venue].filter(Boolean).join(' · ');
+    wsMembers.forEach(m => {
+      sendPushToUser(m.userId, {
+        title: 'New Gig',
+        body: pushBody,
+        tag: `gig-${gig.id}`,
+        url: `/workspace/${req.params.workspaceId}`,
+        workspaceId: req.params.workspaceId
+      }, { category: 'gig', workspaceId: req.params.workspaceId });
+    });
+
     res.status(201).json(gig);
   } catch (error) {
     console.error('Create gig error:', error);
@@ -902,6 +920,23 @@ router.put('/:gigId', authenticate, async (req, res) => {
 
     const io = req.app.get('io');
     io.to(`workspace:${gig.workspaceId}`).emit('gig:updated', gig);
+
+    // Send push notification for gig update
+    const wsMembers = await prisma.workspaceMember.findMany({
+      where: { workspaceId: gig.workspaceId, userId: { not: req.user.id } },
+      select: { userId: true }
+    });
+    const gigDateStr = gig.date ? new Date(gig.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+    const pushBody = [gig.title, gigDateStr, gig.venue].filter(Boolean).join(' · ');
+    wsMembers.forEach(m => {
+      sendPushToUser(m.userId, {
+        title: 'Gig Updated',
+        body: pushBody,
+        tag: `gig-${gig.id}`,
+        url: `/workspace/${gig.workspaceId}`,
+        workspaceId: gig.workspaceId
+      }, { category: 'gig', workspaceId: gig.workspaceId });
+    });
 
     res.json(gig);
   } catch (error) {

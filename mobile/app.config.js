@@ -3,7 +3,7 @@ export default {
     name: 'BandChat',
     slug: 'bandchat',
     scheme: 'bandchat',
-    version: '1.04.51',
+    version: '1.04.52',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'dark',
@@ -16,7 +16,7 @@ export default {
     ios: {
       supportsTablet: false,
       bundleIdentifier: 'com.bandchat.mobile',
-      buildNumber: '10451',
+      buildNumber: '10452',
       infoPlist: {
         NSCameraUsageDescription: 'BandChat needs camera access to take photos for your profile and messages.',
         NSPhotoLibraryUsageDescription: 'BandChat needs photo library access to share images in messages and set your profile picture.',
@@ -24,13 +24,14 @@ export default {
         NSMicrophoneUsageDescription: 'BandChat needs microphone access to record audio for band recordings.',
         NSCalendarsUsageDescription: 'BandChat can add gigs and rehearsals to your device calendar.',
         NSCalendarsFullAccessUsageDescription: 'BandChat can add gigs and rehearsals to your device calendar.',
+        NSFaceIDUsageDescription: 'BandChat uses Face ID to quickly unlock the app.',
         ITSAppUsesNonExemptEncryption: false,
         UIBackgroundModes: ['remote-notification'],
       },
     },
     android: {
       package: 'com.bandchat.mobile',
-      versionCode: 10451,
+      versionCode: 10452,
       adaptiveIcon: {
         backgroundColor: '#1f2937',
         foregroundImage: './assets/android-icon-foreground.png',

@@ -95,6 +95,19 @@ class NotificationService {
     });
   }
 
+  async unregister() {
+    if (!this.expoPushToken) return;
+    try {
+      await api.request('/push/expo-token', {
+        method: 'DELETE',
+        body: JSON.stringify({ token: this.expoPushToken }),
+      });
+    } catch {
+      // Best-effort cleanup
+    }
+    this.expoPushToken = null;
+  }
+
   cleanup() {
     if (this.notificationListener) {
       this.notificationListener.remove();

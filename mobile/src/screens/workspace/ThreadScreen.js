@@ -10,13 +10,14 @@ import {
   StyleSheet,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import * as Haptics from 'expo-haptics';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
+import { useToast } from '../../context/ToastContext';
+import { mediumImpact, successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import MessageBubble from '../../components/MessageBubble';
 import MessageInput from '../../components/MessageInput';
@@ -24,11 +25,12 @@ import MessageActionSheet from '../../components/MessageActionSheet';
 import EmojiPicker from '../../components/EmojiPicker';
 import ImageViewer from '../../components/ImageViewer';
 
-export default function ThreadScreen({ route }) {
+export default function ThreadScreen({ navigation, route }) {
   const { parentMessage, channelId, workspaceId } = route.params;
   const { user } = useAuth();
   const { colors } = useTheme();
   const { socket, startTyping, stopTyping } = useSocket();
+  const toast = useToast();
   const headerHeight = useHeaderHeight();
 
   const [parent, setParent] = useState(parentMessage);
@@ -177,7 +179,7 @@ export default function ThreadScreen({ route }) {
 
   // Long-press → action sheet
   const handleLongPress = useCallback((message) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    mediumImpact();
     setActionMessage(message);
     setShowActions(true);
   }, []);
@@ -194,6 +196,8 @@ export default function ThreadScreen({ route }) {
       case 'copy':
         if (actionMessage.content) {
           Clipboard.setStringAsync(actionMessage.content);
+          successNotification();
+          toast.success('Copied to clipboard');
         }
         break;
       case 'edit':
@@ -286,6 +290,17 @@ export default function ThreadScreen({ route }) {
     }
   }, [parent, replies, user?.id]);
 
+  // Avatar press → profile
+  const handleAvatarPress = useCallback((author) => {
+    if (author?.id) {
+      navigation.navigate('MemberProfile', {
+        workspaceId,
+        userId: author.id,
+        displayName: author.displayName,
+      });
+    }
+  }, [navigation, workspaceId]);
+
   // Image viewer
   const handleImagePress = useCallback((url) => {
     setViewingImage(url);
@@ -318,10 +333,11 @@ export default function ThreadScreen({ route }) {
         onLongPress={handleLongPress}
         onImagePress={handleImagePress}
         onReactionPress={handleReactionPress}
+        onAvatarPress={handleAvatarPress}
         members={workspaceMembers}
       />
     );
-  }, [colors, handleLongPress, handleImagePress, handleReactionPress, workspaceMembers]);
+  }, [colors, handleLongPress, handleImagePress, handleReactionPress, handleAvatarPress, workspaceMembers]);
 
   if (loading) {
     return (

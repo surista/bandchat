@@ -1,7 +1,10 @@
 import express from 'express';
 import webpush from 'web-push';
+import { Expo } from 'expo-server-sdk';
 import prisma from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
+
+const expo = new Expo();
 
 const router = express.Router();
 
@@ -70,6 +73,54 @@ router.post('/unsubscribe', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Push unsubscribe error:', error);
     res.status(500).json({ error: 'Failed to unsubscribe' });
+  }
+});
+
+// Register Expo push token (mobile)
+router.post('/expo-token', authenticate, async (req, res) => {
+  try {
+    const { token, platform } = req.body;
+
+    if (!token || !Expo.isExpoPushToken(token)) {
+      return res.status(400).json({ error: 'Invalid Expo push token' });
+    }
+    if (!platform || !['ios', 'android'].includes(platform)) {
+      return res.status(400).json({ error: 'Invalid platform' });
+    }
+
+    await prisma.expoPushToken.upsert({
+      where: { token },
+      update: { userId: req.user.id, platform },
+      create: { userId: req.user.id, token, platform }
+    });
+
+    res.json({ message: 'Expo push token registered' });
+  } catch (error) {
+    console.error('Expo token register error:', error);
+    res.status(500).json({ error: 'Failed to register token' });
+  }
+});
+
+// Unregister Expo push token (on logout)
+router.delete('/expo-token', authenticate, async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (token) {
+      await prisma.expoPushToken.deleteMany({
+        where: { userId: req.user.id, token }
+      });
+    } else {
+      // Delete all tokens for this user (full logout)
+      await prisma.expoPushToken.deleteMany({
+        where: { userId: req.user.id }
+      });
+    }
+
+    res.json({ message: 'Expo push token removed' });
+  } catch (error) {
+    console.error('Expo token unregister error:', error);
+    res.status(500).json({ error: 'Failed to unregister token' });
   }
 });
 
@@ -265,11 +316,12 @@ export const sendPushToUser = async (userId, payload, options = {}) => {
       }
     }
 
+    // Send web push notifications
     const subscriptions = await prisma.pushSubscription.findMany({
       where: { userId }
     });
 
-    const notifications = subscriptions.map(async (sub) => {
+    const webNotifications = subscriptions.map(async (sub) => {
       try {
         await webpush.sendNotification(
           {
@@ -291,7 +343,49 @@ export const sendPushToUser = async (userId, payload, options = {}) => {
       }
     });
 
-    await Promise.all(notifications);
+    // Send Expo push notifications (mobile)
+    const expoTokens = await prisma.expoPushToken.findMany({
+      where: { userId }
+    });
+
+    const expoMessages = expoTokens
+      .filter(t => Expo.isExpoPushToken(t.token))
+      .map(t => ({
+        to: t.token,
+        sound: 'default',
+        title: payload.title,
+        body: payload.body,
+        data: {
+          url: payload.url,
+          channelId: payload.channelId,
+          workspaceId: payload.workspaceId,
+          tag: payload.tag,
+        },
+      }));
+
+    const expoNotifications = (async () => {
+      if (expoMessages.length === 0) return;
+      const chunks = expo.chunkPushNotifications(expoMessages);
+      for (const chunk of chunks) {
+        try {
+          const receipts = await expo.sendPushNotificationsAsync(chunk);
+          // Clean up invalid tokens
+          for (let i = 0; i < receipts.length; i++) {
+            if (receipts[i].status === 'error' &&
+                receipts[i].details?.error === 'DeviceNotRegistered') {
+              const badToken = chunk[i].to;
+              await prisma.expoPushToken.deleteMany({
+                where: { token: badToken }
+              }).catch(err => console.warn('Failed to remove invalid Expo token:', err.message));
+            }
+          }
+        } catch (err) {
+          console.error('Expo push send error:', err);
+        }
+      }
+    })();
+
+    await Promise.all([...webNotifications, expoNotifications]);
   } catch (error) {
     console.error('Send push error:', error);
   }

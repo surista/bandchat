@@ -1,10 +1,17 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Platform } from 'react-native';
+import { Platform, AppState, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as LocalAuthentication from 'expo-local-authentication';
 import Constants from 'expo-constants';
 import Purchases from 'react-native-purchases';
 import api from '../services/api';
+import { notificationService } from '../services/notifications';
 
 const AuthContext = createContext(null);
+
+const BIOMETRIC_ENABLED_KEY = 'biometricEnabled';
+const BIOMETRIC_PROMPT_SHOWN_KEY = 'biometricPromptShown';
+const BACKGROUND_LOCK_DELAY_MS = 30000;
 
 const configureRevenueCat = async (userId) => {
   try {
@@ -18,12 +25,27 @@ const configureRevenueCat = async (userId) => {
   }
 };
 
+async function checkBiometricAvailable() {
+  try {
+    const hasHardware = await LocalAuthentication.hasHardwareAsync();
+    if (!hasHardware) return false;
+    const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+    return isEnrolled;
+  } catch {
+    return false;
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isOffline, setIsOffline] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  const [biometricEnabled, setBiometricEnabledState] = useState(false);
   const initAttempted = useRef(false);
+  const backgroundTimestamp = useRef(null);
+  const appState = useRef(AppState.currentState);
 
   useEffect(() => {
     // Prevent double initialization
@@ -34,7 +56,21 @@ export function AuthProvider({ children }) {
       setError(null);
       try {
         await api.loadTokens();
+
+        // Load biometric preference
+        const bioEnabled = await AsyncStorage.getItem(BIOMETRIC_ENABLED_KEY);
+        const isBioEnabled = bioEnabled === 'true';
+        setBiometricEnabledState(isBioEnabled);
+
         if (api.accessToken) {
+          // If biometric is enabled, lock the app on cold start
+          if (isBioEnabled) {
+            const available = await checkBiometricAvailable();
+            if (available) {
+              setIsLocked(true);
+            }
+          }
+
           try {
             const userData = await api.getMe();
             setUser(userData);
@@ -45,10 +81,10 @@ export function AuthProvider({ children }) {
             if (fetchError.type === 'NETWORK' || fetchError.type === 'TIMEOUT') {
               // Keep tokens but mark as offline - user can retry later
               setIsOffline(true);
-              // App started offline, keeping stored tokens
             } else {
               // Auth error (token invalid) - clear tokens
               await api.clearTokens();
+              setIsLocked(false);
               setError(fetchError.message);
             }
           }
@@ -64,11 +100,37 @@ export function AuthProvider({ children }) {
     api.onSessionExpired = () => {
       setUser(null);
       setError(null);
+      setIsLocked(false);
       api.clearTokens();
     };
 
     initAuth();
   }, []);
+
+  // AppState listener for background → foreground lock
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async (nextAppState) => {
+      if (appState.current.match(/active/) && nextAppState.match(/inactive|background/)) {
+        // Going to background — record timestamp
+        backgroundTimestamp.current = Date.now();
+      } else if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        // Coming to foreground — check if we should lock
+        if (backgroundTimestamp.current && biometricEnabled) {
+          const elapsed = Date.now() - backgroundTimestamp.current;
+          if (elapsed > BACKGROUND_LOCK_DELAY_MS) {
+            const available = await checkBiometricAvailable();
+            if (available) {
+              setIsLocked(true);
+            }
+          }
+        }
+        backgroundTimestamp.current = null;
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => subscription.remove();
+  }, [biometricEnabled]);
 
   // Retry auth when coming back online
   const retryAuth = useCallback(async () => {
@@ -99,26 +161,81 @@ export function AuthProvider({ children }) {
     return data;
   }, []);
 
+  const promptBiometricSetup = useCallback(async () => {
+    try {
+      const alreadyAsked = await AsyncStorage.getItem(BIOMETRIC_PROMPT_SHOWN_KEY);
+      if (alreadyAsked === 'true') return;
+
+      const available = await checkBiometricAvailable();
+      if (!available) return;
+
+      // Determine label
+      const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
+      const hasFaceId = types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION);
+      const label = hasFaceId ? 'Face ID' : 'Touch ID';
+
+      await AsyncStorage.setItem(BIOMETRIC_PROMPT_SHOWN_KEY, 'true');
+
+      Alert.alert(
+        `Enable ${label}?`,
+        `Use ${label} to quickly unlock BandChat when you return.`,
+        [
+          { text: 'Not Now', style: 'cancel' },
+          {
+            text: 'Enable',
+            onPress: async () => {
+              // Verify biometric works before enabling
+              const result = await LocalAuthentication.authenticateAsync({
+                promptMessage: `Confirm ${label}`,
+                disableDeviceFallback: true,
+                cancelLabel: 'Cancel',
+              });
+              if (result.success) {
+                await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, 'true');
+                setBiometricEnabledState(true);
+              }
+            },
+          },
+        ]
+      );
+    } catch {
+      // Silently fail — not critical
+    }
+  }, []);
+
   const login = useCallback(async (email, password) => {
     const data = await api.login(email, password);
     setUser(data.user);
     await configureRevenueCat(data.user.id);
+    // Prompt biometric setup after first login
+    setTimeout(() => promptBiometricSetup(), 1000);
     return data;
-  }, []);
+  }, [promptBiometricSetup]);
 
   const logout = useCallback(async () => {
     try {
+      await notificationService.unregister();
       await api.logout();
       await Purchases.logOut();
     } catch (err) {
       // silently fail
     } finally {
       setUser(null);
+      setIsLocked(false);
     }
   }, []);
 
   const updateUser = useCallback((userData) => {
     setUser(prev => ({ ...prev, ...userData }));
+  }, []);
+
+  const unlockApp = useCallback(() => {
+    setIsLocked(false);
+  }, []);
+
+  const setBiometricEnabled = useCallback(async (enabled) => {
+    await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, enabled ? 'true' : 'false');
+    setBiometricEnabledState(enabled);
   }, []);
 
   const clearError = useCallback(() => setError(null), []);
@@ -128,14 +245,18 @@ export function AuthProvider({ children }) {
     loading,
     error,
     isOffline,
+    isLocked,
+    biometricEnabled,
     signup,
     login,
     logout,
     updateUser,
     retryAuth,
     clearError,
+    unlockApp,
+    setBiometricEnabled,
     isAuthenticated: !!user,
-  }), [user, loading, error, isOffline, signup, login, logout, updateUser, retryAuth, clearError]);
+  }), [user, loading, error, isOffline, isLocked, biometricEnabled, signup, login, logout, updateUser, retryAuth, clearError, unlockApp, setBiometricEnabled]);
 
   return (
     <AuthContext.Provider value={value}>

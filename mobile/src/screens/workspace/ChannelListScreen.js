@@ -77,6 +77,7 @@ export default function ChannelListScreen({ navigation, route }) {
   const [collapsedBand, setCollapsedBand] = useState(false);
   const [collapsedBandCats, setCollapsedBandCats] = useState({});
   const [collapsedDMs, setCollapsedDMs] = useState(false);
+  const [collapsedQuickLinks, setCollapsedQuickLinks] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [nextGig, setNextGig] = useState(null);
 
@@ -92,16 +93,18 @@ export default function ChannelListScreen({ navigation, route }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const [savedGroups, savedBand, savedBandCats, savedDMs] = await Promise.all([
+        const [savedGroups, savedBand, savedBandCats, savedDMs, savedQuickLinks] = await Promise.all([
           AsyncStorage.getItem(`collapsedGroups:${workspaceId}`),
           AsyncStorage.getItem(`collapsedBand:${workspaceId}`),
           AsyncStorage.getItem(`collapsedBandCats:${workspaceId}`),
           AsyncStorage.getItem(`collapsedDMs:${workspaceId}`),
+          AsyncStorage.getItem(`collapsedQuickLinks:${workspaceId}`),
         ]);
         if (savedGroups) setCollapsedGroups(JSON.parse(savedGroups));
         if (savedBand) setCollapsedBand(JSON.parse(savedBand));
         if (savedBandCats) setCollapsedBandCats(JSON.parse(savedBandCats));
         if (savedDMs) setCollapsedDMs(JSON.parse(savedDMs));
+        if (savedQuickLinks) setCollapsedQuickLinks(JSON.parse(savedQuickLinks));
       } catch {}
     };
     load();
@@ -120,6 +123,9 @@ export default function ChannelListScreen({ navigation, route }) {
   useEffect(() => {
     AsyncStorage.setItem(`collapsedDMs:${workspaceId}`, JSON.stringify(collapsedDMs)).catch(() => {});
   }, [collapsedDMs, workspaceId]);
+  useEffect(() => {
+    AsyncStorage.setItem(`collapsedQuickLinks:${workspaceId}`, JSON.stringify(collapsedQuickLinks)).catch(() => {});
+  }, [collapsedQuickLinks, workspaceId]);
 
   // Create channel modal
   const [showCreateChannel, setShowCreateChannel] = useState(false);
@@ -209,7 +215,10 @@ export default function ChannelListScreen({ navigation, route }) {
   useEffect(() => {
     loadData();
     joinWorkspace(workspaceId);
-  }, [loadData, joinWorkspace, workspaceId]);
+    // Persist last workspace for quick actions
+    AsyncStorage.setItem('lastWorkspaceId', workspaceId);
+    if (workspaceName) AsyncStorage.setItem('lastWorkspaceName', workspaceName);
+  }, [loadData, joinWorkspace, workspaceId, workspaceName]);
 
   // Refresh data when app returns to foreground
   useEffect(() => {
@@ -715,61 +724,77 @@ export default function ChannelListScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.channelListBg }]} edges={['bottom']}>
-      {/* Sticky: Next upcoming event banner + Calendar shortcut */}
+      {/* Collapsible: Next upcoming event banner + Calendar + Saved Messages */}
       <View style={[styles.stickyHeader, { backgroundColor: colors.channelListBg, borderBottomColor: colors.border }]}>
-        {nextGig && (
-          <TouchableOpacity
-            style={[
-              styles.nextGigBanner,
-              {
-                backgroundColor: nextGig.type === 'GIG' ? 'rgba(34,197,94,0.15)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.15)' : 'rgba(168,85,247,0.15)',
-                borderColor: nextGig.type === 'GIG' ? 'rgba(34,197,94,0.3)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.3)' : 'rgba(168,85,247,0.3)',
-              },
-            ]}
-            onPress={() => navigation.navigate('GigDetail', { workspaceId, gigId: nextGig.id })}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel={`Next event: ${nextGig.title}`}
-          >
-            <View style={styles.nextGigRow}>
-              <Text style={styles.nextGigIcon}>
-                {nextGig.type === 'GIG' ? '🎸' : nextGig.type === 'REHEARSAL' ? '🥁' : '📅'}
-              </Text>
-              <Text style={[styles.nextGigTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-                {nextGig.title}
-              </Text>
-            </View>
-            <View style={styles.nextGigRow}>
-              <Text style={[styles.nextGigMeta, { color: colors.textSecondary }]}>
-                {new Date(nextGig.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                {nextGig.startTime ? ` · ${nextGig.startTime}` : ''}
-                {nextGig.venue ? ` · ${nextGig.venue}` : ''}
-              </Text>
-            </View>
-          </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.quickLinksToggle}
+          onPress={() => setCollapsedQuickLinks(prev => !prev)}
+          activeOpacity={0.6}
+          accessibilityRole="button"
+          accessibilityLabel={`Quick links, ${collapsedQuickLinks ? 'collapsed' : 'expanded'}`}
+        >
+          <Text style={[styles.collapseIcon, { color: colors.channelListText }]}>
+            {collapsedQuickLinks ? '\u25B6' : '\u25BC'}
+          </Text>
+          <Text style={[styles.sectionTitle, { color: colors.channelListText }]}>Quick Links</Text>
+        </TouchableOpacity>
+        {!collapsedQuickLinks && (
+          <>
+            {nextGig && (
+              <TouchableOpacity
+                style={[
+                  styles.nextGigBanner,
+                  {
+                    backgroundColor: nextGig.type === 'GIG' ? 'rgba(34,197,94,0.15)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.15)' : 'rgba(168,85,247,0.15)',
+                    borderColor: nextGig.type === 'GIG' ? 'rgba(34,197,94,0.3)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.3)' : 'rgba(168,85,247,0.3)',
+                  },
+                ]}
+                onPress={() => navigation.navigate('GigDetail', { workspaceId, gigId: nextGig.id })}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Next event: ${nextGig.title}`}
+              >
+                <View style={styles.nextGigRow}>
+                  <Text style={styles.nextGigIcon}>
+                    {nextGig.type === 'GIG' ? '🎸' : nextGig.type === 'REHEARSAL' ? '🥁' : '📅'}
+                  </Text>
+                  <Text style={[styles.nextGigTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                    {nextGig.title}
+                  </Text>
+                </View>
+                <View style={styles.nextGigRow}>
+                  <Text style={[styles.nextGigMeta, { color: colors.textSecondary }]}>
+                    {new Date(nextGig.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                    {nextGig.startTime ? ` · ${nextGig.startTime}` : ''}
+                    {nextGig.venue ? ` · ${nextGig.venue}` : ''}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.calendarShortcut}
+              onPress={() => navigation.navigate('GigList', { workspaceId })}
+              activeOpacity={0.6}
+              accessibilityRole="button"
+              accessibilityLabel="Calendar"
+            >
+              <Text style={styles.calendarShortcutIcon}>📅</Text>
+              <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]}>Calendar</Text>
+              <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.calendarShortcut}
+              onPress={() => navigation.navigate('SavedMessages', { workspaceId })}
+              activeOpacity={0.6}
+              accessibilityRole="button"
+              accessibilityLabel="Saved Messages"
+            >
+              <Text style={styles.calendarShortcutIcon}>🔖</Text>
+              <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]}>Saved Messages</Text>
+              <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
+            </TouchableOpacity>
+          </>
         )}
-        <TouchableOpacity
-          style={styles.calendarShortcut}
-          onPress={() => navigation.navigate('GigList', { workspaceId })}
-          activeOpacity={0.6}
-          accessibilityRole="button"
-          accessibilityLabel="Calendar"
-        >
-          <Text style={styles.calendarShortcutIcon}>📅</Text>
-          <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]}>Calendar</Text>
-          <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.calendarShortcut}
-          onPress={() => navigation.navigate('SavedMessages', { workspaceId })}
-          activeOpacity={0.6}
-          accessibilityRole="button"
-          accessibilityLabel="Saved Messages"
-        >
-          <Text style={styles.calendarShortcutIcon}>🔖</Text>
-          <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]}>Saved Messages</Text>
-          <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
-        </TouchableOpacity>
       </View>
 
       <SectionList
@@ -1204,6 +1229,13 @@ const styles = StyleSheet.create({
   },
   stickyHeader: {
     borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingBottom: 4,
+  },
+  quickLinksToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 12,
     paddingBottom: 4,
   },
   nextGigBanner: {

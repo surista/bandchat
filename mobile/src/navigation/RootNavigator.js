@@ -3,9 +3,10 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import AuthStack from './AuthStack';
 import AppStack from './AppStack';
+import BiometricLockScreen from '../screens/auth/BiometricLockScreen';
 
 export default function RootNavigator() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, isLocked } = useAuth();
   const { colors } = useTheme();
 
   if (loading) {
@@ -16,7 +17,9 @@ export default function RootNavigator() {
     );
   }
 
-  return isAuthenticated ? <AppStack /> : <AuthStack />;
+  if (!isAuthenticated) return <AuthStack />;
+  if (isLocked) return <BiometricLockScreen />;
+  return <AppStack />;
 }
 
 const styles = StyleSheet.create({

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
+  Image,
   ScrollView,
   ActivityIndicator,
   RefreshControl,
@@ -9,10 +10,13 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
+import { successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 
 function StatBox({ label, value, colors }) {
@@ -46,6 +50,7 @@ export default function MemberProfileScreen({ route, navigation }) {
   const { workspaceId, userId, displayName } = route.params;
   const { user: currentUser } = useAuth();
   const { colors } = useTheme();
+  const toast = useToast();
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -163,16 +168,40 @@ export default function MemberProfileScreen({ route, navigation }) {
     >
       {/* Profile Header */}
       <View style={styles.profileHeader}>
-        <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-          <Text style={styles.avatarText}>
-            {(profileUser?.displayName || '?')[0].toUpperCase()}
-          </Text>
-        </View>
-        <Text style={[styles.name, { color: colors.textPrimary }]}>
+        {profileUser?.avatarUrl ? (
+          <Image
+            source={{ uri: profileUser.avatarUrl }}
+            style={styles.avatarImage}
+            accessibilityLabel={`${profileUser.displayName} avatar`}
+          />
+        ) : (
+          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+            <Text style={styles.avatarText}>
+              {(profileUser?.displayName || '?')[0].toUpperCase()}
+            </Text>
+          </View>
+        )}
+        <Text style={[styles.name, { color: colors.textPrimary }]} selectable>
           {profileUser?.displayName || 'Unknown'}
         </Text>
+        {profileUser?.email ? (
+          <TouchableOpacity
+            onPress={() => {
+              Clipboard.setStringAsync(profileUser.email);
+              successNotification();
+              toast.success('Email copied');
+            }}
+            activeOpacity={0.6}
+            accessibilityRole="button"
+            accessibilityLabel={`Copy email ${profileUser.email}`}
+          >
+            <Text style={[styles.email, { color: colors.textSecondary }]}>
+              {profileUser.email}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
         {profileUser?.bio ? (
-          <Text style={[styles.bio, { color: colors.textSecondary }]}>{profileUser.bio}</Text>
+          <Text style={[styles.bio, { color: colors.textSecondary }]} selectable>{profileUser.bio}</Text>
         ) : null}
         <View style={styles.badgeRow}>
           <View style={[styles.roleBadge, {
@@ -301,8 +330,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  avatarImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    marginBottom: 12,
+  },
   avatarText: { color: '#ffffff', fontSize: 28, fontWeight: '700' },
   name: { fontSize: 22, fontWeight: '700', marginBottom: 4 },
+  email: { fontSize: 14, textAlign: 'center', marginBottom: 6 },
   bio: { fontSize: 14, textAlign: 'center', marginBottom: 8, lineHeight: 20 },
   badgeRow: { flexDirection: 'row', gap: 8 },
   roleBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6 },

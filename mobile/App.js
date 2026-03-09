@@ -2,6 +2,7 @@ import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useEffect, useRef } from 'react';
 import { Linking } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -119,19 +120,25 @@ function AppContent() {
       },
     ]).catch(() => {});
 
-    const sub = QuickActions.addListener((action) => {
+    const sub = QuickActions.addListener(async (action) => {
       if (!navigationRef.current) return;
-      switch (action.id) {
-        case 'next_gig':
-        case 'calendar':
-          // Navigate to workspace first, then gig list
-          // User needs to be on a workspace; we'll use the last-used workspace
-          navigationRef.current.navigate('WorkspaceList');
-          break;
-        case 'new_message':
-          navigationRef.current.navigate('WorkspaceList');
-          break;
+
+      const wsId = await AsyncStorage.getItem('lastWorkspaceId');
+      const wsName = await AsyncStorage.getItem('lastWorkspaceName');
+
+      if (!wsId) {
+        navigationRef.current.navigate('WorkspaceList');
+        return;
       }
+
+      navigationRef.current.navigate('Workspace', { id: wsId, name: wsName || 'Workspace' });
+
+      if (action.id === 'next_gig' || action.id === 'calendar') {
+        setTimeout(() => {
+          navigationRef.current.navigate('GigList', { workspaceId: wsId });
+        }, 300);
+      }
+      // 'new_message' lands on workspace channel list
     });
 
     return () => sub.remove();

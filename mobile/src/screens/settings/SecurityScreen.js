@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,21 +9,73 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
+  Switch,
   Share,
   Platform,
 } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 
 export default function SecurityScreen() {
-  const { user, logout } = useAuth();
+  const { user, logout, biometricEnabled, setBiometricEnabled } = useAuth();
   const { colors } = useTheme();
 
   const isGoogleOnly = user?.authProvider === 'google';
+
+  // Biometric state
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricLabel, setBiometricLabel] = useState('Biometric Unlock');
+  const [togglingBiometric, setTogglingBiometric] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        if (!hasHardware) return;
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+        if (!isEnrolled) return;
+        setBiometricAvailable(true);
+        const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
+        const hasFaceId = types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION);
+        const hasFingerprint = types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT);
+        if (hasFaceId) {
+          setBiometricLabel('Face ID');
+        } else if (hasFingerprint) {
+          setBiometricLabel(Platform.OS === 'ios' ? 'Touch ID' : 'Fingerprint');
+        }
+      } catch {
+        // No biometrics available
+      }
+    })();
+  }, []);
+
+  const handleToggleBiometric = useCallback(async (value) => {
+    setTogglingBiometric(true);
+    try {
+      if (value) {
+        // Verify biometric works before enabling
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: `Confirm ${biometricLabel}`,
+          disableDeviceFallback: true,
+          cancelLabel: 'Cancel',
+        });
+        if (result.success) {
+          await setBiometricEnabled(true);
+        }
+      } else {
+        await setBiometricEnabled(false);
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to update biometric setting');
+    } finally {
+      setTogglingBiometric(false);
+    }
+  }, [biometricLabel, setBiometricEnabled]);
 
   // Change password
   const [currentPassword, setCurrentPassword] = useState('');
@@ -187,6 +239,33 @@ export default function SecurityScreen() {
             <Text style={[styles.infoValue, { color: colors.textPrimary }]}>{getProviderLabel()}</Text>
           </View>
         </View>
+
+        {/* Biometric Unlock */}
+        {biometricAvailable && (
+          <>
+            <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">BIOMETRIC UNLOCK</Text>
+            <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
+              <View style={styles.biometricRow}>
+                <View style={styles.biometricInfo}>
+                  <Text style={[styles.biometricTitle, { color: colors.textPrimary }]}>{biometricLabel}</Text>
+                  <Text style={[styles.biometricDesc, { color: colors.textSecondary }]}>
+                    Require {biometricLabel} to unlock BandChat
+                  </Text>
+                </View>
+                {togglingBiometric ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Switch
+                    value={biometricEnabled}
+                    onValueChange={handleToggleBiometric}
+                    trackColor={{ false: colors.border, true: colors.primary }}
+                    accessibilityLabel={`Toggle ${biometricLabel}`}
+                  />
+                )}
+              </View>
+            </View>
+          </>
+        )}
 
         {/* Export My Data */}
         <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">MY DATA</Text>
@@ -420,6 +499,14 @@ const styles = StyleSheet.create({
   modalButtonText: { fontSize: 15, fontWeight: '600' },
   modalButtonTextWhite: { fontSize: 15, fontWeight: '600', color: '#ffffff' },
   desc: { fontSize: 14, marginBottom: 12, lineHeight: 20 },
+  biometricRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  biometricInfo: { flex: 1, marginRight: 12 },
+  biometricTitle: { fontSize: 16, fontWeight: '600', marginBottom: 2 },
+  biometricDesc: { fontSize: 13 },
   dangerButton: {
     paddingVertical: 13,
     borderRadius: 10,

@@ -13,13 +13,14 @@ import {
   StyleSheet,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import * as Haptics from 'expo-haptics';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
+import { useToast } from '../../context/ToastContext';
+import { mediumImpact, successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import { addToOfflineQueue, getOfflineQueue, removeFromOfflineQueue } from '../../services/storage';
 import MessageBubble from '../../components/MessageBubble';
@@ -36,6 +37,7 @@ export default function ChannelScreen({ navigation, route }) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const { socket, joinChannel, leaveChannel, startTyping, stopTyping } = useSocket();
+  const toast = useToast();
   const headerHeight = useHeaderHeight();
 
   const [messages, setMessages] = useState([]);
@@ -447,9 +449,20 @@ export default function ChannelScreen({ navigation, route }) {
     }
   }, [channel.id, startTyping, stopTyping]);
 
+  // Avatar tap → member profile
+  const handleAvatarPress = useCallback((author) => {
+    if (author?.id) {
+      navigation.navigate('MemberProfile', {
+        workspaceId,
+        userId: author.id,
+        displayName: author.displayName,
+      });
+    }
+  }, [navigation, workspaceId]);
+
   // Long-press → action sheet
   const handleLongPress = useCallback((message) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    mediumImpact();
     setActionMessage(message);
     setShowActions(true);
   }, []);
@@ -501,6 +514,8 @@ export default function ChannelScreen({ navigation, route }) {
       case 'copy':
         if (actionMessage.content) {
           Clipboard.setStringAsync(actionMessage.content);
+          successNotification();
+          toast.success('Copied to clipboard');
         }
         break;
       case 'edit':
@@ -697,11 +712,12 @@ export default function ChannelScreen({ navigation, route }) {
           onReactionPress={handleReactionPress}
           onSwipeReply={handleReplyPress}
           onSwipeReact={handleReactionPress}
+          onAvatarPress={handleAvatarPress}
           members={workspaceMembers}
         />
       </View>
     );
-  }, [colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, lastOwnMessageId, seenByCount, workspaceMembers, firstUnreadId]);
+  }, [colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, handleAvatarPress, lastOwnMessageId, seenByCount, workspaceMembers, firstUnreadId]);
 
   const renderFooter = useCallback(() => {
     if (!loadingMore) return null;
