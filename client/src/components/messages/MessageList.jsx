@@ -16,6 +16,8 @@ import LinkPreviewCard from './LinkPreviewCard';
 import { handleDownload } from '../../utils/download';
 import { buildMentionRegex } from '../../utils/parseMentions';
 import api from '../../services/api';
+import EmbedCard from './EmbedCard';
+import '../../../styles/markdown.css';
 
 /**
  * Validates a URL string for safety before rendering as a link.
@@ -43,152 +45,265 @@ function isValidHttpUrl(urlString) {
 }
 
 /**
- * Memoized component for rendering message content with URL detection,
- * embeds (Google Docs, YouTube), images, videos, and @mentions.
+ * Apply inline markdown formatting: `code`, **bold**, *italic*, ~~strikethrough~~
+ * Returns array of React elements / strings.
  */
-const MessageContent = React.memo(({ content, message, onOpenLightbox, members }) => {
-  // URL regex: match URLs but stop at brackets/whitespace or punctuation followed by whitespace/end
+function applyInlineMarkdown(text, keyPrefix = '') {
+  if (!text) return [text];
+
+  // Split by inline code first (code skips other formatting)
+  const result = [];
+  const codeRegex = /`([^`\n]+)`/g;
+  let lastIdx = 0;
+  let m;
+
+  while ((m = codeRegex.exec(text)) !== null) {
+    if (m.index > lastIdx) {
+      result.push(...applyBoldItalicStrike(text.slice(lastIdx, m.index), `${keyPrefix}t${lastIdx}`));
+    }
+    result.push(<code key={`${keyPrefix}c${m.index}`}>{m[1]}</code>);
+    lastIdx = m.index + m[0].length;
+  }
+  if (lastIdx < text.length) {
+    result.push(...applyBoldItalicStrike(text.slice(lastIdx), `${keyPrefix}t${lastIdx}`));
+  }
+  return result.length > 0 ? result : [text];
+}
+
+/** Apply **bold**, *italic*, ~~strikethrough~~ formatting */
+function applyBoldItalicStrike(text, keyPrefix) {
+  if (!text) return [text];
+  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|~~(.+?)~~)/g;
+  const result = [];
+  let lastIdx = 0;
+  let m;
+
+  while ((m = regex.exec(text)) !== null) {
+    if (m.index > lastIdx) result.push(text.slice(lastIdx, m.index));
+    if (m[2]) result.push(<strong key={`${keyPrefix}b${m.index}`}>{m[2]}</strong>);
+    else if (m[3]) result.push(<em key={`${keyPrefix}i${m.index}`}>{m[3]}</em>);
+    else if (m[4]) result.push(<del key={`${keyPrefix}s${m.index}`}>{m[4]}</del>);
+    lastIdx = m.index + m[0].length;
+  }
+  if (lastIdx < text.length) result.push(text.slice(lastIdx));
+  return result.length > 0 ? result : [text];
+}
+
+/** Render a URL part as the appropriate embed (YouTube, image, video, Google Doc, or link) */
+function renderUrlPart(part, i, message, onOpenLightbox, onAddToLibrary) {
+  if (!isValidHttpUrl(part)) return <span key={i}>{part}</span>;
+
+  // Google Doc/Sheet
+  let isGoogleDoc = false;
+  try {
+    const parsedUrl = new URL(part);
+    isGoogleDoc = parsedUrl.hostname === 'docs.google.com' || parsedUrl.hostname === 'sheets.google.com';
+  } catch {}
+  if (isGoogleDoc) {
+    return (
+      <div key={i} className="my-2">
+        <a href={part} target="_blank" rel="noopener noreferrer" className="text-slack-blue hover:underline break-all">{part}</a>
+        <a href={part} target="_blank" rel="noopener noreferrer" className="block mt-2 p-3 rounded border border-gray-600 hover:bg-gray-700/50 transition-colors">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zm-3 9h4v2h-4v-2zm0-3h4v2h-4V10zm-2 6h8v2H8v-2z"/></svg>
+            <span className="text-blue-400 underline text-sm">Open Google Doc</span>
+          </div>
+        </a>
+      </div>
+    );
+  }
+
+  // YouTube
+  const ytMatch = part.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/|m\.youtube\.com\/watch\?v=)([\w-]{11})/);
+  if (ytMatch) {
+    const videoId = ytMatch[1];
+    return (
+      <div key={i} className="my-2">
+        <a href={part} target="_blank" rel="noopener noreferrer" className="text-slack-blue hover:underline break-all">{part}</a>
+        <a href={part} target="_blank" rel="noopener noreferrer" className="block relative max-w-full md:max-w-md mt-1 rounded overflow-hidden group">
+          <img src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`} alt="YouTube video thumbnail" className="w-full rounded" loading="lazy" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-16 h-16 bg-red-600 bg-opacity-90 rounded-2xl flex items-center justify-center group-hover:bg-opacity-100 transition-opacity">
+              <svg viewBox="0 0 24 24" fill="white" className="w-8 h-8 ml-1"><path d="M8 5v14l11-7z" /></svg>
+            </div>
+          </div>
+        </a>
+      </div>
+    );
+  }
+
+  // Image
+  if (part.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+    return (
+      <div key={i} className="my-2">
+        <img src={part} alt="Shared image" className="max-w-full md:max-w-md max-h-80 rounded cursor-pointer" loading="lazy" onClick={() => message && onOpenLightbox(message, part)} />
+      </div>
+    );
+  }
+
+  // Video
+  if (part.match(/\.(mp4|webm|mov)$/i)) {
+    return (
+      <div key={i} className="my-2">
+        <video src={part} controls className="max-w-full md:max-w-md rounded" />
+      </div>
+    );
+  }
+
+  return (
+    <span key={i}>
+      <a href={part} target="_blank" rel="noopener noreferrer" className="text-slack-blue hover:underline break-all">{part}</a>
+      <LinkPreviewCard url={part} onAddToLibrary={onAddToLibrary} />
+    </span>
+  );
+}
+
+/** Process a text segment through embed detection, URL splitting, mention highlighting, and inline markdown */
+function processTextSegment(text, segKey, message, onOpenLightbox, members, onAddToLibrary, workspaceId) {
+  // Detect embed tokens [type:uuid]
+  const embedRegex = /\[(song|setlist|gig|poll):([a-f0-9-]+)\]/gi;
+  const embedParts = text.split(embedRegex);
+
+  // embedRegex with 2 capture groups: [before, type, id, between, type, id, ...]
+  if (embedParts.length > 1) {
+    const result = [];
+    for (let ei = 0; ei < embedParts.length; ei += 3) {
+      const textPart = embedParts[ei];
+      if (textPart) {
+        result.push(...processTextInner(textPart, `${segKey}-e${ei}`, message, onOpenLightbox, members, onAddToLibrary));
+      }
+      if (ei + 2 < embedParts.length) {
+        const embedType = embedParts[ei + 1];
+        const embedId = embedParts[ei + 2];
+        result.push(<EmbedCard key={`${segKey}-embed${ei}`} type={embedType} id={embedId} workspaceId={workspaceId} />);
+      }
+    }
+    return result;
+  }
+
+  return processTextInner(text, segKey, message, onOpenLightbox, members, onAddToLibrary);
+}
+
+/** Inner text processing: URL splitting, mentions, inline markdown */
+function processTextInner(text, segKey, message, onOpenLightbox, members, onAddToLibrary) {
   const urlRegex = /(https?:\/\/[^\s\[\]<>]+?)(?=[\[\])\s]|[.,;:!?"'](?:\s|$)|$)/g;
-  const parts = content.split(urlRegex);
+  const parts = text.split(urlRegex);
 
   return parts.map((part, i) => {
     if (part.match(/^https?:\/\//)) {
-      // Validate URL before rendering as a link
-      if (!isValidHttpUrl(part)) {
-        // Render as plain text if invalid
-        return <span key={i}>{part}</span>;
-      }
-
-      // Check if it's a Google Doc/Sheet using proper URL parsing
-      let isGoogleDoc = false;
-      try {
-        const parsedUrl = new URL(part);
-        isGoogleDoc = parsedUrl.hostname === 'docs.google.com' || parsedUrl.hostname === 'sheets.google.com';
-      } catch {}
-      if (isGoogleDoc) {
-        return (
-          <div key={i} className="my-2">
-            <a
-              href={part}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-slack-blue hover:underline break-all"
-            >
-              {part}
-            </a>
-            <a href={part} target="_blank" rel="noopener noreferrer" className="block mt-2 p-3 rounded border border-gray-600 hover:bg-gray-700/50 transition-colors">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zm-3 9h4v2h-4v-2zm0-3h4v2h-4V10zm-2 6h8v2H8v-2z"/></svg>
-                <span className="text-blue-400 underline text-sm">Open Google Doc</span>
-              </div>
-            </a>
-          </div>
-        );
-      }
-
-      // Check if it's a YouTube link
-      const ytMatch = part.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/|m\.youtube\.com\/watch\?v=)([\w-]{11})/);
-      if (ytMatch) {
-        const videoId = ytMatch[1];
-        return (
-          <div key={i} className="my-2">
-            <a
-              href={part}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-slack-blue hover:underline break-all"
-            >
-              {part}
-            </a>
-            <a
-              href={part}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block relative max-w-full md:max-w-md mt-1 rounded overflow-hidden group"
-            >
-              <img
-                src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
-                alt="YouTube video thumbnail"
-                className="w-full rounded"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-16 h-16 bg-red-600 bg-opacity-90 rounded-2xl flex items-center justify-center group-hover:bg-opacity-100 transition-opacity">
-                  <svg viewBox="0 0 24 24" fill="white" className="w-8 h-8 ml-1">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                </div>
-              </div>
-            </a>
-          </div>
-        );
-      }
-
-      // Check if it's an image
-      if (part.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-        return (
-          <div key={i} className="my-2">
-            <img
-              src={part}
-              alt="Shared image"
-              className="max-w-full md:max-w-md max-h-80 rounded cursor-pointer"
-              loading="lazy"
-              onClick={() => message && onOpenLightbox(message, part)}
-            />
-          </div>
-        );
-      }
-
-      // Check if it's a video
-      if (part.match(/\.(mp4|webm|mov)$/i)) {
-        return (
-          <div key={i} className="my-2">
-            <video
-              src={part}
-              controls
-              className="max-w-full md:max-w-md rounded"
-            />
-          </div>
-        );
-      }
-
-      return (
-        <span key={i}>
-          <a
-            href={part}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-slack-blue hover:underline break-all"
-          >
-            {part}
-          </a>
-          <LinkPreviewCard url={part} />
-        </span>
-      );
+      return renderUrlPart(part, `${segKey}-${i}`, message, onOpenLightbox, onAddToLibrary);
     }
 
-    // Convert @mentions — use member-aware regex for multi-word name support
+    // Apply @mentions then inline markdown on remaining text
     const mentionRegex = buildMentionRegex(members || []) || /(^|[\s])@(\w+)/g;
     const mentionParts = part.split(mentionRegex);
-
-    // split with 2 capture groups produces: [before, whitespace, name, between, whitespace, name, ...]
     const result = [];
+
     for (let j = 0; j < mentionParts.length; j += 3) {
-      const text = mentionParts[j];
-      if (text) result.push(text);
+      const txt = mentionParts[j];
+      if (txt) result.push(...applyInlineMarkdown(txt, `${segKey}-${i}-${j}`));
       if (j + 2 < mentionParts.length) {
-        const ws = mentionParts[j + 1]; // leading whitespace or ''
+        const ws = mentionParts[j + 1];
         const name = mentionParts[j + 2];
         if (ws) result.push(ws);
         result.push(
-          <span key={`${i}-${j}`} className="bg-blue-900 text-blue-300 px-1 rounded">
-            @{name}
-          </span>
+          <span key={`${segKey}-${i}-m${j}`} className="bg-blue-900 text-blue-300 px-1 rounded">@{name}</span>
         );
       }
     }
     return result;
   });
+}
+
+/**
+ * Memoized component for rendering message content with markdown formatting,
+ * URL detection, embeds (Google Docs, YouTube), images, videos, and @mentions.
+ */
+const MessageContent = React.memo(({ content, message, onOpenLightbox, members, onAddToLibrary, workspaceId }) => {
+  // Step 1: Extract fenced code blocks
+  const codeBlockRegex = /```(\w*)\n?([\s\S]*?)```/g;
+  const segments = [];
+  let lastIdx = 0;
+  let m;
+
+  while ((m = codeBlockRegex.exec(content)) !== null) {
+    if (m.index > lastIdx) {
+      segments.push({ type: 'text', value: content.slice(lastIdx, m.index) });
+    }
+    segments.push({ type: 'code', lang: m[1], value: m[2].replace(/\n$/, '') });
+    lastIdx = m.index + m[0].length;
+  }
+  if (lastIdx < content.length) {
+    segments.push({ type: 'text', value: content.slice(lastIdx) });
+  }
+  if (segments.length === 0) segments.push({ type: 'text', value: content });
+
+  // Check if any markdown syntax is present (skip wrapping for plain messages)
+  const hasMarkdown = /[`*~]|^>|^[-*] /m.test(content);
+
+  const rendered = segments.map((seg, si) => {
+    if (seg.type === 'code') {
+      return <pre key={`cb${si}`}><code>{seg.value}</code></pre>;
+    }
+
+    // Step 2: Process block-level markdown (blockquotes, lists) on text segments
+    const lines = seg.value.split('\n');
+    const blocks = [];
+    let currentBlock = null;
+
+    for (let li = 0; li < lines.length; li++) {
+      const line = lines[li];
+
+      if (line.startsWith('> ')) {
+        if (currentBlock?.type !== 'blockquote') {
+          if (currentBlock) blocks.push(currentBlock);
+          currentBlock = { type: 'blockquote', lines: [] };
+        }
+        currentBlock.lines.push(line.slice(2));
+      } else if (/^[-*] /.test(line)) {
+        if (currentBlock?.type !== 'list') {
+          if (currentBlock) blocks.push(currentBlock);
+          currentBlock = { type: 'list', lines: [] };
+        }
+        currentBlock.lines.push(line.slice(2));
+      } else {
+        if (currentBlock) {
+          blocks.push(currentBlock);
+          currentBlock = null;
+        }
+        blocks.push({ type: 'text', value: line + (li < lines.length - 1 ? '\n' : '') });
+      }
+    }
+    if (currentBlock) blocks.push(currentBlock);
+
+    return blocks.map((block, bi) => {
+      const key = `${si}-${bi}`;
+      if (block.type === 'blockquote') {
+        return (
+          <blockquote key={key}>
+            {block.lines.map((l, li) => (
+              <React.Fragment key={li}>
+                {processTextSegment(l, `${key}-${li}`, message, onOpenLightbox, members, onAddToLibrary, workspaceId)}
+                {li < block.lines.length - 1 && <br />}
+              </React.Fragment>
+            ))}
+          </blockquote>
+        );
+      }
+      if (block.type === 'list') {
+        return (
+          <ul key={key}>
+            {block.lines.map((l, li) => (
+              <li key={li}>{processTextSegment(l, `${key}-${li}`, message, onOpenLightbox, members, onAddToLibrary, workspaceId)}</li>
+            ))}
+          </ul>
+        );
+      }
+      return <React.Fragment key={key}>{processTextSegment(block.value, key, message, onOpenLightbox, members, onAddToLibrary, workspaceId)}</React.Fragment>;
+    });
+  });
+
+  return hasMarkdown ? <span className="msg-markdown">{rendered}</span> : <>{rendered}</>;
 });
 MessageContent.displayName = 'MessageContent';
 
@@ -220,7 +335,9 @@ function MessageList({
   savedMessageIds,
   lastReadAt,
   members,
-  onAvatarClick
+  onAvatarClick,
+  onAddToLibrary,
+  workspaceId
 }) {
   const [editingId, setEditingId] = useState(null);
   const [editContent, setEditContent] = useState('');
@@ -518,7 +635,7 @@ function MessageList({
                 </div>
               ) : (
                 <div className="text-[var(--color-text-secondary)] break-words whitespace-pre-wrap">
-                  <MessageContent content={message.content} message={message} onOpenLightbox={openLightbox} members={members} />
+                  <MessageContent content={message.content} message={message} onOpenLightbox={openLightbox} members={members} onAddToLibrary={onAddToLibrary} workspaceId={workspaceId} />
                 </div>
               )}
 

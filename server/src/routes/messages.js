@@ -352,17 +352,17 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
       io.to(`channel:${req.params.channelId}`).emit('message:new', message);
     }
 
-    // Send push notification for DMs (to other participants)
+    // Send push notification for DMs (to other participants, unless muted)
     const channel = req.channel;
     if (channel.isDirect) {
       const dmMembers = await prisma.channelMember.findMany({
         where: { channelId: req.params.channelId, userId: { not: req.user.id } },
-        select: { userId: true }
+        select: { userId: true, muted: true }
       });
       const body = content
         ? (content.length > 100 ? content.substring(0, 100) + '...' : content)
         : 'Sent an attachment';
-      dmMembers.forEach(m => {
+      dmMembers.filter(m => !m.muted).forEach(m => {
         sendPushToUser(m.userId, {
           title: req.user.displayName,
           body,
@@ -392,6 +392,16 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
         return name && contentLower.includes(`@${name}`);
       });
 
+      // Check muted status for mentioned users
+      const mentionedUserIds = mentionedUsers.filter(m => m.userId !== req.user.id).map(m => m.userId);
+      const mutedMembers = mentionedUserIds.length > 0
+        ? await prisma.channelMember.findMany({
+            where: { channelId: req.params.channelId, userId: { in: mentionedUserIds } },
+            select: { userId: true, muted: true }
+          })
+        : [];
+      const mutedUserIds = new Set(mutedMembers.filter(m => m.muted).map(m => m.userId));
+
       mentionedUsers.filter(m => m.userId !== req.user.id).forEach(m => {
         io.to(`user:${m.userId}`).emit('mention', {
           channelId: req.params.channelId,
@@ -399,7 +409,8 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
           mentionedBy: req.user
         });
 
-        // Send push notification
+        // Send push notification (skip if channel is muted)
+        if (mutedUserIds.has(m.userId)) return;
         sendPushToUser(m.userId, {
           title: `${req.user.displayName} mentioned you`,
           body: content.length > 100 ? content.substring(0, 100) + '...' : content,

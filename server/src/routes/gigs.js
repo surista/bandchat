@@ -116,10 +116,20 @@ router.get('/workspace/:workspaceId/next', authenticate, isWorkspaceMember, asyn
             setlist: { select: { id: true, name: true } }
           },
           orderBy: { setNumber: 'asc' }
-        }
+        },
+        attendees: {
+          where: { userId: req.user.id },
+          select: { status: true }
+        },
+        _count: { select: { attendees: true } }
       },
       orderBy: { date: 'asc' },
     });
+
+    if (gig) {
+      gig.myAttendance = gig.attendees?.[0]?.status || null;
+      delete gig.attendees;
+    }
 
     res.json(gig || null);
   } catch (error) {

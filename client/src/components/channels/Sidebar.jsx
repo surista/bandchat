@@ -26,6 +26,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { pushService } from '../../services/push';
 import { useToast } from '../../context/ToastContext';
+import { useSocket } from '../../context/SocketContext';
 import api from '../../services/api';
 import MemberProfile from '../common/MemberProfile';
 import MemberHoverCard from '../common/MemberHoverCard';
@@ -108,21 +109,26 @@ function SortableGroupWrapper({ group, children, disabled }) {
 /** Channel item with long-press support for mobile context menus */
 function ChannelItem({ channel, isSelected, onSelect, onLongPress, isAdmin }) {
   const longPress = useLongPress({
-    onLongPress: isAdmin ? (pos) => onLongPress(pos) : undefined,
+    onLongPress: (pos) => onLongPress(pos),
     onTap: onSelect,
-    disabled: !isAdmin,
   });
 
   return (
     <button
-      className={`channel-item w-full ${isSelected ? 'active' : ''}`}
+      className={`channel-item w-full ${isSelected ? 'active' : ''} ${channel.muted ? 'opacity-60' : ''}`}
       {...longPress}
     >
       <span className="text-gray-400">
         {channel.isPrivate ? '🔒' : '#'}
       </span>
       <span className="flex-1 truncate">{channel.name}</span>
-      {channel.unreadCount > 0 && (
+      {channel.muted && (
+        <svg className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+        </svg>
+      )}
+      {!channel.muted && channel.unreadCount > 0 && (
         <span className="bg-slack-red text-white text-xs px-1.5 py-0.5 rounded-full">
           {channel.unreadCount}
         </span>
@@ -175,10 +181,12 @@ function Sidebar({
   width = 256,
   onResizeStart,
   onReorderGroups,
-  onRefreshWorkspace
+  onRefreshWorkspace,
+  onMuteChannel
 }) {
   const navigate = useNavigate();
   const toast = useToast();
+  const { presenceMap } = useSocket();
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showNewMessage, setShowNewMessage] = useState(false);
@@ -516,8 +524,19 @@ function Sidebar({
 
   // handleLongPress for channel items (enables mobile context menu)
   const handleChannelLongPress = (channel, pos) => {
-    if (!isAdmin) return;
-    setContextMenu({ type: 'channel', id: channel.id, name: channel.name, x: pos.x, y: pos.y });
+    setContextMenu({ type: 'channel', id: channel.id, name: channel.name, muted: channel.muted, x: pos.x, y: pos.y });
+  };
+
+  const handleToggleMute = async () => {
+    if (!contextMenu || contextMenu.type !== 'channel') return;
+    const newMuted = !contextMenu.muted;
+    try {
+      await api.muteChannel(contextMenu.id, newMuted);
+      onMuteChannel?.(contextMenu.id, newMuted);
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('Failed to toggle mute:', err);
+    }
+    setContextMenu(null);
   };
 
   const renderChannel = (channel) => {
@@ -593,26 +612,52 @@ function Sidebar({
         {!collapsedSections.quickLinks && (
           <>
             {/* Next upcoming event banner */}
-            {nextGig && (
-              <button
-                onClick={() => onSelectBandView?.('calendar')}
-                className="mx-3 mb-3 px-3 py-2 rounded-lg text-left transition-colors hover:brightness-110"
-                style={{
-                  background: nextGig.type === 'GIG' ? 'rgba(34,197,94,0.15)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.15)' : 'rgba(168,85,247,0.15)',
-                  border: `1px solid ${nextGig.type === 'GIG' ? 'rgba(34,197,94,0.3)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.3)' : 'rgba(168,85,247,0.3)'}`,
-                }}
-              >
-                <div className="flex items-center gap-2 text-xs">
-                  <span>{nextGig.type === 'GIG' ? '🎸' : nextGig.type === 'REHEARSAL' ? '🥁' : '📅'}</span>
-                  <span className="font-semibold text-white truncate">{nextGig.title}</span>
-                </div>
-                <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
-                  <span>{new Date(nextGig.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                  {nextGig.startTime && <span>· {nextGig.startTime}</span>}
-                  {nextGig.venue && <span className="truncate">· {nextGig.venue}</span>}
-                </div>
-              </button>
-            )}
+            {nextGig && (() => {
+              const gigDate = new Date(nextGig.date);
+              const now = new Date();
+              const diffMs = gigDate.getTime() - now.getTime();
+              const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+              const countdown = diffDays <= 0 ? 'Today!' : diffDays === 1 ? 'Tomorrow!' : `${diffDays} days away`;
+              const hasSetlist = nextGig.setlists?.length > 0;
+              const isUrgent = diffDays <= 1;
+
+              return (
+                <button
+                  onClick={() => onSelectBandView?.('calendar')}
+                  className="mx-3 mb-3 px-3 py-2 rounded-lg text-left transition-colors hover:brightness-110"
+                  style={{
+                    background: nextGig.type === 'GIG' ? 'rgba(34,197,94,0.15)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.15)' : 'rgba(168,85,247,0.15)',
+                    border: `1px solid ${nextGig.type === 'GIG' ? 'rgba(34,197,94,0.3)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.3)' : 'rgba(168,85,247,0.3)'}`,
+                  }}
+                >
+                  <div className="flex items-center gap-2 text-xs">
+                    <span>{nextGig.type === 'GIG' ? '🎸' : nextGig.type === 'REHEARSAL' ? '🥁' : '📅'}</span>
+                    <span className="font-semibold text-white truncate">{nextGig.title}</span>
+                    <span className={`ml-auto flex-shrink-0 font-bold ${isUrgent ? 'text-yellow-400' : 'text-gray-300'}`}>{countdown}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
+                    <span>{gigDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                    {nextGig.startTime && <span>· {nextGig.startTime}</span>}
+                    {nextGig.venue && <span className="truncate">· {nextGig.venue}</span>}
+                  </div>
+                  {diffDays <= 7 && (
+                    <div className="flex items-center gap-3 mt-1.5 text-xs">
+                      <span className={hasSetlist ? 'text-green-400' : 'text-yellow-400'}>
+                        {hasSetlist ? '✓ Setlist' : '✗ No setlist'}
+                      </span>
+                      {nextGig.myAttendance && (
+                        <span className={nextGig.myAttendance === 'GOING' ? 'text-green-400' : nextGig.myAttendance === 'NOT_GOING' ? 'text-red-400' : 'text-yellow-400'}>
+                          {nextGig.myAttendance === 'GOING' ? '✓ Going' : nextGig.myAttendance === 'NOT_GOING' ? '✗ Not going' : '? Maybe'}
+                        </span>
+                      )}
+                      {!nextGig.myAttendance && (
+                        <span className="text-yellow-400">? RSVP needed</span>
+                      )}
+                    </div>
+                  )}
+                </button>
+              );
+            })()}
 
             {/* Pinned Calendar shortcut */}
             <button
@@ -976,17 +1021,25 @@ function Sidebar({
                   className="flex items-center gap-2 px-4 py-2.5 sm:py-1 text-gray-300 w-full text-left min-h-[44px] sm:min-h-0 hover:bg-slack-hover cursor-pointer"
                   aria-label={`View ${member.user.displayName}'s profile`}
                 >
-                  {member.user.avatarUrl ? (
-                    <img
-                      src={member.user.avatarUrl}
-                      alt=""
-                      className="w-6 h-6 rounded-full object-cover flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs flex-shrink-0">
-                      {member.user.displayName?.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  <div className="relative flex-shrink-0">
+                    {member.user.avatarUrl ? (
+                      <img
+                        src={member.user.avatarUrl}
+                        alt=""
+                        className="w-6 h-6 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs">
+                        {member.user.displayName?.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--color-sidebar-bg,#1a1d21)] ${
+                      presenceMap[member.user.id] === 'online' ? 'bg-green-500' :
+                      presenceMap[member.user.id] === 'away' ? 'bg-yellow-500' :
+                      presenceMap[member.user.id] === 'busy' ? 'bg-red-500' :
+                      'bg-gray-500'
+                    }`} />
+                  </div>
                   <span className="truncate flex-1">
                     {member.user.displayName}
                     {member.user.id === user?.id && ' (you)'}
@@ -1320,13 +1373,18 @@ function Sidebar({
         />
       )}
 
-      {/* Context Menu for Channels/Sections (Admin Only) */}
+      {/* Context Menu for Channels/Sections */}
       <ContextMenu
         isOpen={contextMenu !== null}
         position={contextMenu || { x: 0, y: 0 }}
         onClose={closeContextMenu}
         items={[
-          {
+          ...(contextMenu?.type === 'channel' ? [{
+            label: contextMenu?.muted ? 'Unmute channel' : 'Mute channel',
+            icon: contextMenu?.muted ? '🔔' : '🔕',
+            onClick: handleToggleMute
+          }] : []),
+          ...(isAdmin ? [{
             label: `Rename ${contextMenu?.type || ''}`,
             icon: '✏️',
             onClick: openRenameModal
@@ -1336,7 +1394,7 @@ function Sidebar({
             icon: '🗑️',
             variant: 'danger',
             onClick: openDeleteConfirm
-          }
+          }] : [])
         ]}
       />
 

@@ -716,6 +716,13 @@ function WorkspaceView() {
         onResizeStart={() => setIsResizing(true)}
         onReorderGroups={(newGroups) => setChannelGroups(newGroups)}
         onRefreshWorkspace={loadWorkspace}
+        onMuteChannel={(channelId, muted) => {
+          setChannels(prev => prev.map(c => c.id === channelId ? { ...c, muted } : c));
+          setDirectMessages(prev => prev.map(dm => dm.id === channelId ? { ...dm, muted } : dm));
+          if (selectedChannel?.id === channelId) {
+            setSelectedChannel(prev => prev ? { ...prev, muted } : prev);
+          }
+        }}
       />
 
       {/* Main Content */}
@@ -782,6 +789,19 @@ function WorkspaceView() {
                 openThreadId={selectedThread?.id || null}
                 onOpenSearch={handleOpenSearch}
                 onStartDM={handleStartDM}
+                onMuteChannel={(channelId, muted) => {
+                  setChannels(prev => prev.map(c => c.id === channelId ? { ...c, muted } : c));
+                  setDirectMessages(prev => prev.map(dm => dm.id === channelId ? { ...dm, muted } : dm));
+                  if (selectedChannel?.id === channelId) {
+                    setSelectedChannel(prev => prev ? { ...prev, muted } : prev);
+                  }
+                }}
+                onAddToLibrary={(url, title) => {
+                  setSelectedChannel(null);
+                  setActiveBandView('songs');
+                  // Store pre-fill data for SongForm
+                  sessionStorage.setItem('prefillSong', JSON.stringify({ title: title || '', referenceUrl: url }));
+                }}
               />
             ) : (
               <div className="flex-1 flex items-center justify-center text-gray-400">

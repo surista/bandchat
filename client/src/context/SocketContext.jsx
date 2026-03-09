@@ -3,7 +3,7 @@
  * Manages WebSocket connection, room joining, and typing indicators.
  */
 
-import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import api from '../services/api';
@@ -35,6 +35,9 @@ export function SocketProvider({ children }) {
   const { user, isAuthenticated } = useAuth();
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
+  const [presenceMap, setPresenceMap] = useState({});
+  const idleTimerRef = useRef(null);
+  const isAwayRef = useRef(false);
 
   useEffect(() => {
     if (isAuthenticated && api.accessToken) {
@@ -49,11 +52,17 @@ export function SocketProvider({ children }) {
       newSocket.on('connect', () => {
         if (import.meta.env.DEV) console.log('Socket connected');
         setConnected(true);
+        newSocket.emit('presence:update', 'online');
       });
 
       newSocket.on('disconnect', () => {
         if (import.meta.env.DEV) console.log('Socket disconnected');
         setConnected(false);
+      });
+
+      // Listen for presence updates from other users
+      newSocket.on('presence:updated', ({ userId, status }) => {
+        setPresenceMap(prev => ({ ...prev, [userId]: status }));
       });
 
       newSocket.on('connect_error', async (error) => {
@@ -71,9 +80,41 @@ export function SocketProvider({ children }) {
 
       setSocket(newSocket);
 
+      // Idle detection: go away after 5 min of inactivity
+      const IDLE_TIMEOUT = 5 * 60 * 1000;
+      const resetIdle = () => {
+        if (isAwayRef.current) {
+          isAwayRef.current = false;
+          newSocket.emit('presence:update', 'online');
+        }
+        clearTimeout(idleTimerRef.current);
+        idleTimerRef.current = setTimeout(() => {
+          isAwayRef.current = true;
+          newSocket.emit('presence:update', 'away');
+        }, IDLE_TIMEOUT);
+      };
+      const handleVisibility = () => {
+        if (document.hidden) {
+          isAwayRef.current = true;
+          newSocket.emit('presence:update', 'away');
+        } else {
+          resetIdle();
+        }
+      };
+
+      window.addEventListener('mousemove', resetIdle);
+      window.addEventListener('keydown', resetIdle);
+      document.addEventListener('visibilitychange', handleVisibility);
+      resetIdle();
+
       return () => {
+        clearTimeout(idleTimerRef.current);
+        window.removeEventListener('mousemove', resetIdle);
+        window.removeEventListener('keydown', resetIdle);
+        document.removeEventListener('visibilitychange', handleVisibility);
         newSocket.disconnect();
         setSocket(null);
+        setPresenceMap({});
       };
     }
   }, [isAuthenticated]);
@@ -105,8 +146,9 @@ export function SocketProvider({ children }) {
     leaveChannel,
     startTyping,
     stopTyping,
-    joinWorkspace
-  }), [socket, connected, joinChannel, leaveChannel, startTyping, stopTyping, joinWorkspace]);
+    joinWorkspace,
+    presenceMap
+  }), [socket, connected, joinChannel, leaveChannel, startTyping, stopTyping, joinWorkspace, presenceMap]);
 
   return (
     <SocketContext.Provider value={value}>

@@ -8,7 +8,14 @@ const getHostname = (url) => {
   try { return new URL(url).hostname; } catch { return url; }
 };
 
-export default function LinkPreviewCard({ url }) {
+const isMusicUrl = (url) => {
+  try {
+    const host = new URL(url).hostname;
+    return host.includes('spotify.com') || host.includes('music.apple.com') || host.includes('youtube.com') || host.includes('youtu.be') || host.includes('soundcloud.com') || host.includes('deezer.com');
+  } catch { return false; }
+};
+
+export default function LinkPreviewCard({ url, onAddToLibrary }) {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -71,50 +78,69 @@ export default function LinkPreviewCard({ url }) {
 
   if (loading || error || !preview) return null;
 
+  const showAddToLibrary = isMusicUrl(url) && onAddToLibrary;
+
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="block max-w-md mt-2 rounded-lg border border-gray-600 bg-gray-750 hover:bg-gray-700 transition-colors overflow-hidden no-underline"
-    >
-      <div className="flex">
-        <div className="flex-1 p-3 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            {preview.favicon && (
-              <img
-                src={preview.favicon}
-                alt=""
-                className="w-4 h-4 rounded"
-                onError={(e) => { e.target.style.display = 'none'; }}
-              />
-            )}
-            <span className="text-xs text-gray-400 truncate">
-              {getHostname(url)}
-            </span>
-          </div>
-          {preview.title && (
-            <div className="text-sm text-blue-400 font-medium truncate mb-1">
-              {preview.title}
+    <div className="max-w-md mt-2">
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`block rounded-lg border border-gray-600 bg-gray-750 hover:bg-gray-700 transition-colors overflow-hidden no-underline ${showAddToLibrary ? 'rounded-b-none' : ''}`}
+      >
+        <div className="flex">
+          <div className="flex-1 p-3 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              {preview.favicon && (
+                <img
+                  src={preview.favicon}
+                  alt=""
+                  className="w-4 h-4 rounded"
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+              )}
+              <span className="text-xs text-gray-400 truncate">
+                {getHostname(url)}
+              </span>
             </div>
-          )}
-          {preview.description && (
-            <div className="text-xs text-gray-400 line-clamp-2">
-              {preview.description}
+            {preview.title && (
+              <div className="text-sm text-blue-400 font-medium truncate mb-1">
+                {preview.title}
+              </div>
+            )}
+            {preview.description && (
+              <div className="text-xs text-gray-400 line-clamp-2">
+                {preview.description}
+              </div>
+            )}
+          </div>
+          {preview.image && (
+            <div className="w-20 h-20 flex-shrink-0">
+              <img
+                src={preview.image}
+                alt=""
+                className="w-full h-full object-cover"
+                onError={(e) => { e.target.parentElement.style.display = 'none'; }}
+              />
             </div>
           )}
         </div>
-        {preview.image && (
-          <div className="w-20 h-20 flex-shrink-0">
-            <img
-              src={preview.image}
-              alt=""
-              className="w-full h-full object-cover"
-              onError={(e) => { e.target.parentElement.style.display = 'none'; }}
-            />
-          </div>
-        )}
-      </div>
-    </a>
+      </a>
+      {showAddToLibrary && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddToLibrary(url, preview.title);
+          }}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-green-600/20 border border-t-0 border-gray-600 rounded-b-lg text-green-400 hover:bg-green-600/30 transition-colors text-sm"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+          </svg>
+          Add to Song Library
+        </button>
+      )}
+    </div>
   );
 }

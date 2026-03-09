@@ -3,7 +3,7 @@
  * Handles real-time message updates, typing indicators, and reactions.
  */
 
-import { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect, useMemo, useCallback } from 'react';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
@@ -13,6 +13,7 @@ import ChannelMembersPanel from './ChannelMembersPanel';
 import PinnedMessagesPanel from './PinnedMessagesPanel';
 import Skeleton from '../common/Skeleton';
 import MemberProfile from '../common/MemberProfile';
+import SlashCommandPicker from '../messages/SlashCommandPicker';
 import useOnlineStatus from '../../hooks/useOnlineStatus';
 
 /**
@@ -25,9 +26,9 @@ import useOnlineStatus from '../../hooks/useOnlineStatus';
  * @param {function} props.onOpenThread - Callback when user clicks to open a thread
  * @param {function} props.onUpdateUnread - Callback to update unread count (called with 0 on channel select)
  */
-function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThreadId, onOpenSearch, onStartDM }) {
+function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThreadId, onOpenSearch, onStartDM, onMuteChannel, onAddToLibrary }) {
   const { user } = useAuth();
-  const { socket, joinChannel, leaveChannel, startTyping, stopTyping } = useSocket();
+  const { socket, joinChannel, leaveChannel, startTyping, stopTyping, presenceMap } = useSocket();
   const isOnline = useOnlineStatus();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,6 +41,10 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   const [showPinned, setShowPinned] = useState(false);
   const [savedMessageIds, setSavedMessageIds] = useState(new Set());
   const [profileUserId, setProfileUserId] = useState(null);
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [descriptionDraft, setDescriptionDraft] = useState('');
+  const [slashCommandType, setSlashCommandType] = useState(null);
+  const isAdmin = workspace?.members?.find(m => m.user?.id === user?.id)?.role === 'ADMIN';
   const lastReadAtRef = useRef(null);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -176,18 +181,52 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
     }
   }, [socket]);
 
-  const loadMoreMessages = async () => {
-    if (!hasMore || !nextCursor) return;
+  const [loadingMore, setLoadingMore] = useState(false);
+  const sentinelRef = useRef(null);
+
+  const loadMoreMessages = useCallback(async () => {
+    if (!hasMore || !nextCursor || loadingMore) return;
+    setLoadingMore(true);
+
+    const container = messagesContainerRef.current;
+    const prevScrollHeight = container?.scrollHeight || 0;
 
     try {
       const data = await api.getMessages(channel.id, nextCursor);
       setMessages(prev => [...data.messages, ...prev]);
       setHasMore(data.hasMore);
       setNextCursor(data.nextCursor);
+
+      // Restore scroll position after prepending
+      requestAnimationFrame(() => {
+        if (container) {
+          container.scrollTop = container.scrollHeight - prevScrollHeight;
+        }
+      });
     } catch (err) {
       console.error('Failed to load more messages:', err);
+    } finally {
+      setLoadingMore(false);
     }
-  };
+  }, [hasMore, nextCursor, loadingMore, channel.id]);
+
+  // IntersectionObserver for infinite scroll
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    const container = messagesContainerRef.current;
+    if (!sentinel || !container) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          loadMoreMessages();
+        }
+      },
+      { root: container, threshold: 0.1 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loadMoreMessages]);
 
   const loadPinnedMessages = async () => {
     try {
@@ -529,12 +568,29 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       <div className="h-14 border-b border-[var(--color-border)] px-4 flex items-center shrink-0">
         {channel.isDirect ? (
           <>
-            <div className="w-8 h-8 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center text-[var(--color-text-primary)] font-medium mr-2">
-              {channel.otherMembers?.[0]?.displayName?.charAt(0).toUpperCase() || '?'}
+            <div className="relative mr-2">
+              <div className="w-8 h-8 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center text-[var(--color-text-primary)] font-medium">
+                {channel.otherMembers?.[0]?.displayName?.charAt(0).toUpperCase() || '?'}
+              </div>
+              {channel.otherMembers?.[0]?.id && (
+                <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[var(--color-bg-secondary)] ${
+                  presenceMap[channel.otherMembers[0].id] === 'online' ? 'bg-green-500' :
+                  presenceMap[channel.otherMembers[0].id] === 'away' ? 'bg-yellow-500' :
+                  'bg-gray-500'
+                }`} />
+              )}
             </div>
-            <h2 className="text-[var(--color-text-primary)] font-semibold">
-              {channel.otherMembers?.map(m => m.displayName).join(', ') || 'Direct Message'}
-            </h2>
+            <div>
+              <h2 className="text-[var(--color-text-primary)] font-semibold leading-tight">
+                {channel.otherMembers?.map(m => m.displayName).join(', ') || 'Direct Message'}
+              </h2>
+              {channel.otherMembers?.[0]?.id && presenceMap[channel.otherMembers[0].id] === 'online' && (
+                <span className="text-xs text-green-500">Active</span>
+              )}
+              {channel.otherMembers?.[0]?.id && presenceMap[channel.otherMembers[0].id] === 'away' && (
+                <span className="text-xs text-yellow-500">Away</span>
+              )}
+            </div>
           </>
         ) : (
           <>
@@ -542,14 +598,70 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
               {channel.isPrivate ? '🔒' : '#'}
             </span>
             <h2 className="text-[var(--color-text-primary)] font-semibold">{channel.name}</h2>
-            {channel.description && (
-              <span className="ml-4 text-[var(--color-text-muted)] text-sm truncate hidden md:inline">
-                {channel.description}
+            {editingDescription ? (
+              <input
+                autoFocus
+                className="ml-4 text-sm bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] border border-[var(--color-border)] rounded px-2 py-0.5 hidden md:inline-block flex-1 max-w-xs"
+                value={descriptionDraft}
+                onChange={(e) => setDescriptionDraft(e.target.value)}
+                onKeyDown={async (e) => {
+                  if (e.key === 'Enter') {
+                    try {
+                      await api.updateChannel(channel.id, { description: descriptionDraft || null });
+                    } catch (err) {
+                      if (import.meta.env.DEV) console.error('Failed to update description:', err);
+                    }
+                    setEditingDescription(false);
+                  } else if (e.key === 'Escape') {
+                    setEditingDescription(false);
+                  }
+                }}
+                onBlur={async () => {
+                  try {
+                    await api.updateChannel(channel.id, { description: descriptionDraft || null });
+                  } catch (err) {
+                    if (import.meta.env.DEV) console.error('Failed to update description:', err);
+                  }
+                  setEditingDescription(false);
+                }}
+                placeholder="Add a topic..."
+                maxLength={200}
+              />
+            ) : (
+              <span
+                className={`ml-4 text-[var(--color-text-muted)] text-sm truncate hidden md:inline ${isAdmin ? 'cursor-pointer hover:text-[var(--color-text-secondary)]' : ''}`}
+                onClick={isAdmin ? () => { setDescriptionDraft(channel.description || ''); setEditingDescription(true); } : undefined}
+              >
+                {channel.description || (isAdmin ? 'Add a topic...' : '')}
               </span>
             )}
           </>
         )}
         <div className="ml-auto flex items-center gap-1">
+          <button
+            onClick={async () => {
+              const newMuted = !channel.muted;
+              try {
+                await api.muteChannel(channel.id, newMuted);
+                onMuteChannel?.(channel.id, newMuted);
+              } catch (err) {
+                if (import.meta.env.DEV) console.error('Failed to toggle mute:', err);
+              }
+            }}
+            className={`p-2 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors ${channel.muted ? 'text-yellow-500' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
+            title={channel.muted ? 'Unmute channel' : 'Mute channel'}
+          >
+            {channel.muted ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+              </svg>
+            )}
+          </button>
           {onOpenSearch && (
             <button
               onClick={onOpenSearch}
@@ -606,13 +718,16 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
         ) : (
           <>
             {hasMore && (
-              <div className="text-center py-4">
-                <button
-                  onClick={loadMoreMessages}
-                  className="text-slack-blue hover:underline text-sm"
-                >
-                  Load older messages
-                </button>
+              <div ref={sentinelRef} className="text-center py-2">
+                {loadingMore && (
+                  <div className="flex items-center justify-center gap-2 text-[var(--color-text-muted)] text-sm py-2">
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Loading...
+                  </div>
+                )}
               </div>
             )}
             <MessageList
@@ -632,6 +747,8 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
               lastReadAt={lastReadAtRef.current}
               members={workspace?.members || []}
               onAvatarClick={setProfileUserId}
+              onAddToLibrary={onAddToLibrary}
+              workspaceId={workspace?.id}
             />
             <div ref={messagesEndRef} />
           </>
@@ -663,6 +780,8 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
         onTyping={handleTyping}
         members={workspace?.members || []}
         disabled={!isOnline}
+        workspaceId={workspace?.id}
+        onSlashCommand={setSlashCommandType}
       />
 
       {/* Members Panel */}
@@ -700,6 +819,17 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
         workspaceId={workspace?.id}
         onClose={() => setProfileUserId(null)}
         onStartDM={profileUserId !== user?.id ? onStartDM : null}
+      />
+    )}
+    {slashCommandType && (
+      <SlashCommandPicker
+        type={slashCommandType}
+        workspaceId={workspace?.id}
+        onClose={() => setSlashCommandType(null)}
+        onSelect={(type, id, title) => {
+          setSlashCommandType(null);
+          handleSendMessage(`[${type}:${id}]`);
+        }}
       />
     )}
     </>

@@ -19,7 +19,14 @@ import { MAX_IMAGE_SIZE, MAX_AUDIO_SIZE, MAX_VIDEO_SIZE, ALLOWED_IMAGE_TYPES, AL
  * @param {function} props.onTyping - Callback when user is typing
  * @param {Array} props.members - Workspace members for @mention autocomplete
  */
-function MessageInput({ channelName, onSend, onTyping, members = [], disabled = false }) {
+const SLASH_COMMANDS = [
+  { command: '/setlist', label: 'Share a setlist', icon: '📋' },
+  { command: '/gig', label: 'Share a gig', icon: '🎤' },
+  { command: '/song', label: 'Share a song', icon: '🎵' },
+  { command: '/poll', label: 'Create a poll', icon: '📊' },
+];
+
+function MessageInput({ channelName, onSend, onTyping, members = [], disabled = false, workspaceId, onSlashCommand }) {
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -29,6 +36,9 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
   const [mentionFilter, setMentionFilter] = useState('');
   const [mentionIndex, setMentionIndex] = useState(0);
   const [mentionStart, setMentionStart] = useState(-1);
+  const [showSlashCommands, setShowSlashCommands] = useState(false);
+  const [slashFilter, setSlashFilter] = useState('');
+  const [slashIndex, setSlashIndex] = useState(0);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const onSendRef = useRef(onSend);
@@ -46,6 +56,11 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
   const filteredMembers = members.filter(m =>
     m.user.displayName.toLowerCase().includes(mentionFilter.toLowerCase())
   ).slice(0, 6);
+
+  // Filter slash commands
+  const filteredSlashCommands = SLASH_COMMANDS.filter(c =>
+    c.command.startsWith('/' + slashFilter)
+  );
 
   // Reset mention index when filter changes
   useEffect(() => {
@@ -218,6 +233,33 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
   };
 
   const handleKeyDown = (e) => {
+    // Handle slash command dropdown navigation
+    if (showSlashCommands && filteredSlashCommands.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSlashIndex(prev => (prev + 1) % filteredSlashCommands.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSlashIndex(prev => (prev - 1 + filteredSlashCommands.length) % filteredSlashCommands.length);
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        const cmd = filteredSlashCommands[slashIndex];
+        setContent('');
+        setShowSlashCommands(false);
+        onSlashCommand?.(cmd.command.slice(1)); // Remove leading /
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowSlashCommands(false);
+        return;
+      }
+    }
+
     // Handle mention dropdown navigation
     if (showMentions && filteredMembers.length > 0) {
       if (e.key === 'ArrowDown') {
@@ -240,6 +282,16 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
         setShowMentions(false);
         return;
       }
+    }
+
+    // Formatting keyboard shortcuts
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+      if (e.key === 'b') { e.preventDefault(); wrapSelection('**'); return; }
+      if (e.key === 'i') { e.preventDefault(); wrapSelection('*'); return; }
+      if (e.key === 'e') { e.preventDefault(); wrapSelection('`'); return; }
+    }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'X') {
+      e.preventDefault(); wrapSelection('~~'); return;
     }
 
     // Normal enter to send
@@ -268,7 +320,37 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
       setMentionFilter('');
       setMentionStart(-1);
     }
+
+    // Check for slash command trigger (/ at start of input)
+    const slashMatch = value.match(/^\/(\w*)$/);
+    if (slashMatch) {
+      setShowSlashCommands(true);
+      setSlashFilter(slashMatch[1]);
+      setSlashIndex(0);
+    } else {
+      setShowSlashCommands(false);
+    }
   };
+
+  // Wrap selected text with markdown markers (or insert markers at cursor)
+  const wrapSelection = useCallback((before, after) => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = content.slice(start, end);
+    const newContent = content.slice(0, start) + before + selected + (after || before) + content.slice(end);
+    setContent(newContent);
+    // Set cursor position after update
+    const cursorPos = selected ? start + before.length + selected.length + (after || before).length : start + before.length;
+    setTimeout(() => {
+      ta.focus();
+      ta.setSelectionRange(
+        selected ? start : cursorPos,
+        selected ? start + before.length + selected.length + (after || before).length : cursorPos
+      );
+    }, 0);
+  }, [content]);
 
   // Auto-resize textarea
   const handleInput = (e) => {
@@ -492,6 +574,33 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
       )}
 
       <div className="bg-[var(--color-bg-tertiary)] rounded-lg relative">
+        {/* Slash command dropdown */}
+        {showSlashCommands && filteredSlashCommands.length > 0 && (
+          <div className="absolute bottom-full left-0 mb-1 w-64 bg-gray-800 rounded-lg shadow-lg border border-gray-600 py-1 z-50">
+            <div className="px-3 py-1.5 text-xs text-gray-400 font-medium uppercase">Commands</div>
+            {filteredSlashCommands.map((cmd, idx) => (
+              <button
+                key={cmd.command}
+                type="button"
+                onClick={() => {
+                  setContent('');
+                  setShowSlashCommands(false);
+                  onSlashCommand?.(cmd.command.slice(1));
+                }}
+                className={`w-full px-3 py-2 text-left flex items-center gap-3 ${
+                  idx === slashIndex ? 'bg-blue-600' : 'hover:bg-gray-700'
+                }`}
+              >
+                <span className="text-lg">{cmd.icon}</span>
+                <div>
+                  <div className="text-white text-sm font-medium">{cmd.command}</div>
+                  <div className="text-gray-400 text-xs">{cmd.label}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* @Mention dropdown */}
         {showMentions && filteredMembers.length > 0 && (
           <div
@@ -539,6 +648,30 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
         />
         <div className="flex items-center justify-between px-3 py-2 border-t border-gray-600">
           <div className="flex items-center gap-2">
+            {/* Formatting toolbar */}
+            <div className="hidden md:flex items-center gap-0.5 pr-2 mr-2 border-r border-gray-600">
+              <button type="button" onClick={() => wrapSelection('**')} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-600" title="Bold (Ctrl+B)" disabled={sending || isRecording}>
+                <span className="font-bold text-sm w-5 h-5 flex items-center justify-center">B</span>
+              </button>
+              <button type="button" onClick={() => wrapSelection('*')} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-600" title="Italic (Ctrl+I)" disabled={sending || isRecording}>
+                <span className="italic text-sm w-5 h-5 flex items-center justify-center">I</span>
+              </button>
+              <button type="button" onClick={() => wrapSelection('~~')} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-600" title="Strikethrough (Ctrl+Shift+X)" disabled={sending || isRecording}>
+                <span className="line-through text-sm w-5 h-5 flex items-center justify-center">S</span>
+              </button>
+              <button type="button" onClick={() => wrapSelection('`')} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-600" title="Code (Ctrl+E)" disabled={sending || isRecording}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+              </button>
+              <button type="button" onClick={() => wrapSelection('```\n', '\n```')} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-600" title="Code block" disabled={sending || isRecording}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M4 12h16M4 17h10" /></svg>
+              </button>
+              <button type="button" onClick={() => { const ta = textareaRef.current; if (ta) { const start = ta.selectionStart; const lineStart = content.lastIndexOf('\n', start - 1) + 1; setContent(content.slice(0, lineStart) + '> ' + content.slice(lineStart)); setTimeout(() => { ta.focus(); ta.setSelectionRange(start + 2, start + 2); }, 0); }}} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-600" title="Quote" disabled={sending || isRecording}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+              </button>
+              <button type="button" onClick={() => { const ta = textareaRef.current; if (ta) { const start = ta.selectionStart; const lineStart = content.lastIndexOf('\n', start - 1) + 1; setContent(content.slice(0, lineStart) + '- ' + content.slice(lineStart)); setTimeout(() => { ta.focus(); ta.setSelectionRange(start + 2, start + 2); }, 0); }}} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-600" title="Bullet list" disabled={sending || isRecording}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /><circle cx="2" cy="6" r="1" fill="currentColor" /><circle cx="2" cy="12" r="1" fill="currentColor" /><circle cx="2" cy="18" r="1" fill="currentColor" /></svg>
+              </button>
+            </div>
             <input
               ref={fileInputRef}
               type="file"
@@ -596,9 +729,11 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
         </div>
       </div>
       <p className="hidden md:block text-xs text-gray-500 mt-2">
-        Press <kbd className="bg-gray-700 px-1 rounded">Enter</kbd> to send,{' '}
-        <kbd className="bg-gray-700 px-1 rounded">Shift + Enter</kbd> for new line,{' '}
-        <kbd className="bg-gray-700 px-1 rounded">@</kbd> to mention
+        <kbd className="bg-gray-700 px-1 rounded">Enter</kbd> send{' · '}
+        <kbd className="bg-gray-700 px-1 rounded">Shift+Enter</kbd> new line{' · '}
+        <kbd className="bg-gray-700 px-1 rounded">@</kbd> mention{' · '}
+        <kbd className="bg-gray-700 px-1 rounded">Ctrl+B</kbd> bold{' · '}
+        <kbd className="bg-gray-700 px-1 rounded">Ctrl+I</kbd> italic
       </p>
     </form>
   );
