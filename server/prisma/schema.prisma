@@ -80,6 +80,7 @@ model RefreshToken {
 model Workspace {
   id                  String    @id @default(uuid())
   name                String
+  slug                String?   @unique
   inviteCode          String    @unique
   inviteCodeExpiresAt DateTime?
   inviteMaxUses       Int?      // null = unlimited

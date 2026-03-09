@@ -321,9 +321,17 @@ async function loadWorkspaces(search) {
       const planBtn = isPro
         ? `<button class="btn btn-sm" style="background:#6b7280" data-toggle-plan="${w.id}" data-ws-name="${esc(w.name)}">Revoke PRO</button>`
         : `<button class="btn btn-sm" style="background:#22c55e" data-toggle-plan="${w.id}" data-ws-name="${esc(w.name)}">Grant PRO</button>`;
+      const ownerInfo = w.owner ? `<div style="font-size:12px;color:#9ca3af;margin-top:2px">Owner: ${esc(w.owner.displayName)}</div>` : '';
+      const slugInfo = w.slug ? `<div style="font-size:11px;color:#6b7280;margin-top:1px">${esc(w.slug)}</div>` : '';
+      const shortId = w.id.substring(0, 8);
       return `
       <tr>
-        <td><strong>${esc(w.name)}</strong> ${planBadge}</td>
+        <td>
+          <strong>${esc(w.name)}</strong> ${planBadge}
+          ${ownerInfo}
+          ${slugInfo}
+          <div style="font-size:11px;color:#6b7280;margin-top:1px;cursor:pointer" title="Click to copy full ID" onclick="navigator.clipboard.writeText('${w.id}');this.textContent='Copied!';setTimeout(()=>this.textContent='${shortId}...',1500)">${shortId}...</div>
+        </td>
         <td>${w._count.members}</td>
         <td>${w._count.channels}</td>
         <td>${fmt(w.messageCount)}</td>

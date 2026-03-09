@@ -26,6 +26,18 @@ const generateInviteCode = () => {
   return crypto.randomBytes(6).toString('base64url').substring(0, 10).toUpperCase();
 };
 
+const generateSlug = (name) => {
+  const base = name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .substring(0, 40);
+  const suffix = crypto.randomBytes(2).toString('hex'); // 4 chars
+  return `${base}-${suffix}`;
+};
+
 // Get expiration date based on duration (in hours, null = never expires)
 const getInviteExpiration = (hours = 24) => {
   if (hours === null || hours === 0) return null;
@@ -150,6 +162,7 @@ router.post('/', authenticate, async (req, res) => {
     const workspace = await prisma.workspace.create({
       data: {
         name: name.trim(),
+        slug: generateSlug(name.trim()),
         inviteCode: generateInviteCode(),
         inviteCodeExpiresAt: getInviteExpiration(),
         members: {

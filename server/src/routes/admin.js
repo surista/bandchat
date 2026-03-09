@@ -185,6 +185,7 @@ router.get('/workspaces', async (req, res) => {
         select: {
           id: true,
           name: true,
+          slug: true,
           plan: true,
           planSource: true,
           planExpiresAt: true,
@@ -192,6 +193,12 @@ router.get('/workspaces', async (req, res) => {
           createdAt: true,
           _count: {
             select: { members: true, channels: true },
+          },
+          members: {
+            where: { role: 'ADMIN' },
+            take: 1,
+            orderBy: { joinedAt: 'asc' },
+            select: { user: { select: { displayName: true, email: true } } },
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -229,10 +236,15 @@ router.get('/workspaces', async (req, res) => {
       }
     }
 
-    const items = workspaces.map(w => ({
-      ...w,
-      messageCount: wsMessageCounts[w.id] || 0,
-    }));
+    const items = workspaces.map(w => {
+      const admin = w.members?.[0]?.user;
+      return {
+        ...w,
+        members: undefined,
+        owner: admin ? { displayName: admin.displayName, email: admin.email } : null,
+        messageCount: wsMessageCounts[w.id] || 0,
+      };
+    });
 
     res.json({ workspaces: items, total, page, limit });
   } catch (error) {

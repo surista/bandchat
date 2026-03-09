@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { randomUUID } from 'crypto';
+import { randomUUID, randomBytes } from 'crypto';
 import prisma from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
@@ -207,9 +207,11 @@ router.post('/execute', authenticate, async (req, res) => {
     emitProgress('workspace', 0, 1, 'Creating workspace...');
 
     // --- Create workspace ---
+    const slug = workspaceName.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').substring(0, 40) + '-' + randomBytes(2).toString('hex');
     const workspace = await prisma.workspace.create({
       data: {
         name: workspaceName,
+        slug,
         createdAt: preserveTimestamps && exportData.workspace.createdAt
           ? new Date(exportData.workspace.createdAt) : new Date(),
       }
