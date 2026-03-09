@@ -642,6 +642,29 @@ router.post('/users/:userId/restore', async (req, res) => {
   }
 });
 
+// DELETE /api/admin/workspaces/:workspaceId — Soft-delete a workspace (30-day grace period)
+router.delete('/workspaces/:workspaceId', async (req, res) => {
+  try {
+    const workspace = await prisma.workspace.findFirst({
+      where: { id: req.params.workspaceId, deletedAt: null },
+      select: { id: true, name: true },
+    });
+    if (!workspace) {
+      return res.status(404).json({ error: 'Workspace not found' });
+    }
+
+    await prisma.workspace.update({
+      where: { id: workspace.id },
+      data: { deletedAt: new Date() },
+    });
+
+    res.json({ message: `Workspace "${workspace.name}" soft-deleted (30-day grace period)` });
+  } catch (error) {
+    console.error('Admin workspace soft-delete error:', error);
+    res.status(500).json({ error: 'Failed to delete workspace' });
+  }
+});
+
 // POST /api/admin/workspaces/:workspaceId/restore — Restore a soft-deleted workspace
 router.post('/workspaces/:workspaceId/restore', async (req, res) => {
   try {

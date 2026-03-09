@@ -309,7 +309,7 @@ async function loadWorkspaces(search) {
     const tbody = document.getElementById('workspacesTable');
 
     if (workspaces.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No workspaces found</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No workspaces found</td></tr>';
       return;
     }
 
@@ -321,6 +321,7 @@ async function loadWorkspaces(search) {
         <td>${fmt(w.messageCount)}</td>
         <td>${fmtBytes(Number(w.storageUsedBytes || 0))}</td>
         <td>${fmtDate(w.createdAt)}</td>
+        <td><button class="btn btn-danger btn-sm" data-delete-ws="${w.id}" data-ws-name="${esc(w.name)}">Delete</button></td>
       </tr>
     `).join('');
   } catch (err) {
@@ -331,6 +332,23 @@ async function loadWorkspaces(search) {
 document.getElementById('workspaceSearch').addEventListener('input', (e) => {
   clearTimeout(workspaceSearchTimer);
   workspaceSearchTimer = setTimeout(() => loadWorkspaces(e.target.value), 300);
+});
+
+// Event delegation for workspace delete buttons
+document.getElementById('workspacesTable').addEventListener('click', async (e) => {
+  const deleteBtn = e.target.closest('[data-delete-ws]');
+  if (deleteBtn) {
+    const name = deleteBtn.dataset.wsName;
+    if (!confirm(`Soft-delete workspace "${name}"? It will be recoverable for 30 days.`)) return;
+    try {
+      const result = await api(`/admin/workspaces/${deleteBtn.dataset.deleteWs}`, { method: 'DELETE' });
+      alert(result.message);
+      loadWorkspaces();
+      loadDeleted();
+    } catch (err) {
+      alert('Failed to delete: ' + err.message);
+    }
+  }
 });
 
 // Storage tab
