@@ -634,7 +634,7 @@ function MessageList({
                   </div>
                 </div>
               ) : (
-                <div className="text-[var(--color-text-secondary)] break-words whitespace-pre-wrap">
+                <div className="message-content text-[var(--color-text-secondary)] break-words whitespace-pre-wrap">
                   <MessageContent content={message.content} message={message} onOpenLightbox={openLightbox} members={members} onAddToLibrary={onAddToLibrary} workspaceId={workspaceId} />
                 </div>
               )}
