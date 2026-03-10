@@ -1,4 +1,5 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, GetObjectCommand, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { getClient, R2_BUCKET_NAME } from '../lib/storage.js';
 import { promisify } from 'util';
 import { gzip, gunzip } from 'zlib';
 import { Resend } from 'resend';
@@ -11,33 +12,10 @@ const gunzipAsync = promisify(gunzip);
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@bandchat.app';
 
-const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
-const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'bandchat';
-
 const BACKUP_PREFIX = 'backups/';
 const KEEP_DAILY = 7;
 const KEEP_WEEKLY = 4;
 
-let s3Client = null;
-
-function getClient() {
-  if (!s3Client) {
-    if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
-      throw new Error('R2 storage not configured');
-    }
-    s3Client = new S3Client({
-      region: 'auto',
-      endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-      credentials: {
-        accessKeyId: R2_ACCESS_KEY_ID,
-        secretAccessKey: R2_SECRET_ACCESS_KEY,
-      },
-    });
-  }
-  return s3Client;
-}
 
 /**
  * Create a full database backup, gzip it, and upload to R2.
@@ -134,6 +112,11 @@ export async function createBackup() {
   const bandAchievements = await prisma.bandAchievement.findMany();
   const availability = await prisma.memberAvailability.findMany();
   const practice = await prisma.practiceSession.findMany();
+  const savedMessages = await prisma.savedMessage.findMany();
+  const expoPushTokens = await prisma.expoPushToken.findMany();
+  const threadReads = await prisma.threadRead.findMany();
+  const reports = await prisma.report.findMany();
+  const blockedUsers = await prisma.blockedUser.findMany();
 
   const backup = {
     version: 1,
@@ -169,6 +152,11 @@ export async function createBackup() {
       bandAchievements,
       availability,
       practice,
+      savedMessages,
+      expoPushTokens,
+      threadReads,
+      reports,
+      blockedUsers,
     }
   };
 
@@ -343,6 +331,11 @@ export async function previewBackup(key) {
     bandAchievements: data.bandAchievements?.length || 0,
     availability: data.availability?.length || 0,
     practice: data.practice?.length || 0,
+    savedMessages: data.savedMessages?.length || 0,
+    expoPushTokens: data.expoPushTokens?.length || 0,
+    threadReads: data.threadReads?.length || 0,
+    reports: data.reports?.length || 0,
+    blockedUsers: data.blockedUsers?.length || 0,
   };
 
   return {
@@ -429,6 +422,7 @@ export async function restoreFromBackup(key, onProgress) {
         "SetlistPerformer",
         "SetlistSong",
         "Setlist",
+        "SavedMessage",
         "PinnedMessage",
         "Reaction",
         "ThreadRead",
@@ -443,6 +437,7 @@ export async function restoreFromBackup(key, onProgress) {
         "ChannelGroup",
         "WorkspaceMember",
         "Workspace",
+        "ExpoPushToken",
         "PushSubscription",
         "RefreshToken",
         "Report",
@@ -481,10 +476,24 @@ export async function restoreFromBackup(key, onProgress) {
         data: {
           id: ws.id,
           name: ws.name,
+          slug: ws.slug || null,
           inviteCode: ws.inviteCode,
-          iconUrl: ws.iconUrl || null,
+          inviteCodeExpiresAt: ws.inviteCodeExpiresAt ? new Date(ws.inviteCodeExpiresAt) : null,
+          inviteMaxUses: ws.inviteMaxUses ?? null,
+          inviteUsedCount: ws.inviteUsedCount ?? 0,
           storageUsedBytes: ws.storageUsedBytes ? BigInt(ws.storageUsedBytes) : 0n,
-          maxStorageBytes: ws.maxStorageBytes ? BigInt(ws.maxStorageBytes) : null,
+          calendarToken: ws.calendarToken || null,
+          currency: ws.currency || 'USD',
+          defaultEventType: ws.defaultEventType || 'GIG',
+          defaultStartTime: ws.defaultStartTime || '19:00',
+          defaultEndTime: ws.defaultEndTime || '21:00',
+          defaultVenue: ws.defaultVenue || null,
+          plan: ws.plan || 'FREE',
+          planSource: ws.planSource || null,
+          planProductId: ws.planProductId || null,
+          planExpiresAt: ws.planExpiresAt ? new Date(ws.planExpiresAt) : null,
+          planOriginalTxId: ws.planOriginalTxId || null,
+          planUpdatedAt: ws.planUpdatedAt ? new Date(ws.planUpdatedAt) : null,
           createdAt: new Date(ws.createdAt),
           updatedAt: ws.updatedAt ? new Date(ws.updatedAt) : new Date(ws.createdAt),
         }
@@ -1106,7 +1115,77 @@ export async function restoreFromBackup(key, onProgress) {
       });
     }
 
-    // Reset sequences for all tables with auto-increment (Prisma uses UUID, so this is just for safety)
+    // --- Saved Messages ---
+    if (data.savedMessages?.length) {
+      emit('restoring', `Inserting ${data.savedMessages.length} saved messages...`);
+      await tx.savedMessage.createMany({
+        data: data.savedMessages.map(sm => ({
+          id: sm.id,
+          userId: sm.userId,
+          messageId: sm.messageId,
+          createdAt: sm.createdAt ? new Date(sm.createdAt) : new Date(),
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    // --- Expo Push Tokens ---
+    if (data.expoPushTokens?.length) {
+      emit('restoring', `Inserting ${data.expoPushTokens.length} expo push tokens...`);
+      await tx.expoPushToken.createMany({
+        data: data.expoPushTokens.map(t => ({
+          id: t.id,
+          userId: t.userId,
+          token: t.token,
+          platform: t.platform,
+          createdAt: t.createdAt ? new Date(t.createdAt) : new Date(),
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    // --- Thread Reads ---
+    if (data.threadReads?.length) {
+      emit('restoring', `Inserting ${data.threadReads.length} thread reads...`);
+      await tx.threadRead.createMany({
+        data: data.threadReads.map(tr => ({
+          userId: tr.userId,
+          messageId: tr.messageId,
+          lastRead: tr.lastRead ? new Date(tr.lastRead) : new Date(),
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    // --- Reports ---
+    if (data.reports?.length) {
+      emit('restoring', `Inserting ${data.reports.length} reports...`);
+      await tx.report.createMany({
+        data: data.reports.map(r => ({
+          id: r.id,
+          reporterId: r.reporterId,
+          messageId: r.messageId,
+          reason: r.reason,
+          createdAt: r.createdAt ? new Date(r.createdAt) : new Date(),
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    // --- Blocked Users ---
+    if (data.blockedUsers?.length) {
+      emit('restoring', `Inserting ${data.blockedUsers.length} blocked users...`);
+      await tx.blockedUser.createMany({
+        data: data.blockedUsers.map(b => ({
+          id: b.id,
+          blockerId: b.blockerId,
+          blockedUserId: b.blockedUserId,
+          createdAt: b.createdAt ? new Date(b.createdAt) : new Date(),
+        })),
+        skipDuplicates: true,
+      });
+    }
+
     emit('restoring', 'Finalizing restore...');
   }, {
     timeout: 600000, // 10 minute timeout for large restores
@@ -1215,6 +1294,10 @@ export async function verifyBackup(key) {
  * @param {string} type - 'failure' or 'verification_failed'
  * @param {object} details - Error details
  */
+function escapeHtml(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 export async function sendBackupAlert(type, details) {
   if (!resend) {
     console.warn('Cannot send backup alert: Resend not configured');
@@ -1231,9 +1314,9 @@ export async function sendBackupAlert(type, details) {
       <p>A scheduled backup encountered an issue:</p>
       <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
         <tr><td style="padding: 8px 0; color: #6b7280; width: 120px;">Time</td><td style="padding: 8px 0; font-weight: 600;">${new Date().toISOString()}</td></tr>
-        <tr><td style="padding: 8px 0; color: #6b7280;">Error</td><td style="padding: 8px 0; font-weight: 600; color: #ef4444;">${details.error || 'Unknown'}</td></tr>
-        ${details.key ? `<tr><td style="padding: 8px 0; color: #6b7280;">Backup Key</td><td style="padding: 8px 0;">${details.key}</td></tr>` : ''}
-        ${details.errors?.length ? `<tr><td style="padding: 8px 0; color: #6b7280;">Details</td><td style="padding: 8px 0;">${details.errors.join('<br>')}</td></tr>` : ''}
+        <tr><td style="padding: 8px 0; color: #6b7280;">Error</td><td style="padding: 8px 0; font-weight: 600; color: #ef4444;">${escapeHtml(details.error || 'Unknown')}</td></tr>
+        ${details.key ? `<tr><td style="padding: 8px 0; color: #6b7280;">Backup Key</td><td style="padding: 8px 0;">${escapeHtml(details.key)}</td></tr>` : ''}
+        ${details.errors?.length ? `<tr><td style="padding: 8px 0; color: #6b7280;">Details</td><td style="padding: 8px 0;">${details.errors.map(e => escapeHtml(e)).join('<br>')}</td></tr>` : ''}
       </table>
       <p style="color: #6b7280; font-size: 14px;">Please check the server logs and R2 storage for more details.</p>
     </div>

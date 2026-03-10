@@ -3,6 +3,7 @@ import multer from 'multer';
 import { randomUUID, randomBytes } from 'crypto';
 import prisma from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
+import rateLimit from 'express-rate-limit';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 
 const router = express.Router();
@@ -33,6 +34,14 @@ function safeUrl(url) {
   return valid ? url : null;
 }
 
+const importLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  skip: process.env.NODE_ENV === 'test' ? () => true : undefined,
+  message: { error: 'Too many import attempts, please try again later' },
+  keyGenerator: (req) => req.user?.id || req.ip,
+});
+
 // Multer for JSON upload (50MB limit)
 const jsonUpload = multer({
   storage: multer.memoryStorage(),
@@ -51,7 +60,7 @@ const jsonUpload = multer({
  * Upload and parse a BandChat workspace export JSON.
  * Returns session ID, member mapping suggestions, and stats.
  */
-router.post('/parse', authenticate, jsonUpload.single('file'), async (req, res) => {
+router.post('/parse', authenticate, importLimiter, jsonUpload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No JSON file uploaded' });
@@ -140,7 +149,7 @@ router.post('/parse', authenticate, jsonUpload.single('file'), async (req, res) 
  * POST /api/workspace-import/execute
  * Execute the workspace import, creating a new workspace with all data.
  */
-router.post('/execute', authenticate, async (req, res) => {
+router.post('/execute', authenticate, importLimiter, async (req, res) => {
   const startTime = Date.now();
   const io = req.app.get('io');
   const userId = req.user.id;

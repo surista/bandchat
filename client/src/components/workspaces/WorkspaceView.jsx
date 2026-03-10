@@ -203,6 +203,7 @@ function WorkspaceView() {
     return saved ? parseInt(saved, 10) : 256;
   });
   const [isResizing, setIsResizing] = useState(false);
+  const sidebarWidthRef = useRef(sidebarWidth);
   const lastRefreshRef = useRef(0);
   const swipeRef = useSwipeGesture({
     onSwipeRight: () => setSidebarOpen(true),
@@ -320,12 +321,13 @@ function WorkspaceView() {
       if (!isResizing) return;
       const newWidth = Math.min(Math.max(180, e.clientX), 400);
       setSidebarWidth(newWidth);
+      sidebarWidthRef.current = newWidth;
     };
 
     const handleMouseUp = () => {
       if (isResizing) {
         setIsResizing(false);
-        localStorage.setItem('sidebarWidth', sidebarWidth.toString());
+        localStorage.setItem('sidebarWidth', sidebarWidthRef.current.toString());
       }
     };
 
@@ -342,7 +344,7 @@ function WorkspaceView() {
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
-  }, [isResizing, sidebarWidth]);
+  }, [isResizing]);
 
   // Soft refresh: update channels/groups/DMs and selectedChannel metadata without resetting loading state
   const selectedChannelRef = useRef(null);

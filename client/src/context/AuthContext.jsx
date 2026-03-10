@@ -5,6 +5,7 @@
 
 import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import api from '../services/api';
+import { clearPreviewCache } from '../components/messages/LinkPreviewCard';
 
 /**
  * @typedef {Object} User
@@ -99,6 +100,7 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.error('Logout API failed:', err);
     } finally {
+      clearPreviewCache();
       setUser(null);
     }
   }, []);

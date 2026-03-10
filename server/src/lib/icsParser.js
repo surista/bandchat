@@ -141,8 +141,24 @@ function parseICSDate(value, keyPart) {
       ));
     }
 
-    // If timezone specified, we should convert, but for simplicity
-    // we'll treat it as local time (most calendar apps handle this)
+    if (timezone) {
+      const isoStr = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+      const utcGuess = new Date(isoStr + 'Z');
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false,
+      });
+      const parts = {};
+      for (const { type, value } of formatter.formatToParts(utcGuess)) {
+        parts[type] = value;
+      }
+      const tzRendered = new Date(`${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}Z`);
+      const offsetMs = tzRendered - utcGuess;
+      return new Date(utcGuess.getTime() - offsetMs);
+    }
+
     return new Date(
       parseInt(year),
       parseInt(month) - 1,
@@ -164,10 +180,10 @@ function unescapeICS(value) {
   if (!value) return value;
 
   return value
+    .replace(/\\\\/g, '\\')
     .replace(/\\n/gi, '\n')
     .replace(/\\,/g, ',')
-    .replace(/\\;/g, ';')
-    .replace(/\\\\/g, '\\');
+    .replace(/\\;/g, ';');
 }
 
 /**

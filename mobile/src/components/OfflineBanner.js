@@ -8,7 +8,7 @@ export default function OfflineBanner() {
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
-      const offline = !state.isConnected || !state.isInternetReachable;
+      const offline = !state.isConnected || state.isInternetReachable === false;
       setIsOffline(offline);
     });
     return () => unsubscribe();

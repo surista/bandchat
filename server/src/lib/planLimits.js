@@ -63,8 +63,12 @@ export function getPlanLimits(workspace) {
  * Serializable plan limits for API responses (converts BigInt to string).
  */
 export function serializePlanLimits(limits) {
-  return {
+  const result = {
     ...limits,
     storageBytes: limits.storageBytes.toString(),
   };
+  for (const [key, val] of Object.entries(result)) {
+    if (val === Infinity) result[key] = -1;
+  }
+  return result;
 }

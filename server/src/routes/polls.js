@@ -257,22 +257,31 @@ router.post('/:pollId/vote', authenticate, async (req, res) => {
     }
 
     // Remove existing votes and create new ones atomically
-    await prisma.$transaction([
-      prisma.pollVote.deleteMany({
+    await prisma.$transaction(async (tx) => {
+      const freshPoll = await tx.poll.findUnique({
+        where: { id: req.params.pollId },
+        select: { isClosed: true, expiresAt: true }
+      });
+
+      if (!freshPoll) throw new Error("Poll not found");
+      if (freshPoll.isClosed) throw new Error("Poll is closed");
+      if (freshPoll.expiresAt && new Date() > freshPoll.expiresAt) throw new Error("Poll has expired");
+
+      await tx.pollVote.deleteMany({
         where: {
           userId: req.user.id,
           option: {
             pollId: req.params.pollId
           }
         }
-      }),
-      prisma.pollVote.createMany({
+      });
+      await tx.pollVote.createMany({
         data: optionIds.map(optionId => ({
           optionId,
           userId: req.user.id
         }))
-      })
-    ]);
+      });
+    });
 
     // Fetch updated poll
     const updatedPoll = await prisma.poll.findUnique({

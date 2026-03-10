@@ -1,6 +1,7 @@
 import express from 'express';
 import { Resend } from 'resend';
 import { authenticate } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 
 function escapeHtml(str) {
@@ -13,7 +14,7 @@ const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KE
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@bandchat.app';
 
 // Report a message
-router.post('/', authenticate, async (req, res) => {
+router.post('/', authenticate, apiLimiter, async (req, res) => {
   try {
     const { messageId, reason } = req.body;
 

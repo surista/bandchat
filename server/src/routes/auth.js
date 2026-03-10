@@ -634,7 +634,7 @@ router.get('/me', authenticate, async (req, res) => {
 });
 
 // Update profile
-router.put('/me', authenticate, async (req, res) => {
+router.put('/me', authenticate, apiLimiter, async (req, res) => {
   try {
     const { displayName, avatarUrl, bio } = req.body;
 
@@ -719,6 +719,8 @@ router.put('/password', authenticate, authLimiter, async (req, res) => {
       }
     });
 
+    await prisma.refreshToken.deleteMany({ where: { userId: req.user.id } });
+
     res.json({ message: 'Password updated successfully' });
   } catch (error) {
     console.error('Password change error:', error);
@@ -727,7 +729,7 @@ router.put('/password', authenticate, authLimiter, async (req, res) => {
 });
 
 // Request email change - sends verification to new email
-router.post('/change-email', authenticate, async (req, res) => {
+router.post('/change-email', authenticate, authLimiter, async (req, res) => {
   try {
     const { newEmail, password } = req.body;
 
@@ -1151,7 +1153,7 @@ router.delete('/account', authenticate, authLimiter, async (req, res) => {
 });
 
 // Export user data as JSON download
-router.get('/export', authenticate, async (req, res) => {
+router.get('/export', authenticate, apiLimiter, async (req, res) => {
   try {
     const userId = req.user.id;
 

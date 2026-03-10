@@ -1,4 +1,5 @@
 import express from 'express';
+import crypto from 'crypto';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 import { getEffectivePlan, getPlanLimits, serializePlanLimits } from '../lib/planLimits.js';
@@ -168,8 +169,12 @@ router.post('/:workspaceId/activate', authenticate, isWorkspaceAdmin, async (req
 // ---------------------------------------------------------------------------
 router.post('/webhooks/revenuecat', async (req, res) => {
   // Verify the shared webhook secret
-  const expectedAuth = `Bearer ${process.env.REVENUECAT_WEBHOOK_SECRET}`;
-  if (req.headers.authorization !== expectedAuth) {
+  const secret = process.env.REVENUECAT_WEBHOOK_SECRET || '';
+  const expectedAuth = `Bearer ${secret}`;
+  const actualAuth = req.headers.authorization || '';
+  const isValid = expectedAuth.length === actualAuth.length &&
+    crypto.timingSafeEqual(Buffer.from(expectedAuth), Buffer.from(actualAuth));
+  if (!isValid) {
     console.warn('[Subscriptions] RevenueCat webhook: invalid authorization header');
     return res.status(401).json({ error: 'Unauthorized' });
   }

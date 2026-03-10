@@ -11,6 +11,7 @@ const REVENUECAT_API_BASE = 'https://api.revenuecat.com/v1';
  * @returns {Promise<object>} The subscriber object from RevenueCat.
  */
 export async function getSubscriber(appUserId) {
+  if (!process.env.REVENUECAT_SECRET_KEY) throw new Error('REVENUECAT_SECRET_KEY not configured');
   const url = `${REVENUECAT_API_BASE}/subscribers/${encodeURIComponent(appUserId)}`;
 
   const response = await fetch(url, {

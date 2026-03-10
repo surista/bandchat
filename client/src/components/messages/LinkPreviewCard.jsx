@@ -4,6 +4,10 @@ import api from '../../services/api';
 // Client-side cache to avoid duplicate fetches
 const previewCache = new Map();
 
+export function clearPreviewCache() {
+  previewCache.clear();
+}
+
 const getHostname = (url) => {
   try { return new URL(url).hostname; } catch { return url; }
 };

@@ -31,7 +31,7 @@ export function isAllowedUploadUrl(urlString, { allowGoogle = false } = {}) {
 
     const hostname = url.hostname;
     const allowed =
-      hostname.endsWith('cloudinary.com') ||
+      (hostname === 'cloudinary.com' || hostname.endsWith('.cloudinary.com')) ||
       (r2Hostname && hostname === r2Hostname) ||
       (allowGoogle && hostname.endsWith('googleusercontent.com'));
 

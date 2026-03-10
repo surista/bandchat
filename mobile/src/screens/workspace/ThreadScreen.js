@@ -35,6 +35,10 @@ export default function ThreadScreen({ navigation, route }) {
 
   const [parent, setParent] = useState(parentMessage);
   const [replies, setReplies] = useState([]);
+  const parentRef = useRef(parent);
+  const repliesRef = useRef(replies);
+  useEffect(() => { parentRef.current = parent; }, [parent]);
+  useEffect(() => { repliesRef.current = replies; }, [replies]);
   const [loading, setLoading] = useState(true);
   const [workspaceMembers, setWorkspaceMembers] = useState([]);
 
@@ -277,7 +281,7 @@ export default function ThreadScreen({ navigation, route }) {
   // Tap reaction to toggle
   const handleReactionPress = useCallback(async (messageId, emoji) => {
     try {
-      const allMessages = [parent, ...replies];
+      const allMessages = [parentRef.current, ...repliesRef.current];
       const msg = allMessages.find(m => m.id === messageId);
       const hasReacted = msg?.reactions?.some(r => r.emoji === emoji && r.userId === user?.id);
       if (hasReacted) {
@@ -288,7 +292,7 @@ export default function ThreadScreen({ navigation, route }) {
     } catch (err) {
       // silently fail
     }
-  }, [parent, replies, user?.id]);
+  }, [user?.id]);
 
   // Avatar press → profile
   const handleAvatarPress = useCallback((author) => {

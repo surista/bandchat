@@ -30,14 +30,15 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
  */
 class ApiService {
   constructor() {
-    this.accessToken = localStorage.getItem('accessToken');
+    this.accessToken = null;
     // Primary: refresh token in httpOnly cookie (set by server).
     // Fallback: also keep in memory for cross-origin deployments where cookies may be blocked.
     this._refreshToken = null;
-    // Clean up legacy refreshToken from localStorage (one-time migration).
+    // Clean up legacy tokens from localStorage (one-time migration).
+    localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     // _hasSession indicates we may have a valid session.
-    this._hasSession = !!this.accessToken;
+    this._hasSession = false;
     this._refreshPromise = null;
     // In-memory response cache: endpoint -> { data, timestamp }
     this._cache = new Map();
@@ -58,7 +59,6 @@ class ApiService {
     this.accessToken = accessToken;
     if (refreshToken) this._refreshToken = refreshToken;
     this._hasSession = true;
-    localStorage.setItem('accessToken', accessToken);
   }
 
   clearTokens() {
@@ -66,7 +66,6 @@ class ApiService {
     this._refreshToken = null;
     this._hasSession = false;
     this._cache.clear();
-    localStorage.removeItem('accessToken');
   }
 
   async request(endpoint, options = {}) {

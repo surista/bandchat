@@ -142,11 +142,17 @@ const UPLOAD_TIMEOUT = 120000; // 2 minutes for uploads
  */
 function fetchWithTimeout(url, options = {}, timeout = DEFAULT_TIMEOUT) {
   const controller = new AbortController();
+
+  if (options.signal) {
+    if (options.signal.aborted) {
+      controller.abort();
+    } else {
+      options.signal.addEventListener('abort', () => controller.abort(), { once: true });
+    }
+  }
+
   const timer = setTimeout(() => controller.abort(), timeout);
-  const signal = options.signal
-    ? options.signal  // Caller provided their own signal
-    : controller.signal;
-  return fetch(url, { ...options, signal })
+  return fetch(url, { ...options, signal: controller.signal })
     .finally(() => clearTimeout(timer));
 }
 
@@ -319,7 +325,7 @@ class ApiService {
         throw error;
       }
       // Handle timeout
-      if (error.message === 'Request timed out') {
+      if (error.name === 'AbortError') {
         const timeoutError = new Error('Request timed out. Please check your connection and try again.');
         timeoutError.type = ErrorTypes.TIMEOUT;
         throw timeoutError;

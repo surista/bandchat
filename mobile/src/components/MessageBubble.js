@@ -343,6 +343,7 @@ function AudioAttachment({ url, filename }) {
   const { colors } = useTheme();
   const [playing, setPlaying] = useState(false);
   const [sound, setSound] = useState(null);
+  const soundRef = useRef(null);
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
   const progressAnim = useRef(new Animated.Value(0)).current;
@@ -350,12 +351,9 @@ function AudioAttachment({ url, filename }) {
 
   useEffect(() => {
     return () => {
-      if (sound) {
-        sound.unloadAsync().catch(() => {});
-      }
+      soundRef.current?.unloadAsync().catch(() => {});
     };
-  }, [sound]);
-
+  }, []);
   // Update progress animation
   useEffect(() => {
     if (duration > 0) {
@@ -392,6 +390,7 @@ function AudioAttachment({ url, filename }) {
             }
           }
         );
+        soundRef.current = newSound;
         setSound(newSound);
         setPlaying(true);
       } catch (err) {

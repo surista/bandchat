@@ -100,8 +100,10 @@ async function seedAchievements() {
   console.log('Achievements seeded:', DEFAULT_ACHIEVEMENTS.length);
 }
 
-// Initialize achievements on startup
-seedAchievements().catch(console.error);
+// Initialize achievements on startup (skip if already seeded)
+prisma.achievement.count().then(count => {
+  if (count === 0) seedAchievements().catch(console.error);
+});
 
 // Get all achievement definitions
 router.get('/definitions', authenticate, async (req, res) => {

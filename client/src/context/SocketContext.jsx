@@ -38,6 +38,7 @@ export function SocketProvider({ children }) {
   const [presenceMap, setPresenceMap] = useState({});
   const idleTimerRef = useRef(null);
   const isAwayRef = useRef(false);
+  const lastResetRef = useRef(0);
 
   useEffect(() => {
     if (isAuthenticated && api.accessToken) {
@@ -83,6 +84,9 @@ export function SocketProvider({ children }) {
       // Idle detection: go away after 5 min of inactivity
       const IDLE_TIMEOUT = 5 * 60 * 1000;
       const resetIdle = () => {
+        const now = Date.now();
+        if (now - lastResetRef.current < 5000) return;
+        lastResetRef.current = now;
         if (isAwayRef.current) {
           isAwayRef.current = false;
           newSocket.emit('presence:update', 'online');

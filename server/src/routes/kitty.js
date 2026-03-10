@@ -187,11 +187,13 @@ router.put('/transactions/:transactionId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Only admins or the creator can modify this transaction' });
     }
 
+    const effectiveType = type || existing.type;
+
     const transaction = await prisma.kittyTransaction.update({
       where: { id: req.params.transactionId },
       data: {
         ...(type && { type }),
-        ...(category !== undefined && { category: type === 'EXPENSE' ? category : null }),
+        ...(category !== undefined && { category: effectiveType === 'EXPENSE' ? category : null }),
         ...(amount !== undefined && { amount: Math.abs(amount) }),
         ...(description && { description }),
         ...(date && { date: new Date(date) })

@@ -79,6 +79,8 @@ router.put('/workspace/:workspaceId/date/:date', authenticate, isWorkspaceMember
       return res.status(400).json({ error: 'Invalid status' });
     }
 
+    if (note && note.length > 500) return res.status(400).json({ error: 'Note too long' });
+
     const availability = await prisma.memberAvailability.upsert({
       where: {
         userId_workspaceId_date: {
@@ -125,9 +127,13 @@ router.put('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asyn
       return res.status(400).json({ error: 'Dates array is required' });
     }
 
+    if (dates.length > 365) return res.status(400).json({ error: 'Maximum 365 dates allowed' });
+
     if (!['AVAILABLE', 'UNAVAILABLE', 'MAYBE'].includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
+
+    if (note && note.length > 500) return res.status(400).json({ error: 'Note too long' });
 
     const results = await Promise.all(
       dates.map(dateStr => {

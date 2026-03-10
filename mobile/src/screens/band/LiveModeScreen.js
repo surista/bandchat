@@ -161,7 +161,7 @@ export default function LiveModeScreen({ navigation, route }) {
         )}
       </View>
     );
-  }, []);
+  }, [screenWidth]);
 
   return (
     <View style={styles.container}>

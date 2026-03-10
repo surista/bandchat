@@ -46,6 +46,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   const [slashCommandType, setSlashCommandType] = useState(null);
   const isAdmin = workspace?.members?.find(m => m.user?.id === user?.id)?.role === 'ADMIN';
   const lastReadAtRef = useRef(null);
+  const descriptionSavedRef = useRef(false);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -606,6 +607,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
                 onChange={(e) => setDescriptionDraft(e.target.value)}
                 onKeyDown={async (e) => {
                   if (e.key === 'Enter') {
+                    descriptionSavedRef.current = true;
                     try {
                       await api.updateChannel(channel.id, { description: descriptionDraft || null });
                     } catch (err) {
@@ -613,10 +615,15 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
                     }
                     setEditingDescription(false);
                   } else if (e.key === 'Escape') {
+                    descriptionSavedRef.current = true;
                     setEditingDescription(false);
                   }
                 }}
                 onBlur={async () => {
+                  if (descriptionSavedRef.current) {
+                    descriptionSavedRef.current = false;
+                    return;
+                  }
                   try {
                     await api.updateChannel(channel.id, { description: descriptionDraft || null });
                   } catch (err) {

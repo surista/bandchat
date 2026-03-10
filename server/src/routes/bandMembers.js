@@ -62,6 +62,10 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (re
       return res.status(400).json({ error: 'Name is required' });
     }
 
+    if (name.length > 200) return res.status(400).json({ error: 'Name must be 200 characters or less' });
+    if (notes && notes.length > 2000) return res.status(400).json({ error: 'Notes must be 2,000 characters or less' });
+    if (imageUrl && imageUrl.length > 2000) return res.status(400).json({ error: 'Image URL too long' });
+
     // Guests don't need stints, regular members do
     if (!isGuest && (!stints || stints.length === 0)) {
       return res.status(400).json({ error: 'At least one instrument stint is required' });
@@ -206,6 +210,10 @@ router.put('/:memberId', authenticate, async (req, res) => {
     if (!membership || membership.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Admin access required' });
     }
+
+    if (name && name.length > 200) return res.status(400).json({ error: 'Name must be 200 characters or less' });
+    if (notes && notes.length > 2000) return res.status(400).json({ error: 'Notes must be 2,000 characters or less' });
+    if (imageUrl && imageUrl.length > 2000) return res.status(400).json({ error: 'Image URL too long' });
 
     if (imageUrl) {
       const urlCheck = isAllowedUploadUrl(imageUrl);

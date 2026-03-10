@@ -196,11 +196,18 @@ export default function GigDetailScreen({ navigation, route }) {
     setSaving(true);
     // Combine date + time into full ISO datetimes (like web client)
     const dateStr = format(date, 'yyyy-MM-dd');
-    const startDateTime = startTime.trim()
-      ? new Date(`${dateStr}T${startTime.trim()}`).toISOString()
+    const timeRegex = /^\d{1,2}:\d{2}$/;
+    const parsedStart = startTime.trim() && timeRegex.test(startTime.trim())
+      ? new Date(`${dateStr}T${startTime.trim()}`)
+      : null;
+    const startDateTime = (parsedStart && !isNaN(parsedStart.getTime()))
+      ? parsedStart.toISOString()
       : new Date(`${dateStr}T00:00`).toISOString();
-    const endDateTime = endTime.trim()
-      ? new Date(`${dateStr}T${endTime.trim()}`).toISOString()
+    const parsedEnd = endTime.trim() && timeRegex.test(endTime.trim())
+      ? new Date(`${dateStr}T${endTime.trim()}`)
+      : null;
+    const endDateTime = (parsedEnd && !isNaN(parsedEnd.getTime()))
+      ? parsedEnd.toISOString()
       : null;
     const data = {
       title: trimmedTitle,

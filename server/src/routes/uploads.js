@@ -197,6 +197,12 @@ router.post('/', authenticate, uploadLimiter, upload.single('file'), async (req,
     // Check workspace storage quota if workspaceId provided
     const workspaceId = req.body.workspaceId || req.query.workspaceId;
     if (workspaceId) {
+      const membership = await prisma.workspaceMember.findUnique({
+        where: { userId_workspaceId: { userId: req.user.id, workspaceId } }
+      });
+      if (!membership) {
+        return res.status(403).json({ error: 'Not a workspace member' });
+      }
       const quotaError = await reserveStorageQuota(workspaceId, req.file.size);
       if (quotaError) {
         return res.status(413).json(quotaError);
@@ -276,6 +282,12 @@ router.post('/multiple', authenticate, uploadLimiter, upload.array('files', 5), 
     // Check workspace storage quota if workspaceId provided
     const workspaceId = req.body.workspaceId || req.query.workspaceId;
     if (workspaceId) {
+      const membership = await prisma.workspaceMember.findUnique({
+        where: { userId_workspaceId: { userId: req.user.id, workspaceId } }
+      });
+      if (!membership) {
+        return res.status(403).json({ error: 'Not a workspace member' });
+      }
       const quotaError = await reserveStorageQuota(workspaceId, totalSize);
       if (quotaError) {
         return res.status(413).json(quotaError);

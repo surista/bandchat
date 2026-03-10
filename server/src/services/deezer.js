@@ -16,8 +16,6 @@ class DeezerService {
       const query = artist ? `${artist} ${title}` : title;
       const url = `${this.baseUrl}/search?q=${encodeURIComponent(query)}&limit=5`;
 
-      console.log('Deezer search:', query);
-
       const response = await fetch(url, {
         headers: {
           'Accept': 'application/json'
@@ -32,13 +30,11 @@ class DeezerService {
       const data = await response.json();
 
       if (!data.data || data.data.length === 0) {
-        console.log('Deezer: No results for', query);
         return null;
       }
 
       // Return the first track ID
       const track = data.data[0];
-      console.log('Deezer found:', track.title, 'by', track.artist?.name);
       return track.id;
     } catch (error) {
       console.error('Deezer search error:', error.message);
@@ -67,11 +63,9 @@ class DeezerService {
       const bpm = track.bpm && track.bpm > 0 ? Math.round(track.bpm) : null;
 
       if (!bpm) {
-        console.log('Deezer: No BPM for track', trackId);
         return null;
       }
 
-      console.log('Deezer BPM:', bpm);
       return { bpm, key: null };
     } catch (error) {
       console.error('Deezer track error:', error.message);

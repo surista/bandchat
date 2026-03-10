@@ -74,6 +74,11 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (re
     if (title.length > 200) return res.status(400).json({ error: 'Title must be 200 characters or less' });
     if (content.length > 10000) return res.status(400).json({ error: 'Content must be 10,000 characters or less' });
 
+    const validPriorities = ['low', 'normal', 'high', 'urgent'];
+    if (priority && !validPriorities.includes(priority)) {
+      return res.status(400).json({ error: 'Invalid priority. Must be low, normal, high, or urgent' });
+    }
+
     const announcement = await prisma.announcement.create({
       data: {
         title,
@@ -195,6 +200,11 @@ router.put('/:announcementId', authenticate, async (req, res) => {
     // Input length validation
     if (title && title.length > 200) return res.status(400).json({ error: 'Title must be 200 characters or less' });
     if (content && content.length > 10000) return res.status(400).json({ error: 'Content must be 10,000 characters or less' });
+
+    const validPriorities = ['low', 'normal', 'high', 'urgent'];
+    if (priority && !validPriorities.includes(priority)) {
+      return res.status(400).json({ error: 'Invalid priority. Must be low, normal, high, or urgent' });
+    }
 
     const announcement = await prisma.announcement.update({
       where: { id: req.params.announcementId },

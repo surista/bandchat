@@ -116,6 +116,14 @@ router.put('/:eventId', authenticate, async (req, res) => {
 
     const { title, description, eventType, eventDate, imageUrl } = req.body;
 
+    if (title && title.length > 200) return res.status(400).json({ error: 'Title must be 200 characters or less' });
+    if (description && description.length > 2000) return res.status(400).json({ error: 'Description must be 2,000 characters or less' });
+
+    const validTypes = ['formation', 'first_gig', 'gig', 'rehearsal', 'member_joined', 'member_left', 'album_release', 'milestone', 'custom'];
+    if (eventType && !validTypes.includes(eventType)) {
+      return res.status(400).json({ error: 'Invalid event type' });
+    }
+
     if (imageUrl) {
       const urlCheck = isAllowedUploadUrl(imageUrl);
       if (!urlCheck.valid) {

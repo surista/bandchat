@@ -465,6 +465,8 @@ model Gig {
   kittyTransactions KittyTransaction[]
 
   @@index([workspaceId, date])
+  @@index([createdById])
+  @@index([workspaceId, status])
 }
 
 model GigAttendee {
@@ -828,7 +830,7 @@ model Recording {
   id          String   @id @default(uuid())
   title       String
   description String?
-  url         String   // Cloudinary URL
+  url         String   // R2 URL
   type        String   // 'audio', 'video'
   duration    Int?     // Duration in seconds
   size        Int?     // File size in bytes

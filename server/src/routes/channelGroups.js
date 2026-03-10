@@ -120,8 +120,8 @@ router.put('/workspace/:workspaceId/reorder', authenticate, isWorkspaceMember, a
     // Update positions in a transaction
     await prisma.$transaction(
       groupIds.map((groupId, index) =>
-        prisma.channelGroup.update({
-          where: { id: groupId },
+        prisma.channelGroup.updateMany({
+          where: { id: groupId, workspaceId: req.params.workspaceId },
           data: { position: index }
         })
       )
@@ -190,6 +190,10 @@ router.put('/:groupId', authenticate, async (req, res) => {
 
     if (!membership || membership.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    if (name !== undefined && name.trim().length === 0) {
+      return res.status(400).json({ error: 'Group name is required' });
     }
 
     const updated = await prisma.channelGroup.update({
