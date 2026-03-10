@@ -62,10 +62,20 @@ function formatGigDate(dateStr) {
   }
 }
 
-function formatTimeRange(startTime, endTime) {
+function formatTimeRange(date, endDate) {
+  // Extract times from datetime fields (time is embedded in the date)
   const parts = [];
-  if (startTime) parts.push(startTime);
-  if (endTime) parts.push(endTime);
+  if (date) {
+    try {
+      const time = format(parseISO(date), 'HH:mm');
+      if (time !== '00:00') parts.push(time); // Skip midnight (no time set)
+    } catch {}
+  }
+  if (endDate) {
+    try {
+      parts.push(format(parseISO(endDate), 'HH:mm'));
+    } catch {}
+  }
   return parts.join(' \u2013 ');
 }
 
@@ -344,7 +354,7 @@ export default function GigListScreen({ navigation, route }) {
     const typeColor = TYPE_COLORS[item.type] || TYPE_COLORS.OTHER;
     const isCancelled = item.status === 'CANCELLED';
     const isCompleted = item.status === 'COMPLETED';
-    const timeStr = formatTimeRange(item.startTime, item.endTime);
+    const timeStr = formatTimeRange(item.date, item.endDate);
     const setlistNames = (item.setlists || []).map(gs => gs.setlist?.name).filter(Boolean);
     const isOther = item._otherWorkspace;
     const dateKey = item.date ? item.date.split('T')[0] : null;

@@ -122,10 +122,26 @@ export default function GigDetailScreen({ navigation, route }) {
     setType(data.type || 'GIG');
     setStatus(data.status || 'SCHEDULED');
     if (data.date) {
-      try { setDate(parseISO(data.date)); } catch { setDate(new Date()); }
+      try {
+        const parsedDate = parseISO(data.date);
+        setDate(parsedDate);
+        // Extract time from the date field (time is embedded in the datetime)
+        setStartTime(format(parsedDate, 'HH:mm'));
+      } catch {
+        setDate(new Date());
+        setStartTime('');
+      }
     }
-    setStartTime(data.startTime || '');
-    setEndTime(data.endTime || '');
+    if (data.endDate) {
+      try {
+        const parsedEndDate = parseISO(data.endDate);
+        setEndTime(format(parsedEndDate, 'HH:mm'));
+      } catch {
+        setEndTime('');
+      }
+    } else {
+      setEndTime('');
+    }
     setVenue(data.venue || '');
     setAddress(data.address || '');
     setPay(data.pay ? String(data.pay) : '');
@@ -172,13 +188,20 @@ export default function GigDetailScreen({ navigation, route }) {
     }
     setFieldErrors({});
     setSaving(true);
+    // Combine date + time into full ISO datetimes (like web client)
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const startDateTime = startTime.trim()
+      ? new Date(`${dateStr}T${startTime.trim()}`).toISOString()
+      : new Date(`${dateStr}T00:00`).toISOString();
+    const endDateTime = endTime.trim()
+      ? new Date(`${dateStr}T${endTime.trim()}`).toISOString()
+      : null;
     const data = {
       title: trimmedTitle,
       type,
       status,
-      date: format(date, 'yyyy-MM-dd'),
-      startTime: startTime.trim() || null,
-      endTime: endTime.trim() || null,
+      date: startDateTime,
+      endDate: endDateTime,
       venue: venue.trim() || null,
       address: address.trim() || null,
       pay: pay ? parseFloat(pay) : null,
@@ -265,24 +288,11 @@ export default function GigDetailScreen({ navigation, route }) {
         calendarId = writable.id;
       }
 
-      // Parse date + time
-      const gigDate = gig.date ? parseISO(gig.date) : new Date();
-      let startDate = new Date(gigDate);
-      let endDate = new Date(gigDate);
-
-      if (gig.startTime) {
-        const [h, m] = gig.startTime.split(':').map(Number);
-        startDate.setHours(h || 0, m || 0, 0);
-      } else {
-        startDate.setHours(19, 0, 0); // default 7pm
-      }
-
-      if (gig.endTime) {
-        const [h, m] = gig.endTime.split(':').map(Number);
-        endDate.setHours(h || 0, m || 0, 0);
-      } else {
-        endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // +2 hours
-      }
+      // Parse date + time (time is embedded in the datetime fields)
+      const startDate = gig.date ? parseISO(gig.date) : new Date();
+      const endDate = gig.endDate
+        ? parseISO(gig.endDate)
+        : new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // +2 hours if no end
 
       const location = [gig.venue, gig.address].filter(Boolean).join(', ');
 
@@ -652,11 +662,18 @@ export default function GigDetailScreen({ navigation, route }) {
         <Text style={[styles.viewValue, { color: colors.textPrimary }]}>
           {gig?.date ? format(parseISO(gig.date), 'EEEE, dd-MMM-yyyy') : 'No date'}
         </Text>
-        {(gig?.startTime || gig?.endTime) && (
-          <Text style={[styles.viewValueSecondary, { color: colors.textSecondary }]}>
-            {[gig.startTime, gig.endTime].filter(Boolean).join(' \u2013 ')}
-          </Text>
-        )}
+        {(gig?.date || gig?.endDate) && (() => {
+          // Extract times from the datetime fields
+          const startTimeStr = gig.date ? format(parseISO(gig.date), 'HH:mm') : null;
+          const endTimeStr = gig.endDate ? format(parseISO(gig.endDate), 'HH:mm') : null;
+          // Only show if there's a meaningful time (not midnight)
+          const hasTime = (startTimeStr && startTimeStr !== '00:00') || endTimeStr;
+          return hasTime ? (
+            <Text style={[styles.viewValueSecondary, { color: colors.textSecondary }]}>
+              {[startTimeStr !== '00:00' ? startTimeStr : null, endTimeStr].filter(Boolean).join(' \u2013 ')}
+            </Text>
+          ) : null;
+        })()}
       </View>
 
       {/* Venue */}
