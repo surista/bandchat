@@ -438,6 +438,9 @@ model Gig {
   type        GigType   @default(GIG)
   date        DateTime
   endDate     DateTime?
+  soundCheckTime      String?   // "HH:mm" format e.g. "16:00"
+  eventStartTime      String?   // "HH:mm" format e.g. "19:00" (doors open)
+  performanceStartTime String?  // "HH:mm" format e.g. "20:00" (band goes on)
   venue       String?
   address     String?
   notes       String?

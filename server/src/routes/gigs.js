@@ -574,7 +574,7 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
 // Create a gig
 router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
-    const { title, type, date, endDate, venue, address, notes, pay, setlistId, setlistIds, isLocked, isPersonal, bandMemberIds } = req.body;
+    const { title, type, date, endDate, soundCheckTime, eventStartTime, performanceStartTime, venue, address, notes, pay, setlistId, setlistIds, isLocked, isPersonal, bandMemberIds } = req.body;
 
     if (!title || !date) {
       return res.status(400).json({ error: 'Title and date are required' });
@@ -632,6 +632,9 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
         type: gigType,
         date: gigDate,
         endDate: endDate ? new Date(endDate) : null,
+        soundCheckTime: soundCheckTime || null,
+        eventStartTime: eventStartTime || null,
+        performanceStartTime: performanceStartTime || null,
         venue,
         address,
         notes,
@@ -779,7 +782,7 @@ router.get('/:gigId', authenticate, async (req, res) => {
 // Update a gig
 router.put('/:gigId', authenticate, async (req, res) => {
   try {
-    const { title, type, date, endDate, venue, address, notes, pay, status, setlistId, setlistIds, isLocked, isPersonal, bandMemberIds } = req.body;
+    const { title, type, date, endDate, soundCheckTime, eventStartTime, performanceStartTime, venue, address, notes, pay, status, setlistId, setlistIds, isLocked, isPersonal, bandMemberIds } = req.body;
 
     // Get the existing gig and check permissions
     const existingGig = await prisma.gig.findUnique({
@@ -889,6 +892,9 @@ router.put('/:gigId', authenticate, async (req, res) => {
         ...(type && { type }),
         ...(date && { date: new Date(date) }),
         ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
+        ...(soundCheckTime !== undefined && { soundCheckTime: soundCheckTime || null }),
+        ...(eventStartTime !== undefined && { eventStartTime: eventStartTime || null }),
+        ...(performanceStartTime !== undefined && { performanceStartTime: performanceStartTime || null }),
         ...(venue !== undefined && { venue }),
         ...(address !== undefined && { address }),
         ...(notes !== undefined && { notes }),

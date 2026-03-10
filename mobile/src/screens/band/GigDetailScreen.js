@@ -69,6 +69,9 @@ export default function GigDetailScreen({ navigation, route }) {
   const [date, setDate] = useState(new Date());
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [soundCheckTime, setSoundCheckTime] = useState('');
+  const [eventStartTime, setEventStartTime] = useState('');
+  const [performanceStartTime, setPerformanceStartTime] = useState('');
   const [venue, setVenue] = useState('');
   const [address, setAddress] = useState('');
   const [pay, setPay] = useState('');
@@ -142,6 +145,9 @@ export default function GigDetailScreen({ navigation, route }) {
     } else {
       setEndTime('');
     }
+    setSoundCheckTime(data.soundCheckTime || '');
+    setEventStartTime(data.eventStartTime || '');
+    setPerformanceStartTime(data.performanceStartTime || '');
     setVenue(data.venue || '');
     setAddress(data.address || '');
     setPay(data.pay ? String(data.pay) : '');
@@ -202,6 +208,9 @@ export default function GigDetailScreen({ navigation, route }) {
       status,
       date: startDateTime,
       endDate: endDateTime,
+      soundCheckTime: soundCheckTime.trim() || null,
+      eventStartTime: eventStartTime.trim() || null,
+      performanceStartTime: performanceStartTime.trim() || null,
       venue: venue.trim() || null,
       address: address.trim() || null,
       pay: pay ? parseFloat(pay) : null,
@@ -476,6 +485,45 @@ export default function GigDetailScreen({ navigation, route }) {
             </View>
           </View>
 
+          {/* Optional Gig Times (only for GIG type) */}
+          {type === 'GIG' && (
+            <View style={styles.row}>
+              <View style={[styles.rowField, { flex: 1 }]}>
+                <Text style={[styles.label, { color: colors.textSecondary, fontSize: 12 }]}>Sound Check</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                  value={soundCheckTime}
+                  onChangeText={setSoundCheckTime}
+                  placeholder="16:00"
+                  placeholderTextColor={colors.textSecondary}
+                  accessibilityLabel="Sound check time"
+                />
+              </View>
+              <View style={[styles.rowField, { flex: 1 }]}>
+                <Text style={[styles.label, { color: colors.textSecondary, fontSize: 12 }]}>Doors</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                  value={eventStartTime}
+                  onChangeText={setEventStartTime}
+                  placeholder="19:00"
+                  placeholderTextColor={colors.textSecondary}
+                  accessibilityLabel="Doors open time"
+                />
+              </View>
+              <View style={[styles.rowField, { flex: 1 }]}>
+                <Text style={[styles.label, { color: colors.textSecondary, fontSize: 12 }]}>Stage</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                  value={performanceStartTime}
+                  onChangeText={setPerformanceStartTime}
+                  placeholder="20:00"
+                  placeholderTextColor={colors.textSecondary}
+                  accessibilityLabel="Stage time"
+                />
+              </View>
+            </View>
+          )}
+
           <Text style={[styles.label, { color: colors.textSecondary }]}>Venue</Text>
           <TextInput
             style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
@@ -674,6 +722,29 @@ export default function GigDetailScreen({ navigation, route }) {
             </Text>
           ) : null;
         })()}
+        {/* Show optional gig times if any are set */}
+        {(gig?.soundCheckTime || gig?.eventStartTime || gig?.performanceStartTime) && (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
+            {gig.soundCheckTime && (
+              <View>
+                <Text style={{ fontSize: 11, color: colors.textSecondary }}>Sound Check</Text>
+                <Text style={{ fontSize: 14, color: colors.textPrimary }}>{gig.soundCheckTime}</Text>
+              </View>
+            )}
+            {gig.eventStartTime && (
+              <View>
+                <Text style={{ fontSize: 11, color: colors.textSecondary }}>Doors</Text>
+                <Text style={{ fontSize: 14, color: colors.textPrimary }}>{gig.eventStartTime}</Text>
+              </View>
+            )}
+            {gig.performanceStartTime && (
+              <View>
+                <Text style={{ fontSize: 11, color: colors.textSecondary }}>Stage</Text>
+                <Text style={{ fontSize: 14, color: colors.textPrimary }}>{gig.performanceStartTime}</Text>
+              </View>
+            )}
+          </View>
+        )}
       </View>
 
       {/* Venue */}

@@ -73,6 +73,9 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     startDate: getDefaultDate(),
     startTime: getTimeFromDate(gig?.date, workspace?.defaultStartTime || '19:00'),
     endTime: getTimeFromDate(gig?.endDate, workspace?.defaultEndTime || '21:00'),
+    soundCheckTime: gig?.soundCheckTime || '',
+    eventStartTime: gig?.eventStartTime || '',
+    performanceStartTime: gig?.performanceStartTime || '',
     venue: gig?.venue || (gig ? '' : workspace?.defaultVenue || ''),
     address: gig?.address || '',
     notes: gig?.notes || '',
@@ -86,6 +89,9 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
   // Time dropdown visibility
   const [showStartTimeDropdown, setShowStartTimeDropdown] = useState(false);
   const [showEndTimeDropdown, setShowEndTimeDropdown] = useState(false);
+  const [showSoundCheckDropdown, setShowSoundCheckDropdown] = useState(false);
+  const [showEventStartDropdown, setShowEventStartDropdown] = useState(false);
+  const [showPerformanceDropdown, setShowPerformanceDropdown] = useState(false);
 
   // Generate time options (00:00 to 23:30 in 30-min increments)
   const timeOptions = [];
@@ -168,6 +174,9 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
         type: formData.type,
         date: startDateTime.toISOString(),
         endDate: endDateTime.toISOString(),
+        soundCheckTime: formData.soundCheckTime || null,
+        eventStartTime: formData.eventStartTime || null,
+        performanceStartTime: formData.performanceStartTime || null,
         venue: formData.venue || null,
         address: formData.address || null,
         notes: formData.notes || null,
@@ -396,6 +405,116 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                   )}
                 </div>
               </div>
+
+              {/* Optional Gig Times (Sound Check, Event Start, Performance) */}
+              {formData.type === 'GIG' && (
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="relative">
+                    <label className="modal-label text-xs">Sound Check</label>
+                    <input
+                      type="text"
+                      value={formData.soundCheckTime}
+                      onChange={(e) => handleChange('soundCheckTime', e.target.value)}
+                      onFocus={() => setShowSoundCheckDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowSoundCheckDropdown(false), 150)}
+                      className="modal-input w-full text-sm"
+                      placeholder="16:00"
+                      pattern="[0-2][0-9]:[0-5][0-9]"
+                    />
+                    {showSoundCheckDropdown && (
+                      <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+                        <button
+                          type="button"
+                          onMouseDown={(e) => { e.preventDefault(); handleChange('soundCheckTime', ''); setShowSoundCheckDropdown(false); }}
+                          className="w-full px-3 py-1.5 text-left text-sm text-gray-500 hover:bg-gray-700"
+                        >
+                          Clear
+                        </button>
+                        {timeOptions.map(time => (
+                          <button
+                            key={time}
+                            type="button"
+                            onMouseDown={(e) => { e.preventDefault(); handleChange('soundCheckTime', time); setShowSoundCheckDropdown(false); }}
+                            className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 ${formData.soundCheckTime === time ? 'bg-blue-600 text-white' : 'text-gray-300'}`}
+                          >
+                            {time}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="relative">
+                    <label className="modal-label text-xs">Doors Open</label>
+                    <input
+                      type="text"
+                      value={formData.eventStartTime}
+                      onChange={(e) => handleChange('eventStartTime', e.target.value)}
+                      onFocus={() => setShowEventStartDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowEventStartDropdown(false), 150)}
+                      className="modal-input w-full text-sm"
+                      placeholder="19:00"
+                      pattern="[0-2][0-9]:[0-5][0-9]"
+                    />
+                    {showEventStartDropdown && (
+                      <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+                        <button
+                          type="button"
+                          onMouseDown={(e) => { e.preventDefault(); handleChange('eventStartTime', ''); setShowEventStartDropdown(false); }}
+                          className="w-full px-3 py-1.5 text-left text-sm text-gray-500 hover:bg-gray-700"
+                        >
+                          Clear
+                        </button>
+                        {timeOptions.map(time => (
+                          <button
+                            key={time}
+                            type="button"
+                            onMouseDown={(e) => { e.preventDefault(); handleChange('eventStartTime', time); setShowEventStartDropdown(false); }}
+                            className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 ${formData.eventStartTime === time ? 'bg-blue-600 text-white' : 'text-gray-300'}`}
+                          >
+                            {time}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="relative">
+                    <label className="modal-label text-xs">Stage Time</label>
+                    <input
+                      type="text"
+                      value={formData.performanceStartTime}
+                      onChange={(e) => handleChange('performanceStartTime', e.target.value)}
+                      onFocus={() => setShowPerformanceDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowPerformanceDropdown(false), 150)}
+                      className="modal-input w-full text-sm"
+                      placeholder="20:00"
+                      pattern="[0-2][0-9]:[0-5][0-9]"
+                    />
+                    {showPerformanceDropdown && (
+                      <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+                        <button
+                          type="button"
+                          onMouseDown={(e) => { e.preventDefault(); handleChange('performanceStartTime', ''); setShowPerformanceDropdown(false); }}
+                          className="w-full px-3 py-1.5 text-left text-sm text-gray-500 hover:bg-gray-700"
+                        >
+                          Clear
+                        </button>
+                        {timeOptions.map(time => (
+                          <button
+                            key={time}
+                            type="button"
+                            onMouseDown={(e) => { e.preventDefault(); handleChange('performanceStartTime', time); setShowPerformanceDropdown(false); }}
+                            className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 ${formData.performanceStartTime === time ? 'bg-blue-600 text-white' : 'text-gray-300'}`}
+                          >
+                            {time}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Availability Summary */}
               {availabilitySummary && availabilitySummary.total > 0 && (
