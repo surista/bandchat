@@ -39,7 +39,7 @@ BandChat is a Slack-like collaboration platform designed for bands and musicians
 │                      Server (Express)                          │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐   │
 │  │   Auth   │  │   REST   │  │ Socket   │  │   Services   │   │
-│  │Middleware│  │  Routes  │  │ Handlers │  │ (Cloudinary) │   │
+│  │Middleware│  │  Routes  │  │ Handlers │  │  (R2, etc.)  │   │
 │  └────┬─────┘  └────┬─────┘  └────┬─────┘  └──────────────┘   │
 │       │             │             │                            │
 │  ┌────┴─────────────┴─────────────┴───────────────────────┐   │
@@ -78,8 +78,9 @@ BandChat is a Slack-like collaboration platform designed for bands and musicians
 | **Prisma** | Database ORM |
 | **PostgreSQL** | Primary database |
 | **JWT** | Authentication tokens |
-| **Cloudinary** | Image hosting |
+| **Cloudflare R2** | File storage (images, audio, video) |
 | **Resend** | Transactional emails |
+| **RevenueCat** | Subscription management |
 
 ---
 
@@ -527,10 +528,11 @@ const loadData = async () => {
 - Image lazy loading
 - Tailwind CSS purging for production
 
-### Caching Opportunities
+### Caching
+- Mobile API: In-memory TTL cache with auto-invalidation on mutations
 - Workspace membership (short TTL)
 - Song metadata after enrichment
-- Static assets via CDN (Cloudinary)
+- Static assets via CDN (Cloudflare R2)
 
 ---
 
@@ -558,8 +560,8 @@ const loadData = async () => {
            │                    │
            ▼                    ▼
     ┌─────────────┐      ┌─────────────┐
-    │ Cloudinary  │      │   Resend    │
-    │  (Images)   │      │  (Emails)   │
+    │Cloudflare R2│      │   Resend    │
+    │  (Storage)  │      │  (Emails)   │
     └─────────────┘      └─────────────┘
 ```
 

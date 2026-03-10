@@ -114,6 +114,9 @@ interface PublicGig {
   type: 'GIG' | 'REHEARSAL' | 'MEETING' | 'OTHER';
   date: string;          // ISO datetime
   endDate?: string;
+  soundCheckTime?: string;      // "HH:mm" format
+  eventStartTime?: string;      // "HH:mm" format (doors open)
+  performanceStartTime?: string; // "HH:mm" format (band goes on)
   venue?: string;
   address?: string;
   notes?: string;
@@ -353,5 +356,6 @@ These endpoints are not used by the website sync but are available for workspace
 
 | Date | Version | Changes |
 |------|---------|---------|
+| 2026-03-11 | 1.2 | Added gig time fields (soundCheckTime, eventStartTime, performanceStartTime) |
 | 2026-03-02 | 1.1 | Added ICS import endpoints |
 | 2026-03-02 | 1.0 | Initial specification |

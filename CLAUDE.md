@@ -135,7 +135,7 @@ bandchat/
 - File/image/audio sharing (up to 10MB) with auto-generated thumbnails, link previews, and photo gallery
 - Song repertoire with bulk import, async metadata enrichment (iTunes/Spotify/Deezer/YouTube/SongBPM), and lyrics
 - Drag-and-drop setlist builder with MC sections, medleys, and PDF export
-- Calendar for gigs/rehearsals with device calendar sync and iCal feed
+- Calendar for gigs/rehearsals with device calendar sync, iCal feed, and optional time fields (sound check, doors, stage)
 - Upcoming event banner with pinned Calendar shortcut in sidebar
 - Gig attendance tracking, completion, history, and live mode
 - Practice tracker with streaks and timezone-aware calculations

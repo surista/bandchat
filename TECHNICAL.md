@@ -2,7 +2,7 @@
 
 Comprehensive technical reference for the BandChat platform — a real-time communication and management app for bands.
 
-**Version:** v1.03.81
+**Version:** v1.04.59
 **Last updated:** March 2026
 
 ---
@@ -37,13 +37,13 @@ Comprehensive technical reference for the BandChat platform — a real-time comm
 │                   Express Server                      │
 │  ┌─────────┐  ┌───────────┐  ┌────────────────────┐ │
 │  │ REST API │  │ Socket.IO │  │ Push Notifications │ │
-│  │ 25 route │  │  Real-time│  │     (VAPID)        │ │
+│  │ 29 route │  │  Real-time│  │     (VAPID)        │ │
 │  │ modules  │  │  events   │  │                    │ │
 │  └────┬─────┘  └─────┬─────┘  └────────────────────┘ │
 │       │              │                                │
 │  ┌────▼──────────────▼──────┐                        │
 │  │    Prisma ORM            │                        │
-│  │    34 models             │                        │
+│  │    45 models             │                        │
 │  └────┬─────────────────────┘                        │
 └───────┼──────────────────────────────────────────────┘
         │
@@ -102,7 +102,7 @@ Comprehensive technical reference for the BandChat platform — a real-time comm
 | Technology | Purpose |
 |---|---|
 | PostgreSQL | Primary database (hosted on Railway) |
-| 34 Prisma models | Full schema with relations, indexes, enums |
+| 45 Prisma models | Full schema with relations, indexes, enums |
 
 ---
 
@@ -187,7 +187,7 @@ prisma generate && prisma db push && node src/index.js
 | `AvailabilityStatus` | `AVAILABLE`, `UNAVAILABLE`, `MAYBE` |
 | `KittyTransactionType` | `GIG_PAY`, `FEE`, `EXPENSE`, `OTHER_INCOME` |
 
-### Models (34 total)
+### Models (45 total)
 
 #### Core
 
@@ -221,7 +221,7 @@ prisma generate && prisma db push && node src/index.js
 | **Setlist** | id, name, description?, useShortNames, performedAt?, venue?, startTime?, workspaceId | workspace, songs, gigSetlists, performers. Unique(workspaceId, name) |
 | **SetlistSong** | id, setlistId, songId?, position, type (SONG/MC/SET_BREAK), duration?, label? | setlist, song |
 | **SetlistPerformer** | id, setlistId, bandMemberId | setlist, bandMember. Unique(setlistId, bandMemberId) |
-| **Gig** | id, title, type (GIG/REHEARSAL/RECORDING/OTHER), date, endDate?, venue?, address?, notes?, pay?, status, isLocked, workspaceId | workspace, setlists, songsPlayed, media, attendees, kittyTransactions |
+| **Gig** | id, title, type (GIG/REHEARSAL/RECORDING/OTHER), date, endDate?, soundCheckTime?, eventStartTime?, performanceStartTime?, venue?, address?, notes?, pay?, status, isLocked, workspaceId | workspace, setlists, songsPlayed, media, attendees, kittyTransactions |
 | **GigSetlist** | id, gigId, setlistId, setNumber | gig, setlist. Unique(gigId, setNumber) |
 | **GigSong** | id, gigId, songId | gig, song. Unique(gigId, songId) |
 | **GigMedia** | id, gigId, type, url, caption? | gig |

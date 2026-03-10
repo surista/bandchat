@@ -2,6 +2,24 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.04.59] - 2026-03-11
+
+### Added
+- **Gig time fields** — Sound check, doors open, and stage times for gigs (all optional)
+- **Setlist rename** — Edit setlist names inline in the builder header or via context menu/card actions
+- **Mobile API caching** — In-memory TTL cache for API responses with auto-invalidation on mutations
+- **Memoization** — React.memo on SongCard and SetlistCard components with useCallback handlers
+- **JSDoc + checkJs** — TypeScript-like type checking for JavaScript files via tsconfig.json
+
+### Fixed
+- **Mobile calendar times** — Times now save and display correctly (embedded in datetime fields)
+- **Message text selection** — Users can now select and copy message text on web
+- **Duplicate function name** — Fixed build error from handleDeleteSong naming conflict
+
+### Changed
+- Gig form shows 3 optional time fields (Sound Check, Doors, Stage Time) for GIG type events only
+- Mobile gig detail screen displays all time fields when set
+
 ## [1.04.49] - 2026-03-09
 
 ### Added

@@ -25,7 +25,7 @@ A real-time communication and management app for bands. Think Slack, but built s
 - **Songs** — Track your repertoire with title, artist, key, BPM, duration, lyrics, YouTube/Spotify links, notes, and bulk import with async metadata enrichment (iTunes, Spotify, Deezer, YouTube, SongBPM)
 - **Setlists** — Drag-and-drop song ordering with automatic duration calculation, MC sections, set breaks, and PDF export
 - **Medleys** — Group songs into medleys within setlists
-- **Calendar** — Schedule gigs, rehearsals, and recording sessions with venue, address, pay tracking, device calendar sync, and iCal feed
+- **Calendar** — Schedule gigs, rehearsals, and recording sessions with venue, address, pay tracking, device calendar sync, iCal feed, and optional time fields (sound check, doors, stage time)
 - **Upcoming Event Banner** — Next gig/rehearsal always visible at the top of the sidebar with pinned Calendar shortcut
 - **Gig Management** — Track attendance, mark gigs complete, view gig history, live mode during performances
 - **Gig Gallery** — Photo/video collection per gig

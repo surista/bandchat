@@ -128,6 +128,14 @@
 - Image thumbnails generated server-side with sharp for faster loading
 - Web: API response caching with TTL, lazy-loaded auth/legal routes, message virtualization (150-message DOM cap)
 
+### Phase 19 — Performance & Gig Enhancements
+- API caching with in-memory TTL cache (30-60s depending on resource) with auto-invalidation on mutations
+- Component memoization (React.memo on SongCard, SetlistCard with useCallback handlers)
+- JSDoc + checkJs for TypeScript-like type checking in JavaScript files
+- Gig time fields: sound check, doors open, and stage time (all optional)
+- Setlist rename from builder header and context menu
+- Mobile calendar time fix (times now save/display correctly)
+
 ### Phase 18 — Security Hardening
 - Authorization checks on song/setlist/contact/medley delete (creator or admin only)
 - Gig media delete authorization (uploader or admin only)
