@@ -1,6 +1,138 @@
 import Constants from 'expo-constants';
 import storage from './storage';
 
+/**
+ * @fileoverview API client for BandChat mobile app.
+ * Handles all HTTP communication with the server including authentication,
+ * token refresh, caching, and error handling.
+ */
+
+/**
+ * @typedef {Object} User
+ * @property {string} id
+ * @property {string} email
+ * @property {string} displayName
+ * @property {string} [avatarUrl]
+ * @property {boolean} [isSystemAdmin]
+ */
+
+/**
+ * @typedef {Object} Workspace
+ * @property {string} id
+ * @property {string} name
+ * @property {string} [slug]
+ * @property {string} [avatarUrl]
+ * @property {WorkspaceMember[]} [members]
+ */
+
+/**
+ * @typedef {Object} WorkspaceMember
+ * @property {string} id
+ * @property {string} role
+ * @property {User} user
+ */
+
+/**
+ * @typedef {Object} Channel
+ * @property {string} id
+ * @property {string} name
+ * @property {boolean} isPrivate
+ * @property {boolean} isDM
+ * @property {string} workspaceId
+ */
+
+/**
+ * @typedef {Object} Message
+ * @property {string} id
+ * @property {string} content
+ * @property {string} createdAt
+ * @property {string} [updatedAt]
+ * @property {User} [author]
+ * @property {Attachment[]} [attachments]
+ * @property {Reaction[]} [reactions]
+ */
+
+/**
+ * @typedef {Object} Attachment
+ * @property {string} id
+ * @property {string} url
+ * @property {string} type
+ * @property {string} [filename]
+ */
+
+/**
+ * @typedef {Object} Reaction
+ * @property {string} emoji
+ * @property {User[]} users
+ */
+
+/**
+ * @typedef {Object} Song
+ * @property {string} id
+ * @property {string} title
+ * @property {string} [artist]
+ * @property {string} [shortName]
+ * @property {string} [key]
+ * @property {number} [bpm]
+ * @property {number} [duration]
+ * @property {string} [youtubeUrl]
+ * @property {string} [spotifyUrl]
+ * @property {string} [lyrics]
+ */
+
+/**
+ * @typedef {Object} Setlist
+ * @property {string} id
+ * @property {string} name
+ * @property {string} [description]
+ * @property {string} [performedAt]
+ * @property {string} [venue]
+ * @property {string} [startTime]
+ * @property {SetlistSong[]} [songs]
+ */
+
+/**
+ * @typedef {Object} SetlistSong
+ * @property {string} id
+ * @property {string} type
+ * @property {number} position
+ * @property {Song} [song]
+ * @property {string} [label]
+ * @property {number} [duration]
+ */
+
+/**
+ * @typedef {Object} Gig
+ * @property {string} id
+ * @property {string} title
+ * @property {string} date
+ * @property {string} [venue]
+ * @property {string} type
+ * @property {string} status
+ * @property {string} [notes]
+ */
+
+/**
+ * @typedef {Object} BandMember
+ * @property {string} id
+ * @property {string} name
+ * @property {string} [instruments]
+ * @property {string} [avatarUrl]
+ */
+
+/**
+ * @typedef {Object} CacheEntry
+ * @property {any} data
+ * @property {number} timestamp
+ */
+
+/**
+ * @typedef {Object} ApiError
+ * @property {string} message
+ * @property {string} [type]
+ * @property {number} [status]
+ */
+
 const API_URL = Constants.expoConfig?.extra?.apiUrl || 'http://localhost:3001/api';
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
 const UPLOAD_TIMEOUT = 120000; // 2 minutes for uploads
@@ -35,6 +167,7 @@ class ApiService {
     this.refreshToken = null;
     this._refreshPromise = null;
     this.onSessionExpired = null;
+    this._cache = new Map(); // endpoint -> { data, timestamp }
   }
 
   async loadTokens() {
@@ -79,8 +212,41 @@ class ApiService {
   async clearTokens() {
     this.accessToken = null;
     this.refreshToken = null;
+    this._cache.clear();
     await storage.removeItem('accessToken');
     await storage.removeItem('refreshToken');
+  }
+
+  /**
+   * Cached GET request - returns cached data if within TTL, otherwise fetches fresh.
+   * @param {string} endpoint - API endpoint
+   * @param {number} ttlMs - Cache TTL in milliseconds (default 60s)
+   * @returns {Promise<any>}
+   */
+  async cachedRequest(endpoint, ttlMs = 60000) {
+    const cached = this._cache.get(endpoint);
+    if (cached && Date.now() - cached.timestamp < ttlMs) {
+      return cached.data;
+    }
+    const data = await this.request(endpoint);
+    this._cache.set(endpoint, { data, timestamp: Date.now() });
+    return data;
+  }
+
+  /**
+   * Invalidate cache entries matching a pattern
+   * @param {string} pattern - Pattern to match against cache keys (or null to clear all)
+   */
+  invalidateCache(pattern) {
+    if (!pattern) {
+      this._cache.clear();
+      return;
+    }
+    for (const key of this._cache.keys()) {
+      if (key.includes(pattern)) {
+        this._cache.delete(key);
+      }
+    }
   }
 
   async ensureFreshToken() {
@@ -102,6 +268,12 @@ class ApiService {
         });
       }
       await this._refreshPromise;
+    }
+
+    // Invalidate cache on mutations (POST/PUT/PATCH/DELETE)
+    if (options.method && options.method !== 'GET') {
+      const resourceBase = endpoint.split('/').slice(0, 2).join('/');
+      this.invalidateCache(resourceBase);
     }
 
     const url = `${API_URL}${endpoint}`;
@@ -331,8 +503,12 @@ class ApiService {
   }
 
   // Workspaces
+  /**
+   * Get all workspaces for the current user
+   * @returns {Promise<Workspace[]>}
+   */
   async getWorkspaces() {
-    return this.request('/workspaces');
+    return this.cachedRequest('/workspaces', 30000);
   }
 
   async createWorkspace(name) {
@@ -425,8 +601,13 @@ class ApiService {
   }
 
   // Channels
+  /**
+   * Get all channels for a workspace
+   * @param {string} workspaceId
+   * @returns {Promise<Channel[]>}
+   */
   async getChannels(workspaceId) {
-    return this.request(`/channels/workspace/${workspaceId}`);
+    return this.cachedRequest(`/channels/workspace/${workspaceId}`, 30000);
   }
 
   async createChannel(workspaceId, data) {
@@ -624,8 +805,13 @@ class ApiService {
   }
 
   // Songs
+  /**
+   * Get all songs for a workspace
+   * @param {string} workspaceId
+   * @returns {Promise<Song[]>}
+   */
   async getSongs(workspaceId) {
-    return this.request(`/songs/workspace/${workspaceId}`);
+    return this.cachedRequest(`/songs/workspace/${workspaceId}`, 60000);
   }
 
   async createSong(workspaceId, data) {
@@ -671,8 +857,13 @@ class ApiService {
   }
 
   // Setlists
+  /**
+   * Get all setlists for a workspace
+   * @param {string} workspaceId
+   * @returns {Promise<Setlist[]>}
+   */
   async getSetlists(workspaceId) {
-    return this.request(`/setlists/workspace/${workspaceId}`);
+    return this.cachedRequest(`/setlists/workspace/${workspaceId}`, 60000);
   }
 
   async createSetlist(workspaceId, data) {
@@ -800,6 +991,16 @@ class ApiService {
   }
 
   // Gigs
+  /**
+   * Get gigs for a workspace with optional filters
+   * @param {string} workspaceId
+   * @param {Object} [filters]
+   * @param {string} [filters.type]
+   * @param {string} [filters.status]
+   * @param {string} [filters.from]
+   * @param {string} [filters.to]
+   * @returns {Promise<Gig[]>}
+   */
   async getGigs(workspaceId, filters = {}) {
     const params = new URLSearchParams();
     if (filters.type) params.append('type', filters.type);
@@ -807,7 +1008,7 @@ class ApiService {
     if (filters.from) params.append('from', filters.from);
     if (filters.to) params.append('to', filters.to);
     const query = params.toString();
-    return this.request(`/gigs/workspace/${workspaceId}${query ? `?${query}` : ''}`);
+    return this.cachedRequest(`/gigs/workspace/${workspaceId}${query ? `?${query}` : ''}`, 60000);
   }
 
   async getNextGig(workspaceId) {
@@ -901,8 +1102,13 @@ class ApiService {
   }
 
   // Band Members
+  /**
+   * Get all band members for a workspace
+   * @param {string} workspaceId
+   * @returns {Promise<BandMember[]>}
+   */
   async getBandMembers(workspaceId) {
-    return this.request(`/band-members/workspace/${workspaceId}`);
+    return this.cachedRequest(`/band-members/workspace/${workspaceId}`, 60000);
   }
 
   async createBandMember(workspaceId, data) {
@@ -987,7 +1193,7 @@ class ApiService {
   // Contacts
   async getContacts(workspaceId, category = null) {
     const params = category ? `?category=${category}` : '';
-    return this.request(`/contacts/workspace/${workspaceId}${params}`);
+    return this.cachedRequest(`/contacts/workspace/${workspaceId}${params}`, 60000);
   }
 
   async createContact(workspaceId, data) {
@@ -1017,7 +1223,7 @@ class ApiService {
   // Announcements
   async getAnnouncements(workspaceId, pinnedOnly = false) {
     const params = pinnedOnly ? '?pinnedOnly=true' : '';
-    return this.request(`/announcements/workspace/${workspaceId}${params}`);
+    return this.cachedRequest(`/announcements/workspace/${workspaceId}${params}`, 60000);
   }
 
   async createAnnouncement(workspaceId, data) {
@@ -1091,7 +1297,7 @@ class ApiService {
 
   // Medleys
   async getMedleys(workspaceId) {
-    return this.request(`/medleys/workspace/${workspaceId}`);
+    return this.cachedRequest(`/medleys/workspace/${workspaceId}`, 60000);
   }
 
   async createMedley(workspaceId, data) {

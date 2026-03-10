@@ -445,6 +445,9 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
   const [viewingSong, setViewingSong] = useState(null);
   const [setlistPanelWidth, setSetlistPanelWidth] = useState(70); // percentage
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState(setlist.name);
+  const [savingName, setSavingName] = useState(false);
   const containerRef = useRef(null);
   const isResizing = useRef(false);
 
@@ -703,6 +706,26 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
     }
   };
 
+  const handleSaveName = async () => {
+    if (!nameValue.trim() || nameValue === setlist.name) {
+      setEditingName(false);
+      setNameValue(setlist.name);
+      return;
+    }
+    setSavingName(true);
+    try {
+      const updated = await api.updateSetlist(setlist.id, { name: nameValue.trim() });
+      onUpdate(updated);
+      setEditingName(false);
+      toast.success('Setlist renamed');
+    } catch (err) {
+      toast.error(err.message);
+      setNameValue(setlist.name);
+    } finally {
+      setSavingName(false);
+    }
+  };
+
   const handleBreakDurationChange = async (item, newDuration) => {
     const duration = parseInt(newDuration);
     setSetlistItems(prev => prev.map(i =>
@@ -926,7 +949,36 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
             ← Back
           </button>
           <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-bold text-[var(--color-text-primary)] truncate">{setlist.name}</h2>
+            {editingName ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={nameValue}
+                  onChange={(e) => setNameValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveName();
+                    if (e.key === 'Escape') {
+                      setEditingName(false);
+                      setNameValue(setlist.name);
+                    }
+                  }}
+                  onBlur={handleSaveName}
+                  autoFocus
+                  disabled={savingName}
+                  className="text-xl font-bold bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded px-2 py-1 text-[var(--color-text-primary)] w-full max-w-md"
+                />
+                {savingName && <span className="text-[var(--color-text-muted)] text-sm">Saving...</span>}
+              </div>
+            ) : (
+              <h2
+                className="text-xl font-bold text-[var(--color-text-primary)] truncate cursor-pointer hover:text-blue-400 group flex items-center gap-2"
+                onClick={() => setEditingName(true)}
+                title="Click to rename"
+              >
+                {setlist.name}
+                <span className="text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 text-sm">✏️</span>
+              </h2>
+            )}
             {setlist.description && (
               <p className="text-[var(--color-text-muted)] text-sm truncate">{setlist.description}</p>
             )}

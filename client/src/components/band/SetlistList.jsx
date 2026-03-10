@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { format } from 'date-fns';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
@@ -10,7 +10,7 @@ import useLongPress from '../../hooks/useLongPress';
 import Skeleton from '../common/Skeleton';
 import LiveMode from './LiveMode';
 
-function SetlistCard({ setlist, onTap, onEdit, onDuplicate, onDelete, onContextMenu, calculateDuration, formatTime12h }) {
+const SetlistCard = memo(function SetlistCard({ setlist, onTap, onEdit, onRename, onDuplicate, onDelete, onContextMenu, calculateDuration, formatTime12h }) {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const longPress = useLongPress({
     onLongPress: (pos) => onContextMenu(pos),
@@ -37,7 +37,8 @@ function SetlistCard({ setlist, onTap, onEdit, onDuplicate, onDelete, onContextM
           )}
         </div>
         <div className="hidden sm:flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]" title="Edit">✏️</button>
+          <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]" title="Edit Songs">✏️</button>
+          <button onClick={(e) => { e.stopPropagation(); onRename(); }} className="p-1 text-[var(--color-text-muted)] hover:text-yellow-400" title="Rename">✍️</button>
           <button onClick={(e) => { e.stopPropagation(); onDuplicate(); }} className="p-1 text-[var(--color-text-muted)] hover:text-blue-400" title="Copy">📋</button>
           <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1 text-[var(--color-text-muted)] hover:text-red-400" title="Delete">🗑️</button>
         </div>
@@ -57,7 +58,13 @@ function SetlistCard({ setlist, onTap, onEdit, onDuplicate, onDelete, onContextM
                   onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onEdit(); }}
                   className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]"
                 >
-                  ✏️ Edit
+                  ✏️ Edit Songs
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onRename(); }}
+                  className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-yellow-300"
+                >
+                  ✍️ Rename
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onDuplicate(); }}
@@ -144,7 +151,7 @@ function SetlistCard({ setlist, onTap, onEdit, onDuplicate, onDelete, onContextM
       )}
     </div>
   );
-}
+});
 
 function SetlistList({ workspaceId, workspaceName }) {
   const toast = useToast();
@@ -181,6 +188,8 @@ function SetlistList({ workspaceId, workspaceName }) {
   const [duplicateName, setDuplicateName] = useState('');
   const [contextMenu, setContextMenu] = useState(null); // { setlistId, x, y }
   const [liveModeSetlist, setLiveModeSetlist] = useState(null);
+  const [renameSetlistId, setRenameSetlistId] = useState(null);
+  const [renameName, setRenameName] = useState('');
 
   useEffect(() => {
     loadData();
@@ -267,6 +276,19 @@ function SetlistList({ workspaceId, workspaceName }) {
       setSetlists(prev => [duplicated, ...prev]);
       setDuplicateSetlistId(null);
       setDuplicateName('');
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleRenameSetlist = async () => {
+    if (!renameSetlistId || !renameName.trim()) return;
+    try {
+      const updated = await api.updateSetlist(renameSetlistId, { name: renameName.trim() });
+      setSetlists(prev => prev.map(s => s.id === updated.id ? updated : s));
+      setRenameSetlistId(null);
+      setRenameName('');
+      toast.success('Setlist renamed');
     } catch (err) {
       toast.error(err.message);
     }
@@ -440,7 +462,7 @@ function SetlistList({ workspaceId, workspaceName }) {
     }
   };
 
-  const calculateDuration = (setlistSongs) => {
+  const calculateDuration = useCallback((setlistSongs) => {
     const totalSeconds = setlistSongs.reduce((acc, ss) => {
       if (ss.type === 'SET_BREAK') return acc + (ss.duration || 0);
       if (ss.type === 'MC') return acc + (ss.duration || 60);
@@ -449,7 +471,7 @@ function SetlistList({ workspaceId, workspaceName }) {
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
     return `${mins}:${String(secs).padStart(2, '0')}`;
-  };
+  }, []);
 
   const formatDuration = (seconds) => {
     if (!seconds) return '';
@@ -458,13 +480,41 @@ function SetlistList({ workspaceId, workspaceName }) {
     return `${mins}:${String(secs).padStart(2, '0')}`;
   };
 
-  const formatTime12h = (time24) => {
+  const formatTime12h = useCallback((time24) => {
     if (!time24) return '';
     const [h, m] = time24.split(':').map(Number);
     const period = h >= 12 ? 'PM' : 'AM';
     const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
     return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
-  };
+  }, []);
+
+  // Memoized callbacks for SetlistCard to prevent unnecessary re-renders
+  const handleViewSetlist = useCallback((setlist) => {
+    setViewingSetlist(setlist);
+  }, []);
+
+  const handleEditSetlist = useCallback((setlist) => {
+    setEditingSetlist(setlist);
+    setShowBuilder(true);
+  }, []);
+
+  const handleDuplicate = useCallback((setlist) => {
+    setDuplicateSetlistId(setlist.id);
+    setDuplicateName(`Copy of ${setlist.name}`);
+  }, []);
+
+  const handleDelete = useCallback((setlistId) => {
+    setDeleteSetlistId(setlistId);
+  }, []);
+
+  const handleContextMenu = useCallback((setlistId, pos) => {
+    setContextMenu({ setlistId, ...pos });
+  }, []);
+
+  const handleRename = useCallback((setlist) => {
+    setRenameSetlistId(setlist.id);
+    setRenameName(setlist.name);
+  }, []);
 
   // Print/PDF export function for any setlist
   const handlePrintSetlist = (setlist) => {
@@ -797,17 +847,12 @@ function SetlistList({ workspaceId, workspaceName }) {
               <SetlistCard
                 key={setlist.id}
                 setlist={setlist}
-                onTap={() => setViewingSetlist(setlist)}
-                onEdit={() => {
-                  setEditingSetlist(setlist);
-                  setShowBuilder(true);
-                }}
-                onDuplicate={() => {
-                  setDuplicateSetlistId(setlist.id);
-                  setDuplicateName(`Copy of ${setlist.name}`);
-                }}
-                onDelete={() => setDeleteSetlistId(setlist.id)}
-                onContextMenu={(pos) => setContextMenu({ setlistId: setlist.id, ...pos })}
+                onTap={() => handleViewSetlist(setlist)}
+                onEdit={() => handleEditSetlist(setlist)}
+                onRename={() => handleRename(setlist)}
+                onDuplicate={() => handleDuplicate(setlist)}
+                onDelete={() => handleDelete(setlist.id)}
+                onContextMenu={(pos) => handleContextMenu(setlist.id, pos)}
                 calculateDuration={calculateDuration}
                 formatTime12h={formatTime12h}
               />
@@ -1359,6 +1404,33 @@ function SetlistList({ workspaceId, workspaceName }) {
         </div>
       )}
 
+      {/* Rename Dialog */}
+      {renameSetlistId && (
+        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) { setRenameSetlistId(null); setRenameName(''); } }}>
+          <div className="modal-content max-w-sm">
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-white mb-4">Rename Setlist</h3>
+              <input
+                type="text"
+                value={renameName}
+                onChange={(e) => setRenameName(e.target.value)}
+                className="modal-input mb-4"
+                placeholder="New name"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleRenameSetlist();
+                  if (e.key === 'Escape') { setRenameSetlistId(null); setRenameName(''); }
+                }}
+              />
+              <div className="flex gap-3 justify-end">
+                <button onClick={() => { setRenameSetlistId(null); setRenameName(''); }} className="btn btn-secondary">Cancel</button>
+                <button onClick={handleRenameSetlist} disabled={!renameName.trim()} className="btn bg-green-600 hover:bg-green-700 text-white">Rename</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ContextMenu
         isOpen={contextMenu !== null}
         position={contextMenu || { x: 0, y: 0 }}
@@ -1373,13 +1445,24 @@ function SetlistList({ workspaceId, workspaceName }) {
             }
           },
           {
-            label: 'Edit Setlist',
+            label: 'Edit Songs',
             icon: '✏️',
             onClick: () => {
               const setlist = setlists.find(s => s.id === contextMenu?.setlistId);
               if (setlist) {
                 setEditingSetlist(setlist);
                 setShowBuilder(true);
+              }
+            }
+          },
+          {
+            label: 'Rename',
+            icon: '✍️',
+            onClick: () => {
+              const setlist = setlists.find(s => s.id === contextMenu?.setlistId);
+              if (setlist) {
+                setRenameSetlistId(setlist.id);
+                setRenameName(setlist.name);
               }
             }
           },

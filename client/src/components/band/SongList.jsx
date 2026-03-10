@@ -1,5 +1,5 @@
 import { isSafeUrl } from '../../utils/urlSafety';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import SongForm from './SongForm';
@@ -19,7 +19,7 @@ function PracticeIndicator({ songId, practiceSummary }) {
   );
 }
 
-function SongCard({ song, onEdit, onDelete, onContextMenu, practiceSummary }) {
+const SongCard = memo(function SongCard({ song, onEdit, onDelete, onContextMenu, practiceSummary }) {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const longPress = useLongPress({
     onLongPress: (pos) => onContextMenu(pos),
@@ -132,7 +132,7 @@ function SongCard({ song, onEdit, onDelete, onContextMenu, practiceSummary }) {
       )}
     </div>
   );
-}
+});
 
 function SongList({ workspaceId, onSelectSong }) {
   const toast = useToast();
@@ -319,6 +319,20 @@ function SongList({ workspaceId, onSelectSong }) {
       return 0;
     });
 
+  // Memoized callbacks for SongCard to prevent unnecessary re-renders
+  const handleEditSong = useCallback((song) => {
+    setEditingSong(song);
+    setShowForm(true);
+  }, []);
+
+  const handleDeleteSong = useCallback((songId) => {
+    setDeleteSongId(songId);
+  }, []);
+
+  const handleContextMenu = useCallback((songId, pos) => {
+    setContextMenu({ songId, ...pos });
+  }, []);
+
   if (loading) {
     return (
       <div className="h-full flex flex-col p-4">
@@ -488,12 +502,9 @@ function SongList({ workspaceId, onSelectSong }) {
                 key={song.id}
                 song={song}
                 practiceSummary={practiceSummary}
-                onEdit={() => {
-                  setEditingSong(song);
-                  setShowForm(true);
-                }}
-                onDelete={() => setDeleteSongId(song.id)}
-                onContextMenu={(pos) => setContextMenu({ songId: song.id, ...pos })}
+                onEdit={() => handleEditSong(song)}
+                onDelete={() => handleDeleteSong(song.id)}
+                onContextMenu={(pos) => handleContextMenu(song.id, pos)}
               />
             ))}
           </div>
