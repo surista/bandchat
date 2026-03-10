@@ -325,7 +325,7 @@ function SongList({ workspaceId, onSelectSong }) {
     setShowForm(true);
   }, []);
 
-  const handleDeleteSong = useCallback((songId) => {
+  const confirmDeleteSong = useCallback((songId) => {
     setDeleteSongId(songId);
   }, []);
 
@@ -503,7 +503,7 @@ function SongList({ workspaceId, onSelectSong }) {
                 song={song}
                 practiceSummary={practiceSummary}
                 onEdit={() => handleEditSong(song)}
-                onDelete={() => handleDeleteSong(song.id)}
+                onDelete={() => confirmDeleteSong(song.id)}
                 onContextMenu={(pos) => handleContextMenu(song.id, pos)}
               />
             ))}
