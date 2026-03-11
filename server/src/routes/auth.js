@@ -493,12 +493,12 @@ router.post('/google', authLimiter, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Google auth error:', error);
+    console.error('Google auth error:', error.message, 'Expected audience:', process.env.GOOGLE_CLIENT_ID);
     if (error.message?.includes('Token used too late') ||
         error.message?.includes('Invalid token')) {
       return res.status(401).json({ error: 'Invalid or expired Google token' });
     }
-    res.status(500).json({ error: 'Google authentication failed' });
+    res.status(500).json({ error: 'Google authentication failed', detail: error.message });
   }
 });
 
