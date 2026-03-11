@@ -84,7 +84,9 @@ export default {
       [
         '@react-native-google-signin/google-signin',
         {
-          iosUrlScheme: `com.googleusercontent.apps.${process.env.GOOGLE_IOS_CLIENT_ID || 'placeholder'}`,
+          iosUrlScheme: process.env.GOOGLE_IOS_CLIENT_ID
+            ? `com.googleusercontent.apps.${process.env.GOOGLE_IOS_CLIENT_ID.replace('.apps.googleusercontent.com', '')}`
+            : 'com.googleusercontent.apps.placeholder',
         },
       ],
       [
