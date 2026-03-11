@@ -27,6 +27,9 @@ const MIME_TO_EXT = {
   'video/webm': '.webm',
   'video/x-msvideo': '.avi',
   'video/x-matroska': '.mkv',
+  // Documents
+  'application/pdf': '.pdf',
+  'application/x-guitar-pro': '.gp',
 };
 
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
