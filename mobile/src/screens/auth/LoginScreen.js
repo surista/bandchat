@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,18 +13,67 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { APP_BASE_URL } from '../../utils/constants';
 
 export default function LoginScreen({ navigation }) {
-  const { login } = useAuth();
+  const { login, googleLogin, appleLogin } = useAuth();
   const { colors } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: Constants.expoConfig?.extra?.googleWebClientId,
+      iosClientId: Constants.expoConfig?.extra?.googleIosClientId,
+    });
+  }, []);
+
+  const handleGoogleSignIn = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+      const idToken = response.data?.idToken;
+      if (!idToken) throw new Error('No ID token');
+      await googleLogin(idToken);
+    } catch (error) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) return;
+      if (error.code === statusCodes.IN_PROGRESS) return;
+      if (error.message?.includes('ACCOUNT_EXISTS') || error.response?.data?.code === 'ACCOUNT_EXISTS') {
+        setError('This email is already registered. Please sign in with your password.');
+      } else {
+        setError(error.message || 'Google sign-in failed');
+      }
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      const fullName = credential.fullName?.givenName
+        ? { givenName: credential.fullName.givenName, familyName: credential.fullName.familyName || '' }
+        : null;
+      await appleLogin(credential.identityToken, fullName);
+    } catch (error) {
+      if (error.code === 'ERR_REQUEST_CANCELED') return;
+      if (error.message?.includes('ACCOUNT_EXISTS') || error.response?.data?.code === 'ACCOUNT_EXISTS') {
+        setError('This email is already registered. Please sign in with your password.');
+      } else {
+        setError(error.message || 'Apple sign-in failed');
+      }
+    }
+  };
 
   const handleSubmit = async () => {
     if (!email.trim() || !password) return;
@@ -144,6 +193,33 @@ export default function LoginScreen({ navigation }) {
                 <Text style={{ color: colors.primary, fontWeight: '600' }}>Sign Up</Text>
               </Text>
             </TouchableOpacity>
+
+            <View style={styles.divider}>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              <Text style={[styles.dividerText, { color: colors.textSecondary }]}>or</Text>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            </View>
+
+            <TouchableOpacity
+              onPress={handleGoogleSignIn}
+              style={[styles.socialButton, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
+              accessibilityRole="button"
+              accessibilityLabel="Sign in with Google"
+            >
+              <Text style={[styles.socialButtonText, { color: colors.textPrimary }]}>
+                Sign in with Google
+              </Text>
+            </TouchableOpacity>
+
+            {Platform.OS === 'ios' && (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={8}
+                style={styles.appleButton}
+                onPress={handleAppleSignIn}
+              />
+            )}
           </View>
 
           <View style={styles.footer}>
@@ -265,4 +341,23 @@ const styles = StyleSheet.create({
   footerLink: { fontSize: 13 },
   footerDot: { fontSize: 13 },
   footerVersion: { fontSize: 12, marginTop: 8, opacity: 0.6 },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerLine: { flex: 1, height: 1 },
+  dividerText: { marginHorizontal: 12, fontSize: 14 },
+  socialButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  socialButtonText: { fontSize: 16, fontWeight: '600' },
+  appleButton: { height: 48, width: '100%' },
 });

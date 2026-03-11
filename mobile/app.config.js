@@ -3,7 +3,7 @@ export default {
     name: 'BandChat',
     slug: 'bandchat',
     scheme: 'bandchat',
-    version: '1.04.60',
+    version: '1.04.61',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'dark',
@@ -16,7 +16,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.bandchat.mobile',
-      buildNumber: '10460',
+      buildNumber: '10461',
       infoPlist: {
         NSCameraUsageDescription: 'BandChat needs camera access to take photos for your profile and messages.',
         NSPhotoLibraryUsageDescription: 'BandChat needs photo library access to share images in messages and set your profile picture.',
@@ -36,7 +36,7 @@ export default {
     },
     android: {
       package: 'com.bandchat.mobile',
-      versionCode: 10460,
+      versionCode: 10461,
       adaptiveIcon: {
         backgroundColor: '#1f2937',
         foregroundImage: './assets/android-icon-foreground.png',
@@ -65,6 +65,8 @@ export default {
       socketUrl: process.env.EXPO_PUBLIC_SOCKET_URL || 'http://localhost:3001',
       revenueCatApiKeyIos: process.env.EXPO_PUBLIC_REVENUECAT_IOS || '',
       revenueCatApiKeyAndroid: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID || '',
+      googleWebClientId: process.env.GOOGLE_CLIENT_ID,
+      googleIosClientId: process.env.GOOGLE_IOS_CLIENT_ID,
       eas: {
         projectId: 'd4038ff4-1904-4b0d-98a0-d8bcab2cb00f',
       },
@@ -78,6 +80,13 @@ export default {
       'expo-notifications',
       'expo-media-library',
       'expo-quick-actions',
+      'expo-apple-authentication',
+      [
+        '@react-native-google-signin/google-signin',
+        {
+          iosUrlScheme: `com.googleusercontent.apps.${process.env.GOOGLE_IOS_CLIENT_ID || 'placeholder'}`,
+        },
+      ],
       [
         'expo-build-properties',
         {

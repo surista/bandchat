@@ -21,6 +21,7 @@ model User {
   passwordResetToken      String?   @unique
   passwordResetExpires    DateTime?
   googleId                String?   @unique
+  appleId                 String?   @unique
   authProvider            String    @default("local")
   isSystemAdmin           Boolean   @default(false)
   notificationsSnoozedUntil DateTime? // null = active, future date = snoozed until then

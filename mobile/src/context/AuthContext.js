@@ -207,7 +207,22 @@ export function AuthProvider({ children }) {
     const data = await api.login(email, password);
     setUser(data.user);
     await configureRevenueCat(data.user.id);
-    // Prompt biometric setup after first login
+    setTimeout(() => promptBiometricSetup(), 1000);
+    return data;
+  }, [promptBiometricSetup]);
+
+  const googleLogin = useCallback(async (credential) => {
+    const data = await api.googleAuth(credential);
+    setUser(data.user);
+    await configureRevenueCat(data.user.id);
+    setTimeout(() => promptBiometricSetup(), 1000);
+    return data;
+  }, [promptBiometricSetup]);
+
+  const appleLogin = useCallback(async (identityToken, fullName) => {
+    const data = await api.appleAuth(identityToken, fullName);
+    setUser(data.user);
+    await configureRevenueCat(data.user.id);
     setTimeout(() => promptBiometricSetup(), 1000);
     return data;
   }, [promptBiometricSetup]);
@@ -249,6 +264,8 @@ export function AuthProvider({ children }) {
     biometricEnabled,
     signup,
     login,
+    googleLogin,
+    appleLogin,
     logout,
     updateUser,
     retryAuth,
@@ -256,7 +273,7 @@ export function AuthProvider({ children }) {
     unlockApp,
     setBiometricEnabled,
     isAuthenticated: !!user,
-  }), [user, loading, error, isOffline, isLocked, biometricEnabled, signup, login, logout, updateUser, retryAuth, clearError, unlockApp, setBiometricEnabled]);
+  }), [user, loading, error, isOffline, isLocked, biometricEnabled, signup, login, googleLogin, appleLogin, logout, updateUser, retryAuth, clearError, unlockApp, setBiometricEnabled]);
 
   return (
     <AuthContext.Provider value={value}>

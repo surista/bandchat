@@ -483,6 +483,17 @@ class ApiService {
     return data;
   }
 
+  async appleAuth(identityToken, fullName) {
+    const data = await this.request('/auth/apple', {
+      method: 'POST',
+      body: JSON.stringify({ identityToken, fullName }),
+    });
+    if (data.accessToken) {
+      await this.setTokens(data.accessToken, data.refreshToken);
+    }
+    return data;
+  }
+
   async linkGoogle(credential) {
     return this.request('/auth/link-google', {
       method: 'POST',

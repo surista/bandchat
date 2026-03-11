@@ -13,6 +13,46 @@ const router = express.Router();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const googleClient = process.env.GOOGLE_CLIENT_ID ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID) : null;
 
+const APPLE_BUNDLE_ID = process.env.APPLE_BUNDLE_ID || 'com.bandchat.app';
+const APPLE_ISSUER = 'https://appleid.apple.com';
+const APPLE_JWKS_URL = 'https://appleid.apple.com/auth/keys';
+
+let appleKeysCache = null;
+let appleKeysCacheTime = 0;
+const APPLE_KEYS_TTL = 24 * 60 * 60 * 1000;
+
+const getApplePublicKeys = async () => {
+  if (appleKeysCache && Date.now() - appleKeysCacheTime < APPLE_KEYS_TTL) {
+    return appleKeysCache;
+  }
+  const response = await fetch(APPLE_JWKS_URL);
+  if (!response.ok) {
+    throw new Error('Failed to fetch Apple public keys');
+  }
+  const data = await response.json();
+  appleKeysCache = data.keys;
+  appleKeysCacheTime = Date.now();
+  return appleKeysCache;
+};
+
+const verifyAppleIdentityToken = async (identityToken) => {
+  const header = JSON.parse(Buffer.from(identityToken.split('.')[0], 'base64url').toString());
+  const keys = await getApplePublicKeys();
+  const key = keys.find(k => k.kid === header.kid);
+  if (!key) {
+    throw new Error('Apple public key not found for kid: ' + header.kid);
+  }
+
+  const publicKey = crypto.createPublicKey({ key, format: 'jwk' });
+  const pem = publicKey.export({ type: 'spki', format: 'pem' });
+
+  return jwt.verify(identityToken, pem, {
+    algorithms: ['RS256'],
+    issuer: APPLE_ISSUER,
+    audience: APPLE_BUNDLE_ID
+  });
+};
+
 // Minimum password length (increased from 6 to 8 for better security)
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -331,7 +371,7 @@ router.post('/login', authLimiter, async (req, res) => {
     }
 
     if (!user.password) {
-      return res.status(400).json({ error: 'This account uses Google Sign-In. Use "Forgot Password" to set a password for mobile login.' });
+      return res.status(400).json({ error: 'This account uses third-party Sign-In. Use "Forgot Password" to set a password for email login.' });
     }
 
     const validPassword = await bcrypt.compare(password, user.password);
@@ -532,6 +572,164 @@ router.post('/link-google', authenticate, async (req, res) => {
   }
 });
 
+// Apple Sign-In / Sign-Up
+router.post('/apple', authLimiter, async (req, res) => {
+  try {
+    const { identityToken, fullName } = req.body;
+
+    if (!identityToken || typeof identityToken !== 'string') {
+      return res.status(400).json({ error: 'Apple identity token required' });
+    }
+
+    if (identityToken.length > 5000) {
+      return res.status(400).json({ error: 'Invalid identity token' });
+    }
+
+    const payload = await verifyAppleIdentityToken(identityToken);
+    const { sub: appleId, email, email_verified } = payload;
+
+    let user = await prisma.user.findUnique({
+      where: { appleId }
+    });
+
+    if (user) {
+      const tokens = await generateTokens(user.id);
+      setRefreshTokenCookie(res, tokens.refreshToken);
+      return res.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          displayName: user.displayName,
+          avatarUrl: user.avatarUrl
+        },
+        ...tokens,
+        isNewUser: false
+      });
+    }
+
+    const existingUserByEmail = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() }
+    });
+
+    if (existingUserByEmail) {
+      return res.status(409).json({
+        error: 'Account exists with this email. Please sign in with your password and link Apple from settings.',
+        code: 'ACCOUNT_EXISTS'
+      });
+    }
+
+    let displayName = email.split('@')[0];
+    if (fullName && (fullName.givenName || fullName.familyName)) {
+      const parts = [fullName.givenName, fullName.familyName].filter(Boolean);
+      if (parts.length > 0) {
+        const combined = parts.join(' ').trim().substring(0, 50);
+        const nameCheck = validateDisplayName(combined);
+        if (nameCheck.valid) {
+          displayName = combined;
+        }
+      }
+    }
+
+    user = await prisma.user.create({
+      data: {
+        email: email.toLowerCase(),
+        displayName,
+        appleId,
+        authProvider: 'apple',
+        emailVerified: email_verified === true || email_verified === 'true',
+        password: null
+      },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        avatarUrl: true,
+        createdAt: true
+      }
+    });
+
+    const tokens = await generateTokens(user.id);
+    setRefreshTokenCookie(res, tokens.refreshToken);
+
+    res.status(201).json({
+      user,
+      ...tokens,
+      isNewUser: true,
+      message: 'Account created successfully with Apple.'
+    });
+
+  } catch (error) {
+    console.error('Apple auth error:', error);
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Invalid or expired Apple token' });
+    }
+    res.status(500).json({ error: 'Apple authentication failed' });
+  }
+});
+
+// Link Apple account to existing account
+router.post('/link-apple', authenticate, async (req, res) => {
+  try {
+    const { identityToken } = req.body;
+
+    if (!identityToken || typeof identityToken !== 'string') {
+      return res.status(400).json({ error: 'Apple identity token required' });
+    }
+
+    if (identityToken.length > 5000) {
+      return res.status(400).json({ error: 'Invalid identity token' });
+    }
+
+    const payload = await verifyAppleIdentityToken(identityToken);
+    const { sub: appleId } = payload;
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: req.user.id }
+    });
+
+    if (currentUser.appleId) {
+      return res.status(400).json({ error: 'Apple account already linked' });
+    }
+
+    const existingAppleUser = await prisma.user.findUnique({
+      where: { appleId }
+    });
+
+    if (existingAppleUser && existingAppleUser.id !== req.user.id) {
+      return res.status(409).json({
+        error: 'This Apple account is already linked to another user'
+      });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        appleId,
+        authProvider: 'both',
+        emailVerified: true
+      },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        avatarUrl: true
+      }
+    });
+
+    res.json({
+      user: updatedUser,
+      message: 'Apple account linked successfully'
+    });
+
+  } catch (error) {
+    console.error('Link Apple error:', error);
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Invalid or expired Apple token' });
+    }
+    res.status(500).json({ error: 'Failed to link Apple account' });
+  }
+});
+
 // Refresh token (rate limited to prevent token enumeration)
 router.post('/refresh', refreshLimiter, async (req, res) => {
   try {
@@ -715,7 +913,7 @@ router.put('/password', authenticate, authLimiter, async (req, res) => {
       where: { id: req.user.id },
       data: {
         password: hashedPassword,
-        authProvider: user.googleId ? 'both' : 'local'
+        authProvider: (user.googleId || user.appleId) ? 'both' : 'local'
       }
     });
 
@@ -1017,8 +1215,7 @@ router.post('/reset-password', authLimiter, async (req, res) => {
       passwordResetExpires: null
     };
 
-    // If Google-only user is setting a password for the first time, update authProvider
-    if (user.googleId && user.authProvider === 'google') {
+    if (user.authProvider === 'google' || user.authProvider === 'apple') {
       updateData.authProvider = 'both';
     }
 
@@ -1077,9 +1274,8 @@ router.delete('/account', authenticate, authLimiter, async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     // Verify identity
-    if (user.authProvider === 'google' && !user.password) {
-      // Google-only users: we accept the request if they're authenticated (JWT verified)
-      // No additional password check needed since they have no password
+    if (!user.password && (user.authProvider === 'google' || user.authProvider === 'apple')) {
+      // OAuth-only users: accept the request if they're authenticated (JWT verified)
     } else {
       if (!password) return res.status(400).json({ error: 'Password is required' });
       const valid = await bcrypt.compare(password, user.password);
