@@ -653,8 +653,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                           value={deletePassword}
                           onChange={(e) => setDeletePassword(e.target.value)}
                           className="modal-input"
-                          placeholder={user?.authProvider === 'google' && !user?.password ? 'No password needed for Google accounts' : 'Enter your password'}
-                          disabled={user?.authProvider === 'google' && !user?.password}
+                          placeholder={!user?.hasPassword ? 'No password needed for social accounts' : 'Enter your password'}
+                          disabled={!user?.hasPassword}
                         />
                         {deleteError && (
                           <p className="text-sm text-red-400">{deleteError}</p>
@@ -673,7 +673,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                                 setDeleteLoading(false);
                               }
                             }}
-                            disabled={deleteLoading || (user?.authProvider !== 'google' && !deletePassword)}
+                            disabled={deleteLoading || (user?.hasPassword && !deletePassword)}
                             className="btn btn-danger"
                           >
                             {deleteLoading ? 'Deleting...' : 'Permanently Delete'}

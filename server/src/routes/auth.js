@@ -498,7 +498,7 @@ router.post('/google', authLimiter, async (req, res) => {
         error.message?.includes('Invalid token')) {
       return res.status(401).json({ error: 'Invalid or expired Google token' });
     }
-    res.status(500).json({ error: 'Google authentication failed', detail: error.message });
+    res.status(500).json({ error: 'Google authentication failed' });
   }
 });
 
@@ -557,7 +557,10 @@ router.post('/link-google', authenticate, async (req, res) => {
         id: true,
         email: true,
         displayName: true,
-        avatarUrl: true
+        avatarUrl: true,
+        authProvider: true,
+        googleId: true,
+        appleId: true,
       }
     });
 
@@ -712,7 +715,10 @@ router.post('/link-apple', authenticate, async (req, res) => {
         id: true,
         email: true,
         displayName: true,
-        avatarUrl: true
+        avatarUrl: true,
+        authProvider: true,
+        googleId: true,
+        appleId: true,
       }
     });
 
@@ -811,6 +817,10 @@ router.get('/me', authenticate, async (req, res) => {
         displayName: true,
         avatarUrl: true,
         bio: true,
+        authProvider: true,
+        googleId: true,
+        appleId: true,
+        password: true,
         createdAt: true,
         workspaces: {
           include: {
@@ -825,7 +835,9 @@ router.get('/me', authenticate, async (req, res) => {
       }
     });
 
-    res.json(user);
+    // Don't send the actual password hash — just whether they have one
+    const { password, ...userData } = user;
+    res.json({ ...userData, hasPassword: !!password });
   } catch (error) {
     res.status(500).json({ error: 'Failed to get user' });
   }
@@ -1274,13 +1286,12 @@ router.delete('/account', authenticate, authLimiter, async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     // Verify identity
-    if (!user.password && (user.authProvider === 'google' || user.authProvider === 'apple')) {
-      // OAuth-only users: accept the request if they're authenticated (JWT verified)
-    } else {
+    if (user.password) {
       if (!password) return res.status(400).json({ error: 'Password is required' });
       const valid = await bcrypt.compare(password, user.password);
       if (!valid) return res.status(401).json({ error: 'Incorrect password' });
     }
+    // Users without a password (social-only) are verified via their JWT
 
     // Check sole-admin constraint
     const adminMemberships = await prisma.workspaceMember.findMany({

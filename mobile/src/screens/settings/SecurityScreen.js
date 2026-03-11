@@ -16,16 +16,23 @@ import {
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as LocalAuthentication from 'expo-local-authentication';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import Constants from 'expo-constants';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 
 export default function SecurityScreen() {
-  const { user, logout, biometricEnabled, setBiometricEnabled } = useAuth();
+  const { user, updateUser, logout, biometricEnabled, setBiometricEnabled } = useAuth();
   const { colors } = useTheme();
 
-  const isGoogleOnly = user?.authProvider === 'google';
+  const hasPassword = user?.hasPassword !== false;
+  const hasGoogle = !!user?.googleId;
+  const hasApple = !!user?.appleId;
+  const [linkingGoogle, setLinkingGoogle] = useState(false);
+  const [linkingApple, setLinkingApple] = useState(false);
 
   // Biometric state
   const [biometricAvailable, setBiometricAvailable] = useState(false);
@@ -53,6 +60,54 @@ export default function SecurityScreen() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: Constants.expoConfig?.extra?.googleWebClientId,
+      iosClientId: Constants.expoConfig?.extra?.googleIosClientId,
+    });
+  }, []);
+
+  const handleLinkGoogle = useCallback(async () => {
+    setLinkingGoogle(true);
+    try {
+      if (Platform.OS === 'android') {
+        await GoogleSignin.hasPlayServices();
+      }
+      const response = await GoogleSignin.signIn();
+      const idToken = response?.data?.idToken;
+      if (!idToken) throw new Error('No ID token received from Google');
+      const data = await api.linkGoogle(idToken);
+      updateUser(data.user);
+      Alert.alert('Success', 'Google account linked successfully');
+    } catch (error) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) return;
+      if (error.code === statusCodes.IN_PROGRESS) return;
+      Alert.alert('Error', error.message || 'Failed to link Google account');
+    } finally {
+      setLinkingGoogle(false);
+    }
+  }, [updateUser]);
+
+  const handleLinkApple = useCallback(async () => {
+    setLinkingApple(true);
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      const data = await api.linkApple(credential.identityToken);
+      updateUser(data.user);
+      Alert.alert('Success', 'Apple account linked successfully');
+    } catch (error) {
+      if (error.code === 'ERR_REQUEST_CANCELED') return;
+      Alert.alert('Error', error.message || 'Failed to link Apple account');
+    } finally {
+      setLinkingApple(false);
+    }
+  }, [updateUser]);
 
   const handleToggleBiometric = useCallback(async (value) => {
     setTogglingBiometric(true);
@@ -144,16 +199,18 @@ export default function SecurityScreen() {
   }, [newEmail, emailPassword]);
 
   const getProviderLabel = () => {
-    if (user?.authProvider === 'google') return 'Google';
-    if (user?.authProvider === 'both') return 'Local + Google';
-    return 'Local';
+    const providers = [];
+    if (user?.authProvider === 'local' || user?.authProvider === 'both') providers.push('Local');
+    if (hasGoogle) providers.push('Google');
+    if (hasApple) providers.push('Apple');
+    return providers.length > 0 ? providers.join(' + ') : 'Local';
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Change Password */}
-        {!isGoogleOnly && (
+        {hasPassword && (
           <>
             <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">CHANGE PASSWORD</Text>
             <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
@@ -218,7 +275,7 @@ export default function SecurityScreen() {
               <Text style={[styles.infoValue, { color: '#f59e0b' }]}>{user.pendingEmail}</Text>
             </View>
           )}
-          {!isGoogleOnly && (
+          {hasPassword && (
             <TouchableOpacity
               style={[styles.outlineButton, { borderColor: colors.primary }]}
               onPress={() => setShowEmailModal(true)}
@@ -232,12 +289,56 @@ export default function SecurityScreen() {
         </View>
 
         {/* Auth Provider */}
-        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">AUTH PROVIDER</Text>
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">LINKED ACCOUNTS</Text>
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Type</Text>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Sign-in methods</Text>
             <Text style={[styles.infoValue, { color: colors.textPrimary }]}>{getProviderLabel()}</Text>
           </View>
+          {!hasGoogle && (
+            <TouchableOpacity
+              style={[styles.outlineButton, { borderColor: colors.border }]}
+              onPress={handleLinkGoogle}
+              disabled={linkingGoogle}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Link Google account"
+            >
+              {linkingGoogle ? (
+                <ActivityIndicator color={colors.textPrimary} size="small" />
+              ) : (
+                <Text style={[styles.outlineButtonText, { color: colors.textPrimary }]}>Link Google Account</Text>
+              )}
+            </TouchableOpacity>
+          )}
+          {!hasApple && Platform.OS === 'ios' && (
+            <TouchableOpacity
+              style={[styles.outlineButton, { borderColor: colors.border, marginTop: 8 }]}
+              onPress={handleLinkApple}
+              disabled={linkingApple}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Link Apple account"
+            >
+              {linkingApple ? (
+                <ActivityIndicator color={colors.textPrimary} size="small" />
+              ) : (
+                <Text style={[styles.outlineButtonText, { color: colors.textPrimary }]}>Link Apple Account</Text>
+              )}
+            </TouchableOpacity>
+          )}
+          {hasGoogle && (
+            <View style={[styles.infoRow, { marginTop: 4 }]}>
+              <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Google</Text>
+              <Text style={[styles.linkedBadge, { color: '#22c55e' }]}>Linked</Text>
+            </View>
+          )}
+          {hasApple && (
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Apple</Text>
+              <Text style={[styles.linkedBadge, { color: '#22c55e' }]}>Linked</Text>
+            </View>
+          )}
         </View>
 
         {/* Biometric Unlock */}
@@ -384,7 +485,7 @@ export default function SecurityScreen() {
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
               This will permanently delete your account. Your messages will show as "Deleted User" and your profile data will be removed.
             </Text>
-            {!isGoogleOnly && (
+            {hasPassword && (
               <TextInput
                 style={[styles.input, styles.lastInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
                 placeholder="Enter your password to confirm"
@@ -422,7 +523,7 @@ export default function SecurityScreen() {
                     setDeleting(false);
                   }
                 }}
-                disabled={deleting || (!isGoogleOnly && !deletePassword)}
+                disabled={deleting || (hasPassword && !deletePassword)}
               >
                 {deleting ? (
                   <ActivityIndicator color="#ffffff" size="small" />
@@ -484,6 +585,7 @@ const styles = StyleSheet.create({
   },
   infoLabel: { fontSize: 14 },
   infoValue: { fontSize: 14, fontWeight: '600' },
+  linkedBadge: { fontSize: 13, fontWeight: '600' },
   // Modal
   modalOverlay: {
     flex: 1,

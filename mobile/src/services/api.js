@@ -501,6 +501,13 @@ class ApiService {
     });
   }
 
+  async linkApple(identityToken) {
+    return this.request('/auth/link-apple', {
+      method: 'POST',
+      body: JSON.stringify({ identityToken }),
+    });
+  }
+
   async forgotPassword(email) {
     return this.request('/auth/forgot-password', {
       method: 'POST',

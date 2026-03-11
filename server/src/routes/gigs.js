@@ -118,7 +118,7 @@ router.get('/workspace/:workspaceId/next', authenticate, isWorkspaceMember, asyn
           orderBy: { setNumber: 'asc' }
         },
         attendees: {
-          where: { userId: req.user.id },
+          where: { bandMember: { linkedUserId: req.user.id } },
           select: { status: true }
         },
         _count: { select: { attendees: true } }
