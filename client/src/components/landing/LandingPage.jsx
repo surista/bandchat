@@ -10,7 +10,7 @@ const FEATURES = [
   { icon: '\uD83D\uDCCA', title: 'Band Tools', desc: 'Announcements, polls, shared finances, contacts, achievements, and practice tracking.' },
   { icon: '\uD83D\uDD14', title: 'Push Notifications', desc: 'Never miss a gig update, new message, or last-minute setlist change.' },
   { icon: '\uD83C\uDFA8', title: '20+ Themes', desc: 'Customize your workspace with dark mode, light mode, and over 20 color themes.' },
-  { icon: '\uD83D\uDCF1', title: 'iOS & Web', desc: 'Native iPhone app plus a full web experience. Your band\u2019s always in your pocket.' },
+  { icon: '\uD83D\uDCF1', title: 'iOS, Android & Web', desc: 'Native mobile apps plus a full web experience. Your band\u2019s always in your pocket.' },
 ];
 
 const STEPS = [
@@ -48,10 +48,10 @@ export default function LandingPage() {
             <span className="text-xl font-bold">BandChat</span>
           </div>
           <div className="flex items-center gap-3">
-            <Link to="/login" className="px-4 py-2 text-sm font-medium border border-white/30 rounded-lg hover:bg-white/10 transition-colors">
+            <Link to="/login" className="px-4 py-2 text-sm font-medium text-white border border-white/30 rounded-lg hover:bg-white/10 transition-colors">
               Log In
             </Link>
-            <Link to="/signup" className="px-4 py-2 text-sm font-medium bg-green-600 hover:bg-green-700 rounded-lg transition-colors">
+            <Link to="/signup" className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors">
               Sign Up Free
             </Link>
           </div>
@@ -67,12 +67,12 @@ export default function LandingPage() {
           Chat, plan setlists, manage gigs, and keep your band in sync &mdash; all in one app built for musicians.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 mb-16">
-          <Link to="/signup" className="px-8 py-4 text-lg font-semibold bg-green-600 hover:bg-green-700 rounded-xl transition-colors">
+          <Link to="/signup" className="px-8 py-4 text-lg font-semibold text-white bg-green-600 hover:bg-green-700 rounded-xl transition-colors">
             Get Started Free
           </Link>
           <button
             onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-            className="px-8 py-4 text-lg font-semibold border border-white/30 hover:bg-white/10 rounded-xl transition-colors"
+            className="px-8 py-4 text-lg font-semibold text-white border border-white/30 hover:bg-white/10 rounded-xl transition-colors"
           >
             See Features
           </button>
@@ -146,7 +146,7 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <Link to="/signup" className="block text-center py-3 rounded-xl font-semibold border border-gray-600 hover:bg-gray-700 transition-colors">
+              <Link to="/signup" className="block text-center py-3 rounded-xl font-semibold text-white border border-gray-600 hover:bg-gray-700 transition-colors">
                 Get Started
               </Link>
             </div>
@@ -164,7 +164,7 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <Link to="/signup" className="block text-center py-3 rounded-xl font-semibold bg-green-600 hover:bg-green-700 transition-colors">
+              <Link to="/signup" className="block text-center py-3 rounded-xl font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors">
                 Start Free Trial
               </Link>
             </div>
@@ -177,7 +177,7 @@ export default function LandingPage() {
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">Take your band on the go</h2>
           <p className="text-gray-300 text-lg mb-8">
-            Download BandChat for iOS and get push notifications, live mode, and your setlists on stage.
+            Download BandChat and get push notifications, live mode, and your setlists on stage.
           </p>
           <a
             href="https://apps.apple.com/app/id6759870253"
