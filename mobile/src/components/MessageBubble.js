@@ -8,6 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 import LinkPreview from './LinkPreview';
 import getAvatarColor from '../utils/getAvatarColor';
 import { buildMentionRegex } from '../utils/parseMentions';
+import { isSafeUrl } from '../utils/urlSafety';
 
 const YT_REGEX = /(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/|m\.youtube\.com\/watch\?v=)([\w-]{11})/;
 
@@ -57,7 +58,13 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
     if (!isPending && onLongPress) onLongPress(message);
   };
 
-  const renderContent = (text) => {
+  // URL regex to match http/https URLs
+  const URL_REGEX = /(https?:\/\/[^\s<>"\])}]+)/gi;
+
+  /**
+   * Render a text segment with @mention highlighting.
+   */
+  const renderMentions = (text, keyPrefix) => {
     if (!text) return null;
     const mentionRegex = buildMentionRegex(members || []);
     if (!mentionRegex) return text;
@@ -68,13 +75,59 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
       if (j + 2 < parts.length) {
         if (parts[j + 1]) result.push(parts[j + 1]);
         result.push(
-          <Text key={j} style={{ color: colors.primary, fontWeight: '600' }}>
+          <Text key={`${keyPrefix}-m${j}`} style={{ color: colors.primary, fontWeight: '600' }}>
             @{parts[j + 2]}
           </Text>
         );
       }
     }
     return result;
+  };
+
+  /**
+   * Render message content with clickable URLs and @mentions.
+   */
+  const renderContent = (text) => {
+    if (!text) return null;
+
+    // Split text by URLs while keeping the URLs in the result
+    const parts = text.split(URL_REGEX);
+    const result = [];
+
+    parts.forEach((part, i) => {
+      if (!part) return;
+
+      // Check if this part is a URL
+      if (URL_REGEX.test(part)) {
+        // Reset regex lastIndex after test
+        URL_REGEX.lastIndex = 0;
+
+        if (isSafeUrl(part)) {
+          result.push(
+            <Text
+              key={`url-${i}`}
+              style={{ color: colors.primary, textDecorationLine: 'underline' }}
+              onPress={() => Linking.openURL(part).catch(() => {})}
+            >
+              {part}
+            </Text>
+          );
+        } else {
+          // Not a safe URL, render as plain text
+          result.push(part);
+        }
+      } else {
+        // Not a URL, apply mention highlighting
+        const mentionResult = renderMentions(part, `p${i}`);
+        if (Array.isArray(mentionResult)) {
+          result.push(...mentionResult);
+        } else if (mentionResult) {
+          result.push(mentionResult);
+        }
+      }
+    });
+
+    return result.length > 0 ? result : text;
   };
 
   const renderLeftActions = (_progress, drag) => (
