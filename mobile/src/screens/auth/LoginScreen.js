@@ -37,10 +37,12 @@ export default function LoginScreen({ navigation }) {
 
   const handleGoogleSignIn = async () => {
     try {
-      await GoogleSignin.hasPlayServices();
+      if (Platform.OS === 'android') {
+        await GoogleSignin.hasPlayServices();
+      }
       const response = await GoogleSignin.signIn();
-      const idToken = response.data?.idToken;
-      if (!idToken) throw new Error('No ID token');
+      const idToken = response?.data?.idToken;
+      if (!idToken) throw new Error('No ID token received from Google');
       await googleLogin(idToken);
     } catch (error) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) return;

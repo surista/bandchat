@@ -13,7 +13,7 @@ const router = express.Router();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const googleClient = process.env.GOOGLE_CLIENT_ID ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID) : null;
 
-const APPLE_BUNDLE_ID = process.env.APPLE_BUNDLE_ID || 'com.bandchat.app';
+const APPLE_BUNDLE_ID = process.env.APPLE_BUNDLE_ID || 'com.bandchat.mobile';
 const APPLE_ISSUER = 'https://appleid.apple.com';
 const APPLE_JWKS_URL = 'https://appleid.apple.com/auth/keys';
 
