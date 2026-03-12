@@ -48,6 +48,12 @@ client/android/capacitor-cordova-android-plugins/
 # Expo
 mobile/.expo/
 
+# Local files (not for repo)
+Slack_export/
+BandChat_Cost_Analysis.docx
+mobile/ipad/
+app.json
+
 # Claude Code
 CLAUDE.md
 nul

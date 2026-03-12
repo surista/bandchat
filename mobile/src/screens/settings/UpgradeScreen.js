@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   StyleSheet,
   Platform,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Purchases from 'react-native-purchases';
@@ -303,6 +304,16 @@ export default function UpgradeScreen({ route }) {
             ? 'Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current period. Manage subscriptions in Settings > Apple ID > Subscriptions.'
             : 'Subscriptions auto-renew unless cancelled. Manage subscriptions in Google Play > Payments & subscriptions.'}
         </Text>
+
+        <View style={styles.legalLinks}>
+          <TouchableOpacity onPress={() => Linking.openURL('https://bandchat.app/terms')}>
+            <Text style={[styles.legalLink, { color: colors.primary }]}>Terms of Use</Text>
+          </TouchableOpacity>
+          <Text style={[styles.legalSeparator, { color: colors.textSecondary }]}>|</Text>
+          <TouchableOpacity onPress={() => Linking.openURL('https://bandchat.app/privacy')}>
+            <Text style={[styles.legalLink, { color: colors.primary }]}>Privacy Policy</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -529,5 +540,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
     paddingHorizontal: 8,
+  },
+  legalLinks: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+    gap: 8,
+  },
+  legalLink: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  legalSeparator: {
+    fontSize: 12,
   },
 });

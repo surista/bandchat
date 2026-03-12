@@ -42,7 +42,9 @@
       "Bash(npx prisma generate:*)",
       "WebFetch(domain:mtg.github.io)",
       "WebFetch(domain:cs310.hashnode.dev)",
-      "WebFetch(domain:gist.github.com)"
+      "WebFetch(domain:gist.github.com)",
+      "Bash(npx:*)",
+      "Bash(grep:*)"
     ]
   }
 }
