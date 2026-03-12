@@ -26,6 +26,12 @@ function WorkspaceList() {
     try {
       const data = await api.getWorkspaces();
       setWorkspaces(data);
+
+      // Auto-navigate if user has exactly one workspace
+      if (data.length === 1) {
+        navigate(`/workspace/${data[0].id}`, { replace: true });
+        return;
+      }
     } catch (err) {
       setError(err.message);
     } finally {

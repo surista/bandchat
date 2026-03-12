@@ -615,11 +615,16 @@ function Sidebar({
             {nextGig && (() => {
               const gigDate = new Date(nextGig.date);
               const now = new Date();
-              const diffMs = gigDate.getTime() - now.getTime();
-              const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+              // Normalize to start of local day for accurate day comparison
+              const gigDay = new Date(gigDate.getFullYear(), gigDate.getMonth(), gigDate.getDate());
+              const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+              const diffMs = gigDay.getTime() - today.getTime();
+              const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
               const countdown = diffDays <= 0 ? 'Today!' : diffDays === 1 ? 'Tomorrow!' : `${diffDays} days away`;
               const hasSetlist = nextGig.setlists?.length > 0;
               const isUrgent = diffDays <= 1;
+              // Use performanceStartTime or eventStartTime for display
+              const displayTime = nextGig.performanceStartTime || nextGig.eventStartTime;
 
               return (
                 <button
@@ -637,7 +642,7 @@ function Sidebar({
                   </div>
                   <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-400">
                     <span>{gigDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                    {nextGig.startTime && <span>· {nextGig.startTime}</span>}
+                    {displayTime && <span>· {displayTime}</span>}
                     {nextGig.venue && <span className="truncate">· {nextGig.venue}</span>}
                   </div>
                   {diffDays <= 7 && (

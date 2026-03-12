@@ -41,6 +41,7 @@ import SavedMessagesScreen from '../screens/workspace/SavedMessagesScreen';
 import SearchScreen from '../screens/workspace/SearchScreen';
 import ChannelSettingsScreen from '../screens/workspace/ChannelSettingsScreen';
 import MessagesTimelineScreen from '../screens/workspace/TimelineScreen';
+import ShareReceiveScreen from '../screens/share/ShareReceiveScreen';
 import { useTheme } from '../context/ThemeContext';
 
 const Stack = createNativeStackNavigator();
@@ -131,6 +132,13 @@ export default function AppStack() {
       <Stack.Screen name="SavedMessages" component={SavedMessagesScreen} options={{ title: 'Saved Messages' }} />
       <Stack.Screen name="MessagesTimeline" component={MessagesTimelineScreen} options={{ title: 'All Messages' }} />
       <Stack.Screen name="ChannelSettings" component={ChannelSettingsScreen} options={{ title: 'Channel Settings' }} />
+
+      {/* Share Extension */}
+      <Stack.Screen
+        name="ShareReceive"
+        component={ShareReceiveScreen}
+        options={{ headerShown: false, presentation: 'modal' }}
+      />
     </Stack.Navigator>
   );
 }

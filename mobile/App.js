@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as QuickActions from 'expo-quick-actions';
+import { ShareIntentProvider, useShareIntent } from 'expo-share-intent';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { AuthProvider } from './src/context/AuthContext';
 import { SocketProvider } from './src/context/SocketContext';
@@ -78,6 +79,17 @@ function handleDeepLink(url, navigationRef) {
 function AppContent() {
   const navigationRef = useRef(null);
   const { mode } = useTheme();
+  const { hasShareIntent, shareIntent } = useShareIntent();
+
+  // Handle share intent - navigate to ShareReceive screen
+  useEffect(() => {
+    if (hasShareIntent && shareIntent?.files?.length > 0 && navigationRef.current) {
+      // Small delay to ensure navigation is ready
+      setTimeout(() => {
+        navigationRef.current.navigate('ShareReceive');
+      }, 100);
+    }
+  }, [hasShareIntent, shareIntent]);
 
   useEffect(() => {
     // Register push notifications
@@ -172,17 +184,19 @@ function AppContent() {
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ErrorBoundary>
-        <SafeAreaProvider>
-          <ThemeProvider>
-            <AuthProvider>
-              <SocketProvider>
-                <AppContent />
-              </SocketProvider>
-            </AuthProvider>
-          </ThemeProvider>
-        </SafeAreaProvider>
-      </ErrorBoundary>
+      <ShareIntentProvider>
+        <ErrorBoundary>
+          <SafeAreaProvider>
+            <ThemeProvider>
+              <AuthProvider>
+                <SocketProvider>
+                  <AppContent />
+                </SocketProvider>
+              </AuthProvider>
+            </ThemeProvider>
+          </SafeAreaProvider>
+        </ErrorBoundary>
+      </ShareIntentProvider>
     </GestureHandlerRootView>
   );
 }
