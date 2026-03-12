@@ -49,7 +49,7 @@ export default function TimelineScreen({ navigation, route }) {
 
   const loadTimeline = useCallback(async (cursor = null, isRefresh = false) => {
     try {
-      const data = await api.getTimeline(workspaceId, cursor);
+      const data = await api.getMessagesTimeline(workspaceId, cursor);
       const msgs = data?.messages || [];
       if (isRefresh || !cursor) {
         setMessages(msgs);
