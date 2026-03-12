@@ -88,7 +88,7 @@ export default {
             NSExtensionActivationSupportsImageWithMaxCount: 10,
           },
           androidIntentFilters: ['image/*'],
-          disableAppGroupsIos: true,
+          iosAppGroupIdentifier: 'group.com.bandchat.mobile',
         },
       ],
       [
