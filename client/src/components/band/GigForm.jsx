@@ -35,6 +35,9 @@ const getGoogleCalendarUrl = (gig) => {
 };
 
 function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmin, workspaceId, workspace, workspaceMembers = [], previousEvents = [] }) {
+  // Read-only mode: locked events can be viewed but not edited by non-admins
+  const readOnly = gig?.isLocked && !isAdmin;
+
   const getDefaultDate = () => {
     if (gig?.date) return format(new Date(gig.date), 'yyyy-MM-dd');
     if (defaultDate) return format(defaultDate, 'yyyy-MM-dd');
@@ -218,7 +221,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     <div className="modal-backdrop">
       <div className="modal-content max-w-lg max-h-modal overflow-y-auto">
         <div className="modal-header">
-          <h3>{gig ? 'Edit Event' : 'New Event'}</h3>
+          <h3>{readOnly ? 'Event Details' : gig ? 'Edit Event' : 'New Event'}</h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white text-2xl leading-none"
@@ -229,13 +232,19 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
         </div>
 
         <div className="modal-body">
+          {readOnly && (
+            <div className="bg-yellow-900/30 border border-yellow-600/50 text-yellow-200 px-4 py-2 rounded-lg mb-4 flex items-center gap-2">
+              <span>🔒</span>
+              <span>This event is locked by an admin and cannot be edited.</span>
+            </div>
+          )}
           {error && (
             <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded-lg mb-4">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} className={readOnly ? 'pointer-events-none opacity-75' : ''}>
             <div className="space-y-4">
               <div className="relative">
                 <label className="modal-label">
@@ -897,7 +906,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
             </div>
 
             <div className="flex gap-2 mt-6 flex-wrap">
-              {gig && onDelete && (
+              {gig && onDelete && !readOnly && (
                 <button
                   type="button"
                   onClick={() => onDelete(gig.id)}
@@ -922,15 +931,17 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                 onClick={onClose}
                 className="btn btn-secondary"
               >
-                Cancel
+                {readOnly ? 'Close' : 'Cancel'}
               </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn bg-green-600 hover:bg-green-700 text-white"
-              >
-                {loading ? 'Saving...' : gig ? 'Update' : 'Create'}
-              </button>
+              {!readOnly && (
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {loading ? 'Saving...' : gig ? 'Update' : 'Create'}
+                </button>
+              )}
             </div>
           </form>
         </div>

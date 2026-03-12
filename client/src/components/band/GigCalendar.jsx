@@ -1166,8 +1166,8 @@ function GigCalendar({ workspaceId, workspace }) {
                           onDragEnd={canDrag ? handleDragEnd : undefined}
                           onClick={(e) => {
                             e.stopPropagation();
-                            // Can't edit external events or locked events (unless admin)
-                            if (!gig.isExternal && (!gig.isLocked || isAdmin)) {
+                            // Can't view external events, but can view locked events (read-only)
+                            if (!gig.isExternal) {
                               setEditingGig(gig);
                               setShowForm(true);
                             }
