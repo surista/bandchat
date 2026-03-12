@@ -108,8 +108,8 @@ router.post('/:workspaceId/activate', authenticate, isWorkspaceAdmin, async (req
       return res.status(502).json({ error: 'Failed to reach RevenueCat. Please try again.' });
     }
 
-    // Check the 'pro' entitlement is active
-    if (!isEntitlementActive(subscriber, 'pro')) {
+    // Check the 'BandChat Pro' entitlement is active
+    if (!isEntitlementActive(subscriber, 'BandChat Pro')) {
       return res.status(402).json({ error: 'No active Pro subscription found.' });
     }
 
@@ -122,8 +122,8 @@ router.post('/:workspaceId/activate', authenticate, isWorkspaceAdmin, async (req
     }
 
     // Extract entitlement details
-    const entitlement = subscriber.entitlements.pro;
-    const store = getEntitlementStore(subscriber, 'pro');
+    const entitlement = subscriber.entitlements['BandChat Pro'];
+    const store = getEntitlementStore(subscriber, 'BandChat Pro');
     const planSource = mapStoreToPlanSource(store);
     const planExpiresAt = entitlement.expires_date ? new Date(entitlement.expires_date) : null;
     const planProductId = entitlement.product_identifier ?? null;

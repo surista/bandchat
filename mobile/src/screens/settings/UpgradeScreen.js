@@ -127,7 +127,7 @@ export default function UpgradeScreen({ route }) {
 
       const { customerInfo } = await Purchases.purchasePackage(pkg);
 
-      if (customerInfo.entitlements.active['pro']) {
+      if (customerInfo.entitlements.active['BandChat Pro']) {
         // Sync the activated plan to the BandChat server
         await api.activatePurchase(workspaceId);
         await loadPlan();
@@ -159,7 +159,7 @@ export default function UpgradeScreen({ route }) {
 
       const customerInfo = await Purchases.restorePurchases();
 
-      if (customerInfo.entitlements.active['pro']) {
+      if (customerInfo.entitlements.active['BandChat Pro']) {
         // Sync restored plan to the server
         await api.activatePurchase(workspaceId);
         await loadPlan();
