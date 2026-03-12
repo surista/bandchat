@@ -54,6 +54,8 @@ export default function UpgradeScreen({ route }) {
   const [packages, setPackages] = useState({});
   // Map of productId -> formatted price string
   const [storePrices, setStorePrices] = useState({});
+  // Whether the store (RevenueCat) is available for purchases
+  const [storeAvailable, setStoreAvailable] = useState(true);
 
   // Load plan status and RevenueCat offerings in parallel on mount
   useEffect(() => {
@@ -98,8 +100,9 @@ export default function UpgradeScreen({ route }) {
       setPackages(pkgMap);
       setStorePrices(priceMap);
     } catch (err) {
-      // Offerings may fail in Expo Go or simulators — fall back to hardcoded prices silently
       console.log('RevenueCat offerings unavailable:', err.message);
+      // If RevenueCat isn't configured (missing API key) or SDK not ready, disable purchases
+      setStoreAvailable(false);
     }
   };
 
@@ -108,6 +111,10 @@ export default function UpgradeScreen({ route }) {
   };
 
   const handlePurchase = async (productId) => {
+    if (!storeAvailable) {
+      Alert.alert('Store Unavailable', 'In-app purchases are not available right now. Please try again later.');
+      return;
+    }
     setPurchasing(productId);
     try {
       // Tag this purchase with the workspace so the server can sync the plan
@@ -141,6 +148,10 @@ export default function UpgradeScreen({ route }) {
   };
 
   const handleRestore = async () => {
+    if (!storeAvailable) {
+      Alert.alert('Store Unavailable', 'In-app purchases are not available right now. Please try again later.');
+      return;
+    }
     setRestoring(true);
     try {
       // Tag this restore attempt with the workspace
@@ -200,6 +211,15 @@ export default function UpgradeScreen({ route }) {
               </Text>
             </View>
 
+            {/* Store unavailable notice */}
+            {!storeAvailable && (
+              <View style={[styles.storeNotice, { backgroundColor: '#78350f' }]}>
+                <Text style={styles.storeNoticeText}>
+                  In-app purchases are temporarily unavailable. Please try again later.
+                </Text>
+              </View>
+            )}
+
             {/* Pricing Options */}
             <View style={styles.pricingSection}>
               <PricingCard
@@ -209,7 +229,7 @@ export default function UpgradeScreen({ route }) {
                 colors={colors}
                 onPress={() => handlePurchase(PRODUCT_IDS.monthly)}
                 loading={purchasing === PRODUCT_IDS.monthly}
-                disabled={!!purchasing || restoring}
+                disabled={!!purchasing || restoring || !storeAvailable}
               />
               <PricingCard
                 title="Annual"
@@ -219,7 +239,7 @@ export default function UpgradeScreen({ route }) {
                 colors={colors}
                 onPress={() => handlePurchase(PRODUCT_IDS.annual)}
                 loading={purchasing === PRODUCT_IDS.annual}
-                disabled={!!purchasing || restoring}
+                disabled={!!purchasing || restoring || !storeAvailable}
                 highlighted
               />
               <PricingCard
@@ -229,7 +249,7 @@ export default function UpgradeScreen({ route }) {
                 colors={colors}
                 onPress={() => handlePurchase(PRODUCT_IDS.lifetime)}
                 loading={purchasing === PRODUCT_IDS.lifetime}
-                disabled={!!purchasing || restoring}
+                disabled={!!purchasing || restoring || !storeAvailable}
               />
             </View>
           </>
@@ -266,7 +286,7 @@ export default function UpgradeScreen({ route }) {
           <TouchableOpacity
             style={styles.restoreButton}
             onPress={handleRestore}
-            disabled={restoring || !!purchasing}
+            disabled={restoring || !!purchasing || !storeAvailable}
             accessibilityRole="button"
             accessibilityLabel="Restore purchases"
           >
@@ -490,6 +510,18 @@ const styles = StyleSheet.create({
   },
   restoreText: {
     fontSize: 15,
+    fontWeight: '600',
+  },
+  storeNotice: {
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  storeNoticeText: {
+    color: '#fbbf24',
+    fontSize: 13,
+    textAlign: 'center',
     fontWeight: '600',
   },
   disclaimer: {

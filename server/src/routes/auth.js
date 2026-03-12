@@ -1285,13 +1285,9 @@ router.delete('/account', authenticate, authLimiter, async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Verify identity
-    if (user.password) {
-      if (!password) return res.status(400).json({ error: 'Password is required' });
-      const valid = await bcrypt.compare(password, user.password);
-      if (!valid) return res.status(401).json({ error: 'Incorrect password' });
-    }
-    // Users without a password (social-only) are verified via their JWT
+    // Identity verified via JWT (authenticate middleware)
+    // Password verification removed per App Store guideline 5.1.1(v):
+    // "Allow users to complete account deletion without extra steps"
 
     // Check sole-admin constraint
     const adminMemberships = await prisma.workspaceMember.findMany({

@@ -147,7 +147,6 @@ export default function SecurityScreen() {
   // Export & Delete
   const [exporting, setExporting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
 
   const handleChangePassword = useCallback(async () => {
@@ -483,24 +482,12 @@ export default function SecurityScreen() {
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: '#ef4444' }]} accessibilityRole="header">Delete Account</Text>
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
-              This will permanently delete your account. Your messages will show as "Deleted User" and your profile data will be removed.
+              This will permanently delete your account. Your messages will show as "Deleted User" and your profile data will be removed. This cannot be undone.
             </Text>
-            {hasPassword && (
-              <TextInput
-                style={[styles.input, styles.lastInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-                placeholder="Enter your password to confirm"
-                placeholderTextColor={colors.textSecondary}
-                value={deletePassword}
-                onChangeText={setDeletePassword}
-                secureTextEntry
-                autoCapitalize="none"
-                accessibilityLabel="Password to confirm account deletion"
-              />
-            )}
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
-                onPress={() => { setShowDeleteModal(false); setDeletePassword(''); }}
+                onPress={() => setShowDeleteModal(false)}
                 disabled={deleting}
                 accessibilityRole="button"
                 accessibilityLabel="Cancel account deletion"
@@ -514,7 +501,7 @@ export default function SecurityScreen() {
                 onPress={async () => {
                   setDeleting(true);
                   try {
-                    await api.deleteAccount(deletePassword || undefined);
+                    await api.deleteAccount();
                     setShowDeleteModal(false);
                     logout();
                   } catch (err) {
@@ -523,7 +510,7 @@ export default function SecurityScreen() {
                     setDeleting(false);
                   }
                 }}
-                disabled={deleting || (hasPassword && !deletePassword)}
+                disabled={deleting}
               >
                 {deleting ? (
                   <ActivityIndicator color="#ffffff" size="small" />

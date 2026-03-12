@@ -56,7 +56,6 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
   const [editBio, setEditBio] = useState('');
   // Account deletion
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
   // Workspace leave/delete
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
@@ -646,16 +645,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     ) : (
                       <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 space-y-3">
                         <p className="text-sm text-red-300 font-medium">
-                          Are you sure? Enter your password to confirm.
+                          Are you sure? This will permanently delete your account. Your messages will be anonymized and your profile data removed.
                         </p>
-                        <input
-                          type="password"
-                          value={deletePassword}
-                          onChange={(e) => setDeletePassword(e.target.value)}
-                          className="modal-input"
-                          placeholder={!user?.hasPassword ? 'No password needed for social accounts' : 'Enter your password'}
-                          disabled={!user?.hasPassword}
-                        />
                         {deleteError && (
                           <p className="text-sm text-red-400">{deleteError}</p>
                         )}
@@ -665,7 +656,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                               setDeleteError('');
                               setDeleteLoading(true);
                               try {
-                                await api.deleteAccount(deletePassword || undefined);
+                                await api.deleteAccount();
                                 onLogout();
                               } catch (err) {
                                 setDeleteError(err.message);
@@ -673,13 +664,13 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                                 setDeleteLoading(false);
                               }
                             }}
-                            disabled={deleteLoading || (user?.hasPassword && !deletePassword)}
+                            disabled={deleteLoading}
                             className="btn btn-danger"
                           >
                             {deleteLoading ? 'Deleting...' : 'Permanently Delete'}
                           </button>
                           <button
-                            onClick={() => { setDeleteConfirmOpen(false); setDeletePassword(''); setDeleteError(''); }}
+                            onClick={() => { setDeleteConfirmOpen(false); setDeleteError(''); }}
                             className="btn btn-secondary"
                           >
                             Cancel
