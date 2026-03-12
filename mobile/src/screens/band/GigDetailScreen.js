@@ -716,19 +716,8 @@ export default function GigDetailScreen({ navigation, route }) {
         <Text style={[styles.viewLabel, { color: colors.textSecondary }]}>Date & Time</Text>
         <Text style={[styles.viewValue, { color: colors.textPrimary }]}>
           {gig?.date ? format(parseISO(gig.date), 'EEEE, dd-MMM-yyyy') : 'No date'}
+          {(gig?.performanceStartTime || gig?.eventStartTime) && ` · ${gig.performanceStartTime || gig.eventStartTime}`}
         </Text>
-        {(gig?.date || gig?.endDate) && (() => {
-          // Extract times from the datetime fields
-          const startTimeStr = gig.date ? format(parseISO(gig.date), 'HH:mm') : null;
-          const endTimeStr = gig.endDate ? format(parseISO(gig.endDate), 'HH:mm') : null;
-          // Only show if there's a meaningful time (not midnight)
-          const hasTime = (startTimeStr && startTimeStr !== '00:00') || endTimeStr;
-          return hasTime ? (
-            <Text style={[styles.viewValueSecondary, { color: colors.textSecondary }]}>
-              {[startTimeStr !== '00:00' ? startTimeStr : null, endTimeStr].filter(Boolean).join(' \u2013 ')}
-            </Text>
-          ) : null;
-        })()}
         {/* Show optional gig times if any are set */}
         {(gig?.soundCheckTime || gig?.eventStartTime || gig?.performanceStartTime) && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>

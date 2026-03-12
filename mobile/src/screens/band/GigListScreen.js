@@ -354,7 +354,8 @@ export default function GigListScreen({ navigation, route }) {
     const typeColor = TYPE_COLORS[item.type] || TYPE_COLORS.OTHER;
     const isCancelled = item.status === 'CANCELLED';
     const isCompleted = item.status === 'COMPLETED';
-    const timeStr = formatTimeRange(item.date, item.endDate);
+    // Use dedicated time fields (HH:mm strings) if available
+    const displayTime = item.performanceStartTime || item.eventStartTime || formatTimeRange(item.date, item.endDate);
     const setlistNames = (item.setlists || []).map(gs => gs.setlist?.name).filter(Boolean);
     const isOther = item._otherWorkspace;
     const dateKey = item.date ? item.date.split('T')[0] : null;
@@ -408,7 +409,7 @@ export default function GigListScreen({ navigation, route }) {
           <View style={styles.dateRow}>
             <Text style={[styles.gigDate, { color: colors.textSecondary }]}>
               {item.date ? formatGigDate(item.date) : 'No date'}
-              {timeStr ? ` \u00B7 ${timeStr}` : ''}
+              {displayTime ? ` \u00B7 ${displayTime}` : ''}
             </Text>
             {dateKey && (
               <TouchableOpacity
