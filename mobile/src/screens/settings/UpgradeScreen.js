@@ -306,11 +306,11 @@ export default function UpgradeScreen({ route }) {
         </Text>
 
         <View style={styles.legalLinks}>
-          <TouchableOpacity onPress={() => Linking.openURL('https://bandchat.app/terms')}>
+          <TouchableOpacity onPress={() => Linking.openURL('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/')}>
             <Text style={[styles.legalLink, { color: colors.primary }]}>Terms of Use</Text>
           </TouchableOpacity>
           <Text style={[styles.legalSeparator, { color: colors.textSecondary }]}>|</Text>
-          <TouchableOpacity onPress={() => Linking.openURL('https://bandchat.app/privacy')}>
+          <TouchableOpacity onPress={() => Linking.openURL('https://bandchat.vercel.app/privacy')}>
             <Text style={[styles.legalLink, { color: colors.primary }]}>Privacy Policy</Text>
           </TouchableOpacity>
         </View>
