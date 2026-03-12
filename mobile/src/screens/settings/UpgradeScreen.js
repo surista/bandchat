@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Purchases from 'react-native-purchases';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
+import { APP_BASE_URL } from '../../utils/constants';
 
 // Product IDs — must match App Store Connect / Google Play Console and RevenueCat dashboard
 const PRODUCT_IDS = {
@@ -60,8 +61,14 @@ export default function UpgradeScreen({ route }) {
 
   // Load plan status and RevenueCat offerings in parallel on mount
   useEffect(() => {
-    loadPlan();
-    loadOfferings();
+    const load = async () => {
+      try {
+        await Promise.all([loadPlan(), loadOfferings()]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
   }, [workspaceId]);
 
   const loadPlan = async () => {
@@ -70,8 +77,6 @@ export default function UpgradeScreen({ route }) {
       setPlanData(data);
     } catch (err) {
       console.error('Failed to load plan:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -306,11 +311,25 @@ export default function UpgradeScreen({ route }) {
         </Text>
 
         <View style={styles.legalLinks}>
-          <TouchableOpacity onPress={() => Linking.openURL('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/')}>
-            <Text style={[styles.legalLink, { color: colors.primary }]}>Terms of Use</Text>
+          <TouchableOpacity
+            onPress={() => Linking.openURL(
+              Platform.OS === 'ios'
+                ? 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/'
+                : `${APP_BASE_URL}/terms`
+            )}
+            accessibilityRole="link"
+            accessibilityLabel={Platform.OS === 'ios' ? 'Terms of Use (EULA)' : 'Terms of Service'}
+          >
+            <Text style={[styles.legalLink, { color: colors.primary }]}>
+              {Platform.OS === 'ios' ? 'Terms of Use (EULA)' : 'Terms of Service'}
+            </Text>
           </TouchableOpacity>
           <Text style={[styles.legalSeparator, { color: colors.textSecondary }]}>|</Text>
-          <TouchableOpacity onPress={() => Linking.openURL('https://bandchat.vercel.app/privacy')}>
+          <TouchableOpacity
+            onPress={() => Linking.openURL(`${APP_BASE_URL}/privacy`)}
+            accessibilityRole="link"
+            accessibilityLabel="Privacy Policy"
+          >
             <Text style={[styles.legalLink, { color: colors.primary }]}>Privacy Policy</Text>
           </TouchableOpacity>
         </View>
