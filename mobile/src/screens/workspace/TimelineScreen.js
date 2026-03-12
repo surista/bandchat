@@ -50,13 +50,14 @@ export default function TimelineScreen({ navigation, route }) {
   const loadTimeline = useCallback(async (cursor = null, isRefresh = false) => {
     try {
       const data = await api.getTimeline(workspaceId, cursor);
+      const msgs = data?.messages || [];
       if (isRefresh || !cursor) {
-        setMessages(data.messages);
+        setMessages(msgs);
       } else {
-        setMessages(prev => [...prev, ...data.messages]);
+        setMessages(prev => [...prev, ...msgs]);
       }
-      setHasMore(data.hasMore);
-      setNextCursor(data.nextCursor);
+      setHasMore(data?.hasMore || false);
+      setNextCursor(data?.nextCursor || null);
     } catch (err) {
       console.error('Failed to load timeline:', err);
     } finally {

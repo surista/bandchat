@@ -680,6 +680,11 @@ router.get('/timeline/:workspaceId', authenticate, async (req, res) => {
       select: { id: true }
     });
 
+    // Return empty if no accessible channels
+    if (accessibleChannels.length === 0) {
+      return res.json({ messages: [], nextCursor: null, hasMore: false });
+    }
+
     // Get blocked user IDs for filtering
     const blockedUsers = await prisma.blockedUser.findMany({
       where: { blockerId: req.user.id },
