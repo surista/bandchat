@@ -648,6 +648,82 @@ router.get('/search/:workspaceId', authenticate, async (req, res) => {
   }
 });
 
+// Get timeline (all messages across accessible channels)
+router.get('/timeline/:workspaceId', authenticate, async (req, res) => {
+  try {
+    const { cursor, limit = 50 } = req.query;
+    const take = Math.min(parseInt(limit) || 50, 100);
+
+    // Verify user is in workspace
+    const membership = await prisma.workspaceMember.findUnique({
+      where: {
+        userId_workspaceId: {
+          userId: req.user.id,
+          workspaceId: req.params.workspaceId
+        }
+      }
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a member of this workspace' });
+    }
+
+    // Get channels user has access to (public + private where member)
+    const accessibleChannels = await prisma.channel.findMany({
+      where: {
+        workspaceId: req.params.workspaceId,
+        OR: [
+          { isPrivate: false },
+          { members: { some: { userId: req.user.id } } }
+        ]
+      },
+      select: { id: true }
+    });
+
+    // Get blocked user IDs for filtering
+    const blockedUsers = await prisma.blockedUser.findMany({
+      where: { blockerId: req.user.id },
+      select: { blockedUserId: true }
+    });
+    const blockedIds = blockedUsers.map(b => b.blockedUserId);
+
+    // Fetch timeline messages
+    const messages = await prisma.message.findMany({
+      where: {
+        channelId: { in: accessibleChannels.map(c => c.id) },
+        parentId: null, // Only top-level messages
+        ...(blockedIds.length > 0 && { authorId: { notIn: blockedIds } })
+      },
+      take: take + 1,
+      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+      orderBy: { createdAt: 'desc' },
+      include: {
+        author: {
+          select: { id: true, displayName: true, avatarUrl: true }
+        },
+        channel: {
+          select: { id: true, name: true, isDirect: true }
+        },
+        attachments: true,
+        ...reactionsInclude,
+        _count: { select: { replies: true } }
+      }
+    });
+
+    const hasMore = messages.length > take;
+    const items = hasMore ? messages.slice(0, take) : messages;
+
+    res.json({
+      messages: items,
+      nextCursor: hasMore ? items[items.length - 1].id : null,
+      hasMore
+    });
+  } catch (error) {
+    console.error('Get timeline error:', error);
+    res.status(500).json({ error: 'Failed to get timeline' });
+  }
+});
+
 // Add a reaction to a message
 router.post('/:messageId/reactions', authenticate, async (req, res) => {
   try {

@@ -36,13 +36,17 @@ export default function WorkspaceListScreen({ navigation, route }) {
     try {
       const data = await api.getWorkspaces();
       setWorkspaces(data);
+      // Auto-navigate if exactly one workspace and no invite code
+      if (data.length === 1 && !route.params?.inviteCode) {
+        navigation.replace('Workspace', { id: data[0].id, name: data[0].name });
+      }
     } catch (err) {
       toast.error(err.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [toast]);
+  }, [toast, navigation, route.params?.inviteCode]);
 
   useEffect(() => {
     loadWorkspaces();

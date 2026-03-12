@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
@@ -77,7 +77,35 @@ function handleDeepLink(url, navigationRef) {
 
 function AppContent() {
   const navigationRef = useRef(null);
+  const saveStateRef = useRef(null);
   const { mode } = useTheme();
+  const [isReady, setIsReady] = useState(false);
+  const [initialState, setInitialState] = useState();
+
+  // Restore navigation state on mount
+  useEffect(() => {
+    const restoreState = async () => {
+      try {
+        const savedState = await AsyncStorage.getItem('NAVIGATION_STATE');
+        if (savedState) {
+          setInitialState(JSON.parse(savedState));
+        }
+      } catch (e) {
+        // Ignore restore errors
+      } finally {
+        setIsReady(true);
+      }
+    };
+    restoreState();
+  }, []);
+
+  // Debounced save handler for navigation state
+  const handleStateChange = useCallback((state) => {
+    if (saveStateRef.current) clearTimeout(saveStateRef.current);
+    saveStateRef.current = setTimeout(() => {
+      AsyncStorage.setItem('NAVIGATION_STATE', JSON.stringify(state));
+    }, 300);
+  }, []);
 
   useEffect(() => {
     // Register push notifications
@@ -158,8 +186,18 @@ function AppContent() {
     prefixes: ['bandchat://'],
   };
 
+  // Wait for navigation state to be restored
+  if (!isReady) {
+    return null;
+  }
+
   return (
-    <NavigationContainer ref={navigationRef} linking={linking}>
+    <NavigationContainer
+      ref={navigationRef}
+      linking={linking}
+      initialState={initialState}
+      onStateChange={handleStateChange}
+    >
       <ToastProvider>
         <OfflineBanner />
         <RootNavigator />

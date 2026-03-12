@@ -443,6 +443,9 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
             onSelectionChange={handleSelectionChange}
             onContentSizeChange={handleContentSizeChange}
             multiline
+            autoCorrect={true}
+            autoCapitalize="sentences"
+            spellCheck={true}
             textAlignVertical="center"
             returnKeyType={Platform.OS === 'ios' ? 'default' : 'send'}
             blurOnSubmit={false}

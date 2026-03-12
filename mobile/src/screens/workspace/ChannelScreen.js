@@ -15,6 +15,7 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -28,6 +29,7 @@ import MessageInput from '../../components/MessageInput';
 import MessageActionSheet from '../../components/MessageActionSheet';
 import EmojiPicker from '../../components/EmojiPicker';
 import ImageViewer from '../../components/ImageViewer';
+import ActionSheet from '../../components/ActionSheet';
 import { format, isSameDay } from 'date-fns';
 import { useLayout } from '../../hooks/useLayout';
 
@@ -58,6 +60,7 @@ export default function ChannelScreen({ navigation, route }) {
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
 
   const [seenByCount, setSeenByCount] = useState(null);
   const [lastOwnMessageId, setLastOwnMessageId] = useState(null);
@@ -70,6 +73,7 @@ export default function ChannelScreen({ navigation, route }) {
   const channelIdRef = useRef(channel.id);
   const userIdRef = useRef(user?.id);
   const flatListRef = useRef(null);
+  const scrollOffsetRef = useRef(0);
   const loadingMoreRef = useRef(false);
   const blockedIdsRef = useRef(new Set());
   const messagesRef = useRef(messages);
@@ -80,32 +84,43 @@ export default function ChannelScreen({ navigation, route }) {
     userIdRef.current = user?.id;
   }, [channel.id, user?.id]);
 
-  // Header: pin + info/settings buttons (hidden for DMs)
+  // Save scroll position on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollOffsetRef.current > 0) {
+        AsyncStorage.setItem(`scrollPos:${channel.id}`, String(scrollOffsetRef.current));
+      }
+    };
+  }, [channel.id]);
+
+  // Restore scroll position on mount
+  useEffect(() => {
+    AsyncStorage.getItem(`scrollPos:${channel.id}`).then(pos => {
+      if (pos && flatListRef.current) {
+        setTimeout(() => {
+          flatListRef.current.scrollToOffset({ offset: parseFloat(pos), animated: false });
+        }, 100);
+      }
+    });
+  }, [channel.id]);
+
+  // Header: "..." menu button (hidden for DMs)
   useLayoutEffect(() => {
     if (channel.isDM) return;
     navigation.setOptions({
       headerRight: () => (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('PinnedMessages', { channelId: channel.id })}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            accessibilityRole="button"
-            accessibilityLabel="Pinned messages"
-          >
-            <Text style={{ fontSize: 18 }}>{'\uD83D\uDCCC'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('ChannelSettings', { channel, workspaceId })}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            accessibilityRole="button"
-            accessibilityLabel="Channel settings"
-          >
-            <Text style={{ fontSize: 20 }}>{'\u2139\uFE0F'}</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          onPress={() => setShowHeaderMenu(true)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="More options"
+          style={{ paddingHorizontal: 8 }}
+        >
+          <Text style={{ fontSize: 20, color: '#ffffff' }}>{'\u2022\u2022\u2022'}</Text>
+        </TouchableOpacity>
       ),
     });
-  }, [navigation, channel, workspaceId]);
+  }, [navigation, channel]);
 
   // Load blocked user IDs for socket filtering
   useEffect(() => {
@@ -597,16 +612,24 @@ export default function ChannelScreen({ navigation, route }) {
     }
   }, [actionMessage, reportReason]);
 
-  // Add reaction
+  // Add/remove reaction (toggle)
   const handleAddReaction = useCallback(async (emoji) => {
     if (!actionMessage) return;
     try {
-      await api.addReaction(actionMessage.id, emoji);
+      // Check if user already reacted with this emoji - toggle it
+      const hasReacted = actionMessage.reactions?.some(
+        r => r.emoji === emoji && r.userId === user?.id
+      );
+      if (hasReacted) {
+        await api.removeReaction(actionMessage.id, emoji);
+      } else {
+        await api.addReaction(actionMessage.id, emoji);
+      }
     } catch (err) {
       // silently fail
     }
     setActionMessage(null);
-  }, [actionMessage]);
+  }, [actionMessage, user?.id]);
 
   // Edit message
   const handleSendEdit = useCallback(async (messageId, content) => {
@@ -762,6 +785,8 @@ export default function ChannelScreen({ navigation, route }) {
         inverted
         onEndReached={loadMore}
         onEndReachedThreshold={0.3}
+        onScroll={(e) => { scrollOffsetRef.current = e.nativeEvent.contentOffset.y; }}
+        scrollEventThrottle={100}
         ListFooterComponent={renderFooter}
         contentContainerStyle={styles.messageList}
         keyboardDismissMode="interactive"
@@ -824,6 +849,29 @@ export default function ChannelScreen({ navigation, route }) {
         visible={!!viewingImage}
         imageUrl={viewingImage}
         onClose={() => setViewingImage(null)}
+      />
+
+      {/* Header Menu ActionSheet */}
+      <ActionSheet
+        visible={showHeaderMenu}
+        onClose={() => setShowHeaderMenu(false)}
+        title={channel.name}
+        actions={[
+          {
+            label: 'Pinned Messages',
+            onPress: () => {
+              setShowHeaderMenu(false);
+              navigation.navigate('PinnedMessages', { channelId: channel.id });
+            },
+          },
+          {
+            label: 'Channel Settings',
+            onPress: () => {
+              setShowHeaderMenu(false);
+              navigation.navigate('ChannelSettings', { channel, workspaceId });
+            },
+          },
+        ]}
       />
 
       {/* Report Message Modal */}

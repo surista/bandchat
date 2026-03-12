@@ -779,6 +779,12 @@ class ApiService {
     return this.request(`/messages/search/${workspaceId}?${params}`);
   }
 
+  async getTimeline(workspaceId, cursor = null, limit = 50) {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor) params.append('cursor', cursor);
+    return this.request(`/messages/timeline/${workspaceId}?${params}`);
+  }
+
   // Reactions
   async addReaction(messageId, emoji) {
     return this.request(`/messages/${messageId}/reactions`, {
