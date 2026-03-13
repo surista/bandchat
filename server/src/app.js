@@ -34,6 +34,7 @@ import slackImportRoutes from './routes/slackImport.js';
 import reportRoutes from './routes/reports.js';
 import blockRoutes from './routes/blocks.js';
 import practiceRoutes from './routes/practice.js';
+import stagePlotRoutes from './routes/stagePlots.js';
 import workspaceImportRoutes from './routes/workspaceImport.js';
 import subscriptionRoutes from './routes/subscriptions.js';
 import adminRoutes from './routes/admin.js';
@@ -151,6 +152,7 @@ export function createApp() {
   app.use('/api/reports', reportRoutes);
   app.use('/api/blocks', blockRoutes);
   app.use('/api/practice', practiceRoutes);
+  app.use('/api/stage-plots', stagePlotRoutes);
   app.use('/api/workspace-import', workspaceImportRoutes);
   app.use('/api/subscriptions', subscriptionRoutes);
   app.use('/api/admin', adminRoutes);

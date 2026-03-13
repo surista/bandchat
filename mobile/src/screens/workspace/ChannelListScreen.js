@@ -41,6 +41,7 @@ const BAND_CATEGORIES = [
     items: [
       { id: 'band-calendar', key: 'calendar', label: 'Calendar', icon: '\uD83D\uDCC5' },
       { id: 'band-stats', key: 'stats', label: 'Stats', icon: '\uD83D\uDCCA' },
+      { id: 'band-stage-plots', key: 'stageplots', label: 'Stage Plots', icon: '\uD83C\uDFAD' },
     ],
   },
   {
@@ -526,6 +527,7 @@ export default function ChannelListScreen({ navigation, route }) {
       kitty: 'Kitty',
       intelligence: 'SongIntelligence',
       practice: 'PracticeDashboard',
+      stageplots: 'StagePlotList',
     };
     navigation.navigate(screenMap[key], { workspaceId });
   }, [navigation, workspaceId, workspace?.effectivePlan]);

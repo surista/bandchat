@@ -24,6 +24,8 @@ import AchievementsScreen from '../screens/band/AchievementsScreen';
 import KittyScreen from '../screens/band/KittyScreen';
 import SongIntelligenceScreen from '../screens/band/SongIntelligenceScreen';
 import PracticeDashboardScreen from '../screens/band/PracticeDashboardScreen';
+import StagePlotListScreen from '../screens/band/StagePlotListScreen';
+import StagePlotEditorScreen from '../screens/band/StagePlotEditorScreen';
 import LiveModeScreen from '../screens/band/LiveModeScreen';
 import LyricsScreen from '../screens/band/LyricsScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
@@ -109,6 +111,8 @@ export default function AppStack() {
       <Stack.Screen name="Kitty" component={KittyScreen} options={{ title: 'Band Kitty' }} />
       <Stack.Screen name="SongIntelligence" component={SongIntelligenceScreen} options={{ title: 'Song Intelligence' }} />
       <Stack.Screen name="PracticeDashboard" component={PracticeDashboardScreen} options={{ title: 'Practice' }} />
+      <Stack.Screen name="StagePlotList" component={StagePlotListScreen} options={{ title: 'Stage Plots' }} />
+      <Stack.Screen name="StagePlotEditor" component={StagePlotEditorScreen} options={{ title: 'Stage Plot' }} />
       <Stack.Screen name="LiveMode" component={LiveModeScreen} options={{ headerShown: false, animation: 'fade' }} />
       <Stack.Screen name="Lyrics" component={LyricsScreen} options={{ headerShown: false, animation: 'fade' }} />
 

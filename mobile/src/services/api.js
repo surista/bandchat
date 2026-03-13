@@ -1749,6 +1749,41 @@ class ApiService {
       method: 'POST',
     });
   }
+
+  // Stage Plots
+  async getStagePlots(workspaceId) {
+    return this.request(`/stage-plots/workspace/${workspaceId}`);
+  }
+
+  async getStagePlot(stagePlotId) {
+    return this.request(`/stage-plots/${stagePlotId}`);
+  }
+
+  async createStagePlot(workspaceId, data) {
+    return this.request(`/stage-plots/workspace/${workspaceId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateStagePlot(stagePlotId, data) {
+    return this.request(`/stage-plots/${stagePlotId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteStagePlot(stagePlotId) {
+    return this.request(`/stage-plots/${stagePlotId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async duplicateStagePlot(stagePlotId) {
+    return this.request(`/stage-plots/${stagePlotId}/duplicate`, {
+      method: 'POST',
+    });
+  }
 }
 
 export const api = new ApiService();

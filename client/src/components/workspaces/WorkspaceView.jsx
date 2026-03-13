@@ -81,6 +81,7 @@ const BandKitty = lazyRetry(() => import('../band/BandKitty'));
 const AudioAnalyzer = lazyRetry(() => import('../band/AudioAnalyzer'));
 const PracticeDashboard = lazyRetry(() => import('../band/PracticeDashboard'));
 const SavedMessages = lazyRetry(() => import('../messages/SavedMessages'));
+const StagePlotCreator = lazyRetry(() => import('../band/StagePlotCreator'));
 
 /** Safe search-highlight renderer — no dangerouslySetInnerHTML */
 function HighlightedText({ text, query }) {
@@ -114,6 +115,7 @@ const BAND_VIEW_TITLES = {
   analyzer: 'Audio Analyzer',
   practice: 'Practice',
   saved: 'Saved Messages',
+  'stage-plots': 'Stage Plots',
 };
 
 /** Lookup for band view components */
@@ -136,6 +138,7 @@ const BAND_VIEW_COMPONENTS = {
   analyzer: AudioAnalyzer,
   practice: PracticeDashboard,
   saved: SavedMessages,
+  'stage-plots': StagePlotCreator,
 };
 
 /** Band views that require a Pro plan */
