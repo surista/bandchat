@@ -765,7 +765,7 @@ export default function ChannelListScreen({ navigation, route }) {
                 <View style={styles.nextGigRow}>
                   <Text style={[styles.nextGigMeta, { color: colors.textSecondary }]}>
                     {new Date(nextGig.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                    {nextGig.startTime ? ` · ${nextGig.startTime}` : ''}
+                    {(nextGig.performanceStartTime || nextGig.eventStartTime) ? ` · ${nextGig.performanceStartTime || nextGig.eventStartTime}` : ''}
                     {nextGig.venue ? ` · ${nextGig.venue}` : ''}
                   </Text>
                 </View>
