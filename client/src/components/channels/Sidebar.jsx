@@ -623,8 +623,11 @@ function Sidebar({
               const countdown = diffDays <= 0 ? 'Today!' : diffDays === 1 ? 'Tomorrow!' : `${diffDays} days away`;
               const hasSetlist = nextGig.setlists?.length > 0;
               const isUrgent = diffDays <= 1;
-              // Use performanceStartTime or eventStartTime for display
-              const displayTime = nextGig.performanceStartTime || nextGig.eventStartTime;
+              // Use performanceStartTime or eventStartTime for display, fall back to time from date
+              const displayTime = nextGig.performanceStartTime || nextGig.eventStartTime ||
+                (gigDate.getHours() !== 0 || gigDate.getMinutes() !== 0
+                  ? gigDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+                  : null);
 
               return (
                 <button
