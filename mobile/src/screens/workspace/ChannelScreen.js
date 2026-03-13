@@ -736,7 +736,6 @@ export default function ChannelScreen({ navigation, route }) {
           onImagePress={handleImagePress}
           onReactionPress={handleReactionPress}
           onSwipeReply={handleReplyPress}
-          onSwipeReact={handleReactionPress}
           onAvatarPress={handleAvatarPress}
           members={workspaceMembers}
         />

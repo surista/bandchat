@@ -5,10 +5,12 @@ import Reanimated, { useAnimatedStyle, interpolate } from 'react-native-reanimat
 import { Video, ResizeMode } from 'expo-av';
 import { format, isToday, isYesterday } from 'date-fns';
 import { useTheme } from '../context/ThemeContext';
+import { lightImpact } from '../utils/haptics';
 import LinkPreview from './LinkPreview';
 import getAvatarColor from '../utils/getAvatarColor';
 import { buildMentionRegex } from '../utils/parseMentions';
 import { isSafeUrl } from '../utils/urlSafety';
+import { useLayout } from '../hooks/useLayout';
 
 const YT_REGEX = /(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/|m\.youtube\.com\/watch\?v=)([\w-]{11})/;
 
@@ -28,8 +30,9 @@ function formatDurationMmSs(ms) {
 
 const SWIPE_COOLDOWN = 500; // ms between swipe actions
 
-const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress, onSwipeReply, onSwipeReact, onAvatarPress, members }, ref) {
+const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress, onSwipeReply, onAvatarPress, members }, ref) {
   const { colors, density } = useTheme();
+  const { attachmentWidth, attachmentHeight } = useLayout();
   const swipeableRef = useRef(null);
   const lastSwipeTime = useRef(0);
   const author = message.author || {};
@@ -134,10 +137,6 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
     <LeftAction drag={drag} />
   );
 
-  const renderRightActions = (_progress, drag) => (
-    <RightAction drag={drag} />
-  );
-
   const handleSwipeOpen = (direction) => {
     const now = Date.now();
     if (now - lastSwipeTime.current < SWIPE_COOLDOWN) {
@@ -147,14 +146,14 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
     lastSwipeTime.current = now;
 
     if (direction === 'left' && onSwipeReply && !isPending) {
+      lightImpact();
       onSwipeReply(message);
-    } else if (direction === 'right' && onSwipeReact && !isPending) {
-      onSwipeReact(message.id, '👍');
     }
-    swipeableRef.current?.close();
+    // Small delay before closing so user sees the action panel
+    setTimeout(() => swipeableRef.current?.close(), 150);
   };
 
-  const swipeEnabled = !isPending && (onSwipeReply || onSwipeReact);
+  const swipeEnabled = !isPending && !!onSwipeReply;
 
   if (isGrouped) {
     return (
@@ -162,18 +161,15 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
         ref={swipeableRef}
         enabled={swipeEnabled}
         renderLeftActions={onSwipeReply ? renderLeftActions : undefined}
-        renderRightActions={onSwipeReact ? renderRightActions : undefined}
         onSwipeableWillOpen={handleSwipeOpen}
         overshootLeft={false}
-        overshootRight={false}
-        friction={2.5}
-        leftThreshold={40}
-        rightThreshold={40}
+        friction={2}
+        leftThreshold={30}
       >
       <Pressable
         style={[styles.groupedContainer, { paddingTop: density.groupedPaddingTop, paddingBottom: density.groupedPaddingBottom }, isPending && styles.pending]}
         onLongPress={handleLongPress}
-        delayLongPress={400}
+        delayLongPress={250}
         accessibilityRole="button"
         accessibilityLabel={`Message: ${message.content || 'attachment'}`}
       >
@@ -187,7 +183,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
           ) : null}
           <YouTubeThumbnail content={message.content} colors={colors} />
           {message.content && !YT_REGEX.test(message.content) ? <LinkPreview content={message.content} /> : null}
-          {renderAttachments(message.attachments, onImagePress)}
+          {renderAttachments(message.attachments, onImagePress, attachmentWidth, attachmentHeight)}
           {renderReactions(message.reactions, colors, message.id, onReactionPress)}
         </View>
       </Pressable>
@@ -200,18 +196,15 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
       ref={swipeableRef}
       enabled={swipeEnabled}
       renderLeftActions={onSwipeReply ? renderLeftActions : undefined}
-      renderRightActions={onSwipeReact ? renderRightActions : undefined}
       onSwipeableWillOpen={handleSwipeOpen}
       overshootLeft={false}
-      overshootRight={false}
-      friction={2.5}
-      leftThreshold={40}
-      rightThreshold={40}
+      friction={2}
+      leftThreshold={30}
     >
     <Pressable
       style={[styles.container, { paddingTop: density.containerPaddingTop, paddingBottom: density.containerPaddingBottom }, isPending && styles.pending]}
       onLongPress={handleLongPress}
-      delayLongPress={400}
+      delayLongPress={250}
       accessibilityRole="button"
       accessibilityLabel={`${displayName}: ${message.content || 'attachment'}`}
     >
@@ -251,7 +244,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
         ) : null}
         <YouTubeThumbnail content={message.content} colors={colors} />
         {message.content && !YT_REGEX.test(message.content) ? <LinkPreview content={message.content} /> : null}
-        {renderAttachments(message.attachments, onImagePress)}
+        {renderAttachments(message.attachments, onImagePress, attachmentWidth, attachmentHeight)}
         {renderReactions(message.reactions, colors, message.id, onReactionPress)}
         {message._count?.replies > 0 && (
           <TouchableOpacity onPress={() => onReplyPress?.(message)} activeOpacity={0.6} accessibilityRole="button" accessibilityLabel={`${message._count.replies} ${message._count.replies === 1 ? 'reply' : 'replies'}, view thread`}>
@@ -331,7 +324,7 @@ const ytStyles = StyleSheet.create({
   },
 });
 
-function renderAttachments(attachments, onImagePress) {
+function renderAttachments(attachments, onImagePress, imgWidth, imgHeight) {
   if (!attachments || attachments.length === 0) return null;
   return (
     <View>
@@ -347,7 +340,7 @@ function renderAttachments(attachments, onImagePress) {
             >
               <Image
                 source={{ uri: att.thumbnailUrl || att.url }}
-                style={styles.attachmentImage}
+                style={[styles.attachmentImage, { width: imgWidth, height: imgHeight }]}
                 resizeMode="cover"
                 accessibilityLabel="Attached image"
               />
@@ -542,18 +535,6 @@ function LeftAction({ drag }) {
   );
 }
 
-function RightAction({ drag }) {
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: interpolate(drag.value, [-60, 0], [0, 60], 'clamp') }],
-  }));
-  return (
-    <Reanimated.View style={[swipeStyles.rightAction, animatedStyle]}>
-      <Text style={swipeStyles.actionIcon}>👍</Text>
-      <Text style={swipeStyles.actionLabel}>React</Text>
-    </Reanimated.View>
-  );
-}
-
 const swipeStyles = StyleSheet.create({
   leftAction: {
     width: 60,
@@ -562,14 +543,6 @@ const swipeStyles = StyleSheet.create({
     backgroundColor: '#3b82f6',
     borderTopLeftRadius: 8,
     borderBottomLeftRadius: 8,
-  },
-  rightAction: {
-    width: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#22c55e',
-    borderTopRightRadius: 8,
-    borderBottomRightRadius: 8,
   },
   actionIcon: {
     fontSize: 20,

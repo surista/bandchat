@@ -22,6 +22,7 @@ import { useSocket } from '../../context/SocketContext';
 import api from '../../services/api';
 import ChannelItem from '../../components/ChannelItem';
 import OnboardingOverlay from '../../components/OnboardingOverlay';
+import { useLayout } from '../../hooks/useLayout';
 
 const BAND_CATEGORIES = [
   {
@@ -66,6 +67,7 @@ export default function ChannelListScreen({ navigation, route }) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const { socket, joinWorkspace } = useSocket();
+  const { isTablet, contentMaxWidth } = useLayout();
 
   const [workspace, setWorkspace] = useState(null);
   const [channels, setChannels] = useState([]);
@@ -723,9 +725,9 @@ export default function ChannelListScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.channelListBg }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.channelListBg }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       {/* Collapsible: Next upcoming event banner + Calendar + Saved Messages */}
-      <View style={[styles.stickyHeader, { backgroundColor: colors.channelListBg, borderBottomColor: colors.border }]}>
+      <View style={[styles.stickyHeader, { backgroundColor: colors.channelListBg, borderBottomColor: colors.border }, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
         <TouchableOpacity
           style={styles.quickLinksToggle}
           onPress={() => setCollapsedQuickLinks(prev => !prev)}
@@ -821,7 +823,7 @@ export default function ChannelListScreen({ navigation, route }) {
         renderItem={renderItem}
         renderSectionHeader={renderSectionHeader}
         stickySectionHeadersEnabled={false}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -1028,6 +1030,9 @@ export default function ChannelListScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  tabletContainer: {
+    alignItems: 'center',
   },
   loadingContainer: {
     flex: 1,

@@ -24,6 +24,7 @@ import MessageInput from '../../components/MessageInput';
 import MessageActionSheet from '../../components/MessageActionSheet';
 import EmojiPicker from '../../components/EmojiPicker';
 import ImageViewer from '../../components/ImageViewer';
+import { useLayout } from '../../hooks/useLayout';
 
 export default function ThreadScreen({ navigation, route }) {
   const { parentMessage, channelId, workspaceId } = route.params;
@@ -32,6 +33,7 @@ export default function ThreadScreen({ navigation, route }) {
   const { socket, startTyping, stopTyping } = useSocket();
   const toast = useToast();
   const headerHeight = useHeaderHeight();
+  const { isTablet, contentMaxWidth } = useLayout();
 
   const [parent, setParent] = useState(parentMessage);
   const [replies, setReplies] = useState([]);
@@ -253,16 +255,23 @@ export default function ThreadScreen({ navigation, route }) {
     }
   }, [actionMessage]);
 
-  // Add reaction
+  // Add/remove reaction (toggle)
   const handleAddReaction = useCallback(async (emoji) => {
     if (!actionMessage) return;
     try {
-      await api.addReaction(actionMessage.id, emoji);
+      const hasReacted = actionMessage.reactions?.some(
+        r => r.emoji === emoji && r.userId === user?.id
+      );
+      if (hasReacted) {
+        await api.removeReaction(actionMessage.id, emoji);
+      } else {
+        await api.addReaction(actionMessage.id, emoji);
+      }
     } catch (err) {
       // silently fail
     }
     setActionMessage(null);
-  }, [actionMessage]);
+  }, [actionMessage, user?.id]);
 
   // Edit message
   const handleSendEdit = useCallback(async (messageId, content) => {
@@ -355,10 +364,11 @@ export default function ThreadScreen({ navigation, route }) {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
+      style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
+      <View style={[styles.chatContainer, isTablet && { maxWidth: contentMaxWidth }]}>
       <FlatList
         data={listData}
         keyExtractor={(item) => item.id}
@@ -399,6 +409,7 @@ export default function ThreadScreen({ navigation, route }) {
         imageUrl={viewingImage}
         onClose={() => setViewingImage(null)}
       />
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -406,6 +417,13 @@ export default function ThreadScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  tabletContainer: {
+    alignItems: 'center',
+  },
+  chatContainer: {
+    flex: 1,
+    width: '100%',
   },
   loadingContainer: {
     flex: 1,
