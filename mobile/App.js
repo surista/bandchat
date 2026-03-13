@@ -10,6 +10,7 @@ import * as QuickActions from 'expo-quick-actions';
 import { ShareIntentProvider, useShareIntent } from 'expo-share-intent';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { AuthProvider } from './src/context/AuthContext';
+import { DatabaseProvider } from './src/context/DatabaseContext';
 import { SocketProvider } from './src/context/SocketContext';
 import { ToastProvider } from './src/context/ToastContext';
 import RootNavigator from './src/navigation/RootNavigator';
@@ -189,9 +190,11 @@ export default function App() {
           <SafeAreaProvider>
             <ThemeProvider>
               <AuthProvider>
-                <SocketProvider>
-                  <AppContent />
-                </SocketProvider>
+                <DatabaseProvider>
+                  <SocketProvider>
+                    <AppContent />
+                  </SocketProvider>
+                </DatabaseProvider>
               </AuthProvider>
             </ThemeProvider>
           </SafeAreaProvider>

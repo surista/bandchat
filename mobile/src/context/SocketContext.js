@@ -2,7 +2,10 @@ import { createContext, useContext, useEffect, useState, useMemo, useCallback, u
 import { io } from 'socket.io-client';
 import Constants from 'expo-constants';
 import { useAuth } from './AuthContext';
+import { useDatabase } from './DatabaseContext';
 import api from '../services/api';
+import { register as registerSocketSync, unregister as unregisterSocketSync } from '../services/socketSyncHandler';
+import { processQueue } from '../services/syncQueue';
 
 const SocketContext = createContext(null);
 
@@ -12,6 +15,7 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 
 export function SocketProvider({ children }) {
   const { isAuthenticated, isOffline } = useAuth();
+  const { isReady: dbReady } = useDatabase();
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState(null);
@@ -46,6 +50,11 @@ export function SocketProvider({ children }) {
       setConnected(true);
       setError(null);
       reconnectAttempts.current = 0;
+      // Register socket → SQLite sync and flush offline queue
+      if (dbReady) {
+        registerSocketSync(newSocket);
+        processQueue().catch(() => {});
+      }
     });
 
     newSocket.on('disconnect', (reason) => {
@@ -88,11 +97,12 @@ export function SocketProvider({ children }) {
       if (reconnectTimeout.current) {
         clearTimeout(reconnectTimeout.current);
       }
+      unregisterSocketSync(newSocket);
       newSocket.disconnect();
       setSocket(null);
       setConnected(false);
     };
-  }, [isAuthenticated, isOffline]);
+  }, [isAuthenticated, isOffline, dbReady]);
 
   const joinChannel = useCallback((channelId) => {
     if (socket) socket.emit('channel:join', channelId);

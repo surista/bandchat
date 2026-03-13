@@ -18,6 +18,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import { successNotification } from '../../utils/haptics';
 import api from '../../services/api';
+import { getLocalSongs, upsertSongs, deleteLocalSong } from '../../services/database';
 import { formatDuration } from '../../utils/formatDuration';
 import useDebounce from '../../hooks/useDebounce';
 
@@ -70,6 +71,16 @@ export default function SongListScreen({ navigation, route }) {
   const loadingRef = useRef(loading);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
 
+  // Pre-load songs from SQLite for instant display
+  useEffect(() => {
+    getLocalSongs(workspaceId).then(cached => {
+      if (cached.length > 0) {
+        setSongs(cached);
+        setLoading(false);
+      }
+    }).catch(() => {});
+  }, [workspaceId]);
+
   // Header buttons
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -104,8 +115,10 @@ export default function SongListScreen({ navigation, route }) {
       ]);
       setSongs(data);
       if (summary) setPracticeSummary(summary);
+      // Persist to SQLite for offline access
+      upsertSongs(data, workspaceId).catch(() => {});
     } catch (err) {
-      // silently fail
+      // silently fail — cached songs still showing if available
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -213,6 +226,7 @@ export default function SongListScreen({ navigation, route }) {
           try {
             await api.deleteSong(selectedSong.id);
             setSongs(prev => prev.filter(s => s.id !== selectedSong.id));
+            deleteLocalSong(selectedSong.id).catch(() => {});
             successNotification();
           } catch (err) {
             Alert.alert('Error', 'Failed to delete song');

@@ -21,6 +21,7 @@ import { useAuth } from '../../context/AuthContext';
 import { mediumImpact, successNotification } from '../../utils/haptics';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import api from '../../services/api';
+import { getLocalGigs, upsertGigs, deleteLocalGig } from '../../services/database';
 
 function getCurrencySymbol(code) {
   const symbols = { USD: '$', GBP: '£', EUR: '€', JPY: '¥', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', CHF: 'CHF ' };
@@ -113,6 +114,16 @@ export default function GigListScreen({ navigation, route }) {
   const loadingRef = useRef(loading);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
 
+  // Pre-load gigs from SQLite for instant display
+  useEffect(() => {
+    getLocalGigs(workspaceId).then(cached => {
+      if (cached.length > 0) {
+        setGigs(cached);
+        setLoading(false);
+      }
+    }).catch(() => {});
+  }, [workspaceId]);
+
   // Load workspace currency and admin status
   useEffect(() => {
     api.getWorkspace(workspaceId).then(ws => {
@@ -186,6 +197,8 @@ export default function GigListScreen({ navigation, route }) {
       ]);
       setGigs(data);
       setOtherGigs(showAllBands ? other : []);
+      // Persist to SQLite for offline access
+      upsertGigs(data, workspaceId).catch(() => {});
       // Index availability by date
       const availMap = {};
       for (const a of myAvail) {
@@ -289,6 +302,7 @@ export default function GigListScreen({ navigation, route }) {
           try {
             await api.deleteGig(selectedGig.id);
             setGigs(prev => prev.filter(g => g.id !== selectedGig.id));
+            deleteLocalGig(selectedGig.id).catch(() => {});
           } catch (err) {
             Alert.alert('Error', 'Failed to delete event');
           }

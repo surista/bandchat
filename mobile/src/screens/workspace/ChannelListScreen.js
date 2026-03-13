@@ -20,6 +20,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
 import api from '../../services/api';
+import { getLocalChannels, upsertChannels, upsertMembers } from '../../services/database';
 import ChannelItem from '../../components/ChannelItem';
 import OnboardingOverlay from '../../components/OnboardingOverlay';
 import { useLayout } from '../../hooks/useLayout';
@@ -190,6 +191,17 @@ export default function ChannelListScreen({ navigation, route }) {
     });
   }, [navigation, workspaceId]);
 
+  // Pre-load channels from SQLite for instant display
+  useEffect(() => {
+    getLocalChannels(workspaceId).then(cached => {
+      if (cached.length > 0) {
+        setChannels(cached.filter(c => !c.isDirect && !c.isDM));
+        setDirectMessages(cached.filter(c => c.isDirect || c.isDM));
+        setLoading(false);
+      }
+    }).catch(() => {});
+  }, [workspaceId]);
+
   const loadData = useCallback(async () => {
     try {
       const [ws, ch, groups, dms, gig] = await Promise.all([
@@ -207,6 +219,9 @@ export default function ChannelListScreen({ navigation, route }) {
       // Check admin status
       const membership = ws.members?.find(m => m.userId === user?.id);
       setIsAdmin(membership?.role === 'ADMIN');
+      // Persist to SQLite for offline access
+      upsertChannels([...ch, ...dms], workspaceId).catch(() => {});
+      if (ws.members) upsertMembers(ws.members, workspaceId).catch(() => {});
     } catch (err) {
       // silently fail
     } finally {

@@ -37,6 +37,7 @@ import practiceRoutes from './routes/practice.js';
 import stagePlotRoutes from './routes/stagePlots.js';
 import workspaceImportRoutes from './routes/workspaceImport.js';
 import subscriptionRoutes from './routes/subscriptions.js';
+import syncRoutes from './routes/sync.js';
 import adminRoutes from './routes/admin.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
@@ -155,6 +156,7 @@ export function createApp() {
   app.use('/api/stage-plots', stagePlotRoutes);
   app.use('/api/workspace-import', workspaceImportRoutes);
   app.use('/api/subscriptions', subscriptionRoutes);
+  app.use('/api/sync', syncRoutes);
   app.use('/api/admin', adminRoutes);
 
   // Health check

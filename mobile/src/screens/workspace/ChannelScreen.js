@@ -24,6 +24,8 @@ import { useToast } from '../../context/ToastContext';
 import { mediumImpact, successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import { addToOfflineQueue, getOfflineQueue, removeFromOfflineQueue } from '../../services/storage';
+import { getLocalMessages, upsertMessages, upsertMessage as upsertLocalMessage } from '../../services/database';
+import { enqueue as enqueueSync } from '../../services/syncQueue';
 import MessageBubble from '../../components/MessageBubble';
 import MessageInput from '../../components/MessageInput';
 import MessageActionSheet from '../../components/MessageActionSheet';
@@ -164,6 +166,15 @@ export default function ChannelScreen({ navigation, route }) {
       setMessages([]);
       setTypingUsers([]);
 
+      // Pre-load from SQLite for instant display
+      try {
+        const cached = await getLocalMessages(channel.id, 50);
+        if (!cancelled && cached.length > 0) {
+          setMessages(cached);
+          setLoading(false);
+        }
+      } catch {}
+
       try {
         const data = await api.getMessages(channel.id);
         if (cancelled) return;
@@ -171,11 +182,14 @@ export default function ChannelScreen({ navigation, route }) {
         setHasMore(data.hasMore);
         setNextCursor(data.nextCursor);
 
+        // Persist to SQLite
+        upsertMessages(data.messages).catch(() => {});
+
         await api.markChannelRead(channel.id);
 
         if (!cancelled) joinChannel(channel.id);
       } catch (err) {
-        // silently fail
+        // silently fail — cached messages still showing if available
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -399,6 +413,9 @@ export default function ChannelScreen({ navigation, route }) {
 
     setMessages(prev => [...prev, optimisticMessage]);
 
+    // Write optimistic message to SQLite immediately
+    upsertLocalMessage(optimisticMessage).catch(() => {});
+
     try {
       let uploadedAttachments = null;
       if (attachment) {
@@ -415,6 +432,8 @@ export default function ChannelScreen({ navigation, route }) {
       setMessages(prev => prev.map(m =>
         m.id === optimisticMessage.id ? savedMessage : m
       ));
+      // Update SQLite with server version
+      upsertLocalMessage(savedMessage).catch(() => {});
     } catch (err) {
       setUploadProgress(null);
       // Queue text-only messages for retry when offline
@@ -422,12 +441,14 @@ export default function ChannelScreen({ navigation, route }) {
         setMessages(prev => prev.map(m =>
           m.id === tempId ? { ...m, queued: true, pending: false } : m
         ));
+        // Write to both legacy queue and new sync queue
         addToOfflineQueue({ tempId, channelId: channel.id, content, createdAt: optimisticMessage.createdAt });
+        enqueueSync('create', 'message', tempId, { channelId: channel.id, content }, workspaceId).catch(() => {});
       } else {
         setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
       }
     }
-  }, [user, channel.id]);
+  }, [user, channel.id, workspaceId]);
 
   // Send voice message
   const handleSendVoice = useCallback(async (uri) => {
