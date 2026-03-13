@@ -30,6 +30,7 @@ const LABEL_MAP = {
   'guitar-halfstack': 'Gtr Half', 'guitar-fullstack': 'Gtr Full',
   'bass-combo': 'Bass Combo', 'bass-115': 'Bass 1x15', 'bass-410': 'Bass 4x10',
   'bass-stack': 'Bass Stack', keyboard: 'Keys', drums: 'Drums', piano: 'Piano',
+  text: 'Text Label',
 };
 
 // ─── Palette sections ───
@@ -39,6 +40,7 @@ const PALETTE_SECTIONS = [
   { label: 'Bass', items: ['bass-combo', 'bass-115', 'bass-410', 'bass-stack'] },
   { label: 'Keys / Piano', items: ['keyboard', 'piano'] },
   { label: 'Drums', items: ['drums'] },
+  { label: 'Other', items: ['text'] },
 ];
 
 const ITEM_SIZE = 48;
@@ -227,6 +229,13 @@ function InstrumentSvg({ type, size = 48 }) {
           <Line x1="32" y1="52" x2="32" y2="58" stroke="#333" strokeWidth="2" />
         </Svg>
       );
+    case 'text':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 64 64">
+          <Rect x="8" y="16" width="48" height="32" rx="4" fill="none" stroke="#9b59b6" strokeWidth="2" strokeDasharray="4 2" />
+          <SvgText x="32" y="37" textAnchor="middle" fontSize="14" fill="#9b59b6" fontWeight="bold">Aa</SvgText>
+        </Svg>
+      );
     default:
       return (
         <Svg width={s} height={s} viewBox="0 0 64 64">
@@ -238,7 +247,7 @@ function InstrumentSvg({ type, size = 48 }) {
 }
 
 // ─── Draggable stage item ───
-function DraggableItem({ item, stageLayout, onMove, onRemove, onLongPress, colors }) {
+function DraggableItem({ item, stageLayout, onMove, onRemove, onLongPress, onUpdateText, colors }) {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const startX = useSharedValue(0);
@@ -291,13 +300,27 @@ function DraggableItem({ item, stageLayout, onMove, onRemove, onLongPress, color
         style={[
           styles.stageItem,
           { left: item.x, top: item.y },
+          item.type === 'text' && { width: 'auto' },
           animatedStyle,
         ]}
       >
-        <InstrumentSvg type={item.type} size={44} />
-        <Text style={styles.stageItemLabel} numberOfLines={1}>
-          {item.label || LABEL_MAP[item.type]}
-        </Text>
+        {item.type === 'text' ? (
+          <TextInput
+            style={styles.stageTextInput}
+            value={item.text || ''}
+            onChangeText={(val) => onUpdateText(item.id, val)}
+            placeholder="Type here..."
+            placeholderTextColor="rgba(255,255,255,0.35)"
+            multiline={false}
+          />
+        ) : (
+          <>
+            <InstrumentSvg type={item.type} size={44} />
+            <Text style={styles.stageItemLabel} numberOfLines={1}>
+              {item.label || LABEL_MAP[item.type]}
+            </Text>
+          </>
+        )}
       </Animated.View>
     </GestureDetector>
   );
@@ -413,6 +436,7 @@ export default function StagePlotEditorScreen({ navigation, route }) {
       y: Math.random() * Math.max(stageLayout.height - ITEM_SIZE - 36, 50) + 10,
       id: Date.now() + Math.random(),
     };
+    if (type === 'text') newItem.text = 'Label';
     const newItems = [...items, newItem];
     setItems(newItems);
     setShowPalette(false);
@@ -432,6 +456,13 @@ export default function StagePlotEditorScreen({ navigation, route }) {
     const newItems = items.filter(it => it.id !== id);
     setItems(newItems);
     successNotification();
+    scheduleAutoSave(newItems, bandName, eventName);
+  }, [items, bandName, eventName, scheduleAutoSave]);
+
+  // Update text item content
+  const updateItemText = useCallback((id, text) => {
+    const newItems = items.map(it => it.id === id ? { ...it, text } : it);
+    setItems(newItems);
     scheduleAutoSave(newItems, bandName, eventName);
   }, [items, bandName, eventName, scheduleAutoSave]);
 
@@ -515,6 +546,7 @@ export default function StagePlotEditorScreen({ navigation, route }) {
             onMove={moveItem}
             onRemove={removeItem}
             onLongPress={handleItemLongPress}
+            onUpdateText={updateItemText}
             colors={colors}
           />
         ))}
@@ -672,6 +704,21 @@ const styles = StyleSheet.create({
     color: '#ccc',
     textAlign: 'center',
     marginTop: 1,
+  },
+  stageTextInput: {
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(155, 89, 246, 0.6)',
+    borderRadius: 4,
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '500',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 70,
+    maxWidth: 160,
+    textAlign: 'center',
   },
   itemCount: {
     textAlign: 'center',

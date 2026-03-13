@@ -17,6 +17,7 @@ const SVG_TEMPLATES = {
   keyboard: `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="8" y="28" width="48" height="20" rx="3" fill="#4a6a85"/><rect x="12" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="18" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="24" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="30" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="36" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="42" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="48" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="15" y="32" width="3" height="7" rx="0.5" fill="#2d4a60"/><rect x="21" y="32" width="3" height="7" rx="0.5" fill="#2d4a60"/><rect x="33" y="32" width="3" height="7" rx="0.5" fill="#2d4a60"/><rect x="39" y="32" width="3" height="7" rx="0.5" fill="#2d4a60"/><rect x="45" y="32" width="3" height="7" rx="0.5" fill="#2d4a60"/><text x="32" y="24" text-anchor="middle" font-size="8" fill="#9b59b6" font-weight="bold">KEYS</text></svg>`,
   drums: `<svg viewBox="0 0 64 64" width="48" height="48"><ellipse cx="32" cy="40" r="12" ry="8" fill="none" stroke="#e74c3c" stroke-width="2"/><ellipse cx="18" cy="28" r="7" ry="5" fill="none" stroke="#f39c12" stroke-width="1.5"/><ellipse cx="46" cy="28" r="7" ry="5" fill="none" stroke="#f39c12" stroke-width="1.5"/><ellipse cx="32" cy="18" r="8" ry="5" fill="none" stroke="#e67e22" stroke-width="1.5"/><circle cx="12" cy="16" r="5" fill="none" stroke="#c0392b" stroke-width="1.5"/><circle cx="52" cy="16" r="5" fill="none" stroke="#c0392b" stroke-width="1.5"/><ellipse cx="22" cy="52" r="6" ry="3" fill="none" stroke="#95a5a6" stroke-width="1.5"/><ellipse cx="42" cy="52" r="6" ry="3" fill="none" stroke="#95a5a6" stroke-width="1.5"/></svg>`,
   piano: `<svg viewBox="0 0 64 64" width="48" height="48"><path d="M16 52 Q8 40 10 24 Q12 12 32 8 Q52 12 54 24 Q56 40 48 52 Z" fill="#3a3a3a" stroke="#666" stroke-width="1.5"/><path d="M20 48 Q14 38 16 26 Q18 18 32 14 Q46 18 48 26 Q50 38 44 48 Z" fill="#4a4a4a"/><rect x="22" y="38" width="3" height="8" rx="0.5" fill="#ecf0f1"/><rect x="26" y="38" width="3" height="8" rx="0.5" fill="#ecf0f1"/><rect x="30" y="38" width="3" height="8" rx="0.5" fill="#ecf0f1"/><rect x="34" y="38" width="3" height="8" rx="0.5" fill="#ecf0f1"/><rect x="38" y="38" width="3" height="8" rx="0.5" fill="#ecf0f1"/><line x1="16" y1="52" x2="12" y2="58" stroke="#666" stroke-width="2"/><line x1="48" y1="52" x2="52" y2="58" stroke="#666" stroke-width="2"/><line x1="32" y1="52" x2="32" y2="58" stroke="#666" stroke-width="2"/></svg>`,
+  text: `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="8" y="16" width="48" height="32" rx="4" fill="none" stroke="#9b59b6" stroke-width="2" stroke-dasharray="4 2"/><text x="32" y="37" text-anchor="middle" font-size="14" fill="#9b59b6" font-weight="bold">Aa</text></svg>`,
 };
 
 const LABEL_MAP = {
@@ -24,6 +25,7 @@ const LABEL_MAP = {
   'guitar-halfstack': 'Gtr Half', 'guitar-fullstack': 'Gtr Full',
   'bass-combo': 'Bass Combo', 'bass-115': 'Bass 1x15', 'bass-410': 'Bass 4x10',
   'bass-stack': 'Bass Stack', keyboard: 'Keys', drums: 'Drums', piano: 'Piano',
+  text: 'Text Label',
 };
 
 const PALETTE_SECTIONS = [
@@ -32,6 +34,7 @@ const PALETTE_SECTIONS = [
   { label: 'Bass', items: ['bass-combo', 'bass-115', 'bass-410', 'bass-stack'] },
   { label: 'Keys / Piano', items: ['keyboard', 'piano'] },
   { label: 'Drums', items: ['drums'] },
+  { label: 'Other', items: ['text'] },
 ];
 
 const MIN_STAGE_W = 300;
@@ -117,12 +120,18 @@ function StageEditor({ plotData, onChange, onSave }) {
     } else if (d.type) {
       const x = clamp(e.clientX - rect.left - 24, 0, rect.width - 48);
       const y = clamp(e.clientY - rect.top - 24, 0, rect.height - 60);
-      setItems(prev => [...prev, { type: d.type, x, y, id: Date.now() + Math.random() }]);
+      const newItem = { type: d.type, x, y, id: Date.now() + Math.random() };
+      if (d.type === 'text') newItem.text = 'Label';
+      setItems(prev => [...prev, newItem]);
     }
     dragRef.current = { type: null, item: null, offsetX: 0, offsetY: 0 };
   };
 
   const removeItem = (idx) => setItems(prev => prev.filter((_, i) => i !== idx));
+
+  const updateItemText = (idx, text) => {
+    setItems(prev => prev.map((it, i) => i === idx ? { ...it, text } : it));
+  };
 
   // ── Stage resize ──
   const onResizeStart = (e, dir) => {
@@ -261,14 +270,28 @@ function StageEditor({ plotData, onChange, onSave }) {
             {items.map((item, idx) => (
               <div
                 key={item.id}
-                className="sp-stage-item"
+                className={`sp-stage-item ${item.type === 'text' ? 'sp-stage-text' : ''}`}
                 style={{ left: item.x, top: item.y }}
                 draggable
                 onDragStart={(e) => onItemDragStart(e, idx)}
                 onDragEnd={onItemDragEnd}
               >
-                <span dangerouslySetInnerHTML={{ __html: SVG_TEMPLATES[item.type] }} />
-                <span className="sp-item-label bg-black/60 text-white">{LABEL_MAP[item.type]}</span>
+                {item.type === 'text' ? (
+                  <input
+                    className="sp-text-input"
+                    value={item.text || ''}
+                    onChange={(e) => updateItemText(idx, e.target.value)}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    draggable={false}
+                    placeholder="Type here..."
+                  />
+                ) : (
+                  <>
+                    <span dangerouslySetInnerHTML={{ __html: SVG_TEMPLATES[item.type] }} />
+                    <span className="sp-item-label bg-black/60 text-white">{LABEL_MAP[item.type]}</span>
+                  </>
+                )}
                 <button className="sp-delete-btn bg-red-500" onClick={() => removeItem(idx)}>&times;</button>
               </div>
             ))}
