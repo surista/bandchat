@@ -3,19 +3,20 @@ import api from '../../services/api';
 import '../../../styles/stagePlot.css';
 
 // ─── SVG icon templates ───
+// Colors brightened for dark mode visibility while keeping realistic silhouette feel
 const SVG_TEMPLATES = {
-  vocals: `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="28" y="8" width="8" height="20" rx="4" fill="#e74c3c"/><path d="M22 18v6a10 10 0 0 0 20 0v-6" fill="none" stroke="#e74c3c" stroke-width="2.5"/><line x1="32" y1="34" x2="32" y2="46" stroke="#e74c3c" stroke-width="2.5"/><line x1="24" y1="46" x2="40" y2="46" stroke="#e74c3c" stroke-width="2.5"/><line x1="32" y1="46" x2="32" y2="56" stroke="#888" stroke-width="2"/><circle cx="32" cy="58" r="3" fill="#888"/></svg>`,
-  'guitar-combo': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="14" y="14" width="36" height="40" rx="4" fill="#3e2c1a"/><rect x="17" y="17" width="30" height="18" rx="2" fill="#2a1e12"/><circle cx="32" cy="26" r="7" fill="none" stroke="#6b4f30" stroke-width="1.5"/><circle cx="32" cy="26" r="3" fill="none" stroke="#6b4f30" stroke-width="1"/><circle cx="22" cy="44" r="1.5" fill="#e67e22"/><circle cx="28" cy="44" r="1.5" fill="#e67e22"/><circle cx="34" cy="44" r="1.5" fill="#e67e22"/><rect x="38" y="42" width="6" height="4" rx="1" fill="#e67e22"/><text x="32" y="10" text-anchor="middle" font-size="7" fill="#e67e22" font-weight="bold">COMBO</text></svg>`,
-  'guitar-212': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="10" y="14" width="44" height="40" rx="4" fill="#2c3e50"/><rect x="13" y="17" width="38" height="22" rx="2" fill="#1a252f"/><circle cx="24" cy="28" r="7" fill="none" stroke="#555" stroke-width="1.5"/><circle cx="40" cy="28" r="7" fill="none" stroke="#555" stroke-width="1.5"/><circle cx="18" cy="48" r="1.5" fill="#e67e22"/><circle cx="24" cy="48" r="1.5" fill="#e67e22"/><circle cx="30" cy="48" r="1.5" fill="#e67e22"/><circle cx="36" cy="48" r="1.5" fill="#e67e22"/><circle cx="42" cy="48" r="1.5" fill="#e67e22"/><text x="32" y="10" text-anchor="middle" font-size="7" fill="#e67e22" font-weight="bold">GTR 2x12</text></svg>`,
-  'guitar-halfstack': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="12" y="6" width="40" height="14" rx="3" fill="#2c3e50"/><circle cx="20" cy="13" r="1.5" fill="#e67e22"/><circle cx="26" cy="13" r="1.5" fill="#e67e22"/><circle cx="32" cy="13" r="1.5" fill="#e67e22"/><rect x="38" y="10" width="10" height="5" rx="1" fill="#1a252f"/><rect x="10" y="22" width="44" height="36" rx="4" fill="#2c3e50"/><rect x="13" y="25" width="38" height="28" rx="2" fill="#1a252f"/><circle cx="24" cy="33" r="6" fill="none" stroke="#555" stroke-width="1.5"/><circle cx="40" cy="33" r="6" fill="none" stroke="#555" stroke-width="1.5"/><circle cx="24" cy="47" r="6" fill="none" stroke="#555" stroke-width="1.5"/><circle cx="40" cy="47" r="6" fill="none" stroke="#555" stroke-width="1.5"/></svg>`,
-  'guitar-fullstack': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="14" y="2" width="36" height="10" rx="2" fill="#2c3e50"/><circle cx="22" cy="7" r="1.2" fill="#e67e22"/><circle cx="27" cy="7" r="1.2" fill="#e67e22"/><circle cx="32" cy="7" r="1.2" fill="#e67e22"/><rect x="36" y="5" width="8" height="4" rx="1" fill="#1a252f"/><rect x="12" y="13" width="40" height="24" rx="3" fill="#2c3e50"/><rect x="14" y="15" width="36" height="20" rx="2" fill="#1a252f"/><circle cx="24" cy="21" r="4.5" fill="none" stroke="#555" stroke-width="1.2"/><circle cx="40" cy="21" r="4.5" fill="none" stroke="#555" stroke-width="1.2"/><circle cx="24" cy="31" r="4.5" fill="none" stroke="#555" stroke-width="1.2"/><circle cx="40" cy="31" r="4.5" fill="none" stroke="#555" stroke-width="1.2"/><rect x="12" y="38" width="40" height="24" rx="3" fill="#2c3e50"/><rect x="14" y="40" width="36" height="20" rx="2" fill="#1a252f"/><circle cx="24" cy="46" r="4.5" fill="none" stroke="#555" stroke-width="1.2"/><circle cx="40" cy="46" r="4.5" fill="none" stroke="#555" stroke-width="1.2"/><circle cx="24" cy="56" r="4.5" fill="none" stroke="#555" stroke-width="1.2"/><circle cx="40" cy="56" r="4.5" fill="none" stroke="#555" stroke-width="1.2"/></svg>`,
-  'bass-combo': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="12" y="14" width="40" height="40" rx="4" fill="#1a2a3a"/><rect x="15" y="17" width="34" height="20" rx="2" fill="#0f1a26"/><circle cx="32" cy="27" r="8" fill="none" stroke="#2a4a6a" stroke-width="1.5"/><circle cx="32" cy="27" r="4" fill="none" stroke="#2a4a6a" stroke-width="1"/><circle cx="20" cy="46" r="1.5" fill="#3498db"/><circle cx="26" cy="46" r="1.5" fill="#3498db"/><circle cx="32" cy="46" r="1.5" fill="#3498db"/><rect x="36" y="44" width="8" height="4" rx="1" fill="#3498db"/><text x="32" y="10" text-anchor="middle" font-size="7" fill="#3498db" font-weight="bold">COMBO</text></svg>`,
-  'bass-115': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="10" y="12" width="44" height="44" rx="4" fill="#1a2a3a"/><rect x="13" y="15" width="38" height="36" rx="2" fill="#0f1a26"/><circle cx="32" cy="33" r="14" fill="none" stroke="#2a4a6a" stroke-width="2"/><circle cx="32" cy="33" r="7" fill="none" stroke="#2a4a6a" stroke-width="1"/><circle cx="32" cy="33" r="2" fill="#2a4a6a"/><text x="32" y="9" text-anchor="middle" font-size="7" fill="#3498db" font-weight="bold">1x15</text></svg>`,
-  'bass-410': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="10" y="10" width="44" height="46" rx="4" fill="#1a2a3a"/><rect x="13" y="13" width="38" height="38" rx="2" fill="#0f1a26"/><circle cx="24" cy="24" r="6.5" fill="none" stroke="#2a4a6a" stroke-width="1.5"/><circle cx="40" cy="24" r="6.5" fill="none" stroke="#2a4a6a" stroke-width="1.5"/><circle cx="24" cy="40" r="6.5" fill="none" stroke="#2a4a6a" stroke-width="1.5"/><circle cx="40" cy="40" r="6.5" fill="none" stroke="#2a4a6a" stroke-width="1.5"/><text x="32" y="7" text-anchor="middle" font-size="7" fill="#3498db" font-weight="bold">4x10</text></svg>`,
-  'bass-stack': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="14" y="4" width="36" height="12" rx="2" fill="#1a2a3a"/><circle cx="22" cy="10" r="1.5" fill="#3498db"/><circle cx="28" cy="10" r="1.5" fill="#3498db"/><rect x="34" y="7" width="10" height="5" rx="1" fill="#0f1a26"/><rect x="12" y="18" width="40" height="42" rx="3" fill="#1a2a3a"/><rect x="14" y="20" width="36" height="38" rx="2" fill="#0f1a26"/><circle cx="24" cy="30" r="6" fill="none" stroke="#2a4a6a" stroke-width="1.5"/><circle cx="40" cy="30" r="6" fill="none" stroke="#2a4a6a" stroke-width="1.5"/><circle cx="24" cy="46" r="6" fill="none" stroke="#2a4a6a" stroke-width="1.5"/><circle cx="40" cy="46" r="6" fill="none" stroke="#2a4a6a" stroke-width="1.5"/></svg>`,
-  keyboard: `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="8" y="28" width="48" height="20" rx="3" fill="#2c3e50"/><rect x="12" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="18" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="24" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="30" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="36" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="42" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="48" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="15" y="32" width="3" height="7" rx="0.5" fill="#2c3e50"/><rect x="21" y="32" width="3" height="7" rx="0.5" fill="#2c3e50"/><rect x="33" y="32" width="3" height="7" rx="0.5" fill="#2c3e50"/><rect x="39" y="32" width="3" height="7" rx="0.5" fill="#2c3e50"/><rect x="45" y="32" width="3" height="7" rx="0.5" fill="#2c3e50"/><text x="32" y="24" text-anchor="middle" font-size="8" fill="#9b59b6" font-weight="bold">KEYS</text></svg>`,
+  vocals: `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="28" y="8" width="8" height="20" rx="4" fill="#e74c3c"/><path d="M22 18v6a10 10 0 0 0 20 0v-6" fill="none" stroke="#e74c3c" stroke-width="2.5"/><line x1="32" y1="34" x2="32" y2="46" stroke="#e74c3c" stroke-width="2.5"/><line x1="24" y1="46" x2="40" y2="46" stroke="#e74c3c" stroke-width="2.5"/><line x1="32" y1="46" x2="32" y2="56" stroke="#aaa" stroke-width="2"/><circle cx="32" cy="58" r="3" fill="#aaa"/></svg>`,
+  'guitar-combo': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="14" y="14" width="36" height="40" rx="4" fill="#6b4f30"/><rect x="17" y="17" width="30" height="18" rx="2" fill="#4a3620"/><circle cx="32" cy="26" r="7" fill="none" stroke="#8b6940" stroke-width="1.5"/><circle cx="32" cy="26" r="3" fill="none" stroke="#8b6940" stroke-width="1"/><circle cx="22" cy="44" r="1.5" fill="#e67e22"/><circle cx="28" cy="44" r="1.5" fill="#e67e22"/><circle cx="34" cy="44" r="1.5" fill="#e67e22"/><rect x="38" y="42" width="6" height="4" rx="1" fill="#e67e22"/><text x="32" y="10" text-anchor="middle" font-size="7" fill="#e67e22" font-weight="bold">COMBO</text></svg>`,
+  'guitar-212': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="10" y="14" width="44" height="40" rx="4" fill="#4a6a85"/><rect x="13" y="17" width="38" height="22" rx="2" fill="#2d4a60"/><circle cx="24" cy="28" r="7" fill="none" stroke="#7a9ab0" stroke-width="1.5"/><circle cx="40" cy="28" r="7" fill="none" stroke="#7a9ab0" stroke-width="1.5"/><circle cx="18" cy="48" r="1.5" fill="#e67e22"/><circle cx="24" cy="48" r="1.5" fill="#e67e22"/><circle cx="30" cy="48" r="1.5" fill="#e67e22"/><circle cx="36" cy="48" r="1.5" fill="#e67e22"/><circle cx="42" cy="48" r="1.5" fill="#e67e22"/><text x="32" y="10" text-anchor="middle" font-size="7" fill="#e67e22" font-weight="bold">GTR 2x12</text></svg>`,
+  'guitar-halfstack': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="12" y="6" width="40" height="14" rx="3" fill="#4a6a85"/><circle cx="20" cy="13" r="1.5" fill="#e67e22"/><circle cx="26" cy="13" r="1.5" fill="#e67e22"/><circle cx="32" cy="13" r="1.5" fill="#e67e22"/><rect x="38" y="10" width="10" height="5" rx="1" fill="#2d4a60"/><rect x="10" y="22" width="44" height="36" rx="4" fill="#4a6a85"/><rect x="13" y="25" width="38" height="28" rx="2" fill="#2d4a60"/><circle cx="24" cy="33" r="6" fill="none" stroke="#7a9ab0" stroke-width="1.5"/><circle cx="40" cy="33" r="6" fill="none" stroke="#7a9ab0" stroke-width="1.5"/><circle cx="24" cy="47" r="6" fill="none" stroke="#7a9ab0" stroke-width="1.5"/><circle cx="40" cy="47" r="6" fill="none" stroke="#7a9ab0" stroke-width="1.5"/></svg>`,
+  'guitar-fullstack': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="14" y="2" width="36" height="10" rx="2" fill="#4a6a85"/><circle cx="22" cy="7" r="1.2" fill="#e67e22"/><circle cx="27" cy="7" r="1.2" fill="#e67e22"/><circle cx="32" cy="7" r="1.2" fill="#e67e22"/><rect x="36" y="5" width="8" height="4" rx="1" fill="#2d4a60"/><rect x="12" y="13" width="40" height="24" rx="3" fill="#4a6a85"/><rect x="14" y="15" width="36" height="20" rx="2" fill="#2d4a60"/><circle cx="24" cy="21" r="4.5" fill="none" stroke="#7a9ab0" stroke-width="1.2"/><circle cx="40" cy="21" r="4.5" fill="none" stroke="#7a9ab0" stroke-width="1.2"/><circle cx="24" cy="31" r="4.5" fill="none" stroke="#7a9ab0" stroke-width="1.2"/><circle cx="40" cy="31" r="4.5" fill="none" stroke="#7a9ab0" stroke-width="1.2"/><rect x="12" y="38" width="40" height="24" rx="3" fill="#4a6a85"/><rect x="14" y="40" width="36" height="20" rx="2" fill="#2d4a60"/><circle cx="24" cy="46" r="4.5" fill="none" stroke="#7a9ab0" stroke-width="1.2"/><circle cx="40" cy="46" r="4.5" fill="none" stroke="#7a9ab0" stroke-width="1.2"/><circle cx="24" cy="56" r="4.5" fill="none" stroke="#7a9ab0" stroke-width="1.2"/><circle cx="40" cy="56" r="4.5" fill="none" stroke="#7a9ab0" stroke-width="1.2"/></svg>`,
+  'bass-combo': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="12" y="14" width="40" height="40" rx="4" fill="#2d4a60"/><rect x="15" y="17" width="34" height="20" rx="2" fill="#1e3548"/><circle cx="32" cy="27" r="8" fill="none" stroke="#4a7a9a" stroke-width="1.5"/><circle cx="32" cy="27" r="4" fill="none" stroke="#4a7a9a" stroke-width="1"/><circle cx="20" cy="46" r="1.5" fill="#3498db"/><circle cx="26" cy="46" r="1.5" fill="#3498db"/><circle cx="32" cy="46" r="1.5" fill="#3498db"/><rect x="36" y="44" width="8" height="4" rx="1" fill="#3498db"/><text x="32" y="10" text-anchor="middle" font-size="7" fill="#3498db" font-weight="bold">COMBO</text></svg>`,
+  'bass-115': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="10" y="12" width="44" height="44" rx="4" fill="#2d4a60"/><rect x="13" y="15" width="38" height="36" rx="2" fill="#1e3548"/><circle cx="32" cy="33" r="14" fill="none" stroke="#4a7a9a" stroke-width="2"/><circle cx="32" cy="33" r="7" fill="none" stroke="#4a7a9a" stroke-width="1"/><circle cx="32" cy="33" r="2" fill="#4a7a9a"/><text x="32" y="9" text-anchor="middle" font-size="7" fill="#3498db" font-weight="bold">1x15</text></svg>`,
+  'bass-410': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="10" y="10" width="44" height="46" rx="4" fill="#2d4a60"/><rect x="13" y="13" width="38" height="38" rx="2" fill="#1e3548"/><circle cx="24" cy="24" r="6.5" fill="none" stroke="#4a7a9a" stroke-width="1.5"/><circle cx="40" cy="24" r="6.5" fill="none" stroke="#4a7a9a" stroke-width="1.5"/><circle cx="24" cy="40" r="6.5" fill="none" stroke="#4a7a9a" stroke-width="1.5"/><circle cx="40" cy="40" r="6.5" fill="none" stroke="#4a7a9a" stroke-width="1.5"/><text x="32" y="7" text-anchor="middle" font-size="7" fill="#3498db" font-weight="bold">4x10</text></svg>`,
+  'bass-stack': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="14" y="4" width="36" height="12" rx="2" fill="#2d4a60"/><circle cx="22" cy="10" r="1.5" fill="#3498db"/><circle cx="28" cy="10" r="1.5" fill="#3498db"/><rect x="34" y="7" width="10" height="5" rx="1" fill="#1e3548"/><rect x="12" y="18" width="40" height="42" rx="3" fill="#2d4a60"/><rect x="14" y="20" width="36" height="38" rx="2" fill="#1e3548"/><circle cx="24" cy="30" r="6" fill="none" stroke="#4a7a9a" stroke-width="1.5"/><circle cx="40" cy="30" r="6" fill="none" stroke="#4a7a9a" stroke-width="1.5"/><circle cx="24" cy="46" r="6" fill="none" stroke="#4a7a9a" stroke-width="1.5"/><circle cx="40" cy="46" r="6" fill="none" stroke="#4a7a9a" stroke-width="1.5"/></svg>`,
+  keyboard: `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="8" y="28" width="48" height="20" rx="3" fill="#4a6a85"/><rect x="12" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="18" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="24" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="30" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="36" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="42" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="48" y="32" width="4" height="12" rx="1" fill="#ecf0f1"/><rect x="15" y="32" width="3" height="7" rx="0.5" fill="#2d4a60"/><rect x="21" y="32" width="3" height="7" rx="0.5" fill="#2d4a60"/><rect x="33" y="32" width="3" height="7" rx="0.5" fill="#2d4a60"/><rect x="39" y="32" width="3" height="7" rx="0.5" fill="#2d4a60"/><rect x="45" y="32" width="3" height="7" rx="0.5" fill="#2d4a60"/><text x="32" y="24" text-anchor="middle" font-size="8" fill="#9b59b6" font-weight="bold">KEYS</text></svg>`,
   drums: `<svg viewBox="0 0 64 64" width="48" height="48"><ellipse cx="32" cy="40" r="12" ry="8" fill="none" stroke="#e74c3c" stroke-width="2"/><ellipse cx="18" cy="28" r="7" ry="5" fill="none" stroke="#f39c12" stroke-width="1.5"/><ellipse cx="46" cy="28" r="7" ry="5" fill="none" stroke="#f39c12" stroke-width="1.5"/><ellipse cx="32" cy="18" r="8" ry="5" fill="none" stroke="#e67e22" stroke-width="1.5"/><circle cx="12" cy="16" r="5" fill="none" stroke="#c0392b" stroke-width="1.5"/><circle cx="52" cy="16" r="5" fill="none" stroke="#c0392b" stroke-width="1.5"/><ellipse cx="22" cy="52" r="6" ry="3" fill="none" stroke="#95a5a6" stroke-width="1.5"/><ellipse cx="42" cy="52" r="6" ry="3" fill="none" stroke="#95a5a6" stroke-width="1.5"/></svg>`,
-  piano: `<svg viewBox="0 0 64 64" width="48" height="48"><path d="M16 52 Q8 40 10 24 Q12 12 32 8 Q52 12 54 24 Q56 40 48 52 Z" fill="#1a1a1a" stroke="#333" stroke-width="1.5"/><path d="M20 48 Q14 38 16 26 Q18 18 32 14 Q46 18 48 26 Q50 38 44 48 Z" fill="#2c2c2c"/><rect x="22" y="38" width="3" height="8" rx="0.5" fill="#ecf0f1"/><rect x="26" y="38" width="3" height="8" rx="0.5" fill="#ecf0f1"/><rect x="30" y="38" width="3" height="8" rx="0.5" fill="#ecf0f1"/><rect x="34" y="38" width="3" height="8" rx="0.5" fill="#ecf0f1"/><rect x="38" y="38" width="3" height="8" rx="0.5" fill="#ecf0f1"/><line x1="16" y1="52" x2="12" y2="58" stroke="#333" stroke-width="2"/><line x1="48" y1="52" x2="52" y2="58" stroke="#333" stroke-width="2"/><line x1="32" y1="52" x2="32" y2="58" stroke="#333" stroke-width="2"/></svg>`,
+  piano: `<svg viewBox="0 0 64 64" width="48" height="48"><path d="M16 52 Q8 40 10 24 Q12 12 32 8 Q52 12 54 24 Q56 40 48 52 Z" fill="#3a3a3a" stroke="#666" stroke-width="1.5"/><path d="M20 48 Q14 38 16 26 Q18 18 32 14 Q46 18 48 26 Q50 38 44 48 Z" fill="#4a4a4a"/><rect x="22" y="38" width="3" height="8" rx="0.5" fill="#ecf0f1"/><rect x="26" y="38" width="3" height="8" rx="0.5" fill="#ecf0f1"/><rect x="30" y="38" width="3" height="8" rx="0.5" fill="#ecf0f1"/><rect x="34" y="38" width="3" height="8" rx="0.5" fill="#ecf0f1"/><rect x="38" y="38" width="3" height="8" rx="0.5" fill="#ecf0f1"/><line x1="16" y1="52" x2="12" y2="58" stroke="#666" stroke-width="2"/><line x1="48" y1="52" x2="52" y2="58" stroke="#666" stroke-width="2"/><line x1="32" y1="52" x2="32" y2="58" stroke="#666" stroke-width="2"/></svg>`,
 };
 
 const LABEL_MAP = {
@@ -180,20 +181,20 @@ function StageEditor({ plotData, onChange, onSave }) {
   return (
     <div className="sp-container">
       {/* Palette sidebar */}
-      <div ref={paletteRef} className="sp-palette bg-[var(--bg-surface)] border-r border-[var(--border)]">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">Instruments</h3>
+      <div ref={paletteRef} className="sp-palette bg-[var(--color-bg-secondary)] border-r border-[var(--color-border)]">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] mb-2">Instruments</h3>
         {PALETTE_SECTIONS.map(section => (
           <div key={section.label}>
-            <div className="sp-palette-section text-gray-500 border-t border-[var(--border)]">{section.label}</div>
+            <div className="sp-palette-section text-[var(--color-text-muted)] border-t border-[var(--color-border)]">{section.label}</div>
             {section.items.map(type => (
               <div
                 key={type}
-                className="sp-palette-item border border-[var(--border)] hover:border-purple-500 bg-[var(--bg-primary)] hover:bg-[var(--bg-surface)]"
+                className="sp-palette-item border border-[var(--color-border)] hover:border-purple-500 bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-secondary)]"
                 draggable
                 onDragStart={(e) => onPaletteDragStart(e, type)}
               >
                 <span dangerouslySetInnerHTML={{ __html: SVG_TEMPLATES[type] }} />
-                <span className="text-gray-400">{LABEL_MAP[type]}</span>
+                <span className="text-[var(--color-text-secondary)]">{LABEL_MAP[type]}</span>
               </div>
             ))}
           </div>
@@ -201,55 +202,62 @@ function StageEditor({ plotData, onChange, onSave }) {
       </div>
 
       {/* Palette resize handle */}
-      <div className="sp-palette-resize bg-[var(--border)] hover:bg-purple-500" onMouseDown={onPalResizeStart} />
+      <div className="sp-palette-resize bg-[var(--color-border)] hover:bg-purple-500" onMouseDown={onPalResizeStart} />
 
       {/* Stage area */}
       <div className="sp-stage-area">
         {/* Info bar */}
         <div className="sp-info-bar">
           <div className="sp-info-field">
-            <label className="text-gray-500">Band</label>
+            <label className="text-[var(--color-text-muted)]">Band</label>
             <input
               type="text"
               value={bandName}
               onChange={(e) => setBandName(e.target.value)}
               placeholder="Band Name"
-              className="bg-[var(--bg-surface)] text-[var(--text-primary)] border border-[var(--border)] focus:border-purple-500"
+              className="bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] border border-[var(--color-border)] focus:border-purple-500"
             />
           </div>
           <div className="sp-info-field">
-            <label className="text-gray-500">Event</label>
+            <label className="text-[var(--color-text-muted)]">Event</label>
             <input
               type="text"
               value={eventName}
               onChange={(e) => setEventName(e.target.value)}
               placeholder="Event / Venue"
-              className="bg-[var(--bg-surface)] text-[var(--text-primary)] border border-[var(--border)] focus:border-purple-500"
+              className="bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] border border-[var(--color-border)] focus:border-purple-500"
             />
           </div>
           <div className="sp-info-field">
-            <label className="text-gray-500">Date</label>
+            <label className="text-[var(--color-text-muted)]">Date</label>
             <input
               type="date"
               value={eventDate}
               onChange={(e) => setEventDate(e.target.value)}
-              className="bg-[var(--bg-surface)] text-[var(--text-primary)] border border-[var(--border)] focus:border-purple-500"
+              className="bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] border border-[var(--color-border)] focus:border-purple-500"
             />
           </div>
         </div>
 
-        <div className="sp-stage-label text-gray-500">Front of Stage (Audience)</div>
+        <div className="sp-stage-label text-[var(--color-text-muted)]">Front of Stage (Audience)</div>
 
         {/* Stage canvas */}
         <div ref={wrapperRef} className="sp-stage-wrapper">
           <div
             ref={stageRef}
-            className={`sp-stage border-2 border-[var(--border)] bg-[var(--bg-primary)] ${dragOver ? 'drag-over border-purple-500' : ''}`}
+            className={`sp-stage border-2 bg-[var(--color-bg-secondary)] ${dragOver ? 'drag-over border-purple-500' : 'border-[var(--color-border)]'}`}
             style={{ width: stageW, height: stageH }}
             onDragOver={onStageDragOver}
             onDragLeave={onStageDragLeave}
             onDrop={onStageDrop}
           >
+            {items.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span className="text-[var(--color-text-muted)] text-sm border-2 border-dashed border-[var(--color-border)] rounded-lg px-6 py-3">
+                  Drag instruments here
+                </span>
+              </div>
+            )}
             {items.map((item, idx) => (
               <div
                 key={item.id}
@@ -260,7 +268,7 @@ function StageEditor({ plotData, onChange, onSave }) {
                 onDragEnd={onItemDragEnd}
               >
                 <span dangerouslySetInnerHTML={{ __html: SVG_TEMPLATES[item.type] }} />
-                <span className="sp-item-label bg-black/50 text-gray-300">{LABEL_MAP[item.type]}</span>
+                <span className="sp-item-label bg-black/60 text-white">{LABEL_MAP[item.type]}</span>
                 <button className="sp-delete-btn bg-red-500" onClick={() => removeItem(idx)}>&times;</button>
               </div>
             ))}
@@ -272,8 +280,8 @@ function StageEditor({ plotData, onChange, onSave }) {
           <div className="sp-resize-handle sp-resize-br" onMouseDown={(e) => onResizeStart(e, 'br')} />
         </div>
 
-        <div className="sp-stage-label text-gray-500">Back of Stage</div>
-        <div className="text-xs text-gray-600 mt-1">{stageW} &times; {stageH}</div>
+        <div className="sp-stage-label text-[var(--color-text-muted)]">Back of Stage</div>
+        <div className="text-xs text-[var(--color-text-muted)] mt-1">{stageW} &times; {stageH}</div>
       </div>
     </div>
   );
@@ -368,15 +376,15 @@ export default function StagePlotCreator({ workspaceId }) {
     return (
       <div className="flex flex-col h-full">
         {/* Toolbar */}
-        <div className="flex items-center gap-3 px-4 py-2 border-b border-[var(--border)] bg-[var(--bg-surface)]">
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
           <button
             onClick={() => { setActivePlotId(null); setActivePlotData(null); }}
-            className="text-gray-400 hover:text-white transition-colors text-sm"
+            className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors text-sm"
           >
             &larr; Back
           </button>
           <input
-            className="bg-transparent border-none text-sm font-medium text-[var(--text-primary)] focus:outline-none flex-1 min-w-0"
+            className="bg-transparent border-none text-sm font-medium text-[var(--color-text-primary)] focus:outline-none flex-1 min-w-0"
             value={activePlot?.title || ''}
             onChange={(e) => {
               const title = e.target.value;
@@ -385,7 +393,7 @@ export default function StagePlotCreator({ workspaceId }) {
               renamePlot._timer = setTimeout(() => renamePlot(activePlotId, title), 600);
             }}
           />
-          <span className="text-xs text-gray-500">Auto-saved</span>
+          <span className="text-xs text-[var(--color-text-muted)]">Auto-saved</span>
         </div>
 
         {/* Stage editor */}
@@ -404,36 +412,47 @@ export default function StagePlotCreator({ workspaceId }) {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Stage Plots</h2>
+        <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Stage Plots</h2>
         <button
           onClick={createPlot}
           disabled={creating}
-          className="btn btn-primary text-sm px-4 py-2"
+          className="btn bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2"
         >
           {creating ? 'Creating...' : '+ New Stage Plot'}
         </button>
       </div>
 
       {loading ? (
-        <div className="text-gray-500 text-sm">Loading...</div>
+        <div className="text-[var(--color-text-muted)] text-sm">Loading...</div>
       ) : plots.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="text-4xl mb-3">🎸</div>
-          <p className="text-gray-400 mb-1">No stage plots yet</p>
-          <p className="text-gray-500 text-sm">Create your first stage plot to share with sound engineers and venues.</p>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="text-5xl mb-4">🎤</div>
+          <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
+            No stage plots yet
+          </h3>
+          <p className="text-[var(--color-text-muted)] max-w-sm mb-4">
+            Create stage plots to share with sound engineers and venues. Drag and drop instruments to lay out your setup.
+          </p>
+          <button
+            onClick={createPlot}
+            disabled={creating}
+            className="btn bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2"
+          >
+            + Create Stage Plot
+          </button>
         </div>
       ) : (
         <div className="space-y-2">
           {plots.map(plot => (
             <div
               key={plot.id}
-              className="sp-list-item flex items-center gap-3 px-4 py-3 rounded-lg border border-[var(--border)] hover:bg-[var(--bg-surface)] cursor-pointer"
+              className="sp-list-item flex items-center gap-3 px-4 py-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] cursor-pointer transition-colors"
               onClick={() => openPlot(plot.id)}
             >
               <div className="text-2xl">🎤</div>
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm text-[var(--text-primary)] truncate">{plot.title}</div>
-                <div className="text-xs text-gray-500">
+                <div className="font-medium text-sm text-[var(--color-text-primary)] truncate">{plot.title}</div>
+                <div className="text-xs text-[var(--color-text-muted)]">
                   {plot.createdBy?.displayName && `by ${plot.createdBy.displayName} · `}
                   {new Date(plot.updatedAt).toLocaleDateString()}
                   {plot.gig && ` · ${plot.gig.title}`}
@@ -442,14 +461,14 @@ export default function StagePlotCreator({ workspaceId }) {
               <div className="flex items-center gap-1">
                 <button
                   onClick={(e) => { e.stopPropagation(); duplicatePlot(plot.id); }}
-                  className="p-1.5 text-gray-500 hover:text-gray-300 transition-colors"
+                  className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
                   title="Duplicate"
                 >
                   📋
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); if (confirm('Delete this stage plot?')) deletePlot(plot.id); }}
-                  className="p-1.5 text-gray-500 hover:text-red-400 transition-colors"
+                  className="p-1.5 text-[var(--color-text-muted)] hover:text-red-400 transition-colors"
                   title="Delete"
                 >
                   🗑️
