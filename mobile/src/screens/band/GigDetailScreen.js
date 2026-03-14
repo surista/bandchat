@@ -716,7 +716,16 @@ export default function GigDetailScreen({ navigation, route }) {
         <Text style={[styles.viewLabel, { color: colors.textSecondary }]}>Date & Time</Text>
         <Text style={[styles.viewValue, { color: colors.textPrimary }]}>
           {gig?.date ? format(parseISO(gig.date), 'EEEE, dd-MMM-yyyy') : 'No date'}
-          {(gig?.performanceStartTime || gig?.eventStartTime) && ` · ${gig.performanceStartTime || gig.eventStartTime}`}
+          {gig?.date && (() => {
+            try {
+              const t = format(parseISO(gig.date), 'HH:mm');
+              if (t !== '00:00') {
+                const end = gig.endDate ? format(parseISO(gig.endDate), 'HH:mm') : null;
+                return ` · ${t}${end ? ` \u2013 ${end}` : ''}`;
+              }
+            } catch {}
+            return '';
+          })()}
         </Text>
         {/* Show optional gig times if any are set */}
         {(gig?.soundCheckTime || gig?.eventStartTime || gig?.performanceStartTime) && (
