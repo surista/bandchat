@@ -90,7 +90,7 @@ function applyBoldItalicStrike(text, keyPrefix) {
 }
 
 /** Render a URL part as the appropriate embed (YouTube, image, video, Google Doc, or link) */
-function renderUrlPart(part, i, message, onOpenLightbox, onAddToLibrary) {
+function renderUrlPart(part, i, message, onOpenLightbox, onAddToLibrary, isOwn, onTogglePreview) {
   if (!isValidHttpUrl(part)) return <span key={i}>{part}</span>;
 
   // Google Doc/Sheet
@@ -153,13 +153,13 @@ function renderUrlPart(part, i, message, onOpenLightbox, onAddToLibrary) {
   return (
     <span key={i}>
       <a href={part} target="_blank" rel="noopener noreferrer" className="text-slack-blue hover:underline break-all">{part}</a>
-      <LinkPreviewCard url={part} onAddToLibrary={onAddToLibrary} />
+      {!message?.hidePreview && <LinkPreviewCard url={part} onAddToLibrary={onAddToLibrary} isOwn={isOwn} onDismiss={onTogglePreview ? () => onTogglePreview(message.id) : undefined} />}
     </span>
   );
 }
 
 /** Process a text segment through embed detection, URL splitting, mention highlighting, and inline markdown */
-function processTextSegment(text, segKey, message, onOpenLightbox, members, onAddToLibrary, workspaceId) {
+function processTextSegment(text, segKey, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview) {
   // Detect embed tokens [type:uuid]
   const embedRegex = /\[(song|setlist|gig|poll):([a-f0-9-]+)\]/gi;
   const embedParts = text.split(embedRegex);
@@ -170,7 +170,7 @@ function processTextSegment(text, segKey, message, onOpenLightbox, members, onAd
     for (let ei = 0; ei < embedParts.length; ei += 3) {
       const textPart = embedParts[ei];
       if (textPart) {
-        result.push(...processTextInner(textPart, `${segKey}-e${ei}`, message, onOpenLightbox, members, onAddToLibrary));
+        result.push(...processTextInner(textPart, `${segKey}-e${ei}`, message, onOpenLightbox, members, onAddToLibrary, isOwn, onTogglePreview));
       }
       if (ei + 2 < embedParts.length) {
         const embedType = embedParts[ei + 1];
@@ -181,17 +181,17 @@ function processTextSegment(text, segKey, message, onOpenLightbox, members, onAd
     return result;
   }
 
-  return processTextInner(text, segKey, message, onOpenLightbox, members, onAddToLibrary);
+  return processTextInner(text, segKey, message, onOpenLightbox, members, onAddToLibrary, isOwn, onTogglePreview);
 }
 
 /** Inner text processing: URL splitting, mentions, inline markdown */
-function processTextInner(text, segKey, message, onOpenLightbox, members, onAddToLibrary) {
+function processTextInner(text, segKey, message, onOpenLightbox, members, onAddToLibrary, isOwn, onTogglePreview) {
   const urlRegex = /(https?:\/\/[^\s\[\]<>]+?)(?=[\[\])\s]|[.,;:!?"'](?:\s|$)|$)/g;
   const parts = text.split(urlRegex);
 
   return parts.map((part, i) => {
     if (part.match(/^https?:\/\//)) {
-      return renderUrlPart(part, `${segKey}-${i}`, message, onOpenLightbox, onAddToLibrary);
+      return renderUrlPart(part, `${segKey}-${i}`, message, onOpenLightbox, onAddToLibrary, isOwn, onTogglePreview);
     }
 
     // Apply @mentions then inline markdown on remaining text
@@ -219,7 +219,7 @@ function processTextInner(text, segKey, message, onOpenLightbox, members, onAddT
  * Memoized component for rendering message content with markdown formatting,
  * URL detection, embeds (Google Docs, YouTube), images, videos, and @mentions.
  */
-const MessageContent = React.memo(({ content, message, onOpenLightbox, members, onAddToLibrary, workspaceId }) => {
+const MessageContent = React.memo(({ content, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview }) => {
   // Step 1: Extract fenced code blocks
   const codeBlockRegex = /```(\w*)\n?([\s\S]*?)```/g;
   const segments = [];
@@ -283,7 +283,7 @@ const MessageContent = React.memo(({ content, message, onOpenLightbox, members, 
           <blockquote key={key}>
             {block.lines.map((l, li) => (
               <React.Fragment key={li}>
-                {processTextSegment(l, `${key}-${li}`, message, onOpenLightbox, members, onAddToLibrary, workspaceId)}
+                {processTextSegment(l, `${key}-${li}`, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview)}
                 {li < block.lines.length - 1 && <br />}
               </React.Fragment>
             ))}
@@ -294,12 +294,12 @@ const MessageContent = React.memo(({ content, message, onOpenLightbox, members, 
         return (
           <ul key={key}>
             {block.lines.map((l, li) => (
-              <li key={li}>{processTextSegment(l, `${key}-${li}`, message, onOpenLightbox, members, onAddToLibrary, workspaceId)}</li>
+              <li key={li}>{processTextSegment(l, `${key}-${li}`, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview)}</li>
             ))}
           </ul>
         );
       }
-      return <React.Fragment key={key}>{processTextSegment(block.value, key, message, onOpenLightbox, members, onAddToLibrary, workspaceId)}</React.Fragment>;
+      return <React.Fragment key={key}>{processTextSegment(block.value, key, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview)}</React.Fragment>;
     });
   });
 
@@ -337,6 +337,7 @@ function MessageList({
   members,
   onAvatarClick,
   onAddToLibrary,
+  onTogglePreview,
   workspaceId
 }) {
   const [editingId, setEditingId] = useState(null);
@@ -635,7 +636,7 @@ function MessageList({
                 </div>
               ) : (
                 <div className="message-content text-[var(--color-text-secondary)] break-words whitespace-pre-wrap">
-                  <MessageContent content={message.content} message={message} onOpenLightbox={openLightbox} members={members} onAddToLibrary={onAddToLibrary} workspaceId={workspaceId} />
+                  <MessageContent content={message.content} message={message} onOpenLightbox={openLightbox} members={members} onAddToLibrary={onAddToLibrary} workspaceId={workspaceId} isOwn={message.author?.id === currentUser?.id} onTogglePreview={onTogglePreview} />
                 </div>
               )}
 

@@ -19,7 +19,7 @@ const isMusicUrl = (url) => {
   } catch { return false; }
 };
 
-export default function LinkPreviewCard({ url, onAddToLibrary }) {
+export default function LinkPreviewCard({ url, onAddToLibrary, isOwn, onDismiss }) {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -85,7 +85,17 @@ export default function LinkPreviewCard({ url, onAddToLibrary }) {
   const showAddToLibrary = isMusicUrl(url) && onAddToLibrary;
 
   return (
-    <div className="max-w-md mt-2">
+    <div className="max-w-md mt-2 relative group">
+      {isOwn && onDismiss && (
+        <button
+          type="button"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDismiss(); }}
+          className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gray-700 border border-gray-500 text-gray-300 hover:text-white hover:bg-gray-600 flex items-center justify-center text-xs z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+          title="Remove preview"
+        >
+          &times;
+        </button>
+      )}
       <a
         href={url}
         target="_blank"

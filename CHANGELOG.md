@@ -2,6 +2,33 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.04.95] - 2026-03-14
+
+### Added
+- **Link preview dismissal** — Message authors can remove link previews from their messages (X button on hover/tap). Persists via `hidePreview` field on Message model. Works on web, mobile, and threads.
+- **Swipe to react** — Left-swipe on messages to toggle thumbs-up reaction (amber panel). Right-swipe still replies (blue panel). Both in channels and threads.
+- **Stage plots** — SVG-based drag-and-drop stage plot editor with 20+ equipment icons, collapsible palette sections, draggable text labels, print/PDF export (web + mobile)
+- **Workspace backup/restore** — Per-workspace manual backups to R2 (max 5 per workspace), with full restore including safety backup
+- **iPad optimization** — `useLayout()` hook with tablet constraints (700px content, 500px modals) rolled out to all 41 mobile screens
+- **Code review fixes** — Filename sanitization on uploads, search rate limiting, sync route hardening, ErrorState with retry on key screens, theme-aware ErrorBoundary
+
+### Fixed
+- **Delete message not working** — Action sheet Modal closing animation conflicted with Alert on iOS. Added 350ms delay between Modal close and action dispatch.
+- **Home button loops back** — Users with only one workspace couldn't reach the workspace list to join a new workspace. Home button now bypasses auto-navigate.
+- **DM names showing raw IDs** — Push notification and deep link navigation to DM channels showed `dm-userId1-userId2` instead of display names. Now resolves member names before navigating.
+- **DM display name resolution** — `getDMDisplayName` now prefers the `otherMembers` field from the server response for more reliable name resolution.
+- Mobile gig detail missing time display (times showed in calendar list but not detail)
+- Account deletion wording clarified — explicitly states it affects all workspaces, not just current one
+- Backup system: fixed `pinnedAt` → `createdAt` in PinnedMessage restore, removed invalid `isEdited` field, included soft-deleted records, added concurrency guard
+- Sync routes: fixed socket room names, added type validation and rate limiting
+- LiveModeScreen: replaced hardcoded `top: 50` with `useSafeAreaInsets()`
+- Admin: workspace backup path traversal validation, generic error messages
+
+### Changed
+- Extracted `formatDuration` and `getInitial` utility functions to reduce code duplication
+- Migrated 12 web modals to reusable `Modal.jsx` component
+- Standardized empty states across web components
+
 ## [1.04.59] - 2026-03-11
 
 ### Added

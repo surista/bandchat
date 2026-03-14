@@ -75,9 +75,12 @@ export default function AppStack() {
         component={ChannelScreen}
         options={({ route }) => {
           const ch = route.params?.channel;
-          const isDM = ch?.isDM;
+          const isDM = ch?.isDM || ch?.isDirect;
           if (isDM) {
-            return { title: ch?.displayName || 'Direct Message' };
+            const name = ch?.displayName
+              || ch?.otherMembers?.map(m => m.displayName).join(', ')
+              || 'Direct Message';
+            return { title: name };
           }
           const prefix = ch?.isPrivate ? '\u{1F512} ' : '# ';
           return { title: prefix + (ch?.name || 'Channel') };

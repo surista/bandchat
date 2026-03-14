@@ -36,8 +36,8 @@ export default function WorkspaceListScreen({ navigation, route }) {
     try {
       const data = await api.getWorkspaces();
       setWorkspaces(data);
-      // Auto-navigate if exactly one workspace and no invite code
-      if (data.length === 1 && !route.params?.inviteCode) {
+      // Auto-navigate if exactly one workspace, no invite code, and not explicitly returning here
+      if (data.length === 1 && !route.params?.inviteCode && !route.params?.showList) {
         navigation.replace('Workspace', { id: data[0].id, name: data[0].name });
       }
     } catch (err) {
@@ -46,7 +46,7 @@ export default function WorkspaceListScreen({ navigation, route }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [toast, navigation, route.params?.inviteCode]);
+  }, [toast, navigation, route.params?.inviteCode, route.params?.showList]);
 
   useEffect(() => {
     loadWorkspaces();

@@ -538,6 +538,14 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
     }
   };
 
+  const handleTogglePreview = async (messageId) => {
+    try {
+      await api.toggleMessagePreview(messageId);
+    } catch (err) {
+      console.error('Failed to toggle preview:', err);
+    }
+  };
+
   const handleOpenThread = (message) => {
     // Clear local unread state for this thread
     setMessages(prev =>
@@ -755,6 +763,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
               members={workspace?.members || []}
               onAvatarClick={setProfileUserId}
               onAddToLibrary={onAddToLibrary}
+              onTogglePreview={handleTogglePreview}
               workspaceId={workspace?.id}
             />
             <div ref={messagesEndRef} />

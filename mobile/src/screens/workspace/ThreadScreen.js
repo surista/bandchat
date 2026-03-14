@@ -196,8 +196,7 @@ export default function ThreadScreen({ navigation, route }) {
 
     switch (action) {
       case 'react':
-        // Delay to let the action sheet Modal fully close before opening emoji picker Modal
-        setTimeout(() => setShowEmojiPicker(true), 400);
+        setShowEmojiPicker(true);
         break;
       case 'copy':
         if (actionMessage.content) {
@@ -319,6 +318,15 @@ export default function ThreadScreen({ navigation, route }) {
     setViewingImage(url);
   }, []);
 
+  // Toggle link preview visibility
+  const handleTogglePreview = useCallback(async (messageId) => {
+    try {
+      await api.toggleMessagePreview(messageId);
+    } catch (err) {
+      // silently fail
+    }
+  }, []);
+
   // Build list: parent message + separator + replies
   const listData = useMemo(() => {
     const items = [
@@ -346,11 +354,14 @@ export default function ThreadScreen({ navigation, route }) {
         onLongPress={handleLongPress}
         onImagePress={handleImagePress}
         onReactionPress={handleReactionPress}
+        onSwipeReact={handleReactionPress}
         onAvatarPress={handleAvatarPress}
         members={workspaceMembers}
+        isOwn={item.author?.id === user?.id}
+        onTogglePreview={handleTogglePreview}
       />
     );
-  }, [colors, handleLongPress, handleImagePress, handleReactionPress, handleAvatarPress, workspaceMembers]);
+  }, [colors, handleLongPress, handleImagePress, handleReactionPress, handleAvatarPress, handleTogglePreview, workspaceMembers, user?.id]);
 
   if (loading) {
     return (

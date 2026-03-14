@@ -132,7 +132,8 @@ bandchat/
 
 ### Key Features
 - Real-time messaging with channels, DMs, threads, reactions, voice messages, and saved messages (bookmarks)
-- File/image/audio sharing (up to 10MB) with auto-generated thumbnails, link previews, and photo gallery
+- File/image/audio sharing (up to 10MB) with auto-generated thumbnails, link previews (dismissible by author), and photo gallery
+- Stage plot editor with drag-and-drop equipment icons, text labels, and PDF export (web + mobile)
 - Song repertoire with bulk import, async metadata enrichment (iTunes/Spotify/Deezer/YouTube/SongBPM), and lyrics
 - Drag-and-drop setlist builder with MC sections, medleys, and PDF export
 - Calendar for gigs/rehearsals with device calendar sync, iCal feed, and optional time fields (sound check, doors, stage)

@@ -766,6 +766,12 @@ class ApiService {
     });
   }
 
+  async toggleMessagePreview(messageId) {
+    return this.request(`/messages/${messageId}/preview`, {
+      method: 'PATCH',
+    });
+  }
+
   async deleteMessage(messageId) {
     return this.request(`/messages/${messageId}`, {
       method: 'DELETE',

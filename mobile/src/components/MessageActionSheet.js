@@ -87,7 +87,8 @@ function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwn
               ]}
               onPress={() => {
                 onClose();
-                onAction(action.key);
+                // Delay action to let Modal close animation finish (iOS Alert conflicts with Modal)
+                setTimeout(() => onAction(action.key), 350);
               }}
               activeOpacity={0.6}
               accessibilityRole="button"

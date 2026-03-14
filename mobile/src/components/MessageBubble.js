@@ -30,7 +30,9 @@ function formatDurationMmSs(ms) {
 
 const SWIPE_COOLDOWN = 500; // ms between swipe actions
 
-const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress, onSwipeReply, onAvatarPress, members }, ref) {
+const SWIPE_REACT_EMOJI = '\uD83D\uDC4D'; // 👍
+
+const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress, onSwipeReply, onSwipeReact, onAvatarPress, members, isOwn, onTogglePreview }, ref) {
   const { colors, density } = useTheme();
   const { attachmentWidth, attachmentHeight } = useLayout();
   const swipeableRef = useRef(null);
@@ -137,6 +139,10 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
     <LeftAction drag={drag} />
   );
 
+  const renderRightActions = (_progress, drag) => (
+    <RightAction drag={drag} />
+  );
+
   const handleSwipeOpen = (direction) => {
     const now = Date.now();
     if (now - lastSwipeTime.current < SWIPE_COOLDOWN) {
@@ -148,12 +154,15 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
     if (direction === 'left' && onSwipeReply && !isPending) {
       lightImpact();
       onSwipeReply(message);
+    } else if (direction === 'right' && onSwipeReact && !isPending) {
+      lightImpact();
+      onSwipeReact(message.id, SWIPE_REACT_EMOJI);
     }
     // Small delay before closing so user sees the action panel
     setTimeout(() => swipeableRef.current?.close(), 150);
   };
 
-  const swipeEnabled = !isPending && !!onSwipeReply;
+  const swipeEnabled = !isPending && (!!onSwipeReply || !!onSwipeReact);
 
   if (isGrouped) {
     return (
@@ -161,10 +170,13 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
         ref={swipeableRef}
         enabled={swipeEnabled}
         renderLeftActions={onSwipeReply ? renderLeftActions : undefined}
+        renderRightActions={onSwipeReact ? renderRightActions : undefined}
         onSwipeableWillOpen={handleSwipeOpen}
         overshootLeft={false}
+        overshootRight={false}
         friction={2}
         leftThreshold={30}
+        rightThreshold={30}
       >
       <Pressable
         style={[styles.groupedContainer, { paddingTop: density.groupedPaddingTop, paddingBottom: density.groupedPaddingBottom }, isPending && styles.pending]}
@@ -182,7 +194,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
             </Text>
           ) : null}
           <YouTubeThumbnail content={message.content} colors={colors} />
-          {message.content && !YT_REGEX.test(message.content) ? <LinkPreview content={message.content} /> : null}
+          {message.content && !message.hidePreview && !YT_REGEX.test(message.content) ? <LinkPreview content={message.content} isOwn={isOwn} onDismiss={onTogglePreview ? () => onTogglePreview(message.id) : undefined} /> : null}
           {renderAttachments(message.attachments, onImagePress, attachmentWidth, attachmentHeight)}
           {renderReactions(message.reactions, colors, message.id, onReactionPress)}
         </View>
@@ -243,7 +255,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
           </Text>
         ) : null}
         <YouTubeThumbnail content={message.content} colors={colors} />
-        {message.content && !YT_REGEX.test(message.content) ? <LinkPreview content={message.content} /> : null}
+        {message.content && !message.hidePreview && !YT_REGEX.test(message.content) ? <LinkPreview content={message.content} isOwn={isOwn} onDismiss={onTogglePreview ? () => onTogglePreview(message.id) : undefined} /> : null}
         {renderAttachments(message.attachments, onImagePress, attachmentWidth, attachmentHeight)}
         {renderReactions(message.reactions, colors, message.id, onReactionPress)}
         {message._count?.replies > 0 && (
@@ -529,8 +541,20 @@ function LeftAction({ drag }) {
   }));
   return (
     <Reanimated.View style={[swipeStyles.leftAction, animatedStyle]}>
-      <Text style={swipeStyles.actionIcon}>💬</Text>
+      <Text style={swipeStyles.actionIcon}>{'\uD83D\uDCAC'}</Text>
       <Text style={swipeStyles.actionLabel}>Reply</Text>
+    </Reanimated.View>
+  );
+}
+
+function RightAction({ drag }) {
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(drag.value, [0, -60], [60, 0], 'clamp') }],
+  }));
+  return (
+    <Reanimated.View style={[swipeStyles.rightAction, animatedStyle]}>
+      <Text style={swipeStyles.actionIcon}>{'\uD83D\uDC4D'}</Text>
+      <Text style={swipeStyles.actionLabel}>Like</Text>
     </Reanimated.View>
   );
 }
@@ -543,6 +567,14 @@ const swipeStyles = StyleSheet.create({
     backgroundColor: '#3b82f6',
     borderTopLeftRadius: 8,
     borderBottomLeftRadius: 8,
+  },
+  rightAction: {
+    width: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f59e0b',
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
   },
   actionIcon: {
     fontSize: 20,

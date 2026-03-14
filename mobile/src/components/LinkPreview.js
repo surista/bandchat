@@ -22,7 +22,7 @@ function getHostname(url) {
   }
 }
 
-function LinkPreview({ content }) {
+function LinkPreview({ content, isOwn, onDismiss }) {
   const { colors } = useTheme();
   const [preview, setPreview] = useState(null);
   const [url, setUrl] = useState(null);
@@ -71,45 +71,81 @@ function LinkPreview({ content }) {
   };
 
   return (
-    <TouchableOpacity
-      style={[styles.container, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
-      onPress={handlePress}
-      activeOpacity={0.7}
-    >
-      <View style={styles.textContent}>
-        <Text style={[styles.domain, { color: colors.textSecondary }]} numberOfLines={1}>
-          {getHostname(url)}
-        </Text>
-        {preview.title && (
-          <Text style={[styles.title, { color: colors.primary }]} numberOfLines={2}>
-            {preview.title}
-          </Text>
-        )}
-        {preview.description && (
-          <Text style={[styles.description, { color: colors.textSecondary }]} numberOfLines={2}>
-            {preview.description}
-          </Text>
-        )}
-      </View>
-      {preview.image && (
-        <Image
-          source={{ uri: preview.image }}
-          style={styles.thumbnail}
-          resizeMode="cover"
-        />
+    <View style={styles.wrapper}>
+      {isOwn && onDismiss && (
+        <TouchableOpacity
+          style={styles.dismissButton}
+          onPress={onDismiss}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="Remove link preview"
+        >
+          <Text style={styles.dismissText}>{'\u00D7'}</Text>
+        </TouchableOpacity>
       )}
-    </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.container, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
+        onPress={handlePress}
+        activeOpacity={0.7}
+      >
+        <View style={styles.textContent}>
+          <Text style={[styles.domain, { color: colors.textSecondary }]} numberOfLines={1}>
+            {getHostname(url)}
+          </Text>
+          {preview.title && (
+            <Text style={[styles.title, { color: colors.primary }]} numberOfLines={2}>
+              {preview.title}
+            </Text>
+          )}
+          {preview.description && (
+            <Text style={[styles.description, { color: colors.textSecondary }]} numberOfLines={2}>
+              {preview.description}
+            </Text>
+          )}
+        </View>
+        {preview.image && (
+          <Image
+            source={{ uri: preview.image }}
+            style={styles.thumbnail}
+            resizeMode="cover"
+          />
+        )}
+      </TouchableOpacity>
+    </View>
   );
 }
 
 export default memo(LinkPreview);
 
 const styles = StyleSheet.create({
+  wrapper: {
+    position: 'relative',
+    marginTop: 6,
+  },
+  dismissButton: {
+    position: 'absolute',
+    top: -8,
+    right: -4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#374151',
+    borderWidth: 1,
+    borderColor: '#6b7280',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  dismissText: {
+    color: '#d1d5db',
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 16,
+  },
   container: {
     flexDirection: 'row',
     borderRadius: 8,
     borderWidth: 1,
-    marginTop: 6,
     overflow: 'hidden',
   },
   textContent: {

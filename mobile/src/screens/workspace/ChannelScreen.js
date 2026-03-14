@@ -516,8 +516,7 @@ export default function ChannelScreen({ navigation, route }) {
         navigation.navigate('Thread', { parentMessage: actionMessage, channelId: channel.id, workspaceId });
         break;
       case 'react':
-        // Delay to let the action sheet Modal fully close before opening emoji picker Modal
-        setTimeout(() => setShowEmojiPicker(true), 400);
+        setShowEmojiPicker(true);
         break;
       case 'pin':
         (async () => {
@@ -693,6 +692,15 @@ export default function ChannelScreen({ navigation, route }) {
     setViewingImage(url);
   }, []);
 
+  // Toggle link preview visibility
+  const handleTogglePreview = useCallback(async (messageId) => {
+    try {
+      await api.toggleMessagePreview(messageId);
+    } catch (err) {
+      // silently fail
+    }
+  }, []);
+
   // Compute first unread message index (in original message order)
   const firstUnreadId = useMemo(() => {
     if (!lastReadAt) return null;
@@ -759,12 +767,15 @@ export default function ChannelScreen({ navigation, route }) {
           onImagePress={handleImagePress}
           onReactionPress={handleReactionPress}
           onSwipeReply={handleReplyPress}
+          onSwipeReact={handleReactionPress}
           onAvatarPress={handleAvatarPress}
           members={workspaceMembers}
+          isOwn={item.author?.id === user?.id}
+          onTogglePreview={handleTogglePreview}
         />
       </View>
     );
-  }, [colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, handleAvatarPress, lastOwnMessageId, seenByCount, workspaceMembers, firstUnreadId]);
+  }, [colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, handleAvatarPress, handleTogglePreview, lastOwnMessageId, seenByCount, workspaceMembers, firstUnreadId, user?.id]);
 
   const renderFooter = useCallback(() => {
     if (!loadingMore) return null;

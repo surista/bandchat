@@ -209,6 +209,7 @@ model Message {
   channelId       String
   parentId        String?
   isHidden        Boolean  @default(false)
+  hidePreview     Boolean  @default(false)
   removedUserName String?  // Set when user is removed/deleted (preserves display name)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

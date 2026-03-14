@@ -11,7 +11,7 @@ A real-time communication and management app for bands. Think Slack, but built s
 - **Reactions** — Emoji reactions on messages
 - **File Sharing** — Upload images, audio, and files up to 10MB via Cloudflare R2 with auto-generated thumbnails
 - **Voice Messages** — Record and send audio messages
-- **Link Previews** — Automatic rich previews for shared URLs (with SSRF protection)
+- **Link Previews** — Automatic rich previews for shared URLs (dismissible by author, with SSRF protection)
 - **Search** — Full-text search across all channels, DMs, and messages (trigram index)
 - **Push Notifications** — Web push for mentions, DMs, and replies
 - **Quick Reactions** — Fast emoji reactions on messages
@@ -24,6 +24,7 @@ A real-time communication and management app for bands. Think Slack, but built s
 ### Band Management
 - **Songs** — Track your repertoire with title, artist, key, BPM, duration, lyrics, YouTube/Spotify links, notes, and bulk import with async metadata enrichment (iTunes, Spotify, Deezer, YouTube, SongBPM)
 - **Setlists** — Drag-and-drop song ordering with automatic duration calculation, MC sections, set breaks, and PDF export
+- **Stage Plots** — Drag-and-drop stage layout editor with 20+ equipment icons, text labels, and print/PDF export
 - **Medleys** — Group songs into medleys within setlists
 - **Calendar** — Schedule gigs, rehearsals, and recording sessions with venue, address, pay tracking, device calendar sync, iCal feed, and optional time fields (sound check, doors, stage time)
 - **Upcoming Event Banner** — Next gig/rehearsal always visible at the top of the sidebar with pinned Calendar shortcut

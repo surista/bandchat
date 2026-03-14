@@ -27,6 +27,24 @@ const isValidUUID = (str) => str && UUID_REGEX.test(str);
 const INVITE_CODE_REGEX = /^[0-9a-f]{64}$/i;
 const isValidInviteCode = (str) => str && INVITE_CODE_REGEX.test(str);
 
+// Prepare channel data for navigation (resolve DM display names)
+async function prepareChannelForNav(channel) {
+  if (!channel.isDirect) return channel;
+  // Get current user ID from stored auth data
+  let userId = null;
+  try {
+    const userData = await AsyncStorage.getItem('user');
+    if (userData) userId = JSON.parse(userData).id;
+  } catch {}
+  const otherMembers = (channel.members || [])
+    .filter(m => m.user?.id !== userId)
+    .map(m => m.user);
+  const displayName = otherMembers.length > 0
+    ? otherMembers.map(m => m?.displayName || 'Unknown').join(', ')
+    : 'Direct Message';
+  return { ...channel, isDM: true, displayName, otherMembers };
+}
+
 function handleDeepLink(url, navigationRef) {
   if (!url || !navigationRef.current) return;
   try {
@@ -54,9 +72,10 @@ function handleDeepLink(url, navigationRef) {
         }
         // bandchat://workspace/:wid/channel/:cid
         navigationRef.current.navigate('Workspace', { id: parts[1] });
-        api.getChannel(parts[3]).then(channel => {
+        api.getChannel(parts[3]).then(async (channel) => {
+          const channelData = await prepareChannelForNav(channel);
           setTimeout(() => {
-            navigationRef.current.navigate('Channel', { channel, workspaceId: parts[1] });
+            navigationRef.current.navigate('Channel', { channel: channelData, workspaceId: parts[1] });
           }, 300);
         }).catch(() => {});
       } else {
@@ -101,8 +120,9 @@ function AppContent() {
         navigationRef.current.navigate('Workspace', { id: data.workspaceId, name: data.workspaceName || 'Workspace' });
         try {
           const channel = await api.getChannel(data.channelId);
+          const channelData = await prepareChannelForNav(channel);
           setTimeout(() => {
-            navigationRef.current.navigate('Channel', { channel, workspaceId: data.workspaceId });
+            navigationRef.current.navigate('Channel', { channel: channelData, workspaceId: data.workspaceId });
           }, 300);
         } catch {
           // Fallback: stay on workspace screen

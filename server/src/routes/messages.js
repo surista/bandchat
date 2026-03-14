@@ -498,6 +498,38 @@ router.put('/:messageId', authenticate, async (req, res) => {
   }
 });
 
+// Toggle link preview visibility on a message (author only)
+router.patch('/:messageId/preview', authenticate, async (req, res) => {
+  try {
+    const message = await prisma.message.findUnique({
+      where: { id: req.params.messageId },
+      select: { authorId: true, channelId: true, hidePreview: true }
+    });
+    if (!message) return res.status(404).json({ error: 'Message not found' });
+    if (message.authorId !== req.user.id) {
+      return res.status(403).json({ error: 'Can only modify your own messages' });
+    }
+
+    const updated = await prisma.message.update({
+      where: { id: req.params.messageId },
+      data: { hidePreview: !message.hidePreview },
+      include: {
+        author: { select: { id: true, displayName: true, avatarUrl: true } },
+        attachments: true,
+        ...reactionsInclude,
+        _count: { select: { replies: true } }
+      }
+    });
+
+    const io = req.app.get('io');
+    io.to(`channel:${message.channelId}`).emit('message:updated', updated);
+
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update preview visibility' });
+  }
+});
+
 // Delete a message
 router.delete('/:messageId', authenticate, async (req, res) => {
   try {

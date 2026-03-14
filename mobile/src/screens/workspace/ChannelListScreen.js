@@ -176,7 +176,7 @@ export default function ChannelListScreen({ navigation, route }) {
     navigation.setOptions({
       headerLeft: () => (
         <TouchableOpacity
-          onPress={() => navigation.navigate('WorkspaceList')}
+          onPress={() => navigation.navigate('WorkspaceList', { showList: true })}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           style={{ marginRight: 8 }}
           accessibilityLabel="Switch workspace"
@@ -368,6 +368,10 @@ export default function ChannelListScreen({ navigation, route }) {
   }, [loadData]);
 
   const getDMDisplayName = useCallback((dm) => {
+    // Server sends otherMembers (mapped user objects) and members (raw ChannelMember with nested user)
+    if (dm.otherMembers?.length > 0) {
+      return dm.otherMembers.map(m => m.displayName || 'Unknown').join(', ');
+    }
     if (!dm.members) return 'Direct Message';
     const otherMembers = dm.members.filter(m => m.userId !== user?.id);
     if (otherMembers.length === 0) {
