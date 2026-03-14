@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import Svg, {
   Rect, Circle, Ellipse, Line, Path, Text as SvgText,
 } from 'react-native-svg';
@@ -250,23 +252,31 @@ function InstrumentSvg({ type, size = 48 }) {
     case 'electric-guitar':
       return (
         <Svg width={s} height={s} viewBox="0 0 64 64">
-          <Path d="M38 6 L40 6 L42 20 L40 22 L42 28 Q44 36 38 42 Q32 48 26 44 Q20 40 22 32 L24 28 L22 22 L24 20 Z" fill="#e67e22" stroke="#c0570a" strokeWidth="1" />
-          <Line x1="32" y1="6" x2="32" y2="20" stroke="#888" strokeWidth="0.5" />
-          <Circle cx="32" cy="34" r="3" fill="none" stroke="#c0570a" strokeWidth="1" />
-          <Circle cx="32" cy="40" r="2" fill="none" stroke="#c0570a" strokeWidth="1" />
-          <Line x1="38" y1="6" x2="40" y2="4" stroke="#888" strokeWidth="1.5" />
-          <Line x1="39" y1="6" x2="41" y2="3" stroke="#888" strokeWidth="1.5" />
+          <Rect x="30" y="4" width="4" height="24" rx="1" fill="#c0570a" />
+          <Line x1="34" y1="6" x2="38" y2="5" stroke="#888" strokeWidth="1.5" />
+          <Line x1="34" y1="9" x2="38" y2="8" stroke="#888" strokeWidth="1.5" />
+          <Line x1="34" y1="12" x2="38" y2="11" stroke="#888" strokeWidth="1.5" />
+          <Path d="M24 28 Q18 30 16 36 Q14 42 18 46 Q22 50 28 48 L30 46 L28 42 L30 40 L34 40 L36 42 L34 46 L36 48 Q42 50 46 46 Q50 42 48 36 Q46 30 40 28 Z" fill="#e67e22" stroke="#c0570a" strokeWidth="1.2" />
+          <Circle cx="28" cy="37" r="2" fill="#c0570a" />
+          <Circle cx="36" cy="37" r="2" fill="#c0570a" />
+          <Line x1="26" y1="28" x2="38" y2="28" stroke="#888" strokeWidth="0.5" />
+          <Line x1="26" y1="30" x2="38" y2="30" stroke="#888" strokeWidth="0.5" />
         </Svg>
       );
     case 'acoustic-guitar':
       return (
         <Svg width={s} height={s} viewBox="0 0 64 64">
-          <Path d="M36 4 L38 4 L40 18 L38 20 L40 26 Q44 34 38 42 Q32 50 24 46 Q18 42 20 32 L22 26 L20 20 L22 18 Z" fill="#c48a3f" stroke="#8b6914" strokeWidth="1" />
-          <Circle cx="30" cy="35" r="4" fill="#8b6914" />
-          <Line x1="30" y1="31" x2="30" y2="39" stroke="#c48a3f" strokeWidth="0.5" />
-          <Line x1="26" y1="35" x2="34" y2="35" stroke="#c48a3f" strokeWidth="0.5" />
-          <Line x1="36" y1="4" x2="38" y2="2" stroke="#888" strokeWidth="1.5" />
-          <Line x1="37" y1="4" x2="39" y2="1" stroke="#888" strokeWidth="1.5" />
+          <Rect x="30" y="4" width="4" height="22" rx="1" fill="#8b6914" />
+          <Line x1="34" y1="6" x2="37" y2="5" stroke="#888" strokeWidth="1.5" />
+          <Line x1="34" y1="9" x2="37" y2="8" stroke="#888" strokeWidth="1.5" />
+          <Line x1="34" y1="12" x2="37" y2="11" stroke="#888" strokeWidth="1.5" />
+          <Ellipse cx="32" cy="30" rx="10" ry="6" fill="#c48a3f" stroke="#8b6914" strokeWidth="1" />
+          <Ellipse cx="32" cy="44" rx="14" ry="10" fill="#c48a3f" stroke="#8b6914" strokeWidth="1.2" />
+          <Ellipse cx="32" cy="44" rx="5" ry="4" fill="#8b6914" />
+          <Line x1="30" y1="26" x2="30" y2="54" stroke="#888" strokeWidth="0.4" />
+          <Line x1="32" y1="26" x2="32" y2="54" stroke="#888" strokeWidth="0.4" />
+          <Line x1="34" y1="26" x2="34" y2="54" stroke="#888" strokeWidth="0.4" />
+          <Rect x="28" y="24" width="8" height="3" rx="1" fill="#8b6914" />
         </Svg>
       );
     case 'guitar-stand':
@@ -284,11 +294,15 @@ function InstrumentSvg({ type, size = 48 }) {
     case 'bass-guitar':
       return (
         <Svg width={s} height={s} viewBox="0 0 64 64">
-          <Path d="M36 4 L38 4 L40 20 L38 22 L40 28 Q46 36 40 44 Q34 52 26 48 Q18 44 20 34 L22 28 L20 22 L22 20 Z" fill="#3498db" stroke="#1a6fa8" strokeWidth="1" />
-          <Circle cx="31" cy="36" r="3" fill="none" stroke="#1a6fa8" strokeWidth="1" />
-          <Circle cx="31" cy="42" r="2" fill="none" stroke="#1a6fa8" strokeWidth="1" />
-          <Line x1="36" y1="4" x2="37" y2="2" stroke="#888" strokeWidth="1.5" />
-          <Line x1="37" y1="4" x2="38" y2="1" stroke="#888" strokeWidth="1.5" />
+          <Rect x="30" y="2" width="4" height="28" rx="1" fill="#1a6fa8" />
+          <Line x1="34" y1="5" x2="38" y2="4" stroke="#888" strokeWidth="1.5" />
+          <Line x1="34" y1="8" x2="38" y2="7" stroke="#888" strokeWidth="1.5" />
+          <Path d="M24 30 Q18 33 16 38 Q14 44 18 48 Q22 52 28 50 L30 48 L28 44 L30 42 L34 42 L36 44 L34 48 L36 50 Q42 52 46 48 Q50 44 48 38 Q46 33 40 30 Z" fill="#3498db" stroke="#1a6fa8" strokeWidth="1.2" />
+          <Circle cx="28" cy="39" r="2" fill="#1a6fa8" />
+          <Circle cx="36" cy="39" r="2" fill="#1a6fa8" />
+          <Line x1="30" y1="30" x2="30" y2="50" stroke="#888" strokeWidth="0.4" />
+          <Line x1="32" y1="30" x2="32" y2="50" stroke="#888" strokeWidth="0.4" />
+          <Line x1="34" y1="30" x2="34" y2="50" stroke="#888" strokeWidth="0.4" />
         </Svg>
       );
     case 'keyboard-stand':
@@ -472,21 +486,92 @@ export default function StagePlotEditorScreen({ navigation, route }) {
     })();
   }, [plotId]);
 
+  // Print / PDF export
+  const handlePrintExport = useCallback(async () => {
+    const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const sw = 900, sh = 500;
+
+    // Simple SVG shapes for print (colored circles with labels, lightweight)
+    const printSvg = (type) => {
+      const colors = {
+        vocals: '#e74c3c', 'mic-stand': '#e74c3c',
+        'electric-guitar': '#e67e22', 'acoustic-guitar': '#c48a3f',
+        'guitar-combo': '#6b4f30', 'guitar-212': '#4a6a85', 'guitar-halfstack': '#4a6a85', 'guitar-fullstack': '#4a6a85', 'guitar-stand': '#888',
+        'bass-guitar': '#3498db', 'bass-combo': '#2d4a60', 'bass-115': '#2d4a60', 'bass-410': '#2d4a60', 'bass-stack': '#2d4a60',
+        keyboard: '#9b59b6', 'keyboard-stand': '#9b59b6', piano: '#666',
+        drums: '#e74c3c',
+        'monitor-wedge': '#27ae60', 'di-box': '#f39c12', pedalboard: '#e67e22',
+      };
+      const c = colors[type] || '#888';
+      return `<svg width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" fill="${c}" opacity="0.2" stroke="${c}" stroke-width="1.5"/><text x="18" y="22" text-anchor="middle" font-size="8" font-weight="bold" fill="${c}">${esc(LABEL_MAP[type] || type).substring(0, 6)}</text></svg>`;
+    };
+
+    const itemsHtml = items.map(item => {
+      if (item.type === 'text') {
+        return `<div style="position:absolute;left:${item.x}px;top:${item.y}px;font-size:12px;font-weight:500;color:#333;background:rgba(200,200,200,0.3);border:1px dashed #999;border-radius:3px;padding:2px 6px;white-space:nowrap">${esc(item.text || '')}</div>`;
+      }
+      const label = LABEL_MAP[item.type] || item.type;
+      return `<div style="position:absolute;left:${item.x}px;top:${item.y}px;display:flex;flex-direction:column;align-items:center;gap:2px">${printSvg(item.type)}<span style="font-size:8px;text-transform:uppercase;letter-spacing:0.5px;background:rgba(0,0,0,0.6);color:#fff;padding:1px 4px;border-radius:2px;white-space:nowrap">${esc(label)}</span></div>`;
+    }).join('');
+
+    const headerParts = [bandName, eventName].filter(Boolean);
+
+    const html = `<!DOCTYPE html><html><head><style>
+      * { margin:0; padding:0; box-sizing:border-box; }
+      body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; padding:20px; }
+      .header { text-align:center; margin-bottom:16px; padding-bottom:12px; border-bottom:2px solid #222; }
+      .plot-title { font-size:24px; font-weight:800; letter-spacing:1px; text-transform:uppercase; }
+      .plot-meta { font-size:14px; color:#666; margin-top:4px; }
+      .stage-container { display:flex; flex-direction:column; align-items:center; }
+      .front-label { font-size:11px; text-transform:uppercase; letter-spacing:2px; color:#999; margin-bottom:6px; }
+      .stage { position:relative; border:2px solid #333; border-radius:6px; background:#f8f8f8; background-image:linear-gradient(#ddd 1px,transparent 1px),linear-gradient(90deg,#ddd 1px,transparent 1px); background-size:40px 40px; overflow:hidden; }
+      .back-label { font-size:11px; text-transform:uppercase; letter-spacing:2px; color:#999; margin-top:6px; }
+    </style></head><body>
+      <div class="header">
+        <div class="plot-title">${esc(title || 'Stage Plot')}</div>
+        ${headerParts.length ? `<div class="plot-meta">${headerParts.map(esc).join(' &middot; ')}</div>` : ''}
+      </div>
+      <div class="stage-container">
+        <div class="front-label">Front of Stage / Audience</div>
+        <div class="stage" style="width:${sw}px;height:${sh}px">${itemsHtml}</div>
+        <div class="back-label">Back of Stage</div>
+      </div>
+    </body></html>`;
+
+    try {
+      const { uri } = await Print.printToFileAsync({ html, width: 842, height: 595 }); // A4 landscape
+      await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `Export ${title || 'Stage Plot'}` });
+    } catch (err) {
+      if (err.message !== 'User did not share') {
+        Alert.alert('Export Failed', err.message || 'Could not create PDF');
+      }
+    }
+  }, [items, bandName, eventName, title]);
+
   // Set header title
   useEffect(() => {
     navigation.setOptions({
       title: title || 'Stage Plot',
       headerRight: () => (
-        <TouchableOpacity
-          onPress={() => setShowPalette(true)}
-          style={styles.headerButton}
-          accessibilityLabel="Add instrument"
-        >
-          <Text style={styles.headerButtonText}>+ Add</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={handlePrintExport}
+            style={[styles.headerButton, { backgroundColor: '#ea580c' }]}
+            accessibilityLabel="Export as PDF"
+          >
+            <Text style={styles.headerButtonText}>PDF</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setShowPalette(true)}
+            style={styles.headerButton}
+            accessibilityLabel="Add instrument"
+          >
+            <Text style={styles.headerButtonText}>+ Add</Text>
+          </TouchableOpacity>
+        </View>
       ),
     });
-  }, [navigation, title]);
+  }, [navigation, title, handlePrintExport]);
 
   // Auto-save data
   const scheduleAutoSave = useCallback((newItems, newBandName, newEventName) => {

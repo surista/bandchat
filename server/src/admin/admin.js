@@ -128,7 +128,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (tab.dataset.tab === 'users') loadUsers();
     if (tab.dataset.tab === 'workspaces') loadWorkspaces();
     if (tab.dataset.tab === 'storage') loadStorageStats();
-    if (tab.dataset.tab === 'backups') loadBackups();
+    if (tab.dataset.tab === 'backups') { loadBackups(); loadWorkspaceSelector(); }
     if (tab.dataset.tab === 'deleted') loadDeleted();
   });
 });
@@ -557,6 +557,223 @@ document.getElementById('backupNowBtn').addEventListener('click', async () => {
   }
 });
 
+// ==========================================
+// Workspace Backups
+// ==========================================
+
+let wsRestoreKey = null;
+
+async function loadWorkspaceSelector() {
+  const selector = document.getElementById('wsBackupSelector');
+  try {
+    const data = await api('/admin/workspaces');
+    const workspaces = data.workspaces || [];
+    selector.innerHTML = '<option value="">Select workspace...</option>' +
+      workspaces.map(w => {
+        const members = w._count?.members ?? '?';
+        const msgs = w._count?.channels ?? '?';
+        const created = fmtDate(w.createdAt);
+        return `<option value="${esc(w.id)}">${esc(w.name)} — ${members} members · Created ${created}</option>`;
+      }).join('');
+  } catch (err) {
+    console.error('Failed to load workspaces for backup selector:', err);
+  }
+}
+
+async function loadWorkspaceBackups(workspaceId) {
+  const tbody = document.getElementById('wsBackupsTable');
+  if (!workspaceId) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Select a workspace to view backups</td></tr>';
+    return;
+  }
+  tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Loading...</td></tr>';
+  try {
+    const data = await api(`/admin/workspaces/${workspaceId}/backups`);
+    if (!data.backups?.length) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No backups for this workspace</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.backups.map(b => {
+      const parts = b.key.split('/');
+      const filename = parts[parts.length - 1];
+      const wsId = parts[2]; // backups/workspace/{wsId}/filename
+      return `<tr>
+        <td>${fmtDate(b.lastModified)}</td>
+        <td style="font-size:12px;color:var(--text-secondary)">${esc(wsId.substring(0, 8))}...</td>
+        <td>${fmtBytes(b.size)}</td>
+        <td>
+          <button class="btn-sm" data-ws-download="${esc(wsId)}/${esc(filename)}">Download</button>
+          <button class="btn-restore" data-ws-restore-key="${esc(b.key)}">Restore</button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="4" class="empty-state">Failed: ${esc(err.message)}</td></tr>`;
+  }
+}
+
+document.getElementById('wsBackupSelector').addEventListener('change', (e) => {
+  const wsId = e.target.value;
+  document.getElementById('wsBackupNowBtn').disabled = !wsId;
+  loadWorkspaceBackups(wsId);
+});
+
+document.getElementById('wsBackupNowBtn').addEventListener('click', async () => {
+  const wsId = document.getElementById('wsBackupSelector').value;
+  if (!wsId) return;
+  const btn = document.getElementById('wsBackupNowBtn');
+  const progress = document.getElementById('wsBackupProgress');
+  btn.disabled = true;
+  progress.style.display = 'block';
+  try {
+    await api(`/admin/workspaces/${wsId}/backup`, { method: 'POST' });
+    progress.style.display = 'none';
+    btn.disabled = false;
+    loadWorkspaceBackups(wsId);
+  } catch (err) {
+    progress.textContent = 'Backup failed: ' + (err.message || 'Unknown error');
+    btn.disabled = false;
+  }
+});
+
+// Event delegation for workspace backup table
+document.getElementById('wsBackupsTable').addEventListener('click', async (e) => {
+  const downloadBtn = e.target.closest('[data-ws-download]');
+  if (downloadBtn) {
+    const pathParts = downloadBtn.dataset.wsDownload;
+    downloadBtn.disabled = true;
+    downloadBtn.textContent = 'Downloading...';
+    try {
+      const res = await fetch(`/api/admin/workspace-backups/download/${encodeURIComponent(pathParts.split('/')[0])}/${encodeURIComponent(pathParts.split('/')[1])}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = pathParts.split('/')[1];
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Download failed: ' + err.message);
+    } finally {
+      downloadBtn.disabled = false;
+      downloadBtn.textContent = 'Download';
+    }
+    return;
+  }
+
+  const restoreBtn = e.target.closest('[data-ws-restore-key]');
+  if (restoreBtn) {
+    openWsRestoreModal(restoreBtn.dataset.wsRestoreKey);
+  }
+});
+
+async function openWsRestoreModal(key) {
+  wsRestoreKey = key;
+  const modal = document.getElementById('wsRestoreModal');
+  const content = document.getElementById('wsRestoreModalContent');
+  content.innerHTML = '<div class="restore-progress"><div class="spinner"></div><p>Loading backup preview...</p></div>';
+  modal.classList.add('open');
+
+  try {
+    const preview = await api('/admin/workspace-backups/preview', {
+      method: 'POST',
+      body: JSON.stringify({ key })
+    });
+
+    const stats = preview.stats || {};
+    const statItems = Object.entries(stats)
+      .filter(([, v]) => v > 0)
+      .map(([k, v]) => `<div class="restore-stat"><div class="restore-stat-value">${fmt(v)}</div><div class="restore-stat-label">${esc(k)}</div></div>`)
+      .join('');
+
+    content.innerHTML = `
+      <p style="color:var(--text-secondary);font-size:14px;margin-bottom:4px">
+        Workspace: <strong>${esc(preview.workspaceName)}</strong>
+      </p>
+      <p style="color:var(--text-secondary);font-size:14px;margin-bottom:8px">
+        Backup from <strong>${esc(preview.createdAt ? fmtDate(preview.createdAt) : 'unknown')}</strong> · ${preview.userStubCount || 0} user references
+      </p>
+      <div class="restore-stats">${statItems}</div>
+      <div class="restore-warning">
+        <strong>Warning:</strong> This will replace ALL data for this workspace with the backup data.
+        Other workspaces will NOT be affected. Users who no longer exist will have their references anonymized.<br><br>
+        No safety backup is created — use "Backup Now" first if needed.
+      </div>
+      <label style="display:block;font-size:13px;color:var(--text-secondary);margin-top:16px">
+        Type <strong>RESTORE WORKSPACE</strong> to confirm:
+      </label>
+      <input class="confirm-input" id="wsRestoreConfirmInput" placeholder="RESTORE WORKSPACE" autocomplete="off" spellcheck="false">
+      <button class="btn-danger" id="wsRestoreExecuteBtn" disabled>Restore Workspace</button>
+    `;
+
+    document.getElementById('wsRestoreConfirmInput').addEventListener('input', (e) => {
+      document.getElementById('wsRestoreExecuteBtn').disabled = e.target.value !== 'RESTORE WORKSPACE';
+    });
+
+    document.getElementById('wsRestoreExecuteBtn').addEventListener('click', executeWsRestore);
+  } catch (err) {
+    content.innerHTML = `<p style="color:var(--red)">Failed to load preview: ${esc(err.message)}</p>`;
+  }
+}
+
+async function executeWsRestore() {
+  const content = document.getElementById('wsRestoreModalContent');
+  content.innerHTML = `
+    <div class="restore-progress">
+      <div class="spinner"></div>
+      <p>Restoring workspace data...</p>
+      <p style="font-size:12px;color:var(--text-secondary);margin-top:8px">This may take a minute. Do not close this page.</p>
+    </div>
+  `;
+
+  try {
+    const result = await api('/admin/workspace-backups/restore', {
+      method: 'POST',
+      body: JSON.stringify({ key: wsRestoreKey, confirmPhrase: 'RESTORE WORKSPACE' })
+    });
+
+    content.innerHTML = `
+      <div style="text-align:center;padding:24px 0">
+        <div style="font-size:40px;margin-bottom:12px">✅</div>
+        <h3 style="color:var(--green);margin-bottom:8px">Workspace Restored Successfully</h3>
+        <p style="color:var(--text-secondary);font-size:14px">
+          ${fmt(result.resolvedUsers)} users resolved, ${fmt(result.missingUsers)} missing (anonymized)
+        </p>
+        <button class="btn-sm" style="margin-top:16px" id="closeWsRestoreSuccessBtn">Close</button>
+      </div>
+    `;
+
+    document.getElementById('closeWsRestoreSuccessBtn').addEventListener('click', closeWsRestoreModal);
+    // Reload workspace backups
+    const wsId = document.getElementById('wsBackupSelector').value;
+    if (wsId) loadWorkspaceBackups(wsId);
+  } catch (err) {
+    content.innerHTML = `
+      <div style="text-align:center;padding:24px 0">
+        <div style="font-size:40px;margin-bottom:12px">❌</div>
+        <h3 style="color:var(--red);margin-bottom:8px">Restore Failed</h3>
+        <p style="color:var(--text-secondary);font-size:14px">${esc(err.message)}</p>
+        <button class="btn-sm" style="margin-top:16px" id="closeWsRestoreErrorBtn">Close</button>
+      </div>
+    `;
+    document.getElementById('closeWsRestoreErrorBtn').addEventListener('click', closeWsRestoreModal);
+  }
+}
+
+function closeWsRestoreModal() {
+  document.getElementById('wsRestoreModal').classList.remove('open');
+  wsRestoreKey = null;
+}
+
+document.getElementById('wsRestoreModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeWsRestoreModal();
+});
+
+document.getElementById('wsRestoreModalCloseBtn').addEventListener('click', closeWsRestoreModal);
+
 // --- Restore functionality ---
 async function openRestoreModal(key) {
   restoreKey = key;
@@ -667,6 +884,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeUserModal();
     closeRestoreModal();
+    closeWsRestoreModal();
   }
 });
 

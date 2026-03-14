@@ -7,14 +7,14 @@ import '../../../styles/stagePlot.css';
 const SVG_TEMPLATES = {
   vocals: `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="28" y="8" width="8" height="20" rx="4" fill="#e74c3c"/><path d="M22 18v6a10 10 0 0 0 20 0v-6" fill="none" stroke="#e74c3c" stroke-width="2.5"/><line x1="32" y1="34" x2="32" y2="46" stroke="#e74c3c" stroke-width="2.5"/><line x1="24" y1="46" x2="40" y2="46" stroke="#e74c3c" stroke-width="2.5"/><line x1="32" y1="46" x2="32" y2="56" stroke="#aaa" stroke-width="2"/><circle cx="32" cy="58" r="3" fill="#aaa"/></svg>`,
   'mic-stand': `<svg viewBox="0 0 64 64" width="48" height="48"><circle cx="22" cy="10" r="5" fill="none" stroke="#e74c3c" stroke-width="2"/><line x1="27" y1="10" x2="42" y2="10" stroke="#aaa" stroke-width="2"/><line x1="32" y1="10" x2="32" y2="54" stroke="#aaa" stroke-width="2"/><line x1="22" y1="54" x2="42" y2="54" stroke="#aaa" stroke-width="2.5"/><circle cx="32" cy="54" r="2" fill="#aaa"/></svg>`,
-  'electric-guitar': `<svg viewBox="0 0 64 64" width="48" height="48"><path d="M38 6 L40 6 L42 20 L40 22 L42 28 Q44 36 38 42 Q32 48 26 44 Q20 40 22 32 L24 28 L22 22 L24 20 Z" fill="#e67e22" stroke="#c0570a" stroke-width="1"/><line x1="32" y1="6" x2="32" y2="20" stroke="#aaa" stroke-width="0.5"/><circle cx="32" cy="34" r="3" fill="none" stroke="#c0570a" stroke-width="1"/><circle cx="32" cy="40" r="2" fill="none" stroke="#c0570a" stroke-width="1"/><line x1="38" y1="6" x2="40" y2="4" stroke="#aaa" stroke-width="1.5"/><line x1="39" y1="6" x2="41" y2="3" stroke="#aaa" stroke-width="1.5"/></svg>`,
-  'acoustic-guitar': `<svg viewBox="0 0 64 64" width="48" height="48"><path d="M36 4 L38 4 L40 18 L38 20 L40 26 Q44 34 38 42 Q32 50 24 46 Q18 42 20 32 L22 26 L20 20 L22 18 Z" fill="#c48a3f" stroke="#8b6914" stroke-width="1"/><circle cx="30" cy="35" r="4" fill="#8b6914"/><line x1="30" y1="31" x2="30" y2="39" stroke="#c48a3f" stroke-width="0.5"/><line x1="26" y1="35" x2="34" y2="35" stroke="#c48a3f" stroke-width="0.5"/><line x1="36" y1="4" x2="38" y2="2" stroke="#aaa" stroke-width="1.5"/><line x1="37" y1="4" x2="39" y2="1" stroke="#aaa" stroke-width="1.5"/></svg>`,
+  'electric-guitar': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="30" y="4" width="4" height="24" rx="1" fill="#c0570a"/><line x1="34" y1="6" x2="38" y2="5" stroke="#aaa" stroke-width="1.5"/><line x1="34" y1="9" x2="38" y2="8" stroke="#aaa" stroke-width="1.5"/><line x1="34" y1="12" x2="38" y2="11" stroke="#aaa" stroke-width="1.5"/><path d="M24 28 Q18 30 16 36 Q14 42 18 46 Q22 50 28 48 L30 46 L28 42 L30 40 L34 40 L36 42 L34 46 L36 48 Q42 50 46 46 Q50 42 48 36 Q46 30 40 28 Z" fill="#e67e22" stroke="#c0570a" stroke-width="1.2"/><circle cx="28" cy="37" r="2" fill="#c0570a"/><circle cx="36" cy="37" r="2" fill="#c0570a"/><line x1="26" y1="28" x2="38" y2="28" stroke="#aaa" stroke-width="0.5"/><line x1="26" y1="30" x2="38" y2="30" stroke="#aaa" stroke-width="0.5"/></svg>`,
+  'acoustic-guitar': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="30" y="4" width="4" height="22" rx="1" fill="#8b6914"/><line x1="34" y1="6" x2="37" y2="5" stroke="#aaa" stroke-width="1.5"/><line x1="34" y1="9" x2="37" y2="8" stroke="#aaa" stroke-width="1.5"/><line x1="34" y1="12" x2="37" y2="11" stroke="#aaa" stroke-width="1.5"/><ellipse cx="32" cy="30" rx="10" ry="6" fill="#c48a3f" stroke="#8b6914" stroke-width="1"/><ellipse cx="32" cy="44" rx="14" ry="10" fill="#c48a3f" stroke="#8b6914" stroke-width="1.2"/><ellipse cx="32" cy="44" rx="5" ry="4" fill="#8b6914"/><line x1="30" y1="26" x2="30" y2="54" stroke="#aaa" stroke-width="0.4"/><line x1="32" y1="26" x2="32" y2="54" stroke="#aaa" stroke-width="0.4"/><line x1="34" y1="26" x2="34" y2="54" stroke="#aaa" stroke-width="0.4"/><rect x="28" y="24" width="8" height="3" rx="1" fill="#8b6914"/></svg>`,
   'guitar-combo': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="14" y="14" width="36" height="40" rx="4" fill="#6b4f30"/><rect x="17" y="17" width="30" height="18" rx="2" fill="#4a3620"/><circle cx="32" cy="26" r="7" fill="none" stroke="#8b6940" stroke-width="1.5"/><circle cx="32" cy="26" r="3" fill="none" stroke="#8b6940" stroke-width="1"/><circle cx="22" cy="44" r="1.5" fill="#e67e22"/><circle cx="28" cy="44" r="1.5" fill="#e67e22"/><circle cx="34" cy="44" r="1.5" fill="#e67e22"/><rect x="38" y="42" width="6" height="4" rx="1" fill="#e67e22"/><text x="32" y="10" text-anchor="middle" font-size="7" fill="#e67e22" font-weight="bold">COMBO</text></svg>`,
   'guitar-212': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="10" y="14" width="44" height="40" rx="4" fill="#4a6a85"/><rect x="13" y="17" width="38" height="22" rx="2" fill="#2d4a60"/><circle cx="24" cy="28" r="7" fill="none" stroke="#7a9ab0" stroke-width="1.5"/><circle cx="40" cy="28" r="7" fill="none" stroke="#7a9ab0" stroke-width="1.5"/><circle cx="18" cy="48" r="1.5" fill="#e67e22"/><circle cx="24" cy="48" r="1.5" fill="#e67e22"/><circle cx="30" cy="48" r="1.5" fill="#e67e22"/><circle cx="36" cy="48" r="1.5" fill="#e67e22"/><circle cx="42" cy="48" r="1.5" fill="#e67e22"/><text x="32" y="10" text-anchor="middle" font-size="7" fill="#e67e22" font-weight="bold">GTR 2x12</text></svg>`,
   'guitar-halfstack': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="12" y="6" width="40" height="14" rx="3" fill="#4a6a85"/><circle cx="20" cy="13" r="1.5" fill="#e67e22"/><circle cx="26" cy="13" r="1.5" fill="#e67e22"/><circle cx="32" cy="13" r="1.5" fill="#e67e22"/><rect x="38" y="10" width="10" height="5" rx="1" fill="#2d4a60"/><rect x="10" y="22" width="44" height="36" rx="4" fill="#4a6a85"/><rect x="13" y="25" width="38" height="28" rx="2" fill="#2d4a60"/><circle cx="24" cy="33" r="6" fill="none" stroke="#7a9ab0" stroke-width="1.5"/><circle cx="40" cy="33" r="6" fill="none" stroke="#7a9ab0" stroke-width="1.5"/><circle cx="24" cy="47" r="6" fill="none" stroke="#7a9ab0" stroke-width="1.5"/><circle cx="40" cy="47" r="6" fill="none" stroke="#7a9ab0" stroke-width="1.5"/></svg>`,
   'guitar-fullstack': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="14" y="2" width="36" height="10" rx="2" fill="#4a6a85"/><circle cx="22" cy="7" r="1.2" fill="#e67e22"/><circle cx="27" cy="7" r="1.2" fill="#e67e22"/><circle cx="32" cy="7" r="1.2" fill="#e67e22"/><rect x="36" y="5" width="8" height="4" rx="1" fill="#2d4a60"/><rect x="12" y="13" width="40" height="24" rx="3" fill="#4a6a85"/><rect x="14" y="15" width="36" height="20" rx="2" fill="#2d4a60"/><circle cx="24" cy="21" r="4.5" fill="none" stroke="#7a9ab0" stroke-width="1.2"/><circle cx="40" cy="21" r="4.5" fill="none" stroke="#7a9ab0" stroke-width="1.2"/><circle cx="24" cy="31" r="4.5" fill="none" stroke="#7a9ab0" stroke-width="1.2"/><circle cx="40" cy="31" r="4.5" fill="none" stroke="#7a9ab0" stroke-width="1.2"/><rect x="12" y="38" width="40" height="24" rx="3" fill="#4a6a85"/><rect x="14" y="40" width="36" height="20" rx="2" fill="#2d4a60"/><circle cx="24" cy="46" r="4.5" fill="none" stroke="#7a9ab0" stroke-width="1.2"/><circle cx="40" cy="46" r="4.5" fill="none" stroke="#7a9ab0" stroke-width="1.2"/><circle cx="24" cy="56" r="4.5" fill="none" stroke="#7a9ab0" stroke-width="1.2"/><circle cx="40" cy="56" r="4.5" fill="none" stroke="#7a9ab0" stroke-width="1.2"/></svg>`,
   'guitar-stand': `<svg viewBox="0 0 64 64" width="48" height="48"><line x1="32" y1="8" x2="32" y2="48" stroke="#aaa" stroke-width="2.5"/><line x1="32" y1="48" x2="18" y2="58" stroke="#aaa" stroke-width="2"/><line x1="32" y1="48" x2="46" y2="58" stroke="#aaa" stroke-width="2"/><line x1="26" y1="18" x2="38" y2="18" stroke="#aaa" stroke-width="2"/><path d="M28 12 Q32 8 36 12" fill="none" stroke="#aaa" stroke-width="2"/><circle cx="18" cy="58" r="2" fill="#888"/><circle cx="46" cy="58" r="2" fill="#888"/></svg>`,
-  'bass-guitar': `<svg viewBox="0 0 64 64" width="48" height="48"><path d="M36 4 L38 4 L40 20 L38 22 L40 28 Q46 36 40 44 Q34 52 26 48 Q18 44 20 34 L22 28 L20 22 L22 20 Z" fill="#3498db" stroke="#1a6fa8" stroke-width="1"/><circle cx="31" cy="36" r="3" fill="none" stroke="#1a6fa8" stroke-width="1"/><circle cx="31" cy="42" r="2" fill="none" stroke="#1a6fa8" stroke-width="1"/><line x1="36" y1="4" x2="37" y2="2" stroke="#aaa" stroke-width="1.5"/><line x1="37" y1="4" x2="38" y2="1" stroke="#aaa" stroke-width="1.5"/></svg>`,
+  'bass-guitar': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="30" y="2" width="4" height="28" rx="1" fill="#1a6fa8"/><line x1="34" y1="5" x2="38" y2="4" stroke="#aaa" stroke-width="1.5"/><line x1="34" y1="8" x2="38" y2="7" stroke="#aaa" stroke-width="1.5"/><path d="M24 30 Q18 33 16 38 Q14 44 18 48 Q22 52 28 50 L30 48 L28 44 L30 42 L34 42 L36 44 L34 48 L36 50 Q42 52 46 48 Q50 44 48 38 Q46 33 40 30 Z" fill="#3498db" stroke="#1a6fa8" stroke-width="1.2"/><circle cx="28" cy="39" r="2" fill="#1a6fa8"/><circle cx="36" cy="39" r="2" fill="#1a6fa8"/><line x1="30" y1="30" x2="30" y2="50" stroke="#aaa" stroke-width="0.4"/><line x1="32" y1="30" x2="32" y2="50" stroke="#aaa" stroke-width="0.4"/><line x1="34" y1="30" x2="34" y2="50" stroke="#aaa" stroke-width="0.4"/></svg>`,
   'bass-combo': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="12" y="14" width="40" height="40" rx="4" fill="#2d4a60"/><rect x="15" y="17" width="34" height="20" rx="2" fill="#1e3548"/><circle cx="32" cy="27" r="8" fill="none" stroke="#4a7a9a" stroke-width="1.5"/><circle cx="32" cy="27" r="4" fill="none" stroke="#4a7a9a" stroke-width="1"/><circle cx="20" cy="46" r="1.5" fill="#3498db"/><circle cx="26" cy="46" r="1.5" fill="#3498db"/><circle cx="32" cy="46" r="1.5" fill="#3498db"/><rect x="36" y="44" width="8" height="4" rx="1" fill="#3498db"/><text x="32" y="10" text-anchor="middle" font-size="7" fill="#3498db" font-weight="bold">COMBO</text></svg>`,
   'bass-115': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="10" y="12" width="44" height="44" rx="4" fill="#2d4a60"/><rect x="13" y="15" width="38" height="36" rx="2" fill="#1e3548"/><circle cx="32" cy="33" r="14" fill="none" stroke="#4a7a9a" stroke-width="2"/><circle cx="32" cy="33" r="7" fill="none" stroke="#4a7a9a" stroke-width="1"/><circle cx="32" cy="33" r="2" fill="#4a7a9a"/><text x="32" y="9" text-anchor="middle" font-size="7" fill="#3498db" font-weight="bold">1x15</text></svg>`,
   'bass-410': `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="10" y="10" width="44" height="46" rx="4" fill="#2d4a60"/><rect x="13" y="13" width="38" height="38" rx="2" fill="#1e3548"/><circle cx="24" cy="24" r="6.5" fill="none" stroke="#4a7a9a" stroke-width="1.5"/><circle cx="40" cy="24" r="6.5" fill="none" stroke="#4a7a9a" stroke-width="1.5"/><circle cx="24" cy="40" r="6.5" fill="none" stroke="#4a7a9a" stroke-width="1.5"/><circle cx="40" cy="40" r="6.5" fill="none" stroke="#4a7a9a" stroke-width="1.5"/><text x="32" y="7" text-anchor="middle" font-size="7" fill="#3498db" font-weight="bold">4x10</text></svg>`,
@@ -421,6 +421,66 @@ export default function StagePlotCreator({ workspaceId }) {
     }
   };
 
+  // Print/PDF export
+  const handlePrint = () => {
+    if (!activePlotData) return;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const data = activePlotData;
+    const plotTitle = plots.find(p => p.id === activePlotId)?.title || 'Stage Plot';
+    const bandName = data.bandName || '';
+    const eventName = data.eventName || '';
+    const eventDate = data.eventDate || '';
+    const sw = data.stageWidth || 900;
+    const sh = data.stageHeight || 500;
+    const items = data.items || [];
+
+    const escHtml = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    // Render items as absolutely positioned elements
+    const itemsHtml = items.map(item => {
+      if (item.type === 'text') {
+        return `<div style="position:absolute;left:${item.x}px;top:${item.y}px;font-size:12px;font-weight:500;color:#333;background:rgba(200,200,200,0.3);border:1px dashed #999;border-radius:3px;padding:2px 6px;white-space:nowrap">${escHtml(item.text || '')}</div>`;
+      }
+      const svg = SVG_TEMPLATES[item.type] || '';
+      const label = LABEL_MAP[item.type] || item.type;
+      return `<div style="position:absolute;left:${item.x}px;top:${item.y}px;display:flex;flex-direction:column;align-items:center;gap:2px">${svg}<span style="font-size:9px;text-transform:uppercase;letter-spacing:0.5px;background:rgba(0,0,0,0.6);color:#fff;padding:1px 4px;border-radius:2px;white-space:nowrap">${escHtml(label)}</span></div>`;
+    }).join('');
+
+    const isLandscape = sw > sh;
+    const headerParts = [bandName, eventName, eventDate].filter(Boolean);
+
+    const html = `<!DOCTYPE html><html><head><title>${escHtml(plotTitle)}</title><style>
+      * { margin:0; padding:0; box-sizing:border-box; }
+      @page { ${isLandscape ? 'size:landscape;' : ''} margin:12mm; }
+      body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; padding:20px; }
+      .header { text-align:center; margin-bottom:16px; padding-bottom:12px; border-bottom:2px solid #222; }
+      .plot-title { font-size:24px; font-weight:800; letter-spacing:1px; text-transform:uppercase; }
+      .plot-meta { font-size:14px; color:#666; margin-top:4px; }
+      .stage-container { display:flex; flex-direction:column; align-items:center; }
+      .front-label { font-size:11px; text-transform:uppercase; letter-spacing:2px; color:#999; margin-bottom:6px; }
+      .stage { position:relative; border:2px solid #333; border-radius:6px; background:#f8f8f8; background-image:linear-gradient(#ddd 1px,transparent 1px),linear-gradient(90deg,#ddd 1px,transparent 1px); background-size:40px 40px; overflow:hidden; }
+      .back-label { font-size:11px; text-transform:uppercase; letter-spacing:2px; color:#999; margin-top:6px; }
+      .dimensions { font-size:10px; color:#bbb; margin-top:4px; }
+    </style></head><body>
+      <div class="header">
+        <div class="plot-title">${escHtml(plotTitle)}</div>
+        ${headerParts.length ? `<div class="plot-meta">${headerParts.map(escHtml).join(' &middot; ')}</div>` : ''}
+      </div>
+      <div class="stage-container">
+        <div class="front-label">Front of Stage / Audience</div>
+        <div class="stage" style="width:${sw}px;height:${sh}px">${itemsHtml}</div>
+        <div class="back-label">Back of Stage</div>
+        <div class="dimensions">${sw} &times; ${sh}</div>
+      </div>
+      <script>window.onload=function(){window.print();}<\/script>
+    </body></html>`;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   // ── Editor view ──
   if (activePlotId && activePlotData) {
     const activePlot = plots.find(p => p.id === activePlotId);
@@ -445,6 +505,13 @@ export default function StagePlotCreator({ workspaceId }) {
             }}
           />
           <span className="text-xs text-[var(--color-text-muted)]">Auto-saved</span>
+          <button
+            onClick={handlePrint}
+            className="px-3 py-1 rounded text-xs bg-orange-600 hover:bg-orange-500 text-white transition-colors"
+            title="Print or save as PDF"
+          >
+            Print / PDF
+          </button>
         </div>
 
         {/* Stage editor */}

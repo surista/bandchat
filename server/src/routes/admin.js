@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { authenticate, isSystemAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 import { listAllObjects, deleteFile, isConfigured as isR2Configured } from '../lib/storage.js';
-import { createBackup, listBackups, getBackupStream, cleanupOldBackups, previewBackup, restoreFromBackup } from '../services/backup.js';
+import { createBackup, listBackups, getBackupStream, cleanupOldBackups, previewBackup, restoreFromBackup, createWorkspaceBackup, listWorkspaceBackups, previewWorkspaceBackup, restoreWorkspaceBackup, cleanupWorkspaceBackups } from '../services/backup.js';
 
 const router = express.Router();
 
@@ -608,6 +608,119 @@ router.post('/backups/restore', async (req, res) => {
 });
 
 // ==========================================
+// Workspace-Scoped Backups
+// ==========================================
+
+// POST /api/admin/workspaces/:workspaceId/backup — Trigger a workspace backup
+router.post('/workspaces/:workspaceId/backup', async (req, res) => {
+  try {
+    const r2Available = await isR2Configured();
+    if (!r2Available) {
+      return res.status(400).json({ error: 'R2 storage not configured.' });
+    }
+
+    console.log(`Workspace backup triggered by ${req.user.email} for workspace ${req.params.workspaceId}`);
+    const result = await createWorkspaceBackup(req.params.workspaceId);
+    console.log(`Workspace backup complete: ${result.key} (${(result.size / 1024).toFixed(1)} KB)`);
+
+    // Cleanup old backups beyond limit
+    const cleanup = await cleanupWorkspaceBackups(req.params.workspaceId);
+
+    res.json({ ...result, cleanup });
+  } catch (error) {
+    console.error('Workspace backup error:', error);
+    res.status(500).json({ error: error.message || 'Workspace backup failed' });
+  }
+});
+
+// GET /api/admin/workspaces/:workspaceId/backups — List workspace backups
+router.get('/workspaces/:workspaceId/backups', async (req, res) => {
+  try {
+    const r2Available = await isR2Configured();
+    if (!r2Available) {
+      return res.json({ backups: [], r2Available: false });
+    }
+
+    const backups = await listWorkspaceBackups(req.params.workspaceId);
+    res.json({ backups, r2Available: true });
+  } catch (error) {
+    console.error('List workspace backups error:', error);
+    res.status(500).json({ error: 'Failed to list workspace backups' });
+  }
+});
+
+// POST /api/admin/workspace-backups/preview — Preview a workspace backup
+router.post('/workspace-backups/preview', async (req, res) => {
+  try {
+    const { key } = req.body;
+    if (!key) {
+      return res.status(400).json({ error: 'Missing backup key' });
+    }
+
+    const preview = await previewWorkspaceBackup(key);
+    res.json(preview);
+  } catch (error) {
+    console.error('Workspace backup preview error:', error);
+    res.status(500).json({ error: error.message || 'Failed to preview workspace backup' });
+  }
+});
+
+// POST /api/admin/workspace-backups/restore — Restore a workspace from backup
+router.post('/workspace-backups/restore', async (req, res) => {
+  try {
+    const { key, confirmPhrase } = req.body;
+
+    if (!key) {
+      return res.status(400).json({ error: 'Missing backup key' });
+    }
+    if (confirmPhrase !== 'RESTORE WORKSPACE') {
+      return res.status(400).json({ error: 'Invalid confirmation phrase. Type "RESTORE WORKSPACE" to confirm.' });
+    }
+
+    console.log(`WORKSPACE RESTORE initiated by ${req.user.email} from backup: ${key}`);
+
+    const result = await restoreWorkspaceBackup(key, (stage, detail) => {
+      console.log(`Workspace Restore [${stage}]: ${detail}`);
+    });
+
+    console.log(`WORKSPACE RESTORE complete.`);
+    res.json(result);
+  } catch (error) {
+    console.error('Workspace restore error:', error);
+    res.status(500).json({ error: error.message || 'Workspace restore failed' });
+  }
+});
+
+// GET /api/admin/workspace-backups/download/:workspaceId/:filename — Download a workspace backup
+router.get('/workspace-backups/download/:workspaceId/:filename', async (req, res) => {
+  try {
+    const workspaceId = req.params.workspaceId;
+    const filename = path.basename(req.params.filename);
+    if (filename !== req.params.filename || filename.includes('..')) {
+      return res.status(400).json({ error: 'Invalid filename' });
+    }
+    // Validate workspaceId is a UUID to prevent path traversal
+    if (!/^[0-9a-f-]{36}$/i.test(workspaceId)) {
+      return res.status(400).json({ error: 'Invalid workspace ID' });
+    }
+
+    const key = `backups/workspace/${workspaceId}/${filename}`;
+    const { stream, size, contentType } = await getBackupStream(key);
+
+    res.set({
+      'Content-Type': contentType || 'application/gzip',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    });
+    if (size) res.set('Content-Length', size);
+
+    stream.pipe(res);
+  } catch (error) {
+    console.error('Workspace backup download error:', error);
+    res.status(404).json({ error: 'Workspace backup not found' });
+  }
+});
+
+// ==========================================
 // Soft-Delete: List / Restore / Purge
 // ==========================================
 
@@ -806,6 +919,19 @@ router.delete('/workspaces/:workspaceId/purge', async (req, res) => {
       }
     } catch (err) {
       console.error('R2 cleanup warning during workspace purge:', err);
+    }
+
+    // Clean up workspace backups from R2
+    try {
+      const r2Available = await isR2Configured();
+      if (r2Available) {
+        const wsBackups = await listWorkspaceBackups(workspace.id);
+        for (const b of wsBackups) {
+          try { await deleteFile(b.key); } catch { /* best effort */ }
+        }
+      }
+    } catch (err) {
+      console.error('R2 workspace backup cleanup warning during purge:', err);
     }
 
     // Cascade delete handles all child records
