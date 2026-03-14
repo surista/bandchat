@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.bandchat.mobile",
+      "sha256_cert_fingerprints": [
+        "A8:7C:53:08:44:5E:09:D3:0F:07:39:2F:59:DB:F7:68:50:A1:0A:48:48:38:CC:76:DA:82:BD:E4:4D:F5:E6:CC"
+      ]
+    }
+  }
+]

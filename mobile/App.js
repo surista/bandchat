@@ -23,8 +23,8 @@ import api from './src/services/api';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isValidUUID = (str) => str && UUID_REGEX.test(str);
 
-// Invite codes are hex strings (64 chars from crypto.randomBytes(32))
-const INVITE_CODE_REGEX = /^[0-9a-f]{64}$/i;
+// Invite codes are 10-char base64url strings (e.g. RJ4IQFLS0A)
+const INVITE_CODE_REGEX = /^[A-Z0-9_-]{4,20}$/i;
 const isValidInviteCode = (str) => str && INVITE_CODE_REGEX.test(str);
 
 // Prepare channel data for navigation (resolve DM display names)
@@ -49,11 +49,13 @@ function handleDeepLink(url, navigationRef) {
   if (!url || !navigationRef.current) return;
   try {
     const parsed = new URL(url);
-    // Only accept our custom protocol
-    if (parsed.protocol !== 'bandchat:') return;
+    // Accept our custom protocol or HTTPS from our web domain
+    const isCustomScheme = parsed.protocol === 'bandchat:';
+    const isWebLink = parsed.protocol === 'https:' && parsed.hostname === 'bandchat.vercel.app';
+    if (!isCustomScheme && !isWebLink) return;
 
     // Sanitize and split path
-    const parts = parsed.pathname.replace(/^\/+/, '').split('/');
+    const parts = parsed.pathname.replace(/^\/+/, '').split('/').filter(Boolean);
     // Limit path depth to prevent abuse
     if (parts.length > 4) return;
 
@@ -70,7 +72,7 @@ function handleDeepLink(url, navigationRef) {
           console.warn('Invalid channel ID in deep link:', parts[3]);
           return;
         }
-        // bandchat://workspace/:wid/channel/:cid
+        // workspace/:wid/channel/:cid
         navigationRef.current.navigate('Workspace', { id: parts[1] });
         api.getChannel(parts[3]).then(async (channel) => {
           const channelData = await prepareChannelForNav(channel);
@@ -79,16 +81,16 @@ function handleDeepLink(url, navigationRef) {
           }, 300);
         }).catch(() => {});
       } else {
-        // bandchat://workspace/:id
+        // workspace/:id
         navigationRef.current.navigate('Workspace', { id: parts[1] });
       }
-    } else if (parts[0] === 'invite' && parts[1]) {
+    } else if ((parts[0] === 'invite' || parts[0] === 'join') && parts[1]) {
       // Validate invite code format
       if (!isValidInviteCode(parts[1])) {
         console.warn('Invalid invite code in deep link:', parts[1]);
         return;
       }
-      // bandchat://invite/:code
+      // invite/:code or join/:code (web uses /join/, custom scheme uses /invite/)
       navigationRef.current.navigate('WorkspaceList', { inviteCode: parts[1] });
     }
   } catch (error) {
@@ -188,7 +190,7 @@ function AppContent() {
   }, []);
 
   const linking = {
-    prefixes: ['bandchat://'],
+    prefixes: ['bandchat://', 'https://bandchat.vercel.app'],
   };
 
   return (

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import WorkspaceList from './components/workspaces/WorkspaceList';
 import WorkspaceView from './components/workspaces/WorkspaceView';
@@ -38,6 +38,7 @@ const LandingPage = lazyRetry(() => import('./components/landing/LandingPage'));
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -47,11 +48,12 @@ function PrivateRoute({ children }) {
     );
   }
 
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  return isAuthenticated ? children : <Navigate to="/login" state={{ from: location.pathname }} />;
 }
 
 function PublicRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -61,7 +63,8 @@ function PublicRoute({ children }) {
     );
   }
 
-  return !isAuthenticated ? children : <Navigate to="/" />;
+  const redirectTo = location.state?.from || '/';
+  return !isAuthenticated ? children : <Navigate to={redirectTo} />;
 }
 
 function HomeRoute() {

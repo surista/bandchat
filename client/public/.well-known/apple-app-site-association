@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "N7TWCNBX6C.com.bandchat.mobile",
+        "paths": ["/join/*", "/workspace/*"]
+      }
+    ]
+  }
+}
