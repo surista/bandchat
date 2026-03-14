@@ -172,6 +172,17 @@ export default function ChannelListScreen({ navigation, route }) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => navigation.navigate('WorkspaceList')}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={{ marginRight: 8 }}
+          accessibilityLabel="Switch workspace"
+          accessibilityRole="button"
+        >
+          <Text style={{ fontSize: 20 }}>{'🏠'}</Text>
+        </TouchableOpacity>
+      ),
       headerRight: () => (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
           <TouchableOpacity

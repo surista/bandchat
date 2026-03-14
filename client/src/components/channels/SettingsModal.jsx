@@ -1254,7 +1254,33 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 <div className="space-y-4">
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-5 border border-[var(--color-modal-border)]">
                     <h4 className="text-lg font-medium text-[var(--color-text-primary)] mb-1">Workspace</h4>
-                    <p className="text-sm text-[var(--color-text-muted)]">{workspace.name}</p>
+                    {isAdmin ? (
+                      <div className="flex items-center gap-2 mt-2">
+                        <input
+                          type="text"
+                          defaultValue={workspace.name}
+                          maxLength={100}
+                          className="modal-input flex-1"
+                          onBlur={async (e) => {
+                            const newName = e.target.value.trim();
+                            if (newName && newName !== workspace.name) {
+                              try {
+                                await api.updateWorkspace(workspace.id, { name: newName });
+                                if (onRefreshWorkspace) onRefreshWorkspace();
+                              } catch (err) {
+                                e.target.value = workspace.name;
+                                setWsActionError(err.message);
+                              }
+                            } else {
+                              e.target.value = workspace.name;
+                            }
+                          }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-sm text-[var(--color-text-muted)]">{workspace.name}</p>
+                    )}
                     <p className="text-xs text-[var(--color-text-muted)] mt-2">{workspace.members?.length || 0} members</p>
                   </div>
 

@@ -559,8 +559,8 @@ router.get('/backups/download/:filename', async (req, res) => {
 router.post('/backups/restore-preview', async (req, res) => {
   try {
     const { key } = req.body;
-    if (!key) {
-      return res.status(400).json({ error: 'Missing backup key' });
+    if (!key || !key.startsWith('backups/') || key.includes('..')) {
+      return res.status(400).json({ error: 'Invalid backup key' });
     }
 
     const preview = await previewBackup(key);
@@ -579,8 +579,8 @@ router.post('/backups/restore', async (req, res) => {
   try {
     const { key, confirmPhrase } = req.body;
 
-    if (!key) {
-      return res.status(400).json({ error: 'Missing backup key' });
+    if (!key || !key.startsWith('backups/') || key.includes('..')) {
+      return res.status(400).json({ error: 'Invalid backup key' });
     }
     if (confirmPhrase !== 'RESTORE DATABASE') {
       return res.status(400).json({ error: 'Invalid confirmation phrase. Type "RESTORE DATABASE" to confirm.' });

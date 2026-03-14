@@ -1712,7 +1712,9 @@ router.get('/workspace/:workspaceId/calendar.ics', calendarLimiter, async (req, 
       select: { calendarToken: true, name: true }
     });
 
-    if (!workspace || !workspace.calendarToken || !crypto.timingSafeEqual(Buffer.from(workspace.calendarToken), Buffer.from(token))) {
+    const storedBuf = workspace?.calendarToken ? Buffer.from(workspace.calendarToken) : null;
+    const suppliedBuf = Buffer.from(token);
+    if (!workspace || !storedBuf || storedBuf.length !== suppliedBuf.length || !crypto.timingSafeEqual(storedBuf, suppliedBuf)) {
       return res.status(403).json({ error: 'Invalid token' });
     }
 

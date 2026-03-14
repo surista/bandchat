@@ -169,7 +169,11 @@ router.post('/:workspaceId/activate', authenticate, isWorkspaceAdmin, async (req
 // ---------------------------------------------------------------------------
 router.post('/webhooks/revenuecat', async (req, res) => {
   // Verify the shared webhook secret
-  const secret = process.env.REVENUECAT_WEBHOOK_SECRET || '';
+  const secret = process.env.REVENUECAT_WEBHOOK_SECRET;
+  if (!secret) {
+    console.warn('[Subscriptions] REVENUECAT_WEBHOOK_SECRET not set — rejecting webhook');
+    return res.status(503).json({ error: 'Webhook not configured' });
+  }
   const expectedAuth = `Bearer ${secret}`;
   const actualAuth = req.headers.authorization || '';
   const isValid = expectedAuth.length === actualAuth.length &&

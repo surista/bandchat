@@ -515,6 +515,11 @@ export async function restoreFromBackup(key, onProgress) {
             workspaceId: ws.id,
             role: m.role,
             joinedAt: m.joinedAt ? new Date(m.joinedAt) : new Date(),
+            notifyDMs: m.notifyDMs ?? true,
+            notifyMentions: m.notifyMentions ?? true,
+            notifyGigChanges: m.notifyGigChanges ?? true,
+            notifyAnnouncements: m.notifyAnnouncements ?? true,
+            notifyChannelMessages: m.notifyChannelMessages ?? false,
           })),
           skipDuplicates: true,
         });
@@ -547,7 +552,8 @@ export async function restoreFromBackup(key, onProgress) {
           isPrivate: ch.isPrivate || false,
           isDirect: ch.isDirect || false,
           workspaceId: ch.workspaceId,
-          channelGroupId: ch.channelGroupId || null,
+          groupId: ch.groupId || null,
+          position: ch.position ?? 0,
           createdAt: new Date(ch.createdAt),
           updatedAt: ch.updatedAt ? new Date(ch.updatedAt) : new Date(ch.createdAt),
         })),
@@ -559,7 +565,9 @@ export async function restoreFromBackup(key, onProgress) {
         (ch.members || []).map(m => ({
           userId: m.userId,
           channelId: ch.id,
-          lastReadAt: m.lastReadAt ? new Date(m.lastReadAt) : null,
+          lastRead: m.lastRead ? new Date(m.lastRead) : new Date(),
+          muted: m.muted || false,
+          joinedAt: m.joinedAt ? new Date(m.joinedAt) : new Date(),
         }))
       );
       if (memberData.length) {
@@ -600,11 +608,10 @@ export async function restoreFromBackup(key, onProgress) {
             data: s.attachments.map(a => ({
               id: a.id,
               url: a.url,
-              name: a.name || null,
+              filename: a.filename || null,
               type: a.type || 'FILE',
               size: a.size || null,
               songId: s.id,
-              uploadedById: a.uploadedById || null,
               createdAt: a.createdAt ? new Date(a.createdAt) : new Date(),
             })),
             skipDuplicates: true,
@@ -624,7 +631,6 @@ export async function restoreFromBackup(key, onProgress) {
           notes: bm.notes || null,
           isGuest: bm.isGuest || false,
           linkedUserId: bm.linkedUserId || null,
-          userId: bm.userId || null,
           workspaceId: bm.workspaceId,
           createdAt: bm.createdAt ? new Date(bm.createdAt) : new Date(),
           updatedAt: bm.updatedAt ? new Date(bm.updatedAt) : new Date(),
@@ -636,7 +642,7 @@ export async function restoreFromBackup(key, onProgress) {
           data: bm.stints.map(s => ({
             id: s.id,
             instruments: s.instruments || (s.instrument ? [s.instrument] : []),
-            startDate: s.startDate ? new Date(s.startDate) : null,
+            startDate: new Date(s.startDate),
             endDate: s.endDate ? new Date(s.endDate) : null,
             bandMemberId: bm.id,
           })),
@@ -664,7 +670,7 @@ export async function restoreFromBackup(key, onProgress) {
             authorId: msg.authorId || null,
             parentId: msg.parentId || null,
             removedUserName: msg.removedUserName || null,
-            isEdited: msg.isEdited || false,
+            isHidden: msg.isHidden || false,
             createdAt: new Date(msg.createdAt),
             updatedAt: msg.updatedAt ? new Date(msg.updatedAt) : new Date(msg.createdAt),
           }
@@ -679,6 +685,9 @@ export async function restoreFromBackup(key, onProgress) {
               filename: a.filename || null,
               type: a.type || 'FILE',
               size: a.size || null,
+              thumbnailUrl: a.thumbnailUrl || null,
+              width: a.width || null,
+              height: a.height || null,
               messageId: msg.id,
               createdAt: a.createdAt ? new Date(a.createdAt) : new Date(),
             })),
@@ -729,6 +738,8 @@ export async function restoreFromBackup(key, onProgress) {
           id: sl.id,
           name: sl.name,
           description: sl.description || null,
+          useShortNames: sl.useShortNames || false,
+          isAutoCreated: sl.isAutoCreated || false,
           performedAt: sl.performedAt ? new Date(sl.performedAt) : null,
           venue: sl.venue || null,
           startTime: sl.startTime || null,
@@ -747,6 +758,7 @@ export async function restoreFromBackup(key, onProgress) {
             position: ss.position,
             type: ss.type || 'SONG',
             label: ss.label || null,
+            duration: ss.duration || null,
             songId: ss.songId || ss.song?.id || null,
             setlistId: sl.id,
           })),
@@ -786,6 +798,7 @@ export async function restoreFromBackup(key, onProgress) {
           status: g.status || 'SCHEDULED',
           isLocked: g.isLocked || false,
           isPersonal: g.isPersonal || false,
+          setlistId: g.setlistId || null,
           workspaceId: g.workspaceId,
           createdById: g.createdById || null,
           removedCreatorName: g.removedCreatorName || null,
@@ -840,7 +853,6 @@ export async function restoreFromBackup(key, onProgress) {
             id: gs.id,
             gigId: g.id,
             songId: gs.songId,
-            position: gs.position ?? 0,
           })),
           skipDuplicates: true,
         });
@@ -914,7 +926,9 @@ export async function restoreFromBackup(key, onProgress) {
             allowMultiple: p.allowMultiple || false,
             isAnonymous: p.isAnonymous || false,
             isClosed: p.isClosed || false,
+            expiresAt: p.expiresAt ? new Date(p.expiresAt) : null,
             workspaceId: p.workspaceId,
+            channelId: p.channelId || null,
             createdById: p.createdById || null,
             removedCreatorName: p.removedCreatorName || null,
             createdAt: p.createdAt ? new Date(p.createdAt) : new Date(),
@@ -1027,6 +1041,7 @@ export async function restoreFromBackup(key, onProgress) {
         data: data.kitties.map(k => ({
           id: k.id,
           startingBalance: k.startingBalance ?? 0,
+          balanceAsOfDate: k.balanceAsOfDate ? new Date(k.balanceAsOfDate) : new Date(),
           currency: k.currency || 'USD',
           workspaceId: k.workspaceId,
           createdAt: k.createdAt ? new Date(k.createdAt) : new Date(),
@@ -1060,10 +1075,13 @@ export async function restoreFromBackup(key, onProgress) {
       await tx.achievement.createMany({
         data: data.achievements.map(a => ({
           id: a.id,
+          code: a.code,
           name: a.name,
           description: a.description || null,
           icon: a.icon || null,
           category: a.category || null,
+          threshold: a.threshold ?? null,
+          isBandWide: a.isBandWide || false,
         })),
         skipDuplicates: true,
       });
@@ -1077,6 +1095,7 @@ export async function restoreFromBackup(key, onProgress) {
           achievementId: a.achievementId,
           workspaceId: a.workspaceId,
           earnedAt: a.earnedAt ? new Date(a.earnedAt) : new Date(),
+          metadata: a.metadata ?? null,
         })),
         skipDuplicates: true,
       });
@@ -1089,6 +1108,7 @@ export async function restoreFromBackup(key, onProgress) {
           achievementId: a.achievementId,
           workspaceId: a.workspaceId,
           earnedAt: a.earnedAt ? new Date(a.earnedAt) : new Date(),
+          metadata: a.metadata ?? null,
         })),
         skipDuplicates: true,
       });
@@ -1116,11 +1136,12 @@ export async function restoreFromBackup(key, onProgress) {
       await tx.practiceSession.createMany({
         data: data.practice.map(p => ({
           id: p.id,
+          songId: p.songId,
           userId: p.userId,
           workspaceId: p.workspaceId,
-          date: new Date(p.date),
-          durationMinutes: p.durationMinutes || 0,
+          duration: p.duration || 0,
           notes: p.notes || null,
+          practicedAt: p.practicedAt ? new Date(p.practicedAt) : new Date(),
           createdAt: p.createdAt ? new Date(p.createdAt) : new Date(),
         })),
         skipDuplicates: true,
@@ -1912,6 +1933,11 @@ export async function restoreWorkspaceBackup(key, onProgress) {
             workspaceId: wid,
             role: m.role,
             joinedAt: m.joinedAt ? new Date(m.joinedAt) : new Date(),
+            notifyDMs: m.notifyDMs ?? true,
+            notifyMentions: m.notifyMentions ?? true,
+            notifyGigChanges: m.notifyGigChanges ?? true,
+            notifyAnnouncements: m.notifyAnnouncements ?? true,
+            notifyChannelMessages: m.notifyChannelMessages ?? false,
           })),
           skipDuplicates: true,
         });
@@ -1943,7 +1969,8 @@ export async function restoreWorkspaceBackup(key, onProgress) {
             isPrivate: ch.isPrivate || false,
             isDirect: ch.isDirect || false,
             workspaceId: wid,
-            channelGroupId: ch.channelGroupId || null,
+            groupId: ch.groupId || null,
+            position: ch.position ?? 0,
             createdAt: new Date(ch.createdAt),
             updatedAt: ch.updatedAt ? new Date(ch.updatedAt) : new Date(ch.createdAt),
           })),
@@ -1956,7 +1983,9 @@ export async function restoreWorkspaceBackup(key, onProgress) {
             .map(m => ({
               userId: m.userId,
               channelId: ch.id,
-              lastReadAt: m.lastReadAt ? new Date(m.lastReadAt) : null,
+              lastRead: m.lastRead ? new Date(m.lastRead) : new Date(),
+              muted: m.muted || false,
+              joinedAt: m.joinedAt ? new Date(m.joinedAt) : new Date(),
             }))
         );
         if (memberData.length) {
@@ -1992,9 +2021,8 @@ export async function restoreWorkspaceBackup(key, onProgress) {
         if (s.attachments?.length) {
           await tx.songAttachment.createMany({
             data: s.attachments.map(a => ({
-              id: a.id, url: a.url, name: a.name || null, type: a.type || 'FILE',
+              id: a.id, url: a.url, filename: a.filename || null, type: a.type || 'FILE',
               size: a.size || null, songId: s.id,
-              uploadedById: resolveUser(a.uploadedById),
               createdAt: a.createdAt ? new Date(a.createdAt) : new Date(),
             })),
             skipDuplicates: true,
@@ -2010,7 +2038,6 @@ export async function restoreWorkspaceBackup(key, onProgress) {
             id: bm.id, name: bm.name, imageUrl: bm.imageUrl || null, notes: bm.notes || null,
             isGuest: bm.isGuest || false,
             linkedUserId: resolveUser(bm.linkedUserId),
-            userId: resolveUser(bm.userId),
             workspaceId: wid,
             createdAt: bm.createdAt ? new Date(bm.createdAt) : new Date(),
             updatedAt: bm.updatedAt ? new Date(bm.updatedAt) : new Date(),
@@ -2021,7 +2048,7 @@ export async function restoreWorkspaceBackup(key, onProgress) {
             data: bm.stints.map(s => ({
               id: s.id,
               instruments: s.instruments || (s.instrument ? [s.instrument] : []),
-              startDate: s.startDate ? new Date(s.startDate) : null,
+              startDate: new Date(s.startDate),
               endDate: s.endDate ? new Date(s.endDate) : null,
               bandMemberId: bm.id,
             })),
@@ -2047,6 +2074,7 @@ export async function restoreWorkspaceBackup(key, onProgress) {
               parentId: msg.parentId || null,
               removedUserName: authorResolved ? (msg.removedUserName || null) : (msg.removedUserName || getRemovedName(msg.authorId)),
               isEdited: msg.isEdited || false,
+              isHidden: msg.isHidden || false,
               createdAt: new Date(msg.createdAt),
               updatedAt: msg.updatedAt ? new Date(msg.updatedAt) : new Date(msg.createdAt),
             },
@@ -2056,7 +2084,9 @@ export async function restoreWorkspaceBackup(key, onProgress) {
             await tx.attachment.createMany({
               data: msg.attachments.map(a => ({
                 id: a.id, url: a.url, filename: a.filename || null,
-                type: a.type || 'FILE', size: a.size || null, messageId: msg.id,
+                type: a.type || 'FILE', size: a.size || null,
+                thumbnailUrl: a.thumbnailUrl || null, width: a.width || null, height: a.height || null,
+                messageId: msg.id,
                 createdAt: a.createdAt ? new Date(a.createdAt) : new Date(),
               })),
               skipDuplicates: true,
@@ -2103,6 +2133,7 @@ export async function restoreWorkspaceBackup(key, onProgress) {
         await tx.setlist.create({
           data: {
             id: sl.id, name: sl.name, description: sl.description || null,
+            useShortNames: sl.useShortNames || false, isAutoCreated: sl.isAutoCreated || false,
             performedAt: sl.performedAt ? new Date(sl.performedAt) : null,
             venue: sl.venue || null, startTime: sl.startTime || null,
             workspaceId: wid, createdById: creatorResolved,
@@ -2115,7 +2146,8 @@ export async function restoreWorkspaceBackup(key, onProgress) {
           await tx.setlistSong.createMany({
             data: sl.songs.map(ss => ({
               id: ss.id, position: ss.position, type: ss.type || 'SONG',
-              label: ss.label || null, songId: ss.songId || ss.song?.id || null,
+              label: ss.label || null, duration: ss.duration || null,
+              songId: ss.songId || ss.song?.id || null,
               setlistId: sl.id,
             })),
             skipDuplicates: true,
@@ -2146,6 +2178,7 @@ export async function restoreWorkspaceBackup(key, onProgress) {
             notes: g.notes || null, pay: g.pay || null,
             status: g.status || 'SCHEDULED', isLocked: g.isLocked || false,
             isPersonal: g.isPersonal || false,
+            setlistId: g.setlistId || null,
             workspaceId: wid, createdById: creatorResolved,
             removedCreatorName: creatorResolved ? (g.removedCreatorName || null) : (g.removedCreatorName || getRemovedName(g.createdById)),
             createdAt: g.createdAt ? new Date(g.createdAt) : new Date(),
@@ -2176,7 +2209,7 @@ export async function restoreWorkspaceBackup(key, onProgress) {
         }
         if (g.songsPlayed?.length) {
           await tx.gigSong.createMany({
-            data: g.songsPlayed.map(gs => ({ id: gs.id, gigId: g.id, songId: gs.songId, position: gs.position ?? 0 })),
+            data: g.songsPlayed.map(gs => ({ id: gs.id, gigId: g.id, songId: gs.songId })),
             skipDuplicates: true,
           });
         }
@@ -2236,8 +2269,8 @@ export async function restoreWorkspaceBackup(key, onProgress) {
             data: {
               id: p.id, question: p.question, description: p.description || null,
               allowMultiple: p.allowMultiple || false, isAnonymous: p.isAnonymous || false,
-              isClosed: p.isClosed || false, workspaceId: wid,
-              channelId: p.channelId || null,
+              isClosed: p.isClosed || false, expiresAt: p.expiresAt ? new Date(p.expiresAt) : null,
+              workspaceId: wid, channelId: p.channelId || null,
               createdById: creatorResolved,
               removedCreatorName: creatorResolved ? (p.removedCreatorName || null) : (p.removedCreatorName || getRemovedName(p.createdById)),
               createdAt: p.createdAt ? new Date(p.createdAt) : new Date(),
@@ -2320,6 +2353,7 @@ export async function restoreWorkspaceBackup(key, onProgress) {
           data: {
             id: data.kitty.id,
             startingBalance: data.kitty.startingBalance ?? 0,
+            balanceAsOfDate: data.kitty.balanceAsOfDate ? new Date(data.kitty.balanceAsOfDate) : new Date(),
             currency: data.kitty.currency || 'USD',
             workspaceId: wid,
             createdAt: data.kitty.createdAt ? new Date(data.kitty.createdAt) : new Date(),
@@ -2349,6 +2383,7 @@ export async function restoreWorkspaceBackup(key, onProgress) {
           data: validMemberAchievements.map(a => ({
             id: a.id, userId: a.userId, achievementId: a.achievementId,
             workspaceId: wid, earnedAt: a.earnedAt ? new Date(a.earnedAt) : new Date(),
+            metadata: a.metadata ?? null,
           })),
           skipDuplicates: true,
         });
@@ -2361,6 +2396,7 @@ export async function restoreWorkspaceBackup(key, onProgress) {
           data: validBandAchievements.map(a => ({
             id: a.id, achievementId: a.achievementId, workspaceId: wid,
             earnedAt: a.earnedAt ? new Date(a.earnedAt) : new Date(),
+            metadata: a.metadata ?? null,
           })),
           skipDuplicates: true,
         });
@@ -2383,9 +2419,10 @@ export async function restoreWorkspaceBackup(key, onProgress) {
       if (validPractice.length) {
         await tx.practiceSession.createMany({
           data: validPractice.map(p => ({
-            id: p.id, userId: p.userId, workspaceId: wid,
-            date: new Date(p.date), durationMinutes: p.durationMinutes || 0,
-            notes: p.notes || null, createdAt: p.createdAt ? new Date(p.createdAt) : new Date(),
+            id: p.id, songId: p.songId, userId: p.userId, workspaceId: wid,
+            duration: p.duration || 0, notes: p.notes || null,
+            practicedAt: p.practicedAt ? new Date(p.practicedAt) : new Date(),
+            createdAt: p.createdAt ? new Date(p.createdAt) : new Date(),
           })),
           skipDuplicates: true,
         });

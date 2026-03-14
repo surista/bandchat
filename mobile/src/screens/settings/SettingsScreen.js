@@ -33,7 +33,7 @@ const EVENT_TYPES = [
   { value: 'OTHER', label: 'Other' },
 ];
 
-function SettingsRow({ icon, label, onPress, color, colors, showArrow = true }) {
+function SettingsRow({ icon, label, subtitle, onPress, color, colors, showArrow = true }) {
   return (
     <TouchableOpacity
       style={[styles.row, { backgroundColor: colors.bgSecondary }]}
@@ -43,7 +43,10 @@ function SettingsRow({ icon, label, onPress, color, colors, showArrow = true }) 
       accessibilityLabel={label}
     >
       <Text style={styles.rowIcon}>{icon}</Text>
-      <Text style={[styles.rowLabel, { color: color || colors.textPrimary }]}>{label}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.rowLabel, { color: color || colors.textPrimary }]}>{label}</Text>
+        {subtitle ? <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>{subtitle}</Text> : null}
+      </View>
       {showArrow && (
         <Text style={[styles.rowArrow, { color: colors.textSecondary }]}>{'\u203A'}</Text>
       )}
@@ -67,6 +70,9 @@ export default function SettingsScreen({ navigation, route }) {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [effectivePlan, setEffectivePlan] = useState('FREE');
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [renameText, setRenameText] = useState('');
+  const [renaming, setRenaming] = useState(false);
 
   // Workspace defaults state
   const [showDefaultsModal, setShowDefaultsModal] = useState(false);
@@ -149,6 +155,25 @@ export default function SettingsScreen({ navigation, route }) {
       setDeleting(false);
     }
   }, [workspaceId, workspaceName, deleteConfirmText, navigation]);
+
+  const handleRenameWorkspace = useCallback(async () => {
+    const trimmed = renameText.trim();
+    if (!trimmed || trimmed === workspaceName) {
+      setShowRenameModal(false);
+      return;
+    }
+    setRenaming(true);
+    try {
+      await api.updateWorkspace(workspaceId, { name: trimmed });
+      setWorkspaceName(trimmed);
+      navigation.setParams({ name: trimmed });
+      setShowRenameModal(false);
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to rename workspace');
+    } finally {
+      setRenaming(false);
+    }
+  }, [workspaceId, renameText, workspaceName, navigation]);
 
   const handleSaveDefaults = useCallback(async () => {
     setSavingDefaults(true);
@@ -273,6 +298,17 @@ export default function SettingsScreen({ navigation, route }) {
           {isAdmin && (
             <>
               <SettingsRow
+                icon={'✏️'}
+                label="Rename Workspace"
+                subtitle={workspaceName}
+                onPress={() => {
+                  setRenameText(workspaceName);
+                  setShowRenameModal(true);
+                }}
+                colors={colors}
+              />
+              <View style={[styles.separator, { backgroundColor: colors.border }]} />
+              <SettingsRow
                 icon={'\uD83D\uDC65'}
                 label="Members"
                 onPress={() => navigation.navigate('WorkspaceMembers', { workspaceId })}
@@ -388,6 +424,48 @@ export default function SettingsScreen({ navigation, route }) {
           BandChat Mobile v{Constants.expoConfig?.version || '1.0.0'}
         </Text>
       </ScrollView>
+
+      {/* Rename Workspace Modal */}
+      <Modal visible={showRenameModal} transparent animationType="fade" onRequestClose={() => setShowRenameModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Rename Workspace</Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+              value={renameText}
+              onChangeText={setRenameText}
+              placeholder="Workspace name"
+              placeholderTextColor={colors.textSecondary}
+              maxLength={100}
+              autoFocus
+              selectTextOnFocus
+              returnKeyType="done"
+              onSubmitEditing={handleRenameWorkspace}
+              accessibilityLabel="New workspace name"
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
+                onPress={() => setShowRenameModal(false)}
+                disabled={renaming}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel"
+              >
+                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#22c55e' }, (!renameText.trim() || renameText.trim() === workspaceName) && { opacity: 0.5 }]}
+                onPress={handleRenameWorkspace}
+                disabled={renaming || !renameText.trim() || renameText.trim() === workspaceName}
+                accessibilityRole="button"
+                accessibilityLabel="Save new name"
+              >
+                <Text style={[styles.modalButtonText, { color: '#fff' }]}>{renaming ? 'Saving...' : 'Save'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Delete Workspace Confirmation Modal */}
       <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
@@ -577,7 +655,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   rowIcon: { fontSize: 18, width: 30, textAlign: 'center' },
-  rowLabel: { fontSize: 16, flex: 1, marginLeft: 4 },
+  rowLabel: { fontSize: 16, marginLeft: 4 },
+  rowSubtitle: { fontSize: 13, marginLeft: 4, marginTop: 2 },
   rowArrow: { fontSize: 22, fontWeight: '300' },
   separator: { height: StyleSheet.hairlineWidth, marginLeft: 50 },
   version: { fontSize: 13, textAlign: 'center', marginTop: 32 },
