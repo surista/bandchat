@@ -43,6 +43,28 @@
   padding-top: 0;
 }
 
+.sp-palette-section-toggle {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  user-select: none;
+}
+
+.sp-palette-section-toggle:hover {
+  color: var(--color-text-primary);
+}
+
+.sp-section-chevron {
+  font-size: 0.55rem;
+  transition: transform 0.15s;
+  display: inline-block;
+}
+
+.sp-section-chevron.collapsed {
+  transform: rotate(-90deg);
+}
+
 .sp-palette-item {
   display: flex;
   flex-direction: column;

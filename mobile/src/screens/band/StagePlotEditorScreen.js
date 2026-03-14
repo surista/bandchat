@@ -26,20 +26,28 @@ import ActionSheet from '../../components/ActionSheet';
 
 // ─── Label map ───
 const LABEL_MAP = {
-  vocals: 'Vocals', 'guitar-combo': 'Gtr Combo', 'guitar-212': 'Gtr 2x12',
+  vocals: 'Vocals', 'mic-stand': 'Mic Stand',
+  'electric-guitar': 'Electric Gtr', 'acoustic-guitar': 'Acoustic Gtr',
+  'guitar-combo': 'Gtr Combo', 'guitar-212': 'Gtr 2x12',
   'guitar-halfstack': 'Gtr Half', 'guitar-fullstack': 'Gtr Full',
+  'guitar-stand': 'Guitar Stand',
+  'bass-guitar': 'Bass Guitar',
   'bass-combo': 'Bass Combo', 'bass-115': 'Bass 1x15', 'bass-410': 'Bass 4x10',
-  'bass-stack': 'Bass Stack', keyboard: 'Keys', drums: 'Drums', piano: 'Piano',
+  'bass-stack': 'Bass Stack',
+  keyboard: 'Keys', 'keyboard-stand': 'Keys Stand', piano: 'Piano',
+  drums: 'Drums',
+  'monitor-wedge': 'Monitor', 'di-box': 'DI Box', pedalboard: 'Pedalboard',
   text: 'Text Label',
 };
 
 // ─── Palette sections ───
 const PALETTE_SECTIONS = [
-  { label: 'Vocals', items: ['vocals'] },
-  { label: 'Guitar', items: ['guitar-combo', 'guitar-212', 'guitar-halfstack', 'guitar-fullstack'] },
-  { label: 'Bass', items: ['bass-combo', 'bass-115', 'bass-410', 'bass-stack'] },
-  { label: 'Keys / Piano', items: ['keyboard', 'piano'] },
+  { label: 'Vocals', items: ['vocals', 'mic-stand'] },
+  { label: 'Guitar', items: ['electric-guitar', 'acoustic-guitar', 'guitar-combo', 'guitar-212', 'guitar-halfstack', 'guitar-fullstack', 'guitar-stand'] },
+  { label: 'Bass', items: ['bass-guitar', 'bass-combo', 'bass-115', 'bass-410', 'bass-stack'] },
+  { label: 'Keys / Piano', items: ['keyboard', 'keyboard-stand', 'piano'] },
   { label: 'Drums', items: ['drums'] },
+  { label: 'Monitors / PA', items: ['monitor-wedge', 'di-box', 'pedalboard'] },
   { label: 'Other', items: ['text'] },
 ];
 
@@ -229,6 +237,104 @@ function InstrumentSvg({ type, size = 48 }) {
           <Line x1="32" y1="52" x2="32" y2="58" stroke="#333" strokeWidth="2" />
         </Svg>
       );
+    case 'mic-stand':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 64 64">
+          <Circle cx="22" cy="10" r="5" fill="none" stroke="#e74c3c" strokeWidth="2" />
+          <Line x1="27" y1="10" x2="42" y2="10" stroke="#888" strokeWidth="2" />
+          <Line x1="32" y1="10" x2="32" y2="54" stroke="#888" strokeWidth="2" />
+          <Line x1="22" y1="54" x2="42" y2="54" stroke="#888" strokeWidth="2.5" />
+          <Circle cx="32" cy="54" r="2" fill="#888" />
+        </Svg>
+      );
+    case 'electric-guitar':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 64 64">
+          <Path d="M38 6 L40 6 L42 20 L40 22 L42 28 Q44 36 38 42 Q32 48 26 44 Q20 40 22 32 L24 28 L22 22 L24 20 Z" fill="#e67e22" stroke="#c0570a" strokeWidth="1" />
+          <Line x1="32" y1="6" x2="32" y2="20" stroke="#888" strokeWidth="0.5" />
+          <Circle cx="32" cy="34" r="3" fill="none" stroke="#c0570a" strokeWidth="1" />
+          <Circle cx="32" cy="40" r="2" fill="none" stroke="#c0570a" strokeWidth="1" />
+          <Line x1="38" y1="6" x2="40" y2="4" stroke="#888" strokeWidth="1.5" />
+          <Line x1="39" y1="6" x2="41" y2="3" stroke="#888" strokeWidth="1.5" />
+        </Svg>
+      );
+    case 'acoustic-guitar':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 64 64">
+          <Path d="M36 4 L38 4 L40 18 L38 20 L40 26 Q44 34 38 42 Q32 50 24 46 Q18 42 20 32 L22 26 L20 20 L22 18 Z" fill="#c48a3f" stroke="#8b6914" strokeWidth="1" />
+          <Circle cx="30" cy="35" r="4" fill="#8b6914" />
+          <Line x1="30" y1="31" x2="30" y2="39" stroke="#c48a3f" strokeWidth="0.5" />
+          <Line x1="26" y1="35" x2="34" y2="35" stroke="#c48a3f" strokeWidth="0.5" />
+          <Line x1="36" y1="4" x2="38" y2="2" stroke="#888" strokeWidth="1.5" />
+          <Line x1="37" y1="4" x2="39" y2="1" stroke="#888" strokeWidth="1.5" />
+        </Svg>
+      );
+    case 'guitar-stand':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 64 64">
+          <Line x1="32" y1="8" x2="32" y2="48" stroke="#888" strokeWidth="2.5" />
+          <Line x1="32" y1="48" x2="18" y2="58" stroke="#888" strokeWidth="2" />
+          <Line x1="32" y1="48" x2="46" y2="58" stroke="#888" strokeWidth="2" />
+          <Line x1="26" y1="18" x2="38" y2="18" stroke="#888" strokeWidth="2" />
+          <Path d="M28 12 Q32 8 36 12" fill="none" stroke="#888" strokeWidth="2" />
+          <Circle cx="18" cy="58" r="2" fill="#666" />
+          <Circle cx="46" cy="58" r="2" fill="#666" />
+        </Svg>
+      );
+    case 'bass-guitar':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 64 64">
+          <Path d="M36 4 L38 4 L40 20 L38 22 L40 28 Q46 36 40 44 Q34 52 26 48 Q18 44 20 34 L22 28 L20 22 L22 20 Z" fill="#3498db" stroke="#1a6fa8" strokeWidth="1" />
+          <Circle cx="31" cy="36" r="3" fill="none" stroke="#1a6fa8" strokeWidth="1" />
+          <Circle cx="31" cy="42" r="2" fill="none" stroke="#1a6fa8" strokeWidth="1" />
+          <Line x1="36" y1="4" x2="37" y2="2" stroke="#888" strokeWidth="1.5" />
+          <Line x1="37" y1="4" x2="38" y2="1" stroke="#888" strokeWidth="1.5" />
+        </Svg>
+      );
+    case 'keyboard-stand':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 64 64">
+          <Line x1="16" y1="22" x2="48" y2="22" stroke="#9b59b6" strokeWidth="3" strokeLinecap="round" />
+          <Line x1="18" y1="22" x2="32" y2="54" stroke="#888" strokeWidth="2" />
+          <Line x1="46" y1="22" x2="32" y2="54" stroke="#888" strokeWidth="2" />
+          <Line x1="22" y1="54" x2="42" y2="54" stroke="#888" strokeWidth="2" />
+          <Line x1="20" y1="38" x2="44" y2="38" stroke="#888" strokeWidth="1.5" />
+        </Svg>
+      );
+    case 'monitor-wedge':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 64 64">
+          <Path d="M10 44 L14 24 L50 24 L54 44 Z" fill="#555" stroke="#777" strokeWidth="1.5" />
+          <Rect x="18" y="28" width="28" height="12" rx="2" fill="#333" />
+          <Ellipse cx="32" cy="34" rx="4" ry="3" fill="none" stroke="#888" strokeWidth="1" />
+          <SvgText x="32" y="54" textAnchor="middle" fontSize="7" fill="#2ecc71" fontWeight="bold">MON</SvgText>
+        </Svg>
+      );
+    case 'di-box':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 64 64">
+          <Rect x="16" y="20" width="32" height="24" rx="3" fill="#444" />
+          <Rect x="18" y="22" width="28" height="20" rx="2" fill="#333" />
+          <Circle cx="26" cy="32" r="4" fill="none" stroke="#e67e22" strokeWidth="1.5" />
+          <Circle cx="38" cy="32" r="4" fill="none" stroke="#e67e22" strokeWidth="1.5" />
+          <SvgText x="32" y="54" textAnchor="middle" fontSize="7" fill="#e67e22" fontWeight="bold">DI</SvgText>
+        </Svg>
+      );
+    case 'pedalboard':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 64 64">
+          <Rect x="8" y="22" width="48" height="24" rx="4" fill="#333" stroke="#555" strokeWidth="1" />
+          <Rect x="12" y="26" width="10" height="16" rx="2" fill="#2c3e50" />
+          <Rect x="27" y="26" width="10" height="16" rx="2" fill="#2c3e50" />
+          <Rect x="42" y="26" width="10" height="16" rx="2" fill="#2c3e50" />
+          <Circle cx="17" cy="30" r="2" fill="#e74c3c" />
+          <Circle cx="32" cy="30" r="2" fill="#2ecc71" />
+          <Circle cx="47" cy="30" r="2" fill="#3498db" />
+          <Rect x="14" y="36" width="6" height="4" rx="1" fill="#aaa" />
+          <Rect x="29" y="36" width="6" height="4" rx="1" fill="#aaa" />
+          <Rect x="44" y="36" width="6" height="4" rx="1" fill="#aaa" />
+        </Svg>
+      );
     case 'text':
       return (
         <Svg width={s} height={s} viewBox="0 0 64 64">
@@ -341,6 +447,7 @@ export default function StagePlotEditorScreen({ navigation, route }) {
   const [selectedItem, setSelectedItem] = useState(null);
   const [showItemActions, setShowItemActions] = useState(false);
   const [stageLayout, setStageLayout] = useState({ width: 0, height: 0 });
+  const [collapsedSections, setCollapsedSections] = useState({});
 
   const saveTimerRef = useRef(null);
   const titleTimerRef = useRef(null);
@@ -576,26 +683,40 @@ export default function StagePlotEditorScreen({ navigation, route }) {
             <View style={[styles.paletteHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.paletteTitle, { color: colors.textPrimary }]}>Add Instrument</Text>
             <ScrollView style={styles.paletteScroll} showsVerticalScrollIndicator={false}>
-              {PALETTE_SECTIONS.map(section => (
-                <View key={section.label}>
-                  <Text style={[styles.paletteSectionLabel, { color: colors.textSecondary, borderTopColor: colors.border }]}>
-                    {section.label}
-                  </Text>
-                  <View style={styles.paletteGrid}>
-                    {section.items.map(type => (
-                      <TouchableOpacity
-                        key={type}
-                        style={[styles.paletteItem, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
-                        onPress={() => addItem(type)}
-                        activeOpacity={0.7}
-                      >
-                        <InstrumentSvg type={type} size={40} />
-                        <Text style={[styles.paletteItemLabel, { color: colors.textPrimary }]}>{LABEL_MAP[type]}</Text>
-                      </TouchableOpacity>
-                    ))}
+              {PALETTE_SECTIONS.map(section => {
+                const isCollapsed = collapsedSections[section.label];
+                return (
+                  <View key={section.label}>
+                    <TouchableOpacity
+                      style={[styles.paletteSectionHeader, { borderTopColor: colors.border }]}
+                      onPress={() => setCollapsedSections(prev => ({ ...prev, [section.label]: !prev[section.label] }))}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.paletteSectionChevron, { color: colors.textSecondary }]}>
+                        {isCollapsed ? '\u25B6' : '\u25BC'}
+                      </Text>
+                      <Text style={[styles.paletteSectionLabel, { color: colors.textSecondary }]}>
+                        {section.label}
+                      </Text>
+                    </TouchableOpacity>
+                    {!isCollapsed && (
+                      <View style={styles.paletteGrid}>
+                        {section.items.map(type => (
+                          <TouchableOpacity
+                            key={type}
+                            style={[styles.paletteItem, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
+                            onPress={() => addItem(type)}
+                            activeOpacity={0.7}
+                          >
+                            <InstrumentSvg type={type} size={40} />
+                            <Text style={[styles.paletteItemLabel, { color: colors.textPrimary }]}>{LABEL_MAP[type]}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
                   </View>
-                </View>
-              ))}
+                );
+              })}
               <View style={{ height: 20 }} />
             </ScrollView>
           </View>
@@ -756,14 +877,23 @@ const styles = StyleSheet.create({
   paletteScroll: {
     paddingHorizontal: 16,
   },
+  paletteSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: 4,
+  },
+  paletteSectionChevron: {
+    fontSize: 9,
+    width: 12,
+  },
   paletteSectionLabel: {
     fontSize: 12,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    paddingVertical: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    marginTop: 4,
   },
   paletteGrid: {
     flexDirection: 'row',
