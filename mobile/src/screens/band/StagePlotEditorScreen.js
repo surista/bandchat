@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
+  Image,
 } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -25,6 +26,13 @@ import { useTheme } from '../../context/ThemeContext';
 import { lightImpact, mediumImpact, successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import ActionSheet from '../../components/ActionSheet';
+
+// ─── Instrument image assets ───
+const INSTRUMENT_IMAGES = {
+  'electric-guitar': require('../../../assets/instruments/guitar_01.png'),
+  'acoustic-guitar': require('../../../assets/instruments/ac_guitar_01.png'),
+  'bass-guitar': require('../../../assets/instruments/bass_01.png'),
+};
 
 // ─── Label map ───
 const LABEL_MAP = {
@@ -250,44 +258,9 @@ function InstrumentSvg({ type, size = 48 }) {
         </Svg>
       );
     case 'electric-guitar':
-      return (
-        <Svg width={s} height={s} viewBox="0 0 64 64">
-          <Rect x="28" y="2" width="8" height="7" rx="2" fill="#5c3310" />
-          <Circle cx="26" cy="3.5" r="1.3" fill="#bbb" />
-          <Circle cx="26" cy="6.5" r="1.3" fill="#bbb" />
-          <Circle cx="38" cy="3.5" r="1.3" fill="#bbb" />
-          <Circle cx="38" cy="6.5" r="1.3" fill="#bbb" />
-          <Rect x="30" y="7" width="4" height="24" rx="1" fill="#a0693a" />
-          <Circle cx="32" cy="14" r="0.8" fill="#ddd" />
-          <Circle cx="32" cy="20" r="0.8" fill="#ddd" />
-          <Circle cx="32" cy="26" r="0.8" fill="#ddd" />
-          <Path d="M24 31 Q16 33 14 40 Q13 48 20 53 Q26 57 32 57 Q38 57 44 53 Q51 48 50 40 Q48 33 40 31 L37 27 L27 27 Z" fill="#e67e22" stroke="#c0570a" strokeWidth="1.2" />
-          <Rect x="24" y="36" width="16" height="3" rx="1.5" fill="#333" stroke="#555" strokeWidth="0.5" />
-          <Rect x="24" y="44" width="16" height="3" rx="1.5" fill="#333" stroke="#555" strokeWidth="0.5" />
-          <Rect x="28" y="50" width="8" height="2" rx="1" fill="#aaa" />
-          <Circle cx="21" cy="50" r="2" fill="#444" stroke="#666" strokeWidth="0.5" />
-        </Svg>
-      );
     case 'acoustic-guitar':
       return (
-        <Svg width={s} height={s} viewBox="0 0 64 64">
-          <Rect x="29" y="2" width="6" height="6" rx="2" fill="#5c3310" />
-          <Circle cx="27" cy="3.5" r="1.2" fill="#bbb" />
-          <Circle cx="27" cy="6" r="1.2" fill="#bbb" />
-          <Circle cx="37" cy="3.5" r="1.2" fill="#bbb" />
-          <Circle cx="37" cy="6" r="1.2" fill="#bbb" />
-          <Rect x="30" y="6" width="4" height="22" rx="1" fill="#8b6914" />
-          <Rect x="28" y="6" width="8" height="3" rx="1" fill="#6b5010" />
-          <Circle cx="32" cy="14" r="0.7" fill="#ddd" />
-          <Circle cx="32" cy="20" r="0.7" fill="#ddd" />
-          <Ellipse cx="32" cy="30" rx="10" ry="6" fill="#d4a04a" stroke="#8b6914" strokeWidth="1.2" />
-          <Ellipse cx="32" cy="44" rx="14" ry="12" fill="#d4a04a" stroke="#8b6914" strokeWidth="1.2" />
-          <Circle cx="32" cy="42" r="5" fill="#8b6914" />
-          <Rect x="28" y="50" width="8" height="2" rx="0.5" fill="#5c3310" />
-          <Line x1="30" y1="9" x2="30" y2="52" stroke="#bbb" strokeWidth="0.3" />
-          <Line x1="32" y1="9" x2="32" y2="52" stroke="#bbb" strokeWidth="0.3" />
-          <Line x1="34" y1="9" x2="34" y2="52" stroke="#bbb" strokeWidth="0.3" />
-        </Svg>
+        <Image source={INSTRUMENT_IMAGES[type]} style={{ width: s, height: s }} resizeMode="contain" />
       );
     case 'guitar-stand':
       return (
@@ -303,24 +276,7 @@ function InstrumentSvg({ type, size = 48 }) {
       );
     case 'bass-guitar':
       return (
-        <Svg width={s} height={s} viewBox="0 0 64 64">
-          <Rect x="28" y="1" width="8" height="8" rx="2" fill="#0f4c75" />
-          <Circle cx="26" cy="3" r="1.5" fill="#bbb" />
-          <Circle cx="26" cy="7" r="1.5" fill="#bbb" />
-          <Circle cx="38" cy="3" r="1.5" fill="#bbb" />
-          <Circle cx="38" cy="7" r="1.5" fill="#bbb" />
-          <Rect x="30" y="7" width="4" height="26" rx="1" fill="#1a6fa8" />
-          <Circle cx="32" cy="14" r="0.8" fill="#ddd" />
-          <Circle cx="32" cy="22" r="0.8" fill="#ddd" />
-          <Circle cx="32" cy="28" r="0.8" fill="#ddd" />
-          <Path d="M24 33 Q16 35 14 42 Q13 50 20 55 Q26 59 32 59 Q38 59 44 55 Q51 50 50 42 Q48 35 40 33 L37 29 L27 29 Z" fill="#3498db" stroke="#1a6fa8" strokeWidth="1.2" />
-          <Rect x="23" y="38" width="18" height="3" rx="1.5" fill="#0f4c75" stroke="#1a6fa8" strokeWidth="0.5" />
-          <Rect x="23" y="46" width="18" height="3" rx="1.5" fill="#0f4c75" stroke="#1a6fa8" strokeWidth="0.5" />
-          <Rect x="28" y="52" width="8" height="2" rx="1" fill="#aaa" />
-          <Line x1="30" y1="9" x2="30" y2="54" stroke="#bbb" strokeWidth="0.4" />
-          <Line x1="32" y1="9" x2="32" y2="54" stroke="#bbb" strokeWidth="0.4" />
-          <Line x1="34" y1="9" x2="34" y2="54" stroke="#bbb" strokeWidth="0.4" />
-        </Svg>
+        <Image source={INSTRUMENT_IMAGES[type]} style={{ width: s, height: s }} resizeMode="contain" />
       );
     case 'keyboard-stand':
       return (

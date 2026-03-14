@@ -601,20 +601,21 @@ export default function ChannelScreen({ navigation, route }) {
             const img = actionMessage.attachments?.find(a => a.type === 'IMAGE');
             if (!img?.url) return;
             const { status } = await MediaLibrary.requestPermissionsAsync();
-            if (status !== 'granted') {
+            if (status !== 'granted' && status !== 'limited') {
               Alert.alert('Permission needed', 'Allow BandChat to save photos to your library.');
               return;
             }
             let filename = img.url.split('/').pop()?.split('?')[0] || '';
+            filename = filename.replace(/[^a-zA-Z0-9._-]/g, '');
             if (!filename || !filename.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
               filename = `image-${Date.now()}.jpg`;
             }
             const localUri = FileSystem.cacheDirectory + filename;
-            await FileSystem.downloadAsync(img.url, localUri);
-            await MediaLibrary.saveToLibraryAsync(localUri);
+            const { uri } = await FileSystem.downloadAsync(img.url, localUri);
+            await MediaLibrary.saveToLibraryAsync(uri);
             Alert.alert('Saved', 'Image saved to your photo library.');
           } catch (err) {
-            Alert.alert('Error', 'Failed to save image.');
+            Alert.alert('Error', err.message || 'Failed to save image.');
           }
         })();
         break;

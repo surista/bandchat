@@ -27,20 +27,22 @@ function ImageViewer({ visible, imageUrl, onClose }) {
     try {
       setSaving(true);
       const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') {
+      if (status !== 'granted' && status !== 'limited') {
         Alert.alert('Permission needed', 'Allow BandChat to save photos to your library.');
         return;
       }
+      // Extract and sanitize filename
       let filename = imageUrl.split('/').pop()?.split('?')[0] || '';
+      filename = filename.replace(/[^a-zA-Z0-9._-]/g, '');
       if (!filename || !filename.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
         filename = `image-${Date.now()}.jpg`;
       }
       const localUri = FileSystem.cacheDirectory + filename;
-      await FileSystem.downloadAsync(imageUrl, localUri);
-      await MediaLibrary.saveToLibraryAsync(localUri);
+      const { uri } = await FileSystem.downloadAsync(imageUrl, localUri);
+      await MediaLibrary.saveToLibraryAsync(uri);
       Alert.alert('Saved', 'Image saved to your photo library.');
     } catch (err) {
-      Alert.alert('Error', 'Failed to save image.');
+      Alert.alert('Error', err.message || 'Failed to save image.');
     } finally {
       setSaving(false);
     }
