@@ -73,6 +73,8 @@ export default function ChannelScreen({ navigation, route }) {
   const [savedMessageIds, setSavedMessageIds] = useState(new Set());
   const [uploadProgress, setUploadProgress] = useState(null);
   const [lastReadAt, setLastReadAt] = useState(null);
+  const [blockedDomains, setBlockedDomains] = useState(new Set());
+  const [linkActionUrl, setLinkActionUrl] = useState(null);
 
   const channelIdRef = useRef(channel.id);
   const userIdRef = useRef(user?.id);
@@ -96,6 +98,19 @@ export default function ChannelScreen({ navigation, route }) {
       }
     };
   }, [channel.id]);
+
+  // Load blocked preview domains
+  useEffect(() => {
+    AsyncStorage.getItem('bandchat_blocked_preview_domains').then(val => {
+      if (val) {
+        try { setBlockedDomains(new Set(JSON.parse(val))); } catch {}
+      }
+    });
+  }, []);
+
+  const handleLinkLongPress = useCallback((url) => {
+    setLinkActionUrl(url);
+  }, []);
 
   // Restore scroll position on mount
   useEffect(() => {
@@ -772,10 +787,12 @@ export default function ChannelScreen({ navigation, route }) {
           members={workspaceMembers}
           isOwn={item.author?.id === user?.id}
           onTogglePreview={handleTogglePreview}
+          blockedDomains={blockedDomains}
+          onLinkLongPress={handleLinkLongPress}
         />
       </View>
     );
-  }, [colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, handleAvatarPress, handleTogglePreview, lastOwnMessageId, seenByCount, workspaceMembers, firstUnreadId, user?.id]);
+  }, [colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, handleAvatarPress, handleTogglePreview, lastOwnMessageId, seenByCount, workspaceMembers, firstUnreadId, user?.id, blockedDomains, handleLinkLongPress]);
 
   const renderFooter = useCallback(() => {
     if (!loadingMore) return null;
@@ -913,6 +930,29 @@ export default function ChannelScreen({ navigation, route }) {
             },
           },
         ]}
+      />
+
+      {/* Link Preview Domain Block ActionSheet */}
+      <ActionSheet
+        visible={!!linkActionUrl}
+        onClose={() => setLinkActionUrl(null)}
+        title={linkActionUrl ? (() => { try { return new URL(linkActionUrl).hostname; } catch { return linkActionUrl; } })() : ''}
+        actions={(() => {
+          if (!linkActionUrl) return [];
+          let domain;
+          try { domain = new URL(linkActionUrl).hostname; } catch { return []; }
+          const isBlocked = blockedDomains.has(domain);
+          return [{
+            label: isBlocked ? `Show previews from ${domain}` : `Block previews from ${domain}`,
+            onPress: () => {
+              const next = new Set(blockedDomains);
+              if (isBlocked) { next.delete(domain); } else { next.add(domain); }
+              AsyncStorage.setItem('bandchat_blocked_preview_domains', JSON.stringify([...next]));
+              setBlockedDomains(next);
+              setLinkActionUrl(null);
+            },
+          }];
+        })()}
       />
 
       {/* Report Message Modal */}

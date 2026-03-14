@@ -12,6 +12,7 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -24,6 +25,7 @@ import MessageInput from '../../components/MessageInput';
 import MessageActionSheet from '../../components/MessageActionSheet';
 import EmojiPicker from '../../components/EmojiPicker';
 import ImageViewer from '../../components/ImageViewer';
+import ActionSheet from '../../components/ActionSheet';
 import { useLayout } from '../../hooks/useLayout';
 
 export default function ThreadScreen({ navigation, route }) {
@@ -50,8 +52,23 @@ export default function ThreadScreen({ navigation, route }) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [editingMessage, setEditingMessage] = useState(null);
   const [viewingImage, setViewingImage] = useState(null);
+  const [blockedDomains, setBlockedDomains] = useState(new Set());
+  const [linkActionUrl, setLinkActionUrl] = useState(null);
 
   const parentIdRef = useRef(parentMessage.id);
+
+  // Load blocked preview domains
+  useEffect(() => {
+    AsyncStorage.getItem('bandchat_blocked_preview_domains').then(val => {
+      if (val) {
+        try { setBlockedDomains(new Set(JSON.parse(val))); } catch {}
+      }
+    });
+  }, []);
+
+  const handleLinkLongPress = useCallback((url) => {
+    setLinkActionUrl(url);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -359,9 +376,11 @@ export default function ThreadScreen({ navigation, route }) {
         members={workspaceMembers}
         isOwn={item.author?.id === user?.id}
         onTogglePreview={handleTogglePreview}
+        blockedDomains={blockedDomains}
+        onLinkLongPress={handleLinkLongPress}
       />
     );
-  }, [colors, handleLongPress, handleImagePress, handleReactionPress, handleAvatarPress, handleTogglePreview, workspaceMembers, user?.id]);
+  }, [colors, handleLongPress, handleImagePress, handleReactionPress, handleAvatarPress, handleTogglePreview, workspaceMembers, user?.id, blockedDomains, handleLinkLongPress]);
 
   if (loading) {
     return (
@@ -419,6 +438,29 @@ export default function ThreadScreen({ navigation, route }) {
         visible={!!viewingImage}
         imageUrl={viewingImage}
         onClose={() => setViewingImage(null)}
+      />
+
+      {/* Link Preview Domain Block ActionSheet */}
+      <ActionSheet
+        visible={!!linkActionUrl}
+        onClose={() => setLinkActionUrl(null)}
+        title={linkActionUrl ? (() => { try { return new URL(linkActionUrl).hostname; } catch { return linkActionUrl; } })() : ''}
+        actions={(() => {
+          if (!linkActionUrl) return [];
+          let domain;
+          try { domain = new URL(linkActionUrl).hostname; } catch { return []; }
+          const isBlocked = blockedDomains.has(domain);
+          return [{
+            label: isBlocked ? `Show previews from ${domain}` : `Block previews from ${domain}`,
+            onPress: () => {
+              const next = new Set(blockedDomains);
+              if (isBlocked) { next.delete(domain); } else { next.add(domain); }
+              AsyncStorage.setItem('bandchat_blocked_preview_domains', JSON.stringify([...next]));
+              setBlockedDomains(next);
+              setLinkActionUrl(null);
+            },
+          }];
+        })()}
       />
       </View>
     </KeyboardAvoidingView>

@@ -32,7 +32,7 @@ const SWIPE_COOLDOWN = 500; // ms between swipe actions
 
 const SWIPE_REACT_EMOJI = '\uD83D\uDC4D'; // 👍
 
-const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress, onSwipeReply, onSwipeReact, onAvatarPress, members, isOwn, onTogglePreview }, ref) {
+const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress, onSwipeReply, onSwipeReact, onAvatarPress, members, isOwn, onTogglePreview, blockedDomains, onLinkLongPress }, ref) {
   const { colors, density } = useTheme();
   const { attachmentWidth, attachmentHeight } = useLayout();
   const swipeableRef = useRef(null);
@@ -194,7 +194,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
             </Text>
           ) : null}
           <YouTubeThumbnail content={message.content} colors={colors} />
-          {message.content && !message.hidePreview && !YT_REGEX.test(message.content) ? <LinkPreview content={message.content} isOwn={isOwn} onDismiss={onTogglePreview ? () => onTogglePreview(message.id) : undefined} /> : null}
+          {message.content && !message.hidePreview && !YT_REGEX.test(message.content) ? <LinkPreview content={message.content} isOwn={isOwn} onDismiss={onTogglePreview ? () => onTogglePreview(message.id) : undefined} blockedDomains={blockedDomains} onLongPress={onLinkLongPress} /> : null}
           {renderAttachments(message.attachments, onImagePress, attachmentWidth, attachmentHeight)}
           {renderReactions(message.reactions, colors, message.id, onReactionPress)}
         </View>
@@ -255,7 +255,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
           </Text>
         ) : null}
         <YouTubeThumbnail content={message.content} colors={colors} />
-        {message.content && !message.hidePreview && !YT_REGEX.test(message.content) ? <LinkPreview content={message.content} isOwn={isOwn} onDismiss={onTogglePreview ? () => onTogglePreview(message.id) : undefined} /> : null}
+        {message.content && !message.hidePreview && !YT_REGEX.test(message.content) ? <LinkPreview content={message.content} isOwn={isOwn} onDismiss={onTogglePreview ? () => onTogglePreview(message.id) : undefined} blockedDomains={blockedDomains} onLongPress={onLinkLongPress} /> : null}
         {renderAttachments(message.attachments, onImagePress, attachmentWidth, attachmentHeight)}
         {renderReactions(message.reactions, colors, message.id, onReactionPress)}
         {message._count?.replies > 0 && (

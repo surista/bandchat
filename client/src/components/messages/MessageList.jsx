@@ -19,6 +19,22 @@ import api from '../../services/api';
 import EmbedCard from './EmbedCard';
 import '../../../styles/markdown.css';
 
+// ─── Blocked preview domains (localStorage) ───
+const BLOCKED_DOMAINS_KEY = 'bandchat_blocked_preview_domains';
+
+function getBlockedDomains() {
+  try { return new Set(JSON.parse(localStorage.getItem(BLOCKED_DOMAINS_KEY) || '[]')); }
+  catch { return new Set(); }
+}
+
+function persistBlockedDomains(domains) {
+  localStorage.setItem(BLOCKED_DOMAINS_KEY, JSON.stringify([...domains]));
+}
+
+function getDomain(url) {
+  try { return new URL(url).hostname; } catch { return ''; }
+}
+
 /**
  * Validates a URL string for safety before rendering as a link.
  * Prevents javascript: URLs, data: URLs, and malformed URLs.
@@ -90,7 +106,7 @@ function applyBoldItalicStrike(text, keyPrefix) {
 }
 
 /** Render a URL part as the appropriate embed (YouTube, image, video, Google Doc, or link) */
-function renderUrlPart(part, i, message, onOpenLightbox, onAddToLibrary, isOwn, onTogglePreview) {
+function renderUrlPart(part, i, message, onOpenLightbox, onAddToLibrary, isOwn, onTogglePreview, blockedDomains) {
   if (!isValidHttpUrl(part)) return <span key={i}>{part}</span>;
 
   // Google Doc/Sheet
@@ -150,16 +166,18 @@ function renderUrlPart(part, i, message, onOpenLightbox, onAddToLibrary, isOwn, 
     );
   }
 
+  const domain = getDomain(part);
+  const domainBlocked = blockedDomains?.has(domain);
   return (
     <span key={i}>
       <a href={part} target="_blank" rel="noopener noreferrer" className="text-slack-blue hover:underline break-all">{part}</a>
-      {!message?.hidePreview && <LinkPreviewCard url={part} onAddToLibrary={onAddToLibrary} isOwn={isOwn} onDismiss={onTogglePreview ? () => onTogglePreview(message.id) : undefined} />}
+      {!message?.hidePreview && !domainBlocked && <LinkPreviewCard url={part} onAddToLibrary={onAddToLibrary} isOwn={isOwn} onDismiss={onTogglePreview ? () => onTogglePreview(message.id) : undefined} />}
     </span>
   );
 }
 
 /** Process a text segment through embed detection, URL splitting, mention highlighting, and inline markdown */
-function processTextSegment(text, segKey, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview) {
+function processTextSegment(text, segKey, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview, blockedDomains) {
   // Detect embed tokens [type:uuid]
   const embedRegex = /\[(song|setlist|gig|poll):([a-f0-9-]+)\]/gi;
   const embedParts = text.split(embedRegex);
@@ -170,7 +188,7 @@ function processTextSegment(text, segKey, message, onOpenLightbox, members, onAd
     for (let ei = 0; ei < embedParts.length; ei += 3) {
       const textPart = embedParts[ei];
       if (textPart) {
-        result.push(...processTextInner(textPart, `${segKey}-e${ei}`, message, onOpenLightbox, members, onAddToLibrary, isOwn, onTogglePreview));
+        result.push(...processTextInner(textPart, `${segKey}-e${ei}`, message, onOpenLightbox, members, onAddToLibrary, isOwn, onTogglePreview, blockedDomains));
       }
       if (ei + 2 < embedParts.length) {
         const embedType = embedParts[ei + 1];
@@ -181,17 +199,17 @@ function processTextSegment(text, segKey, message, onOpenLightbox, members, onAd
     return result;
   }
 
-  return processTextInner(text, segKey, message, onOpenLightbox, members, onAddToLibrary, isOwn, onTogglePreview);
+  return processTextInner(text, segKey, message, onOpenLightbox, members, onAddToLibrary, isOwn, onTogglePreview, blockedDomains);
 }
 
 /** Inner text processing: URL splitting, mentions, inline markdown */
-function processTextInner(text, segKey, message, onOpenLightbox, members, onAddToLibrary, isOwn, onTogglePreview) {
+function processTextInner(text, segKey, message, onOpenLightbox, members, onAddToLibrary, isOwn, onTogglePreview, blockedDomains) {
   const urlRegex = /(https?:\/\/[^\s\[\]<>]+?)(?=[\[\])\s]|[.,;:!?"'](?:\s|$)|$)/g;
   const parts = text.split(urlRegex);
 
   return parts.map((part, i) => {
     if (part.match(/^https?:\/\//)) {
-      return renderUrlPart(part, `${segKey}-${i}`, message, onOpenLightbox, onAddToLibrary, isOwn, onTogglePreview);
+      return renderUrlPart(part, `${segKey}-${i}`, message, onOpenLightbox, onAddToLibrary, isOwn, onTogglePreview, blockedDomains);
     }
 
     // Apply @mentions then inline markdown on remaining text
@@ -219,7 +237,7 @@ function processTextInner(text, segKey, message, onOpenLightbox, members, onAddT
  * Memoized component for rendering message content with markdown formatting,
  * URL detection, embeds (Google Docs, YouTube), images, videos, and @mentions.
  */
-const MessageContent = React.memo(({ content, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview }) => {
+const MessageContent = React.memo(({ content, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview, blockedDomains }) => {
   // Step 1: Extract fenced code blocks
   const codeBlockRegex = /```(\w*)\n?([\s\S]*?)```/g;
   const segments = [];
@@ -283,7 +301,7 @@ const MessageContent = React.memo(({ content, message, onOpenLightbox, members, 
           <blockquote key={key}>
             {block.lines.map((l, li) => (
               <React.Fragment key={li}>
-                {processTextSegment(l, `${key}-${li}`, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview)}
+                {processTextSegment(l, `${key}-${li}`, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview, blockedDomains)}
                 {li < block.lines.length - 1 && <br />}
               </React.Fragment>
             ))}
@@ -294,12 +312,12 @@ const MessageContent = React.memo(({ content, message, onOpenLightbox, members, 
         return (
           <ul key={key}>
             {block.lines.map((l, li) => (
-              <li key={li}>{processTextSegment(l, `${key}-${li}`, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview)}</li>
+              <li key={li}>{processTextSegment(l, `${key}-${li}`, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview, blockedDomains)}</li>
             ))}
           </ul>
         );
       }
-      return <React.Fragment key={key}>{processTextSegment(block.value, key, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview)}</React.Fragment>;
+      return <React.Fragment key={key}>{processTextSegment(block.value, key, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview, blockedDomains)}</React.Fragment>;
     });
   });
 
@@ -349,9 +367,10 @@ function MessageList({
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState('');
   const [lightboxData, setLightboxData] = useState(null); // { images: [{src, alt}], index }
-  const [msgContextMenu, setMsgContextMenu] = useState(null); // { messageId, x, y }
+  const [msgContextMenu, setMsgContextMenu] = useState(null); // { messageId, x, y, linkUrl? }
   const [seenByCount, setSeenByCount] = useState(null);
   const [seenByMessageId, setSeenByMessageId] = useState(null);
+  const [blockedDomains, setBlockedDomains] = useState(() => getBlockedDomains());
 
   // Build avatar lookup from workspace members (includes BandMember fallback)
   const memberAvatarMap = useMemo(() => {
@@ -559,7 +578,11 @@ function MessageList({
             className={`group flex gap-3 py-2 hover:bg-[var(--color-bg-tertiary)]/30 rounded px-2 -mx-2 relative ${message.pending ? 'opacity-60' : ''}`}
             onContextMenu={(e) => {
               e.preventDefault();
-              setMsgContextMenu({ messageId: message.id, x: e.clientX, y: e.clientY });
+              // Detect if right-clicked on a link or link preview
+              const previewEl = e.target.closest('[data-preview-url]');
+              const linkEl = e.target.closest('a[href^="http"]');
+              const linkUrl = previewEl?.dataset?.previewUrl || linkEl?.href || null;
+              setMsgContextMenu({ messageId: message.id, x: e.clientX, y: e.clientY, linkUrl });
             }}
           >
             {/* Avatar */}
@@ -636,7 +659,7 @@ function MessageList({
                 </div>
               ) : (
                 <div className="message-content text-[var(--color-text-secondary)] break-words whitespace-pre-wrap">
-                  <MessageContent content={message.content} message={message} onOpenLightbox={openLightbox} members={members} onAddToLibrary={onAddToLibrary} workspaceId={workspaceId} isOwn={message.author?.id === currentUser?.id} onTogglePreview={onTogglePreview} />
+                  <MessageContent content={message.content} message={message} onOpenLightbox={openLightbox} members={members} onAddToLibrary={onAddToLibrary} workspaceId={workspaceId} isOwn={message.author?.id === currentUser?.id} onTogglePreview={onTogglePreview} blockedDomains={blockedDomains} />
                 </div>
               )}
 
@@ -918,12 +941,22 @@ function MessageList({
         if (!msg) return [];
         const isOwn = msg.author?.id === currentUser?.id;
         const isPinned = pinnedMessageIds?.has(msg.id);
+        const linkUrl = msgContextMenu?.linkUrl;
+        const linkDomain = linkUrl ? getDomain(linkUrl) : null;
+        const isDomainBlocked = linkDomain ? blockedDomains.has(linkDomain) : false;
         return [
           { label: 'Reply in Thread', icon: '💬', onClick: () => onOpenThread(msg) },
           { label: 'Add Reaction', icon: '😀', onClick: () => setReactionPickerMessageId(msg.id) },
           { label: 'Copy Text', icon: '📋', onClick: () => handleCopyText(msg.id) },
           { label: isPinned ? 'Unpin Message' : 'Pin Message', icon: '📌', onClick: () => isPinned ? onUnpinMessage?.(msg.id) : onPinMessage?.(msg.id), show: !!(onPinMessage && onUnpinMessage) },
           { label: savedMessageIds?.has(msg.id) ? 'Unsave Message' : 'Save Message', icon: '🔖', onClick: () => savedMessageIds?.has(msg.id) ? onUnsaveMessage?.(msg.id) : onSaveMessage?.(msg.id), show: !!(onSaveMessage && onUnsaveMessage) },
+          { divider: true, label: 'link-divider', onClick: () => {}, show: !!linkDomain },
+          { label: isDomainBlocked ? `Show previews from ${linkDomain}` : `Block previews from ${linkDomain}`, icon: isDomainBlocked ? '👁️' : '🚫', onClick: () => {
+            const domains = getBlockedDomains();
+            if (isDomainBlocked) { domains.delete(linkDomain); } else { domains.add(linkDomain); }
+            persistBlockedDomains(domains);
+            setBlockedDomains(new Set(domains));
+          }, show: !!linkDomain },
           { divider: true, label: 'divider', onClick: () => {}, show: isOwn },
           { label: 'Edit Message', icon: '✏️', onClick: () => handleStartEdit(msg), show: isOwn },
           { label: 'Delete Message', icon: '🗑️', variant: 'danger', onClick: () => setDeleteMessageId(msg.id), show: isOwn },

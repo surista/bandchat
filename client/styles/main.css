@@ -72,6 +72,7 @@ body {
 
 /* Allow text selection on actual content */
 .message-content,
+[data-message-id],
 input,
 textarea,
 select,

@@ -22,7 +22,7 @@ function getHostname(url) {
   }
 }
 
-function LinkPreview({ content, isOwn, onDismiss }) {
+function LinkPreview({ content, isOwn, onDismiss, onLongPress, blockedDomains }) {
   const { colors } = useTheme();
   const [preview, setPreview] = useState(null);
   const [url, setUrl] = useState(null);
@@ -35,6 +35,12 @@ function LinkPreview({ content, isOwn, onDismiss }) {
 
     const firstUrl = match[0].replace(/[)}\]>,;.!?]+$/, '');
     setUrl(firstUrl);
+
+    // Check if domain is blocked
+    try {
+      const domain = new URL(firstUrl).hostname;
+      if (blockedDomains?.has(domain)) return;
+    } catch {}
 
     if (cache.has(firstUrl)) {
       const cached = cache.get(firstUrl);
@@ -61,10 +67,15 @@ function LinkPreview({ content, isOwn, onDismiss }) {
       });
 
     return () => { cancelled = true; };
-  }, [content]);
+  }, [content, blockedDomains]);
 
   if (!preview || !url) return null;
   if (!preview.title && !preview.description) return null;
+
+  // Hide if domain is blocked (checked at render time for reactivity)
+  try {
+    if (blockedDomains?.has(new URL(url).hostname)) return null;
+  } catch {}
 
   const handlePress = () => {
     Linking.openURL(url).catch(() => {});
@@ -86,6 +97,8 @@ function LinkPreview({ content, isOwn, onDismiss }) {
       <TouchableOpacity
         style={[styles.container, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
         onPress={handlePress}
+        onLongPress={() => onLongPress?.(url)}
+        delayLongPress={400}
         activeOpacity={0.7}
       >
         <View style={styles.textContent}>

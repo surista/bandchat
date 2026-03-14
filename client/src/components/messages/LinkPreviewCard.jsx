@@ -85,7 +85,7 @@ export default function LinkPreviewCard({ url, onAddToLibrary, isOwn, onDismiss 
   const showAddToLibrary = isMusicUrl(url) && onAddToLibrary;
 
   return (
-    <div className="max-w-md mt-2 relative group">
+    <div className="max-w-md mt-2 relative group" data-preview-url={url}>
       {isOwn && onDismiss && (
         <button
           type="button"
