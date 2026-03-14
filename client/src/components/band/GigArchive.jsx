@@ -6,6 +6,7 @@ import { getCurrencySymbol } from '../../utils/currencies';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ImageLightbox from '../common/ImageLightbox';
 import { formatDuration } from '../../utils/formatDuration';
+import getInitial from '../../utils/getInitial';
 
 function GigArchive({ workspaceId, isAdmin, workspace }) {
   const [setlists, setSetlists] = useState([]);
@@ -809,7 +810,7 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
                               title={member.name}
                               className="w-7 h-7 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center text-[var(--color-text-primary)] text-xs font-medium border-2 border-[var(--color-bg-primary)]"
                             >
-                              {member.name?.charAt(0).toUpperCase()}
+                              {getInitial(member.name)}
                             </div>
                           )
                         ))}
@@ -1008,7 +1009,7 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
                               />
                             ) : (
                               <div className="w-6 h-6 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center text-[var(--color-text-primary)] text-xs font-medium">
-                                {member.name?.charAt(0).toUpperCase()}
+                                {getInitial(member.name)}
                               </div>
                             )}
                             <span className="text-[var(--color-text-primary)] text-sm">{member.name}</span>
@@ -1487,7 +1488,7 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
                         />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center text-[var(--color-text-primary)] font-medium flex-shrink-0">
-                          {member.name?.charAt(0).toUpperCase()}
+                          {getInitial(member.name)}
                         </div>
                       )}
                       <div className="flex-1 min-w-0">

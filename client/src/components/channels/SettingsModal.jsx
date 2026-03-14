@@ -716,6 +716,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                   <p className="text-[var(--color-text-muted)] mb-4">Choose a theme for your sidebar</p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                     {Object.entries(themes).map(([id, theme]) => {
+                      // Note: FREE_THEME_IDS is also defined in server/src/lib/planLimits.js.
+                      // If these values change, update both locations.
                       const FREE_THEME_IDS = ['default', 'midnight', 'ocean'];
                       const isLocked = workspace?.effectivePlan !== 'PRO' && !FREE_THEME_IDS.includes(id);
                       return (

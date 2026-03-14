@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import rateLimit from 'express-rate-limit';
 import { Resend } from 'resend';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
+import { exportLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 import { forceLeaveWorkspace } from '../socket/handlers.js';
 import { getEffectivePlan, getPlanLimits, serializePlanLimits } from '../lib/planLimits.js';
@@ -1459,7 +1460,7 @@ router.get('/:workspaceId/members/:userId/events', authenticate, isWorkspaceMemb
 });
 
 // Export full workspace data as JSON download (admin only)
-router.get('/:workspaceId/export', authenticate, isWorkspaceAdmin, async (req, res) => {
+router.get('/:workspaceId/export', authenticate, isWorkspaceAdmin, exportLimiter, async (req, res) => {
   try {
     const { workspaceId } = req.params;
 

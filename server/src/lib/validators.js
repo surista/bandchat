@@ -16,21 +16,6 @@ export function isValidUUID(str) {
 }
 
 /**
- * Validate and parse an integer from string with bounds
- * @param {string} value - The value to parse
- * @param {object} options - Options for validation
- * @param {number} options.min - Minimum value (default: 1)
- * @param {number} options.max - Maximum value (default: Infinity)
- * @param {number} options.defaultValue - Default if invalid
- * @returns {number} - Parsed integer or default
- */
-export function parseIntSafe(value, { min = 1, max = Infinity, defaultValue = 1 } = {}) {
-  const parsed = parseInt(value, 10);
-  if (isNaN(parsed)) return defaultValue;
-  return Math.min(Math.max(parsed, min), max);
-}
-
-/**
  * Validate recording type
  * @param {string} type - The type to validate
  * @returns {boolean} - True if valid type

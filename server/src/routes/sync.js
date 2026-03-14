@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember } from '../middleware/auth.js';
+import { syncLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 
 const router = express.Router();
@@ -11,7 +12,7 @@ const router = express.Router();
  *   - since: ISO timestamp (omit for initial sync)
  *   - entities: comma-separated list (channels,messages,songs,gigs,members)
  */
-router.get('/:workspaceId/pull', authenticate, isWorkspaceMember, async (req, res) => {
+router.get('/:workspaceId/pull', authenticate, isWorkspaceMember, syncLimiter, async (req, res) => {
   try {
     const { workspaceId } = req.params;
     const since = req.query.since ? new Date(req.query.since) : null;

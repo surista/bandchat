@@ -19,11 +19,19 @@ const KEEP_WEEKLY = 4;
 const MAX_WORKSPACE_BACKUPS = 5;
 
 
+let backupInProgress = false;
+
 /**
  * Create a full database backup, gzip it, and upload to R2.
  * @returns {{ key: string, size: number, timestamp: string, stats: object }}
  */
 export async function createBackup() {
+  if (backupInProgress) {
+    throw new Error('A backup is already in progress');
+  }
+  backupInProgress = true;
+
+  try {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const key = `${BACKUP_PREFIX}backup-${timestamp}.json.gz`;
 
@@ -35,7 +43,7 @@ export async function createBackup() {
     where: { OR: [{ deletedAt: null }, { deletedAt: { not: null } }] },
     select: {
       id: true, email: true, displayName: true, avatarUrl: true, bio: true,
-      createdAt: true, authProvider: true, isSystemAdmin: true, emailVerified: true,
+      createdAt: true, updatedAt: true, authProvider: true, isSystemAdmin: true, emailVerified: true,
       deletedAt: true,
     }
   });
@@ -186,6 +194,9 @@ export async function createBackup() {
     timestamp: new Date().toISOString(),
     stats: backup.stats,
   };
+  } finally {
+    backupInProgress = false;
+  }
 }
 
 /**
@@ -472,6 +483,7 @@ export async function restoreFromBackup(key, onProgress) {
             avatarUrl: u.avatarUrl || null,
             bio: u.bio || null,
             createdAt: new Date(u.createdAt),
+            updatedAt: u.updatedAt ? new Date(u.updatedAt) : new Date(),
             authProvider: u.authProvider,
             isSystemAdmin: u.isSystemAdmin || false,
             emailVerified: u.emailVerified || false,
@@ -881,6 +893,7 @@ export async function restoreFromBackup(key, onProgress) {
           createdById: c.createdById || null,
           removedCreatorName: c.removedCreatorName || null,
           createdAt: c.createdAt ? new Date(c.createdAt) : new Date(),
+          updatedAt: c.updatedAt ? new Date(c.updatedAt) : new Date(c.createdAt || new Date()),
         })),
         skipDuplicates: true,
       });
@@ -902,6 +915,7 @@ export async function restoreFromBackup(key, onProgress) {
             createdById: a.createdById || null,
             removedCreatorName: a.removedCreatorName || null,
             createdAt: a.createdAt ? new Date(a.createdAt) : new Date(),
+            updatedAt: a.updatedAt ? new Date(a.updatedAt) : new Date(a.createdAt || new Date()),
           }
         });
 
@@ -937,6 +951,7 @@ export async function restoreFromBackup(key, onProgress) {
             createdById: p.createdById || null,
             removedCreatorName: p.removedCreatorName || null,
             createdAt: p.createdAt ? new Date(p.createdAt) : new Date(),
+            updatedAt: p.updatedAt ? new Date(p.updatedAt) : new Date(p.createdAt || new Date()),
           }
         });
 
@@ -1022,6 +1037,7 @@ export async function restoreFromBackup(key, onProgress) {
             createdById: m.createdById || null,
             removedCreatorName: m.removedCreatorName || null,
             createdAt: m.createdAt ? new Date(m.createdAt) : new Date(),
+            updatedAt: m.updatedAt ? new Date(m.updatedAt) : new Date(m.createdAt || new Date()),
           }
         });
 
@@ -1320,6 +1336,25 @@ export async function verifyBackup(key) {
       setlists: data.setlists?.length || 0,
       gigs: data.gigs?.length || 0,
       bandMembers: data.bandMembers?.length || 0,
+      contacts: data.contacts?.length || 0,
+      announcements: data.announcements?.length || 0,
+      polls: data.polls?.length || 0,
+      timeline: data.timeline?.length || 0,
+      recordings: data.recordings?.length || 0,
+      medleys: data.medleys?.length || 0,
+      kitties: data.kitties?.length || 0,
+      kittyTransactions: data.kittyTransactions?.length || 0,
+      achievements: data.achievements?.length || 0,
+      memberAchievements: data.memberAchievements?.length || 0,
+      bandAchievements: data.bandAchievements?.length || 0,
+      availability: data.availability?.length || 0,
+      practice: data.practice?.length || 0,
+      savedMessages: data.savedMessages?.length || 0,
+      expoPushTokens: data.expoPushTokens?.length || 0,
+      threadReads: data.threadReads?.length || 0,
+      reports: data.reports?.length || 0,
+      blockedUsers: data.blockedUsers?.length || 0,
+      stagePlots: data.stagePlots?.length || 0,
     };
 
     // Basic sanity checks
@@ -1521,8 +1556,11 @@ export async function createWorkspaceBackup(workspaceId) {
   const practice = await prisma.practiceSession.findMany({ where: { workspaceId } });
   const stagePlots = await prisma.stagePlot.findMany({ where: { workspaceId } });
 
-  // Saved messages, thread reads scoped via channel messages
+  // Saved messages, thread reads, reports scoped via channel messages
   const messageIds = messages.map(m => m.id);
+  const reports = messageIds.length > 0
+    ? await prisma.report.findMany({ where: { message: { channel: { workspaceId } } } })
+    : [];
   const savedMessages = messageIds.length > 0
     ? await prisma.savedMessage.findMany({ where: { messageId: { in: messageIds } } })
     : [];
@@ -1564,6 +1602,7 @@ export async function createWorkspaceBackup(workspaceId) {
   availability.forEach(a => userIdSet.add(a.userId));
   practice.forEach(p => userIdSet.add(p.userId));
   stagePlots.forEach(sp => { if (sp.createdById) userIdSet.add(sp.createdById); });
+  reports.forEach(r => { if (r.reporterId) userIdSet.add(r.reporterId); });
   gigs.forEach(g => {
     g.media?.forEach(m => { if (m.uploadedById) userIdSet.add(m.uploadedById); });
   });
@@ -1626,6 +1665,7 @@ export async function createWorkspaceBackup(workspaceId) {
       threadReads,
       pinnedMessages: channels.flatMap(ch => ch.pinnedMessages || []),
       stagePlots,
+      reports,
     },
   };
 
@@ -1821,6 +1861,7 @@ export async function restoreWorkspaceBackup(key, onProgress) {
       // --- Delete existing workspace data (children before parents) ---
 
       // Message tree (via Channel)
+      await tx.$executeRawUnsafe(`DELETE FROM "Report" WHERE "messageId" IN (SELECT id FROM "Message" WHERE "channelId" IN (SELECT id FROM "Channel" WHERE "workspaceId" = $1))`, wid);
       await tx.$executeRawUnsafe(`DELETE FROM "SavedMessage" WHERE "messageId" IN (SELECT id FROM "Message" WHERE "channelId" IN (SELECT id FROM "Channel" WHERE "workspaceId" = $1))`, wid);
       await tx.$executeRawUnsafe(`DELETE FROM "ThreadRead" WHERE "messageId" IN (SELECT id FROM "Message" WHERE "channelId" IN (SELECT id FROM "Channel" WHERE "workspaceId" = $1))`, wid);
       await tx.$executeRawUnsafe(`DELETE FROM "Reaction" WHERE "messageId" IN (SELECT id FROM "Message" WHERE "channelId" IN (SELECT id FROM "Channel" WHERE "workspaceId" = $1))`, wid);
@@ -2236,6 +2277,7 @@ export async function restoreWorkspaceBackup(key, onProgress) {
             createdById: resolveUser(c.createdById),
             removedCreatorName: resolveUser(c.createdById) ? (c.removedCreatorName || null) : (c.removedCreatorName || getRemovedName(c.createdById)),
             createdAt: c.createdAt ? new Date(c.createdAt) : new Date(),
+            updatedAt: c.updatedAt ? new Date(c.updatedAt) : new Date(c.createdAt || new Date()),
           })),
           skipDuplicates: true,
         });
@@ -2254,6 +2296,7 @@ export async function restoreWorkspaceBackup(key, onProgress) {
               workspaceId: wid, createdById: creatorResolved,
               removedCreatorName: creatorResolved ? (a.removedCreatorName || null) : (a.removedCreatorName || getRemovedName(a.createdById)),
               createdAt: a.createdAt ? new Date(a.createdAt) : new Date(),
+              updatedAt: a.updatedAt ? new Date(a.updatedAt) : new Date(a.createdAt || new Date()),
             },
           });
           const validAcks = (a.acknowledgments || []).filter(ack => existingUserIds.has(ack.userId));
@@ -2283,6 +2326,7 @@ export async function restoreWorkspaceBackup(key, onProgress) {
               createdById: creatorResolved,
               removedCreatorName: creatorResolved ? (p.removedCreatorName || null) : (p.removedCreatorName || getRemovedName(p.createdById)),
               createdAt: p.createdAt ? new Date(p.createdAt) : new Date(),
+              updatedAt: p.updatedAt ? new Date(p.updatedAt) : new Date(p.createdAt || new Date()),
             },
           });
           if (p.options?.length) {
@@ -2345,6 +2389,7 @@ export async function restoreWorkspaceBackup(key, onProgress) {
               workspaceId: wid, createdById: creatorResolved,
               removedCreatorName: creatorResolved ? (m.removedCreatorName || null) : (m.removedCreatorName || getRemovedName(m.createdById)),
               createdAt: m.createdAt ? new Date(m.createdAt) : new Date(),
+              updatedAt: m.updatedAt ? new Date(m.updatedAt) : new Date(m.createdAt || new Date()),
             },
           });
           if (m.songs?.length) {
@@ -2471,6 +2516,21 @@ export async function restoreWorkspaceBackup(key, onProgress) {
             removedCreatorName: resolveUser(sp.createdById) ? (sp.removedCreatorName || null) : (sp.removedCreatorName || getRemovedName(sp.createdById)),
             createdAt: sp.createdAt ? new Date(sp.createdAt) : new Date(),
             updatedAt: sp.updatedAt ? new Date(sp.updatedAt) : new Date(),
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      // --- Reports ---
+      const validReports = (data.reports || []).filter(r => existingUserIds.has(r.reporterId));
+      if (validReports.length) {
+        await tx.report.createMany({
+          data: validReports.map(r => ({
+            id: r.id,
+            reporterId: r.reporterId,
+            messageId: r.messageId,
+            reason: r.reason,
+            createdAt: r.createdAt ? new Date(r.createdAt) : new Date(),
           })),
           skipDuplicates: true,
         });

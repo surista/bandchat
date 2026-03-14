@@ -7,6 +7,7 @@ import GigForm from './GigForm';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ContextMenu from '../common/ContextMenu';
 import useLongPress from '../../hooks/useLongPress';
+import Modal from '../common/Modal';
 import Skeleton from '../common/Skeleton';
 import { getCurrencySymbol } from '../../utils/currencies';
 
@@ -1317,12 +1318,10 @@ function GigCalendar({ workspaceId, workspace }) {
       />
 
       {/* Move or Copy Dialog */}
-      {showMoveOrCopy && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-6 w-full max-w-sm border border-[var(--color-border)]">
-            <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">Move or Copy?</h3>
+      <Modal isOpen={!!showMoveOrCopy} onClose={() => setShowMoveOrCopy(null)} title="Move or Copy?" maxWidth="max-w-sm">
+          <div className="p-4">
             <p className="text-[var(--color-text-muted)] mb-4">
-              "{showMoveOrCopy.gig.title}" → {format(showMoveOrCopy.targetDate, 'MMM d, yyyy')}
+              "{showMoveOrCopy?.gig.title}" → {showMoveOrCopy && format(showMoveOrCopy.targetDate, 'MMM d, yyyy')}
             </p>
             <div className="flex gap-3">
               <button
@@ -1345,8 +1344,7 @@ function GigCalendar({ workspaceId, workspace }) {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </Modal>
 
       <ContextMenu
         isOpen={gigContextMenu !== null}
@@ -1368,18 +1366,8 @@ function GigCalendar({ workspaceId, workspace }) {
       />
 
       {/* Subscribe Modal */}
-      {showSubscribeModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowSubscribeModal(false)}>
-          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-6 w-full max-w-md border border-[var(--color-border)]" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-[var(--color-text-primary)]">Subscribe to Calendar</h3>
-              <button
-                onClick={() => setShowSubscribeModal(false)}
-                className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl"
-              >
-                &times;
-              </button>
-            </div>
+      <Modal isOpen={showSubscribeModal} onClose={() => setShowSubscribeModal(false)} title="Subscribe to Calendar">
+          <div className="p-4">
             <p className="text-[var(--color-text-muted)] text-sm mb-4">
               Add this URL to your calendar app (Apple Calendar, Google Calendar, Outlook, etc.) to automatically sync all band events.
             </p>
@@ -1404,23 +1392,16 @@ function GigCalendar({ workspaceId, workspace }) {
               Most calendar apps support webcal:// links. If it does not open automatically, paste the URL manually in your calendar app's "subscribe" feature.
             </p>
           </div>
-        </div>
-      )}
+      </Modal>
 
       {/* ICS Import Modal */}
-      {showImportModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowImportModal(false)}>
-          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-6 w-full max-w-lg border border-[var(--color-border)]" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-[var(--color-text-primary)]">Import Calendar Event</h3>
-              <button
-                onClick={() => { setShowImportModal(false); setIcsContent(''); setIcsPreview(null); setIcsError(''); }}
-                className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl"
-              >
-                &times;
-              </button>
-            </div>
-
+      <Modal
+        isOpen={showImportModal}
+        onClose={() => { setShowImportModal(false); setIcsContent(''); setIcsPreview(null); setIcsError(''); }}
+        title="Import Calendar Event"
+        maxWidth="max-w-lg"
+      >
+          <div className="p-4">
             <p className="text-[var(--color-text-muted)] text-sm mb-4">
               Upload an .ics file or paste calendar invite content from Outlook, Google Calendar, etc.
             </p>
@@ -1501,24 +1482,13 @@ function GigCalendar({ workspaceId, workspace }) {
               </button>
             </div>
           </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Set Availability Modal */}
-      {availabilityDate && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
-          onClick={() => setAvailabilityDate(null)}
-        >
-          <div
-            className="bg-[var(--color-bg-secondary)] rounded-lg p-6 w-full max-w-sm border border-[var(--color-border)]"
-            onClick={e => e.stopPropagation()}
-          >
-            <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">
-              Set My Availability
-            </h3>
+      <Modal isOpen={!!availabilityDate} onClose={() => setAvailabilityDate(null)} title="Set My Availability" maxWidth="max-w-sm">
+          <div className="p-4">
             <p className="text-[var(--color-text-muted)] mb-4">
-              {format(availabilityDate, 'EEEE, MMMM d, yyyy')}
+              {availabilityDate && format(availabilityDate, 'EEEE, MMMM d, yyyy')}
             </p>
 
             <div className="space-y-2">
@@ -1569,8 +1539,7 @@ function GigCalendar({ workspaceId, workspace }) {
               Cancel
             </button>
           </div>
-        </div>
-      )}
+      </Modal>
     </div>
   );
 }

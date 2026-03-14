@@ -55,7 +55,10 @@ const PORT = process.env.PORT || 3001;
 async function setupDatabase() {
   try {
     // Enable pg_trgm extension and create trigram index for fast text search
-    await prisma.$executeRawUnsafe(`CREATE EXTENSION IF NOT EXISTS pg_trgm`);
+    await prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS pg_trgm`;
+    // Note: CREATE INDEX CONCURRENTLY cannot run inside a transaction.
+    // $executeRawUnsafe is used here because $executeRaw tagged templates
+    // run within implicit transactions which CONCURRENTLY does not support.
     await prisma.$executeRawUnsafe(`
       CREATE INDEX CONCURRENTLY IF NOT EXISTS "Message_content_trgm_idx"
       ON "Message" USING gin (content gin_trgm_ops)

@@ -13,6 +13,7 @@ import { formatFileSize } from '../../utils/format';
 import { MAX_IMAGE_SIZE, MAX_AUDIO_SIZE, isImageFile, isAudioFile } from '../../utils/fileValidation';
 import { buildMentionRegex } from '../../utils/parseMentions';
 import MemberProfile from '../common/MemberProfile';
+import getInitial from '../../utils/getInitial';
 
 function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, members, onStartDM }) {
   const { user } = useAuth();
@@ -321,7 +322,7 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
               return avatarSrc ? (
                 <img src={avatarSrc} alt={message.author?.displayName || 'User'} className="w-full h-full rounded object-cover" />
               ) : (
-                (message.author?.displayName || message.removedUserName || 'Deleted User').charAt(0).toUpperCase()
+                getInitial(message.author?.displayName || message.removedUserName || 'Deleted User')
               );
             })()}
           </div>
@@ -395,7 +396,7 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
                     return avatarSrc ? (
                       <img src={avatarSrc} alt={reply.author?.displayName || 'User'} className="w-full h-full rounded object-cover" />
                     ) : (
-                      (reply.author?.displayName || reply.removedUserName || 'Deleted User').charAt(0).toUpperCase()
+                      getInitial(reply.author?.displayName || reply.removedUserName || 'Deleted User')
                     );
                   })()}
                 </div>

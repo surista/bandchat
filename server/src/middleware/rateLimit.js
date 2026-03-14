@@ -53,3 +53,33 @@ export const messageLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false
 });
+
+// Limit for data export endpoints (user data export, workspace export)
+export const exportLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  skip: skipInTest,
+  message: { error: 'Too many export requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// Limit for message search
+export const searchLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30,
+  skip: skipInTest,
+  message: { error: 'Too many search requests, please slow down' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// Limit for sync pull endpoint
+export const syncLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60,
+  skip: skipInTest,
+  message: { error: 'Too many sync requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false
+});

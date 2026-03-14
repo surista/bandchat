@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { formatDate } from '../../utils/formatDate';
 import { formatTotalDuration } from '../../utils/formatDuration';
+import ErrorMessage from '../common/ErrorMessage';
+import Modal from '../common/Modal';
 
 const CURRENCY_SYMBOLS = {
   USD: '$', EUR: '\u20AC', GBP: '\u00A3', JPY: '\u00A5', CAD: 'C$', AUD: 'A$',
@@ -51,11 +53,11 @@ function GigStats({ workspaceId }) {
 
   if (error) {
     return (
-      <div className="p-4">
-        <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded">
-          {error}
-        </div>
-      </div>
+      <ErrorMessage
+        message={error}
+        onRetry={loadStats}
+        className="py-16"
+      />
     );
   }
 
@@ -336,15 +338,7 @@ function GigStats({ workspaceId }) {
       </div>
 
       {/* Popup for Busiest Stretch */}
-      {popup?.type === 'busiest' && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setPopup(null)}>
-          <div className="bg-[var(--color-bg-secondary)] rounded-lg w-full max-w-md border border-[var(--color-border)]" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
-              <h3 className="text-lg font-medium text-[var(--color-text-primary)] flex items-center gap-2">
-                <span>🔥</span> Busiest Stretch
-              </h3>
-              <button onClick={() => setPopup(null)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl">&times;</button>
-            </div>
+      <Modal isOpen={popup?.type === 'busiest'} onClose={() => setPopup(null)} title="Busiest Stretch">
             <div className="p-4">
               <div className="text-purple-300 font-bold text-lg mb-2">
                 {popup.data.gigs} gigs in {popup.data.days} days
@@ -367,20 +361,10 @@ function GigStats({ workspaceId }) {
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Popup for Venue */}
-      {popup?.type === 'venue' && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setPopup(null)}>
-          <div className="bg-[var(--color-bg-secondary)] rounded-lg w-full max-w-md border border-[var(--color-border)]" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
-              <h3 className="text-lg font-medium text-[var(--color-text-primary)] flex items-center gap-2">
-                <span>🏟️</span> {popup.data.venue}
-              </h3>
-              <button onClick={() => setPopup(null)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl">&times;</button>
-            </div>
+      <Modal isOpen={popup?.type === 'venue'} onClose={() => setPopup(null)} title={popup?.data?.venue || 'Venue'}>
             <div className="p-4">
               <div className="text-green-400 font-bold text-lg mb-4">
                 {popup.data.count} {popup.data.count === 1 ? 'gig' : 'gigs'} at this venue
@@ -398,20 +382,10 @@ function GigStats({ workspaceId }) {
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Popup for Song Density */}
-      {popup?.type === 'songdensity' && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setPopup(null)}>
-          <div className="bg-[var(--color-bg-secondary)] rounded-lg w-full max-w-md border border-[var(--color-border)]" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
-              <h3 className="text-lg font-medium text-[var(--color-text-primary)] flex items-center gap-2">
-                <span>⚡</span> Song Density Record
-              </h3>
-              <button onClick={() => setPopup(null)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl">&times;</button>
-            </div>
+      <Modal isOpen={popup?.type === 'songdensity'} onClose={() => setPopup(null)} title="Song Density Record">
             <div className="p-4">
               <div className="text-cyan-300 font-bold text-lg mb-2">
                 {popup.data.totalSongs} songs in {popup.data.days} day{popup.data.days !== 1 ? 's' : ''}
@@ -438,25 +412,17 @@ function GigStats({ workspaceId }) {
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Popup for Setlist Detail */}
-      {setlistDetail && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setSetlistDetail(null)}>
-          <div className="bg-[var(--color-bg-secondary)] rounded-lg w-full max-w-lg border border-[var(--color-border)] max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between flex-shrink-0">
-              <div>
-                <h3 className="text-lg font-medium text-[var(--color-text-primary)]">{setlistDetail.name}</h3>
-                <div className="text-[var(--color-text-muted)] text-sm">
-                  {setlistDetail.performedAt && formatDate(setlistDetail.performedAt)}
-                  {setlistDetail.venue && ` • ${setlistDetail.venue}`}
-                </div>
+      <Modal isOpen={!!setlistDetail} onClose={() => setSetlistDetail(null)} title={setlistDetail?.name || 'Setlist'} maxWidth="max-w-lg">
+            {setlistDetail && (
+              <div className="px-4 text-[var(--color-text-muted)] text-sm -mt-2 mb-2">
+                {setlistDetail.performedAt && formatDate(setlistDetail.performedAt)}
+                {setlistDetail.venue && ` • ${setlistDetail.venue}`}
               </div>
-              <button onClick={() => setSetlistDetail(null)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl">&times;</button>
-            </div>
-            <div className="p-4 overflow-y-auto flex-1">
+            )}
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
               {setlistDetail.songs?.length > 0 ? (
                 <div className="space-y-1">
                   {setlistDetail.songs
@@ -483,9 +449,7 @@ function GigStats({ workspaceId }) {
                 <div className="text-gray-500 text-center py-4">No songs in this setlist</div>
               )}
             </div>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   );
 }

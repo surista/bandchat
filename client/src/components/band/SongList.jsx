@@ -6,6 +6,7 @@ import SongForm from './SongForm';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ContextMenu from '../common/ContextMenu';
 import useLongPress from '../../hooks/useLongPress';
+import Modal from '../common/Modal';
 import Skeleton from '../common/Skeleton';
 
 function PracticeIndicator({ songId, practiceSummary }) {
@@ -524,13 +525,13 @@ function SongList({ workspaceId, onSelectSong }) {
       )}
 
       {/* Bulk Import Modal */}
-      {showBulkImport && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg w-full max-w-2xl max-h-modal overflow-y-auto">
+      <Modal
+        isOpen={showBulkImport}
+        onClose={() => setShowBulkImport(false)}
+        title="Bulk Import Songs"
+        maxWidth="max-w-2xl"
+      >
             <div className="p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">
-                Bulk Import Songs
-              </h3>
 
               {!bulkResults ? (
                 <>
@@ -673,9 +674,7 @@ Hotel California - Eagles"
                 </>
               )}
             </div>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       <ConfirmDialog
         isOpen={deleteSongId !== null}

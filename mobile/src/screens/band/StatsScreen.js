@@ -61,14 +61,14 @@ function StatBox({ label, value, color, bgColor, onPress }) {
   if (onPress) {
     return <TouchableOpacity style={styles.statBoxWrapper} onPress={onPress} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={`${label}: ${value}`}>{content}</TouchableOpacity>;
   }
-  return <View style={styles.statBoxWrapper}>{content}</View>;
+  return <View style={styles.statBoxWrapper} accessibilityLabel={`${label}: ${value}`}>{content}</View>;
 }
 
 function RankedItem({ rank, title, subtitle, colors }) {
   const medals = { 1: '\uD83E\uDD47', 2: '\uD83E\uDD48', 3: '\uD83E\uDD49' };
   const medal = medals[rank];
   return (
-    <View style={[styles.rankedItem, { backgroundColor: colors.bgSecondary }]}>
+    <View style={[styles.rankedItem, { backgroundColor: colors.bgSecondary }]} accessibilityLabel={`Number ${rank}: ${title}${subtitle ? `, ${subtitle}` : ''}`}>
       <View style={styles.rankBadge}>
         {medal ? (
           <Text style={styles.medalText}>{medal}</Text>
@@ -86,7 +86,7 @@ function RankedItem({ rank, title, subtitle, colors }) {
 
 function FunFactCard({ label, value, detail, colors }) {
   return (
-    <View style={[styles.funFactCard, { backgroundColor: colors.bgSecondary }]}>
+    <View style={[styles.funFactCard, { backgroundColor: colors.bgSecondary }]} accessibilityLabel={`${label}: ${value}${detail ? `, ${detail}` : ''}`}>
       <Text style={[styles.funFactLabel, { color: colors.textSecondary }]}>{label}</Text>
       <Text style={[styles.funFactValue, { color: colors.textPrimary }]}>{value}</Text>
       {detail ? <Text style={[styles.funFactDetail, { color: colors.textSecondary }]}>{detail}</Text> : null}

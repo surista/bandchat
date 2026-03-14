@@ -12,6 +12,7 @@ import Skeleton from '../common/Skeleton';
 import ErrorMessage from '../common/ErrorMessage';
 import UpgradePrompt from '../common/UpgradePrompt';
 import useSwipeGesture from '../../hooks/useSwipeGesture';
+import getInitial from '../../utils/getInitial';
 
 // Error component for failed chunk loads
 function ChunkLoadError({ onRetry }) {
@@ -1182,7 +1183,7 @@ function WorkspaceView() {
                   const displayName = dm.otherMembers?.length > 0
                     ? dm.otherMembers.map(m => m.displayName).join(', ')
                     : 'Unknown';
-                  const initial = dm.otherMembers?.[0]?.displayName?.charAt(0).toUpperCase() || '?';
+                  const initial = getInitial(dm.otherMembers?.[0]?.displayName);
 
                   return (
                     <button
@@ -1285,7 +1286,7 @@ function WorkspaceView() {
                       {unreadDMs.map(dm => {
                         const otherUser = dm.otherMembers?.[0];
                         const displayName = otherUser?.displayName || 'Unknown';
-                        const initial = displayName.charAt(0).toUpperCase();
+                        const initial = getInitial(displayName);
                         return (
                           <button
                             key={dm.id}

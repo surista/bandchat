@@ -149,7 +149,7 @@ export default function PracticeDashboardScreen({ route }) {
   const renderItem = useCallback(({ item }) => {
     if (item.type === 'header') {
       return (
-        <Text style={[styles.dateHeader, { color: colors.textSecondary }]}>
+        <Text style={[styles.dateHeader, { color: colors.textSecondary }]} accessibilityRole="header">
           {formatDateHeader(item.date)}
         </Text>
       );
@@ -205,7 +205,7 @@ export default function PracticeDashboardScreen({ route }) {
       {/* Stats header */}
       <View style={[styles.statsContainer, { backgroundColor: colors.bgSecondary }]}>
         <View style={styles.statsRow}>
-          <View style={styles.statItem}>
+          <View style={styles.statItem} accessibilityLabel={`Day streak: ${summary?.streak || 0}`}>
             <Text style={[styles.statValue, { color: colors.primary }]}>
               {summary?.streak || 0}
             </Text>
@@ -214,7 +214,7 @@ export default function PracticeDashboardScreen({ route }) {
             </Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.statItem}>
+          <View style={styles.statItem} accessibilityLabel={`Total time: ${formatMinutes(summary?.totalMinutes || 0)}`}>
             <Text style={[styles.statValue, { color: colors.primary }]}>
               {formatMinutes(summary?.totalMinutes || 0)}
             </Text>
@@ -223,7 +223,7 @@ export default function PracticeDashboardScreen({ route }) {
             </Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.statItem}>
+          <View style={styles.statItem} accessibilityLabel={`Sessions: ${summary?.totalSessions || 0}`}>
             <Text style={[styles.statValue, { color: colors.primary }]}>
               {summary?.totalSessions || 0}
             </Text>

@@ -3,6 +3,7 @@ import { api } from '../../services/api';
 import { formatDate } from '../../utils/formatDate';
 import { useToast } from '../../context/ToastContext';
 import ConfirmDialog from '../common/ConfirmDialog';
+import ErrorMessage from '../common/ErrorMessage';
 import Skeleton from '../common/Skeleton';
 
 const EVENT_TYPES = [
@@ -21,6 +22,7 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
   const toast = useToast();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
   const [generating, setGenerating] = useState(false);
@@ -44,8 +46,10 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
     try {
       const data = await api.getTimeline(workspaceId);
       setEvents(data);
-    } catch (error) {
-      console.error('Failed to load timeline:', error);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load timeline:', err);
+      setError(err.message || 'Failed to load timeline');
     } finally {
       setLoading(false);
     }
@@ -277,7 +281,13 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
       )}
 
       {/* Timeline Display */}
-      {events.length === 0 ? (
+      {error && !loading && events.length === 0 ? (
+        <ErrorMessage
+          message={error}
+          onRetry={loadTimeline}
+          className="py-16"
+        />
+      ) : events.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <p className="text-lg mb-4">Your band's story starts here!</p>
           <p className="text-sm">Add events to build your timeline, or click "Auto-Generate" to create events from your gig history.</p>

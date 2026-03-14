@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { Resend } from 'resend';
 import { OAuth2Client } from 'google-auth-library';
 import { authenticate } from '../middleware/auth.js';
-import { apiLimiter, authLimiter, tokenLimiter, refreshLimiter } from '../middleware/rateLimit.js';
+import { apiLimiter, authLimiter, tokenLimiter, refreshLimiter, exportLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 
@@ -493,7 +493,7 @@ router.post('/google', authLimiter, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Google auth error:', error.message, 'Expected audience:', process.env.GOOGLE_CLIENT_ID);
+    console.error('Google auth error:', error.message);
     if (error.message?.includes('Token used too late') ||
         error.message?.includes('Invalid token')) {
       return res.status(401).json({ error: 'Invalid or expired Google token' });
@@ -1360,7 +1360,7 @@ router.delete('/account', authenticate, authLimiter, async (req, res) => {
 });
 
 // Export user data as JSON download
-router.get('/export', authenticate, apiLimiter, async (req, res) => {
+router.get('/export', authenticate, exportLimiter, async (req, res) => {
   try {
     const userId = req.user.id;
 

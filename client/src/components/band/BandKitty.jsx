@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
 import api from '../../services/api';
 import ConfirmDialog from '../common/ConfirmDialog';
+import Modal from '../common/Modal';
 import Skeleton from '../common/Skeleton';
 import { CURRENCIES, getCurrencySymbol } from '../../utils/currencies';
 
@@ -296,9 +297,20 @@ function BandKitty({ workspaceId }) {
         )}
 
         {Object.keys(groupedTransactions).length === 0 ? (
-          <div className="text-center text-[var(--color-text-muted)] py-8">
-            No transactions yet.
-            {' Click "Add Transaction" to get started.'}
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="text-5xl mb-4">💰</div>
+            <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
+              No transactions yet
+            </h3>
+            <p className="text-[var(--color-text-muted)] max-w-sm mb-4">
+              Track shared band expenses, gig payments, and income to keep everyone in the loop.
+            </p>
+            <button
+              onClick={() => { resetForm(); setShowForm(true); }}
+              className="btn bg-green-600 hover:bg-green-700 text-white"
+            >
+              + Add Transaction
+            </button>
           </div>
         ) : (
           Object.entries(groupedTransactions).map(([month, transactions]) => (
@@ -375,14 +387,11 @@ function BandKitty({ workspaceId }) {
       </div>
 
       {/* Transaction Form Modal */}
-      {showForm && (
-        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) resetForm(); }}>
-          <div className="modal-content max-w-md max-h-modal overflow-y-auto">
-            <div className="p-4 border-b border-[var(--color-border)]">
-              <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
-                {editingTransaction ? 'Edit Transaction' : 'Add Transaction'}
-              </h3>
-            </div>
+      <Modal
+        isOpen={showForm}
+        onClose={resetForm}
+        title={editingTransaction ? 'Edit Transaction' : 'Add Transaction'}
+      >
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
               <div>
                 <label className="block text-sm text-[var(--color-text-muted)] mb-1">Type</label>
@@ -466,17 +475,14 @@ function BandKitty({ workspaceId }) {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Settings Modal */}
-      {showSettings && (
-        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowSettings(false); }}>
-          <div className="modal-content max-w-md">
-            <div className="p-4 border-b border-[var(--color-border)]">
-              <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Kitty Settings</h3>
-            </div>
+      <Modal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        title="Kitty Settings"
+      >
             <form onSubmit={handleSaveSettings} className="p-4 space-y-4">
               <div>
                 <label className="block text-sm text-[var(--color-text-muted)] mb-1">Currency</label>
@@ -535,9 +541,7 @@ function BandKitty({ workspaceId }) {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Delete Confirmation */}
       <ConfirmDialog

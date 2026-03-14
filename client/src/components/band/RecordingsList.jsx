@@ -5,6 +5,7 @@ import { formatDuration } from '../../utils/formatDuration';
 import { useToast } from '../../context/ToastContext';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ErrorMessage from '../common/ErrorMessage';
+import Modal from '../common/Modal';
 import Skeleton from '../common/Skeleton';
 
 export default function RecordingsList({ workspaceId }) {
@@ -220,13 +221,13 @@ export default function RecordingsList({ workspaceId }) {
       </div>
 
       {/* Recorder Modal */}
-      {showRecorder && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg p-6 max-w-lg w-full">
-            <h3 className="text-xl font-bold text-white mb-4">
-              {recordedBlob ? 'Save Recording' : 'New Recording'}
-            </h3>
-
+      <Modal
+        isOpen={showRecorder}
+        onClose={resetRecorder}
+        title={recordedBlob ? 'Save Recording' : 'New Recording'}
+        maxWidth="max-w-lg"
+      >
+          <div className="p-6">
             {!recordedBlob ? (
               <>
                 {/* Recording Type Selection */}
@@ -355,8 +356,9 @@ export default function RecordingsList({ workspaceId }) {
               </>
             )}
 
+          </div>
             {/* Actions */}
-            <div className="flex gap-2 mt-6">
+            <div className="flex gap-2 px-6 pb-6">
               {recordedBlob && (
                 <>
                   <button
@@ -381,9 +383,7 @@ export default function RecordingsList({ workspaceId }) {
                 Cancel
               </button>
             </div>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Filters */}
       <div className="flex gap-4 mb-6">

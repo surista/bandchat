@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticate, isChannelMember } from '../middleware/auth.js';
-import { messageLimiter } from '../middleware/rateLimit.js';
+import { messageLimiter, searchLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 import { deleteFile, isR2Url } from '../lib/storage.js';
@@ -565,7 +565,7 @@ router.delete('/:messageId', authenticate, async (req, res) => {
 });
 
 // Search messages in a workspace
-router.get('/search/:workspaceId', authenticate, async (req, res) => {
+router.get('/search/:workspaceId', authenticate, searchLimiter, async (req, res) => {
   try {
     const { q, channelId, authorId, limit: rawLimit = 20 } = req.query;
     const limit = Math.min(parseInt(rawLimit), 100);
