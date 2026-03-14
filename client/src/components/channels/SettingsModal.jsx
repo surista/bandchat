@@ -633,7 +633,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-5 border border-red-900/50">
                     <h4 className="text-lg font-medium text-red-400 mb-2">Delete Account</h4>
                     <p className="text-sm text-[var(--color-text-muted)] mb-3">
-                      Permanently delete your account. Your messages will be anonymized and your profile data removed. This cannot be undone.
+                      This will permanently delete your account across all workspaces. Your messages will be anonymized and your profile data removed. This cannot be undone. If you just want to leave this workspace, you can do that under the Workspace tab.
                     </p>
                     {!deleteConfirmOpen ? (
                       <button

@@ -406,7 +406,7 @@ export default function SecurityScreen() {
         <Text style={[styles.sectionHeader, { color: '#ef4444' }]} accessibilityRole="header">DANGER ZONE</Text>
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
           <Text style={[styles.desc, { color: colors.textSecondary }]}>
-            Permanently delete your account. Your messages will be anonymized and your profile data removed. This cannot be undone.
+            This will permanently delete your account across all workspaces. Your messages will be anonymized and your profile data removed. This cannot be undone. If you just want to leave this workspace, you can find that under the Workspace tab.
           </Text>
           <TouchableOpacity
             style={[styles.dangerButton]}
