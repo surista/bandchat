@@ -25,6 +25,7 @@ import { mediumImpact, successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import { addToOfflineQueue, getOfflineQueue, removeFromOfflineQueue } from '../../services/storage';
 import { getLocalMessages, upsertMessages, upsertMessage as upsertLocalMessage } from '../../services/database';
+import ErrorState from '../../components/ErrorState';
 import { enqueue as enqueueSync } from '../../services/syncQueue';
 import MessageBubble from '../../components/MessageBubble';
 import MessageInput from '../../components/MessageInput';
@@ -48,6 +49,7 @@ export default function ChannelScreen({ navigation, route }) {
 
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState(null);
@@ -189,7 +191,7 @@ export default function ChannelScreen({ navigation, route }) {
 
         if (!cancelled) joinChannel(channel.id);
       } catch (err) {
-        // silently fail — cached messages still showing if available
+        if (messages.length === 0) setLoadError('Could not load messages');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -786,6 +788,14 @@ export default function ChannelScreen({ navigation, route }) {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
+      </View>
+    );
+  }
+
+  if (loadError && messages.length === 0) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+        <ErrorState emoji="💬" title="Couldn't load messages" message={loadError} onRetry={() => { setLoading(true); setLoadError(null); }} />
       </View>
     );
   }

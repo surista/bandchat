@@ -176,7 +176,7 @@ router.post('/:workspaceId/push', authenticate, isWorkspaceMember, async (req, r
 
           result = await prisma.message.create({
             data: {
-              content: (payload.content || '').slice(0, 4000),
+              content: (typeof payload.content === 'string' ? payload.content : '').slice(0, 10000),
               channelId: payload.channelId,
               authorId: req.user.id,
             },
@@ -191,7 +191,7 @@ router.post('/:workspaceId/push', authenticate, isWorkspaceMember, async (req, r
           // Emit via socket for real-time
           const io = req.app.get('io');
           if (io) {
-            io.to(payload.channelId).emit('message:new', result);
+            io.to(`channel:${payload.channelId}`).emit('message:new', result);
           }
         }
 
@@ -201,7 +201,7 @@ router.post('/:workspaceId/push', authenticate, isWorkspaceMember, async (req, r
             await prisma.message.delete({ where: { id: entityId } });
             const io = req.app.get('io');
             if (io) {
-              io.to(msg.channelId).emit('message:deleted', { messageId: entityId, channelId: msg.channelId });
+              io.to(`channel:${msg.channelId}`).emit('message:deleted', { messageId: entityId, channelId: msg.channelId });
             }
           }
         }

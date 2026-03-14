@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Appearance } from 'react-native';
 
 export default class ErrorBoundary extends Component {
   constructor(props) {
@@ -21,11 +21,16 @@ export default class ErrorBoundary extends Component {
 
   render() {
     if (this.state.hasError) {
+      const isDark = Appearance.getColorScheme() === 'dark';
+      const bg = isDark ? '#1a1d21' : '#f9fafb';
+      const titleColor = isDark ? '#ffffff' : '#111827';
+      const messageColor = isDark ? '#9ca3af' : '#6b7280';
+
       return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: bg }]}>
           <Text style={styles.icon}>{'\u26A0\uFE0F'}</Text>
-          <Text style={styles.title}>Something went wrong</Text>
-          <Text style={styles.message}>
+          <Text style={[styles.title, { color: titleColor }]}>Something went wrong</Text>
+          <Text style={[styles.message, { color: messageColor }]}>
             {this.state.error?.message || 'An unexpected error occurred'}
           </Text>
           <TouchableOpacity style={styles.button} onPress={this.handleReset} activeOpacity={0.8}>
@@ -45,7 +50,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
-    backgroundColor: '#1a1d21',
   },
   icon: {
     fontSize: 48,
@@ -54,12 +58,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#ffffff',
     marginBottom: 8,
   },
   message: {
     fontSize: 14,
-    color: '#9ca3af',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,

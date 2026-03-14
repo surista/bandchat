@@ -313,7 +313,7 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
             }).map(att => ({
               type: att.type,
               url: att.url,
-              filename: att.filename,
+              filename: typeof att.filename === 'string' ? att.filename.replace(/[<>"'\\]/g, '_').replace(/\.\./g, '_').substring(0, 255) : null,
               size: att.size,
               ...(att.thumbnailUrl && { thumbnailUrl: att.thumbnailUrl }),
               ...(att.width && { width: att.width }),

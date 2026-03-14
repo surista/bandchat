@@ -1341,8 +1341,12 @@ router.delete('/account', authenticate, authLimiter, async (req, res) => {
       workspaceIds.forEach(wsId => {
         io.to(`workspace:${wsId}`).emit('member:removed', { userId });
       });
-      // Force-logout the deleted user's active sockets
+      // Force-logout and disconnect the deleted user's active sockets
       io.to(`user:${userId}`).emit('force:logout');
+      const sockets = await io.in(`user:${userId}`).fetchSockets();
+      for (const s of sockets) {
+        s.disconnect(true);
+      }
     }
 
     // Clear the httpOnly cookie for web clients

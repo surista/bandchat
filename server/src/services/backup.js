@@ -446,7 +446,6 @@ export async function restoreFromBackup(key, onProgress) {
         "WorkspaceMember",
         "Workspace",
         "ExpoPushToken",
-        "PushSubscription",
         "RefreshToken",
         "Report",
         "BlockedUser",
@@ -722,7 +721,7 @@ export async function restoreFromBackup(key, onProgress) {
         messageId: pm.messageId || pm.message?.id,
         channelId: ch.id,
         pinnedById: pm.pinnedById || pm.pinnedBy?.id || null,
-        pinnedAt: pm.pinnedAt ? new Date(pm.pinnedAt) : new Date(),
+        createdAt: pm.pinnedAt ? new Date(pm.pinnedAt) : (pm.createdAt ? new Date(pm.createdAt) : new Date()),
       }))
     ).filter(pm => pm.messageId);
     if (pinnedData.length) {
@@ -2073,7 +2072,6 @@ export async function restoreWorkspaceBackup(key, onProgress) {
               authorId: authorResolved,
               parentId: msg.parentId || null,
               removedUserName: authorResolved ? (msg.removedUserName || null) : (msg.removedUserName || getRemovedName(msg.authorId)),
-              isEdited: msg.isEdited || false,
               isHidden: msg.isHidden || false,
               createdAt: new Date(msg.createdAt),
               updatedAt: msg.updatedAt ? new Date(msg.updatedAt) : new Date(msg.createdAt),
@@ -2119,7 +2117,7 @@ export async function restoreWorkspaceBackup(key, onProgress) {
           messageId: pm.messageId || pm.message?.id,
           channelId: pm.channelId,
           pinnedById: resolveUser(pm.pinnedById || pm.pinnedBy?.id),
-          pinnedAt: pm.pinnedAt ? new Date(pm.pinnedAt) : new Date(),
+          createdAt: pm.pinnedAt ? new Date(pm.pinnedAt) : (pm.createdAt ? new Date(pm.createdAt) : new Date()),
         }))
         .filter(pm => pm.messageId);
       if (pinnedData.length) {

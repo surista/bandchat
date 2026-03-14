@@ -19,6 +19,7 @@ import { SkeletonList } from '../../components/SkeletonLoader';
 import { successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import { getLocalSongs, upsertSongs, deleteLocalSong } from '../../services/database';
+import ErrorState from '../../components/ErrorState';
 import { formatDuration } from '../../utils/formatDuration';
 import useDebounce from '../../hooks/useDebounce';
 
@@ -42,6 +43,7 @@ export default function SongListScreen({ navigation, route }) {
 
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300); // Debounce search by 300ms
@@ -115,10 +117,11 @@ export default function SongListScreen({ navigation, route }) {
       ]);
       setSongs(data);
       if (summary) setPracticeSummary(summary);
+      setLoadError(null);
       // Persist to SQLite for offline access
       upsertSongs(data, workspaceId).catch(() => {});
     } catch (err) {
-      // silently fail — cached songs still showing if available
+      if (songs.length === 0) setLoadError('Could not load songs');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -294,6 +297,14 @@ export default function SongListScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
         <SkeletonList count={8} lines={2} />
+      </SafeAreaView>
+    );
+  }
+
+  if (loadError && songs.length === 0) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+        <ErrorState emoji="🎵" title="Couldn't load songs" message={loadError} onRetry={loadSongs} />
       </SafeAreaView>
     );
   }

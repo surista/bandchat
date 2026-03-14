@@ -22,6 +22,7 @@ import { useSocket } from '../../context/SocketContext';
 import api from '../../services/api';
 import { getLocalChannels, upsertChannels, upsertMembers } from '../../services/database';
 import ChannelItem from '../../components/ChannelItem';
+import ErrorState from '../../components/ErrorState';
 import OnboardingOverlay from '../../components/OnboardingOverlay';
 import { useLayout } from '../../hooks/useLayout';
 
@@ -76,6 +77,7 @@ export default function ChannelListScreen({ navigation, route }) {
   const [channelGroups, setChannelGroups] = useState([]);
   const [directMessages, setDirectMessages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState({});
   const [collapsedBand, setCollapsedBand] = useState(false);
@@ -233,8 +235,9 @@ export default function ChannelListScreen({ navigation, route }) {
       // Persist to SQLite for offline access
       upsertChannels([...ch, ...dms], workspaceId).catch(() => {});
       if (ws.members) upsertMembers(ws.members, workspaceId).catch(() => {});
+      setLoadError(null);
     } catch (err) {
-      // silently fail
+      if (channels.length === 0) setLoadError('Could not load channels');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -748,6 +751,14 @@ export default function ChannelListScreen({ navigation, route }) {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loadError && channels.length === 0) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.channelListBg }]} edges={['bottom']}>
+        <ErrorState emoji="💬" title="Couldn't load channels" message={loadError} onRetry={loadData} />
       </SafeAreaView>
     );
   }

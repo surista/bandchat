@@ -619,6 +619,11 @@ router.post('/workspaces/:workspaceId/backup', async (req, res) => {
       return res.status(400).json({ error: 'R2 storage not configured.' });
     }
 
+    const workspace = await prisma.workspace.findUnique({ where: { id: req.params.workspaceId }, select: { id: true } });
+    if (!workspace) {
+      return res.status(404).json({ error: 'Workspace not found' });
+    }
+
     console.log(`Workspace backup triggered by ${req.user.email} for workspace ${req.params.workspaceId}`);
     const result = await createWorkspaceBackup(req.params.workspaceId);
     console.log(`Workspace backup complete: ${result.key} (${(result.size / 1024).toFixed(1)} KB)`);
@@ -629,7 +634,7 @@ router.post('/workspaces/:workspaceId/backup', async (req, res) => {
     res.json({ ...result, cleanup });
   } catch (error) {
     console.error('Workspace backup error:', error);
-    res.status(500).json({ error: error.message || 'Workspace backup failed' });
+    res.status(500).json({ error: 'Workspace backup failed' });
   }
 });
 
@@ -653,15 +658,15 @@ router.get('/workspaces/:workspaceId/backups', async (req, res) => {
 router.post('/workspace-backups/preview', async (req, res) => {
   try {
     const { key } = req.body;
-    if (!key) {
-      return res.status(400).json({ error: 'Missing backup key' });
+    if (!key || !key.startsWith('backups/workspace/') || key.includes('..')) {
+      return res.status(400).json({ error: 'Invalid backup key' });
     }
 
     const preview = await previewWorkspaceBackup(key);
     res.json(preview);
   } catch (error) {
     console.error('Workspace backup preview error:', error);
-    res.status(500).json({ error: error.message || 'Failed to preview workspace backup' });
+    res.status(500).json({ error: 'Failed to preview workspace backup' });
   }
 });
 
@@ -670,8 +675,8 @@ router.post('/workspace-backups/restore', async (req, res) => {
   try {
     const { key, confirmPhrase } = req.body;
 
-    if (!key) {
-      return res.status(400).json({ error: 'Missing backup key' });
+    if (!key || !key.startsWith('backups/workspace/') || key.includes('..')) {
+      return res.status(400).json({ error: 'Invalid backup key' });
     }
     if (confirmPhrase !== 'RESTORE WORKSPACE') {
       return res.status(400).json({ error: 'Invalid confirmation phrase. Type "RESTORE WORKSPACE" to confirm.' });
@@ -687,7 +692,7 @@ router.post('/workspace-backups/restore', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Workspace restore error:', error);
-    res.status(500).json({ error: error.message || 'Workspace restore failed' });
+    res.status(500).json({ error: 'Workspace restore failed' });
   }
 });
 

@@ -22,6 +22,7 @@ import { mediumImpact, successNotification } from '../../utils/haptics';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import api from '../../services/api';
 import { getLocalGigs, upsertGigs, deleteLocalGig } from '../../services/database';
+import ErrorState from '../../components/ErrorState';
 
 function getCurrencySymbol(code) {
   const symbols = { USD: '$', GBP: '£', EUR: '€', JPY: '¥', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', CHF: 'CHF ' };
@@ -90,6 +91,7 @@ export default function GigListScreen({ navigation, route }) {
   const [otherGigs, setOtherGigs] = useState([]);
   const [showAllBands, setShowAllBands] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [typeFilter, setTypeFilter] = useState('all');
   const [sortNewest, setSortNewest] = useState(true);
@@ -197,6 +199,7 @@ export default function GigListScreen({ navigation, route }) {
       ]);
       setGigs(data);
       setOtherGigs(showAllBands ? other : []);
+      setLoadError(null);
       // Persist to SQLite for offline access
       upsertGigs(data, workspaceId).catch(() => {});
       // Index availability by date
@@ -206,7 +209,7 @@ export default function GigListScreen({ navigation, route }) {
       }
       setAvailability(availMap);
     } catch (err) {
-      // silently fail
+      if (gigs.length === 0) setLoadError('Could not load events');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -481,6 +484,14 @@ export default function GigListScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
         <SkeletonList count={6} lines={3} />
+      </SafeAreaView>
+    );
+  }
+
+  if (loadError && gigs.length === 0) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+        <ErrorState emoji="📅" title="Couldn't load events" message={loadError} onRetry={loadGigs} />
       </SafeAreaView>
     );
   }
