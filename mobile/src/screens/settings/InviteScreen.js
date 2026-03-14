@@ -16,10 +16,12 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import formatDate from '../../utils/formatDate';
+import { useLayout } from '../../hooks/useLayout';
 
 export default function InviteScreen({ route }) {
   const { workspaceId } = route.params;
-  const { user } = useAuth();
+  const { user } = useAuth()
+  const { isTablet, contentMaxWidth } = useLayout();
   const { colors } = useTheme();
 
   const [inviteData, setInviteData] = useState(null);
@@ -112,7 +114,7 @@ export default function InviteScreen({ route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -121,8 +123,8 @@ export default function InviteScreen({ route }) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
+      <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
         {/* Invite Code */}
         <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>INVITE CODE</Text>
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
@@ -215,6 +217,7 @@ export default function InviteScreen({ route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { padding: 16, paddingBottom: 40 },
   sectionHeader: {

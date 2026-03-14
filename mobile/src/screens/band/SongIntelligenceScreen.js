@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
+import { useLayout } from '../../hooks/useLayout';
 
 const TABS = ['recommendations', 'mashups', 'transitions', 'optimizer'];
 const TAB_LABELS = {
@@ -459,11 +460,12 @@ function OptimizerTab({ workspaceId, colors }) {
 // --- Main Screen ---
 export default function SongIntelligenceScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme();
+  const { colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
   const [activeTab, setActiveTab] = useState('recommendations');
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       {/* Tabs */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabRow}>
         {TABS.map(tab => (
@@ -494,6 +496,7 @@ export default function SongIntelligenceScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   // Tabs
   tabRow: { paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.1)' },
   tab: { paddingVertical: 12, paddingHorizontal: 16 },

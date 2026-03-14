@@ -22,6 +22,7 @@ import { useTheme } from '../../context/ThemeContext';
 import ErrorState from '../../components/ErrorState';
 import useDebounce from '../../hooks/useDebounce';
 import api from '../../services/api';
+import { useLayout } from '../../hooks/useLayout';
 
 const EVENT_TYPES = [
   { key: 'formation', label: 'Band Formation', icon: '\uD83C\uDFB8' },
@@ -54,7 +55,8 @@ function formatEventDate(dateStr) {
 
 export default function TimelineScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { user } = useAuth();
+  const { user } = useAuth()
+  const { isTablet, contentMaxWidth } = useLayout();
   const { colors, mode } = useTheme();
 
   const [events, setEvents] = useState([]);
@@ -342,7 +344,7 @@ export default function TimelineScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -352,7 +354,7 @@ export default function TimelineScreen({ navigation, route }) {
 
   if (error) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <ErrorState message={error} onRetry={loadData} />
       </SafeAreaView>
     );
@@ -361,11 +363,11 @@ export default function TimelineScreen({ navigation, route }) {
   if (showForm) {
     return (
       <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: colors.bgPrimary }]}
+        style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={100}
       >
-        <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
           <Text style={[styles.formTitle, { color: colors.textPrimary }]}>
             {editingEvent ? 'Edit Event' : 'New Event'}
           </Text>
@@ -508,7 +510,7 @@ export default function TimelineScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       {/* Admin actions */}
       {isAdmin && (
         <View style={styles.adminRow}>
@@ -555,7 +557,7 @@ export default function TimelineScreen({ navigation, route }) {
         data={groupedData}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -623,6 +625,7 @@ export default function TimelineScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   // Admin row
   adminRow: {

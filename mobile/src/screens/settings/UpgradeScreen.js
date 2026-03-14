@@ -15,6 +15,7 @@ import Purchases from 'react-native-purchases';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { APP_BASE_URL } from '../../utils/constants';
+import { useLayout } from '../../hooks/useLayout';
 
 // Product IDs — must match App Store Connect / Google Play Console and RevenueCat dashboard
 const PRODUCT_IDS = {
@@ -45,7 +46,8 @@ const PRO_FEATURES = [
 ];
 
 export default function UpgradeScreen({ route }) {
-  const { colors } = useTheme();
+  const { colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
   const { workspaceId } = route.params;
 
   const [planData, setPlanData] = useState(null);
@@ -184,15 +186,15 @@ export default function UpgradeScreen({ route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
 
         {/* Current Plan Status */}
         {isPro ? (
@@ -386,6 +388,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   scrollContent: {
     padding: 16,
     paddingBottom: 40,

@@ -14,6 +14,7 @@ import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { format, isToday, isYesterday } from 'date-fns';
+import { useLayout } from '../../hooks/useLayout';
 
 function formatMessageDate(date) {
   const d = new Date(date);
@@ -24,7 +25,8 @@ function formatMessageDate(date) {
 
 export default function TimelineScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme();
+  const { colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
   const { socket } = useSocket();
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
@@ -217,7 +219,7 @@ export default function TimelineScreen({ navigation, route }) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
       <FlatList
         data={messages}
         keyExtractor={(item) => item.id}
@@ -242,6 +244,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

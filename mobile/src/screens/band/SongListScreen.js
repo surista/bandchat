@@ -22,6 +22,7 @@ import { getLocalSongs, upsertSongs, deleteLocalSong } from '../../services/data
 import ErrorState from '../../components/ErrorState';
 import { formatDuration } from '../../utils/formatDuration';
 import useDebounce from '../../hooks/useDebounce';
+import { useLayout } from '../../hooks/useLayout';
 
 const SORT_OPTIONS = [
   { key: 'title', label: 'Title' },
@@ -39,7 +40,8 @@ function Badge({ label, color, bgColor }) {
 
 export default function SongListScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme();
+  const { colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
 
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -295,7 +297,7 @@ export default function SongListScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <SkeletonList count={8} lines={2} />
       </SafeAreaView>
     );
@@ -303,14 +305,14 @@ export default function SongListScreen({ navigation, route }) {
 
   if (loadError && songs.length === 0) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <ErrorState emoji="🎵" title="Couldn't load songs" message={loadError} onRetry={loadSongs} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       {/* Search + Sort */}
       <View style={styles.toolbar}>
         <TextInput
@@ -339,7 +341,7 @@ export default function SongListScreen({ navigation, route }) {
         data={filteredSongs}
         keyExtractor={(item) => item.id}
         renderItem={renderSong}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -439,7 +441,7 @@ export default function SongListScreen({ navigation, route }) {
 
       {/* Bulk Import Modal */}
       <Modal visible={showBulkImport} animationType="slide" onRequestClose={() => setShowBulkImport(false)}>
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
           <View style={[styles.bulkHeader, { backgroundColor: colors.bgSecondary }]}>
             <TouchableOpacity onPress={() => setShowBulkImport(false)} accessibilityRole="button" accessibilityLabel="Cancel bulk import">
               <Text style={{ color: colors.primary, fontSize: 16 }}>Cancel</Text>
@@ -579,6 +581,7 @@ export default function SongListScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   toolbar: {
     flexDirection: 'row',

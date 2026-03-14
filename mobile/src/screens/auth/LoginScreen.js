@@ -18,9 +18,11 @@ import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-si
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { APP_BASE_URL } from '../../utils/constants';
+import { useLayout } from '../../hooks/useLayout';
 
 export default function LoginScreen({ navigation }) {
-  const { login, googleLogin, appleLogin } = useAuth();
+  const { login, googleLogin, appleLogin } = useAuth()
+  const { isTablet, contentMaxWidth } = useLayout();
   const { colors } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -92,13 +94,13 @@ export default function LoginScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.sidebar }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.sidebar }, isTablet && styles.tabletContainer]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
@@ -252,6 +254,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  tabletContainer: { maxWidth: 500, width: '100%', alignSelf: 'center' },
   flex: {
     flex: 1,
   },

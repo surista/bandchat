@@ -8,15 +8,17 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme, themes } from '../../context/ThemeContext';
+import { useLayout } from '../../hooks/useLayout';
 
 const themeKeys = Object.keys(themes);
 
 export default function AppearanceScreen() {
-  const { currentTheme, setTheme, mode, toggleMode, colors } = useTheme();
+  const { currentTheme, setTheme, mode, toggleMode, colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
+      <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
         {/* Mode Toggle */}
         <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>MODE</Text>
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
@@ -76,6 +78,7 @@ export default function AppearanceScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   content: { padding: 16, paddingBottom: 40 },
   sectionHeader: {
     fontSize: 13,

@@ -15,10 +15,12 @@ import { useSocket } from '../../context/SocketContext';
 import ErrorState from '../../components/ErrorState';
 import api from '../../services/api';
 import { format } from 'date-fns';
+import { useLayout } from '../../hooks/useLayout';
 
 export default function PinnedMessagesScreen({ navigation, route }) {
   const { channelId } = route.params;
-  const { colors } = useTheme();
+  const { colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
   const { socket } = useSocket();
 
   // Ensure back button is always visible
@@ -140,7 +142,7 @@ export default function PinnedMessagesScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -150,14 +152,14 @@ export default function PinnedMessagesScreen({ navigation, route }) {
 
   if (error) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <ErrorState message={error} onRetry={loadPins} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       <FlatList
         data={pins}
         keyExtractor={(item) => item.id || item.messageId}
@@ -179,6 +181,7 @@ export default function PinnedMessagesScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   listContent: { padding: 12, gap: 10 },
   pinCard: {

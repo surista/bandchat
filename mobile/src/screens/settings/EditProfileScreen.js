@@ -16,9 +16,11 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
+import { useLayout } from '../../hooks/useLayout';
 
 export default function EditProfileScreen({ navigation }) {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser } = useAuth()
+  const { isTablet, contentMaxWidth } = useLayout();
   const { colors } = useTheme();
 
   const [displayName, setDisplayName] = useState(user?.displayName || '');
@@ -78,8 +80,8 @@ export default function EditProfileScreen({ navigation }) {
     (bio.trim() || '') !== (user?.bio || '');
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
+      <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
         {/* Avatar */}
         <TouchableOpacity
           style={styles.avatarWrapper}
@@ -169,6 +171,7 @@ export default function EditProfileScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   content: { padding: 24, alignItems: 'center' },
   // Avatar
   avatarWrapper: { position: 'relative', marginBottom: 4 },

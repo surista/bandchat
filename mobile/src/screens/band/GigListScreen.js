@@ -23,6 +23,7 @@ import { SkeletonList } from '../../components/SkeletonLoader';
 import api from '../../services/api';
 import { getLocalGigs, upsertGigs, deleteLocalGig } from '../../services/database';
 import ErrorState from '../../components/ErrorState';
+import { useLayout } from '../../hooks/useLayout';
 
 function getCurrencySymbol(code) {
   const symbols = { USD: '$', GBP: '£', EUR: '€', JPY: '¥', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', CHF: 'CHF ' };
@@ -83,7 +84,8 @@ function formatTimeRange(date, endDate) {
 
 export default function GigListScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme();
+  const { colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
   const { user } = useAuth();
 
   const [gigs, setGigs] = useState([]);
@@ -482,7 +484,7 @@ export default function GigListScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <SkeletonList count={6} lines={3} />
       </SafeAreaView>
     );
@@ -490,14 +492,14 @@ export default function GigListScreen({ navigation, route }) {
 
   if (loadError && gigs.length === 0) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <ErrorState emoji="📅" title="Couldn't load events" message={loadError} onRetry={loadGigs} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       {/* Filter chips */}
       <ScrollView
         horizontal
@@ -567,7 +569,7 @@ export default function GigListScreen({ navigation, route }) {
         renderItem={renderGig}
         renderSectionHeader={renderSectionHeader}
         stickySectionHeadersEnabled={false}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -785,6 +787,7 @@ export default function GigListScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   // Filters
   filterScroll: { flexGrow: 0 },

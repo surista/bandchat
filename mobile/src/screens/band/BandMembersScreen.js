@@ -21,6 +21,7 @@ import useDebounce from '../../hooks/useDebounce';
 import ErrorState from '../../components/ErrorState';
 import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
+import { useLayout } from '../../hooks/useLayout';
 
 const INSTRUMENT_OPTIONS = [
   'Guitar', 'Bass', 'Drums', 'Vocals', 'Keys',
@@ -66,7 +67,8 @@ function getDateRange(member) {
 
 export default function BandMembersScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme();
+  const { colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
   const { user } = useAuth();
 
   const [members, setMembers] = useState({ current: [], former: [], guests: [] });
@@ -316,7 +318,7 @@ export default function BandMembersScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -326,7 +328,7 @@ export default function BandMembersScreen({ navigation, route }) {
 
   if (error) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <ErrorState
           emoji={'\uD83D\uDE15'}
           title="Couldn't load members"
@@ -338,7 +340,7 @@ export default function BandMembersScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       <View style={[styles.toolbar, { borderBottomColor: colors.border }]}>
         <TextInput
           style={[styles.searchInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary }]}
@@ -377,7 +379,7 @@ export default function BandMembersScreen({ navigation, route }) {
         renderItem={renderMember}
         renderSectionHeader={renderSectionHeader}
         stickySectionHeadersEnabled={false}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -538,6 +540,7 @@ export default function BandMembersScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   emptyText: { fontSize: 15 },
   emptyIcon: { fontSize: 40, marginBottom: 12 },

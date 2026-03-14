@@ -19,6 +19,7 @@ import { useAuth } from '../../context/AuthContext';
 import ActionSheet from '../../components/ActionSheet';
 import ErrorState from '../../components/ErrorState';
 import api from '../../services/api';
+import { useLayout } from '../../hooks/useLayout';
 
 const PRIORITY_COLORS = {
   low: '#6b7280',
@@ -44,7 +45,8 @@ function timeAgo(dateStr) {
 
 export default function AnnouncementsScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme();
+  const { colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
   const { user } = useAuth();
 
   const [announcements, setAnnouncements] = useState([]);
@@ -270,7 +272,7 @@ export default function AnnouncementsScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -280,7 +282,7 @@ export default function AnnouncementsScreen({ navigation, route }) {
 
   if (error) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <ErrorState
           emoji={'\uD83D\uDE15'}
           title="Couldn't load announcements"
@@ -292,14 +294,14 @@ export default function AnnouncementsScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
         renderItem={renderAnnouncement}
         renderSectionHeader={renderSectionHeader}
         stickySectionHeadersEnabled={false}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -430,6 +432,7 @@ export default function AnnouncementsScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   emptyIcon: { fontSize: 40, marginBottom: 12 },
   emptyTitle: { fontSize: 16, fontWeight: '600', marginBottom: 4 },

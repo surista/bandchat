@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
+import { useLayout } from '../../hooks/useLayout';
 
 const SNOOZE_OPTIONS = [
   { label: '30 minutes', value: 30 },
@@ -29,7 +30,8 @@ const PREF_CATEGORIES = [
 ];
 
 export default function NotificationsScreen({ route }) {
-  const { colors } = useTheme();
+  const { colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
   const workspaceId = route?.params?.workspaceId;
 
   const [loading, setLoading] = useState(true);
@@ -110,7 +112,7 @@ export default function NotificationsScreen({ route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -119,8 +121,8 @@ export default function NotificationsScreen({ route }) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
+      <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
         {/* Status */}
         <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>STATUS</Text>
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
@@ -209,6 +211,7 @@ export default function NotificationsScreen({ route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { padding: 16, paddingBottom: 40 },
   sectionHeader: {

@@ -17,10 +17,12 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { format } from 'date-fns';
+import { useLayout } from '../../hooks/useLayout';
 
 export default function ChannelSettingsScreen({ navigation, route }) {
   const { channel, workspaceId } = route.params;
-  const { user } = useAuth();
+  const { user } = useAuth()
+  const { isTablet, contentMaxWidth } = useLayout();
   const { colors } = useTheme();
 
   const [channelData, setChannelData] = useState(channel);
@@ -195,7 +197,7 @@ export default function ChannelSettingsScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -204,8 +206,8 @@ export default function ChannelSettingsScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
+      <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
         {/* Channel Info Card */}
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
           <View style={styles.channelIconRow}>
@@ -417,6 +419,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

@@ -15,10 +15,12 @@ import { useTheme } from '../../context/ThemeContext';
 import Badge from '../../components/Badge';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
+import { useLayout } from '../../hooks/useLayout';
 
 export default function MedleyListScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme();
+  const { colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
 
   const [medleys, setMedleys] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -192,7 +194,7 @@ export default function MedleyListScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -201,12 +203,12 @@ export default function MedleyListScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       <FlatList
         data={medleys}
         keyExtractor={(item) => item.id}
         renderItem={renderMedley}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -272,6 +274,7 @@ export default function MedleyListScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   listContent: { paddingHorizontal: 12, paddingVertical: 8, paddingBottom: 20 },
   card: {

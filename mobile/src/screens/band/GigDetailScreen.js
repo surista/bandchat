@@ -23,6 +23,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { successNotification } from '../../utils/haptics';
 import api from '../../services/api';
+import { useLayout } from '../../hooks/useLayout';
 
 const ATTENDEE_STATUSES = ['ATTENDING', 'MAYBE', 'NOT_ATTENDING'];
 const ATTENDEE_LABELS = { ATTENDING: 'Going', MAYBE: 'Maybe', NOT_ATTENDING: 'Not Going' };
@@ -52,7 +53,8 @@ const STATUS_COLORS = {
 export default function GigDetailScreen({ navigation, route }) {
   const { gigId, workspaceId, editing: startEditing } = route.params;
   const isNew = !gigId;
-  const { user } = useAuth();
+  const { user } = useAuth()
+  const { isTablet, contentMaxWidth } = useLayout();
   const { colors, mode } = useTheme();
 
   const [gig, setGig] = useState(null);
@@ -367,7 +369,7 @@ export default function GigDetailScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -378,11 +380,11 @@ export default function GigDetailScreen({ navigation, route }) {
   if (editing) {
     return (
       <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: colors.bgPrimary }]}
+        style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={100}
       >
-        <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
           <Text style={[styles.label, { color: colors.textSecondary }]}>Title *</Text>
           <TextInput
             style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: fieldErrors.title ? '#ef4444' : colors.border }]}
@@ -692,7 +694,7 @@ export default function GigDetailScreen({ navigation, route }) {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-      contentContainerStyle={styles.viewContent}
+      contentContainerStyle={[styles.viewContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
     >
       {/* Type + Status + Lock badges */}
       <View style={styles.viewBadgeRow}>
@@ -940,6 +942,7 @@ export default function GigDetailScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   // View mode
   viewContent: { padding: 16 },

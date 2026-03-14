@@ -13,6 +13,7 @@ import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { formatTotalDuration } from '../../utils/formatDuration';
+import { useLayout } from '../../hooks/useLayout';
 
 const CURRENCIES = [
   { code: 'USD', symbol: '$' },
@@ -95,7 +96,8 @@ function FunFactCard({ label, value, detail, colors }) {
 
 export default function StatsScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme();
+  const { colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
 
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -134,7 +136,7 @@ export default function StatsScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -144,7 +146,7 @@ export default function StatsScreen({ navigation, route }) {
 
   if (!stats) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <View style={styles.centered}>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No stats available</Text>
         </View>
@@ -161,9 +163,9 @@ export default function StatsScreen({ navigation, route }) {
     : null;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -294,6 +296,7 @@ export default function StatsScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   emptyText: { fontSize: 15 },
   scrollContent: { padding: 12, paddingBottom: 30 },

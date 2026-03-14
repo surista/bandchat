@@ -24,10 +24,12 @@ import { formatDuration } from '../../utils/formatDuration';
 import { buildSetlistHTML } from '../../utils/buildSetlistHTML';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { useLayout } from '../../hooks/useLayout';
 
 export default function SetlistListScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme();
+  const { colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
 
   const [setlists, setSetlists] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -233,7 +235,7 @@ export default function SetlistListScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <SkeletonList count={6} lines={2} />
       </SafeAreaView>
     );
@@ -241,7 +243,7 @@ export default function SetlistListScreen({ navigation, route }) {
 
   if (error) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <ErrorState
           emoji={'\uD83D\uDE15'}
           title="Couldn't load setlists"
@@ -253,7 +255,7 @@ export default function SetlistListScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       <View style={[styles.toolbar, { borderBottomColor: colors.border }]}>
         <TextInput
           style={[styles.searchInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary }]}
@@ -269,7 +271,7 @@ export default function SetlistListScreen({ navigation, route }) {
         data={filteredSetlists}
         keyExtractor={(item) => item.id}
         renderItem={renderSetlist}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -395,6 +397,7 @@ export default function SetlistListScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   toolbar: { paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
   searchInput: { borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },

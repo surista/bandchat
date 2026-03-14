@@ -16,11 +16,13 @@ import { useTheme } from '../../context/ThemeContext';
 import Badge from '../../components/Badge';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
+import { useLayout } from '../../hooks/useLayout';
 
 export default function MedleyDetailScreen({ navigation, route }) {
   const { medleyId, workspaceId, editing: startEditing } = route.params;
   const isNew = !medleyId;
-  const { colors } = useTheme();
+  const { colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
 
   const [medley, setMedley] = useState(null);
   const [loading, setLoading] = useState(!isNew);
@@ -177,7 +179,7 @@ export default function MedleyDetailScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -188,11 +190,11 @@ export default function MedleyDetailScreen({ navigation, route }) {
   if (editing) {
     return (
       <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: colors.bgPrimary }]}
+        style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={100}
       >
-        <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
           <Text style={[styles.label, { color: colors.textSecondary }]}>Name *</Text>
           <TextInput
             style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
@@ -357,7 +359,7 @@ export default function MedleyDetailScreen({ navigation, route }) {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-      contentContainerStyle={styles.viewContent}
+      contentContainerStyle={[styles.viewContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
     >
       {medley.description ? (
         <Text style={[styles.viewDescription, { color: colors.textSecondary }]}>{medley.description}</Text>
@@ -406,6 +408,7 @@ export default function MedleyDetailScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   // View mode
   viewContent: { padding: 16 },

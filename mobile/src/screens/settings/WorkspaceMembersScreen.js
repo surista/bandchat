@@ -17,10 +17,12 @@ import { useTheme } from '../../context/ThemeContext';
 import { mediumImpact, successNotification } from '../../utils/haptics';
 import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
+import { useLayout } from '../../hooks/useLayout';
 
 export default function WorkspaceMembersScreen({ route, navigation }) {
   const { workspaceId } = route.params;
-  const { user } = useAuth();
+  const { user } = useAuth()
+  const { isTablet, contentMaxWidth } = useLayout();
   const { colors } = useTheme();
 
   const [members, setMembers] = useState([]);
@@ -200,7 +202,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -209,7 +211,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       <View style={[styles.countBar, { backgroundColor: colors.bgSecondary }]}>
         <Text style={[styles.countText, { color: colors.textSecondary }]}>
           {members.filter(m => !blockedIds.has(m.userId)).length} member{members.filter(m => !blockedIds.has(m.userId)).length !== 1 ? 's' : ''}
@@ -220,7 +222,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
         data={members.filter(m => !blockedIds.has(m.userId))}
         keyExtractor={(item) => item.userId}
         renderItem={renderMember}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -410,6 +412,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   countBar: { paddingHorizontal: 16, paddingVertical: 10 },
   countText: { fontSize: 14, fontWeight: '600' },

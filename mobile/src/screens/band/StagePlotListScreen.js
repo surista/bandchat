@@ -14,10 +14,12 @@ import { mediumImpact, successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import ActionSheet from '../../components/ActionSheet';
 import { format } from 'date-fns';
+import { useLayout } from '../../hooks/useLayout';
 
 export default function StagePlotListScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme();
+  const { colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
   const { user } = useAuth();
 
   const [plots, setPlots] = useState([]);
@@ -128,7 +130,7 @@ export default function StagePlotListScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -137,7 +139,7 @@ export default function StagePlotListScreen({ navigation, route }) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
       {plots.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>{'\uD83C\uDFAD'}</Text>
@@ -159,7 +161,7 @@ export default function StagePlotListScreen({ navigation, route }) {
             data={plots}
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
           />
           <TouchableOpacity
             style={[styles.fab, { backgroundColor: '#16a34a' }]}
@@ -203,6 +205,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

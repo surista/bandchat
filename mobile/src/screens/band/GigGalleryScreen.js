@@ -14,13 +14,15 @@ import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
 import ImageViewer from '../../components/ImageViewer';
 import api from '../../services/api';
+import { useLayout } from '../../hooks/useLayout';
 
 const GAP = 2;
 const TABLET_BREAKPOINT = 768;
 
 export default function GigGalleryScreen({ route }) {
   const { gigId, gigTitle } = route.params;
-  const { colors } = useTheme();
+  const { colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
   const { width: screenWidth } = useWindowDimensions();
 
   const [media, setMedia] = useState([]);
@@ -102,7 +104,7 @@ export default function GigGalleryScreen({ route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -111,7 +113,7 @@ export default function GigGalleryScreen({ route }) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       <FlatList
         data={media}
         keyExtractor={(item) => item.id}
@@ -119,7 +121,7 @@ export default function GigGalleryScreen({ route }) {
         key={numColumns}
         numColumns={numColumns}
         columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         ListEmptyComponent={
           <View style={styles.centered}>
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
@@ -143,6 +145,7 @@ export default function GigGalleryScreen({ route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   listContent: { flexGrow: 1 },
   row: { gap: GAP },

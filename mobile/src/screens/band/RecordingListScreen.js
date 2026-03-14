@@ -19,6 +19,7 @@ import formatDate from '../../utils/formatDate';
 import api from '../../services/api';
 import ErrorState from '../../components/ErrorState';
 import useDebounce from '../../hooks/useDebounce';
+import { useLayout } from '../../hooks/useLayout';
 
 const TYPE_FILTERS = [
   { key: 'all', label: 'All Types' },
@@ -103,7 +104,8 @@ function InlineAudioPlayer({ url, colors }) {
 
 export default function RecordingListScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme();
+  const { colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
 
   const [recordings, setRecordings] = useState([]);
   const [songs, setSongs] = useState([]);
@@ -253,7 +255,7 @@ export default function RecordingListScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -263,7 +265,7 @@ export default function RecordingListScreen({ navigation, route }) {
 
   if (error) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <ErrorState
           emoji={'\uD83D\uDE15'}
           title="Couldn't load recordings"
@@ -275,7 +277,7 @@ export default function RecordingListScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       <View style={[styles.searchBar, { borderBottomColor: colors.border }]}>
         <TextInput
           style={[styles.searchInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary }]}
@@ -370,7 +372,7 @@ export default function RecordingListScreen({ navigation, route }) {
         data={filteredRecordings}
         keyExtractor={(item) => item.id}
         renderItem={renderRecording}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -426,6 +428,7 @@ export default function RecordingListScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   // Filters
   filterRow: {

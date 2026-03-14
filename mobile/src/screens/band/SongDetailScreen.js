@@ -20,6 +20,7 @@ import { useTheme } from '../../context/ThemeContext';
 import Badge from '../../components/Badge';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
+import { useLayout } from '../../hooks/useLayout';
 
 const KEY_ROOTS = ['C', 'C#/Db', 'D', 'D#/Eb', 'E', 'F', 'F#/Gb', 'G', 'G#/Ab', 'A', 'A#/Bb', 'B'];
 const KEY_SUFFIXES = ['major', 'minor'];
@@ -37,7 +38,8 @@ function parseDuration(str) {
 export default function SongDetailScreen({ navigation, route }) {
   const { songId, workspaceId, editing: startEditing } = route.params;
   const isNew = !songId;
-  const { colors } = useTheme();
+  const { colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
 
   const [song, setSong] = useState(null);
   const [loading, setLoading] = useState(!isNew);
@@ -225,7 +227,7 @@ export default function SongDetailScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -236,11 +238,11 @@ export default function SongDetailScreen({ navigation, route }) {
   if (editing) {
     return (
       <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: colors.bgPrimary }]}
+        style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={100}
       >
-        <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
           <Text style={[styles.label, { color: colors.textSecondary }]}>Title *</Text>
           <TextInput
             style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: fieldErrors.title ? '#ef4444' : colors.border }]}
@@ -470,7 +472,7 @@ export default function SongDetailScreen({ navigation, route }) {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-      contentContainerStyle={styles.viewContent}
+      contentContainerStyle={[styles.viewContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
     >
       {song?.artist ? (
         <Text style={[styles.viewArtist, { color: colors.textSecondary }]}>{song.artist}</Text>
@@ -620,6 +622,7 @@ export default function SongDetailScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   // View mode
   viewContent: { padding: 16 },

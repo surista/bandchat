@@ -24,6 +24,7 @@ import { useTheme } from '../../context/ThemeContext';
 import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
 import { APP_BASE_URL } from '../../utils/constants';
+import { useLayout } from '../../hooks/useLayout';
 
 const CURRENCIES = ['USD', 'GBP', 'EUR', 'JPY', 'AUD', 'CAD', 'NZD', 'CHF', 'ZAR'];
 const EVENT_TYPES = [
@@ -62,7 +63,8 @@ function SectionHeader({ title, colors }) {
 
 export default function SettingsScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { user, logout } = useAuth();
+  const { user, logout } = useAuth()
+  const { isTablet, contentMaxWidth } = useLayout();
   const { colors, messageDensity, setMessageDensity } = useTheme();
   const [isAdmin, setIsAdmin] = useState(false);
   const [workspaceName, setWorkspaceName] = useState('');
@@ -196,8 +198,8 @@ export default function SettingsScreen({ navigation, route }) {
   }, [workspaceId, wsCurrency, wsEventType, wsStartTime, wsEndTime, wsVenue]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
+      <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
         {/* User Card */}
         <TouchableOpacity
           style={[styles.userCard, { backgroundColor: colors.bgSecondary }]}
@@ -614,6 +616,7 @@ export default function SettingsScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   content: { padding: 16, paddingBottom: 40 },
   // User card
   userCard: {

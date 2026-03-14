@@ -23,9 +23,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
+import { useLayout } from '../../hooks/useLayout';
 
 export default function SecurityScreen() {
-  const { user, updateUser, logout, biometricEnabled, setBiometricEnabled } = useAuth();
+  const { user, updateUser, logout, biometricEnabled, setBiometricEnabled } = useAuth()
+  const { isTablet, contentMaxWidth } = useLayout();
   const { colors } = useTheme();
 
   const hasPassword = user?.hasPassword !== false;
@@ -206,8 +208,8 @@ export default function SecurityScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
+      <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
         {/* Change Password */}
         {hasPassword && (
           <>
@@ -528,6 +530,7 @@ export default function SecurityScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   content: { padding: 16, paddingBottom: 40 },
   sectionHeader: {
     fontSize: 13,

@@ -18,6 +18,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import { successNotification } from '../../utils/haptics';
 import api from '../../services/api';
+import { useLayout } from '../../hooks/useLayout';
 
 function StatBox({ label, value, colors }) {
   return (
@@ -48,7 +49,8 @@ const ACHIEVEMENT_ICONS = {
 
 export default function MemberProfileScreen({ route, navigation }) {
   const { workspaceId, userId, displayName } = route.params;
-  const { user: currentUser } = useAuth();
+  const { user: currentUser } = useAuth()
+  const { isTablet, contentMaxWidth } = useLayout();
   const { colors } = useTheme();
   const toast = useToast();
 
@@ -133,7 +135,7 @@ export default function MemberProfileScreen({ route, navigation }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -143,7 +145,7 @@ export default function MemberProfileScreen({ route, navigation }) {
 
   if (!profile) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <View style={styles.centered}>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Profile not found</Text>
         </View>
@@ -156,7 +158,7 @@ export default function MemberProfileScreen({ route, navigation }) {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -317,6 +319,7 @@ export default function MemberProfileScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { fontSize: 15 },
   content: { padding: 16, paddingBottom: 40 },

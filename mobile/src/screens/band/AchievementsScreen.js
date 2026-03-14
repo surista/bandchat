@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import formatDate from '../../utils/formatDate';
 import api from '../../services/api';
+import { useLayout } from '../../hooks/useLayout';
 
 const TABS = ['band', 'my', 'leaderboard'];
 const TAB_LABELS = { band: 'Band', my: 'My Badges', leaderboard: 'Leaderboard' };
@@ -37,7 +38,8 @@ function StatCard({ label, value, color, bgColor }) {
 
 export default function AchievementsScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme();
+  const { colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
 
   const [definitions, setDefinitions] = useState([]);
   const [bandAchievements, setBandAchievements] = useState([]);
@@ -166,7 +168,7 @@ export default function AchievementsScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -175,7 +177,7 @@ export default function AchievementsScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       <ScrollView
         refreshControl={
           <RefreshControl
@@ -387,6 +389,7 @@ function LeaderboardView({ leaderboard, colors }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   emptyCentered: { padding: 40, alignItems: 'center' },
   emptyText: { fontSize: 15 },

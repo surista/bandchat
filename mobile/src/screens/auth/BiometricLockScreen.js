@@ -3,9 +3,11 @@ import { View, Text, TouchableOpacity, StyleSheet, Image, ActivityIndicator } fr
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLayout } from '../../hooks/useLayout';
 
 export default function BiometricLockScreen() {
-  const { unlockApp, logout } = useAuth();
+  const { unlockApp, logout } = useAuth()
+  const { isTablet, contentMaxWidth } = useLayout();
   const { colors } = useTheme();
   const [authenticating, setAuthenticating] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -39,7 +41,7 @@ export default function BiometricLockScreen() {
   }, [authenticate]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
       <View style={styles.content}>
         <Image
           source={require('../../../assets/icon.png')}
@@ -91,6 +93,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  tabletContainer: { maxWidth: 500, width: '100%', alignSelf: 'center' },
   content: {
     alignItems: 'center',
     paddingHorizontal: 40,

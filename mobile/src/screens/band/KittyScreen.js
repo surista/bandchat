@@ -20,6 +20,7 @@ import { useTheme } from '../../context/ThemeContext';
 import ActionSheet from '../../components/ActionSheet';
 import formatDate from '../../utils/formatDate';
 import api from '../../services/api';
+import { useLayout } from '../../hooks/useLayout';
 
 const TRANSACTION_TYPES = [
   { key: 'GIG_PAY', label: 'Gig Pay', icon: '\uD83C\uDFA4', positive: true },
@@ -88,7 +89,8 @@ function getTypeInfo(type) {
 
 export default function KittyScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { user } = useAuth();
+  const { user } = useAuth()
+  const { isTablet, contentMaxWidth } = useLayout();
   const { colors } = useTheme();
 
   const [kitty, setKitty] = useState(null);
@@ -369,7 +371,7 @@ export default function KittyScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -380,11 +382,11 @@ export default function KittyScreen({ navigation, route }) {
   if (showForm) {
     return (
       <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: colors.bgPrimary }]}
+        style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={100}
       >
-        <ScrollView contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
           <Text style={[styles.formTitle, { color: colors.textPrimary }]}>
             {editingTx ? 'Edit Transaction' : 'New Transaction'}
           </Text>
@@ -512,7 +514,7 @@ export default function KittyScreen({ navigation, route }) {
   const balance = kitty?.currentBalance ?? 0;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       {/* Balance header */}
       <View style={styles.balanceHeader}>
         <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>Current Balance</Text>
@@ -555,7 +557,7 @@ export default function KittyScreen({ navigation, route }) {
         data={groupedData}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
         }
@@ -640,6 +642,7 @@ export default function KittyScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   // Balance
   balanceHeader: { alignItems: 'center', paddingVertical: 16 },

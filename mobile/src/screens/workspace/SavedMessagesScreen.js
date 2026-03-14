@@ -12,10 +12,12 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { format } from 'date-fns';
+import { useLayout } from '../../hooks/useLayout';
 
 export default function SavedMessagesScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme();
+  const { colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
   const [savedMessages, setSavedMessages] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -131,7 +133,7 @@ export default function SavedMessagesScreen({ navigation, route }) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
       <Text style={[styles.count, { color: colors.textSecondary }]}>
         {savedMessages.length} saved message{savedMessages.length !== 1 ? 's' : ''}
       </Text>
@@ -149,6 +151,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

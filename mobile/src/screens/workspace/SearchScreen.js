@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { format, isToday, isYesterday } from 'date-fns';
+import { useLayout } from '../../hooks/useLayout';
 
 function formatTimestamp(dateStr) {
   const date = new Date(dateStr);
@@ -22,7 +23,8 @@ function formatTimestamp(dateStr) {
 
 export default function SearchScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme();
+  const { colors } = useTheme()
+  const { isTablet, contentMaxWidth } = useLayout();
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -202,7 +204,7 @@ export default function SearchScreen({ navigation, route }) {
   }, [channels, colors, handleResultPress, renderHighlightedText]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       {/* Search Input */}
       <View style={[styles.searchBar, { backgroundColor: colors.bgSecondary, borderBottomColor: colors.border }]}>
         <Text style={styles.searchIcon}>{'\uD83D\uDD0D'}</Text>
@@ -337,6 +339,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
