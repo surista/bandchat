@@ -3,12 +3,14 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { formatDistanceToNow } from 'date-fns';
 import ConfirmDialog from '../common/ConfirmDialog';
+import ErrorMessage from '../common/ErrorMessage';
 import Skeleton from '../common/Skeleton';
 
 function PollsList({ workspaceId }) {
   const { user } = useAuth();
   const [polls, setPolls] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [deletePollId, setDeletePollId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [showClosed, setShowClosed] = useState(false);
@@ -21,8 +23,10 @@ function PollsList({ workspaceId }) {
     try {
       const data = await api.getPolls(workspaceId, { includeCompleted: showClosed });
       setPolls(data);
+      setError(null);
     } catch (err) {
       console.error('Failed to load polls:', err);
+      setError(err.message || 'Failed to load polls');
     } finally {
       setLoading(false);
     }
@@ -118,7 +122,13 @@ function PollsList({ workspaceId }) {
 
       {/* Polls List */}
       <div className="flex-1 overflow-y-auto p-4">
-        {polls.length === 0 ? (
+        {error && !loading && polls.length === 0 ? (
+          <ErrorMessage
+            message={error}
+            onRetry={loadPolls}
+            className="py-16"
+          />
+        ) : polls.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="text-5xl mb-4">🗳️</div>
             <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">

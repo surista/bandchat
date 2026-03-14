@@ -390,12 +390,6 @@ class ApiService {
     });
   }
 
-  async removeWorkspaceMember(workspaceId, userId) {
-    return this.request(`/workspaces/${workspaceId}/members/${userId}`, {
-      method: 'DELETE'
-    });
-  }
-
   async updateMemberRole(workspaceId, userId, role) {
     return this.request(`/workspaces/${workspaceId}/members/${userId}`, {
       method: 'PUT',
@@ -1093,10 +1087,6 @@ class ApiService {
     });
   }
 
-  async getContact(contactId) {
-    return this.request(`/contacts/${contactId}`);
-  }
-
   async updateContact(contactId, data) {
     return this.request(`/contacts/${contactId}`, {
       method: 'PUT',
@@ -1121,10 +1111,6 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(data)
     });
-  }
-
-  async getAnnouncement(announcementId) {
-    return this.request(`/announcements/${announcementId}`);
   }
 
   async updateAnnouncement(announcementId, data) {
@@ -1195,10 +1181,6 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify(data)
     });
-  }
-
-  async getMedley(medleyId) {
-    return this.request(`/medleys/${medleyId}`);
   }
 
   async updateMedley(medleyId, data) {
@@ -1278,25 +1260,6 @@ class ApiService {
   async checkAchievements(workspaceId) {
     return this.request(`/achievements/workspace/${workspaceId}/check`, {
       method: 'POST'
-    });
-  }
-
-  async reseedAchievements() {
-    return this.request('/achievements/reseed', {
-      method: 'POST'
-    });
-  }
-
-  async resetBandBadges(workspaceId) {
-    return this.request(`/achievements/workspace/${workspaceId}/reset-band-badges`, {
-      method: 'POST'
-    });
-  }
-
-  async awardAchievement(workspaceId, achievementCode, userId = null) {
-    return this.request(`/achievements/workspace/${workspaceId}/award`, {
-      method: 'POST',
-      body: JSON.stringify({ achievementCode, userId })
     });
   }
 

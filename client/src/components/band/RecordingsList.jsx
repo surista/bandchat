@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../../services/api';
 import { formatDate } from '../../utils/formatDate';
+import { formatDuration } from '../../utils/formatDuration';
 import { useToast } from '../../context/ToastContext';
 import ConfirmDialog from '../common/ConfirmDialog';
+import ErrorMessage from '../common/ErrorMessage';
 import Skeleton from '../common/Skeleton';
 
 export default function RecordingsList({ workspaceId }) {
@@ -10,6 +12,7 @@ export default function RecordingsList({ workspaceId }) {
   const [recordings, setRecordings] = useState([]);
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [deleteRecordingId, setDeleteRecordingId] = useState(null);
   const [showRecorder, setShowRecorder] = useState(false);
   const [recordingType, setRecordingType] = useState('audio');
@@ -58,8 +61,10 @@ export default function RecordingsList({ workspaceId }) {
       ]);
       setRecordings(recs);
       setSongs(songList);
-    } catch (error) {
-      console.error('Failed to load data:', error);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load data:', err);
+      setError(err.message || 'Failed to load recordings');
     } finally {
       setLoading(false);
     }
@@ -190,12 +195,6 @@ export default function RecordingsList({ workspaceId }) {
     }
   }
 
-  function formatDuration(seconds) {
-    if (!seconds) return '';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  }
 
   if (loading) {
     return (
@@ -411,8 +410,17 @@ export default function RecordingsList({ workspaceId }) {
         </select>
       </div>
 
+      {/* Error State */}
+      {error && !loading && recordings.length === 0 && (
+        <ErrorMessage
+          message={error}
+          onRetry={loadData}
+          className="py-16"
+        />
+      )}
+
       {/* Recordings Grid */}
-      {recordings.length === 0 ? (
+      {!error && recordings.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="text-5xl mb-4">🎙️</div>
           <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">

@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
+import { formatDuration } from '../../utils/formatDuration';
 import ConfirmDialog from '../common/ConfirmDialog';
+import ErrorMessage from '../common/ErrorMessage';
 import Skeleton from '../common/Skeleton';
 
 function MedleyList({ workspaceId }) {
   const [medleys, setMedleys] = useState([]);
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingMedley, setEditingMedley] = useState(null);
   const [deleteMedleyId, setDeleteMedleyId] = useState(null);
@@ -23,8 +26,10 @@ function MedleyList({ workspaceId }) {
       ]);
       setMedleys(medleysData);
       setSongs(songsData);
+      setError(null);
     } catch (err) {
       console.error('Failed to load medleys:', err);
+      setError(err.message || 'Failed to load medleys');
     } finally {
       setLoading(false);
     }
@@ -96,7 +101,13 @@ function MedleyList({ workspaceId }) {
 
       {/* Medleys List */}
       <div className="flex-1 overflow-y-auto p-4">
-        {medleys.length === 0 ? (
+        {error && !loading && medleys.length === 0 ? (
+          <ErrorMessage
+            message={error}
+            onRetry={loadData}
+            className="py-16"
+          />
+        ) : medleys.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="text-5xl mb-4">🎶</div>
             <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
@@ -156,12 +167,6 @@ function MedleyCard({ medley, onEdit, onDelete, onReorder }) {
   const [localSongs, setLocalSongs] = useState(null);
 
   const totalDuration = medley.songs?.reduce((sum, ms) => sum + (ms.song?.duration || 0), 0) || 0;
-  const formatDuration = (seconds) => {
-    if (!seconds) return '';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${String(secs).padStart(2, '0')}`;
-  };
 
   const handleDragStart = (e, index) => {
     if (!localSongs) {
@@ -349,13 +354,6 @@ function MedleyForm({ medley, songs, onSave, onClose }) {
       setError(err.message);
       setLoading(false);
     }
-  };
-
-  const formatDuration = (seconds) => {
-    if (!seconds) return '';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${String(secs).padStart(2, '0')}`;
   };
 
   return (

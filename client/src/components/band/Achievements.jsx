@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../../services/api';
 import { formatDate } from '../../utils/formatDate';
+import ErrorMessage from '../common/ErrorMessage';
 import Skeleton from '../common/Skeleton';
 
 export default function Achievements({ workspaceId }) {
@@ -12,6 +13,7 @@ export default function Achievements({ workspaceId }) {
   const [leaderboard, setLeaderboard] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [checking, setChecking] = useState(false);
   const [newAchievements, setNewAchievements] = useState([]);
   const [message, setMessage] = useState(null);
@@ -41,8 +43,10 @@ export default function Achievements({ workspaceId }) {
       setMemberAchievements(members);
       setMyAchievements(mine);
       setLeaderboard(board);
-    } catch (error) {
-      console.error('Failed to load achievements:', error);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load achievements:', err);
+      setError(err.message || 'Failed to load achievements');
     } finally {
       setLoading(false);
     }
@@ -54,7 +58,6 @@ export default function Achievements({ workspaceId }) {
     setMessage(null);
     try {
       const result = await api.checkAchievements(workspaceId);
-      console.log('Check achievements result:', result);
       setStats(result.stats);
       if (result.newAchievements.length > 0) {
         setNewAchievements(result.newAchievements);
@@ -105,6 +108,15 @@ export default function Achievements({ workspaceId }) {
     <div className="h-full flex flex-col bg-gray-900">
       <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-5xl mx-auto">
+      {/* Error State */}
+      {error && !loading && allDefinitions.length === 0 && (
+        <ErrorMessage
+          message={error}
+          onRetry={loadData}
+          className="py-16"
+        />
+      )}
+
       {/* New Achievement Celebration */}
       {newAchievements.length > 0 && (
         <div className="mb-6 bg-gradient-to-r from-yellow-600/20 to-orange-600/20 border border-yellow-500/50 rounded-lg p-4">

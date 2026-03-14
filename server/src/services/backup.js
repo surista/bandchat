@@ -30,14 +30,18 @@ export async function createBackup() {
   // Query all data sequentially to avoid memory spikes
   // Note: passwordHash is intentionally excluded — local-auth users must use password reset after restore.
   // Google OAuth users can sign in normally.
+  // Bypass soft-delete middleware by explicitly including all deletedAt values
   const users = await prisma.user.findMany({
+    where: { OR: [{ deletedAt: null }, { deletedAt: { not: null } }] },
     select: {
       id: true, email: true, displayName: true, avatarUrl: true, bio: true,
       createdAt: true, authProvider: true, isSystemAdmin: true, emailVerified: true,
+      deletedAt: true,
     }
   });
 
   const workspaces = await prisma.workspace.findMany({
+    where: { OR: [{ deletedAt: null }, { deletedAt: { not: null } }] },
     include: {
       members: { include: { user: { select: { id: true, displayName: true, email: true } } } },
       channelGroups: true,
@@ -471,6 +475,7 @@ export async function restoreFromBackup(key, onProgress) {
             authProvider: u.authProvider,
             isSystemAdmin: u.isSystemAdmin || false,
             emailVerified: u.emailVerified || false,
+            deletedAt: u.deletedAt ? new Date(u.deletedAt) : null,
           }
         })
       ));
@@ -503,6 +508,7 @@ export async function restoreFromBackup(key, onProgress) {
           planUpdatedAt: ws.planUpdatedAt ? new Date(ws.planUpdatedAt) : null,
           createdAt: new Date(ws.createdAt),
           updatedAt: ws.updatedAt ? new Date(ws.updatedAt) : new Date(ws.createdAt),
+          deletedAt: ws.deletedAt ? new Date(ws.deletedAt) : null,
         }
       });
 
@@ -1803,7 +1809,12 @@ export async function restoreWorkspaceBackup(key, onProgress) {
       : [];
     const existingAchievementIds = new Set(existingAchievements.map(a => a.id));
 
-    // Step 4: Execute restore in a transaction
+    // Step 4: Create safety backup before destructive restore
+    emit('restoring', 'Creating safety backup before restore...');
+    const safetyBackup = await createWorkspaceBackup(wid);
+    emit('restoring', `Safety backup created: ${safetyBackup.key}`);
+
+    // Step 5: Execute restore in a transaction
     emit('restoring', 'Deleting existing workspace data and restoring from backup...');
 
     await prisma.$transaction(async (tx) => {

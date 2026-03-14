@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { formatDate } from '../../utils/formatDate';
+import { formatTotalDuration } from '../../utils/formatDuration';
 
 const CURRENCY_SYMBOLS = {
   USD: '$', EUR: '\u20AC', GBP: '\u00A3', JPY: '\u00A5', CAD: 'C$', AUD: 'A$',
@@ -29,16 +30,6 @@ function GigStats({ workspaceId }) {
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatDuration = (seconds) => {
-    if (!seconds) return '0m';
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) {
-      return `${hours}h ${mins}m`;
-    }
-    return `${mins}m`;
   };
 
   const loadSetlistDetail = async (setlistId) => {
@@ -241,7 +232,7 @@ function GigStats({ workspaceId }) {
                   <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Most Time on One Song</div>
                   <div className="text-[var(--color-text-primary)] font-medium text-sm">{stats.mostTimeSong.title}</div>
                   <div className="text-blue-400 font-bold">
-                    {formatDuration(stats.mostTimeSong.totalTime)}
+                    {formatTotalDuration(stats.mostTimeSong.totalTime)}
                     <span className="text-gray-500 text-xs font-normal ml-1">({stats.mostTimeSong.playCount} plays)</span>
                   </div>
                 </div>

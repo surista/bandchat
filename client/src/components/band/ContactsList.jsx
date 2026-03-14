@@ -2,6 +2,7 @@ import { isSafeUrl } from '../../utils/urlSafety';
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import ConfirmDialog from '../common/ConfirmDialog';
+import ErrorMessage from '../common/ErrorMessage';
 import Skeleton from '../common/Skeleton';
 
 const CATEGORIES = [
@@ -15,6 +16,7 @@ const CATEGORIES = [
 function ContactsList({ workspaceId }) {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingContact, setEditingContact] = useState(null);
   const [deleteContactId, setDeleteContactId] = useState(null);
@@ -29,8 +31,10 @@ function ContactsList({ workspaceId }) {
     try {
       const data = await api.getContacts(workspaceId);
       setContacts(data);
+      setError(null);
     } catch (err) {
       console.error('Failed to load contacts:', err);
+      setError(err.message || 'Failed to load contacts');
     } finally {
       setLoading(false);
     }
@@ -123,7 +127,13 @@ function ContactsList({ workspaceId }) {
 
       {/* Contacts List */}
       <div className="flex-1 overflow-y-auto p-4">
-        {filteredContacts.length === 0 ? (
+        {error && !loading && contacts.length === 0 ? (
+          <ErrorMessage
+            message={error}
+            onRetry={loadContacts}
+            className="py-16"
+          />
+        ) : filteredContacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="text-5xl mb-4">{contacts.length === 0 ? '📇' : '🔍'}</div>
             <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">

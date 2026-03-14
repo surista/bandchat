@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { escapeHtml } from '../../utils/escapeHtml';
+import { formatDuration } from '../../utils/formatDuration';
 import SetlistBuilder from './SetlistBuilder';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ContextMenu from '../common/ContextMenu';
@@ -472,13 +473,6 @@ function SetlistList({ workspaceId, workspaceName }) {
     const secs = totalSeconds % 60;
     return `${mins}:${String(secs).padStart(2, '0')}`;
   }, []);
-
-  const formatDuration = (seconds) => {
-    if (!seconds) return '';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${String(secs).padStart(2, '0')}`;
-  };
 
   const formatTime12h = useCallback((time24) => {
     if (!time24) return '';

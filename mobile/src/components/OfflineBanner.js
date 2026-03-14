@@ -31,6 +31,8 @@ export default function OfflineBanner() {
   );
 }
 
+// Colors are intentionally hardcoded — red/white is semantically correct
+// for an error banner regardless of the active theme.
 const styles = StyleSheet.create({
   banner: {
     backgroundColor: '#ef4444',

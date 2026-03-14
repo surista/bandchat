@@ -1421,25 +1421,6 @@ class ApiService {
     });
   }
 
-  async reseedAchievements() {
-    return this.request('/achievements/reseed', {
-      method: 'POST',
-    });
-  }
-
-  async resetBandBadges(workspaceId) {
-    return this.request(`/achievements/workspace/${workspaceId}/reset-band-badges`, {
-      method: 'POST',
-    });
-  }
-
-  async awardAchievement(workspaceId, achievementCode, userId = null) {
-    return this.request(`/achievements/workspace/${workspaceId}/award`, {
-      method: 'POST',
-      body: JSON.stringify({ achievementCode, userId }),
-    });
-  }
-
   async getAchievementLeaderboard(workspaceId) {
     return this.request(`/achievements/workspace/${workspaceId}/leaderboard`);
   }
@@ -1451,10 +1432,6 @@ class ApiService {
     if (filters.type) params.append('type', filters.type);
     const query = params.toString();
     return this.request(`/recordings/workspace/${workspaceId}${query ? `?${query}` : ''}`);
-  }
-
-  async getSongRecordings(songId) {
-    return this.request(`/recordings/song/${songId}`);
   }
 
   async createRecording(workspaceId, data) {

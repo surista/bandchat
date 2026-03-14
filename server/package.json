@@ -1,6 +1,6 @@
 {
   "name": "bandchat-server",
-  "version": "1.04.92",
+  "version": "1.04.93",
   "description": "BandChat backend API",
   "main": "src/index.js",
   "type": "module",
@@ -23,7 +23,6 @@
     "@prisma/client": "^5.22.0",
     "adm-zip": "^0.5.16",
     "bcryptjs": "^2.4.3",
-    "cloudinary": "^2.8.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -38,7 +37,6 @@
     "resend": "^4.0.0",
     "sharp": "^0.34.5",
     "socket.io": "^4.8.1",
-    "uuid": "^10.0.0",
     "web-push": "^3.6.7"
   },
   "engines": {

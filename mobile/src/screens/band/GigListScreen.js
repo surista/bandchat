@@ -585,6 +585,14 @@ export default function GigListScreen({ navigation, route }) {
             <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
               Tap + to add a gig or rehearsal
             </Text>
+            <TouchableOpacity
+              style={styles.emptyButton}
+              onPress={() => navigation.navigate('GigDetail', { workspaceId })}
+              accessibilityRole="button"
+              accessibilityLabel="Create event"
+            >
+              <Text style={styles.emptyButtonText}>+ Create Event</Text>
+            </TouchableOpacity>
           </View>
         }
       />
@@ -836,6 +844,8 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 40, marginBottom: 12 },
   emptyText: { fontSize: 15 },
   emptyHint: { fontSize: 13, marginTop: 6, textAlign: 'center', opacity: 0.7 },
+  emptyButton: { backgroundColor: '#16a34a', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, marginTop: 16 },
+  emptyButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   // Action sheet
   actionOverlay: {
     flex: 1,

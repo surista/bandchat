@@ -506,9 +506,21 @@ export default function SetlistDetailScreen({ navigation, route }) {
           contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
           ListEmptyComponent={
             <View style={styles.centered}>
+              <Text style={styles.emptyIcon}>{'\uD83C\uDFB5'}</Text>
               <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
                 No songs in this setlist
               </Text>
+              <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
+                Switch to edit mode to add songs
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyButton}
+                onPress={() => { setEditing(true); openSongPicker(); }}
+                accessibilityRole="button"
+                accessibilityLabel="Add song to setlist"
+              >
+                <Text style={styles.emptyButtonText}>+ Add Song</Text>
+              </TouchableOpacity>
             </View>
           }
         />
@@ -797,7 +809,11 @@ const styles = StyleSheet.create({
   },
   toolbarButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '600' },
   toolbarButtonTextDark: { fontSize: 14, fontWeight: '600' },
+  emptyIcon: { fontSize: 40, marginBottom: 12 },
   emptyText: { fontSize: 15 },
+  emptyHint: { fontSize: 13, marginTop: 6, textAlign: 'center', opacity: 0.7 },
+  emptyButton: { backgroundColor: '#16a34a', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, marginTop: 16 },
+  emptyButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   // Song picker
   pickerContainer: { flex: 1 },
   pickerHeader: {

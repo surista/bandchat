@@ -11,12 +11,14 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useKeepAwake } from 'expo-keep-awake';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatDuration } from '../../utils/formatDuration';
 
 export default function LiveModeScreen({ navigation, route }) {
   const { width: screenWidth } = useWindowDimensions();
   const { setlistItems, setlistName } = route.params;
   useKeepAwake();
+  const insets = useSafeAreaInsets();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [autoAdvance, setAutoAdvance] = useState(false);
@@ -169,7 +171,7 @@ export default function LiveModeScreen({ navigation, route }) {
 
       {/* Close button */}
       <TouchableOpacity
-        style={styles.closeButton}
+        style={[styles.closeButton, { top: insets.top + 10 }]}
         onPress={handleClose}
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         accessibilityRole="button"
@@ -180,7 +182,7 @@ export default function LiveModeScreen({ navigation, route }) {
 
       {/* Auto-advance toggle */}
       <TouchableOpacity
-        style={[styles.autoButton, autoAdvance && styles.autoButtonActive]}
+        style={[styles.autoButton, { top: insets.top + 10 }, autoAdvance && styles.autoButtonActive]}
         onPress={() => setAutoAdvance(prev => !prev)}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         accessibilityRole="button"
@@ -192,7 +194,7 @@ export default function LiveModeScreen({ navigation, route }) {
       </TouchableOpacity>
 
       {/* Setlist name */}
-      <View style={styles.titleBar}>
+      <View style={[styles.titleBar, { paddingTop: insets.top + 14 }]}>
         <Text style={styles.setlistTitle} numberOfLines={1}>{setlistName}</Text>
       </View>
 
@@ -235,7 +237,6 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 50,
     left: 16,
     zIndex: 10,
     width: 36,
@@ -252,7 +253,6 @@ const styles = StyleSheet.create({
   },
   autoButton: {
     position: 'absolute',
-    top: 50,
     right: 16,
     zIndex: 10,
     paddingHorizontal: 14,
@@ -273,7 +273,6 @@ const styles = StyleSheet.create({
     color: '#10b981',
   },
   titleBar: {
-    paddingTop: 54,
     paddingBottom: 8,
     alignItems: 'center',
     paddingHorizontal: 60,

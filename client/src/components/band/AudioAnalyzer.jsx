@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../../services/api';
+import { formatDuration } from '../../utils/formatDuration';
 
 export default function AudioAnalyzer({ workspaceId }) {
   const [essentia, setEssentia] = useState(null);
@@ -45,12 +46,6 @@ export default function AudioAnalyzer({ workspaceId }) {
   useEffect(() => {
     api.getSongs(workspaceId).then(setSongs).catch(err => console.warn('Failed to load songs:', err.message));
   }, [workspaceId]);
-
-  const formatDuration = (seconds) => {
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
 
   const analyzeFile = useCallback(async (audioFile) => {
     if (!essentia) return;

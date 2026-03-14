@@ -1416,6 +1416,38 @@ router.get('/export', authenticate, apiLimiter, async (req, res) => {
 
     if (!user) return res.status(404).json({ error: 'User not found' });
 
+    // Fetch additional user-scoped data not included in the main query
+    const [contacts, practiceSessions, savedMessages, blockedUsers, pinnedMessages] = await Promise.all([
+      prisma.contact.findMany({
+        where: { createdById: userId },
+        select: { name: true, category: true, email: true, phone: true, website: true, notes: true, createdAt: true,
+          workspace: { select: { name: true } } }
+      }),
+      prisma.practiceSession.findMany({
+        where: { userId },
+        select: { duration: true, notes: true, practicedAt: true,
+          song: { select: { title: true, artist: true } },
+          workspace: { select: { name: true } } }
+      }),
+      prisma.savedMessage.findMany({
+        where: { userId },
+        select: { createdAt: true,
+          message: { select: { id: true, content: true, createdAt: true,
+            channel: { select: { name: true, workspace: { select: { name: true } } } } } } }
+      }),
+      prisma.blockedUser.findMany({
+        where: { blockerId: userId },
+        select: { createdAt: true,
+          blockedUser: { select: { displayName: true } } }
+      }),
+      prisma.pinnedMessage.findMany({
+        where: { pinnedById: userId },
+        select: { createdAt: true,
+          message: { select: { id: true, content: true } },
+          channel: { select: { name: true, workspace: { select: { name: true } } } } }
+      }),
+    ]);
+
     const messagesTruncated = user.messages.length >= 10000;
     const exportData = {
       exportDate: new Date().toISOString(),
@@ -1459,6 +1491,26 @@ router.get('/export', authenticate, apiLimiter, async (req, res) => {
       })),
       reactions: user.reactions.map(r => ({
         emoji: r.emoji, messageContent: r.message?.content
+      })),
+      contacts: contacts.map(c => ({
+        name: c.name, category: c.category, email: c.email, phone: c.phone,
+        website: c.website, notes: c.notes, workspaceName: c.workspace.name, createdAt: c.createdAt
+      })),
+      practiceSessions: practiceSessions.map(p => ({
+        songTitle: p.song.title, songArtist: p.song.artist, duration: p.duration,
+        notes: p.notes, practicedAt: p.practicedAt, workspaceName: p.workspace.name
+      })),
+      savedMessages: savedMessages.map(s => ({
+        messageContent: s.message.content, messageCreatedAt: s.message.createdAt,
+        channelName: s.message.channel?.name, workspaceName: s.message.channel?.workspace?.name,
+        savedAt: s.createdAt
+      })),
+      blockedUsers: blockedUsers.map(b => ({
+        blockedUserName: b.blockedUser.displayName, blockedAt: b.createdAt
+      })),
+      pinnedMessages: pinnedMessages.map(p => ({
+        messageContent: p.message.content, channelName: p.channel.name,
+        workspaceName: p.channel.workspace?.name, pinnedAt: p.createdAt
       }))
     };
 

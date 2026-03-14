@@ -1,23 +1,29 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
+import ErrorMessage from '../common/ErrorMessage';
 
 function SavedMessages({ workspaceId }) {
   const [savedMessages, setSavedMessages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await api.getSavedMessages(workspaceId);
-        setSavedMessages(data);
-      } catch (err) {
-        console.error('Failed to load saved messages:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    loadSavedMessages();
   }, [workspaceId]);
+
+  const loadSavedMessages = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getSavedMessages(workspaceId);
+      setSavedMessages(data);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load saved messages:', err);
+      setError(err.message || 'Failed to load saved messages');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleUnsave = async (messageId) => {
     try {
@@ -38,6 +44,16 @@ function SavedMessages({ workspaceId }) {
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500" />
       </div>
+    );
+  }
+
+  if (error && savedMessages.length === 0) {
+    return (
+      <ErrorMessage
+        message={error}
+        onRetry={loadSavedMessages}
+        className="py-16"
+      />
     );
   }
 

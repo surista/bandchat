@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { formatDuration } from '../../utils/formatDuration';
 
 export function LiveMode({ setlistItems, setlistName, onClose }) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -73,14 +74,6 @@ export function LiveMode({ setlistItems, setlistName, onClose }) {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [autoAdvance, currentIndex, items]);
-
-  // Format duration
-  const formatDuration = (seconds) => {
-    if (!seconds) return '';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${String(secs).padStart(2, '0')}`;
-  };
 
   // Song counter
   const songNumber = (() => {

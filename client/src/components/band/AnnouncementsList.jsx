@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { formatDistanceToNow } from 'date-fns';
 import ConfirmDialog from '../common/ConfirmDialog';
+import ErrorMessage from '../common/ErrorMessage';
 import Skeleton from '../common/Skeleton';
 
 const PRIORITIES = [
@@ -16,6 +17,7 @@ function AnnouncementsList({ workspaceId, workspace }) {
   const { user } = useAuth();
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState(null);
   const [deleteAnnouncementId, setDeleteAnnouncementId] = useState(null);
@@ -30,8 +32,10 @@ function AnnouncementsList({ workspaceId, workspace }) {
     try {
       const data = await api.getAnnouncements(workspaceId);
       setAnnouncements(data);
+      setError(null);
     } catch (err) {
       console.error('Failed to load announcements:', err);
+      setError(err.message || 'Failed to load announcements');
     } finally {
       setLoading(false);
     }
@@ -109,7 +113,13 @@ function AnnouncementsList({ workspaceId, workspace }) {
 
       {/* Announcements List */}
       <div className="flex-1 overflow-y-auto p-4">
-        {announcements.length === 0 ? (
+        {error && !loading && announcements.length === 0 ? (
+          <ErrorMessage
+            message={error}
+            onRetry={loadAnnouncements}
+            className="py-16"
+          />
+        ) : announcements.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="text-5xl mb-4">📢</div>
             <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">

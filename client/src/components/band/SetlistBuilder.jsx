@@ -24,6 +24,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import api from '../../services/api';
 import { escapeHtml } from '../../utils/escapeHtml';
+import { formatDuration } from '../../utils/formatDuration';
 import SongForm from './SongForm';
 
 // Helper to split items into sets based on SET_BREAK markers
@@ -635,12 +636,6 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
   const songCount = setlistItems.filter(i => i.type !== 'MC' && i.type !== 'SET_BREAK').length;
   const mcCount = setlistItems.filter(i => i.type === 'MC').length;
 
-  const formatDuration = (seconds) => {
-    if (!seconds) return '';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${String(secs).padStart(2, '0')}`;
-  };
 
   // Split items into sets for multi-column view
   const sets = useMemo(() => splitIntoSets(setlistItems), [setlistItems]);
