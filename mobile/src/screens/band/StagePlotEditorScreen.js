@@ -252,31 +252,41 @@ function InstrumentSvg({ type, size = 48 }) {
     case 'electric-guitar':
       return (
         <Svg width={s} height={s} viewBox="0 0 64 64">
-          <Rect x="30" y="4" width="4" height="24" rx="1" fill="#c0570a" />
-          <Line x1="34" y1="6" x2="38" y2="5" stroke="#888" strokeWidth="1.5" />
-          <Line x1="34" y1="9" x2="38" y2="8" stroke="#888" strokeWidth="1.5" />
-          <Line x1="34" y1="12" x2="38" y2="11" stroke="#888" strokeWidth="1.5" />
-          <Path d="M24 28 Q18 30 16 36 Q14 42 18 46 Q22 50 28 48 L30 46 L28 42 L30 40 L34 40 L36 42 L34 46 L36 48 Q42 50 46 46 Q50 42 48 36 Q46 30 40 28 Z" fill="#e67e22" stroke="#c0570a" strokeWidth="1.2" />
-          <Circle cx="28" cy="37" r="2" fill="#c0570a" />
-          <Circle cx="36" cy="37" r="2" fill="#c0570a" />
-          <Line x1="26" y1="28" x2="38" y2="28" stroke="#888" strokeWidth="0.5" />
-          <Line x1="26" y1="30" x2="38" y2="30" stroke="#888" strokeWidth="0.5" />
+          <Rect x="28" y="2" width="8" height="7" rx="2" fill="#5c3310" />
+          <Circle cx="26" cy="3.5" r="1.3" fill="#bbb" />
+          <Circle cx="26" cy="6.5" r="1.3" fill="#bbb" />
+          <Circle cx="38" cy="3.5" r="1.3" fill="#bbb" />
+          <Circle cx="38" cy="6.5" r="1.3" fill="#bbb" />
+          <Rect x="30" y="7" width="4" height="24" rx="1" fill="#a0693a" />
+          <Circle cx="32" cy="14" r="0.8" fill="#ddd" />
+          <Circle cx="32" cy="20" r="0.8" fill="#ddd" />
+          <Circle cx="32" cy="26" r="0.8" fill="#ddd" />
+          <Path d="M24 31 Q16 33 14 40 Q13 48 20 53 Q26 57 32 57 Q38 57 44 53 Q51 48 50 40 Q48 33 40 31 L37 27 L27 27 Z" fill="#e67e22" stroke="#c0570a" strokeWidth="1.2" />
+          <Rect x="24" y="36" width="16" height="3" rx="1.5" fill="#333" stroke="#555" strokeWidth="0.5" />
+          <Rect x="24" y="44" width="16" height="3" rx="1.5" fill="#333" stroke="#555" strokeWidth="0.5" />
+          <Rect x="28" y="50" width="8" height="2" rx="1" fill="#aaa" />
+          <Circle cx="21" cy="50" r="2" fill="#444" stroke="#666" strokeWidth="0.5" />
         </Svg>
       );
     case 'acoustic-guitar':
       return (
         <Svg width={s} height={s} viewBox="0 0 64 64">
-          <Rect x="30" y="4" width="4" height="22" rx="1" fill="#8b6914" />
-          <Line x1="34" y1="6" x2="37" y2="5" stroke="#888" strokeWidth="1.5" />
-          <Line x1="34" y1="9" x2="37" y2="8" stroke="#888" strokeWidth="1.5" />
-          <Line x1="34" y1="12" x2="37" y2="11" stroke="#888" strokeWidth="1.5" />
-          <Ellipse cx="32" cy="30" rx="10" ry="6" fill="#c48a3f" stroke="#8b6914" strokeWidth="1" />
-          <Ellipse cx="32" cy="44" rx="14" ry="10" fill="#c48a3f" stroke="#8b6914" strokeWidth="1.2" />
-          <Ellipse cx="32" cy="44" rx="5" ry="4" fill="#8b6914" />
-          <Line x1="30" y1="26" x2="30" y2="54" stroke="#888" strokeWidth="0.4" />
-          <Line x1="32" y1="26" x2="32" y2="54" stroke="#888" strokeWidth="0.4" />
-          <Line x1="34" y1="26" x2="34" y2="54" stroke="#888" strokeWidth="0.4" />
-          <Rect x="28" y="24" width="8" height="3" rx="1" fill="#8b6914" />
+          <Rect x="29" y="2" width="6" height="6" rx="2" fill="#5c3310" />
+          <Circle cx="27" cy="3.5" r="1.2" fill="#bbb" />
+          <Circle cx="27" cy="6" r="1.2" fill="#bbb" />
+          <Circle cx="37" cy="3.5" r="1.2" fill="#bbb" />
+          <Circle cx="37" cy="6" r="1.2" fill="#bbb" />
+          <Rect x="30" y="6" width="4" height="22" rx="1" fill="#8b6914" />
+          <Rect x="28" y="6" width="8" height="3" rx="1" fill="#6b5010" />
+          <Circle cx="32" cy="14" r="0.7" fill="#ddd" />
+          <Circle cx="32" cy="20" r="0.7" fill="#ddd" />
+          <Ellipse cx="32" cy="30" rx="10" ry="6" fill="#d4a04a" stroke="#8b6914" strokeWidth="1.2" />
+          <Ellipse cx="32" cy="44" rx="14" ry="12" fill="#d4a04a" stroke="#8b6914" strokeWidth="1.2" />
+          <Circle cx="32" cy="42" r="5" fill="#8b6914" />
+          <Rect x="28" y="50" width="8" height="2" rx="0.5" fill="#5c3310" />
+          <Line x1="30" y1="9" x2="30" y2="52" stroke="#bbb" strokeWidth="0.3" />
+          <Line x1="32" y1="9" x2="32" y2="52" stroke="#bbb" strokeWidth="0.3" />
+          <Line x1="34" y1="9" x2="34" y2="52" stroke="#bbb" strokeWidth="0.3" />
         </Svg>
       );
     case 'guitar-stand':
@@ -294,15 +304,22 @@ function InstrumentSvg({ type, size = 48 }) {
     case 'bass-guitar':
       return (
         <Svg width={s} height={s} viewBox="0 0 64 64">
-          <Rect x="30" y="2" width="4" height="28" rx="1" fill="#1a6fa8" />
-          <Line x1="34" y1="5" x2="38" y2="4" stroke="#888" strokeWidth="1.5" />
-          <Line x1="34" y1="8" x2="38" y2="7" stroke="#888" strokeWidth="1.5" />
-          <Path d="M24 30 Q18 33 16 38 Q14 44 18 48 Q22 52 28 50 L30 48 L28 44 L30 42 L34 42 L36 44 L34 48 L36 50 Q42 52 46 48 Q50 44 48 38 Q46 33 40 30 Z" fill="#3498db" stroke="#1a6fa8" strokeWidth="1.2" />
-          <Circle cx="28" cy="39" r="2" fill="#1a6fa8" />
-          <Circle cx="36" cy="39" r="2" fill="#1a6fa8" />
-          <Line x1="30" y1="30" x2="30" y2="50" stroke="#888" strokeWidth="0.4" />
-          <Line x1="32" y1="30" x2="32" y2="50" stroke="#888" strokeWidth="0.4" />
-          <Line x1="34" y1="30" x2="34" y2="50" stroke="#888" strokeWidth="0.4" />
+          <Rect x="28" y="1" width="8" height="8" rx="2" fill="#0f4c75" />
+          <Circle cx="26" cy="3" r="1.5" fill="#bbb" />
+          <Circle cx="26" cy="7" r="1.5" fill="#bbb" />
+          <Circle cx="38" cy="3" r="1.5" fill="#bbb" />
+          <Circle cx="38" cy="7" r="1.5" fill="#bbb" />
+          <Rect x="30" y="7" width="4" height="26" rx="1" fill="#1a6fa8" />
+          <Circle cx="32" cy="14" r="0.8" fill="#ddd" />
+          <Circle cx="32" cy="22" r="0.8" fill="#ddd" />
+          <Circle cx="32" cy="28" r="0.8" fill="#ddd" />
+          <Path d="M24 33 Q16 35 14 42 Q13 50 20 55 Q26 59 32 59 Q38 59 44 55 Q51 50 50 42 Q48 35 40 33 L37 29 L27 29 Z" fill="#3498db" stroke="#1a6fa8" strokeWidth="1.2" />
+          <Rect x="23" y="38" width="18" height="3" rx="1.5" fill="#0f4c75" stroke="#1a6fa8" strokeWidth="0.5" />
+          <Rect x="23" y="46" width="18" height="3" rx="1.5" fill="#0f4c75" stroke="#1a6fa8" strokeWidth="0.5" />
+          <Rect x="28" y="52" width="8" height="2" rx="1" fill="#aaa" />
+          <Line x1="30" y1="9" x2="30" y2="54" stroke="#bbb" strokeWidth="0.4" />
+          <Line x1="32" y1="9" x2="32" y2="54" stroke="#bbb" strokeWidth="0.4" />
+          <Line x1="34" y1="9" x2="34" y2="54" stroke="#bbb" strokeWidth="0.4" />
         </Svg>
       );
     case 'keyboard-stand':
@@ -532,9 +549,9 @@ export default function StagePlotEditorScreen({ navigation, route }) {
         ${headerParts.length ? `<div class="plot-meta">${headerParts.map(esc).join(' &middot; ')}</div>` : ''}
       </div>
       <div class="stage-container">
-        <div class="front-label">Front of Stage / Audience</div>
-        <div class="stage" style="width:${sw}px;height:${sh}px">${itemsHtml}</div>
         <div class="back-label">Back of Stage</div>
+        <div class="stage" style="width:${sw}px;height:${sh}px">${itemsHtml}</div>
+        <div class="front-label">Front of Stage / Audience</div>
       </div>
     </body></html>`;
 
@@ -720,9 +737,9 @@ export default function StagePlotEditorScreen({ navigation, route }) {
         </View>
       </View>
 
-      {/* Stage label - front */}
+      {/* Stage label - back */}
       <Text style={[styles.stageLabel, { color: colors.textSecondary }]}>
-        {'\u25BC'} Front of Stage (Audience) {'\u25BC'}
+        {'\u25B2'} Back of Stage {'\u25B2'}
       </Text>
 
       {/* Stage canvas */}
@@ -751,9 +768,9 @@ export default function StagePlotEditorScreen({ navigation, route }) {
         )}
       </View>
 
-      {/* Stage label - back */}
+      {/* Stage label - front */}
       <Text style={[styles.stageLabel, { color: colors.textSecondary }]}>
-        {'\u25B2'} Back of Stage {'\u25B2'}
+        {'\u25BC'} Front of Stage (Audience) {'\u25BC'}
       </Text>
 
       {/* Item count */}
