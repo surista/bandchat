@@ -385,13 +385,33 @@ export default function WebsiteTab({ workspace }) {
 
       {renderConfigForm()}
 
-      <button
-        onClick={handleDeploy}
-        disabled={deploying || !bandName.trim()}
-        className="btn bg-green-600 hover:bg-green-700 text-white min-h-[44px] px-6"
-      >
-        {deploying ? 'Deploying...' : websiteData?.websiteConfig ? 'Deploy Website' : 'Create & Deploy Website'}
-      </button>
+      <div className="flex gap-3">
+        <button
+          onClick={handleDeploy}
+          disabled={deploying || !bandName.trim()}
+          className="btn bg-green-600 hover:bg-green-700 text-white min-h-[44px] px-6"
+        >
+          {deploying ? 'Deploying...' : websiteData?.websiteConfig ? 'Deploy Website' : 'Create & Deploy Website'}
+        </button>
+        {websiteData?.websiteEnabled && (
+          <button
+            onClick={() => setDeleteOpen(true)}
+            className="btn bg-red-600/20 text-red-400 hover:bg-red-600/30 min-h-[44px] px-4"
+          >
+            Delete Website
+          </button>
+        )}
+      </div>
+
+      <ConfirmDialog
+        isOpen={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete Website"
+        message="This will permanently remove the website, Vercel project, and GitHub repository. This action cannot be undone."
+        confirmText={deleteLoading ? 'Deleting...' : 'Delete Website'}
+        variant="danger"
+      />
     </div>
   );
 
