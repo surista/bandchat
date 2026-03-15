@@ -182,11 +182,11 @@ function Footer({ theme = 'dark' }) {
               <div className="border-b border-[var(--color-modal-border)] pb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded">NEW</span>
-                  <span className="text-sm text-gray-500">v1.05.05</span>
+                  <span className="text-sm text-gray-500">v1.05.07</span>
                 </div>
                 <h4 className="font-medium text-white mb-1">All Messages, Pin Setlists & Stage Plot Upgrades</h4>
                 <p className="text-sm text-gray-400">
-                  All Messages feed — see messages across all channels in one unified view. Pin setlists to channels for quick reference. Calendar now splits into Upcoming (soonest first) and Past sections. Stage plot icons now use real instrument images with resize, flip, and rotate controls. Gig notes shown on hover in Quick Links. New blue flame app icon everywhere.
+                  All Messages feed across all channels. Pin setlists to channels with expandable song list (key, BPM, MC breaks). Calendar splits into Upcoming/Past. Stage plot resize, flip, rotate with real instrument images. Poll push notifications. Gig notes on Quick Links hover. Blue flame icons everywhere. Mobile pin setlist UI.
                 </p>
               </div>
               <div className="border-b border-[var(--color-modal-border)] pb-4">

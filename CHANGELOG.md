@@ -2,11 +2,14 @@
 
 All notable changes to BandChat are documented here.
 
-## [1.05.05] - 2026-03-15
+## [1.05.07] - 2026-03-15
 
 ### Added
 - **All Messages** — Unified cross-channel message feed on web with click-to-navigate to channel. Shows DM participant names.
-- **Pin setlists to channels** — Admin can pin a setlist to any channel via header icon. Shows inline banner with song count and unpin option.
+- **Pin setlists to channels** — Admin can pin a setlist to any channel via header icon. Shows expandable inline banner with numbered song list, key, BPM. Works on web and mobile.
+- **Mobile pin setlist UI** — Pin/unpin/change setlists via channel header "..." menu with ActionSheet picker.
+- **Expandable pinned setlist** — Click/tap to expand full song list with key (purple) and BPM (blue) badges, MC breaks in yellow. Scrollable, collapses on tap.
+- **Poll push notifications** — All workspace members get notified when a new poll is created.
 - **Stage plot resize, flip, rotate** — Click any stage plot item to select it and use toolbar controls: scale 50%-300%, horizontal flip, 90° rotation. Transforms saved and included in PDF export.
 - **Gig notes on Quick Links** — Hover the upcoming event banner on web to see notes. On mobile, notes show inline. Click opens the gig detail.
 - **Error states on 8 mobile screens** — Achievements, Polls, Kitty, Medleys, Stats, Stage Plots, Saved Messages, Invite now show retry on error instead of silent failure.

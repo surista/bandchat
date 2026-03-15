@@ -1483,11 +1483,11 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-4 border border-[var(--color-modal-border)]">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded">NEW</span>
-                      <span className="text-sm text-[var(--color-text-muted)]">v1.05.05</span>
+                      <span className="text-sm text-[var(--color-text-muted)]">v1.05.07</span>
                     </div>
                     <h4 className="font-medium text-[var(--color-text-primary)] mb-1">All Messages, Pin Setlists & Stage Plot Upgrades</h4>
                     <p className="text-sm text-[var(--color-text-muted)]">
-                      All Messages feed across all channels. Pin setlists to channels. Calendar split into Upcoming/Past sections. Stage plot resize, flip, and rotate with real instrument images. Gig notes on Quick Links hover. New blue flame PWA icons. Security and backup fixes.
+                      All Messages feed across all channels. Pin setlists to channels with expandable song list (key, BPM, MC breaks). Calendar splits into Upcoming/Past. Stage plot resize, flip, rotate with real instrument images. Poll push notifications. Mobile pin setlist UI. Security and backup fixes.
                     </p>
                   </div>
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-4 border border-[var(--color-modal-border)]">
