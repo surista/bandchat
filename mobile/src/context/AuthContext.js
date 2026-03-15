@@ -11,7 +11,7 @@ const AuthContext = createContext(null);
 
 const BIOMETRIC_ENABLED_KEY = 'biometricEnabled';
 const BIOMETRIC_PROMPT_SHOWN_KEY = 'biometricPromptShown';
-const BACKGROUND_LOCK_DELAY_MS = 30000;
+const BACKGROUND_LOCK_DELAY_MS = 5 * 60 * 1000; // 5 minutes
 
 const configureRevenueCat = async (userId) => {
   try {
@@ -108,13 +108,16 @@ export function AuthProvider({ children }) {
   }, []);
 
   // AppState listener for background → foreground lock
+  // Only lock after actual background (not brief inactive from notification shade, Face ID, etc.)
   useEffect(() => {
     const subscription = AppState.addEventListener('change', async (nextAppState) => {
-      if (appState.current.match(/active/) && nextAppState.match(/inactive|background/)) {
-        // Going to background — record timestamp
-        backgroundTimestamp.current = Date.now();
-      } else if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-        // Coming to foreground — check if we should lock
+      if (nextAppState === 'background') {
+        // Only record timestamp when fully backgrounded (not inactive)
+        if (!backgroundTimestamp.current) {
+          backgroundTimestamp.current = Date.now();
+        }
+      } else if (nextAppState === 'active' && appState.current === 'background') {
+        // Only check lock when returning from background (not inactive → active)
         if (backgroundTimestamp.current && biometricEnabled) {
           const elapsed = Date.now() - backgroundTimestamp.current;
           if (elapsed > BACKGROUND_LOCK_DELAY_MS) {

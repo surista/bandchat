@@ -89,9 +89,10 @@ export default function BiometricLockScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 9999,
   },
   tabletContainer: { maxWidth: 500, width: '100%', alignSelf: 'center' },
   content: {

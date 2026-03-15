@@ -18,8 +18,14 @@ export default function RootNavigator() {
   }
 
   if (!isAuthenticated) return <AuthStack />;
-  if (isLocked) return <BiometricLockScreen />;
-  return <AppStack />;
+
+  // Render AppStack always (preserves navigation state) with lock screen overlay
+  return (
+    <>
+      <AppStack />
+      {isLocked && <BiometricLockScreen />}
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
