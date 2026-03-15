@@ -5,8 +5,11 @@ import ErrorMessage from '../common/ErrorMessage';
 
 function getDmDisplayName(channel, currentUserId) {
   if (!channel?.isDirect || !channel.members) return null;
-  const other = channel.members.find(m => m.user?.id !== currentUserId);
-  return other?.user?.displayName || 'DM';
+  const others = channel.members
+    .filter(m => m.user?.id !== currentUserId)
+    .map(m => m.user?.displayName)
+    .filter(Boolean);
+  return others.length > 0 ? others.join(', ') : 'DM';
 }
 
 function AllMessages({ workspaceId, onSelectChannel }) {
