@@ -1483,11 +1483,20 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-4 border border-[var(--color-modal-border)]">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded">NEW</span>
+                      <span className="text-sm text-[var(--color-text-muted)]">v1.05.05</span>
+                    </div>
+                    <h4 className="font-medium text-[var(--color-text-primary)] mb-1">All Messages, Pin Setlists & Stage Plot Upgrades</h4>
+                    <p className="text-sm text-[var(--color-text-muted)]">
+                      All Messages feed across all channels. Pin setlists to channels. Calendar split into Upcoming/Past sections. Stage plot resize, flip, and rotate with real instrument images. Gig notes on Quick Links hover. New blue flame PWA icons. Security and backup fixes.
+                    </p>
+                  </div>
+                  <div className="bg-[var(--color-modal-card)] rounded-lg p-4 border border-[var(--color-modal-border)]">
+                    <div className="flex items-center gap-2 mb-2">
                       <span className="text-sm text-[var(--color-text-muted)]">v1.04.95</span>
                     </div>
                     <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Stage Plots, Swipe React & Bug Fixes</h4>
                     <p className="text-sm text-[var(--color-text-muted)]">
-                      Drag-and-drop stage plot editor with 20+ equipment icons and text labels. Swipe left to react, right to reply. Dismiss link previews on your own messages. Fixed delete message, home button, and DM name display. iPad-optimized layouts and workspace backup/restore.
+                      Drag-and-drop stage plot editor with 20+ equipment icons and text labels. Swipe left to react, right to reply. Dismiss link previews on your own messages. iPad-optimized layouts and workspace backup/restore.
                     </p>
                   </div>
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-4 border border-[var(--color-modal-border)]">

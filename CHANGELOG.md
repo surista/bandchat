@@ -2,6 +2,41 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.05.05] - 2026-03-15
+
+### Added
+- **All Messages** — Unified cross-channel message feed on web with click-to-navigate to channel. Shows DM participant names.
+- **Pin setlists to channels** — Admin can pin a setlist to any channel via header icon. Shows inline banner with song count and unpin option.
+- **Stage plot resize, flip, rotate** — Click any stage plot item to select it and use toolbar controls: scale 50%-300%, horizontal flip, 90° rotation. Transforms saved and included in PDF export.
+- **Gig notes on Quick Links** — Hover the upcoming event banner on web to see notes. On mobile, notes show inline. Click opens the gig detail.
+- **Error states on 8 mobile screens** — Achievements, Polls, Kitty, Medleys, Stats, Stage Plots, Saved Messages, Invite now show retry on error instead of silent failure.
+- **KeyboardAvoidingView on 5 mobile modals** — Announcements, Contacts, Polls, Band Members, Workspace Members password reset.
+
+### Fixed
+- **Calendar split sections** — List view now shows UPCOMING (soonest first) and PAST (most recent first) instead of a single sorted list.
+- **Push notification toggle broken** — Was reading from deleted localStorage key instead of in-memory token.
+- **HTML injection in invite emails** — Workspace names and display names now HTML-escaped.
+- **Channel create button missing on mobile** — When all channels were in groups, the "+" button disappeared.
+- **Setlist/contact/stage plot authorization** — Added creator-or-admin checks on update/delete.
+- **Socket.IO auth soft-delete** — Explicit `deletedAt: null` check instead of relying on middleware.
+- **Input validation** — Length limits on song, gig, medley fields (create + update).
+- **Fetch timeouts** — 10s timeout on iTunes, YouTube, Deezer, SongBPM API calls.
+- **Seed script** — Fixed `type`→`eventType`, `date`→`eventDate` in timeline events.
+- **Backup restore** — Channel `pinnedSetlistId`, message `hidePreview`, KittyTransaction `gigId` now preserved. StagePlot added to user purge anonymization.
+- **LyricsScreen safe area** — Uses `useSafeAreaInsets()` instead of hardcoded `paddingTop: 50`.
+- **Dark mode fixes** — Auth pages, landing page, WorkspaceList, JoinWorkspace, bulk import modal, SongCard hover, ConfirmDialog all themed for dark mode.
+- **Settings tabs** — Horizontally scrollable instead of wrapping on mobile.
+- **Snooze menu** — Opens above instead of off-screen on mobile.
+- **ActionSheet safe area** — Dynamic insets instead of hardcoded `paddingBottom: 34`.
+- **Swipe-to-react** — Now works on non-grouped messages (was grouped-only).
+
+### Changed
+- **PWA icons** — All icons regenerated from blue flame (was old "B" icon). Favicon, apple-touch-icon, maskable icons all updated.
+- **Stage plot instruments** — Guitar, bass, acoustic, drums use real PNG images with transparent backgrounds instead of SVGs.
+- **Manifest theme colors** — Updated to dark theme (`#0f1117`).
+- **Achievements reseed** — Now requires system admin instead of workspace admin.
+- **Storage extension fallback** — Unknown MIME types get `.bin` instead of user-provided extension.
+
 ## [1.05.00] - 2026-03-15
 
 ### Added

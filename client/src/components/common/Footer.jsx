@@ -182,11 +182,47 @@ function Footer({ theme = 'dark' }) {
               <div className="border-b border-[var(--color-modal-border)] pb-4">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded">NEW</span>
+                  <span className="text-sm text-gray-500">v1.05.05</span>
+                </div>
+                <h4 className="font-medium text-white mb-1">All Messages, Pin Setlists & Stage Plot Upgrades</h4>
+                <p className="text-sm text-gray-400">
+                  All Messages feed — see messages across all channels in one unified view. Pin setlists to channels for quick reference. Calendar now splits into Upcoming (soonest first) and Past sections. Stage plot icons now use real instrument images with resize, flip, and rotate controls. Gig notes shown on hover in Quick Links. New blue flame app icon everywhere.
+                </p>
+              </div>
+              <div className="border-b border-[var(--color-modal-border)] pb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm text-gray-500">v1.05.01</span>
+                </div>
+                <h4 className="font-medium text-white mb-1">Code Review & Security Fixes</h4>
+                <p className="text-sm text-gray-400">
+                  Comprehensive code review with 40+ fixes: HTML injection prevention in emails, push notification toggle fix, graceful shutdown improvements, creator-or-admin authorization checks, input validation on songs/gigs/medleys, fetch timeouts on external APIs, and dark theme UI for auth pages and landing page.
+                </p>
+              </div>
+              <div className="border-b border-[var(--color-modal-border)] pb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm text-gray-500">v1.05.00</span>
+                </div>
+                <h4 className="font-medium text-white mb-1">App Links, Play Store & New Icon</h4>
+                <p className="text-sm text-gray-400">
+                  Android App Links and iOS Universal Links for direct app opening. New blue flame app icon. Google Play Store setup with RevenueCat subscriptions. Invite link fixes and deep link improvements.
+                </p>
+              </div>
+              <div className="border-b border-[var(--color-modal-border)] pb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm text-gray-500">v1.04.95</span>
+                </div>
+                <h4 className="font-medium text-white mb-1">Stage Plots, Link Preview Dismiss & iPad</h4>
+                <p className="text-sm text-gray-400">
+                  SVG stage plot editor with 20+ equipment icons and PDF export. Dismiss link previews from your messages. Swipe to react on mobile. Workspace backup/restore. iPad optimization across all 41 screens. Code review with security hardening.
+                </p>
+              </div>
+              <div className="border-b border-[var(--color-modal-border)] pb-4">
+                <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.04.40</span>
                 </div>
                 <h4 className="font-medium text-white mb-1">Security Hardening</h4>
                 <p className="text-sm text-gray-400">
-                  Comprehensive security audit with 43 fixes: authorization checks on all delete/update operations, URL injection prevention, Socket.IO hardening (room eviction, payload validation, connection limits), password complexity requirements, refresh token rotation, input length limits, zip bomb protection, and sanitized error messages.
+                  Comprehensive security audit with 43 fixes: authorization checks on all delete/update operations, URL injection prevention, Socket.IO hardening, password complexity requirements, refresh token rotation, input length limits, and sanitized error messages.
                 </p>
               </div>
               <div className="border-b border-[var(--color-modal-border)] pb-4">
