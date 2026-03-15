@@ -633,6 +633,7 @@ function Sidebar({
                 <button
                   onClick={() => onSelectBandView?.('calendar')}
                   className="mx-3 mb-3 px-3 py-2 rounded-lg text-left transition-colors hover:brightness-110"
+                  title={nextGig.notes || undefined}
                   style={{
                     background: nextGig.type === 'GIG' ? 'rgba(34,197,94,0.15)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.15)' : 'rgba(168,85,247,0.15)',
                     border: `1px solid ${nextGig.type === 'GIG' ? 'rgba(34,197,94,0.3)' : nextGig.type === 'REHEARSAL' ? 'rgba(59,130,246,0.3)' : 'rgba(168,85,247,0.3)'}`,

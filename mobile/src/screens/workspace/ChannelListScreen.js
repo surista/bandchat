@@ -820,6 +820,11 @@ export default function ChannelListScreen({ navigation, route }) {
                     {nextGig.venue ? ` · ${nextGig.venue}` : ''}
                   </Text>
                 </View>
+                {nextGig.notes ? (
+                  <Text style={[styles.nextGigNotes, { color: colors.textSecondary }]} numberOfLines={1}>
+                    {nextGig.notes}
+                  </Text>
+                ) : null}
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -1331,6 +1336,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
     marginLeft: 20,
+  },
+  nextGigNotes: {
+    fontSize: 11,
+    marginTop: 3,
+    marginLeft: 20,
+    fontStyle: 'italic',
+    opacity: 0.8,
   },
   calendarShortcut: {
     flexDirection: 'row',
