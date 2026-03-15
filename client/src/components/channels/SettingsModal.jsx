@@ -231,7 +231,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-[var(--color-modal-border)] justify-center flex-wrap" role="tablist">
+            <div className="flex border-b border-[var(--color-modal-border)] overflow-x-auto scrollbar-hide" role="tablist" style={{ scrollbarWidth: 'none' }}>
               <button
                 role="tab"
                 aria-selected={settingsTab === 'profile'}

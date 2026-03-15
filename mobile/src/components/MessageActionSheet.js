@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Pressable,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 
 const QUICK_EMOJIS = ['\uD83D\uDC4D', '\uD83D\uDC4E', '\uD83C\uDFB8', '\uD83D\uDD25', '\u2764\uFE0F'];
@@ -25,6 +26,7 @@ const ACTIONS = [
 
 function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwnMessage, isPinned, isBookmarked, hideReply, hasImageAttachment }) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const filteredActions = ACTIONS.filter(a =>
     (!a.ownOnly || isOwnMessage) && (!a.notOwn || !isOwnMessage) &&
@@ -51,7 +53,7 @@ function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwn
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
-        <View style={[styles.sheet, { backgroundColor: colors.modalBg }]}>
+        <View style={[styles.sheet, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 16) }]}>
           {/* Quick Reaction Row */}
           <View style={[styles.quickReactionRow, { borderBottomColor: colors.border }]}>
             {QUICK_EMOJIS.map((emoji) => (
@@ -132,7 +134,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingTop: 8,
-    paddingBottom: 34,
+    paddingBottom: 16,
     paddingHorizontal: 16,
     maxWidth: 500,
     alignSelf: 'center',

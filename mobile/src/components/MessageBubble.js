@@ -208,10 +208,13 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
       ref={swipeableRef}
       enabled={swipeEnabled}
       renderLeftActions={onSwipeReply ? renderLeftActions : undefined}
+      renderRightActions={onSwipeReact ? renderRightActions : undefined}
       onSwipeableWillOpen={handleSwipeOpen}
       overshootLeft={false}
+      overshootRight={false}
       friction={2}
       leftThreshold={30}
+      rightThreshold={30}
     >
     <Pressable
       style={[styles.container, { paddingTop: density.containerPaddingTop, paddingBottom: density.containerPaddingBottom }, isPending && styles.pending]}
@@ -724,9 +727,9 @@ const styles = StyleSheet.create({
   reactionBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   reactionEmoji: {
     fontSize: 14,

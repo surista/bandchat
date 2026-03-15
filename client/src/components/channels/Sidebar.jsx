@@ -1129,7 +1129,7 @@ function Sidebar({
                 </span>
               </button>
               {snoozeMenuOpen && (
-                <div className="absolute left-full bottom-0 ml-1 bg-gray-800 rounded-lg shadow-xl border border-gray-700 min-w-[160px] z-50">
+                <div className="absolute bottom-full left-0 mb-1 bg-gray-800 rounded-lg shadow-xl border border-gray-700 min-w-[160px] z-50">
                   {!notificationsEnabled ? (
                     <button
                       onClick={() => { toggleNotifications(); setSnoozeMenuOpen(false); }}

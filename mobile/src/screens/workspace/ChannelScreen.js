@@ -848,7 +848,13 @@ export default function ChannelScreen({ navigation, route }) {
         onScroll={(e) => { scrollOffsetRef.current = e.nativeEvent.contentOffset.y; }}
         scrollEventThrottle={100}
         ListFooterComponent={renderFooter}
-        contentContainerStyle={styles.messageList}
+        ListEmptyComponent={!loading ? (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, transform: [{ scaleY: -1 }] }}>
+            <Text style={{ fontSize: 40, marginBottom: 8 }}>💬</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 16, textAlign: 'center' }}>No messages yet. Say something!</Text>
+          </View>
+        ) : null}
+        contentContainerStyle={[styles.messageList, messages.length === 0 && !loading && { flex: 1 }]}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         // Performance optimizations
@@ -964,7 +970,7 @@ export default function ChannelScreen({ navigation, route }) {
         animationType="fade"
         onRequestClose={() => setShowReportModal(false)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg || colors.bgSecondary }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Report Message</Text>
             <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
@@ -1003,7 +1009,7 @@ export default function ChannelScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </KeyboardAvoidingView>
   );

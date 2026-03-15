@@ -1260,7 +1260,7 @@ const styles = StyleSheet.create({
   bandCategoryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
     paddingHorizontal: 16,
     marginTop: 4,
   },
@@ -1283,7 +1283,7 @@ const styles = StyleSheet.create({
   bandItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 13,
     paddingHorizontal: 28,
   },
   bandItemIcon: {

@@ -28,7 +28,7 @@ const SongCard = memo(function SongCard({ song, onEdit, onDelete, onContextMenu,
 
   return (
     <div
-      className="bg-[var(--color-bg-secondary)] rounded-lg p-4 hover:bg-gray-750 transition-colors border border-[var(--color-border)] group"
+      className="bg-[var(--color-bg-secondary)] rounded-lg p-4 hover:bg-[var(--color-bg-tertiary)] transition-colors border border-[var(--color-border)] group"
       {...longPress}
     >
       <div className="flex items-start justify-between mb-2">
@@ -359,7 +359,7 @@ function SongList({ workspaceId, onSelectSong }) {
       <div className="flex-shrink-0 p-4 border-b border-[var(--color-border)]">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Songs</h2>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap justify-end">
             <button
               onClick={async () => {
                 setBulkText('');
@@ -535,13 +535,13 @@ function SongList({ workspaceId, onSelectSong }) {
 
               {!bulkResults ? (
                 <>
-                  <p className="text-gray-600 mb-4">
+                  <p className="text-[var(--color-text-secondary)] mb-4">
                     Paste your song list below. One song per line in any of these formats:
                   </p>
-                  <ul className="text-sm text-gray-500 mb-4 space-y-1">
-                    <li>• <code className="bg-gray-100 px-1 rounded">Full Title - Short Name - Artist</code></li>
-                    <li>• <code className="bg-gray-100 px-1 rounded">Title - Artist</code></li>
-                    <li>• <code className="bg-gray-100 px-1 rounded">Title</code> (no artist)</li>
+                  <ul className="text-sm text-[var(--color-text-muted)] mb-4 space-y-1">
+                    <li>• <code className="bg-[var(--color-bg-tertiary)] px-1 rounded">Full Title - Short Name - Artist</code></li>
+                    <li>• <code className="bg-[var(--color-bg-tertiary)] px-1 rounded">Title - Artist</code></li>
+                    <li>• <code className="bg-[var(--color-bg-tertiary)] px-1 rounded">Title</code> (no artist)</li>
                   </ul>
 
                   <textarea
@@ -553,12 +553,12 @@ Example:
 Even Flow - Flow - Pearl Jam
 Bohemian Rhapsody - Queen
 Hotel California - Eagles"
-                    className="w-full h-64 px-3 py-2 border border-gray-300 rounded text-gray-900 font-mono text-sm"
+                    className="w-full h-64 px-3 py-2 border border-[var(--color-border)] rounded text-[var(--color-text-primary)] bg-[var(--color-bg-tertiary)] font-mono text-sm"
                     disabled={bulkImporting}
                   />
 
                   <div className="flex items-center justify-between mt-3">
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-[var(--color-text-muted)]">
                       {parseBulkText(bulkText).length} songs detected
                     </div>
 
@@ -570,14 +570,14 @@ Hotel California - Eagles"
                         disabled={bulkImporting}
                         className="w-4 h-4 rounded"
                       />
-                      <span className="text-sm text-gray-700">
+                      <span className="text-sm text-[var(--color-text-secondary)]">
                         <span className="text-green-600">●</span> Auto-fill metadata (BPM, key, duration, links)
                       </span>
                     </label>
                   </div>
 
                   {bulkImporting && fetchMetadata && (
-                    <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
+                    <div className="mt-3 p-3 bg-blue-900/30 border border-blue-500/50 rounded text-sm text-blue-300">
                       Fetching metadata (BPM, key, duration, YouTube, Spotify)... This may take a moment.
                     </div>
                   )}
@@ -604,23 +604,23 @@ Hotel California - Eagles"
                 <>
                   <div className="space-y-4">
                     {bulkResults.created.length > 0 && (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <h4 className="font-medium text-green-800 mb-2">
+                      <div className="bg-green-900/30 border border-green-500/50 rounded-lg p-4">
+                        <h4 className="font-medium text-green-300 mb-2">
                           {bulkResults.created.length} songs imported successfully
                           {bulkResults.metadataMatches > 0 && (
-                            <span className="font-normal text-green-600 ml-2">
+                            <span className="font-normal text-green-400 ml-2">
                               ({bulkResults.metadataMatches} with metadata)
                             </span>
                           )}
                         </h4>
-                        <ul className="text-sm text-green-700 max-h-32 overflow-y-auto">
+                        <ul className="text-sm text-green-200 max-h-32 overflow-y-auto">
                           {bulkResults.created.map((song, i) => (
                             <li key={i} className="flex items-center gap-2">
                               <span>{song.title}{song.artist && ` - ${song.artist}`}</span>
-                              {song.bpm && <span className="text-xs bg-green-200 px-1 rounded">BPM</span>}
-                              {song.key && <span className="text-xs bg-green-200 px-1 rounded">Key</span>}
-                              {song.duration && <span className="text-xs bg-green-200 px-1 rounded">Dur</span>}
-                              {song.youtubeUrl && <span className="text-xs bg-red-200 px-1 rounded">YT</span>}
+                              {song.bpm && <span className="text-xs bg-green-800 text-green-200 px-1 rounded">BPM</span>}
+                              {song.key && <span className="text-xs bg-green-800 text-green-200 px-1 rounded">Key</span>}
+                              {song.duration && <span className="text-xs bg-green-800 text-green-200 px-1 rounded">Dur</span>}
+                              {song.youtubeUrl && <span className="text-xs bg-red-800 text-red-200 px-1 rounded">YT</span>}
                             </li>
                           ))}
                         </ul>
@@ -628,11 +628,11 @@ Hotel California - Eagles"
                     )}
 
                     {bulkResults.skipped.length > 0 && (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                        <h4 className="font-medium text-yellow-800 mb-2">
+                      <div className="bg-yellow-900/30 border border-yellow-500/50 rounded-lg p-4">
+                        <h4 className="font-medium text-yellow-300 mb-2">
                           {bulkResults.skipped.length} songs skipped (already exist)
                         </h4>
-                        <ul className="text-sm text-yellow-700 max-h-32 overflow-y-auto">
+                        <ul className="text-sm text-yellow-200 max-h-32 overflow-y-auto">
                           {bulkResults.skipped.map((song, i) => (
                             <li key={i}>{song.title}{song.artist && ` - ${song.artist}`}</li>
                           ))}
@@ -641,11 +641,11 @@ Hotel California - Eagles"
                     )}
 
                     {bulkResults.errors.length > 0 && (
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <h4 className="font-medium text-red-800 mb-2">
+                      <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-4">
+                        <h4 className="font-medium text-red-300 mb-2">
                           {bulkResults.errors.length} errors
                         </h4>
-                        <ul className="text-sm text-red-700 max-h-32 overflow-y-auto">
+                        <ul className="text-sm text-red-200 max-h-32 overflow-y-auto">
                           {bulkResults.errors.map((err, i) => (
                             <li key={i}>{err.song?.title || 'Unknown'}: {err.error}</li>
                           ))}

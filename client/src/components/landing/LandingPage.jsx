@@ -48,10 +48,10 @@ export default function LandingPage() {
             <span className="text-xl font-bold text-white">BandChat</span>
           </div>
           <div className="flex items-center gap-3">
-            <Link to="/login" className="px-4 py-2 text-sm font-medium text-white border border-white/30 rounded-lg hover:bg-white/10 transition-colors">
+            <Link to="/login" className="px-5 py-2.5 text-sm font-medium text-white border border-white/30 rounded-lg hover:bg-white/10 transition-colors min-h-[44px] flex items-center">
               Log In
             </Link>
-            <Link to="/signup" className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors">
+            <Link to="/signup" className="px-5 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors min-h-[44px] flex items-center">
               Sign Up Free
             </Link>
           </div>

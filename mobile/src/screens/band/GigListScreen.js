@@ -471,8 +471,8 @@ export default function GigListScreen({ navigation, route }) {
   }, [colors, navigation, workspaceId, availability, cycleAvailability]);
 
   const renderSectionHeader = useCallback(({ section }) => (
-    <View style={styles.monthHeader}>
-      <Text style={[styles.monthText, { color: colors.textSecondary }]} accessibilityRole="header">{section.title}</Text>
+    <View style={[styles.monthHeader, { borderBottomColor: colors.border }]}>
+      <Text style={[styles.monthText, { color: section.title === 'PAST' ? colors.textSecondary : colors.primary }]} accessibilityRole="header">{section.title}</Text>
     </View>
   ), [colors]);
 
@@ -537,13 +537,6 @@ export default function GigListScreen({ navigation, route }) {
           </Text>
         </TouchableOpacity>
       </ScrollView>
-
-      {/* Desktop feature hint */}
-      <View style={[styles.desktopHint, { backgroundColor: colors.bgTertiary }]}>
-        <Text style={[styles.desktopHintText, { color: colors.textSecondary }]}>
-          Import calendar invites from web app
-        </Text>
-      </View>
 
       <SectionList
         sections={sections}
@@ -795,8 +788,8 @@ const styles = StyleSheet.create({
   filterChipText: { fontSize: 14, fontWeight: '600' },
   // List
   listContent: { paddingHorizontal: 12, paddingBottom: 20 },
-  monthHeader: { paddingVertical: 8, paddingHorizontal: 4 },
-  monthText: { fontSize: 14, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  monthHeader: { paddingVertical: 10, paddingHorizontal: 4, paddingTop: 16, borderBottomWidth: StyleSheet.hairlineWidth },
+  monthText: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
   // Gig card
   gigCard: {
     flexDirection: 'row',
