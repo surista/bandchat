@@ -832,23 +832,50 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
                 <div className="text-sm text-[var(--color-text-muted)] py-1">No songs in this setlist</div>
               ) : (
                 <div className="space-y-0.5">
-                  {setlistSongs.map((ss, i) => (
-                    <div key={ss.id} className="flex items-center gap-2 text-sm py-1 px-2 rounded hover:bg-[var(--color-bg-secondary)]">
-                      <span className="text-[var(--color-text-muted)] w-5 text-right text-xs">{i + 1}</span>
-                      {ss.type === 'MC' ? (
-                        <span className="text-yellow-400 italic">{ss.label || 'MC Break'}</span>
-                      ) : ss.song ? (
-                        <>
-                          <span className="text-[var(--color-text-primary)]">{ss.song.shortName || ss.song.title}</span>
-                          {ss.song.artist && <span className="text-[var(--color-text-muted)] text-xs">— {ss.song.artist}</span>}
-                          {ss.song.key && <span className="text-purple-400 text-xs ml-auto">{ss.song.key}</span>}
-                          {ss.song.bpm && <span className="text-blue-400 text-xs">{ss.song.bpm}</span>}
-                        </>
-                      ) : (
-                        <span className="text-[var(--color-text-muted)] italic">{ss.label || 'Unknown'}</span>
-                      )}
-                    </div>
-                  ))}
+                  {(() => {
+                    let setNumber = 1;
+                    let songIndex = 0;
+                    // Check if there are any SET_BREAK items
+                    const hasSetBreaks = setlistSongs.some(ss => ss.type === 'SET_BREAK');
+                    return setlistSongs.map((ss) => {
+                      if (ss.type === 'SET_BREAK') {
+                        setNumber++;
+                        songIndex = 0;
+                        return (
+                          <div key={ss.id} className="flex items-center gap-2 py-2 mt-2 border-t border-[var(--color-border)]">
+                            <span className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">{ss.label || `Set ${setNumber - 1} Break`}</span>
+                          </div>
+                        );
+                      }
+                      songIndex++;
+                      // Show "Set 1" header before the first song if there are set breaks
+                      const showSetHeader = hasSetBreaks && songIndex === 1;
+                      return (
+                        <div key={ss.id}>
+                          {showSetHeader && (
+                            <div className={`flex items-center gap-2 py-1.5 ${setNumber > 1 ? '' : ''}`}>
+                              <span className="text-xs font-semibold text-green-400 uppercase tracking-wider">Set {setNumber}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 text-sm py-1 px-2 rounded hover:bg-[var(--color-bg-secondary)]">
+                            <span className="text-[var(--color-text-muted)] w-5 text-right text-xs">{songIndex}</span>
+                            {ss.type === 'MC' ? (
+                              <span className="text-yellow-400 italic">{ss.label || 'MC Break'}</span>
+                            ) : ss.song ? (
+                              <>
+                                <span className="text-[var(--color-text-primary)]">{ss.song.shortName || ss.song.title}</span>
+                                {ss.song.artist && <span className="text-[var(--color-text-muted)] text-xs">— {ss.song.artist}</span>}
+                                {ss.song.key && <span className="text-purple-400 text-xs ml-auto">{ss.song.key}</span>}
+                                {ss.song.bpm && <span className="text-blue-400 text-xs">{ss.song.bpm}</span>}
+                              </>
+                            ) : (
+                              <span className="text-[var(--color-text-muted)] italic">{ss.label || 'Unknown'}</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               )}
             </div>

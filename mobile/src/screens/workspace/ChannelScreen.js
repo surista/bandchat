@@ -870,22 +870,47 @@ export default function ChannelScreen({ navigation, route }) {
               ) : setlistSongs.length === 0 ? (
                 <Text style={{ color: colors.textSecondary, fontSize: 13, paddingVertical: 4 }}>No songs in this setlist</Text>
               ) : (
-                setlistSongs.map((ss, i) => (
-                  <View key={ss.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 5, gap: 8 }}>
-                    <Text style={{ color: colors.textSecondary, fontSize: 11, width: 20, textAlign: 'right' }}>{i + 1}</Text>
-                    {ss.type === 'MC' ? (
-                      <Text style={{ color: '#facc15', fontStyle: 'italic', fontSize: 13 }}>{ss.label || 'MC Break'}</Text>
-                    ) : ss.song ? (
-                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={{ color: colors.textPrimary, fontSize: 13, flex: 1 }} numberOfLines={1}>{ss.song.shortName || ss.song.title}</Text>
-                        {ss.song.key ? <Text style={{ color: '#c084fc', fontSize: 11 }}>{ss.song.key}</Text> : null}
-                        {ss.song.bpm ? <Text style={{ color: '#60a5fa', fontSize: 11 }}>{ss.song.bpm}</Text> : null}
+                (() => {
+                  let setNumber = 1;
+                  let songIndex = 0;
+                  const hasSetBreaks = setlistSongs.some(ss => ss.type === 'SET_BREAK');
+                  return setlistSongs.map((ss) => {
+                    if (ss.type === 'SET_BREAK') {
+                      setNumber++;
+                      songIndex = 0;
+                      return (
+                        <View key={ss.id} style={{ paddingVertical: 6, marginTop: 8, borderTopWidth: 1, borderTopColor: colors.border }}>
+                          <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' }}>{ss.label || `Set ${setNumber - 1} Break`}</Text>
+                        </View>
+                      );
+                    }
+                    songIndex++;
+                    const showSetHeader = hasSetBreaks && songIndex === 1;
+                    return (
+                      <View key={ss.id}>
+                        {showSetHeader && (
+                          <View style={{ paddingVertical: 4, marginTop: setNumber > 1 ? 0 : 0 }}>
+                            <Text style={{ color: '#4ade80', fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' }}>Set {setNumber}</Text>
+                          </View>
+                        )}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 5, gap: 8 }}>
+                          <Text style={{ color: colors.textSecondary, fontSize: 11, width: 20, textAlign: 'right' }}>{songIndex}</Text>
+                          {ss.type === 'MC' ? (
+                            <Text style={{ color: '#facc15', fontStyle: 'italic', fontSize: 13 }}>{ss.label || 'MC Break'}</Text>
+                          ) : ss.song ? (
+                            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Text style={{ color: colors.textPrimary, fontSize: 13, flex: 1 }} numberOfLines={1}>{ss.song.shortName || ss.song.title}</Text>
+                              {ss.song.key ? <Text style={{ color: '#c084fc', fontSize: 11 }}>{ss.song.key}</Text> : null}
+                              {ss.song.bpm ? <Text style={{ color: '#60a5fa', fontSize: 11 }}>{ss.song.bpm}</Text> : null}
+                            </View>
+                          ) : (
+                            <Text style={{ color: colors.textSecondary, fontStyle: 'italic', fontSize: 13 }}>{ss.label || 'Unknown'}</Text>
+                          )}
+                        </View>
                       </View>
-                    ) : (
-                      <Text style={{ color: colors.textSecondary, fontStyle: 'italic', fontSize: 13 }}>{ss.label || 'Unknown'}</Text>
-                    )}
-                  </View>
-                ))
+                    );
+                  });
+                })()
               )}
             </ScrollView>
           )}

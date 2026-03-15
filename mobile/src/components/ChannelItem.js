@@ -46,6 +46,9 @@ function ChannelItem({ channel, isDM, dmMembers, onPress, unreadCount }) {
       >
         {displayName}
       </Text>
+      {!isDM && channel.pinnedSetlistId && (
+        <Text style={{ color: '#4ade80', fontSize: 12, marginLeft: 4 }}>♫</Text>
+      )}
       {hasUnread && (
         <View style={[styles.badge, { backgroundColor: colors.primary }]}>
           <Text style={styles.badgeText}>
