@@ -142,7 +142,7 @@ router.post('/:workspaceId/deploy', authenticate, isWorkspaceAdmin, deployLimite
       const apiUrl = process.env.API_URL || (process.env.RAILWAY_PUBLIC_DOMAIN
         ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api`
         : 'http://localhost:3001/api');
-      const domain = `${bandSlug}.bandchat.com`;
+      const domain = `${bandSlug}.bandchat.app`;
       const config = workspace.websiteConfig;
       await setVercelEnvVars(vercelProjectId, {
         // Sync credentials (API token replaces email/password)

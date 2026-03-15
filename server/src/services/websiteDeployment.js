@@ -1,6 +1,6 @@
 /**
  * Website deployment service — manages GitHub + Vercel integration
- * for band websites deployed at bandname.bandchat.com.
+ * for band websites deployed at bandname.bandchat.app.
  */
 
 import crypto from 'crypto';
