@@ -382,7 +382,8 @@ input:focus, textarea:focus {
 [data-mode="light"] .bg-gray-900 { background-color: var(--color-bg-primary) !important; }
 [data-mode="light"] .bg-gray-800 { background-color: var(--color-bg-secondary) !important; }
 [data-mode="light"] .bg-gray-700,
-[data-mode="light"] .bg-gray-750 { background-color: var(--color-bg-tertiary) !important; }
+[data-mode="light"] .bg-gray-750,
+[data-mode="light"] .hover\:bg-gray-750:hover { background-color: var(--color-bg-tertiary) !important; }
 [data-mode="light"] .bg-gray-600 { background-color: #d1d5db !important; }
 [data-mode="light"] .bg-gray-500 { background-color: #9ca3af !important; }
 [data-mode="light"] .bg-gray-700\/30,

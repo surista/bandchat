@@ -839,6 +839,7 @@ export async function restoreFromBackup(key, onProgress) {
             gigId: g.id,
             bandMemberId: a.bandMemberId,
             status: a.status || 'PENDING',
+            createdAt: a.createdAt ? new Date(a.createdAt) : new Date(),
           })),
           skipDuplicates: true,
         });
@@ -851,6 +852,7 @@ export async function restoreFromBackup(key, onProgress) {
             gigId: g.id,
             setlistId: gs.setlistId,
             setNumber: gs.setNumber || 1,
+            createdAt: gs.createdAt ? new Date(gs.createdAt) : new Date(),
           })),
           skipDuplicates: true,
         });
@@ -1005,6 +1007,7 @@ export async function restoreFromBackup(key, onProgress) {
           createdById: t.createdById || null,
           removedCreatorName: t.removedCreatorName || null,
           createdAt: t.createdAt ? new Date(t.createdAt) : new Date(),
+          updatedAt: t.updatedAt ? new Date(t.updatedAt) : new Date(),
         })),
         skipDuplicates: true,
       });
@@ -1027,6 +1030,7 @@ export async function restoreFromBackup(key, onProgress) {
           createdById: r.createdById || null,
           removedCreatorName: r.removedCreatorName || null,
           createdAt: r.createdAt ? new Date(r.createdAt) : new Date(),
+          updatedAt: r.updatedAt ? new Date(r.updatedAt) : new Date(),
         })),
         skipDuplicates: true,
       });
@@ -1074,6 +1078,7 @@ export async function restoreFromBackup(key, onProgress) {
           currency: k.currency || 'USD',
           workspaceId: k.workspaceId,
           createdAt: k.createdAt ? new Date(k.createdAt) : new Date(),
+          updatedAt: k.updatedAt ? new Date(k.updatedAt) : new Date(),
         })),
         skipDuplicates: true,
       });

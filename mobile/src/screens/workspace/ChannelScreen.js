@@ -58,6 +58,8 @@ export default function ChannelScreen({ navigation, route }) {
   const [typingUsers, setTypingUsers] = useState([]);
   const [setlistExpanded, setSetlistExpanded] = useState(false);
   const [setlistSongs, setSetlistSongs] = useState(null);
+  const [showSetlistPicker, setShowSetlistPicker] = useState(false);
+  const [setlistPickerList, setSetlistPickerList] = useState([]);
 
   // Action sheet / picker state
   const [actionMessage, setActionMessage] = useState(null);
@@ -983,6 +985,31 @@ export default function ChannelScreen({ navigation, route }) {
             },
           },
           {
+            label: channel.pinnedSetlist ? 'Change Pinned Setlist' : 'Pin a Setlist',
+            onPress: async () => {
+              setShowHeaderMenu(false);
+              try {
+                const data = await api.getSetlists(workspaceId);
+                setSetlistPickerList(data);
+                setShowSetlistPicker(true);
+              } catch {}
+            },
+          },
+          ...(channel.pinnedSetlist ? [{
+            label: 'Unpin Setlist',
+            destructive: true,
+            onPress: async () => {
+              setShowHeaderMenu(false);
+              try {
+                await api.unpinSetlist(channel.id);
+                setSetlistExpanded(false);
+                setSetlistSongs(null);
+              } catch (err) {
+                Alert.alert('Error', err.message || 'Failed to unpin setlist');
+              }
+            },
+          }] : []),
+          {
             label: 'Channel Settings',
             onPress: () => {
               setShowHeaderMenu(false);
@@ -990,6 +1017,26 @@ export default function ChannelScreen({ navigation, route }) {
             },
           },
         ]}
+      />
+
+      {/* Setlist Picker ActionSheet */}
+      <ActionSheet
+        visible={showSetlistPicker}
+        onClose={() => setShowSetlistPicker(false)}
+        title="Pin a Setlist"
+        actions={setlistPickerList.map(s => ({
+          label: s.name + (channel.pinnedSetlistId === s.id ? ' (pinned)' : ''),
+          onPress: async () => {
+            setShowSetlistPicker(false);
+            try {
+              await api.pinSetlist(channel.id, s.id);
+              setSetlistExpanded(false);
+              setSetlistSongs(null);
+            } catch (err) {
+              Alert.alert('Error', err.message || 'Failed to pin setlist');
+            }
+          },
+        }))}
       />
 
       {/* Link Preview Domain Block ActionSheet */}
