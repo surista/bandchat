@@ -126,51 +126,72 @@ router.post('/:workspaceId/deploy', authenticate, isWorkspaceAdmin, deployLimite
     });
 
     try {
-      // 1. Fork template repo
-      const repoName = await forkTemplate(bandSlug);
+      const isRedeploy = workspace.websiteEnabled && workspace.websiteRepoName && workspace.websiteVercelId;
 
-      // 2. Write site config
-      await writeSiteConfig(repoName, workspace.websiteConfig);
+      let repoName, vercelProjectId, deployHookUrl, domain;
 
-      // 3. Create Vercel project
-      const vercelProjectId = await createVercelProject(repoName, bandSlug);
+      if (isRedeploy) {
+        // Redeploy: update config in existing repo and trigger rebuild
+        repoName = workspace.websiteRepoName;
+        vercelProjectId = workspace.websiteVercelId;
+        domain = workspace.websiteUrl?.replace('https://', '') || `${bandSlug}.bandchat.app`;
 
-      // 4. Generate API token for data sync
-      const apiToken = await generateApiToken(workspaceId);
+        // Update site config in existing repo
+        await writeSiteConfig(repoName, workspace.websiteConfig);
 
-      // 5. Set env vars on Vercel
-      const apiUrl = process.env.API_URL || (process.env.RAILWAY_PUBLIC_DOMAIN
-        ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api`
-        : 'http://localhost:3001/api');
-      const domain = `${bandSlug}.bandchat.app`;
-      const config = workspace.websiteConfig;
-      await setVercelEnvVars(vercelProjectId, {
-        // Sync credentials (API token replaces email/password)
-        BANDCHAT_API_URL: apiUrl,
-        BANDCHAT_API_TOKEN: apiToken,
-        BANDCHAT_WORKSPACE_ID: workspaceId,
-        // Template-expected vars
-        VITE_BANDCHAT_URL: apiUrl,
-        VITE_WORKSPACE_ID: workspaceId,
-        SYNC_BANDCHAT_URL: apiUrl,
-        SYNC_WORKSPACE_ID: workspaceId,
-        SYNC_API_TOKEN: apiToken,
-        SITE_DOMAIN: domain,
-        BAND_NAME: config.bandName || workspace.name,
-        CONTACT_EMAIL: config.contactEmail || '',
-        // Shared keys (if configured)
-        ...(process.env.RESEND_API_KEY && { RESEND_API_KEY: process.env.RESEND_API_KEY }),
-        ...(process.env.RESEND_FROM_EMAIL && { RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL }),
-      });
+        // Trigger rebuild via deploy hook (or direct if no hook)
+        const ws = await prisma.workspace.findUnique({
+          where: { id: workspaceId },
+          select: { websiteDeployHook: true },
+        });
+        deployHookUrl = ws?.websiteDeployHook;
+        if (deployHookUrl) {
+          await triggerDeploy(deployHookUrl);
+        }
+      } else {
+        // Fresh deploy: create repo, Vercel project, everything
+        repoName = await forkTemplate(bandSlug);
 
-      // 6. Add custom domain
-      await addVercelDomain(vercelProjectId, domain);
+        // Write site config
+        await writeSiteConfig(repoName, workspace.websiteConfig);
 
-      // 7. Create deploy hook
-      const deployHookUrl = await createDeployHook(vercelProjectId);
+        // Create Vercel project
+        vercelProjectId = await createVercelProject(repoName, bandSlug);
 
-      // 8. Trigger initial deploy
-      await triggerDeploy(deployHookUrl);
+        // Generate API token for data sync
+        const apiToken = await generateApiToken(workspaceId);
+
+        // Set env vars on Vercel
+        const apiUrl = process.env.API_URL || (process.env.RAILWAY_PUBLIC_DOMAIN
+          ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api`
+          : 'http://localhost:3001/api');
+        domain = `${bandSlug}.bandchat.app`;
+        const config = workspace.websiteConfig;
+        await setVercelEnvVars(vercelProjectId, {
+          BANDCHAT_API_URL: apiUrl,
+          BANDCHAT_API_TOKEN: apiToken,
+          BANDCHAT_WORKSPACE_ID: workspaceId,
+          VITE_BANDCHAT_URL: apiUrl,
+          VITE_WORKSPACE_ID: workspaceId,
+          SYNC_BANDCHAT_URL: apiUrl,
+          SYNC_WORKSPACE_ID: workspaceId,
+          SYNC_API_TOKEN: apiToken,
+          SITE_DOMAIN: domain,
+          BAND_NAME: config.bandName || workspace.name,
+          CONTACT_EMAIL: config.contactEmail || '',
+          ...(process.env.RESEND_API_KEY && { RESEND_API_KEY: process.env.RESEND_API_KEY }),
+          ...(process.env.RESEND_FROM_EMAIL && { RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL }),
+        });
+
+        // Add custom domain
+        await addVercelDomain(vercelProjectId, domain);
+
+        // Create deploy hook
+        deployHookUrl = await createDeployHook(vercelProjectId);
+
+        // Trigger initial deploy
+        await triggerDeploy(deployHookUrl);
+      }
 
       // 9. Update workspace
       const updated = await prisma.workspace.update({
