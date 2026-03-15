@@ -50,6 +50,7 @@ export default function ChannelScreen({ navigation, route }) {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState(null);
@@ -206,7 +207,7 @@ export default function ChannelScreen({ navigation, route }) {
 
         if (!cancelled) joinChannel(channel.id);
       } catch (err) {
-        if (messages.length === 0) setLoadError('Could not load messages');
+        if (!cancelled) setLoadError('Could not load messages');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -218,7 +219,7 @@ export default function ChannelScreen({ navigation, route }) {
       cancelled = true;
       leaveChannel(channel.id);
     };
-  }, [channel.id, joinChannel, leaveChannel]);
+  }, [channel.id, joinChannel, leaveChannel, retryCount]);
 
   // Socket event handlers
   useEffect(() => {
@@ -485,7 +486,7 @@ export default function ChannelScreen({ navigation, route }) {
     setMessages(prev => [...prev, optimisticMessage]);
 
     try {
-      const uploaded = await api.uploadFile(uri, filename, 'audio/m4a', workspaceId);
+      const uploaded = await api.uploadFile(uri, filename, 'audio/mp4', workspaceId);
       const savedMessage = await api.sendMessage(channel.id, '', null, [uploaded]);
       setMessages(prev => prev.map(m =>
         m.id === optimisticMessage.id ? savedMessage : m
@@ -493,7 +494,7 @@ export default function ChannelScreen({ navigation, route }) {
     } catch (err) {
       setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
     }
-  }, [user, channel.id]);
+  }, [user, channel.id, workspaceId]);
 
   // Typing handler
   const handleTyping = useCallback((isTyping) => {
@@ -824,7 +825,7 @@ export default function ChannelScreen({ navigation, route }) {
   if (loadError && messages.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
-        <ErrorState emoji="💬" title="Couldn't load messages" message={loadError} onRetry={() => { setLoading(true); setLoadError(null); }} />
+        <ErrorState emoji="💬" title="Couldn't load messages" message={loadError} onRetry={() => { setLoadError(null); setRetryCount(c => c + 1); }} />
       </View>
     );
   }

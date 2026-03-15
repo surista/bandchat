@@ -68,7 +68,7 @@ export function getClient() {
 export async function uploadFile(buffer, originalFilename, contentType, category) {
   const client = getClient();
   // L2: Derive extension from detected MIME type, not user-provided filename
-  const ext = MIME_TO_EXT[contentType] || path.extname(originalFilename) || '';
+  const ext = MIME_TO_EXT[contentType] || '.bin';
   const key = `${category}/${randomUUID()}${ext}`;
 
   await client.send(new PutObjectCommand({

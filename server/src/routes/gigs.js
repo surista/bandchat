@@ -580,6 +580,12 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       return res.status(400).json({ error: 'Title and date are required' });
     }
 
+    // Input length validation
+    if (title.length > 200) return res.status(400).json({ error: 'Title must be 200 characters or less' });
+    if (venue && venue.length > 200) return res.status(400).json({ error: 'Venue must be 200 characters or less' });
+    if (address && address.length > 500) return res.status(400).json({ error: 'Address must be 500 characters or less' });
+    if (notes && notes.length > 5000) return res.status(400).json({ error: 'Notes must be 5,000 characters or less' });
+
     // Only admins can create locked events
     const canLock = req.workspaceMembership?.role === 'ADMIN';
     const gigType = type || 'GIG';
@@ -801,6 +807,12 @@ router.put('/:gigId', authenticate, async (req, res) => {
     if (!existingGig) {
       return res.status(404).json({ error: 'Gig not found' });
     }
+
+    // Input length validation
+    if (title && title.length > 200) return res.status(400).json({ error: 'Title must be 200 characters or less' });
+    if (venue && venue.length > 200) return res.status(400).json({ error: 'Venue must be 200 characters or less' });
+    if (address && address.length > 500) return res.status(400).json({ error: 'Address must be 500 characters or less' });
+    if (notes && notes.length > 5000) return res.status(400).json({ error: 'Notes must be 5,000 characters or less' });
 
     // Check if user is a member and get their role
     const membership = existingGig.workspace.members.find(m => m.userId === req.user.id);

@@ -200,6 +200,7 @@ model ChannelMember {
   channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
 
   @@id([userId, channelId])
+  @@index([channelId])
 }
 
 model Message {
@@ -535,6 +536,7 @@ model GigSong {
   song Song @relation(fields: [songId], references: [id], onDelete: Cascade)
 
   @@unique([gigId, songId])
+  @@index([songId])
 }
 
 enum GigType {
@@ -567,6 +569,7 @@ model BandMember {
   performances   SetlistPerformer[]
   gigAttendances GigAttendee[]
 
+  @@unique([workspaceId, linkedUserId])
   @@index([workspaceId])
   @@index([linkedUserId])
 }
@@ -734,6 +737,7 @@ model Poll {
 
   @@index([workspaceId])
   @@index([channelId])
+  @@index([createdById])
 }
 
 model PollOption {

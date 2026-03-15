@@ -55,7 +55,7 @@ export default function WorkspaceListScreen({ navigation, route }) {
   // Handle invite deep link
   useEffect(() => {
     const code = route.params?.inviteCode;
-    if (code) {
+    if (code && /^[a-zA-Z0-9_-]+$/.test(code) && code.length <= 100) {
       setInviteCode(code);
       setShowJoin(true);
     }

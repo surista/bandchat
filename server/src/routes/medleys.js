@@ -55,6 +55,10 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       return res.status(400).json({ error: 'Name is required' });
     }
 
+    // Input length validation
+    if (name.length > 200) return res.status(400).json({ error: 'Name must be 200 characters or less' });
+    if (description && description.length > 5000) return res.status(400).json({ error: 'Description must be 5,000 characters or less' });
+
     if (!songIds || songIds.length < 2) {
       return res.status(400).json({ error: 'At least 2 songs are required for a medley' });
     }

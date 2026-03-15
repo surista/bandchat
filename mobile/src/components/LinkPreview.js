@@ -62,8 +62,7 @@ function LinkPreview({ content, isOwn, onDismiss, onLongPress, blockedDomains })
         setPreview(data);
       })
       .catch(() => {
-        // Cache errors as null to avoid re-fetching
-        cache.set(firstUrl, null);
+        // Don't cache errors — allow retry on next render
       });
 
     return () => { cancelled = true; };

@@ -823,7 +823,7 @@ html {
 }
 
 .landing-gradient-text {
-  background: linear-gradient(135deg, #2BAC76, #36C5F0, #ECB22E);
+  background: linear-gradient(135deg, #4ADE80, #38BDF8, #FACC15);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -864,7 +864,7 @@ html {
     left: 16.67%;
     right: 16.67%;
     height: 2px;
-    border-top: 2px dashed rgba(255, 255, 255, 0.15);
+    border-top: 2px dashed rgba(255, 255, 255, 0.25);
   }
 }
 

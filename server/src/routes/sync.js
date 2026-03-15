@@ -197,8 +197,20 @@ router.post('/:workspaceId/push', authenticate, isWorkspaceMember, async (req, r
         }
 
         if (entity === 'message' && operation === 'delete') {
+          if (!UUID_REGEX.test(entityId)) {
+            results.push({ tempId: entityId, status: 'error', error: 'Invalid message ID' });
+            continue;
+          }
           const msg = await prisma.message.findUnique({ where: { id: entityId } });
           if (msg && msg.authorId === req.user.id) {
+            // Verify user is a member of the channel this message belongs to
+            const delMembership = await prisma.channelMember.findFirst({
+              where: { channelId: msg.channelId, userId: req.user.id },
+            });
+            if (!delMembership) {
+              results.push({ tempId: entityId, status: 'error', error: 'Not a channel member' });
+              continue;
+            }
             await prisma.message.delete({ where: { id: entityId } });
             const io = req.app.get('io');
             if (io) {

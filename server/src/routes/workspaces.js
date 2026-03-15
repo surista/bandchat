@@ -621,19 +621,23 @@ router.post('/:workspaceId/invite-email', authenticate, isWorkspaceAdmin, async 
       return res.json({ message: 'Invite email sent (dev mode)' });
     }
 
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const safeName = esc(workspace.name);
+    const safeDisplayName = esc(req.user.displayName);
+
     await resend.emails.send({
       from: process.env.EMAIL_FROM || 'BandChat <noreply@bandchat.app>',
       to: email.trim(),
-      subject: `You're invited to join ${workspace.name} on BandChat`,
+      subject: `You're invited to join ${workspace.name.replace(/[\r\n]/g, '')} on BandChat`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
           <h1 style="color: #3B82F6;">You're invited!</h1>
-          <p><strong>${req.user.displayName}</strong> has invited you to join <strong>${workspace.name}</strong> on BandChat.</p>
+          <p><strong>${safeDisplayName}</strong> has invited you to join <strong>${safeName}</strong> on BandChat.</p>
           <p>BandChat is a collaboration platform built for bands and musicians.</p>
           <div style="margin: 30px 0;">
             <a href="${inviteUrl}"
                style="background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-              Join ${workspace.name}
+              Join ${safeName}
             </a>
           </div>
           <p style="color: #666; font-size: 14px;">
@@ -763,6 +767,11 @@ router.post('/:workspaceId/members/:userId/reset-password', authenticate, isWork
 
     if (newPassword.length > 128) {
       return res.status(400).json({ error: 'Password must be 128 characters or less' });
+    }
+
+    // Validate password complexity (same rules as registration)
+    if (!/[a-z]/.test(newPassword) || !/[A-Z]/.test(newPassword) || !/\d/.test(newPassword)) {
+      return res.status(400).json({ error: 'Password must include uppercase, lowercase, and a number' });
     }
 
     // Verify admin's password before allowing reset

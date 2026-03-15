@@ -123,8 +123,7 @@ export const setupSocketHandlers = (io) => {
     socket.join(`user:${user.id}`);
 
     // L19: Per-user connection limit - disconnect oldest if over limit
-    const allSockets = await io.fetchSockets();
-    const userSockets = allSockets.filter(s => s.user && s.user.id === user.id);
+    const userSockets = await io.in(`user:${user.id}`).fetchSockets();
     if (userSockets.length > MAX_CONNECTIONS_PER_USER) {
       const excess = userSockets.length - MAX_CONNECTIONS_PER_USER;
       const oldestSockets = userSockets
@@ -354,9 +353,9 @@ export const setupSocketHandlers = (io) => {
  */
 export async function forceLeaveRoom(io, userId, roomName) {
   try {
-    const sockets = await io.fetchSockets();
+    const sockets = await io.in(`user:${userId}`).fetchSockets();
     for (const s of sockets) {
-      if (s.user && s.user.id === userId && s.rooms.has(roomName)) {
+      if (s.rooms.has(roomName)) {
         s.leave(roomName);
       }
     }
@@ -375,16 +374,14 @@ export async function forceLeaveRoom(io, userId, roomName) {
  */
 export async function forceLeaveWorkspace(io, userId, workspaceId, channelIds = []) {
   try {
-    const sockets = await io.fetchSockets();
+    const sockets = await io.in(`user:${userId}`).fetchSockets();
     for (const s of sockets) {
-      if (s.user && s.user.id === userId) {
-        s.leave(`workspace:${workspaceId}`);
-        for (const channelId of channelIds) {
-          s.leave(`channel:${channelId}`);
-        }
-        // Notify the client so it can update its UI
-        s.emit('workspace:removed', { workspaceId });
+      s.leave(`workspace:${workspaceId}`);
+      for (const channelId of channelIds) {
+        s.leave(`channel:${channelId}`);
       }
+      // Notify the client so it can update its UI
+      s.emit('workspace:removed', { workspaceId });
     }
   } catch (error) {
     console.error(`Failed to evict user ${userId} from workspace ${workspaceId}:`, error);

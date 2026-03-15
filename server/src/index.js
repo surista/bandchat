@@ -78,8 +78,11 @@ httpServer.listen(PORT, async () => {
   // Run database setup
   await setupDatabase();
 
+  // Track interval handles for graceful shutdown
+  const intervalHandles = [];
+
   // Clean up expired refresh tokens every hour
-  setInterval(async () => {
+  intervalHandles.push(setInterval(async () => {
     try {
       const { count } = await prisma.refreshToken.deleteMany({
         where: { expiresAt: { lt: new Date() } }
@@ -88,7 +91,7 @@ httpServer.listen(PORT, async () => {
     } catch (err) {
       console.error('Refresh token cleanup error:', err);
     }
-  }, 60 * 60 * 1000);
+  }, 60 * 60 * 1000));
 
   // Daily database backup to R2 (first run 60s after start, then every 24h)
   const runScheduledBackup = async () => {
@@ -113,9 +116,9 @@ httpServer.listen(PORT, async () => {
       await sendBackupAlert('failure', { error: err.message }).catch(e => console.error('Failed to send backup alert:', e));
     }
   };
-  setTimeout(() => {
+  const backupTimeout = setTimeout(() => {
     runScheduledBackup();
-    setInterval(runScheduledBackup, 24 * 60 * 60 * 1000);
+    intervalHandles.push(setInterval(runScheduledBackup, 24 * 60 * 60 * 1000));
   }, 60 * 1000);
 
   // Daily soft-delete purge: permanently delete records older than 30 days
@@ -145,7 +148,7 @@ httpServer.listen(PORT, async () => {
             prisma.kittyTransaction.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
             prisma.pinnedMessage.updateMany({ where: { pinnedById: user.id }, data: { pinnedById: null } }),
             prisma.user.delete({ where: { id: user.id } }),
-          ]);
+          ], { timeout: 30000 });
           console.log(`Purged soft-deleted user: ${user.displayName} (${user.id})`);
         } catch (err) {
           console.error(`Failed to purge user ${user.id}:`, err);
@@ -195,15 +198,29 @@ httpServer.listen(PORT, async () => {
     }
   };
   // Run purge 2 minutes after start, then every 24 hours
-  setTimeout(() => {
+  const purgeTimeout = setTimeout(() => {
     runSoftDeletePurge();
-    setInterval(runSoftDeletePurge, 24 * 60 * 60 * 1000);
+    intervalHandles.push(setInterval(runSoftDeletePurge, 24 * 60 * 60 * 1000));
   }, 2 * 60 * 1000);
+
+  // Store timeout handles for cleanup
+  app.set('_intervalHandles', intervalHandles);
+  app.set('_timeoutHandles', [backupTimeout, purgeTimeout]);
 });
 
 // Graceful shutdown
 const gracefulShutdown = async (signal) => {
   console.log(`${signal} received. Shutting down gracefully...`);
+
+  // Clear all scheduled intervals and timeouts
+  const intervals = app.get('_intervalHandles') || [];
+  const timeouts = app.get('_timeoutHandles') || [];
+  intervals.forEach(h => clearInterval(h));
+  timeouts.forEach(h => clearTimeout(h));
+
+  // Close Socket.IO connections
+  io.close();
+
   httpServer.close(async () => {
     console.log('HTTP server closed');
     await prisma.$disconnect();
@@ -218,5 +235,14 @@ const gracefulShutdown = async (signal) => {
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle unhandled promise rejections and uncaught exceptions
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  gracefulShutdown('uncaughtException');
+});
 
 export { io };

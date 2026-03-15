@@ -123,12 +123,15 @@ router.put('/:contactId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Contact not found' });
     }
 
-    // Verify user is a workspace member
+    // Verify user is creator or admin
     const membership = await prisma.workspaceMember.findUnique({
       where: { userId_workspaceId: { userId: req.user.id, workspaceId: existingContact.workspaceId } }
     });
     if (!membership) {
       return res.status(403).json({ error: 'Not a workspace member' });
+    }
+    if (existingContact.createdById !== req.user.id && membership.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only the creator or an admin can update this contact' });
     }
 
     // Input length validation

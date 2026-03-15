@@ -6,7 +6,8 @@ import { getCurrencySymbol } from '../../utils/currencies';
 // Generate Google Calendar URL
 const getGoogleCalendarUrl = (gig) => {
   const formatGoogleDate = (date) => {
-    return format(new Date(date), "yyyyMMdd'T'HHmmss");
+    // Use UTC format with Z suffix so Google Calendar interprets it correctly regardless of user's account timezone
+    return format(new Date(date), "yyyyMMdd'T'HHmmss'Z'");
   };
 
   const startDate = formatGoogleDate(gig.date);

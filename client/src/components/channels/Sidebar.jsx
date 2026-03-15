@@ -264,7 +264,7 @@ function Sidebar({
   const toggleNotifications = async () => {
     setNotificationsLoading(true);
     try {
-      const accessToken = localStorage.getItem('accessToken');
+      const accessToken = api.accessToken;
       if (notificationsEnabled) {
         await pushService.unsubscribe(accessToken);
         setNotificationsEnabled(false);

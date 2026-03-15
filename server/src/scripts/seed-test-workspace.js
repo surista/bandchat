@@ -294,18 +294,18 @@ async function main() {
   await prisma.timelineEvent.createMany({
     data: [
       {
-        type: 'MEMBER_JOINED',
+        eventType: 'MEMBER_JOINED',
         title: 'Band formed',
         description: 'The test band was created',
-        date: new Date('2020-01-01'),
+        eventDate: new Date('2020-01-01'),
         workspaceId: workspace.id,
         createdById: adminUser.id,
       },
       {
-        type: 'GIG_PLAYED',
+        eventType: 'GIG_PLAYED',
         title: 'First test gig',
         description: 'We played our first test gig',
-        date: new Date('2020-06-15'),
+        eventDate: new Date('2020-06-15'),
         workspaceId: workspace.id,
         createdById: adminUser.id,
       },

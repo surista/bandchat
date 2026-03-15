@@ -130,6 +130,9 @@ router.put('/:id', authenticate, async (req, res) => {
     if (!member) {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
+    if (existing.createdById !== req.user.id && member.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only the creator or an admin can update this stage plot' });
+    }
 
     const { title, data, gigId } = req.body;
 
@@ -185,6 +188,9 @@ router.delete('/:id', authenticate, async (req, res) => {
 
     if (!member) {
       return res.status(403).json({ error: 'Not a workspace member' });
+    }
+    if (existing.createdById !== req.user.id && member.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only the creator or an admin can delete this stage plot' });
     }
 
     await prisma.stagePlot.delete({

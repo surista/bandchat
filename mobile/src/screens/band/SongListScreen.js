@@ -123,7 +123,7 @@ export default function SongListScreen({ navigation, route }) {
       // Persist to SQLite for offline access
       upsertSongs(data, workspaceId).catch(() => {});
     } catch (err) {
-      if (songs.length === 0) setLoadError('Could not load songs');
+      setSongs(prev => { if (prev.length === 0) setLoadError('Could not load songs'); return prev; });
     } finally {
       setLoading(false);
       setRefreshing(false);

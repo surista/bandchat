@@ -1,6 +1,6 @@
 /**
  * @fileoverview Settings modal extracted from Sidebar.
- * Contains profile, workspace, theme, members, band members, import, what's new, and about tabs.
+ * Contains profile, workspace, theme, members, band members, import, what's new, and support tabs.
  */
 
 import { useState, useEffect } from 'react';
@@ -104,6 +104,13 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
       setNewEmail('');
       setEmailPassword('');
       setSettingsTab('profile');
+      // Re-sync workspace defaults
+      setWsCurrency(workspace?.currency || 'USD');
+      setWsEventType(workspace?.defaultEventType || 'GIG');
+      setWsStartTime(workspace?.defaultStartTime || '19:00');
+      setWsEndTime(workspace?.defaultEndTime || '21:00');
+      setWsVenue(workspace?.defaultVenue || '');
+      setWsDefaultsSaved(false);
     }
   }, [isOpen, user?.displayName, user?.avatarUrl, user?.bio]);
 
@@ -339,15 +346,15 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
               </button>
               <button
                 role="tab"
-                aria-selected={settingsTab === 'about'}
-                onClick={() => setSettingsTab('about')}
+                aria-selected={settingsTab === 'support'}
+                onClick={() => setSettingsTab('support')}
                 className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
-                  settingsTab === 'about'
+                  settingsTab === 'support'
                     ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
                     : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                 }`}
               >
-                About
+                Support
               </button>
             </div>
 
@@ -1629,8 +1636,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 </div>
               )}
 
-              {/* About Tab */}
-              {settingsTab === 'about' && (
+              {/* Support Tab */}
+              {settingsTab === 'support' && (
                 <div className="space-y-6">
                   <div className="text-center py-4">
                     <img
@@ -1640,6 +1647,52 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     />
                     <h3 className="text-xl font-bold text-[var(--color-text-primary)]">BandChat</h3>
                     <p className="text-[var(--color-text-muted)]">v{__APP_VERSION__}</p>
+                  </div>
+
+                  <div className="bg-[var(--color-modal-card)] rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-[var(--color-text-secondary)]">Support Email</span>
+                      <a
+                        href="mailto:admin@bandchat.app?subject=BandChat Support"
+                        className="text-sm text-[var(--color-primary)] hover:underline"
+                      >
+                        admin@bandchat.app
+                      </a>
+                    </div>
+                    <div className="border-t border-[var(--color-modal-border)]" />
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-[var(--color-text-secondary)]">Privacy Policy</span>
+                      <a
+                        href="/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-[var(--color-primary)] hover:underline"
+                      >
+                        View
+                      </a>
+                    </div>
+                    <div className="border-t border-[var(--color-modal-border)]" />
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-[var(--color-text-secondary)]">Terms of Service</span>
+                      <a
+                        href="/terms"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-[var(--color-primary)] hover:underline"
+                      >
+                        View
+                      </a>
+                    </div>
+                    <div className="border-t border-[var(--color-modal-border)]" />
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-[var(--color-text-secondary)]">Send Feedback</span>
+                      <a
+                        href="mailto:admin@bandchat.app?subject=BandChat Feedback"
+                        className="text-sm text-[var(--color-primary)] hover:underline"
+                      >
+                        Email
+                      </a>
+                    </div>
                   </div>
 
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-4">
@@ -1955,7 +2008,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-[var(--color-text-muted)] mb-1 block">New password (min 6 characters)</label>
+                  <label className="text-sm text-[var(--color-text-muted)] mb-1 block">New password (min 8 characters)</label>
                   <input
                     type="password"
                     value={resetNewPassword}

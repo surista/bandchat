@@ -17,9 +17,8 @@ class DeezerService {
       const url = `${this.baseUrl}/search?q=${encodeURIComponent(query)}&limit=5`;
 
       const response = await fetch(url, {
-        headers: {
-          'Accept': 'application/json'
-        }
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(10000)
       });
 
       if (!response.ok) {
@@ -47,9 +46,8 @@ class DeezerService {
       const url = `${this.baseUrl}/track/${trackId}`;
 
       const response = await fetch(url, {
-        headers: {
-          'Accept': 'application/json'
-        }
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(10000)
       });
 
       if (!response.ok) {

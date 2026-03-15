@@ -9,7 +9,6 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
-  Image,
 } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -26,13 +25,6 @@ import { useTheme } from '../../context/ThemeContext';
 import { lightImpact, mediumImpact, successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import ActionSheet from '../../components/ActionSheet';
-
-// ─── Instrument image assets ───
-const INSTRUMENT_IMAGES = {
-  'electric-guitar': require('../../../assets/instruments/guitar_01.png'),
-  'acoustic-guitar': require('../../../assets/instruments/ac_guitar_01.png'),
-  'bass-guitar': require('../../../assets/instruments/bass_01.png'),
-};
 
 // ─── Label map ───
 const LABEL_MAP = {
@@ -258,9 +250,33 @@ function InstrumentSvg({ type, size = 48 }) {
         </Svg>
       );
     case 'electric-guitar':
+      return (
+        <Svg width={s} height={s} viewBox="0 0 64 64">
+          <Path d="M44 8 L46 6 L48 8 L46 10 Z" fill="#e67e22" />
+          <Line x1="44" y1="10" x2="36" y2="18" stroke="#888" strokeWidth="2" />
+          <Line x1="46" y1="8" x2="38" y2="16" stroke="#888" strokeWidth="2" />
+          <Path d="M36 18 Q32 20 30 24 Q28 28 28 32 Q24 34 22 38 Q20 42 22 46 Q24 50 28 50 Q32 50 34 46 Q36 42 34 38 Q34 34 36 30 Q40 28 42 24 Q44 20 40 16 Z" fill="#e67e22" opacity="0.9" />
+          <Circle cx="28" cy="40" r="3" fill="none" stroke="#b35900" strokeWidth="1.5" />
+          <Line x1="26" y1="44" x2="22" y2="52" stroke="#888" strokeWidth="2" />
+          <Line x1="30" y1="44" x2="34" y2="52" stroke="#888" strokeWidth="2" />
+          <Rect x="30" y="26" width="6" height="2" rx="1" fill="#b35900" />
+        </Svg>
+      );
     case 'acoustic-guitar':
       return (
-        <Image source={INSTRUMENT_IMAGES[type]} style={{ width: s, height: s }} resizeMode="contain" />
+        <Svg width={s} height={s} viewBox="0 0 64 64">
+          <Line x1="44" y1="6" x2="36" y2="18" stroke="#888" strokeWidth="2.5" />
+          <Rect x="42" y="4" width="6" height="4" rx="1" fill="#8b6940" />
+          <Circle cx="44" cy="6" r="1" fill="#888" />
+          <Circle cx="46" cy="8" r="1" fill="#888" />
+          <Circle cx="48" cy="6" r="1" fill="#888" />
+          <Path d="M36 18 Q32 20 30 24 Q26 28 24 34 Q20 38 20 42 Q20 48 26 50 Q32 52 36 48 Q40 44 38 38 Q38 32 40 26 Q42 22 40 18 Z" fill="#c8a25c" stroke="#8b6940" strokeWidth="1.5" />
+          <Ellipse cx="30" cy="40" rx="5" ry="4" fill="#3a2a10" />
+          <Circle cx="30" cy="40" r="1.5" fill="#c8a25c" />
+          <Line x1="28" y1="24" x2="28" y2="50" stroke="#888" strokeWidth="0.5" opacity="0.5" />
+          <Line x1="30" y1="24" x2="30" y2="50" stroke="#888" strokeWidth="0.5" opacity="0.5" />
+          <Line x1="32" y1="24" x2="32" y2="50" stroke="#888" strokeWidth="0.5" opacity="0.5" />
+        </Svg>
       );
     case 'guitar-stand':
       return (
@@ -276,7 +292,17 @@ function InstrumentSvg({ type, size = 48 }) {
       );
     case 'bass-guitar':
       return (
-        <Image source={INSTRUMENT_IMAGES[type]} style={{ width: s, height: s }} resizeMode="contain" />
+        <Svg width={s} height={s} viewBox="0 0 64 64">
+          <Rect x="42" y="4" width="8" height="6" rx="1" fill="#3498db" />
+          <Circle cx="44" cy="6" r="1" fill="#888" />
+          <Circle cx="48" cy="6" r="1" fill="#888" />
+          <Line x1="44" y1="10" x2="34" y2="22" stroke="#888" strokeWidth="2.5" />
+          <Path d="M34 22 Q30 24 28 28 Q26 32 26 36 Q22 38 20 42 Q18 46 20 50 Q22 54 26 54 Q30 54 32 50 Q34 46 32 42 Q32 38 34 34 Q38 30 38 26 Q38 22 36 20 Z" fill="#3498db" opacity="0.9" />
+          <Circle cx="26" cy="44" r="3" fill="none" stroke="#1a6fa0" strokeWidth="1.5" />
+          <Rect x="28" y="30" width="6" height="2" rx="1" fill="#1a6fa0" />
+          <Line x1="24" y1="48" x2="20" y2="56" stroke="#888" strokeWidth="2" />
+          <Line x1="28" y1="48" x2="32" y2="56" stroke="#888" strokeWidth="2" />
+        </Svg>
       );
     case 'keyboard-stand':
       return (

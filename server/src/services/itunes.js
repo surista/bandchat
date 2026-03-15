@@ -21,7 +21,9 @@ class iTunesService {
         limit: 5
       });
 
-      const response = await fetch(`${this.baseUrl}/search?${params}`);
+      const response = await fetch(`${this.baseUrl}/search?${params}`, {
+        signal: AbortSignal.timeout(10000)
+      });
 
       if (!response.ok) {
         console.error('iTunes search failed:', response.status);

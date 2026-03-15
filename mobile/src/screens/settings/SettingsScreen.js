@@ -384,9 +384,17 @@ export default function SettingsScreen({ navigation, route }) {
           )}
         </View>
 
-        {/* Legal */}
-        <SectionHeader title="LEGAL" colors={colors} />
+        {/* Support */}
+        <SectionHeader title="SUPPORT" colors={colors} />
         <View style={styles.group}>
+          <SettingsRow
+            icon={'\u2709\uFE0F'}
+            label="Contact Support"
+            subtitle="admin@bandchat.app"
+            onPress={() => Linking.openURL('mailto:admin@bandchat.app?subject=BandChat Support')}
+            colors={colors}
+          />
+          <View style={[styles.separator, { backgroundColor: colors.border }]} />
           <SettingsRow
             icon={'\uD83D\uDD12'}
             label="Privacy Policy"
@@ -402,7 +410,7 @@ export default function SettingsScreen({ navigation, route }) {
           />
           <View style={[styles.separator, { backgroundColor: colors.border }]} />
           <SettingsRow
-            icon={'\u2709\uFE0F'}
+            icon={'\uD83D\uDCAC'}
             label="Send Feedback"
             onPress={() => Linking.openURL('mailto:admin@bandchat.app?subject=BandChat Feedback')}
             colors={colors}
@@ -423,7 +431,7 @@ export default function SettingsScreen({ navigation, route }) {
         </View>
 
         <Text style={[styles.version, { color: colors.textSecondary }]} accessibilityRole="text">
-          BandChat Mobile v{Constants.expoConfig?.version || '1.0.0'}
+          BandChat v{Constants.expoConfig?.version || '1.0.0'}
         </Text>
       </ScrollView>
 

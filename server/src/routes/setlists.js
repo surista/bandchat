@@ -192,6 +192,9 @@ router.put('/:setlistId', authenticate, async (req, res) => {
     if (!member) {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
+    if (existing.createdById !== req.user.id && member.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only the creator or an admin can update this setlist' });
+    }
 
     // Input length validation
     if (name && name.length > 200) return res.status(400).json({ error: 'Name must be 200 characters or less' });

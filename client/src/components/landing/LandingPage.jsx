@@ -39,13 +39,13 @@ const PRO_FEATURES = [
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen flex flex-col bg-[#0f1117] text-white">
       {/* Nav */}
-      <nav className="fixed top-0 w-full z-40 bg-gray-900/80 backdrop-blur-md border-b border-white/10">
+      <nav className="fixed top-0 w-full z-40 bg-[#0f1117]/90 backdrop-blur-md border-b border-white/10">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/bc_icon_06.png" alt="BandChat" className="w-8 h-8 rounded-lg" />
-            <span className="text-xl font-bold">BandChat</span>
+            <span className="text-xl font-bold text-white">BandChat</span>
           </div>
           <div className="flex items-center gap-3">
             <Link to="/login" className="px-4 py-2 text-sm font-medium text-white border border-white/30 rounded-lg hover:bg-white/10 transition-colors">
@@ -59,11 +59,11 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="min-h-screen flex flex-col items-center justify-center text-center px-6 pt-16 bg-gradient-to-b from-[#4A154B] via-[#2d1230] to-gray-900">
-        <h1 className="text-5xl sm:text-7xl font-bold mb-6 tracking-tight">
+      <section className="min-h-screen flex flex-col items-center justify-center text-center px-6 pt-16 bg-gradient-to-b from-[#1a1d2e] to-[#0f1117]">
+        <h1 className="text-5xl sm:text-7xl font-bold mb-6 tracking-tight text-white">
           Your band's <span className="landing-gradient-text">HQ</span>
         </h1>
-        <p className="text-xl sm:text-2xl text-gray-300 max-w-2xl mx-auto mb-10 leading-relaxed">
+        <p className="text-xl sm:text-2xl text-gray-200 max-w-2xl mx-auto mb-10 leading-relaxed">
           Chat, plan setlists, manage gigs, and keep your band in sync &mdash; all in one app built for musicians.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 mb-16">
@@ -77,7 +77,7 @@ export default function LandingPage() {
             See Features
           </button>
         </div>
-        <div className="max-w-4xl w-full rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-gray-800/50 aspect-video flex items-center justify-center">
+        <div className="max-w-4xl w-full rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-[#1a1d2e] aspect-video flex items-center justify-center">
           <div className="text-center">
             <img src="/bc_icon_06.png" alt="BandChat" className="w-24 h-24 mx-auto mb-4 rounded-2xl" />
             <p className="text-gray-400 text-lg">App screenshot coming soon</p>
@@ -86,23 +86,23 @@ export default function LandingPage() {
       </section>
 
       {/* Features */}
-      <section id="features" className="py-24 px-6">
+      <section id="features" className="py-24 px-6 bg-[#0f1117]">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 text-white">
             Everything your band needs
           </h2>
-          <p className="text-gray-400 text-lg text-center mb-16 max-w-2xl mx-auto">
+          <p className="text-gray-300 text-lg text-center mb-16 max-w-2xl mx-auto">
             From rehearsal to stage, BandChat keeps your band organized and connected.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {FEATURES.map((f) => (
               <div
                 key={f.title}
-                className="landing-fade-up bg-gray-800 rounded-2xl p-6 border border-gray-700 hover:border-green-500/50 transition-colors"
+                className="landing-fade-up bg-[#1a1d2e] rounded-2xl p-6 border border-white/10 hover:border-green-500/50 transition-colors"
               >
                 <div className="text-4xl mb-4">{f.icon}</div>
-                <h3 className="text-xl font-semibold mb-2">{f.title}</h3>
-                <p className="text-gray-400 leading-relaxed">{f.desc}</p>
+                <h3 className="text-xl font-semibold mb-2 text-white">{f.title}</h3>
+                <p className="text-gray-300 leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -110,19 +110,19 @@ export default function LandingPage() {
       </section>
 
       {/* How It Works */}
-      <section className="py-24 px-6 bg-gradient-to-b from-gray-900 via-[#1a1025] to-gray-900">
+      <section className="py-24 px-6 bg-[#141722]">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-16">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-16 text-white">
             Up and running in minutes
           </h2>
           <div className="landing-steps flex flex-col md:flex-row gap-12 items-start">
             {STEPS.map((s) => (
               <div key={s.num} className="flex-1 text-center relative z-10">
-                <div className="w-16 h-16 rounded-full bg-green-600/20 text-green-400 text-2xl font-bold flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 rounded-full bg-green-600 text-white text-2xl font-bold flex items-center justify-center mx-auto mb-4">
                   {s.num}
                 </div>
-                <h3 className="text-xl font-semibold mb-2">{s.title}</h3>
-                <p className="text-gray-400">{s.desc}</p>
+                <h3 className="text-xl font-semibold mb-2 text-white">{s.title}</h3>
+                <p className="text-gray-300">{s.desc}</p>
               </div>
             ))}
           </div>
@@ -130,34 +130,34 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing */}
-      <section className="py-24 px-6">
+      <section className="py-24 px-6 bg-[#0f1117]">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">Simple pricing</h2>
-          <p className="text-gray-400 text-lg text-center mb-12">Start free. Upgrade when you're ready.</p>
+          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4 text-white">Simple pricing</h2>
+          <p className="text-gray-300 text-lg text-center mb-12">Start free. Upgrade when you're ready.</p>
           <div className="flex flex-col md:flex-row gap-8 max-w-3xl mx-auto">
             {/* Free */}
-            <div className="flex-1 bg-gray-800 rounded-2xl p-8 border border-gray-700">
-              <h3 className="text-2xl font-bold mb-2">Free</h3>
-              <div className="text-4xl font-bold mb-6">$0 <span className="text-lg text-gray-400 font-normal">/ month</span></div>
-              <ul className="space-y-3 text-gray-300 mb-8">
+            <div className="flex-1 bg-[#1a1d2e] rounded-2xl p-8 border border-white/10">
+              <h3 className="text-2xl font-bold mb-2 text-white">Free</h3>
+              <div className="text-4xl font-bold mb-6 text-white">$0 <span className="text-lg text-gray-400 font-normal">/ month</span></div>
+              <ul className="space-y-3 text-gray-200 mb-8">
                 {FREE_FEATURES.map((f) => (
                   <li key={f} className="flex items-center gap-2">
                     <span className="text-green-400">{'\u2713'}</span> {f}
                   </li>
                 ))}
               </ul>
-              <Link to="/signup" className="block text-center py-3 rounded-xl font-semibold text-white border border-gray-600 hover:bg-gray-700 transition-colors">
+              <Link to="/signup" className="block text-center py-3 rounded-xl font-semibold text-white border border-white/20 hover:bg-white/10 transition-colors">
                 Get Started
               </Link>
             </div>
             {/* Pro */}
-            <div className="flex-1 bg-gray-800 rounded-2xl p-8 border-2 border-green-500 relative">
+            <div className="flex-1 bg-[#1a1d2e] rounded-2xl p-8 border-2 border-green-500 relative">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full">
                 MOST POPULAR
               </div>
-              <h3 className="text-2xl font-bold mb-2">Pro</h3>
-              <div className="text-4xl font-bold mb-6">$4.99 <span className="text-lg text-gray-400 font-normal">/ month</span></div>
-              <ul className="space-y-3 text-gray-300 mb-8">
+              <h3 className="text-2xl font-bold mb-2 text-white">Pro</h3>
+              <div className="text-4xl font-bold mb-6 text-white">$4.99 <span className="text-lg text-gray-400 font-normal">/ month</span></div>
+              <ul className="space-y-3 text-gray-200 mb-8">
                 {PRO_FEATURES.map((f) => (
                   <li key={f} className="flex items-center gap-2">
                     <span className="text-green-400">{'\u2713'}</span> {f}
@@ -173,10 +173,10 @@ export default function LandingPage() {
       </section>
 
       {/* Download CTA */}
-      <section className="py-24 px-6 bg-gradient-to-b from-gray-900 to-[#4A154B]">
+      <section className="py-24 px-6 bg-[#141722]">
         <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">Take your band on the go</h2>
-          <p className="text-gray-300 text-lg mb-8">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-white">Take your band on the go</h2>
+          <p className="text-gray-200 text-lg mb-8">
             Download BandChat and get push notifications, live mode, and your setlists on stage.
           </p>
           <a
@@ -191,18 +191,20 @@ export default function LandingPage() {
               </svg>
               <div className="text-left">
                 <div className="text-[10px] text-gray-300 leading-none">Download on the</div>
-                <div className="text-xl font-semibold leading-tight">App Store</div>
+                <div className="text-xl font-semibold leading-tight text-white">App Store</div>
               </div>
             </div>
           </a>
-          <p className="text-gray-400">
+          <p className="text-gray-300">
             Or <Link to="/signup" className="text-green-400 hover:text-green-300 underline">use BandChat on the web</Link> &mdash; no download needed.
           </p>
         </div>
       </section>
 
-      {/* Footer */}
-      <Footer theme="dark" />
+      {/* Footer - always visible at bottom */}
+      <div className="mt-auto bg-[#0a0c12] border-t border-white/10">
+        <Footer theme="dark" />
+      </div>
     </div>
   );
 }

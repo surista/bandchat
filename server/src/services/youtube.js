@@ -37,7 +37,9 @@ class YouTubeService {
         videoCategoryId: '10' // Music category
       });
 
-      const response = await fetch(`${this.baseUrl}/search?${params}`);
+      const response = await fetch(`${this.baseUrl}/search?${params}`, {
+        signal: AbortSignal.timeout(10000)
+      });
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));

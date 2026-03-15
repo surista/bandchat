@@ -118,15 +118,11 @@ router.get('/definitions', authenticate, async (req, res) => {
   }
 });
 
-// Force reseed achievements (fixes icons) - requires admin of at least one workspace
+// Force reseed achievements (fixes icons) - requires system admin
 router.post('/reseed', authenticate, async (req, res) => {
   try {
-    // Require user to be an admin of at least one workspace
-    const adminMembership = await prisma.workspaceMember.findFirst({
-      where: { userId: req.user.id, role: 'ADMIN' }
-    });
-    if (!adminMembership) {
-      return res.status(403).json({ error: 'Admin access required' });
+    if (!req.user.isSystemAdmin) {
+      return res.status(403).json({ error: 'System admin access required' });
     }
 
     console.log('Force reseeding achievements...');

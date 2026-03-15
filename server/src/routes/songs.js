@@ -50,6 +50,17 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       return res.status(400).json({ error: 'Title is required' });
     }
 
+    // Input length validation
+    if (title.length > 200) return res.status(400).json({ error: 'Title must be 200 characters or less' });
+    if (shortName && shortName.length > 50) return res.status(400).json({ error: 'Short name must be 50 characters or less' });
+    if (artist && artist.length > 200) return res.status(400).json({ error: 'Artist must be 200 characters or less' });
+    if (notes && notes.length > 5000) return res.status(400).json({ error: 'Notes must be 5,000 characters or less' });
+    if (lyrics && lyrics.length > 50000) return res.status(400).json({ error: 'Lyrics must be 50,000 characters or less' });
+    if (arrangement && arrangement.length > 5000) return res.status(400).json({ error: 'Arrangement must be 5,000 characters or less' });
+    if (youtubeUrl && youtubeUrl.length > 2048) return res.status(400).json({ error: 'URL must be 2,048 characters or less' });
+    if (spotifyUrl && spotifyUrl.length > 2048) return res.status(400).json({ error: 'URL must be 2,048 characters or less' });
+    if (key && key.length > 10) return res.status(400).json({ error: 'Key must be 10 characters or less' });
+
     // Check plan song limit
     const workspace = await prisma.workspace.findUnique({ where: { id: req.params.workspaceId }, select: { plan: true, planExpiresAt: true } });
     const limits = getPlanLimits(workspace);
@@ -340,6 +351,16 @@ router.put('/:songId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
+    // Input length validation
+    if (title && title.length > 200) return res.status(400).json({ error: 'Title must be 200 characters or less' });
+    if (shortName && shortName.length > 50) return res.status(400).json({ error: 'Short name must be 50 characters or less' });
+    if (artist && artist.length > 200) return res.status(400).json({ error: 'Artist must be 200 characters or less' });
+    if (notes && notes.length > 5000) return res.status(400).json({ error: 'Notes must be 5,000 characters or less' });
+    if (lyrics && lyrics.length > 50000) return res.status(400).json({ error: 'Lyrics must be 50,000 characters or less' });
+    if (arrangement && arrangement.length > 5000) return res.status(400).json({ error: 'Arrangement must be 5,000 characters or less' });
+    if (youtubeUrl && youtubeUrl.length > 2048) return res.status(400).json({ error: 'URL must be 2,048 characters or less' });
+    if (spotifyUrl && spotifyUrl.length > 2048) return res.status(400).json({ error: 'URL must be 2,048 characters or less' });
+    if (key && key.length > 10) return res.status(400).json({ error: 'Key must be 10 characters or less' });
     if (youtubeUrl && !youtubeUrl.startsWith('https://')) return res.status(400).json({ error: 'YouTube URL must use HTTPS' });
     if (spotifyUrl && !spotifyUrl.startsWith('https://')) return res.status(400).json({ error: 'Spotify URL must use HTTPS' });
 

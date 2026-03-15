@@ -92,7 +92,7 @@ async function isPrivateUrl(urlString) {
     }
     // DNS resolution step: resolve hostname and check resolved IP
     try {
-      const { address } = await dns.promises.lookup(hostname);
+      const { address } = await dns.lookup(hostname);
       if (isPrivateIP(address)) {
         return true;
       }
