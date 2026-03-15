@@ -363,6 +363,7 @@ router.get('/api/:workspaceId/data', async (req, res) => {
         where: {
           workspaceId,
           isPersonal: false,
+          type: 'GIG',
           status: { not: 'CANCELLED' },
         },
         select: {
