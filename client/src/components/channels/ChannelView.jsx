@@ -49,6 +49,8 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   const [showSetlistPicker, setShowSetlistPicker] = useState(false);
   const [setlistPickerList, setSetlistPickerList] = useState([]);
   const [loadError, setLoadError] = useState(null);
+  const [setlistExpanded, setSetlistExpanded] = useState(false);
+  const [setlistSongs, setSetlistSongs] = useState(null);
   const isAdmin = workspace?.members?.find(m => m.user?.id === user?.id)?.role === 'ADMIN';
   const lastReadAtRef = useRef(null);
   const descriptionSavedRef = useRef(false);
@@ -66,6 +68,8 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   useEffect(() => {
     // Capture lastRead before marking channel as read
     lastReadAtRef.current = channel.lastRead || null;
+    setSetlistExpanded(false);
+    setSetlistSongs(null);
 
     // Immediately clear the unread badge when channel is selected
     onUpdateUnread(0);
@@ -781,27 +785,74 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
         </div>
       )}
 
-      {/* Pinned Setlist Banner */}
+      {/* Pinned Setlist Banner — expandable */}
       {channel.pinnedSetlist && (
-        <div className="px-4 py-2 bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)] flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-[var(--color-text-muted)]">📋</span>
-            <span className="font-medium text-[var(--color-text-primary)]">{channel.pinnedSetlist.name}</span>
-            <span className="text-[var(--color-text-muted)]">
-              {channel.pinnedSetlist._count?.songs || 0} songs
-            </span>
+        <div className="bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)]">
+          <div className="px-4 py-2 flex items-center justify-between">
+            <button
+              className="flex items-center gap-2 text-sm flex-1 text-left"
+              onClick={async () => {
+                if (!setlistExpanded && !setlistSongs) {
+                  try {
+                    const data = await api.getSetlist(channel.pinnedSetlist.id);
+                    setSetlistSongs(data.songs || []);
+                  } catch {}
+                }
+                setSetlistExpanded(prev => !prev);
+              }}
+            >
+              <span className="text-[var(--color-text-muted)] text-xs">{setlistExpanded ? '▼' : '▶'}</span>
+              <span className="text-[var(--color-text-muted)]">📋</span>
+              <span className="font-medium text-[var(--color-text-primary)]">{channel.pinnedSetlist.name}</span>
+              <span className="text-[var(--color-text-muted)]">
+                {channel.pinnedSetlist._count?.songs || 0} songs
+              </span>
+            </button>
+            {isAdmin && (
+              <button
+                onClick={async () => {
+                  try {
+                    await api.unpinSetlist(channel.id);
+                    setSetlistExpanded(false);
+                    setSetlistSongs(null);
+                  } catch {}
+                }}
+                className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] ml-2"
+                title="Unpin setlist"
+              >
+                Unpin
+              </button>
+            )}
           </div>
-          <button
-            onClick={async () => {
-              try {
-                await api.unpinSetlist(channel.id);
-              } catch {}
-            }}
-            className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-            title="Unpin setlist"
-          >
-            Unpin
-          </button>
+          {setlistExpanded && (
+            <div className="px-4 pb-3 max-h-64 overflow-y-auto">
+              {!setlistSongs ? (
+                <div className="text-sm text-[var(--color-text-muted)] py-1">Loading...</div>
+              ) : setlistSongs.length === 0 ? (
+                <div className="text-sm text-[var(--color-text-muted)] py-1">No songs in this setlist</div>
+              ) : (
+                <div className="space-y-0.5">
+                  {setlistSongs.map((ss, i) => (
+                    <div key={ss.id} className="flex items-center gap-2 text-sm py-1 px-2 rounded hover:bg-[var(--color-bg-secondary)]">
+                      <span className="text-[var(--color-text-muted)] w-5 text-right text-xs">{i + 1}</span>
+                      {ss.type === 'MC' ? (
+                        <span className="text-yellow-400 italic">{ss.label || 'MC Break'}</span>
+                      ) : ss.song ? (
+                        <>
+                          <span className="text-[var(--color-text-primary)]">{ss.song.shortName || ss.song.title}</span>
+                          {ss.song.artist && <span className="text-[var(--color-text-muted)] text-xs">— {ss.song.artist}</span>}
+                          {ss.song.key && <span className="text-purple-400 text-xs ml-auto">{ss.song.key}</span>}
+                          {ss.song.bpm && <span className="text-blue-400 text-xs">{ss.song.bpm}</span>}
+                        </>
+                      ) : (
+                        <span className="text-[var(--color-text-muted)] italic">{ss.label || 'Unknown'}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
