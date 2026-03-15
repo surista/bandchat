@@ -112,7 +112,12 @@ router.post('/:workspaceId/deploy', authenticate, isWorkspaceAdmin, deployLimite
       return res.status(400).json({ error: 'Please save website config first' });
     }
 
-    const bandSlug = workspace.slug || workspaceId.slice(0, 8);
+    // Generate slug from workspace slug, config band name, or workspace name
+    const rawSlug = workspace.slug
+      || workspace.websiteConfig?.bandName
+      || workspace.name
+      || workspaceId.slice(0, 8);
+    const bandSlug = rawSlug.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
 
     // Mark as deploying
     await prisma.workspace.update({
