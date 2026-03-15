@@ -28,6 +28,10 @@ export default function WebsiteTab({ workspace }) {
   // Branding
   const [primaryColor, setPrimaryColor] = useState('#ff3250');
   const [secondaryColor, setSecondaryColor] = useState('#ffc800');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [heroImageUrl, setHeroImageUrl] = useState('');
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [heroUploading, setHeroUploading] = useState(false);
   // Social
   const [instagram, setInstagram] = useState('');
   const [facebook, setFacebook] = useState('');
@@ -70,6 +74,8 @@ export default function WebsiteTab({ workspace }) {
         setContactEmail(c.contactEmail || c.emails?.info || '');
         setPrimaryColor(c.theme?.primaryAccent || c.primaryColor || '#ff3250');
         setSecondaryColor(c.theme?.secondaryAccent || c.secondaryColor || '#ffc800');
+        setLogoUrl(c.images?.logo || '');
+        setHeroImageUrl(c.images?.heroImages?.[0] || '');
         // Social — handle both flat and array formats
         if (Array.isArray(c.social)) {
           setInstagram(c.social.find(s => s.platform === 'instagram')?.url || '');
@@ -142,6 +148,10 @@ export default function WebsiteTab({ workspace }) {
       theme: {
         primaryAccent: primaryColor,
         secondaryAccent: secondaryColor,
+      },
+      images: {
+        logo: logoUrl || null,
+        heroImages: heroImageUrl ? [heroImageUrl] : [],
       },
       features: {
         songs: showSongs,
@@ -408,7 +418,7 @@ export default function WebsiteTab({ workspace }) {
         {/* Branding */}
         <div>
           <h4 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">Branding</h4>
-          <div className="flex gap-6">
+          <div className="flex gap-6 mb-4">
             <div>
               <label className="text-sm text-[var(--color-text-muted)] mb-1 block">Primary Color</label>
               <div className="flex items-center gap-2">
@@ -422,6 +432,89 @@ export default function WebsiteTab({ workspace }) {
                 <input type="color" value={secondaryColor} onChange={dirty(setSecondaryColor)} className="w-10 h-10 rounded cursor-pointer border-0 p-0" />
                 <input type="text" value={secondaryColor} onChange={dirty(setSecondaryColor)} className="modal-input w-24 text-sm" maxLength={7} />
               </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Logo Upload */}
+            <div>
+              <label className="text-sm text-[var(--color-text-muted)] mb-1 block">Logo</label>
+              {logoUrl ? (
+                <div className="relative inline-block">
+                  <img src={logoUrl} alt="Logo" className="w-24 h-24 object-contain rounded-lg bg-[var(--color-modal-card)] border border-[var(--color-modal-border)]" />
+                  <button
+                    onClick={() => { setLogoUrl(''); setConfigDirty(true); }}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-600 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-700"
+                  >
+                    &times;
+                  </button>
+                </div>
+              ) : (
+                <label className={`flex items-center justify-center w-24 h-24 rounded-lg border-2 border-dashed border-[var(--color-modal-border)] cursor-pointer hover:border-[var(--color-primary)] transition-colors ${logoUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setLogoUploading(true);
+                      try {
+                        const result = await api.uploadFile(file, workspace.id);
+                        setLogoUrl(result.url);
+                        setConfigDirty(true);
+                      } catch (err) {
+                        toast.error('Failed to upload logo');
+                      } finally {
+                        setLogoUploading(false);
+                      }
+                    }}
+                  />
+                  <span className="text-[var(--color-text-muted)] text-xs text-center px-2">
+                    {logoUploading ? 'Uploading...' : 'Upload logo'}
+                  </span>
+                </label>
+              )}
+            </div>
+            {/* Hero Image Upload */}
+            <div>
+              <label className="text-sm text-[var(--color-text-muted)] mb-1 block">Hero Image</label>
+              {heroImageUrl ? (
+                <div className="relative inline-block">
+                  <img src={heroImageUrl} alt="Hero" className="w-full max-w-[200px] h-24 object-cover rounded-lg border border-[var(--color-modal-border)]" />
+                  <button
+                    onClick={() => { setHeroImageUrl(''); setConfigDirty(true); }}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-600 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-700"
+                  >
+                    &times;
+                  </button>
+                </div>
+              ) : (
+                <label className={`flex items-center justify-center w-full max-w-[200px] h-24 rounded-lg border-2 border-dashed border-[var(--color-modal-border)] cursor-pointer hover:border-[var(--color-primary)] transition-colors ${heroUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setHeroUploading(true);
+                      try {
+                        const result = await api.uploadFile(file, workspace.id);
+                        setHeroImageUrl(result.url);
+                        setConfigDirty(true);
+                      } catch (err) {
+                        toast.error('Failed to upload hero image');
+                      } finally {
+                        setHeroUploading(false);
+                      }
+                    }}
+                  />
+                  <span className="text-[var(--color-text-muted)] text-xs text-center px-2">
+                    {heroUploading ? 'Uploading...' : 'Upload hero image'}
+                  </span>
+                </label>
+              )}
+              <p className="text-xs text-[var(--color-text-muted)] mt-1">Full-width background image for the homepage</p>
             </div>
           </div>
         </div>

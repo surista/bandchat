@@ -12,7 +12,9 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { useLayout } from '../../hooks/useLayout';
@@ -40,6 +42,10 @@ export default function WebsiteSettingsScreen({ route }) {
   // Branding
   const [primaryColor, setPrimaryColor] = useState('#ff3250');
   const [secondaryColor, setSecondaryColor] = useState('#ffc800');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [heroImageUrl, setHeroImageUrl] = useState('');
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [heroUploading, setHeroUploading] = useState(false);
   // Social
   const [instagram, setInstagram] = useState('');
   const [facebook, setFacebook] = useState('');
@@ -80,6 +86,8 @@ export default function WebsiteSettingsScreen({ route }) {
         setContactEmail(c.contactEmail || c.emails?.info || '');
         setPrimaryColor(c.theme?.primaryAccent || '#ff3250');
         setSecondaryColor(c.theme?.secondaryAccent || '#ffc800');
+        setLogoUrl(c.images?.logo || '');
+        setHeroImageUrl(c.images?.heroImages?.[0] || '');
         if (Array.isArray(c.social)) {
           setInstagram(c.social.find(s => s.platform === 'instagram')?.url || '');
           setFacebook(c.social.find(s => s.platform === 'facebook')?.url || '');
@@ -138,6 +146,7 @@ export default function WebsiteSettingsScreen({ route }) {
       social: socialArray,
       socialLinks: { instagram: instagram.trim(), facebook: facebook.trim(), youtube: youtube.trim(), spotify: spotify.trim() },
       theme: { primaryAccent: primaryColor, secondaryAccent: secondaryColor },
+      images: { logo: logoUrl || null, heroImages: heroImageUrl ? [heroImageUrl] : [] },
       features: {
         songs: showSongs, archive: showArchive, setlists: showSetlists,
         timeline: showTimeline, media: showMedia, stats: showStats,
@@ -162,7 +171,7 @@ export default function WebsiteSettingsScreen({ route }) {
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to save config');
     } finally { setSavingConfig(false); }
-  }, [workspaceId, bandName, tagline, description, location, genre, founded, contactEmail, primaryColor, secondaryColor, instagram, facebook, youtube, spotify, showSongs, showArchive, showSetlists, showTimeline, showMedia, showStats, showSongRequests, showTrivia, seoTitle, seoDescription]);
+  }, [workspaceId, bandName, tagline, description, location, genre, founded, contactEmail, primaryColor, secondaryColor, instagram, facebook, youtube, spotify, showSongs, showArchive, showSetlists, showTimeline, showMedia, showStats, showSongRequests, showTrivia, seoTitle, seoDescription, logoUrl, heroImageUrl]);
 
   const handleDeploy = useCallback(async () => {
     if (!bandName.trim()) { Alert.alert('Error', 'Band name is required'); return; }
@@ -176,7 +185,7 @@ export default function WebsiteSettingsScreen({ route }) {
     } catch (err) {
       Alert.alert('Error', err.message || 'Deployment failed');
     } finally { setDeploying(false); }
-  }, [workspaceId, bandName, tagline, description, location, genre, founded, contactEmail, primaryColor, secondaryColor, instagram, facebook, youtube, spotify, showSongs, showArchive, showSetlists, showTimeline, showMedia, showStats, showSongRequests, showTrivia, seoTitle, seoDescription]);
+  }, [workspaceId, bandName, tagline, description, location, genre, founded, contactEmail, primaryColor, secondaryColor, instagram, facebook, youtube, spotify, showSongs, showArchive, showSetlists, showTimeline, showMedia, showStats, showSongRequests, showTrivia, seoTitle, seoDescription, logoUrl, heroImageUrl]);
 
   const handleSync = useCallback(async () => {
     setSyncing(true);
@@ -305,6 +314,71 @@ export default function WebsiteSettingsScreen({ route }) {
                 <TextInput style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]} value={secondaryColor} onChangeText={setSecondaryColor} placeholder="#ffc800" placeholderTextColor={colors.textSecondary} maxLength={7} autoCapitalize="none" />
               </View>
             </View>
+
+            {/* Logo */}
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Logo</Text>
+            {logoUrl ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Image source={{ uri: logoUrl }} style={{ width: 72, height: 72, borderRadius: 8, backgroundColor: colors.bgTertiary }} resizeMode="contain" />
+                <TouchableOpacity onPress={() => setLogoUrl('')} style={{ backgroundColor: 'rgba(239,68,68,0.15)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}>
+                  <Text style={{ color: '#ef4444', fontSize: 14, fontWeight: '600' }}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.uploadBtn, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
+                disabled={logoUploading}
+                onPress={async () => {
+                  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'images', quality: 0.8 });
+                  if (result.canceled) return;
+                  setLogoUploading(true);
+                  try {
+                    const asset = result.assets[0];
+                    const formData = new FormData();
+                    formData.append('file', { uri: asset.uri, name: 'logo.jpg', type: 'image/jpeg' });
+                    formData.append('workspaceId', workspaceId);
+                    const uploaded = await api.uploadFile(formData, workspaceId);
+                    setLogoUrl(uploaded.url);
+                  } catch { Alert.alert('Error', 'Failed to upload logo'); }
+                  finally { setLogoUploading(false); }
+                }}
+              >
+                <Text style={[styles.uploadBtnText, { color: colors.textSecondary }]}>{logoUploading ? 'Uploading...' : 'Upload Logo'}</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Hero Image */}
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Hero Image</Text>
+            {heroImageUrl ? (
+              <View style={{ gap: 8 }}>
+                <Image source={{ uri: heroImageUrl }} style={{ width: '100%', height: 100, borderRadius: 8 }} resizeMode="cover" />
+                <TouchableOpacity onPress={() => setHeroImageUrl('')} style={{ backgroundColor: 'rgba(239,68,68,0.15)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, alignSelf: 'flex-start' }}>
+                  <Text style={{ color: '#ef4444', fontSize: 14, fontWeight: '600' }}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.uploadBtn, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
+                disabled={heroUploading}
+                onPress={async () => {
+                  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'images', quality: 0.8 });
+                  if (result.canceled) return;
+                  setHeroUploading(true);
+                  try {
+                    const asset = result.assets[0];
+                    const formData = new FormData();
+                    formData.append('file', { uri: asset.uri, name: 'hero.jpg', type: 'image/jpeg' });
+                    formData.append('workspaceId', workspaceId);
+                    const uploaded = await api.uploadFile(formData, workspaceId);
+                    setHeroImageUrl(uploaded.url);
+                  } catch { Alert.alert('Error', 'Failed to upload hero image'); }
+                  finally { setHeroUploading(false); }
+                }}
+              >
+                <Text style={[styles.uploadBtnText, { color: colors.textSecondary }]}>{heroUploading ? 'Uploading...' : 'Upload Hero Image'}</Text>
+              </TouchableOpacity>
+            )}
+            <Text style={[{ color: colors.textSecondary, fontSize: 12, marginTop: 4 }]}>Full-width background image for the homepage</Text>
           </View>
 
           {/* Contact & Social */}
@@ -408,4 +482,6 @@ const styles = StyleSheet.create({
   buttonGroup: { gap: 12, marginTop: 8 },
   primaryBtn: { paddingVertical: 14, borderRadius: 10, alignItems: 'center' },
   primaryBtnText: { fontSize: 16, fontWeight: '700', color: '#ffffff' },
+  uploadBtn: { borderWidth: 1, borderStyle: 'dashed', borderRadius: 8, paddingVertical: 16, alignItems: 'center' },
+  uploadBtnText: { fontSize: 14, fontWeight: '500' },
 });
