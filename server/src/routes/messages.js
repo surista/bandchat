@@ -739,7 +739,13 @@ router.get('/timeline/:workspaceId', authenticate, async (req, res) => {
           select: { id: true, displayName: true, avatarUrl: true }
         },
         channel: {
-          select: { id: true, name: true, isDirect: true }
+          select: {
+            id: true, name: true, isDirect: true,
+            members: {
+              select: { user: { select: { id: true, displayName: true } } },
+              take: 5
+            }
+          }
         },
         attachments: true,
         ...reactionsInclude,

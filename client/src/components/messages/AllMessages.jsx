@@ -1,8 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import ErrorMessage from '../common/ErrorMessage';
 
+function getDmDisplayName(channel, currentUserId) {
+  if (!channel?.isDirect || !channel.members) return null;
+  const other = channel.members.find(m => m.user?.id !== currentUserId);
+  return other?.user?.displayName || 'DM';
+}
+
 function AllMessages({ workspaceId, onSelectChannel }) {
+  const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -114,7 +122,9 @@ function AllMessages({ workspaceId, onSelectChannel }) {
                   {msg.author?.displayName || msg.removedUserName || 'Unknown'}
                 </span>
                 <span className="text-xs text-[var(--color-text-muted)]">
-                  {msg.channel?.isDirect ? 'DM' : `in #${msg.channel?.name || 'unknown'}`}
+                  {msg.channel?.isDirect
+                    ? `DM with ${getDmDisplayName(msg.channel, user?.id)}`
+                    : `in #${msg.channel?.name || 'unknown'}`}
                 </span>
                 <span className="text-xs text-[var(--color-text-muted)] ml-auto">
                   {formatDate(msg.createdAt)}
