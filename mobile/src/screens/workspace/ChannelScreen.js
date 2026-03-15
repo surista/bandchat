@@ -879,9 +879,7 @@ export default function ChannelScreen({ navigation, route }) {
                       setNumber++;
                       songIndex = 0;
                       return (
-                        <View key={ss.id} style={{ paddingVertical: 6, marginTop: 8, borderTopWidth: 1, borderTopColor: colors.border }}>
-                          <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' }}>{ss.label || `Set ${setNumber - 1} Break`}</Text>
-                        </View>
+                        <View key={ss.id} style={{ marginVertical: 8, borderTopWidth: 1, borderTopColor: colors.border }}
                       );
                     }
                     songIndex++;

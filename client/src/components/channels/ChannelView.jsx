@@ -842,9 +842,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
                         setNumber++;
                         songIndex = 0;
                         return (
-                          <div key={ss.id} className="flex items-center gap-2 py-2 mt-2 border-t border-[var(--color-border)]">
-                            <span className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">{ss.label || `Set ${setNumber - 1} Break`}</span>
-                          </div>
+                          <div key={ss.id} className="my-2 border-t border-[var(--color-border)]" />
                         );
                       }
                       songIndex++;
