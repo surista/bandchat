@@ -13,7 +13,7 @@ import {
   Share,
   Platform,
 } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import { File, Paths } from 'expo-file-system/next';
 import * as Sharing from 'expo-sharing';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -382,9 +382,9 @@ export default function SecurityScreen() {
               try {
                 const data = await api.exportUserData();
                 const json = JSON.stringify(data, null, 2);
-                const path = `${FileSystem.cacheDirectory}bandchat-export.json`;
-                await FileSystem.writeAsStringAsync(path, json, { encoding: FileSystem.EncodingType.UTF8 });
-                await Sharing.shareAsync(path, { mimeType: 'application/json' });
+                const file = new File(Paths.cache, 'bandchat-export.json');
+                await file.write(json);
+                await Sharing.shareAsync(file.uri, { mimeType: 'application/json' });
               } catch (err) {
                 Alert.alert('Error', err.message || 'Failed to export data');
               } finally {

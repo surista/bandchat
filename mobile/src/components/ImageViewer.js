@@ -11,7 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import * as MediaLibrary from 'expo-media-library';
-import * as FileSystem from 'expo-file-system';
+import { File, Paths } from 'expo-file-system/next';
 
 function ImageViewer({ visible, imageUrl, onClose }) {
   const [loading, setLoading] = useState(true);
@@ -37,9 +37,9 @@ function ImageViewer({ visible, imageUrl, onClose }) {
       if (!filename || !filename.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
         filename = `image-${Date.now()}.jpg`;
       }
-      const localUri = FileSystem.cacheDirectory + filename;
-      const { uri } = await FileSystem.downloadAsync(imageUrl, localUri);
-      await MediaLibrary.saveToLibraryAsync(uri);
+      const file = new File(Paths.cache, filename);
+      await file.downloadFrom(imageUrl);
+      await MediaLibrary.saveToLibraryAsync(file.uri);
       Alert.alert('Saved', 'Image saved to your photo library.');
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to save image.');

@@ -151,10 +151,10 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
     }
     lastSwipeTime.current = now;
 
-    if (direction === 'left' && onSwipeReply && !isPending) {
+    if (direction === 'right' && onSwipeReply && !isPending) {
       lightImpact();
       onSwipeReply(message);
-    } else if (direction === 'right' && onSwipeReact && !isPending) {
+    } else if (direction === 'left' && onSwipeReact && !isPending) {
       lightImpact();
       onSwipeReact(message.id, SWIPE_REACT_EMOJI);
     }

@@ -14,7 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import { File, Paths } from 'expo-file-system/next';
 import * as Sharing from 'expo-sharing';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
@@ -324,9 +324,9 @@ export default function SettingsScreen({ navigation, route }) {
                   try {
                     const data = await api.exportWorkspaceData(workspaceId);
                     const json = JSON.stringify(data, null, 2);
-                    const path = `${FileSystem.cacheDirectory}bandchat-workspace-export.json`;
-                    await FileSystem.writeAsStringAsync(path, json, { encoding: FileSystem.EncodingType.UTF8 });
-                    await Sharing.shareAsync(path, { mimeType: 'application/json' });
+                    const file = new File(Paths.cache, 'bandchat-workspace-export.json');
+                    await file.write(json);
+                    await Sharing.shareAsync(file.uri, { mimeType: 'application/json' });
                   } catch (err) {
                     Alert.alert('Error', err.message || 'Failed to export workspace');
                   }

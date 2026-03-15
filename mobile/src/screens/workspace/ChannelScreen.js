@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as MediaLibrary from 'expo-media-library';
-import * as FileSystem from 'expo-file-system';
+import { File, Paths } from 'expo-file-system/next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useAuth } from '../../context/AuthContext';
@@ -616,9 +616,9 @@ export default function ChannelScreen({ navigation, route }) {
             if (!filename || !filename.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
               filename = `image-${Date.now()}.jpg`;
             }
-            const localUri = FileSystem.cacheDirectory + filename;
-            const { uri } = await FileSystem.downloadAsync(img.url, localUri);
-            await MediaLibrary.saveToLibraryAsync(uri);
+            const file = new File(Paths.cache, filename);
+            await file.downloadFrom(img.url);
+            await MediaLibrary.saveToLibraryAsync(file.uri);
             Alert.alert('Saved', 'Image saved to your photo library.');
           } catch (err) {
             Alert.alert('Error', err.message || 'Failed to save image.');
