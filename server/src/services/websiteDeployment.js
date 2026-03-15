@@ -196,6 +196,34 @@ export async function triggerDeploy(deployHookUrl) {
 }
 
 /**
+ * Create a production deployment directly via Vercel API.
+ * Used for initial deploys where the deploy hook may not trigger.
+ */
+export async function createDeployment(projectId, repoName) {
+  const res = await fetch(`https://api.vercel.com/v13/deployments${vercelTeamParam()}`, {
+    method: 'POST',
+    headers: vercelHeaders(),
+    body: JSON.stringify({
+      name: projectId,
+      project: projectId,
+      target: 'production',
+      gitSource: {
+        type: 'github',
+        org: WEBSITE_GITHUB_ORG,
+        repo: repoName,
+        ref: 'main',
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    console.error('Create deployment failed:', err);
+    // Non-fatal — deploy hook or next commit will trigger it
+  }
+}
+
+/**
  * Delete the Vercel project.
  */
 export async function deleteVercelProject(projectId) {

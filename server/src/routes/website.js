@@ -10,6 +10,7 @@ import {
   addVercelDomain,
   createDeployHook,
   triggerDeploy,
+  createDeployment,
   deleteVercelProject,
   deleteGithubRepo,
   generateApiToken,
@@ -189,8 +190,8 @@ router.post('/:workspaceId/deploy', authenticate, isWorkspaceAdmin, deployLimite
         // Create deploy hook
         deployHookUrl = await createDeployHook(vercelProjectId);
 
-        // Trigger initial deploy
-        await triggerDeploy(deployHookUrl);
+        // Trigger initial deploy — use direct API deployment (deploy hooks don't work for first build)
+        await createDeployment(vercelProjectId, repoName);
       }
 
       // 9. Update workspace
