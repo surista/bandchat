@@ -234,14 +234,21 @@ router.post('/:workspaceId/sync', authenticate, isWorkspaceAdmin, async (req, re
   try {
     const workspace = await prisma.workspace.findUnique({
       where: { id: req.params.workspaceId },
-      select: { websiteEnabled: true, websiteDeployHook: true },
+      select: { websiteEnabled: true, websiteDeployHook: true, websiteVercelId: true, websiteRepoName: true },
     });
 
-    if (!workspace?.websiteEnabled || !workspace.websiteDeployHook) {
+    if (!workspace?.websiteEnabled) {
       return res.status(400).json({ error: 'Website not deployed' });
     }
 
-    await triggerDeploy(workspace.websiteDeployHook);
+    if (workspace.websiteDeployHook) {
+      await triggerDeploy(workspace.websiteDeployHook);
+    } else if (workspace.websiteVercelId && workspace.websiteRepoName) {
+      // Fallback: trigger via deployment API
+      await createDeployment(workspace.websiteVercelId, workspace.websiteRepoName);
+    } else {
+      return res.status(400).json({ error: 'No deploy hook or project configured' });
+    }
     res.json({ message: 'Sync triggered' });
   } catch (error) {
     console.error('Website sync error:', error);
