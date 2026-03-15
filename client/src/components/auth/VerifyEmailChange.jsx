@@ -38,13 +38,13 @@ function VerifyEmailChange() {
   }, [searchParams, updateUser]);
 
   return (
-    <div className="min-h-screen bg-slack-purple flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#0f1117] flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full text-center">
         {status === 'verifying' && (
           <>
             <div className="animate-spin w-12 h-12 border-4 border-slack-purple border-t-transparent rounded-full mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-800">Verifying your email...</h2>
-            <p className="text-gray-600 mt-2">Please wait while we update your email address.</p>
+            <p className="text-gray-400 mt-2">Please wait while we update your email address.</p>
           </>
         )}
 
@@ -56,10 +56,10 @@ function VerifyEmailChange() {
               </svg>
             </div>
             <h2 className="text-xl font-semibold text-gray-800">Email Updated!</h2>
-            <p className="text-gray-600 mt-2">{message}</p>
+            <p className="text-gray-400 mt-2">{message}</p>
             <button
               onClick={() => navigate('/')}
-              className="mt-6 bg-[#4A154B] text-white px-6 py-2 rounded-lg hover:bg-[#3D1140] transition-colors"
+              className="mt-6 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
             >
               Go to BandChat
             </button>
@@ -74,10 +74,10 @@ function VerifyEmailChange() {
               </svg>
             </div>
             <h2 className="text-xl font-semibold text-gray-800">Verification Failed</h2>
-            <p className="text-gray-600 mt-2">{message}</p>
+            <p className="text-gray-400 mt-2">{message}</p>
             <button
               onClick={() => navigate('/')}
-              className="mt-6 bg-[#4A154B] text-white px-6 py-2 rounded-lg hover:bg-[#3D1140] transition-colors"
+              className="mt-6 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
             >
               Go to BandChat
             </button>

@@ -25,7 +25,7 @@ function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-slack-purple flex flex-col">
+    <div className="min-h-screen bg-[#0f1117] flex flex-col">
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
@@ -38,12 +38,12 @@ function ForgotPassword() {
             <p className="text-gray-300">Enter your email to receive a reset link</p>
           </div>
 
-          <div className="bg-white rounded-lg p-8 shadow-xl">
+          <div className="bg-[#1a1d2e] rounded-lg p-8 shadow-xl border border-white/10">
             {success ? (
               <div className="text-center">
                 <div className="text-green-600 text-5xl mb-4">✓</div>
                 <h2 className="text-xl font-semibold text-gray-800 mb-2">Check your email</h2>
-                <p className="text-gray-600 mb-6">
+                <p className="text-gray-400 mb-6">
                   If an account exists with <strong>{email}</strong>, we've sent a password reset link.
                 </p>
                 <p className="text-sm text-gray-500 mb-4">
@@ -51,7 +51,7 @@ function ForgotPassword() {
                 </p>
                 <Link
                   to="/login"
-                  className="inline-block bg-[#4A154B] text-white px-6 py-2 rounded font-medium hover:bg-[#3D1140] transition-colors"
+                  className="inline-block bg-green-600 text-white px-6 py-2 rounded font-medium hover:bg-green-700 transition-colors"
                 >
                   Back to Login
                 </Link>
@@ -59,13 +59,13 @@ function ForgotPassword() {
             ) : (
               <form onSubmit={handleSubmit}>
                 {error && (
-                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                  <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded mb-4">
                     {error}
                   </div>
                 )}
 
                 <div className="mb-6">
-                  <label htmlFor="email" className="block text-gray-700 font-medium mb-2">
+                  <label htmlFor="email" className="block text-gray-200 font-medium mb-2">
                     Email Address
                   </label>
                   <input
@@ -82,14 +82,14 @@ function ForgotPassword() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-[#4A154B] text-white py-3 rounded font-medium hover:bg-[#3D1140] transition-colors disabled:opacity-50"
+                  className="w-full bg-green-600 text-white py-3 rounded font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
                 >
                   {loading ? 'Sending...' : 'Send Reset Link'}
                 </button>
 
-                <p className="text-center mt-6 text-gray-600">
+                <p className="text-center mt-6 text-gray-400">
                   Remember your password?{' '}
-                  <Link to="/login" className="text-[#4A154B] font-medium hover:underline">
+                  <Link to="/login" className="text-green-400 font-medium hover:underline">
                     Sign in
                   </Link>
                 </p>

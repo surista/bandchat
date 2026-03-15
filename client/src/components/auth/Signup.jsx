@@ -62,7 +62,7 @@ function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-slack-purple flex flex-col">
+    <div className="min-h-screen bg-[#0f1117] flex flex-col">
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
@@ -75,9 +75,9 @@ function Signup() {
             <p className="text-gray-300">Create your account</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="bg-white rounded-lg p-8 shadow-xl">
+          <form onSubmit={handleSubmit} className="bg-[#1a1d2e] rounded-lg p-8 shadow-xl border border-white/10">
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded mb-4">
               {error}
             </div>
           )}
@@ -92,15 +92,15 @@ function Signup() {
 
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
+              <div className="w-full border-t border-white/20"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Or sign up with email</span>
+              <span className="px-2 bg-[#1a1d2e] text-gray-500">Or sign up with email</span>
             </div>
           </div>
 
           <div className="mb-4">
-            <label htmlFor="displayName" className="block text-gray-700 font-medium mb-2">
+            <label htmlFor="displayName" className="block text-gray-200 font-medium mb-2">
               Display Name
             </label>
             <input
@@ -109,14 +109,14 @@ function Signup() {
               autoComplete="name"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple text-base"
+              className="w-full px-4 py-3 border border-white/20 rounded focus:ring-2 focus:ring-green-500 text-base bg-[#141722] text-white placeholder-gray-500"
               placeholder="Your name"
               required
             />
           </div>
 
           <div className="mb-4">
-            <label htmlFor="email" className="block text-gray-700 font-medium mb-2">
+            <label htmlFor="email" className="block text-gray-200 font-medium mb-2">
               Email
             </label>
             <input
@@ -126,14 +126,14 @@ function Signup() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple text-base"
+              className="w-full px-4 py-3 border border-white/20 rounded focus:ring-2 focus:ring-green-500 text-base bg-[#141722] text-white placeholder-gray-500"
               placeholder="you@example.com"
               required
             />
           </div>
 
           <div className="mb-4">
-            <label htmlFor="password" className="block text-gray-700 font-medium mb-2">
+            <label htmlFor="password" className="block text-gray-200 font-medium mb-2">
               Password
             </label>
             <div className="relative">
@@ -143,14 +143,14 @@ function Signup() {
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple text-base pr-12"
+                className="w-full px-4 py-3 border border-white/20 rounded focus:ring-2 focus:ring-green-500 text-base bg-[#141722] text-white placeholder-gray-500 pr-12"
                 placeholder="Min 8 chars, upper + lower + number"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-400 text-sm"
                 tabIndex={-1}
               >
                 {showPassword ? 'Hide' : 'Show'}
@@ -159,7 +159,7 @@ function Signup() {
           </div>
 
           <div className="mb-4">
-            <label htmlFor="confirmPassword" className="block text-gray-700 font-medium mb-2">
+            <label htmlFor="confirmPassword" className="block text-gray-200 font-medium mb-2">
               Confirm Password
             </label>
             <div className="relative">
@@ -169,7 +169,7 @@ function Signup() {
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple text-base pr-12"
+                className="w-full px-4 py-3 border border-white/20 rounded focus:ring-2 focus:ring-green-500 text-base bg-[#141722] text-white placeholder-gray-500 pr-12"
                 placeholder="Confirm your password"
                 required
               />
@@ -181,27 +181,27 @@ function Signup() {
               type="checkbox"
               checked={agreedToTerms}
               onChange={(e) => setAgreedToTerms(e.target.checked)}
-              className="mt-1 w-4 h-4 rounded border-gray-300 text-[#4A154B] focus:ring-[#4A154B]"
+              className="mt-1 w-4 h-4 rounded border-gray-300 text-green-400 focus:ring-green-500"
             />
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-gray-400">
               I agree to the{' '}
-              <Link to="/terms" className="text-[#4A154B] hover:underline">Terms of Service</Link>
+              <Link to="/terms" className="text-green-400 hover:underline">Terms of Service</Link>
               {' '}and{' '}
-              <Link to="/privacy" className="text-[#4A154B] hover:underline">Privacy Policy</Link>
+              <Link to="/privacy" className="text-green-400 hover:underline">Privacy Policy</Link>
             </span>
           </label>
 
           <button
             type="submit"
             disabled={loading || !agreedToTerms}
-            className="w-full bg-[#4A154B] text-white py-3 rounded font-medium hover:bg-[#3D1140] transition-colors disabled:opacity-50"
+            className="w-full bg-green-600 text-white py-3 rounded font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
           >
             {loading ? 'Creating account...' : 'Create Account'}
           </button>
 
-          <p className="text-center mt-6 text-gray-600">
+          <p className="text-center mt-6 text-gray-400">
             Already have an account?{' '}
-            <Link to="/login" className="text-[#4A154B] font-medium hover:underline">
+            <Link to="/login" className="text-green-400 font-medium hover:underline">
               Sign in
             </Link>
           </p>

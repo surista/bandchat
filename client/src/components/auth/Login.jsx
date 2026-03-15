@@ -48,7 +48,7 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-slack-purple flex flex-col">
+    <div className="min-h-screen bg-[#0f1117] flex flex-col">
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
@@ -61,9 +61,9 @@ function Login() {
             <p className="text-gray-300">Sign in to your workspace</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="bg-white rounded-lg p-8 shadow-xl">
+          <form onSubmit={handleSubmit} className="bg-[#1a1d2e] rounded-lg p-8 shadow-xl border border-white/10">
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded mb-4">
               {error}
             </div>
           )}
@@ -77,15 +77,15 @@ function Login() {
 
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
+              <div className="w-full border-t border-white/20"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Or continue with email</span>
+              <span className="px-2 bg-[#1a1d2e] text-gray-500">Or continue with email</span>
             </div>
           </div>
 
           <div className="mb-4">
-            <label htmlFor="email" className="block text-gray-700 font-medium mb-2">
+            <label htmlFor="email" className="block text-gray-200 font-medium mb-2">
               Email
             </label>
             <input
@@ -95,14 +95,14 @@ function Login() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple text-base"
+              className="w-full px-4 py-3 border border-white/20 rounded focus:ring-2 focus:ring-green-500 text-base bg-[#141722] text-white placeholder-gray-500"
               placeholder="you@example.com"
               required
             />
           </div>
 
           <div className="mb-4">
-            <label htmlFor="password" className="block text-gray-700 font-medium mb-2">
+            <label htmlFor="password" className="block text-gray-200 font-medium mb-2">
               Password
             </label>
             <div className="relative">
@@ -112,14 +112,14 @@ function Login() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple text-base pr-12"
+                className="w-full px-4 py-3 border border-white/20 rounded focus:ring-2 focus:ring-green-500 text-base bg-[#141722] text-white placeholder-gray-500 pr-12"
                 placeholder="Your password"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-400 text-sm"
                 tabIndex={-1}
               >
                 {showPassword ? 'Hide' : 'Show'}
@@ -128,7 +128,7 @@ function Login() {
           </div>
 
           <div className="mb-6 text-right">
-            <Link to="/forgot-password" className="text-sm text-[#4A154B] hover:underline">
+            <Link to="/forgot-password" className="text-sm text-green-400 hover:underline">
               Forgot password?
             </Link>
           </div>
@@ -136,14 +136,14 @@ function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#4A154B] text-white py-3 rounded font-medium hover:bg-[#3D1140] transition-colors disabled:opacity-50"
+            className="w-full bg-green-600 text-white py-3 rounded font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
 
-          <p className="text-center mt-6 text-gray-600">
+          <p className="text-center mt-6 text-gray-400">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-[#4A154B] font-medium hover:underline">
+            <Link to="/signup" className="text-green-400 font-medium hover:underline">
               Sign up
             </Link>
           </p>

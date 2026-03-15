@@ -68,7 +68,7 @@ function ResetPassword() {
 
   if (verifying) {
     return (
-      <div className="min-h-screen bg-slack-purple flex flex-col">
+      <div className="min-h-screen bg-[#0f1117] flex flex-col">
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="text-white text-xl">Verifying reset link...</div>
         </div>
@@ -77,7 +77,7 @@ function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen bg-slack-purple flex flex-col">
+    <div className="min-h-screen bg-[#0f1117] flex flex-col">
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
@@ -90,17 +90,17 @@ function ResetPassword() {
             <p className="text-gray-300">Enter your new password below</p>
           </div>
 
-          <div className="bg-white rounded-lg p-8 shadow-xl">
+          <div className="bg-[#1a1d2e] rounded-lg p-8 shadow-xl border border-white/10">
             {success ? (
               <div className="text-center">
                 <div className="text-green-600 text-5xl mb-4">✓</div>
                 <h2 className="text-xl font-semibold text-gray-800 mb-2">Password Reset!</h2>
-                <p className="text-gray-600 mb-6">
+                <p className="text-gray-400 mb-6">
                   Your password has been successfully reset. You can now sign in with your new password.
                 </p>
                 <Link
                   to="/login"
-                  className="inline-block bg-[#4A154B] text-white px-6 py-2 rounded font-medium hover:bg-[#3D1140] transition-colors"
+                  className="inline-block bg-green-600 text-white px-6 py-2 rounded font-medium hover:bg-green-700 transition-colors"
                 >
                   Sign In
                 </Link>
@@ -109,12 +109,12 @@ function ResetPassword() {
               <div className="text-center">
                 <div className="text-red-500 text-5xl mb-4">!</div>
                 <h2 className="text-xl font-semibold text-gray-800 mb-2">Invalid Reset Link</h2>
-                <p className="text-gray-600 mb-6">
+                <p className="text-gray-400 mb-6">
                   {error || 'This password reset link is invalid or has expired.'}
                 </p>
                 <Link
                   to="/forgot-password"
-                  className="inline-block bg-[#4A154B] text-white px-6 py-2 rounded font-medium hover:bg-[#3D1140] transition-colors"
+                  className="inline-block bg-green-600 text-white px-6 py-2 rounded font-medium hover:bg-green-700 transition-colors"
                 >
                   Request New Link
                 </Link>
@@ -122,13 +122,13 @@ function ResetPassword() {
             ) : (
               <form onSubmit={handleSubmit}>
                 {error && (
-                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                  <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded mb-4">
                     {error}
                   </div>
                 )}
 
                 <div className="mb-4">
-                  <label htmlFor="password" className="block text-gray-700 font-medium mb-2">
+                  <label htmlFor="password" className="block text-gray-200 font-medium mb-2">
                     New Password
                   </label>
                   <div className="relative">
@@ -145,7 +145,7 @@ function ResetPassword() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-400 text-sm"
                       tabIndex={-1}
                     >
                       {showPassword ? 'Hide' : 'Show'}
@@ -154,7 +154,7 @@ function ResetPassword() {
                 </div>
 
                 <div className="mb-6">
-                  <label htmlFor="confirmPassword" className="block text-gray-700 font-medium mb-2">
+                  <label htmlFor="confirmPassword" className="block text-gray-200 font-medium mb-2">
                     Confirm Password
                   </label>
                   <div className="relative">
@@ -173,13 +173,13 @@ function ResetPassword() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-[#4A154B] text-white py-3 rounded font-medium hover:bg-[#3D1140] transition-colors disabled:opacity-50"
+                  className="w-full bg-green-600 text-white py-3 rounded font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
                 >
                   {loading ? 'Resetting...' : 'Reset Password'}
                 </button>
 
-                <p className="text-center mt-6 text-gray-600">
-                  <Link to="/login" className="text-[#4A154B] font-medium hover:underline">
+                <p className="text-center mt-6 text-gray-400">
+                  <Link to="/login" className="text-green-400 font-medium hover:underline">
                     Back to Login
                   </Link>
                 </p>
