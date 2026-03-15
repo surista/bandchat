@@ -30,6 +30,7 @@ export default function WebsiteTab({ workspace }) {
   const [websiteData, setWebsiteData] = useState(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deploySuccessUrl, setDeploySuccessUrl] = useState(null);
 
   // Config form state — band identity
   const [bandName, setBandName] = useState('');
@@ -220,8 +221,8 @@ export default function WebsiteTab({ workspace }) {
       await api.updateWebsiteConfig(workspace.id, getConfig());
       const result = await api.deployWebsite(workspace.id);
       setWebsiteData(result);
-      toast.success('Website deployed!');
       setConfigDirty(false);
+      setDeploySuccessUrl(result.websiteUrl);
       await loadWebsite();
     } catch (err) {
       toast.error(err.message || 'Deployment failed');
@@ -272,6 +273,7 @@ export default function WebsiteTab({ workspace }) {
   if (isDeployed) {
     return (
       <div className="space-y-6">
+        {renderDeploySuccessModal()}
         {/* Status card */}
         <div className="bg-[var(--color-modal-card)] rounded-lg p-5 border border-[var(--color-modal-border)]">
           <div className="flex items-center gap-3 mb-3">
@@ -356,6 +358,7 @@ export default function WebsiteTab({ workspace }) {
   // Not yet deployed — show empty state + config form
   return (
     <div className="space-y-6">
+      {renderDeploySuccessModal()}
       {!websiteData?.websiteConfig && !isDeployingStatus && (
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <div className="text-5xl mb-4">🌐</div>
@@ -414,6 +417,38 @@ export default function WebsiteTab({ workspace }) {
       />
     </div>
   );
+
+  function renderDeploySuccessModal() {
+    if (!deploySuccessUrl) return null;
+    return (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" onClick={() => setDeploySuccessUrl(null)}>
+        <div className="bg-[var(--color-modal-bg)] rounded-xl p-8 max-w-md w-full mx-4 text-center shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="text-5xl mb-4">🎉</div>
+          <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">Website Deployed!</h3>
+          <p className="text-[var(--color-text-muted)] mb-4">
+            Your site is being built and will be live in 2-3 minutes at:
+          </p>
+          <a
+            href={deploySuccessUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[var(--color-primary)] font-semibold text-lg hover:underline break-all"
+          >
+            {deploySuccessUrl}
+          </a>
+          <p className="text-xs text-[var(--color-text-muted)] mt-4">
+            The first build takes a little longer. Future updates will be faster.
+          </p>
+          <button
+            onClick={() => setDeploySuccessUrl(null)}
+            className="btn bg-[var(--color-primary)] hover:opacity-90 text-white min-h-[44px] px-6 mt-6"
+          >
+            Got it
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   function renderConfigForm() {
     const dirty = (setter) => (e) => { setter(e.target.value); setConfigDirty(true); };
