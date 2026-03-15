@@ -263,7 +263,7 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
   );
 }
 
-function GigCalendar({ workspaceId, workspace }) {
+function GigCalendar({ workspaceId, workspace, focusGigId }) {
   const { user } = useAuth();
   const toast = useToast();
 
@@ -388,6 +388,17 @@ function GigCalendar({ workspaceId, workspace }) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [view, showForm, deleteGigId, showMoveOrCopy]);
+
+  // Auto-open gig detail when navigated from Quick Links banner
+  useEffect(() => {
+    if (focusGigId && gigs.length > 0 && !loading) {
+      const gig = gigs.find(g => g.id === focusGigId);
+      if (gig) {
+        setEditingGig(gig);
+        setShowForm(true);
+      }
+    }
+  }, [focusGigId, gigs, loading]);
 
   const loadData = async () => {
     try {

@@ -631,7 +631,7 @@ function Sidebar({
 
               return (
                 <button
-                  onClick={() => onSelectBandView?.('calendar')}
+                  onClick={() => onSelectBandView?.('calendar', { focusGigId: nextGig.id })}
                   className="mx-3 mb-3 px-3 py-2 rounded-lg text-left transition-colors hover:brightness-110"
                   title={nextGig.notes || undefined}
                   style={{

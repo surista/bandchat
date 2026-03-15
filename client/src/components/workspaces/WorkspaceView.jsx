@@ -587,8 +587,10 @@ function WorkspaceView() {
     if (selectedChannel) updateChannelUnread(selectedChannel.id, count);
   }, [selectedChannel?.id]);
 
-  const handleSelectBandView = (view) => {
+  const [bandViewProps, setBandViewProps] = useState(null);
+  const handleSelectBandView = (view, extraProps = null) => {
     setActiveBandView(view);
+    setBandViewProps(extraProps);
     setBandViewKey(prev => prev + 1); // Force remount to reset state
     setSelectedChannel(null);
     setSelectedThread(null);
@@ -784,7 +786,7 @@ function WorkspaceView() {
                   if (!BandComponent) return null;
                   const extraProps = BAND_VIEW_EXTRA_PROPS[activeBandView]?.({ workspace, isAdmin, onSelectChannel: (chId) => { const ch = channels.find(c => c.id === chId) || directMessages.find(d => d.id === chId); if (ch) { setSelectedChannel(ch); setActiveBandView(null); } } }) || {};
                   const keyProp = KEYED_BAND_VIEWS.has(activeBandView) ? bandViewKey : undefined;
-                  return <BandComponent key={keyProp} workspaceId={workspaceId} {...extraProps} />;
+                  return <BandComponent key={keyProp} workspaceId={workspaceId} {...extraProps} {...(bandViewProps || {})} />;
                 })()}
               </Suspense>
               )
