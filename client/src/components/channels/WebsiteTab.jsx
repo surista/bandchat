@@ -46,9 +46,10 @@ export default function WebsiteTab({ workspace }) {
   const [primaryColor, setPrimaryColor] = useState('#ff3250');
   const [secondaryColor, setSecondaryColor] = useState('#ffc800');
   const [logoUrl, setLogoUrl] = useState('');
-  const [heroImageUrl, setHeroImageUrl] = useState('');
+  const [heroImages, setHeroImages] = useState([]);
+  const [mediaImages, setMediaImages] = useState([]);
   const [logoUploading, setLogoUploading] = useState(false);
-  const [heroUploading, setHeroUploading] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   // Social
   const [instagram, setInstagram] = useState('');
   const [facebook, setFacebook] = useState('');
@@ -93,7 +94,8 @@ export default function WebsiteTab({ workspace }) {
         setPrimaryColor(c.theme?.primaryAccent || c.primaryColor || '#ff3250');
         setSecondaryColor(c.theme?.secondaryAccent || c.secondaryColor || '#ffc800');
         setLogoUrl(c.images?.logo || '');
-        setHeroImageUrl(c.images?.heroImages?.[0] || '');
+        setHeroImages(c.images?.heroImages || []);
+        setMediaImages(c.images?.mediaImages || []);
         // Social — handle both flat and array formats
         if (Array.isArray(c.social)) {
           setInstagram(c.social.find(s => s.platform === 'instagram')?.url || '');
@@ -171,7 +173,8 @@ export default function WebsiteTab({ workspace }) {
       },
       images: {
         logo: logoUrl || null,
-        heroImages: heroImageUrl ? [heroImageUrl] : [],
+        heroImages,
+        mediaImages,
       },
       features: {
         songs: showSongs,
@@ -576,21 +579,23 @@ export default function WebsiteTab({ workspace }) {
                 </label>
               )}
             </div>
-            {/* Hero Image Upload */}
+            {/* Hero Images */}
             <div>
-              <label className="text-sm text-[var(--color-text-muted)] mb-1 block">Hero Image</label>
-              {heroImageUrl ? (
-                <div className="relative inline-block">
-                  <img src={heroImageUrl} alt="Hero" className="w-full max-w-[200px] h-24 object-cover rounded-lg border border-[var(--color-modal-border)]" />
-                  <button
-                    onClick={() => { setHeroImageUrl(''); setConfigDirty(true); }}
-                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-600 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-700"
-                  >
-                    &times;
-                  </button>
-                </div>
-              ) : (
-                <label className={`flex items-center justify-center w-full max-w-[200px] h-24 rounded-lg border-2 border-dashed border-[var(--color-modal-border)] cursor-pointer hover:border-[var(--color-primary)] transition-colors ${heroUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+              <label className="text-sm text-[var(--color-text-muted)] mb-1 block">Hero Images</label>
+              <p className="text-xs text-[var(--color-text-muted)] mb-2">Full-width background images that rotate on the homepage. Recommended: 1920x1080px.</p>
+              <div className="flex flex-wrap gap-2">
+                {heroImages.map((url, i) => (
+                  <div key={url} className="relative">
+                    <img src={url} alt={`Hero ${i + 1}`} className="w-28 h-20 object-cover rounded-lg border border-[var(--color-modal-border)]" />
+                    <button
+                      onClick={() => { setHeroImages(prev => prev.filter((_, j) => j !== i)); setConfigDirty(true); }}
+                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-600 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-700"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ))}
+                <label className={`flex items-center justify-center w-28 h-20 rounded-lg border-2 border-dashed border-[var(--color-modal-border)] cursor-pointer hover:border-[var(--color-primary)] transition-colors ${imageUploading ? 'opacity-50 pointer-events-none' : ''}`}>
                   <input
                     type="file"
                     accept="image/*"
@@ -598,24 +603,23 @@ export default function WebsiteTab({ workspace }) {
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-                      setHeroUploading(true);
+                      setImageUploading(true);
                       try {
                         const result = await api.uploadFile(file, workspace.id);
-                        setHeroImageUrl(result.url);
+                        setHeroImages(prev => [...prev, result.url]);
                         setConfigDirty(true);
                       } catch (err) {
-                        toast.error('Failed to upload hero image');
+                        toast.error('Failed to upload image');
                       } finally {
-                        setHeroUploading(false);
+                        setImageUploading(false);
                       }
                     }}
                   />
-                  <span className="text-[var(--color-text-muted)] text-xs text-center px-2">
-                    {heroUploading ? 'Uploading...' : 'Upload hero image'}
+                  <span className="text-[var(--color-text-muted)] text-xs text-center px-1">
+                    {imageUploading ? '...' : '+ Add'}
                   </span>
                 </label>
-              )}
-              <p className="text-xs text-[var(--color-text-muted)] mt-1">Full-width background image for the homepage</p>
+              </div>
             </div>
           </div>
         </div>
@@ -657,6 +661,49 @@ export default function WebsiteTab({ workspace }) {
                 <span className="text-sm text-[var(--color-text-primary)]">{label}</span>
               </label>
             ))}
+          </div>
+        </div>
+
+        {/* Media Photos */}
+        <div>
+          <h4 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">Media Photos</h4>
+          <p className="text-xs text-[var(--color-text-muted)] mb-2">Upload promo shots, band portraits, etc. Gig photos from BandChat sync automatically.</p>
+          <div className="flex flex-wrap gap-2">
+            {mediaImages.map((url, i) => (
+              <div key={url} className="relative">
+                <img src={url} alt={`Media ${i + 1}`} className="w-20 h-20 object-cover rounded-lg border border-[var(--color-modal-border)]" />
+                <button
+                  onClick={() => { setMediaImages(prev => prev.filter((_, j) => j !== i)); setConfigDirty(true); }}
+                  className="absolute -top-2 -right-2 w-5 h-5 bg-red-600 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-700"
+                >
+                  &times;
+                </button>
+              </div>
+            ))}
+            <label className={`flex items-center justify-center w-20 h-20 rounded-lg border-2 border-dashed border-[var(--color-modal-border)] cursor-pointer hover:border-[var(--color-primary)] transition-colors ${imageUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setImageUploading(true);
+                  try {
+                    const result = await api.uploadFile(file, workspace.id);
+                    setMediaImages(prev => [...prev, result.url]);
+                    setConfigDirty(true);
+                  } catch (err) {
+                    toast.error('Failed to upload image');
+                  } finally {
+                    setImageUploading(false);
+                  }
+                }}
+              />
+              <span className="text-[var(--color-text-muted)] text-xs text-center px-1">
+                {imageUploading ? '...' : '+ Add'}
+              </span>
+            </label>
           </div>
         </div>
 
