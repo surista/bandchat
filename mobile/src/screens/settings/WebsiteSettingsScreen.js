@@ -21,6 +21,20 @@ import { useLayout } from '../../hooks/useLayout';
 import { successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 
+const THEMES = [
+  { id: 'rock', label: 'Rock', bg: '#0a0a0a', accent: '#e81c2e', accent2: '#ff5722', desc: 'Bold & high energy' },
+  { id: 'grunge', label: 'Grunge', bg: '#1a1611', accent: '#a63c2e', accent2: '#bfa84f', desc: 'Raw & textured' },
+  { id: 'pop', label: 'Pop', bg: '#faf8ff', accent: '#f637e3', accent2: '#7c3aed', desc: 'Bright & playful', light: true },
+  { id: 'jazz', label: 'Jazz', bg: '#0b1021', accent: '#c9a84c', accent2: '#6b7394', desc: 'Sophisticated & warm' },
+  { id: 'covers', label: 'Covers', bg: '#121218', accent: '#ff2d78', accent2: '#00c2ff', desc: 'Fun & versatile' },
+  { id: 'country', label: 'Country', bg: '#1c1712', accent: '#c8873a', accent2: '#a0522d', desc: 'Rustic & honest' },
+  { id: 'metal', label: 'Metal', bg: '#050505', accent: '#8b0000', accent2: '#4a4a4a', desc: 'Dark & aggressive' },
+  { id: 'electronic', label: 'Electronic', bg: '#080810', accent: '#00ffc8', accent2: '#6a00ff', desc: 'Futuristic & sharp' },
+  { id: 'funk', label: 'Funk / Soul', bg: '#1a0e08', accent: '#e86a17', accent2: '#daa520', desc: 'Groovy & retro' },
+  { id: 'reggae', label: 'Reggae', bg: '#0f1a0a', accent: '#2d8b2e', accent2: '#daa520', desc: 'Warm & positive' },
+  { id: 'classical', label: 'Classical', bg: '#fdfcf9', accent: '#1a1a1a', accent2: '#9e8a5e', desc: 'Elegant & refined', light: true },
+];
+
 export default function WebsiteSettingsScreen({ route }) {
   const { workspaceId, workspaceName } = route.params;
   const { colors } = useTheme();
@@ -39,6 +53,8 @@ export default function WebsiteSettingsScreen({ route }) {
   const [genre, setGenre] = useState('');
   const [founded, setFounded] = useState('');
   const [contactEmail, setContactEmail] = useState('');
+  // Template
+  const [template, setTemplate] = useState('covers');
   // Branding
   const [primaryColor, setPrimaryColor] = useState('#ff3250');
   const [secondaryColor, setSecondaryColor] = useState('#ffc800');
@@ -84,6 +100,7 @@ export default function WebsiteSettingsScreen({ route }) {
         setGenre(c.genre || c.band?.genre || '');
         setFounded(String(c.founded || c.band?.founded || ''));
         setContactEmail(c.contactEmail || c.emails?.info || '');
+        setTemplate(c.template || c.theme?.template || 'covers');
         setPrimaryColor(c.theme?.primaryAccent || '#ff3250');
         setSecondaryColor(c.theme?.secondaryAccent || '#ffc800');
         setLogoUrl(c.images?.logo || '');
@@ -145,7 +162,8 @@ export default function WebsiteSettingsScreen({ route }) {
       emails: { info: contactEmail.trim() },
       social: socialArray,
       socialLinks: { instagram: instagram.trim(), facebook: facebook.trim(), youtube: youtube.trim(), spotify: spotify.trim() },
-      theme: { primaryAccent: primaryColor, secondaryAccent: secondaryColor },
+      template,
+      theme: { template, primaryAccent: primaryColor, secondaryAccent: secondaryColor },
       images: { logo: logoUrl || null, heroImages: heroImageUrl ? [heroImageUrl] : [] },
       features: {
         songs: showSongs, archive: showArchive, setlists: showSetlists,
@@ -171,7 +189,7 @@ export default function WebsiteSettingsScreen({ route }) {
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to save config');
     } finally { setSavingConfig(false); }
-  }, [workspaceId, bandName, tagline, description, location, genre, founded, contactEmail, primaryColor, secondaryColor, instagram, facebook, youtube, spotify, showSongs, showArchive, showSetlists, showTimeline, showMedia, showStats, showSongRequests, showTrivia, seoTitle, seoDescription, logoUrl, heroImageUrl]);
+  }, [workspaceId, bandName, tagline, description, location, genre, founded, contactEmail, primaryColor, secondaryColor, instagram, facebook, youtube, spotify, showSongs, showArchive, showSetlists, showTimeline, showMedia, showStats, showSongRequests, showTrivia, seoTitle, seoDescription, logoUrl, heroImageUrl, template]);
 
   const handleDeploy = useCallback(async () => {
     if (!bandName.trim()) { Alert.alert('Error', 'Band name is required'); return; }
@@ -185,7 +203,7 @@ export default function WebsiteSettingsScreen({ route }) {
     } catch (err) {
       Alert.alert('Error', err.message || 'Deployment failed');
     } finally { setDeploying(false); }
-  }, [workspaceId, bandName, tagline, description, location, genre, founded, contactEmail, primaryColor, secondaryColor, instagram, facebook, youtube, spotify, showSongs, showArchive, showSetlists, showTimeline, showMedia, showStats, showSongRequests, showTrivia, seoTitle, seoDescription, logoUrl, heroImageUrl]);
+  }, [workspaceId, bandName, tagline, description, location, genre, founded, contactEmail, primaryColor, secondaryColor, instagram, facebook, youtube, spotify, showSongs, showArchive, showSetlists, showTimeline, showMedia, showStats, showSongRequests, showTrivia, seoTitle, seoDescription, logoUrl, heroImageUrl, template]);
 
   const handleSync = useCallback(async () => {
     setSyncing(true);
@@ -301,6 +319,34 @@ export default function WebsiteSettingsScreen({ route }) {
           </View>
 
           {/* Branding */}
+          {/* Template / Genre */}
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>DESIGN TEMPLATE</Text>
+          <Text style={[{ color: colors.textSecondary, fontSize: 12, marginBottom: 8, marginLeft: 4 }]}>Choose a style that fits your band's vibe</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+            {THEMES.map((t) => (
+              <TouchableOpacity
+                key={t.id}
+                onPress={() => setTemplate(t.id)}
+                style={{
+                  width: '31%',
+                  backgroundColor: t.bg,
+                  borderRadius: 10,
+                  padding: 10,
+                  borderWidth: 2,
+                  borderColor: template === t.id ? colors.primary : 'transparent',
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={{ flexDirection: 'row', gap: 4, marginBottom: 6 }}>
+                  <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: t.accent }} />
+                  <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: t.accent2 }} />
+                </View>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: t.light ? '#1a1a1a' : '#fff' }}>{t.label}</Text>
+                <Text style={{ fontSize: 10, color: t.light ? '#666' : '#999', marginTop: 2 }}>{t.desc}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>BRANDING</Text>
           <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
             <View style={styles.row}>

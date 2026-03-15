@@ -8,6 +8,20 @@ import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import ConfirmDialog from '../common/ConfirmDialog';
 
+const THEMES = [
+  { id: 'rock', label: 'Rock', bg: '#0a0a0a', accent: '#e81c2e', accent2: '#ff5722', desc: 'Bold & high energy' },
+  { id: 'grunge', label: 'Grunge', bg: '#1a1611', accent: '#a63c2e', accent2: '#bfa84f', desc: 'Raw & textured' },
+  { id: 'pop', label: 'Pop', bg: '#faf8ff', accent: '#f637e3', accent2: '#7c3aed', desc: 'Bright & playful', light: true },
+  { id: 'jazz', label: 'Jazz', bg: '#0b1021', accent: '#c9a84c', accent2: '#6b7394', desc: 'Sophisticated & warm' },
+  { id: 'covers', label: 'Covers', bg: '#121218', accent: '#ff2d78', accent2: '#00c2ff', desc: 'Fun & versatile' },
+  { id: 'country', label: 'Country', bg: '#1c1712', accent: '#c8873a', accent2: '#a0522d', desc: 'Rustic & honest' },
+  { id: 'metal', label: 'Metal', bg: '#050505', accent: '#8b0000', accent2: '#4a4a4a', desc: 'Dark & aggressive' },
+  { id: 'electronic', label: 'Electronic', bg: '#080810', accent: '#00ffc8', accent2: '#6a00ff', desc: 'Futuristic & sharp' },
+  { id: 'funk', label: 'Funk / Soul', bg: '#1a0e08', accent: '#e86a17', accent2: '#daa520', desc: 'Groovy & retro' },
+  { id: 'reggae', label: 'Reggae', bg: '#0f1a0a', accent: '#2d8b2e', accent2: '#daa520', desc: 'Warm & positive' },
+  { id: 'classical', label: 'Classical', bg: '#fdfcf9', accent: '#1a1a1a', accent2: '#9e8a5e', desc: 'Elegant & refined', light: true },
+];
+
 export default function WebsiteTab({ workspace }) {
   const toast = useToast();
   const [loading, setLoading] = useState(true);
@@ -25,6 +39,8 @@ export default function WebsiteTab({ workspace }) {
   const [genre, setGenre] = useState('');
   const [founded, setFounded] = useState('');
   const [contactEmail, setContactEmail] = useState('');
+  // Template/genre
+  const [template, setTemplate] = useState('covers');
   // Branding
   const [primaryColor, setPrimaryColor] = useState('#ff3250');
   const [secondaryColor, setSecondaryColor] = useState('#ffc800');
@@ -72,6 +88,7 @@ export default function WebsiteTab({ workspace }) {
         setGenre(c.genre || c.band?.genre || '');
         setFounded(c.founded || c.band?.founded || '');
         setContactEmail(c.contactEmail || c.emails?.info || '');
+        setTemplate(c.template || c.theme?.template || 'covers');
         setPrimaryColor(c.theme?.primaryAccent || c.primaryColor || '#ff3250');
         setSecondaryColor(c.theme?.secondaryAccent || c.secondaryColor || '#ffc800');
         setLogoUrl(c.images?.logo || '');
@@ -145,7 +162,9 @@ export default function WebsiteTab({ workspace }) {
         youtube: youtube.trim(),
         spotify: spotify.trim(),
       },
+      template,
       theme: {
+        template,
         primaryAccent: primaryColor,
         secondaryAccent: secondaryColor,
       },
@@ -412,6 +431,33 @@ export default function WebsiteTab({ workspace }) {
                 <input type="number" value={founded} onChange={dirty(setFounded)} className="modal-input w-full" placeholder="2024" min={1900} max={2100} />
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Template / Genre */}
+        <div>
+          <h4 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">Design Template</h4>
+          <p className="text-xs text-[var(--color-text-muted)] mb-3">Choose a style that fits your band's vibe</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {THEMES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => { setTemplate(t.id); setConfigDirty(true); }}
+                className={`relative rounded-lg p-3 text-left transition-all border-2 ${
+                  template === t.id
+                    ? 'border-[var(--color-primary)] ring-1 ring-[var(--color-primary)]'
+                    : 'border-transparent hover:border-[var(--color-modal-border)]'
+                }`}
+                style={{ background: t.bg }}
+              >
+                <div className="flex gap-1.5 mb-2">
+                  <span className="w-4 h-4 rounded-full" style={{ background: t.accent }} />
+                  <span className="w-4 h-4 rounded-full" style={{ background: t.accent2 }} />
+                </div>
+                <span className={`text-sm font-semibold block ${t.light ? 'text-gray-800' : 'text-white'}`}>{t.label}</span>
+                <span className={`text-xs block mt-0.5 ${t.light ? 'text-gray-500' : 'text-gray-400'}`}>{t.desc}</span>
+              </button>
+            ))}
           </div>
         </div>
 
