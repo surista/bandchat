@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
+import { triggerWebsiteSync } from '../services/websiteDeployment.js';
 
 const router = express.Router();
 
@@ -139,6 +140,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (re
     io.to(`workspace:${req.params.workspaceId}`).emit('bandMember:created', member);
 
     res.status(201).json(member);
+    triggerWebsiteSync(req.params.workspaceId);
   } catch (error) {
     console.error('Create band member error:', error);
     res.status(500).json({ error: 'Failed to create band member' });
@@ -326,6 +328,7 @@ router.put('/:memberId', authenticate, async (req, res) => {
     io.to(`workspace:${member.workspaceId}`).emit('bandMember:updated', member);
 
     res.json(member);
+    triggerWebsiteSync(member.workspaceId);
   } catch (error) {
     console.error('Update band member error:', error);
     res.status(500).json({ error: 'Failed to update band member' });
@@ -366,6 +369,7 @@ router.delete('/:memberId', authenticate, async (req, res) => {
     io.to(`workspace:${member.workspaceId}`).emit('bandMember:deleted', { memberId: req.params.memberId });
 
     res.json({ message: 'Band member deleted' });
+    triggerWebsiteSync(member.workspaceId);
   } catch (error) {
     console.error('Delete band member error:', error);
     res.status(500).json({ error: 'Failed to delete band member' });

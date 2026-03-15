@@ -37,6 +37,7 @@ import UpgradeScreen from '../screens/settings/UpgradeScreen';
 import WorkspaceMembersScreen from '../screens/settings/WorkspaceMembersScreen';
 import InviteScreen from '../screens/settings/InviteScreen';
 import BlockedUsersScreen from '../screens/settings/BlockedUsersScreen';
+import WebsiteSettingsScreen from '../screens/settings/WebsiteSettingsScreen';
 import MemberProfileScreen from '../screens/workspace/MemberProfileScreen';
 import PinnedMessagesScreen from '../screens/workspace/PinnedMessagesScreen';
 import SavedMessagesScreen from '../screens/workspace/SavedMessagesScreen';
@@ -129,6 +130,7 @@ export default function AppStack() {
       <Stack.Screen name="Invite" component={InviteScreen} options={{ title: 'Invite People' }} />
       <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} options={{ title: 'Blocked Users' }} />
       <Stack.Screen name="Upgrade" component={UpgradeScreen} options={{ title: 'Upgrade to Pro' }} />
+      <Stack.Screen name="WebsiteSettings" component={WebsiteSettingsScreen} options={{ title: 'Band Website' }} />
 
       {/* Members */}
       <Stack.Screen name="MemberProfile" component={MemberProfileScreen} options={{ title: 'Member' }} />

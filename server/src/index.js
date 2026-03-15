@@ -25,6 +25,7 @@ import { setupSocketHandlers } from './socket/handlers.js';
 import prisma from './lib/prisma.js';
 import { createBackupWithVerification, cleanupOldBackups, sendBackupAlert } from './services/backup.js';
 import { isConfigured as isR2Configured, deleteFile } from './lib/storage.js';
+import { deleteVercelProject, deleteGithubRepo } from './services/websiteDeployment.js';
 
 const app = createApp();
 const httpServer = createServer(app);
@@ -183,6 +184,22 @@ httpServer.listen(PORT, async () => {
             }
           } catch (err) {
             console.error(`R2 cleanup warning during workspace purge ${ws.id}:`, err);
+          }
+
+          // Clean up website (Vercel project + GitHub repo)
+          const wsData = await prisma.workspace.findUnique({
+            where: { id: ws.id },
+            select: { websiteVercelId: true, websiteRepoName: true },
+          });
+          if (wsData?.websiteVercelId) {
+            await deleteVercelProject(wsData.websiteVercelId).catch(err =>
+              console.error(`Website Vercel cleanup warning for ${ws.id}:`, err.message)
+            );
+          }
+          if (wsData?.websiteRepoName) {
+            await deleteGithubRepo(wsData.websiteRepoName).catch(err =>
+              console.error(`Website GitHub cleanup warning for ${ws.id}:`, err.message)
+            );
           }
 
           await prisma.workspace.delete({ where: { id: ws.id } });

@@ -15,6 +15,7 @@ import BandMemberForm from '../band/BandMembers/BandMemberForm';
 import Skeleton from '../common/Skeleton';
 import ConfirmDialog from '../common/ConfirmDialog';
 import SlackImportWizard from '../workspaces/SlackImportWizard';
+import WebsiteTab from './WebsiteTab';
 
 function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWorkspace }) {
   const navigate = useNavigate();
@@ -317,6 +318,18 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     }`}
                   >
                     Import
+                  </button>
+                  <button
+                    role="tab"
+                    aria-selected={settingsTab === 'website'}
+                    onClick={() => setSettingsTab('website')}
+                    className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
+                      settingsTab === 'website'
+                        ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
+                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                    }`}
+                  >
+                    Website
                   </button>
                 </>
               )}
@@ -1982,6 +1995,10 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                     )}
                   </div>
                 </div>
+              )}
+
+              {settingsTab === 'website' && (
+                <WebsiteTab workspace={workspace} />
               )}
             </div>
           </div>

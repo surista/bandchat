@@ -18,6 +18,7 @@ export const PLAN_LIMITS = {
       pdfExport: false,
       slackImport: false,
       songIntelligence: false,
+      customWebsite: true,
     },
   },
   PRO: {
@@ -34,6 +35,7 @@ export const PLAN_LIMITS = {
       pdfExport: true,
       slackImport: true,
       songIntelligence: true,
+      customWebsite: true,
     },
   },
 };

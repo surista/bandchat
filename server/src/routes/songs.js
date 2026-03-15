@@ -6,6 +6,7 @@ import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 import { deleteFile, isR2Url } from '../lib/storage.js';
 import { safeDecrementStorage } from './uploads.js';
 import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
+import { triggerWebsiteSync } from '../services/websiteDeployment.js';
 import songBPMScraperService from '../services/songbpm-scraper.js';
 import deezerService from '../services/deezer.js';
 import itunesService from '../services/itunes.js';
@@ -102,6 +103,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
     io.to(`workspace:${req.params.workspaceId}`).emit('song:created', song);
 
     res.status(201).json(song);
+    triggerWebsiteSync(req.params.workspaceId);
   } catch (error) {
     console.error('Create song error:', error);
     if (error.code === 'P2002') {
@@ -391,6 +393,7 @@ router.put('/:songId', authenticate, async (req, res) => {
     io.to(`workspace:${song.workspaceId}`).emit('song:updated', song);
 
     res.json(song);
+    triggerWebsiteSync(song.workspaceId);
   } catch (error) {
     console.error('Update song error:', error);
     res.status(500).json({ error: 'Failed to update song' });
@@ -666,6 +669,7 @@ router.delete('/:songId', authenticate, async (req, res) => {
     io.to(`workspace:${song.workspaceId}`).emit('song:deleted', { songId: req.params.songId });
 
     res.json({ message: 'Song deleted' });
+    triggerWebsiteSync(song.workspaceId);
   } catch (error) {
     console.error('Delete song error:', error);
     res.status(500).json({ error: 'Failed to delete song' });

@@ -8,6 +8,7 @@ import { safeDecrementStorage } from './uploads.js';
 import { parseICS, parseICSMultiple } from '../lib/icsParser.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 import { getPlanLimits } from '../lib/planLimits.js';
+import { triggerWebsiteSync } from '../services/websiteDeployment.js';
 import { sendPushToUser } from './push.js';
 
 const router = express.Router();
@@ -715,6 +716,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
     });
 
     res.status(201).json(gig);
+    triggerWebsiteSync(req.params.workspaceId);
   } catch (error) {
     console.error('Create gig error:', error);
     res.status(500).json({ error: 'Failed to create gig' });
@@ -967,6 +969,7 @@ router.put('/:gigId', authenticate, async (req, res) => {
     });
 
     res.json(gig);
+    triggerWebsiteSync(gig.workspaceId);
   } catch (error) {
     console.error('Update gig error:', error);
     res.status(500).json({ error: 'Failed to update gig' });
@@ -1182,6 +1185,7 @@ router.delete('/:gigId', authenticate, async (req, res) => {
     io.to(`workspace:${gig.workspaceId}`).emit('gig:deleted', { gigId: req.params.gigId });
 
     res.json({ message: 'Gig deleted' });
+    triggerWebsiteSync(gig.workspaceId);
   } catch (error) {
     console.error('Delete gig error:', error);
     res.status(500).json({ error: 'Failed to delete gig' });

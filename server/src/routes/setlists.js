@@ -3,6 +3,7 @@ import { authenticate } from '../middleware/auth.js';
 import { isWorkspaceMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
+import { triggerWebsiteSync } from '../services/websiteDeployment.js';
 
 const router = express.Router();
 
@@ -101,6 +102,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
     io.to(`workspace:${req.params.workspaceId}`).emit('setlist:created', setlist);
 
     res.status(201).json(setlist);
+    triggerWebsiteSync(req.params.workspaceId);
   } catch (error) {
     console.error('Create setlist error:', error);
     if (error.code === 'P2002') {
@@ -225,6 +227,7 @@ router.put('/:setlistId', authenticate, async (req, res) => {
     io.to(`workspace:${setlist.workspaceId}`).emit('setlist:updated', setlist);
 
     res.json(setlist);
+    triggerWebsiteSync(setlist.workspaceId);
   } catch (error) {
     console.error('Update setlist error:', error);
     res.status(500).json({ error: 'Failed to update setlist' });
@@ -267,6 +270,7 @@ router.delete('/:setlistId', authenticate, async (req, res) => {
     io.to(`workspace:${setlist.workspaceId}`).emit('setlist:deleted', { setlistId: req.params.setlistId });
 
     res.json({ message: 'Setlist deleted' });
+    triggerWebsiteSync(setlist.workspaceId);
   } catch (error) {
     console.error('Delete setlist error:', error);
     res.status(500).json({ error: 'Failed to delete setlist' });

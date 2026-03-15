@@ -74,6 +74,16 @@ export const searchLimiter = rateLimit({
   legacyHeaders: false
 });
 
+// Limit for website deploy endpoint (expensive operation)
+export const deployLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  skip: skipInTest,
+  message: { error: 'Too many deploy requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 // Limit for sync pull endpoint
 export const syncLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute

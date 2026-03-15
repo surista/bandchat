@@ -107,6 +107,16 @@ model Workspace {
   planOriginalTxId  String?   @unique             // prevents duplicate redemption
   planUpdatedAt     DateTime?
 
+  // Website
+  websiteEnabled    Boolean   @default(false)
+  websiteUrl        String?
+  websiteRepoName   String?
+  websiteVercelId   String?
+  websiteConfig     Json?
+  websiteDeployedAt DateTime?
+  websiteStatus     String?   // 'deploying' | 'active' | 'error'
+  websiteDeployHook String?
+
   members       WorkspaceMember[]
   channels      Channel[]
   channelGroups ChannelGroup[]
@@ -126,6 +136,7 @@ model Workspace {
   bandKitty           BandKitty?
   practiceSessions    PracticeSession[]
   stagePlots          StagePlot[]
+  websiteApiTokens    WebsiteApiToken[]
 
   @@index([deletedAt])
 }
@@ -971,4 +982,15 @@ model StagePlot {
   @@index([workspaceId])
   @@index([createdById])
   @@index([gigId])
+}
+
+model WebsiteApiToken {
+  id          String    @id @default(uuid())
+  token       String    @unique   // SHA-256 hashed
+  workspaceId String
+  createdAt   DateTime  @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
 }

@@ -1780,6 +1780,39 @@ class ApiService {
       method: 'POST',
     });
   }
+  // Website
+  async getWebsiteConfig(workspaceId) {
+    return this.request(`/website/${workspaceId}`);
+  }
+
+  async updateWebsiteConfig(workspaceId, config) {
+    return this.request(`/website/${workspaceId}/config`, {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    });
+  }
+
+  async deployWebsite(workspaceId) {
+    return this.request(`/website/${workspaceId}/deploy`, {
+      method: 'POST',
+    });
+  }
+
+  async syncWebsite(workspaceId) {
+    return this.request(`/website/${workspaceId}/sync`, {
+      method: 'POST',
+    });
+  }
+
+  async deleteWebsite(workspaceId) {
+    return this.request(`/website/${workspaceId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getWebsiteStatus(workspaceId) {
+    return this.request(`/website/${workspaceId}/status`);
+  }
 }
 
 export const api = new ApiService();

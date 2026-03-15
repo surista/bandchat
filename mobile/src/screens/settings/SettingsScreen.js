@@ -359,6 +359,13 @@ export default function SettingsScreen({ navigation, route }) {
                 colors={colors}
               />
               <View style={[styles.separator, { backgroundColor: colors.border }]} />
+              <SettingsRow
+                icon={'🌐'}
+                label="Band Website"
+                onPress={() => navigation.navigate('WebsiteSettings', { workspaceId, workspaceName })}
+                colors={colors}
+              />
+              <View style={[styles.separator, { backgroundColor: colors.border }]} />
             </>
           )}
           <SettingsRow
