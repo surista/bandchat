@@ -33,22 +33,27 @@ function vercelTeamParam() {
 }
 
 /**
- * Fork the website template repo into the org for this band.
+ * Create a new repo from the template for this band.
+ * Uses GitHub's "create repo from template" API (not fork — forks can't target the same org).
  */
 export async function forkTemplate(bandSlug) {
   const repoName = `bandchat-${bandSlug}`;
-  const res = await fetch(`https://api.github.com/repos/${WEBSITE_GITHUB_ORG}/${WEBSITE_TEMPLATE_REPO}/forks`, {
+  const res = await fetch(`https://api.github.com/repos/${WEBSITE_GITHUB_ORG}/${WEBSITE_TEMPLATE_REPO}/generate`, {
     method: 'POST',
-    headers: githubHeaders(),
+    headers: {
+      ...githubHeaders(),
+      Accept: 'application/vnd.github.baptiste-preview+json',
+    },
     body: JSON.stringify({
-      organization: WEBSITE_GITHUB_ORG,
+      owner: WEBSITE_GITHUB_ORG,
       name: repoName,
+      private: false,
     }),
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(`GitHub fork failed: ${err.message || res.statusText}`);
+    throw new Error(`GitHub repo creation failed: ${err.message || res.statusText}`);
   }
 
   return repoName;
