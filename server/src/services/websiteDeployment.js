@@ -169,7 +169,7 @@ export async function createDeployHook(projectId) {
     headers: vercelHeaders(),
     body: JSON.stringify({
       name: 'bandchat-sync',
-      ref: 'master',
+      ref: 'main',
     }),
   });
 
