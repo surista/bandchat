@@ -114,7 +114,7 @@ function AllMessages({ workspaceId, onSelectChannel }) {
                   {msg.author?.displayName || msg.removedUserName || 'Unknown'}
                 </span>
                 <span className="text-xs text-[var(--color-text-muted)]">
-                  in #{msg.channel?.name || 'unknown'}
+                  {msg.channel?.isDirect ? 'DM' : `in #${msg.channel?.name || 'unknown'}`}
                 </span>
                 <span className="text-xs text-[var(--color-text-muted)] ml-auto">
                   {formatDate(msg.createdAt)}
