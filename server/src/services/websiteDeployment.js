@@ -47,7 +47,7 @@ export async function forkTemplate(bandSlug) {
     body: JSON.stringify({
       owner: WEBSITE_GITHUB_ORG,
       name: repoName,
-      private: false,
+      private: true,
     }),
   });
 
