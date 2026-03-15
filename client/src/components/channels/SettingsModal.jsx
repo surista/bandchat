@@ -232,143 +232,58 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
             </div>
 
             {/* Tabs */}
-            <div className="flex flex-wrap border-b border-[var(--color-modal-border)]" role="tablist">
-              <button
-                role="tab"
-                aria-selected={settingsTab === 'profile'}
-                onClick={() => setSettingsTab('profile')}
-                className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
-                  settingsTab === 'profile'
-                    ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                }`}
-              >
-                Profile
-              </button>
-              <button
-                role="tab"
-                aria-selected={settingsTab === 'workspace'}
-                onClick={() => setSettingsTab('workspace')}
-                className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
-                  settingsTab === 'workspace'
-                    ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                }`}
-              >
-                Workspace
-              </button>
-              <button
-                role="tab"
-                aria-selected={settingsTab === 'theme'}
-                onClick={() => setSettingsTab('theme')}
-                className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
-                  settingsTab === 'theme'
-                    ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                }`}
-              >
-                Theme
-              </button>
-              <button
-                role="tab"
-                aria-selected={settingsTab === 'notifications'}
-                onClick={() => setSettingsTab('notifications')}
-                className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
-                  settingsTab === 'notifications'
-                    ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                }`}
-              >
-                Notifications
-              </button>
+            <div className="border-b border-[var(--color-modal-border)]" role="tablist">
+              {/* Row 1: Personal settings + general */}
+              <div className="flex">
+                {[
+                  ['profile', 'Profile'],
+                  ['workspace', 'Workspace'],
+                  ['theme', 'Theme'],
+                  ['notifications', 'Notifications'],
+                  ['whatsnew', 'New'],
+                  ['plan', 'Plan'],
+                  ['support', 'Support'],
+                ].map(([key, label]) => (
+                  <button
+                    key={key}
+                    role="tab"
+                    aria-selected={settingsTab === key}
+                    onClick={() => setSettingsTab(key)}
+                    className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
+                      settingsTab === key
+                        ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
+                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {/* Row 2: Admin-only tabs */}
               {isAdmin && (
-                <>
-                  <button
-                    role="tab"
-                    aria-selected={settingsTab === 'members'}
-                    onClick={() => setSettingsTab('members')}
-                    className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
-                      settingsTab === 'members'
-                        ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                    }`}
-                  >
-                    Members
-                  </button>
-                  <button
-                    role="tab"
-                    aria-selected={settingsTab === 'bandmembers'}
-                    onClick={() => setSettingsTab('bandmembers')}
-                    className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
-                      settingsTab === 'bandmembers'
-                        ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                    }`}
-                  >
-                    Band
-                  </button>
-                  <button
-                    role="tab"
-                    aria-selected={settingsTab === 'import'}
-                    onClick={() => setSettingsTab('import')}
-                    className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
-                      settingsTab === 'import'
-                        ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                    }`}
-                  >
-                    Import
-                  </button>
-                  <button
-                    role="tab"
-                    aria-selected={settingsTab === 'website'}
-                    onClick={() => setSettingsTab('website')}
-                    className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
-                      settingsTab === 'website'
-                        ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                    }`}
-                  >
-                    Website
-                  </button>
-                </>
+                <div className="flex">
+                  {[
+                    ['members', 'Members'],
+                    ['bandmembers', 'Band'],
+                    ['import', 'Import'],
+                    ['website', 'Website'],
+                  ].map(([key, label]) => (
+                    <button
+                      key={key}
+                      role="tab"
+                      aria-selected={settingsTab === key}
+                      onClick={() => setSettingsTab(key)}
+                      className={`px-3 pt-2 pb-2.5 font-medium whitespace-nowrap transition-colors text-sm ${
+                        settingsTab === key
+                          ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
+                          : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               )}
-              <button
-                role="tab"
-                aria-selected={settingsTab === 'whatsnew'}
-                onClick={() => setSettingsTab('whatsnew')}
-                className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
-                  settingsTab === 'whatsnew'
-                    ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                }`}
-              >
-                New
-              </button>
-              <button
-                role="tab"
-                aria-selected={settingsTab === 'plan'}
-                onClick={() => setSettingsTab('plan')}
-                className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
-                  settingsTab === 'plan'
-                    ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                }`}
-              >
-                Plan
-              </button>
-              <button
-                role="tab"
-                aria-selected={settingsTab === 'support'}
-                onClick={() => setSettingsTab('support')}
-                className={`px-3 pt-3 pb-3.5 font-medium whitespace-nowrap transition-colors text-sm ${
-                  settingsTab === 'support'
-                    ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                }`}
-              >
-                Support
-              </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6" role="tabpanel">
