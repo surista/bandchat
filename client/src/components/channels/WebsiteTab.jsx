@@ -457,6 +457,25 @@ export default function WebsiteTab({ workspace }) {
     const dirty = (setter) => (e) => { setter(e.target.value); setConfigDirty(true); };
     const dirtyCheck = (setter) => (e) => { setter(e.target.checked); setConfigDirty(true); };
 
+    async function handleDropUpload(files, setter) {
+      const imageFiles = [...files].filter(f => f.type.startsWith('image/'));
+      if (!imageFiles.length) return;
+      setImageUploading(true);
+      try {
+        const urls = [];
+        for (const file of imageFiles) {
+          const result = await api.uploadFile(file, workspace.id);
+          urls.push(result.url);
+        }
+        setter(prev => [...prev, ...urls]);
+        setConfigDirty(true);
+      } catch (err) {
+        toast.error('Failed to upload image(s)');
+      } finally {
+        setImageUploading(false);
+      }
+    }
+
     return (
       <div className="space-y-6">
         {/* Band Identity */}
@@ -580,9 +599,14 @@ export default function WebsiteTab({ workspace }) {
               )}
             </div>
             {/* Hero Images */}
-            <div>
+            <div
+              onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('ring-2', 'ring-[var(--color-primary)]'); }}
+              onDragLeave={(e) => { e.currentTarget.classList.remove('ring-2', 'ring-[var(--color-primary)]'); }}
+              onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('ring-2', 'ring-[var(--color-primary)]'); handleDropUpload(e.dataTransfer.files, setHeroImages); }}
+              className="rounded-lg p-3 transition-all"
+            >
               <label className="text-sm text-[var(--color-text-muted)] mb-1 block">Hero Images</label>
-              <p className="text-xs text-[var(--color-text-muted)] mb-2">Full-width background images that rotate on the homepage. Recommended: 1920x1080px.</p>
+              <p className="text-xs text-[var(--color-text-muted)] mb-2">Full-width background images that rotate on the homepage. Drag & drop or click to add. Recommended: 1920x1080px.</p>
               <div className="flex flex-wrap gap-2">
                 {heroImages.map((url, i) => (
                   <div key={url} className="relative">
@@ -599,17 +623,22 @@ export default function WebsiteTab({ workspace }) {
                   <input
                     type="file"
                     accept="image/*"
+                    multiple
                     className="hidden"
                     onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
+                      const files = [...(e.target.files || [])];
+                      if (!files.length) return;
                       setImageUploading(true);
                       try {
-                        const result = await api.uploadFile(file, workspace.id);
-                        setHeroImages(prev => [...prev, result.url]);
+                        const urls = [];
+                        for (const file of files) {
+                          const result = await api.uploadFile(file, workspace.id);
+                          urls.push(result.url);
+                        }
+                        setHeroImages(prev => [...prev, ...urls]);
                         setConfigDirty(true);
                       } catch (err) {
-                        toast.error('Failed to upload image');
+                        toast.error('Failed to upload image(s)');
                       } finally {
                         setImageUploading(false);
                       }
@@ -665,9 +694,14 @@ export default function WebsiteTab({ workspace }) {
         </div>
 
         {/* Media Photos */}
-        <div>
+        <div
+          onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('ring-2', 'ring-[var(--color-primary)]'); }}
+          onDragLeave={(e) => { e.currentTarget.classList.remove('ring-2', 'ring-[var(--color-primary)]'); }}
+          onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('ring-2', 'ring-[var(--color-primary)]'); handleDropUpload(e.dataTransfer.files, setMediaImages); }}
+          className="rounded-lg p-3 transition-all"
+        >
           <h4 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">Media Photos</h4>
-          <p className="text-xs text-[var(--color-text-muted)] mb-2">Upload promo shots, band portraits, etc. Gig photos from BandChat sync automatically.</p>
+          <p className="text-xs text-[var(--color-text-muted)] mb-2">Drag & drop or click to add. Gig photos from BandChat sync automatically.</p>
           <div className="flex flex-wrap gap-2">
             {mediaImages.map((url, i) => (
               <div key={url} className="relative">
@@ -684,17 +718,22 @@ export default function WebsiteTab({ workspace }) {
               <input
                 type="file"
                 accept="image/*"
+                multiple
                 className="hidden"
                 onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
+                  const files = [...(e.target.files || [])];
+                  if (!files.length) return;
                   setImageUploading(true);
                   try {
-                    const result = await api.uploadFile(file, workspace.id);
-                    setMediaImages(prev => [...prev, result.url]);
+                    const urls = [];
+                    for (const file of files) {
+                      const result = await api.uploadFile(file, workspace.id);
+                      urls.push(result.url);
+                    }
+                    setMediaImages(prev => [...prev, ...urls]);
                     setConfigDirty(true);
                   } catch (err) {
-                    toast.error('Failed to upload image');
+                    toast.error('Failed to upload image(s)');
                   } finally {
                     setImageUploading(false);
                   }
