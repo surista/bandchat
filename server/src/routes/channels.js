@@ -34,6 +34,13 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
             id: true,
             name: true
           }
+        },
+        pinnedSetlist: {
+          select: {
+            id: true,
+            name: true,
+            _count: { select: { songs: true } }
+          }
         }
       },
       orderBy: [{ position: 'asc' }, { name: 'asc' }]
@@ -868,6 +875,76 @@ router.post('/workspace/:workspaceId/dm', authenticate, isWorkspaceMember, async
   } catch (error) {
     console.error('Create DM error:', error);
     res.status(500).json({ error: 'Failed to create DM' });
+  }
+});
+
+// Pin a setlist to a channel
+router.post('/:channelId/pin-setlist', authenticate, async (req, res) => {
+  try {
+    const { setlistId } = req.body;
+    if (!setlistId) return res.status(400).json({ error: 'setlistId is required' });
+
+    const channel = await prisma.channel.findUnique({ where: { id: req.params.channelId } });
+    if (!channel) return res.status(404).json({ error: 'Channel not found' });
+
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: channel.workspaceId } }
+    });
+    if (!membership) return res.status(403).json({ error: 'Not a workspace member' });
+
+    // Verify setlist belongs to the same workspace
+    const setlist = await prisma.setlist.findUnique({ where: { id: setlistId } });
+    if (!setlist || setlist.workspaceId !== channel.workspaceId) {
+      return res.status(400).json({ error: 'Setlist not found in this workspace' });
+    }
+
+    const updated = await prisma.channel.update({
+      where: { id: req.params.channelId },
+      data: { pinnedSetlistId: setlistId },
+      include: {
+        pinnedSetlist: {
+          include: { songs: { include: { song: true }, orderBy: { position: 'asc' } } }
+        }
+      }
+    });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`channel:${channel.id}`).emit('channel:updated', { id: channel.id, pinnedSetlistId: setlistId, pinnedSetlist: updated.pinnedSetlist });
+    }
+
+    res.json({ pinnedSetlist: updated.pinnedSetlist });
+  } catch (error) {
+    console.error('Pin setlist error:', error);
+    res.status(500).json({ error: 'Failed to pin setlist' });
+  }
+});
+
+// Unpin setlist from a channel
+router.delete('/:channelId/pin-setlist', authenticate, async (req, res) => {
+  try {
+    const channel = await prisma.channel.findUnique({ where: { id: req.params.channelId } });
+    if (!channel) return res.status(404).json({ error: 'Channel not found' });
+
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: channel.workspaceId } }
+    });
+    if (!membership) return res.status(403).json({ error: 'Not a workspace member' });
+
+    await prisma.channel.update({
+      where: { id: req.params.channelId },
+      data: { pinnedSetlistId: null }
+    });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`channel:${channel.id}`).emit('channel:updated', { id: channel.id, pinnedSetlistId: null, pinnedSetlist: null });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Unpin setlist error:', error);
+    res.status(500).json({ error: 'Failed to unpin setlist' });
   }
 });
 

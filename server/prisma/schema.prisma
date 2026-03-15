@@ -177,8 +177,11 @@ model Channel {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  pinnedSetlistId String?
+
   workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   group     ChannelGroup?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  pinnedSetlist  Setlist?    @relation("ChannelPinnedSetlist", fields: [pinnedSetlistId], references: [id], onDelete: SetNull)
   members        ChannelMember[]
   messages       Message[]
   polls          Poll[]
@@ -403,12 +406,13 @@ model Setlist {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy   User?               @relation(fields: [createdById], references: [id], onDelete: SetNull)
-  songs       SetlistSong[]
-  gigs        Gig[]               // Legacy single-setlist relation
-  gigSetlists GigSetlist[]        // Multi-set support
-  performers  SetlistPerformer[]  // Band members who performed this setlist
+  workspace       Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy       User?               @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  songs           SetlistSong[]
+  gigs            Gig[]               // Legacy single-setlist relation
+  gigSetlists     GigSetlist[]        // Multi-set support
+  performers      SetlistPerformer[]  // Band members who performed this setlist
+  pinnedInChannels Channel[]          @relation("ChannelPinnedSetlist")
 
   @@unique([workspaceId, name])
   @@index([workspaceId])

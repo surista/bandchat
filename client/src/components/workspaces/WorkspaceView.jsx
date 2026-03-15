@@ -82,6 +82,7 @@ const BandKitty = lazyRetry(() => import('../band/BandKitty'));
 const AudioAnalyzer = lazyRetry(() => import('../band/AudioAnalyzer'));
 const PracticeDashboard = lazyRetry(() => import('../band/PracticeDashboard'));
 const SavedMessages = lazyRetry(() => import('../messages/SavedMessages'));
+const AllMessages = lazyRetry(() => import('../messages/AllMessages'));
 const StagePlotCreator = lazyRetry(() => import('../band/StagePlotCreator'));
 
 /** Safe search-highlight renderer — no dangerouslySetInnerHTML */
@@ -139,6 +140,7 @@ const BAND_VIEW_COMPONENTS = {
   analyzer: AudioAnalyzer,
   practice: PracticeDashboard,
   saved: SavedMessages,
+  'all-messages': AllMessages,
   'stage-plots': StagePlotCreator,
 };
 
@@ -162,6 +164,7 @@ const BAND_VIEW_EXTRA_PROPS = {
   archive: (ctx) => ({ isAdmin: ctx.isAdmin, workspace: ctx.workspace }),
   timeline: (ctx) => ({ isAdmin: ctx.isAdmin }),
   kitty: (ctx) => ({ isAdmin: ctx.isAdmin }),
+  'all-messages': (ctx) => ({ onSelectChannel: ctx.onSelectChannel }),
 };
 
 /** Views that should use bandViewKey as key prop */
@@ -779,7 +782,7 @@ function WorkspaceView() {
                 {(() => {
                   const BandComponent = BAND_VIEW_COMPONENTS[activeBandView];
                   if (!BandComponent) return null;
-                  const extraProps = BAND_VIEW_EXTRA_PROPS[activeBandView]?.({ workspace, isAdmin }) || {};
+                  const extraProps = BAND_VIEW_EXTRA_PROPS[activeBandView]?.({ workspace, isAdmin, onSelectChannel: (chId) => { const ch = channels.find(c => c.id === chId) || dms.find(d => d.id === chId); if (ch) { setSelectedChannel(ch); setActiveBandView(null); } } }) || {};
                   const keyProp = KEYED_BAND_VIEWS.has(activeBandView) ? bandViewKey : undefined;
                   return <BandComponent key={keyProp} workspaceId={workspaceId} {...extraProps} />;
                 })()}

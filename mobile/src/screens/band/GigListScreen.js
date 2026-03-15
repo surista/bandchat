@@ -234,34 +234,28 @@ export default function GigListScreen({ navigation, route }) {
     loadGigs();
   }, [loadGigs]);
 
-  // Group by month
+  // Split into UPCOMING (soonest first) and PAST (most recent first)
   const sections = useMemo(() => {
+    const now = new Date();
     const allGigs = [
       ...gigs,
       ...otherGigs.map(g => ({ ...g, _otherWorkspace: true, _workspaceName: g.workspace?.name })),
     ];
-    const sorted = allGigs.sort((a, b) => {
-      const da = a.date ? new Date(a.date) : new Date(0);
-      const db = b.date ? new Date(b.date) : new Date(0);
-      return sortNewest ? db - da : da - db;
-    });
 
-    const monthMap = {};
-    for (const gig of sorted) {
-      let monthKey = 'No Date';
-      if (gig.date) {
-        try {
-          monthKey = format(parseISO(gig.date), 'MMMM yyyy');
-        } catch {
-          monthKey = 'No Date';
-        }
-      }
-      if (!monthMap[monthKey]) monthMap[monthKey] = [];
-      monthMap[monthKey].push(gig);
-    }
+    const upcoming = allGigs
+      .filter(g => g.date && new Date(g.date) >= now && g.status !== 'CANCELLED')
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    return Object.entries(monthMap).map(([title, data]) => ({ title, data }));
-  }, [gigs, otherGigs, sortNewest]);
+    const past = allGigs
+      .filter(g => !g.date || new Date(g.date) < now || g.status === 'CANCELLED')
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+    const result = [];
+    if (upcoming.length > 0) result.push({ title: 'UPCOMING', data: upcoming });
+    if (past.length > 0) result.push({ title: 'PAST', data: past });
+    if (result.length === 0) result.push({ title: 'UPCOMING', data: [] });
+    return result;
+  }, [gigs, otherGigs]);
 
   const handleDuplicate = useCallback(async () => {
     if (!selectedGig) return;
@@ -540,18 +534,6 @@ export default function GigListScreen({ navigation, route }) {
         >
           <Text style={[styles.filterChipText, { color: showAllBands ? '#ffffff' : colors.textSecondary }]}>
             All Bands
-          </Text>
-        </TouchableOpacity>
-        <View style={[styles.filterDivider, { backgroundColor: colors.border }]} />
-        <TouchableOpacity
-          style={[styles.filterChip, { backgroundColor: colors.bgTertiary }]}
-          onPress={() => setSortNewest(prev => !prev)}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel={`Sort: ${sortNewest ? 'Newest first' : 'Oldest first'}`}
-        >
-          <Text style={[styles.filterChipText, { color: colors.textSecondary }]}>
-            {sortNewest ? '\u2193 Newest' : '\u2191 Oldest'}
           </Text>
         </TouchableOpacity>
       </ScrollView>

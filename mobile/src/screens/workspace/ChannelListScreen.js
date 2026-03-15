@@ -588,13 +588,12 @@ export default function ChannelListScreen({ navigation, route }) {
       .filter(c => !c.groupId)
       .sort((a, b) => a.name.localeCompare(b.name));
 
-    if (ungrouped.length > 0 || channelSections.length === 0) {
-      channelSections.unshift({
-        title: 'Channels',
-        showCreate: true,
-        data: ungrouped.map(c => ({ ...c, _type: 'channel' })),
-      });
-    }
+    // Always show "Channels" section with create button (even if all channels are in groups)
+    channelSections.unshift({
+      title: 'Channels',
+      showCreate: true,
+      data: ungrouped.map(c => ({ ...c, _type: 'channel' })),
+    });
 
     const dmSection = {
       title: 'Direct Messages',

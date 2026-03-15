@@ -44,6 +44,8 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   const [editingDescription, setEditingDescription] = useState(false);
   const [descriptionDraft, setDescriptionDraft] = useState('');
   const [slashCommandType, setSlashCommandType] = useState(null);
+  const [showSetlistPicker, setShowSetlistPicker] = useState(false);
+  const [setlistPickerList, setSetlistPickerList] = useState([]);
   const isAdmin = workspace?.members?.find(m => m.user?.id === user?.id)?.role === 'ADMIN';
   const lastReadAtRef = useRef(null);
   const descriptionSavedRef = useRef(false);
@@ -702,6 +704,52 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
               </span>
             )}
           </button>
+          {!channel.isDirect && (
+            <div className="relative">
+              <button
+                onClick={async () => {
+                  if (showSetlistPicker) {
+                    setShowSetlistPicker(false);
+                    return;
+                  }
+                  try {
+                    const data = await api.getSetlists(workspace.id);
+                    setSetlistPickerList(data);
+                  } catch {}
+                  setShowSetlistPicker(true);
+                }}
+                className={`p-2 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors ${showSetlistPicker ? 'text-[var(--color-text-primary)] bg-[var(--color-bg-tertiary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
+                title="Pin a setlist"
+              >
+                <span className="text-base">📋</span>
+              </button>
+              {showSetlistPicker && (
+                <div className="absolute right-0 top-full mt-1 w-64 bg-[var(--color-modal-bg)] border border-[var(--color-border)] rounded-lg shadow-xl z-50 py-1 max-h-64 overflow-y-auto">
+                  {setlistPickerList.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-[var(--color-text-muted)]">No setlists yet</div>
+                  ) : (
+                    setlistPickerList.map(s => (
+                      <button
+                        key={s.id}
+                        onClick={async () => {
+                          try {
+                            await api.pinSetlist(channel.id, s.id);
+                          } catch {}
+                          setShowSetlistPicker(false);
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] flex items-center justify-between"
+                      >
+                        <span className="truncate">{s.name}</span>
+                        {channel.pinnedSetlistId === s.id && (
+                          <span className="text-green-400 text-xs ml-2">pinned</span>
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           <button
             onClick={() => setShowMembers(prev => !prev)}
             className={`p-2 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors ${showMembers ? 'text-[var(--color-text-primary)] bg-[var(--color-bg-tertiary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
@@ -721,6 +769,30 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636a9 9 0 010 12.728M5.636 18.364a9 9 0 010-12.728m2.828 9.9a5 5 0 010-7.072m7.072 0a5 5 0 010 7.072" />
           </svg>
           You're offline — showing cached messages
+        </div>
+      )}
+
+      {/* Pinned Setlist Banner */}
+      {channel.pinnedSetlist && (
+        <div className="px-4 py-2 bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)] flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-[var(--color-text-muted)]">📋</span>
+            <span className="font-medium text-[var(--color-text-primary)]">{channel.pinnedSetlist.name}</span>
+            <span className="text-[var(--color-text-muted)]">
+              {channel.pinnedSetlist._count?.songs || 0} songs
+            </span>
+          </div>
+          <button
+            onClick={async () => {
+              try {
+                await api.unpinSetlist(channel.id);
+              } catch {}
+            }}
+            className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+            title="Unpin setlist"
+          >
+            Unpin
+          </button>
         </div>
       )}
 

@@ -676,6 +676,15 @@ function Sidebar({
               <span className="flex-1 truncate">Calendar</span>
             </button>
 
+            {/* All Messages shortcut */}
+            <button
+              onClick={() => onSelectBandView?.('all-messages')}
+              className={`channel-item w-full mx-2 mb-1 ${activeBandView === 'all-messages' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">💬</span>
+              <span className="flex-1 truncate">All Messages</span>
+            </button>
+
             {/* Saved Messages shortcut */}
             <button
               onClick={() => onSelectBandView?.('saved')}

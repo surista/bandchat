@@ -790,9 +790,14 @@ function GigCalendar({ workspaceId, workspace }) {
     ? allGigs.filter(g => g.type === filterType)
     : allGigs;
 
+  const now = new Date();
   const upcomingGigs = filteredGigs
-    .filter(g => new Date(g.date) >= new Date() && g.status !== 'CANCELLED')
+    .filter(g => new Date(g.date) >= now && g.status !== 'CANCELLED')
     .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  const pastGigs = filteredGigs
+    .filter(g => new Date(g.date) < now || g.status === 'CANCELLED')
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
 
   // Format time range helper
   const formatTimeRange = (startDate, endDate) => {
@@ -970,13 +975,6 @@ function GigCalendar({ workspaceId, workspace }) {
               <option value="RECORDING">Recording</option>
               <option value="OTHER">Other</option>
             </select>
-            <button
-              onClick={() => setSortNewest(prev => !prev)}
-              className="px-3 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded text-[var(--color-text-secondary)] text-sm hover:text-[var(--color-text-primary)] transition-colors"
-              title={sortNewest ? 'Showing newest first' : 'Showing oldest first'}
-            >
-              {sortNewest ? '↓ Newest' : '↑ Oldest'}
-            </button>
             <div className="flex bg-[var(--color-bg-tertiary)] rounded overflow-hidden">
               <button
                 onClick={() => setView('calendar')}
@@ -1217,65 +1215,122 @@ function GigCalendar({ workspaceId, workspace }) {
             </div>
           </div>
         ) : (
-          /* List View */
-          <div className={listMode === 'compact' ? 'bg-[var(--color-bg-secondary)] rounded-lg divide-y divide-[var(--color-border)]' : 'space-y-4'}>
-            {upcomingGigs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="text-5xl mb-4">📅</div>
-                <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
-                  No upcoming events
-                </h3>
-                <p className="text-[var(--color-text-muted)] max-w-sm mb-4">
-                  Schedule gigs, rehearsals, and other events to keep your band organized.
-                </p>
-                <button
-                  onClick={() => { setEditingGig(null); setShowForm(true); }}
-                  className="btn bg-green-600 hover:bg-green-700 text-white"
-                >
-                  + Add Event
-                </button>
-              </div>
-            ) : listMode === 'compact' ? (
-              /* Compact list header */
-              <>
-                <div className="flex items-center gap-3 px-3 py-2 text-xs text-[var(--color-text-muted)] font-medium border-b border-[var(--color-border)]">
-                  <div className="w-24">Date</div>
-                  <div className="w-24">Time</div>
-                  <div className="flex-1">Event</div>
-                  <div className="w-32 hidden md:block">Venue</div>
-                  <div className="w-24 text-right">Type</div>
-                  <div className="w-16"></div>
+          /* List View - Split into UPCOMING and PAST sections */
+          <div className="space-y-6">
+            {/* UPCOMING section */}
+            <div>
+              <h3 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider px-1 mb-2">Upcoming</h3>
+              {upcomingGigs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center bg-[var(--color-bg-secondary)] rounded-lg">
+                  <div className="text-4xl mb-3">📅</div>
+                  <h3 className="text-base font-medium text-[var(--color-text-primary)] mb-1">
+                    No upcoming events
+                  </h3>
+                  <p className="text-[var(--color-text-muted)] text-sm max-w-sm mb-3">
+                    Schedule gigs, rehearsals, and other events to keep your band organized.
+                  </p>
+                  <button
+                    onClick={() => { setEditingGig(null); setShowForm(true); }}
+                    className="btn bg-green-600 hover:bg-green-700 text-white text-sm"
+                  >
+                    + Add Event
+                  </button>
                 </div>
-                {upcomingGigs.map(gig => (
-                  <GigCompactRow
-                    key={gig.id}
-                    gig={gig}
-                    isAdmin={isAdmin}
-                    getTypeColor={getTypeColor}
-                    formatTimeRange={formatTimeRange}
-                    onEdit={() => { setEditingGig(gig); setShowForm(true); }}
-                    onDelete={() => setDeleteGigId(gig.id)}
-                    onContextMenu={(pos) => setGigContextMenu({ gigId: gig.id, ...pos })}
-                  />
-                ))}
-              </>
-            ) : (
-              upcomingGigs.map(gig => (
-                <GigListCard
-                  key={gig.id}
-                  gig={gig}
-                  isAdmin={isAdmin}
-                  getTypeColor={getTypeColor}
-                  getStatusBadge={getStatusBadge}
-                  formatTimeRange={formatTimeRange}
-                  onEdit={() => { setEditingGig(gig); setShowForm(true); }}
-                  onDuplicate={() => handleDuplicateGig(gig)}
-                  onComplete={() => handleCompleteGig(gig)}
-                  onDelete={() => setDeleteGigId(gig.id)}
-                  onContextMenu={(pos) => setGigContextMenu({ gigId: gig.id, ...pos })}
-                  getGoogleCalendarUrl={getGoogleCalendarUrl}
-                />
-              ))
+              ) : (
+                <div className={listMode === 'compact' ? 'bg-[var(--color-bg-secondary)] rounded-lg divide-y divide-[var(--color-border)]' : 'space-y-4'}>
+                  {listMode === 'compact' ? (
+                    <>
+                      <div className="flex items-center gap-3 px-3 py-2 text-xs text-[var(--color-text-muted)] font-medium border-b border-[var(--color-border)]">
+                        <div className="w-24">Date</div>
+                        <div className="w-24">Time</div>
+                        <div className="flex-1">Event</div>
+                        <div className="w-32 hidden md:block">Venue</div>
+                        <div className="w-24 text-right">Type</div>
+                        <div className="w-16"></div>
+                      </div>
+                      {upcomingGigs.map(gig => (
+                        <GigCompactRow
+                          key={gig.id}
+                          gig={gig}
+                          isAdmin={isAdmin}
+                          getTypeColor={getTypeColor}
+                          formatTimeRange={formatTimeRange}
+                          onEdit={() => { setEditingGig(gig); setShowForm(true); }}
+                          onDelete={() => setDeleteGigId(gig.id)}
+                          onContextMenu={(pos) => setGigContextMenu({ gigId: gig.id, ...pos })}
+                        />
+                      ))}
+                    </>
+                  ) : (
+                    upcomingGigs.map(gig => (
+                      <GigListCard
+                        key={gig.id}
+                        gig={gig}
+                        isAdmin={isAdmin}
+                        getTypeColor={getTypeColor}
+                        getStatusBadge={getStatusBadge}
+                        formatTimeRange={formatTimeRange}
+                        onEdit={() => { setEditingGig(gig); setShowForm(true); }}
+                        onDuplicate={() => handleDuplicateGig(gig)}
+                        onComplete={() => handleCompleteGig(gig)}
+                        onDelete={() => setDeleteGigId(gig.id)}
+                        onContextMenu={(pos) => setGigContextMenu({ gigId: gig.id, ...pos })}
+                        getGoogleCalendarUrl={getGoogleCalendarUrl}
+                      />
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* PAST section */}
+            {pastGigs.length > 0 && (
+              <div>
+                <h3 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider px-1 mb-2">Past</h3>
+                <div className={listMode === 'compact' ? 'bg-[var(--color-bg-secondary)] rounded-lg divide-y divide-[var(--color-border)] opacity-75' : 'space-y-4 opacity-75'}>
+                  {listMode === 'compact' ? (
+                    <>
+                      <div className="flex items-center gap-3 px-3 py-2 text-xs text-[var(--color-text-muted)] font-medium border-b border-[var(--color-border)]">
+                        <div className="w-24">Date</div>
+                        <div className="w-24">Time</div>
+                        <div className="flex-1">Event</div>
+                        <div className="w-32 hidden md:block">Venue</div>
+                        <div className="w-24 text-right">Type</div>
+                        <div className="w-16"></div>
+                      </div>
+                      {pastGigs.map(gig => (
+                        <GigCompactRow
+                          key={gig.id}
+                          gig={gig}
+                          isAdmin={isAdmin}
+                          getTypeColor={getTypeColor}
+                          formatTimeRange={formatTimeRange}
+                          onEdit={() => { setEditingGig(gig); setShowForm(true); }}
+                          onDelete={() => setDeleteGigId(gig.id)}
+                          onContextMenu={(pos) => setGigContextMenu({ gigId: gig.id, ...pos })}
+                        />
+                      ))}
+                    </>
+                  ) : (
+                    pastGigs.map(gig => (
+                      <GigListCard
+                        key={gig.id}
+                        gig={gig}
+                        isAdmin={isAdmin}
+                        getTypeColor={getTypeColor}
+                        getStatusBadge={getStatusBadge}
+                        formatTimeRange={formatTimeRange}
+                        onEdit={() => { setEditingGig(gig); setShowForm(true); }}
+                        onDuplicate={() => handleDuplicateGig(gig)}
+                        onComplete={() => handleCompleteGig(gig)}
+                        onDelete={() => setDeleteGigId(gig.id)}
+                        onContextMenu={(pos) => setGigContextMenu({ gigId: gig.id, ...pos })}
+                        getGoogleCalendarUrl={getGoogleCalendarUrl}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
             )}
           </div>
         )}

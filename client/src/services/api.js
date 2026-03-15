@@ -594,6 +594,11 @@ class ApiService {
     return this.request('/blocks');
   }
 
+  async getMessageTimeline(workspaceId, cursor = null) {
+    const params = cursor ? `?cursor=${cursor}` : '';
+    return this.request(`/messages/timeline/${workspaceId}${params}`);
+  }
+
   async searchMessages(workspaceId, query, channelId = null, authorId = null) {
     const params = new URLSearchParams({ q: query });
     if (channelId) params.append('channelId', channelId);
@@ -635,6 +640,19 @@ class ApiService {
 
   async getPinnedMessages(channelId) {
     return this.request(`/messages/channel/${channelId}/pins`);
+  }
+
+  async pinSetlist(channelId, setlistId) {
+    return this.request(`/channels/${channelId}/pin-setlist`, {
+      method: 'POST',
+      body: JSON.stringify({ setlistId })
+    });
+  }
+
+  async unpinSetlist(channelId) {
+    return this.request(`/channels/${channelId}/pin-setlist`, {
+      method: 'DELETE'
+    });
   }
 
   // Saved messages (bookmarks)
