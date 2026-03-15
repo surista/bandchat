@@ -78,6 +78,7 @@ function StageEditor({ plotData, onChange, onSave }) {
   const saveTimerRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState({});
+  const [selectedIdx, setSelectedIdx] = useState(null);
 
   const toggleSection = (label) => {
     setCollapsedSections(prev => ({ ...prev, [label]: !prev[label] }));
@@ -149,10 +150,22 @@ function StageEditor({ plotData, onChange, onSave }) {
     dragRef.current = { type: null, item: null, offsetX: 0, offsetY: 0 };
   };
 
-  const removeItem = (idx) => setItems(prev => prev.filter((_, i) => i !== idx));
+  const removeItem = (idx) => { setItems(prev => prev.filter((_, i) => i !== idx)); setSelectedIdx(null); };
 
   const updateItemText = (idx, text) => {
     setItems(prev => prev.map((it, i) => i === idx ? { ...it, text } : it));
+  };
+
+  const scaleItem = (idx, delta) => {
+    setItems(prev => prev.map((it, i) => i === idx ? { ...it, scale: Math.max(0.5, Math.min(3, (it.scale || 1) + delta)) } : it));
+  };
+
+  const flipItemH = (idx) => {
+    setItems(prev => prev.map((it, i) => i === idx ? { ...it, flipX: !(it.flipX || false) } : it));
+  };
+
+  const rotateItem = (idx) => {
+    setItems(prev => prev.map((it, i) => i === idx ? { ...it, rotation: ((it.rotation || 0) + 90) % 360 } : it));
   };
 
   // ── Stage resize ──
@@ -287,6 +300,7 @@ function StageEditor({ plotData, onChange, onSave }) {
             onDragOver={onStageDragOver}
             onDragLeave={onStageDragLeave}
             onDrop={onStageDrop}
+            onClick={() => setSelectedIdx(null)}
           >
             {items.length === 0 && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -295,34 +309,61 @@ function StageEditor({ plotData, onChange, onSave }) {
                 </span>
               </div>
             )}
-            {items.map((item, idx) => (
-              <div
-                key={item.id}
-                className={`sp-stage-item ${item.type === 'text' ? 'sp-stage-text' : ''}`}
-                style={{ left: item.x, top: item.y }}
-                draggable
-                onDragStart={(e) => onItemDragStart(e, idx)}
-                onDragEnd={onItemDragEnd}
-              >
-                {item.type === 'text' ? (
-                  <input
-                    className="sp-text-input"
-                    value={item.text || ''}
-                    onChange={(e) => updateItemText(idx, e.target.value)}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
-                    draggable={false}
-                    placeholder="Type here..."
-                  />
-                ) : (
-                  <>
-                    <span dangerouslySetInnerHTML={{ __html: SVG_TEMPLATES[item.type] }} />
-                    <span className="sp-item-label bg-black/60 text-white">{LABEL_MAP[item.type]}</span>
-                  </>
-                )}
-                <button className="sp-delete-btn bg-red-500" onClick={() => removeItem(idx)}>&times;</button>
-              </div>
-            ))}
+            {items.map((item, idx) => {
+              const s = item.scale || 1;
+              const transformParts = [];
+              if (s !== 1) transformParts.push(`scale(${s})`);
+              if (item.flipX) transformParts.push('scaleX(-1)');
+              if (item.rotation) transformParts.push(`rotate(${item.rotation}deg)`);
+              const transform = transformParts.length > 0 ? transformParts.join(' ') : undefined;
+              const isSelected = selectedIdx === idx;
+
+              return (
+                <div
+                  key={item.id}
+                  className={`sp-stage-item ${item.type === 'text' ? 'sp-stage-text' : ''} ${isSelected ? 'ring-2 ring-purple-400 ring-offset-1 ring-offset-transparent rounded' : ''}`}
+                  style={{ left: item.x, top: item.y, transform, transformOrigin: 'center center' }}
+                  draggable
+                  onDragStart={(e) => onItemDragStart(e, idx)}
+                  onDragEnd={onItemDragEnd}
+                  onClick={(e) => { e.stopPropagation(); setSelectedIdx(isSelected ? null : idx); }}
+                >
+                  {item.type === 'text' ? (
+                    <input
+                      className="sp-text-input"
+                      value={item.text || ''}
+                      onChange={(e) => updateItemText(idx, e.target.value)}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
+                      draggable={false}
+                      placeholder="Type here..."
+                    />
+                  ) : (
+                    <>
+                      <span dangerouslySetInnerHTML={{ __html: SVG_TEMPLATES[item.type] }} />
+                      <span className="sp-item-label bg-black/60 text-white">{LABEL_MAP[item.type]}</span>
+                    </>
+                  )}
+                  <button className="sp-delete-btn bg-red-500" onClick={(e) => { e.stopPropagation(); removeItem(idx); }}>&times;</button>
+                  {/* Selection toolbar */}
+                  {isSelected && item.type !== 'text' && (
+                    <div
+                      className="absolute -bottom-9 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-gray-800 rounded-lg px-1.5 py-1 shadow-lg border border-gray-600 z-50"
+                      onClick={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      draggable={false}
+                    >
+                      <button onClick={() => scaleItem(idx, -0.25)} className="w-6 h-6 text-xs text-white hover:bg-gray-600 rounded flex items-center justify-center" title="Smaller">−</button>
+                      <span className="text-[10px] text-gray-300 w-8 text-center">{Math.round(s * 100)}%</span>
+                      <button onClick={() => scaleItem(idx, 0.25)} className="w-6 h-6 text-xs text-white hover:bg-gray-600 rounded flex items-center justify-center" title="Bigger">+</button>
+                      <div className="w-px h-4 bg-gray-600" />
+                      <button onClick={() => flipItemH(idx)} className="w-6 h-6 text-xs text-white hover:bg-gray-600 rounded flex items-center justify-center" title="Flip horizontal">↔</button>
+                      <button onClick={() => rotateItem(idx)} className="w-6 h-6 text-xs text-white hover:bg-gray-600 rounded flex items-center justify-center" title="Rotate 90°">↻</button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* Resize handles */}
@@ -445,7 +486,12 @@ export default function StagePlotCreator({ workspaceId }) {
       }
       const svg = SVG_TEMPLATES[item.type] || '';
       const label = LABEL_MAP[item.type] || item.type;
-      return `<div style="position:absolute;left:${item.x}px;top:${item.y}px;display:flex;flex-direction:column;align-items:center;gap:2px">${svg}<span style="font-size:9px;text-transform:uppercase;letter-spacing:0.5px;background:rgba(0,0,0,0.6);color:#fff;padding:1px 4px;border-radius:2px;white-space:nowrap">${escHtml(label)}</span></div>`;
+      const transformParts = [];
+      if (item.scale && item.scale !== 1) transformParts.push(`scale(${item.scale})`);
+      if (item.flipX) transformParts.push('scaleX(-1)');
+      if (item.rotation) transformParts.push(`rotate(${item.rotation}deg)`);
+      const transformStyle = transformParts.length > 0 ? `transform:${transformParts.join(' ')};transform-origin:center center;` : '';
+      return `<div style="position:absolute;left:${item.x}px;top:${item.y}px;display:flex;flex-direction:column;align-items:center;gap:2px;${transformStyle}">${svg}<span style="font-size:9px;text-transform:uppercase;letter-spacing:0.5px;background:rgba(0,0,0,0.6);color:#fff;padding:1px 4px;border-radius:2px;white-space:nowrap">${escHtml(label)}</span></div>`;
     }).join('');
 
     const isLandscape = sw > sh;
