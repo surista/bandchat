@@ -35,11 +35,11 @@ function JoinWorkspace() {
   }
 
   return (
-    <div className="min-h-screen bg-slack-purple flex flex-col">
+    <div className="min-h-screen bg-gray-950 flex flex-col">
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg p-8 max-w-md w-full text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Unable to Join</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
+        <div className="bg-gray-900 rounded-xl p-8 max-w-md w-full text-center border border-gray-800">
+          <h2 className="text-2xl font-bold text-white mb-4">Unable to Join</h2>
+          <p className="text-gray-400 mb-6">{error}</p>
           <button
             onClick={() => navigate('/')}
             className="btn btn-primary"

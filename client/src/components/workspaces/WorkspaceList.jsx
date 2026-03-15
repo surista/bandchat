@@ -106,7 +106,7 @@ function WorkspaceList() {
         </div>
 
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded mb-4">
             {error}
           </div>
         )}
@@ -126,17 +126,17 @@ function WorkspaceList() {
               <button
                 key={workspace.id}
                 onClick={() => navigate(`/workspace/${workspace.id}`)}
-                className="w-full bg-white rounded-lg p-4 flex items-center justify-between hover:shadow-lg transition-shadow text-left"
+                className="w-full bg-[var(--color-bg-secondary)] rounded-lg p-4 flex items-center justify-between hover:bg-[var(--color-bg-tertiary)] transition-colors text-left border border-[var(--color-border)]"
               >
                 <div>
-                  <h3 className="font-semibold text-lg text-gray-900">
+                  <h3 className="font-semibold text-lg text-[var(--color-text-primary)]">
                     {workspace.name}
                   </h3>
-                  <p className="text-gray-500 text-sm">
+                  <p className="text-[var(--color-text-muted)] text-sm">
                     {workspace._count?.members || 0} members · {workspace._count?.channels || 0} channels
                   </p>
                 </div>
-                <span className="text-gray-400">→</span>
+                <span className="text-[var(--color-text-muted)]">→</span>
               </button>
             ))}
           </div>
@@ -150,14 +150,14 @@ function WorkspaceList() {
         >
           <form onSubmit={handleJoinWorkspace} className="p-6">
             <div className="mb-4">
-              <label className="block text-gray-700 font-medium mb-2">
+              <label className="block text-[var(--color-text-secondary)] font-medium mb-2">
                 Invite Code
               </label>
               <input
                 type="text"
                 value={inviteCode}
                 onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                className="w-full px-4 py-2 border border-gray-300 rounded font-mono text-lg tracking-wider"
+                className="modal-input w-full font-mono text-lg tracking-wider"
                 placeholder="ABC123"
                 maxLength={8}
                 required

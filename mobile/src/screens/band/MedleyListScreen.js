@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import Badge from '../../components/Badge';
+import ErrorState from '../../components/ErrorState';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
 import { useLayout } from '../../hooks/useLayout';
@@ -25,6 +26,7 @@ export default function MedleyListScreen({ navigation, route }) {
   const [medleys, setMedleys] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
 
   // Action sheet
@@ -51,11 +53,12 @@ export default function MedleyListScreen({ navigation, route }) {
   }, [navigation, workspaceId, colors.primary]);
 
   const loadMedleys = useCallback(async () => {
+    setLoadError(null);
     try {
       const data = await api.getMedleys(workspaceId);
       setMedleys(data);
     } catch (err) {
-      // silently fail
+      setLoadError('Could not load medleys');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -198,6 +201,19 @@ export default function MedleyListScreen({ navigation, route }) {
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loadError && medleys.length === 0) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
+        <ErrorState
+          emoji={'\uD83C\uDFB6'}
+          title="Couldn't load medleys"
+          message={loadError}
+          onRetry={() => { setLoadError(null); loadMedleys(); }}
+        />
       </SafeAreaView>
     );
   }

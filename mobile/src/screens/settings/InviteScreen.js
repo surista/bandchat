@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import ErrorState from '../../components/ErrorState';
 import api from '../../services/api';
 import formatDate from '../../utils/formatDate';
 import { useLayout } from '../../hooks/useLayout';
@@ -26,6 +27,7 @@ export default function InviteScreen({ route }) {
 
   const [inviteData, setInviteData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -35,6 +37,7 @@ export default function InviteScreen({ route }) {
   const [sending, setSending] = useState(false);
 
   const loadInviteData = useCallback(async () => {
+    setLoadError(null);
     try {
       const [invite, ws] = await Promise.all([
         api.getInviteCode(workspaceId),
@@ -44,7 +47,7 @@ export default function InviteScreen({ route }) {
       const membership = ws.members?.find(m => m.userId === user?.id);
       setIsAdmin(membership?.role === 'ADMIN');
     } catch (err) {
-      // silently fail
+      setLoadError('Could not load invite data');
     } finally {
       setLoading(false);
     }
@@ -118,6 +121,19 @@ export default function InviteScreen({ route }) {
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loadError && !inviteData) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
+        <ErrorState
+          emoji={'\u2709\uFE0F'}
+          title="Couldn't load invite"
+          message={loadError}
+          onRetry={() => { setLoadError(null); loadInviteData(); }}
+        />
       </SafeAreaView>
     );
   }

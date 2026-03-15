@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import formatDate from '../../utils/formatDate';
 import api from '../../services/api';
+import ErrorState from '../../components/ErrorState';
 import { useLayout } from '../../hooks/useLayout';
 
 const TABS = ['band', 'my', 'leaderboard'];
@@ -48,6 +49,7 @@ export default function AchievementsScreen({ navigation, route }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const [checking, setChecking] = useState(false);
   const [activeTab, setActiveTab] = useState('band');
   const [newAchievements, setNewAchievements] = useState([]);
@@ -74,6 +76,7 @@ export default function AchievementsScreen({ navigation, route }) {
   }, [navigation, colors.primary, checking]);
 
   const loadData = useCallback(async () => {
+    setLoadError(null);
     try {
       const [defs, band, my, lb] = await Promise.all([
         api.getAchievementDefinitions(),
@@ -86,7 +89,7 @@ export default function AchievementsScreen({ navigation, route }) {
       setMyAchievements(my);
       setLeaderboard(lb);
     } catch (err) {
-      // silently fail
+      setLoadError('Could not load achievements');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -172,6 +175,19 @@ export default function AchievementsScreen({ navigation, route }) {
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loadError && definitions.length === 0) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
+        <ErrorState
+          emoji={'\uD83C\uDFC6'}
+          title="Couldn't load achievements"
+          message={loadError}
+          onRetry={() => { setLoadError(null); loadData(); }}
+        />
       </SafeAreaView>
     );
   }

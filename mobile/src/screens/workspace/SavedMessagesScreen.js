@@ -10,6 +10,7 @@ import {
   Image,
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import ErrorState from '../../components/ErrorState';
 import api from '../../services/api';
 import { format } from 'date-fns';
 import { useLayout } from '../../hooks/useLayout';
@@ -20,6 +21,7 @@ export default function SavedMessagesScreen({ navigation, route }) {
   const { isTablet, contentMaxWidth } = useLayout();
   const [savedMessages, setSavedMessages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
     navigation.setOptions({
@@ -30,11 +32,12 @@ export default function SavedMessagesScreen({ navigation, route }) {
   }, [navigation, colors]);
 
   const loadSaved = useCallback(async () => {
+    setLoadError(null);
     try {
       const data = await api.getSavedMessages(workspaceId);
       setSavedMessages(data);
     } catch (err) {
-      console.error('Failed to load saved messages:', err);
+      setLoadError('Could not load saved messages');
     } finally {
       setLoading(false);
     }
@@ -116,6 +119,19 @@ export default function SavedMessagesScreen({ navigation, route }) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.bgPrimary }]}>
         <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (loadError && savedMessages.length === 0) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+        <ErrorState
+          emoji={'\uD83D\uDD16'}
+          title="Couldn't load saved messages"
+          message={loadError}
+          onRetry={() => { setLoadError(null); loadSaved(); }}
+        />
       </View>
     );
   }

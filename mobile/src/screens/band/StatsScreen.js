@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
+import ErrorState from '../../components/ErrorState';
 import api from '../../services/api';
 import { formatTotalDuration } from '../../utils/formatDuration';
 import { useLayout } from '../../hooks/useLayout';
@@ -102,16 +103,18 @@ export default function StatsScreen({ navigation, route }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(null);
 
   const loadingRef = useRef(loading);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
 
   const loadStats = useCallback(async () => {
+    setLoadError(null);
     try {
       const data = await api.getGigStats(workspaceId);
       setStats(data);
     } catch (err) {
-      // silently fail
+      setLoadError('Could not load stats');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -140,6 +143,19 @@ export default function StatsScreen({ navigation, route }) {
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loadError && !stats) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
+        <ErrorState
+          emoji={'\uD83D\uDCCA'}
+          title="Couldn't load stats"
+          message={loadError}
+          onRetry={() => { setLoadError(null); loadStats(); }}
+        />
       </SafeAreaView>
     );
   }

@@ -573,6 +573,7 @@ export async function restoreFromBackup(key, onProgress) {
           position: ch.position ?? 0,
           createdAt: new Date(ch.createdAt),
           updatedAt: ch.updatedAt ? new Date(ch.updatedAt) : new Date(ch.createdAt),
+          // pinnedSetlistId deferred — set after setlists are restored
         })),
         skipDuplicates: true,
       });
@@ -688,6 +689,7 @@ export async function restoreFromBackup(key, onProgress) {
             parentId: msg.parentId || null,
             removedUserName: msg.removedUserName || null,
             isHidden: msg.isHidden || false,
+            hidePreview: msg.hidePreview || false,
             createdAt: new Date(msg.createdAt),
             updatedAt: msg.updatedAt ? new Date(msg.updatedAt) : new Date(msg.createdAt),
           }
@@ -793,6 +795,12 @@ export async function restoreFromBackup(key, onProgress) {
           skipDuplicates: true,
         });
       }
+    }
+
+    // Deferred: set pinnedSetlistId on channels (now that setlists exist)
+    const channelsWithPinnedSetlist = data.channels.filter(ch => ch.pinnedSetlistId);
+    for (const ch of channelsWithPinnedSetlist) {
+      await tx.channel.update({ where: { id: ch.id }, data: { pinnedSetlistId: ch.pinnedSetlistId } });
     }
 
     // --- Gigs ---
@@ -1082,6 +1090,7 @@ export async function restoreFromBackup(key, onProgress) {
           description: t.description || null,
           date: new Date(t.date),
           kittyId: t.kittyId,
+          gigId: t.gigId || null,
           createdById: t.createdById || null,
           removedCreatorName: t.removedCreatorName || null,
           createdAt: t.createdAt ? new Date(t.createdAt) : new Date(),
@@ -2125,6 +2134,7 @@ export async function restoreWorkspaceBackup(key, onProgress) {
               parentId: msg.parentId || null,
               removedUserName: authorResolved ? (msg.removedUserName || null) : (msg.removedUserName || getRemovedName(msg.authorId)),
               isHidden: msg.isHidden || false,
+              hidePreview: msg.hidePreview || false,
               createdAt: new Date(msg.createdAt),
               updatedAt: msg.updatedAt ? new Date(msg.updatedAt) : new Date(msg.createdAt),
             },
@@ -2211,6 +2221,12 @@ export async function restoreWorkspaceBackup(key, onProgress) {
             skipDuplicates: true,
           });
         }
+      }
+
+      // Deferred: set pinnedSetlistId on channels (now that setlists exist)
+      const wsChannelsWithPinnedSetlist = data.channels.filter(ch => ch.pinnedSetlistId);
+      for (const ch of wsChannelsWithPinnedSetlist) {
+        await tx.channel.update({ where: { id: ch.id }, data: { pinnedSetlistId: ch.pinnedSetlistId } });
       }
 
       // --- Gigs ---

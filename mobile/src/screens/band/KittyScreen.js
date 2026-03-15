@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import ActionSheet from '../../components/ActionSheet';
+import ErrorState from '../../components/ErrorState';
 import formatDate from '../../utils/formatDate';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
@@ -96,6 +97,7 @@ export default function KittyScreen({ navigation, route }) {
   const [kitty, setKitty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [filterTab, setFilterTab] = useState('all');
 
@@ -155,6 +157,7 @@ export default function KittyScreen({ navigation, route }) {
   }, [navigation, colors.primary, isAdmin, kitty]);
 
   const loadData = useCallback(async () => {
+    setLoadError(null);
     try {
       const [data, ws] = await Promise.all([
         api.getKitty(workspaceId),
@@ -164,7 +167,7 @@ export default function KittyScreen({ navigation, route }) {
       const membership = ws.members?.find(m => m.userId === user?.id);
       setIsAdmin(membership?.role === 'ADMIN');
     } catch (err) {
-      // silently fail
+      setLoadError('Could not load kitty data');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -375,6 +378,19 @@ export default function KittyScreen({ navigation, route }) {
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loadError && !kitty) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
+        <ErrorState
+          emoji={'\uD83D\uDCB0'}
+          title="Couldn't load kitty"
+          message={loadError}
+          onRetry={() => { setLoadError(null); loadData(); }}
+        />
       </SafeAreaView>
     );
   }

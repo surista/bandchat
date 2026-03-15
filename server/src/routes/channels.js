@@ -882,15 +882,27 @@ router.post('/workspace/:workspaceId/dm', authenticate, isWorkspaceMember, async
 router.post('/:channelId/pin-setlist', authenticate, async (req, res) => {
   try {
     const { setlistId } = req.body;
-    if (!setlistId) return res.status(400).json({ error: 'setlistId is required' });
+    if (!setlistId || typeof setlistId !== 'string' || setlistId.length > 100) {
+      return res.status(400).json({ error: 'Valid setlistId is required' });
+    }
 
     const channel = await prisma.channel.findUnique({ where: { id: req.params.channelId } });
     if (!channel) return res.status(404).json({ error: 'Channel not found' });
 
+    // Check workspace membership and require admin role
     const membership = await prisma.workspaceMember.findUnique({
       where: { userId_workspaceId: { userId: req.user.id, workspaceId: channel.workspaceId } }
     });
     if (!membership) return res.status(403).json({ error: 'Not a workspace member' });
+    if (membership.role !== 'ADMIN') return res.status(403).json({ error: 'Only admins can pin setlists to channels' });
+
+    // For private channels, verify the user is a member
+    if (channel.isPrivate) {
+      const channelMember = await prisma.channelMember.findUnique({
+        where: { userId_channelId: { userId: req.user.id, channelId: channel.id } }
+      });
+      if (!channelMember) return res.status(403).json({ error: 'Not a member of this channel' });
+    }
 
     // Verify setlist belongs to the same workspace
     const setlist = await prisma.setlist.findUnique({ where: { id: setlistId } });
@@ -930,6 +942,7 @@ router.delete('/:channelId/pin-setlist', authenticate, async (req, res) => {
       where: { userId_workspaceId: { userId: req.user.id, workspaceId: channel.workspaceId } }
     });
     if (!membership) return res.status(403).json({ error: 'Not a workspace member' });
+    if (membership.role !== 'ADMIN') return res.status(403).json({ error: 'Only admins can unpin setlists' });
 
     await prisma.channel.update({
       where: { id: req.params.channelId },

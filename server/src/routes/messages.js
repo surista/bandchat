@@ -681,7 +681,7 @@ router.get('/search/:workspaceId', authenticate, searchLimiter, async (req, res)
 });
 
 // Get timeline (all messages across accessible channels)
-router.get('/timeline/:workspaceId', authenticate, async (req, res) => {
+router.get('/timeline/:workspaceId', authenticate, searchLimiter, async (req, res) => {
   try {
     const { cursor, limit = 50 } = req.query;
     const take = Math.min(parseInt(limit) || 50, 100);

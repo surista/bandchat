@@ -94,11 +94,10 @@ export const setupSocketHandlers = (io) => {
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
 
-      const user = await prisma.user.findUnique({
-        where: { id: decoded.userId },
+      const user = await prisma.user.findFirst({
+        where: { id: decoded.userId, deletedAt: null },
         select: {
           id: true,
-          // L20: email removed - not needed for socket operations
           displayName: true,
           avatarUrl: true
         }

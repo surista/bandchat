@@ -10,6 +10,8 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +20,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import { successNotification } from '../../utils/haptics';
+import ErrorState from '../../components/ErrorState';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
 
@@ -38,6 +41,7 @@ export default function PollsScreen({ navigation, route }) {
   const [polls, setPolls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const [showClosed, setShowClosed] = useState(false);
 
   // Per-poll vote selections (keyed by poll id)
@@ -76,11 +80,12 @@ export default function PollsScreen({ navigation, route }) {
   }, [navigation, colors.primary]);
 
   const loadPolls = useCallback(async () => {
+    setLoadError(null);
     try {
       const data = await api.getPolls(workspaceId, { includeCompleted: showClosed });
       setPolls(data);
     } catch (err) {
-      // silently fail
+      setLoadError('Could not load polls');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -361,6 +366,19 @@ export default function PollsScreen({ navigation, route }) {
     );
   }
 
+  if (loadError && polls.length === 0) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
+        <ErrorState
+          emoji={'\uD83D\uDDF3\uFE0F'}
+          title="Couldn't load polls"
+          message={loadError}
+          onRetry={() => { setLoadError(null); loadPolls(); }}
+        />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       {/* Show closed toggle */}
@@ -403,7 +421,7 @@ export default function PollsScreen({ navigation, route }) {
 
       {/* Create Modal */}
       <Modal visible={showCreate} transparent animationType="fade" onRequestClose={() => setShowCreate(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Create Poll</Text>
@@ -505,7 +523,7 @@ export default function PollsScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Action Sheet */}

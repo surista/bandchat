@@ -11,6 +11,7 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { mediumImpact, successNotification } from '../../utils/haptics';
+import ErrorState from '../../components/ErrorState';
 import api from '../../services/api';
 import ActionSheet from '../../components/ActionSheet';
 import { format } from 'date-fns';
@@ -24,15 +25,17 @@ export default function StagePlotListScreen({ navigation, route }) {
 
   const [plots, setPlots] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [selectedPlot, setSelectedPlot] = useState(null);
   const [showActions, setShowActions] = useState(false);
 
   const loadPlots = useCallback(async () => {
+    setLoadError(null);
     try {
       const data = await api.getStagePlots(workspaceId);
       setPlots(data);
     } catch (err) {
-      // silently fail
+      setLoadError('Could not load stage plots');
     } finally {
       setLoading(false);
     }
@@ -134,6 +137,19 @@ export default function StagePlotListScreen({ navigation, route }) {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
+      </View>
+    );
+  }
+
+  if (loadError && plots.length === 0) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
+        <ErrorState
+          emoji={'\uD83C\uDFAD'}
+          title="Couldn't load stage plots"
+          message={loadError}
+          onRetry={() => { setLoadError(null); loadPlots(); }}
+        />
       </View>
     );
   }

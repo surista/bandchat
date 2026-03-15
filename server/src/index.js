@@ -146,6 +146,7 @@ httpServer.listen(PORT, async () => {
             prisma.timelineEvent.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
             prisma.recording.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
             prisma.kittyTransaction.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
+            prisma.stagePlot.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
             prisma.pinnedMessage.updateMany({ where: { pinnedById: user.id }, data: { pinnedById: null } }),
             prisma.user.delete({ where: { id: user.id } }),
           ], { timeout: 30000 });

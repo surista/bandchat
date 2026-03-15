@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
 
 const MIN_FONT_SIZE = 12;
@@ -16,6 +17,7 @@ const DEFAULT_FONT_SIZE = 18;
 
 export default function LyricsScreen({ navigation, route }) {
   const { lyrics, songTitle, duration } = route.params;
+  const insets = useSafeAreaInsets();
 
   const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
   const [autoScrolling, setAutoScrolling] = useState(false);
@@ -91,7 +93,7 @@ export default function LyricsScreen({ navigation, route }) {
       <StatusBar hidden />
 
       {/* Top bar */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity
           style={styles.closeButton}
           onPress={handleClose}
@@ -171,7 +173,7 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 50,
+    paddingTop: 50, // overridden inline with safe area insets
     paddingBottom: 12,
     paddingHorizontal: 16,
     backgroundColor: '#111',
