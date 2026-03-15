@@ -51,6 +51,8 @@ export default function SetlistListScreen({ navigation, route }) {
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
+  const [newDate, setNewDate] = useState('');
+  const [newVenue, setNewVenue] = useState('');
   const [creating, setCreating] = useState(false);
 
   // Action sheet
@@ -113,18 +115,22 @@ export default function SetlistListScreen({ navigation, route }) {
       const created = await api.createSetlist(workspaceId, {
         name,
         description: newDescription.trim() || null,
+        performedAt: newDate.trim() || null,
+        venue: newVenue.trim() || null,
       });
       successNotification();
       setShowCreate(false);
       setNewName('');
       setNewDescription('');
+      setNewDate('');
+      setNewVenue('');
       navigation.navigate('SetlistDetail', { setlistId: created.id, workspaceId });
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to create setlist');
     } finally {
       setCreating(false);
     }
-  }, [newName, newDescription, workspaceId, navigation]);
+  }, [newName, newDescription, newDate, newVenue, workspaceId, navigation]);
 
   const handleDuplicate = useCallback(async () => {
     if (!selectedSetlist) return;
@@ -317,10 +323,34 @@ export default function SetlistListScreen({ navigation, route }) {
               placeholderTextColor={colors.textSecondary}
               accessibilityLabel="Setlist description"
             />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Date</Text>
+                <TextInput
+                  style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                  value={newDate}
+                  onChangeText={setNewDate}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={colors.textSecondary}
+                  accessibilityLabel="Performance date"
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Venue</Text>
+                <TextInput
+                  style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                  value={newVenue}
+                  onChangeText={setNewVenue}
+                  placeholder="Venue name"
+                  placeholderTextColor={colors.textSecondary}
+                  accessibilityLabel="Venue"
+                />
+              </View>
+            </View>
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
-                onPress={() => { setShowCreate(false); setNewName(''); setNewDescription(''); }}
+                onPress={() => { setShowCreate(false); setNewName(''); setNewDescription(''); setNewDate(''); setNewVenue(''); }}
                 disabled={creating}
                 accessibilityRole="button"
                 accessibilityLabel="Cancel"
