@@ -913,6 +913,19 @@ class ApiService {
     return this.request(`/setlists/${setlistId}`);
   }
 
+  async pinSetlist(channelId, setlistId) {
+    return this.request(`/channels/${channelId}/pin-setlist`, {
+      method: 'POST',
+      body: JSON.stringify({ setlistId }),
+    });
+  }
+
+  async unpinSetlist(channelId) {
+    return this.request(`/channels/${channelId}/pin-setlist`, {
+      method: 'DELETE',
+    });
+  }
+
   async updateSetlist(setlistId, data) {
     return this.request(`/setlists/${setlistId}`, {
       method: 'PUT',

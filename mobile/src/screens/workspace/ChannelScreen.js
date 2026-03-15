@@ -7,6 +7,7 @@ import {
   Modal,
   TextInput,
   TouchableOpacity,
+  ScrollView,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -55,6 +56,8 @@ export default function ChannelScreen({ navigation, route }) {
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState(null);
   const [typingUsers, setTypingUsers] = useState([]);
+  const [setlistExpanded, setSetlistExpanded] = useState(false);
+  const [setlistSongs, setSetlistSongs] = useState(null);
 
   // Action sheet / picker state
   const [actionMessage, setActionMessage] = useState(null);
@@ -837,6 +840,55 @@ export default function ChannelScreen({ navigation, route }) {
       keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
       <View style={[styles.chatContainer, isTablet && { maxWidth: contentMaxWidth }]}>
+      {/* Pinned Setlist Banner */}
+      {channel.pinnedSetlist && (
+        <View style={{ backgroundColor: colors.bgTertiary, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}
+            onPress={async () => {
+              if (!setlistExpanded && !setlistSongs) {
+                try {
+                  const data = await api.getSetlist(channel.pinnedSetlist.id);
+                  setSetlistSongs(data.songs || []);
+                } catch {}
+              }
+              setSetlistExpanded(prev => !prev);
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={{ color: colors.textSecondary, fontSize: 10 }}>{setlistExpanded ? '▼' : '▶'}</Text>
+            <Text style={{ fontSize: 14 }}>📋</Text>
+            <Text style={{ color: colors.textPrimary, fontWeight: '600', fontSize: 14, flex: 1 }}>{channel.pinnedSetlist.name}</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{channel.pinnedSetlist._count?.songs || 0} songs</Text>
+          </TouchableOpacity>
+          {setlistExpanded && (
+            <ScrollView style={{ maxHeight: 250, paddingHorizontal: 16, paddingBottom: 8 }}>
+              {!setlistSongs ? (
+                <Text style={{ color: colors.textSecondary, fontSize: 13, paddingVertical: 4 }}>Loading...</Text>
+              ) : setlistSongs.length === 0 ? (
+                <Text style={{ color: colors.textSecondary, fontSize: 13, paddingVertical: 4 }}>No songs in this setlist</Text>
+              ) : (
+                setlistSongs.map((ss, i) => (
+                  <View key={ss.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 5, gap: 8 }}>
+                    <Text style={{ color: colors.textSecondary, fontSize: 11, width: 20, textAlign: 'right' }}>{i + 1}</Text>
+                    {ss.type === 'MC' ? (
+                      <Text style={{ color: '#facc15', fontStyle: 'italic', fontSize: 13 }}>{ss.label || 'MC Break'}</Text>
+                    ) : ss.song ? (
+                      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={{ color: colors.textPrimary, fontSize: 13, flex: 1 }} numberOfLines={1}>{ss.song.shortName || ss.song.title}</Text>
+                        {ss.song.key ? <Text style={{ color: '#c084fc', fontSize: 11 }}>{ss.song.key}</Text> : null}
+                        {ss.song.bpm ? <Text style={{ color: '#60a5fa', fontSize: 11 }}>{ss.song.bpm}</Text> : null}
+                      </View>
+                    ) : (
+                      <Text style={{ color: colors.textSecondary, fontStyle: 'italic', fontSize: 13 }}>{ss.label || 'Unknown'}</Text>
+                    )}
+                  </View>
+                ))
+              )}
+            </ScrollView>
+          )}
+        </View>
+      )}
       <FlatList
         ref={flatListRef}
         data={invertedMessages}
