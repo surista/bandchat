@@ -24,7 +24,6 @@ function ResetPassword() {
       return;
     }
 
-    // Verify the token is valid
     api.verifyResetToken(token)
       .then(result => {
         setTokenValid(result.valid);
@@ -68,7 +67,7 @@ function ResetPassword() {
 
   if (verifying) {
     return (
-      <div className="min-h-screen bg-[#0f1117] flex flex-col">
+      <div className="min-h-screen bg-gray-950 flex flex-col">
         <div className="flex-1 flex items-center justify-center p-4">
           <div className="text-white text-xl">Verifying reset link...</div>
         </div>
@@ -77,44 +76,44 @@ function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f1117] flex flex-col">
+    <div className="min-h-screen bg-gray-950 flex flex-col">
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <img
               src="/bc_icon_06.png"
               alt="BandChat"
-              className="w-24 h-24 mx-auto mb-4 rounded-xl shadow-lg"
+              className="w-20 h-20 mx-auto mb-4 rounded-xl shadow-lg"
             />
-            <h1 className="text-4xl font-bold text-white mb-2">Set New Password</h1>
-            <p className="text-gray-300">Enter your new password below</p>
+            <h1 className="text-3xl font-bold text-white mb-1">Set New Password</h1>
+            <p className="text-gray-400">Enter your new password below</p>
           </div>
 
-          <div className="bg-[#1a1d2e] rounded-lg p-8 shadow-xl border border-white/10">
+          <div className="bg-gray-900 rounded-xl p-8 shadow-2xl border border-gray-800">
             {success ? (
               <div className="text-center">
-                <div className="text-green-600 text-5xl mb-4">✓</div>
-                <h2 className="text-xl font-semibold text-gray-800 mb-2">Password Reset!</h2>
+                <div className="text-green-400 text-5xl mb-4">&#10003;</div>
+                <h2 className="text-xl font-semibold text-white mb-2">Password Reset!</h2>
                 <p className="text-gray-400 mb-6">
                   Your password has been successfully reset. You can now sign in with your new password.
                 </p>
                 <Link
                   to="/login"
-                  className="inline-block bg-green-600 text-white px-6 py-2 rounded font-medium hover:bg-green-700 transition-colors"
+                  className="inline-block bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-500 transition-colors"
                 >
                   Sign In
                 </Link>
               </div>
             ) : !tokenValid ? (
               <div className="text-center">
-                <div className="text-red-500 text-5xl mb-4">!</div>
-                <h2 className="text-xl font-semibold text-gray-800 mb-2">Invalid Reset Link</h2>
+                <div className="text-red-400 text-5xl mb-4">!</div>
+                <h2 className="text-xl font-semibold text-white mb-2">Invalid Reset Link</h2>
                 <p className="text-gray-400 mb-6">
                   {error || 'This password reset link is invalid or has expired.'}
                 </p>
                 <Link
                   to="/forgot-password"
-                  className="inline-block bg-green-600 text-white px-6 py-2 rounded font-medium hover:bg-green-700 transition-colors"
+                  className="inline-block bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-500 transition-colors"
                 >
                   Request New Link
                 </Link>
@@ -122,13 +121,13 @@ function ResetPassword() {
             ) : (
               <form onSubmit={handleSubmit}>
                 {error && (
-                  <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded mb-4">
+                  <div className="bg-red-950 border border-red-800 text-red-300 px-4 py-3 rounded-lg mb-4 text-sm">
                     {error}
                   </div>
                 )}
 
                 <div className="mb-4">
-                  <label htmlFor="password" className="block text-gray-200 font-medium mb-2">
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1.5">
                     New Password
                   </label>
                   <div className="relative">
@@ -137,7 +136,7 @@ function ResetPassword() {
                       id="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple focus:border-transparent pr-12"
+                      className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-base pr-16"
                       placeholder="Min 8 chars, upper + lower + number"
                       minLength={8}
                       required
@@ -145,7 +144,7 @@ function ResetPassword() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-400 text-sm"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-sm font-medium"
                       tabIndex={-1}
                     >
                       {showPassword ? 'Hide' : 'Show'}
@@ -154,32 +153,30 @@ function ResetPassword() {
                 </div>
 
                 <div className="mb-6">
-                  <label htmlFor="confirmPassword" className="block text-gray-200 font-medium mb-2">
+                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-1.5">
                     Confirm Password
                   </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      id="confirmPassword"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-slack-purple focus:border-transparent pr-12"
-                      placeholder="Confirm your new password"
-                      required
-                    />
-                  </div>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    id="confirmPassword"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-base"
+                    placeholder="Confirm your new password"
+                    required
+                  />
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-green-600 text-white py-3 rounded font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+                  className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-500 transition-colors disabled:opacity-50 text-base"
                 >
                   {loading ? 'Resetting...' : 'Reset Password'}
                 </button>
 
-                <p className="text-center mt-6 text-gray-400">
-                  <Link to="/login" className="text-green-400 font-medium hover:underline">
+                <p className="text-center mt-6 text-gray-400 text-sm">
+                  <Link to="/login" className="text-green-400 font-medium hover:text-green-300">
                     Back to Login
                   </Link>
                 </p>
