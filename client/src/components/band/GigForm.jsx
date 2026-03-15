@@ -39,6 +39,15 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
   // Read-only mode: locked events can be viewed but not edited by non-admins
   const readOnly = gig?.isLocked && !isAdmin;
 
+  // ESC to close
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const getDefaultDate = () => {
     if (gig?.date) return format(new Date(gig.date), 'yyyy-MM-dd');
     if (defaultDate) return format(defaultDate, 'yyyy-MM-dd');
