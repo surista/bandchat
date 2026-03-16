@@ -5,7 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { Resend } from 'resend';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
 import { exportLimiter } from '../middleware/rateLimit.js';
-import prisma from '../lib/prisma.js';
+import prisma, { USER_SELECT_BRIEF } from '../lib/prisma.js';
 import { forceLeaveWorkspace } from '../socket/handlers.js';
 import { getEffectivePlan, getPlanLimits, serializePlanLimits } from '../lib/planLimits.js';
 
@@ -64,7 +64,7 @@ const autoElevateAdmin = async (workspaceId, excludeUserId) => {
       { joinedAt: 'asc' },  // Longest-tenured first
     ],
     include: {
-      user: { select: { id: true, displayName: true } }
+      user: { select: USER_SELECT_BRIEF }
     }
   });
 
@@ -96,7 +96,7 @@ const autoElevateAdmin = async (workspaceId, excludeUserId) => {
       joinedAt: candidate.joinedAt
     },
     include: {
-      user: { select: { id: true, displayName: true } }
+      user: { select: USER_SELECT_BRIEF }
     }
   });
 
@@ -1482,13 +1482,13 @@ router.get('/:workspaceId/export', authenticate, isWorkspaceAdmin, exportLimiter
         channels: {
           where: { isDirect: false },
           include: {
-            members: { include: { user: { select: { id: true, displayName: true } } } },
+            members: { include: { user: { select: USER_SELECT_BRIEF } } },
             messages: {
               orderBy: { createdAt: 'asc' },
               include: {
-                author: { select: { id: true, displayName: true } },
+                author: { select: USER_SELECT_BRIEF },
                 attachments: { select: { filename: true, url: true, type: true, size: true } },
-                reactions: { include: { user: { select: { id: true, displayName: true } } } }
+                reactions: { include: { user: { select: USER_SELECT_BRIEF } } }
               }
             }
           }
@@ -1576,13 +1576,13 @@ router.get('/:workspaceId/export', authenticate, isWorkspaceAdmin, exportLimiter
     const dmChannels = await prisma.channel.findMany({
       where: { workspaceId, isDirect: true },
       include: {
-        members: { include: { user: { select: { id: true, displayName: true } } } },
+        members: { include: { user: { select: USER_SELECT_BRIEF } } },
         messages: {
           orderBy: { createdAt: 'asc' },
           include: {
-            author: { select: { id: true, displayName: true } },
+            author: { select: USER_SELECT_BRIEF },
             attachments: { select: { filename: true, url: true, type: true, size: true } },
-            reactions: { include: { user: { select: { id: true, displayName: true } } } }
+            reactions: { include: { user: { select: USER_SELECT_BRIEF } } }
           }
         }
       }

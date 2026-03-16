@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { isSafeUrl } from '../../utils/urlSafety';
 import api from '../../services/api';
+import Modal from '../common/Modal';
 import ConfirmDialog from '../common/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
 import LyricsModal from './LyricsModal';
@@ -192,19 +193,8 @@ function SongForm({ song, workspaceId, onSave, onClose }) {
   ];
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal-content max-w-lg max-h-modal overflow-y-auto">
-        <div className="modal-header">
-          <h3>{song ? 'Edit Song' : 'Add Song'}</h3>
-          <button
-            onClick={onClose}
-            className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl leading-none"
-            aria-label="Close"
-          >
-            &times;
-          </button>
-        </div>
-
+    <>
+    <Modal isOpen={true} onClose={onClose} title={song ? 'Edit Song' : 'Add Song'} maxWidth="max-w-lg" className="max-h-modal overflow-y-auto">
         <div className="modal-body">
           {error && (
             <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded-lg mb-4">
@@ -564,7 +554,7 @@ Example:
             </div>
           </form>
         </div>
-      </div>
+    </Modal>
       <ConfirmDialog
         isOpen={deleteAttachmentId !== null}
         title="Delete Attachment"
@@ -586,7 +576,7 @@ Example:
           onClose={() => setShowLyricsModal(false)}
         />
       )}
-    </div>
+    </>
   );
 }
 

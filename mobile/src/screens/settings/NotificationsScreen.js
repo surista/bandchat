@@ -30,7 +30,7 @@ const PREF_CATEGORIES = [
 ];
 
 export default function NotificationsScreen({ route }) {
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
   const workspaceId = route?.params?.workspaceId;
 

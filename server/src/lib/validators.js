@@ -23,3 +23,19 @@ export function isValidUUID(str) {
 export function isValidRecordingType(type) {
   return ['audio', 'video'].includes(type);
 }
+
+/**
+ * Express middleware that validates named route params are valid UUIDs.
+ * Usage: router.get('/:workspaceId', validateUUID('workspaceId'), ...)
+ */
+export function validateUUID(...paramNames) {
+  return (req, res, next) => {
+    for (const name of paramNames) {
+      const value = req.params[name];
+      if (value && !isValidUUID(value)) {
+        return res.status(400).json({ error: `Invalid ${name}` });
+      }
+    }
+    next();
+  };
+}

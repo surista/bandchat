@@ -142,7 +142,7 @@ describe('Gigs API', () => {
         .send({ pay: 750, notes: 'Updated pay' });
 
       expect(res.status).toBe(200);
-      expect(res.body.pay).toBe(750);
+      expect(Number(res.body.pay)).toBe(750);
     });
   });
 

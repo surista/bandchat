@@ -56,7 +56,7 @@ describe('Kitty API', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.currency).toBe('GBP');
-      expect(res.body.startingBalance).toBe(1000);
+      expect(Number(res.body.startingBalance)).toBe(1000);
     });
 
     it('should reject non-admin', async () => {
@@ -82,7 +82,7 @@ describe('Kitty API', () => {
         });
 
       expect(res.status).toBe(201);
-      expect(res.body.amount).toBe(500);
+      expect(Number(res.body.amount)).toBe(500);
 
       transactionId = res.body.id;
     });
@@ -110,7 +110,7 @@ describe('Kitty API', () => {
         .send({ amount: 600, description: 'Updated gig payment' });
 
       expect(res.status).toBe(200);
-      expect(res.body.amount).toBe(600);
+      expect(Number(res.body.amount)).toBe(600);
     });
   });
 
@@ -122,7 +122,7 @@ describe('Kitty API', () => {
 
       expect(res.status).toBe(200);
       // Starting 1000 + income 600 - expense 100 = 1500
-      expect(res.body.currentBalance).toBe(1500);
+      expect(Number(res.body.currentBalance)).toBe(1500);
     });
   });
 

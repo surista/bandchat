@@ -465,7 +465,7 @@ router.post('/google', authLimiter, async (req, res) => {
       data: {
         email: email.toLowerCase(),
         displayName: safeDisplayName,
-        avatarUrl: picture,
+        avatarUrl: picture && picture.startsWith('https://') ? picture : null,
         googleId,
         authProvider: 'google',
         emailVerified: email_verified === true,
@@ -1285,9 +1285,16 @@ router.delete('/account', authenticate, authLimiter, async (req, res) => {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Identity verified via JWT (authenticate middleware)
-    // Password verification removed per App Store guideline 5.1.1(v):
-    // "Allow users to complete account deletion without extra steps"
+    // Require password confirmation for users who have a password set
+    if (user.password) {
+      if (!password) {
+        return res.status(400).json({ error: 'Password is required to delete your account' });
+      }
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(401).json({ error: 'Incorrect password' });
+      }
+    }
 
     // Check sole-admin constraint
     const adminMemberships = await prisma.workspaceMember.findMany({

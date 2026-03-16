@@ -21,7 +21,7 @@ const TABLET_BREAKPOINT = 768;
 
 export default function GigGalleryScreen({ route }) {
   const { gigId, gigTitle } = route.params;
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
   const { width: screenWidth } = useWindowDimensions();
 

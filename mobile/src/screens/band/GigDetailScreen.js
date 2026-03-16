@@ -25,31 +25,16 @@ import { successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
 import ErrorState from '../../components/ErrorState';
+import { SkeletonList } from '../../components/SkeletonLoader';
+import getCurrencySymbol from '../../utils/getCurrencySymbol';
+import { TYPE_COLORS, STATUS_COLORS } from '../../utils/constants';
 
 const ATTENDEE_STATUSES = ['ATTENDING', 'MAYBE', 'NOT_ATTENDING'];
 const ATTENDEE_LABELS = { ATTENDING: 'Going', MAYBE: 'Maybe', NOT_ATTENDING: 'Not Going' };
 const ATTENDEE_COLORS = { ATTENDING: '#22c55e', MAYBE: '#eab308', NOT_ATTENDING: '#ef4444' };
 
-function getCurrencySymbol(code) {
-  const symbols = { USD: '$', GBP: '£', EUR: '€', JPY: '¥', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', CHF: 'CHF ' };
-  return symbols[code] || code + ' ';
-}
-
 const GIG_TYPES = ['GIG', 'REHEARSAL', 'RECORDING', 'OTHER'];
 const GIG_STATUSES = ['SCHEDULED', 'COMPLETED', 'CANCELLED'];
-
-const TYPE_COLORS = {
-  GIG: '#3b82f6',
-  REHEARSAL: '#38bdf8',
-  RECORDING: '#6366f1',
-  OTHER: '#6b7280',
-};
-
-const STATUS_COLORS = {
-  SCHEDULED: '#3b82f6',
-  COMPLETED: '#22c55e',
-  CANCELLED: '#ef4444',
-};
 
 export default function GigDetailScreen({ navigation, route }) {
   const { gigId, workspaceId, editing: startEditing } = route.params;
@@ -389,9 +374,7 @@ export default function GigDetailScreen({ navigation, route }) {
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        <SkeletonList count={3} lines={3} />
       </View>
     );
   }

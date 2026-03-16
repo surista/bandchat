@@ -24,11 +24,8 @@ import api from '../../services/api';
 import { getLocalGigs, upsertGigs, deleteLocalGig } from '../../services/database';
 import ErrorState from '../../components/ErrorState';
 import { useLayout } from '../../hooks/useLayout';
-
-function getCurrencySymbol(code) {
-  const symbols = { USD: '$', GBP: '£', EUR: '€', JPY: '¥', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', ZAR: 'R', CHF: 'CHF ' };
-  return symbols[code] || code + ' ';
-}
+import getCurrencySymbol from '../../utils/getCurrencySymbol';
+import { TYPE_COLORS, STATUS_COLORS } from '../../utils/constants';
 
 const TYPE_FILTERS = [
   { key: 'all', label: 'All' },
@@ -37,18 +34,6 @@ const TYPE_FILTERS = [
   { key: 'RECORDING', label: 'Recording' },
   { key: 'OTHER', label: 'Other' },
 ];
-
-const TYPE_COLORS = {
-  GIG: '#3b82f6',
-  REHEARSAL: '#38bdf8',
-  RECORDING: '#6366f1',
-  OTHER: '#6b7280',
-};
-
-const STATUS_COLORS = {
-  COMPLETED: '#22c55e',
-  CANCELLED: '#ef4444',
-};
 
 const AVAILABILITY_STATUS = {
   AVAILABLE: { label: 'Available', color: '#22c55e', icon: '✓' },
@@ -84,7 +69,7 @@ function formatTimeRange(date, endDate) {
 
 export default function GigListScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
   const { user } = useAuth();
 

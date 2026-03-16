@@ -13,9 +13,6 @@ import {
   Platform,
   StyleSheet,
 } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
-import * as MediaLibrary from 'expo-media-library';
-import { File, Paths } from 'expo-file-system/next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,7 +20,6 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
 import { useToast } from '../../context/ToastContext';
-import { mediumImpact, successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import { addToOfflineQueue, getOfflineQueue, removeFromOfflineQueue } from '../../services/storage';
 import { getLocalMessages, upsertMessages, upsertMessage as upsertLocalMessage } from '../../services/database';
@@ -37,6 +33,7 @@ import ImageViewer from '../../components/ImageViewer';
 import ActionSheet from '../../components/ActionSheet';
 import { format, isSameDay } from 'date-fns';
 import { useLayout } from '../../hooks/useLayout';
+import useMessageActions from '../../hooks/useMessageActions';
 
 const GROUP_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -58,17 +55,12 @@ export default function ChannelScreen({ navigation, route }) {
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState(null);
   const [typingUsers, setTypingUsers] = useState([]);
+  const [pinnedSetlist, setPinnedSetlist] = useState(channel.pinnedSetlist || null);
   const [setlistExpanded, setSetlistExpanded] = useState(false);
   const [setlistSongs, setSetlistSongs] = useState(null);
   const [showSetlistPicker, setShowSetlistPicker] = useState(false);
   const [setlistPickerList, setSetlistPickerList] = useState([]);
 
-  // Action sheet / picker state
-  const [actionMessage, setActionMessage] = useState(null);
-  const [showActions, setShowActions] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [editingMessage, setEditingMessage] = useState(null);
-  const [viewingImage, setViewingImage] = useState(null);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportSubmitting, setReportSubmitting] = useState(false);
@@ -81,9 +73,6 @@ export default function ChannelScreen({ navigation, route }) {
   const [savedMessageIds, setSavedMessageIds] = useState(new Set());
   const [uploadProgress, setUploadProgress] = useState(null);
   const [lastReadAt, setLastReadAt] = useState(null);
-  const [blockedDomains, setBlockedDomains] = useState(new Set());
-  const [linkActionUrl, setLinkActionUrl] = useState(null);
-
   const channelIdRef = useRef(channel.id);
   const userIdRef = useRef(user?.id);
   const flatListRef = useRef(null);
@@ -92,6 +81,51 @@ export default function ChannelScreen({ navigation, route }) {
   const blockedIdsRef = useRef(new Set());
   const messagesRef = useRef(messages);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
+
+  const findMessage = useCallback((id) => messagesRef.current.find(m => m.id === id), []);
+
+  // Extra actions specific to ChannelScreen (reply, pin, bookmark, report)
+  const extraActions = useMemo(() => ({
+    reply: (msg) => navigation.navigate('Thread', { parentMessage: msg, channelId: channel.id, workspaceId }),
+    pin: (msg) => {
+      (async () => {
+        try {
+          if (pinnedMessageIds.has(msg.id)) {
+            await api.unpinMessage(msg.id);
+          } else {
+            await api.pinMessage(msg.id);
+          }
+        } catch (err) {
+          Alert.alert('Error', err.message || 'Failed to pin/unpin message');
+        }
+      })();
+    },
+    bookmark: (msg) => {
+      (async () => {
+        try {
+          if (savedMessageIds.has(msg.id)) {
+            await api.unsaveMessage(msg.id);
+            setSavedMessageIds(prev => { const next = new Set(prev); next.delete(msg.id); return next; });
+          } else {
+            await api.saveMessage(msg.id);
+            setSavedMessageIds(prev => new Set([...prev, msg.id]));
+          }
+        } catch (err) {
+          Alert.alert('Error', err.message || 'Failed to save/unsave message');
+        }
+      })();
+    },
+    report: () => { setReportReason(''); setShowReportModal(true); },
+  }), [navigation, channel.id, workspaceId, pinnedMessageIds, savedMessageIds]);
+
+  const {
+    actionMessage, showActions, showEmojiPicker, editingMessage, viewingImage,
+    blockedDomains, linkActionUrl,
+    setShowActions, setShowEmojiPicker, setViewingImage, setLinkActionUrl, setActionMessage,
+    handleLongPress, handleAction, handleAddReaction, handleSendEdit,
+    handleCancelEdit, handleReactionPress, handleImagePress, handleTogglePreview,
+    handleLinkLongPress, toggleBlockedDomain,
+  } = useMessageActions({ findMessage, extraActions });
 
   useEffect(() => {
     channelIdRef.current = channel.id;
@@ -106,19 +140,6 @@ export default function ChannelScreen({ navigation, route }) {
       }
     };
   }, [channel.id]);
-
-  // Load blocked preview domains
-  useEffect(() => {
-    AsyncStorage.getItem('bandchat_blocked_preview_domains').then(val => {
-      if (val) {
-        try { setBlockedDomains(new Set(JSON.parse(val))); } catch {}
-      }
-    });
-  }, []);
-
-  const handleLinkLongPress = useCallback((url) => {
-    setLinkActionUrl(url);
-  }, []);
 
   // Restore scroll position on mount
   useEffect(() => {
@@ -523,117 +544,6 @@ export default function ChannelScreen({ navigation, route }) {
     }
   }, [navigation, workspaceId]);
 
-  // Long-press → action sheet
-  const handleLongPress = useCallback((message) => {
-    mediumImpact();
-    setActionMessage(message);
-    setShowActions(true);
-  }, []);
-
-  // Handle action from the sheet
-  const handleAction = useCallback((action) => {
-    if (!actionMessage) return;
-
-    switch (action) {
-      case 'reply':
-        navigation.navigate('Thread', { parentMessage: actionMessage, channelId: channel.id, workspaceId });
-        break;
-      case 'react':
-        setShowEmojiPicker(true);
-        break;
-      case 'pin':
-        (async () => {
-          try {
-            if (pinnedMessageIds.has(actionMessage.id)) {
-              await api.unpinMessage(actionMessage.id);
-            } else {
-              await api.pinMessage(actionMessage.id);
-            }
-          } catch (err) {
-            Alert.alert('Error', err.message || 'Failed to pin/unpin message');
-          }
-        })();
-        break;
-      case 'bookmark':
-        (async () => {
-          try {
-            if (savedMessageIds.has(actionMessage.id)) {
-              await api.unsaveMessage(actionMessage.id);
-              setSavedMessageIds(prev => {
-                const next = new Set(prev);
-                next.delete(actionMessage.id);
-                return next;
-              });
-            } else {
-              await api.saveMessage(actionMessage.id);
-              setSavedMessageIds(prev => new Set([...prev, actionMessage.id]));
-            }
-          } catch (err) {
-            Alert.alert('Error', err.message || 'Failed to save/unsave message');
-          }
-        })();
-        break;
-      case 'copy':
-        if (actionMessage.content) {
-          Clipboard.setStringAsync(actionMessage.content);
-          successNotification();
-          toast.success('Copied to clipboard');
-        }
-        break;
-      case 'edit':
-        setEditingMessage(actionMessage);
-        break;
-      case 'delete':
-        Alert.alert(
-          'Delete Message',
-          'Are you sure you want to delete this message?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Delete',
-              style: 'destructive',
-              onPress: async () => {
-                try {
-                  await api.deleteMessage(actionMessage.id);
-                } catch (err) {
-                  // silently fail
-                }
-              },
-            },
-          ]
-        );
-        break;
-      case 'save':
-        (async () => {
-          try {
-            const img = actionMessage.attachments?.find(a => a.type === 'IMAGE');
-            if (!img?.url) return;
-            const { status } = await MediaLibrary.requestPermissionsAsync();
-            if (status !== 'granted' && status !== 'limited') {
-              Alert.alert('Permission needed', 'Allow BandChat to save photos to your library.');
-              return;
-            }
-            let filename = img.url.split('/').pop()?.split('?')[0] || '';
-            filename = filename.replace(/[^a-zA-Z0-9._-]/g, '');
-            if (!filename || !filename.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-              filename = `image-${Date.now()}.jpg`;
-            }
-            const file = new File(Paths.cache, filename);
-            await file.downloadFrom(img.url);
-            await MediaLibrary.saveToLibraryAsync(file.uri);
-            Alert.alert('Saved', 'Image saved to your photo library.');
-          } catch (err) {
-            Alert.alert('Error', err.message || 'Failed to save image.');
-          }
-        })();
-        break;
-      case 'report':
-        setReportReason('');
-        setShowReportModal(true);
-        break;
-    }
-  }, [actionMessage, navigation, channel.id, workspaceId, pinnedMessageIds, savedMessageIds]);
-
   // Submit report
   const handleSubmitReport = useCallback(async () => {
     if (!reportReason.trim() || !actionMessage) {
@@ -658,72 +568,10 @@ export default function ChannelScreen({ navigation, route }) {
     }
   }, [actionMessage, reportReason]);
 
-  // Add/remove reaction (toggle)
-  const handleAddReaction = useCallback(async (emoji) => {
-    if (!actionMessage) return;
-    try {
-      // Check if user already reacted with this emoji - toggle it
-      const hasReacted = actionMessage.reactions?.some(
-        r => r.emoji === emoji && r.userId === user?.id
-      );
-      if (hasReacted) {
-        await api.removeReaction(actionMessage.id, emoji);
-      } else {
-        await api.addReaction(actionMessage.id, emoji);
-      }
-    } catch (err) {
-      // silently fail
-    }
-    setActionMessage(null);
-  }, [actionMessage, user?.id]);
-
-  // Edit message
-  const handleSendEdit = useCallback(async (messageId, content) => {
-    try {
-      await api.updateMessage(messageId, content);
-    } catch (err) {
-      // silently fail
-    }
-    setEditingMessage(null);
-  }, []);
-
-  const handleCancelEdit = useCallback(() => {
-    setEditingMessage(null);
-  }, []);
-
   // Tap reply count → thread screen
   const handleReplyPress = useCallback((message) => {
     navigation.navigate('Thread', { parentMessage: message, channelId: channel.id, workspaceId });
   }, [navigation, channel.id, workspaceId]);
-
-  // Tap reaction to toggle
-  const handleReactionPress = useCallback(async (messageId, emoji) => {
-    try {
-      const msg = messagesRef.current.find(m => m.id === messageId);
-      const hasReacted = msg?.reactions?.some(r => r.emoji === emoji && r.userId === user?.id);
-      if (hasReacted) {
-        await api.removeReaction(messageId, emoji);
-      } else {
-        await api.addReaction(messageId, emoji);
-      }
-    } catch (err) {
-      // silently fail
-    }
-  }, [user?.id]);
-
-  // Image viewer
-  const handleImagePress = useCallback((url) => {
-    setViewingImage(url);
-  }, []);
-
-  // Toggle link preview visibility
-  const handleTogglePreview = useCallback(async (messageId) => {
-    try {
-      await api.toggleMessagePreview(messageId);
-    } catch (err) {
-      // silently fail
-    }
-  }, []);
 
   // Compute first unread message index (in original message order)
   const firstUnreadId = useMemo(() => {
@@ -845,14 +693,14 @@ export default function ChannelScreen({ navigation, route }) {
     >
       <View style={[styles.chatContainer, isTablet && { maxWidth: contentMaxWidth }]}>
       {/* Pinned Setlist Banner */}
-      {channel.pinnedSetlist && (
-        <View style={{ backgroundColor: colors.bgTertiary, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+      {pinnedSetlist && (
+        <View style={[styles.setlistBanner, { backgroundColor: colors.bgTertiary, borderBottomColor: colors.border }]}>
           <TouchableOpacity
-            style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}
+            style={styles.setlistHeader}
             onPress={async () => {
               if (!setlistExpanded && !setlistSongs) {
                 try {
-                  const data = await api.getSetlist(channel.pinnedSetlist.id);
+                  const data = await api.getSetlist(pinnedSetlist.id);
                   setSetlistSongs(data.songs || []);
                 } catch {}
               }
@@ -862,17 +710,17 @@ export default function ChannelScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel="Toggle pinned setlist"
           >
-            <Text style={{ color: colors.textSecondary, fontSize: 10 }}>{setlistExpanded ? '▼' : '▶'}</Text>
-            <Text style={{ fontSize: 14 }}>📋</Text>
-            <Text style={{ color: colors.textPrimary, fontWeight: '600', fontSize: 14, flex: 1 }}>{channel.pinnedSetlist.name}</Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{channel.pinnedSetlist._count?.songs || 0} songs</Text>
+            <Text style={[styles.setlistChevron, { color: colors.textSecondary }]}>{setlistExpanded ? '▼' : '▶'}</Text>
+            <Text style={styles.setlistIcon}>📋</Text>
+            <Text style={[styles.setlistName, { color: colors.textPrimary }]}>{pinnedSetlist.name}</Text>
+            <Text style={[styles.setlistCount, { color: colors.textSecondary }]}>{pinnedSetlist._count?.songs || 0} songs</Text>
           </TouchableOpacity>
           {setlistExpanded && (
-            <ScrollView style={{ maxHeight: 250, paddingHorizontal: 16, paddingBottom: 8 }}>
+            <ScrollView style={styles.setlistScroll}>
               {!setlistSongs ? (
-                <Text style={{ color: colors.textSecondary, fontSize: 13, paddingVertical: 4 }}>Loading...</Text>
+                <Text style={[styles.setlistMsg, { color: colors.textSecondary }]}>Loading...</Text>
               ) : setlistSongs.length === 0 ? (
-                <Text style={{ color: colors.textSecondary, fontSize: 13, paddingVertical: 4 }}>No songs in this setlist</Text>
+                <Text style={[styles.setlistMsg, { color: colors.textSecondary }]}>No songs in this setlist</Text>
               ) : (
                 (() => {
                   let setNumber = 1;
@@ -883,7 +731,7 @@ export default function ChannelScreen({ navigation, route }) {
                       setNumber++;
                       songIndex = 0;
                       return (
-                        <View key={ss.id} style={{ marginVertical: 8, borderTopWidth: 1, borderTopColor: colors.border }} />
+                        <View key={ss.id} style={[styles.setlistBreak, { borderTopColor: colors.border }]} />
                       );
                     }
                     songIndex++;
@@ -891,22 +739,22 @@ export default function ChannelScreen({ navigation, route }) {
                     return (
                       <View key={ss.id}>
                         {showSetHeader && (
-                          <View style={{ paddingVertical: 4, marginTop: setNumber > 1 ? 0 : 0 }}>
-                            <Text style={{ color: '#4ade80', fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' }}>Set {setNumber}</Text>
+                          <View style={styles.setlistSetHeader}>
+                            <Text style={styles.setlistSetLabel}>Set {setNumber}</Text>
                           </View>
                         )}
-                        <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 5, gap: 8 }}>
-                          <Text style={{ color: colors.textSecondary, fontSize: 11, width: 20, textAlign: 'right' }}>{songIndex}</Text>
+                        <View style={styles.setlistSongRow}>
+                          <Text style={[styles.setlistSongIndex, { color: colors.textSecondary }]}>{songIndex}</Text>
                           {ss.type === 'MC' ? (
-                            <Text style={{ color: '#facc15', fontStyle: 'italic', fontSize: 13 }}>{ss.label || 'MC Break'}</Text>
+                            <Text style={styles.setlistMcText}>{ss.label || 'MC Break'}</Text>
                           ) : ss.song ? (
-                            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                              <Text style={{ color: colors.textPrimary, fontSize: 13, flex: 1 }} numberOfLines={1}>{ss.song.shortName || ss.song.title}</Text>
-                              {ss.song.key ? <Text style={{ color: '#c084fc', fontSize: 11 }}>{ss.song.key}</Text> : null}
-                              {ss.song.bpm ? <Text style={{ color: '#60a5fa', fontSize: 11 }}>{ss.song.bpm}</Text> : null}
+                            <View style={styles.setlistSongInfo}>
+                              <Text style={[styles.setlistSongTitle, { color: colors.textPrimary }]} numberOfLines={1}>{ss.song.shortName || ss.song.title}</Text>
+                              {ss.song.key ? <Text style={styles.setlistKeyText}>{ss.song.key}</Text> : null}
+                              {ss.song.bpm ? <Text style={styles.setlistBpmText}>{ss.song.bpm}</Text> : null}
                             </View>
                           ) : (
-                            <Text style={{ color: colors.textSecondary, fontStyle: 'italic', fontSize: 13 }}>{ss.label || 'Unknown'}</Text>
+                            <Text style={[styles.setlistUnknown, { color: colors.textSecondary }]}>{ss.label || 'Unknown'}</Text>
                           )}
                         </View>
                       </View>
@@ -1013,7 +861,7 @@ export default function ChannelScreen({ navigation, route }) {
             },
           },
           {
-            label: channel.pinnedSetlist ? 'Change Pinned Setlist' : 'Pin a Setlist',
+            label: pinnedSetlist ? 'Change Pinned Setlist' : 'Pin a Setlist',
             onPress: async () => {
               setShowHeaderMenu(false);
               try {
@@ -1023,13 +871,14 @@ export default function ChannelScreen({ navigation, route }) {
               } catch {}
             },
           },
-          ...(channel.pinnedSetlist ? [{
+          ...(pinnedSetlist ? [{
             label: 'Unpin Setlist',
             destructive: true,
             onPress: async () => {
               setShowHeaderMenu(false);
               try {
                 await api.unpinSetlist(channel.id);
+                setPinnedSetlist(null);
                 setSetlistExpanded(false);
                 setSetlistSongs(null);
               } catch (err) {
@@ -1053,11 +902,12 @@ export default function ChannelScreen({ navigation, route }) {
         onClose={() => setShowSetlistPicker(false)}
         title="Pin a Setlist"
         actions={setlistPickerList.map(s => ({
-          label: s.name + (channel.pinnedSetlistId === s.id ? ' (pinned)' : ''),
+          label: s.name + (pinnedSetlist?.id === s.id ? ' (pinned)' : ''),
           onPress: async () => {
             setShowSetlistPicker(false);
             try {
               await api.pinSetlist(channel.id, s.id);
+              setPinnedSetlist({ id: s.id, name: s.name, _count: { songs: s.songs?.length || s._count?.songs || 0 } });
               setSetlistExpanded(false);
               setSetlistSongs(null);
             } catch (err) {
@@ -1079,13 +929,7 @@ export default function ChannelScreen({ navigation, route }) {
           const isBlocked = blockedDomains.has(domain);
           return [{
             label: isBlocked ? `Show previews from ${domain}` : `Block previews from ${domain}`,
-            onPress: () => {
-              const next = new Set(blockedDomains);
-              if (isBlocked) { next.delete(domain); } else { next.add(domain); }
-              AsyncStorage.setItem('bandchat_blocked_preview_domains', JSON.stringify([...next]));
-              setBlockedDomains(next);
-              setLinkActionUrl(null);
-            },
+            onPress: () => toggleBlockedDomain(linkActionUrl),
           }];
         })()}
       />
@@ -1228,6 +1072,91 @@ const styles = StyleSheet.create({
   typingText: {
     fontSize: 13,
     fontStyle: 'italic',
+  },
+  setlistBanner: {
+    borderBottomWidth: 1,
+  },
+  setlistHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  setlistChevron: {
+    fontSize: 10,
+  },
+  setlistIcon: {
+    fontSize: 14,
+  },
+  setlistName: {
+    fontWeight: '600',
+    fontSize: 14,
+    flex: 1,
+  },
+  setlistCount: {
+    fontSize: 12,
+  },
+  setlistScroll: {
+    maxHeight: 250,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  setlistMsg: {
+    fontSize: 13,
+    paddingVertical: 4,
+  },
+  setlistBreak: {
+    marginVertical: 8,
+    borderTopWidth: 1,
+  },
+  setlistSetHeader: {
+    paddingVertical: 4,
+  },
+  setlistSetLabel: {
+    color: '#4ade80',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  setlistSongRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5,
+    gap: 8,
+  },
+  setlistSongIndex: {
+    fontSize: 11,
+    width: 20,
+    textAlign: 'right',
+  },
+  setlistMcText: {
+    color: '#facc15',
+    fontStyle: 'italic',
+    fontSize: 13,
+  },
+  setlistSongInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  setlistSongTitle: {
+    fontSize: 13,
+    flex: 1,
+  },
+  setlistKeyText: {
+    color: '#c084fc',
+    fontSize: 11,
+  },
+  setlistBpmText: {
+    color: '#60a5fa',
+    fontSize: 11,
+  },
+  setlistUnknown: {
+    fontStyle: 'italic',
+    fontSize: 13,
   },
   modalOverlay: {
     flex: 1,

@@ -28,6 +28,7 @@ import { pushService } from '../../services/push';
 import { useToast } from '../../context/ToastContext';
 import { useSocket } from '../../context/SocketContext';
 import api from '../../services/api';
+import useIsAdmin from '../../hooks/useIsAdmin';
 import MemberProfile from '../common/MemberProfile';
 import MemberHoverCard from '../common/MemberHoverCard';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -263,6 +264,13 @@ function Sidebar({
       .catch(() => {});
   }, []);
 
+  // Lock body scroll when sidebar is open on mobile
+  useEffect(() => {
+    if (isOpen && window.innerWidth < 768) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [isOpen]);
 
   const toggleNotifications = async () => {
     setNotificationsLoading(true);
@@ -330,10 +338,7 @@ function Sidebar({
     return { groupedChannels: grouped, ungroupedChannels: ungrouped };
   }, [channels]);
 
-  // Check if current user is admin
-  const isAdmin = useMemo(() => {
-    return workspace?.members?.find(m => m.user?.id === user?.id)?.role === 'ADMIN';
-  }, [workspace, user]);
+  const isAdmin = useIsAdmin(workspace);
 
   // Filter blocked users from sidebar members list
   const visibleMembers = useMemo(() => {
@@ -1221,149 +1226,105 @@ function Sidebar({
         </div>
       </div>
 
-      {/* Create Channel Modal - Portal to body to escape sidebar transform */}
-      {showCreateChannel && createPortal(
-        <div className="modal-backdrop">
-          <div className="modal-content max-w-md">
-            <div className="modal-header">
-              <h3>Create a Channel</h3>
+      {/* Create Channel Modal */}
+      <Modal isOpen={showCreateChannel} onClose={() => { setShowCreateChannel(false); setNewChannelName(''); setIsPrivate(false); setSelectedGroupId(''); }} title="Create a Channel">
+        <div className="modal-body">
+          <form onSubmit={handleCreateChannel}>
+            <div className="mb-4">
+              <label className="modal-label">Channel Name</label>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-400">#</span>
+                <input
+                  type="text"
+                  value={newChannelName}
+                  onChange={(e) =>
+                    setNewChannelName(
+                      e.target.value.toLowerCase().replace(/\s+/g, '-')
+                    )
+                  }
+                  className="modal-input flex-1"
+                  placeholder="new-channel"
+                  required
+                />
+              </div>
+            </div>
+            {channelGroups.length > 0 && (
+              <div className="mb-4">
+                <label className="modal-label">Group (optional)</label>
+                <select
+                  value={selectedGroupId}
+                  onChange={(e) => setSelectedGroupId(e.target.value)}
+                  className="modal-input"
+                >
+                  <option value="">No group</option>
+                  {channelGroups.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="mb-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isPrivate}
+                  onChange={(e) => setIsPrivate(e.target.checked)}
+                  className="w-4 h-4 rounded"
+                />
+                <span className="text-gray-300">Make private</span>
+              </label>
+              <p className="text-sm text-gray-500 mt-1 ml-6">
+                Private channels are only visible to invited members.
+              </p>
+            </div>
+            <div className="flex gap-2 justify-end pt-2">
               <button
-                onClick={() => {
-                  setShowCreateChannel(false);
-                  setNewChannelName('');
-                  setIsPrivate(false);
-                  setSelectedGroupId('');
-                }}
-                className="text-gray-400 hover:text-white text-2xl leading-none"
+                type="button"
+                onClick={() => { setShowCreateChannel(false); setNewChannelName(''); setIsPrivate(false); setSelectedGroupId(''); }}
+                className="btn btn-secondary"
               >
-                &times;
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary">
+                Create
               </button>
             </div>
-            <div className="modal-body">
-              <form onSubmit={handleCreateChannel}>
-                <div className="mb-4">
-                  <label className="modal-label">Channel Name</label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-400">#</span>
-                    <input
-                      type="text"
-                      value={newChannelName}
-                      onChange={(e) =>
-                        setNewChannelName(
-                          e.target.value.toLowerCase().replace(/\s+/g, '-')
-                        )
-                      }
-                      className="modal-input flex-1"
-                      placeholder="new-channel"
-                      required
-                    />
-                  </div>
-                </div>
-                {channelGroups.length > 0 && (
-                  <div className="mb-4">
-                    <label className="modal-label">Group (optional)</label>
-                    <select
-                      value={selectedGroupId}
-                      onChange={(e) => setSelectedGroupId(e.target.value)}
-                      className="modal-input"
-                    >
-                      <option value="">No group</option>
-                      {channelGroups.map((group) => (
-                        <option key={group.id} value={group.id}>
-                          {group.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                <div className="mb-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isPrivate}
-                      onChange={(e) => setIsPrivate(e.target.checked)}
-                      className="w-4 h-4 rounded"
-                    />
-                    <span className="text-gray-300">Make private</span>
-                  </label>
-                  <p className="text-sm text-gray-500 mt-1 ml-6">
-                    Private channels are only visible to invited members.
-                  </p>
-                </div>
-                <div className="flex gap-2 justify-end pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowCreateChannel(false);
-                      setNewChannelName('');
-                      setIsPrivate(false);
-                      setSelectedGroupId('');
-                    }}
-                    className="btn btn-secondary"
-                  >
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn btn-primary">
-                    Create
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </form>
+        </div>
+      </Modal>
 
-      {/* Create Group Modal - Portal to body to escape sidebar transform */}
-      {showCreateGroup && createPortal(
-        <div className="modal-backdrop">
-          <div className="modal-content max-w-md">
-            <div className="modal-header">
-              <h3>Create a Channel Group</h3>
+      {/* Create Group Modal */}
+      <Modal isOpen={showCreateGroup} onClose={() => { setShowCreateGroup(false); setNewGroupName(''); }} title="Create a Channel Group">
+        <div className="modal-body">
+          <form onSubmit={handleCreateGroup}>
+            <div className="mb-4">
+              <label className="modal-label">Group Name</label>
+              <input
+                type="text"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                className="modal-input"
+                placeholder="e.g., Projects, Rehearsals, Admin"
+                required
+              />
+            </div>
+            <div className="flex gap-2 justify-end pt-2">
               <button
-                onClick={() => {
-                  setShowCreateGroup(false);
-                  setNewGroupName('');
-                }}
-                className="text-gray-400 hover:text-white text-2xl leading-none"
+                type="button"
+                onClick={() => { setShowCreateGroup(false); setNewGroupName(''); }}
+                className="btn btn-secondary"
               >
-                &times;
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary">
+                Create
               </button>
             </div>
-            <div className="modal-body">
-              <form onSubmit={handleCreateGroup}>
-                <div className="mb-4">
-                  <label className="modal-label">Group Name</label>
-                  <input
-                    type="text"
-                    value={newGroupName}
-                    onChange={(e) => setNewGroupName(e.target.value)}
-                    className="modal-input"
-                    placeholder="e.g., Projects, Rehearsals, Admin"
-                    required
-                  />
-                </div>
-                <div className="flex gap-2 justify-end pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowCreateGroup(false);
-                      setNewGroupName('');
-                    }}
-                    className="btn btn-secondary"
-                  >
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn btn-primary">
-                    Create
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </form>
+        </div>
+      </Modal>
 
       {/* New Message Modal */}
       {showNewMessage && (

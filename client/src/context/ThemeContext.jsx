@@ -251,8 +251,15 @@ export function ThemeProvider({ children }) {
     setMode(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
+  const followSystem = () => {
+    localStorage.removeItem('bandchat-mode');
+    const isLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+    setMode(isLight ? 'light' : 'dark');
+  };
+
   const contextValue = useMemo(() => ({
-    currentTheme, setTheme, themes, mode, toggleMode
+    currentTheme, setTheme, themes, mode, toggleMode, followSystem,
+    isFollowingSystem: !localStorage.getItem('bandchat-mode'),
   }), [currentTheme, mode]);
 
   return (

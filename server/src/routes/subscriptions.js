@@ -204,6 +204,13 @@ router.post('/webhooks/revenuecat', async (req, res) => {
       return;
     }
 
+    // Verify workspace exists
+    const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { id: true } });
+    if (!workspace) {
+      console.log(`[Subscriptions] RevenueCat webhook: workspace ${workspaceId} not found — skipping`);
+      return;
+    }
+
     // Activation events — set plan to PRO
     const activationEvents = [
       'INITIAL_PURCHASE',

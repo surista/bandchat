@@ -3,22 +3,16 @@ import {
   View,
   Text,
   FlatList,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
 } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
-import * as MediaLibrary from 'expo-media-library';
-import { File, Paths } from 'expo-file-system/next';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
 import { useToast } from '../../context/ToastContext';
-import { mediumImpact, successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import MessageBubble from '../../components/MessageBubble';
 import MessageInput from '../../components/MessageInput';
@@ -26,7 +20,9 @@ import MessageActionSheet from '../../components/MessageActionSheet';
 import EmojiPicker from '../../components/EmojiPicker';
 import ImageViewer from '../../components/ImageViewer';
 import ActionSheet from '../../components/ActionSheet';
+import ErrorState from '../../components/ErrorState';
 import { useLayout } from '../../hooks/useLayout';
+import useMessageActions from '../../hooks/useMessageActions';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ThreadScreen({ navigation, route }) {
@@ -46,43 +42,37 @@ export default function ThreadScreen({ navigation, route }) {
   useEffect(() => { parentRef.current = parent; }, [parent]);
   useEffect(() => { repliesRef.current = replies; }, [replies]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [workspaceMembers, setWorkspaceMembers] = useState([]);
-
-  // Action sheet / picker state
-  const [actionMessage, setActionMessage] = useState(null);
-  const [showActions, setShowActions] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [editingMessage, setEditingMessage] = useState(null);
-  const [viewingImage, setViewingImage] = useState(null);
-  const [blockedDomains, setBlockedDomains] = useState(new Set());
-  const [linkActionUrl, setLinkActionUrl] = useState(null);
 
   const parentIdRef = useRef(parentMessage.id);
 
-  // Load blocked preview domains
-  useEffect(() => {
-    AsyncStorage.getItem('bandchat_blocked_preview_domains').then(val => {
-      if (val) {
-        try { setBlockedDomains(new Set(JSON.parse(val))); } catch {}
-      }
-    });
+  const findMessage = useCallback((id) => {
+    if (parentRef.current?.id === id) return parentRef.current;
+    return repliesRef.current.find(m => m.id === id);
   }, []);
 
-  const handleLinkLongPress = useCallback((url) => {
-    setLinkActionUrl(url);
-  }, []);
+  const {
+    actionMessage, showActions, showEmojiPicker, editingMessage, viewingImage,
+    blockedDomains, linkActionUrl,
+    setShowActions, setShowEmojiPicker, setViewingImage, setLinkActionUrl,
+    handleLongPress, handleAction, handleAddReaction, handleSendEdit,
+    handleCancelEdit, handleReactionPress, handleImagePress, handleTogglePreview,
+    handleLinkLongPress, toggleBlockedDomain,
+  } = useMessageActions({ findMessage });
 
   useEffect(() => {
     let cancelled = false;
 
     const init = async () => {
       try {
+        setLoadError(null);
         const data = await api.getReplies(parentMessage.id);
         if (cancelled) return;
         setReplies(data.replies || []);
         await api.markThreadRead(parentMessage.id);
       } catch (err) {
-        // silently fail
+        if (!cancelled) setLoadError('Failed to load replies');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -172,155 +162,70 @@ export default function ThreadScreen({ navigation, route }) {
     };
   }, [socket]);
 
-  const handleSend = useCallback(async (content) => {
+  const handleSend = useCallback(async (content, attachment) => {
+    const attType = attachment ? (attachment.isVideo ? 'VIDEO' : attachment.isAudio ? 'AUDIO' : 'IMAGE') : null;
     const optimisticReply = {
       id: `temp-${Date.now()}`,
-      content,
+      content: content || '',
       author: { id: user.id, displayName: user.displayName, avatarUrl: user.avatarUrl },
       channelId,
       parentId: parentMessage.id,
       createdAt: new Date().toISOString(),
       reactions: [],
-      attachments: [],
+      attachments: attachment ? [{ id: `temp-att-${Date.now()}`, type: attType, url: attachment.uri, pending: true }] : [],
       pending: true,
     };
 
     setReplies(prev => [...prev, optimisticReply]);
 
     try {
-      const saved = await api.sendMessage(channelId, content, parentMessage.id);
+      let uploadedAttachments = null;
+      if (attachment) {
+        const uploaded = await api.uploadFile(attachment.uri, attachment.filename, attachment.mimeType, workspaceId);
+        uploadedAttachments = [uploaded];
+      }
+      const saved = await api.sendMessage(channelId, content || '', parentMessage.id, uploadedAttachments);
       setReplies(prev => prev.map(r =>
         r.id === optimisticReply.id ? saved : r
       ));
     } catch (err) {
       setReplies(prev => prev.filter(r => r.id !== optimisticReply.id));
+      toast.error('Failed to send reply');
     }
-  }, [user, channelId, parentMessage.id]);
+  }, [user, channelId, parentMessage.id, workspaceId, toast]);
+
+  const handleSendVoice = useCallback(async (uri) => {
+    const filename = `voice-${Date.now()}.m4a`;
+    const optimisticReply = {
+      id: `temp-${Date.now()}`,
+      content: '',
+      author: { id: user.id, displayName: user.displayName, avatarUrl: user.avatarUrl },
+      channelId,
+      parentId: parentMessage.id,
+      createdAt: new Date().toISOString(),
+      reactions: [],
+      attachments: [{ id: `temp-att-${Date.now()}`, type: 'AUDIO', url: uri, filename, pending: true }],
+      pending: true,
+    };
+
+    setReplies(prev => [...prev, optimisticReply]);
+
+    try {
+      const uploaded = await api.uploadFile(uri, filename, 'audio/mp4', workspaceId);
+      const saved = await api.sendMessage(channelId, '', parentMessage.id, [uploaded]);
+      setReplies(prev => prev.map(r =>
+        r.id === optimisticReply.id ? saved : r
+      ));
+    } catch (err) {
+      setReplies(prev => prev.filter(r => r.id !== optimisticReply.id));
+      toast.error('Failed to send voice message');
+    }
+  }, [user, channelId, parentMessage.id, workspaceId, toast]);
 
   const handleTyping = useCallback((isTyping) => {
     if (isTyping) startTyping(channelId);
     else stopTyping(channelId);
   }, [channelId, startTyping, stopTyping]);
-
-  // Long-press → action sheet
-  const handleLongPress = useCallback((message) => {
-    mediumImpact();
-    setActionMessage(message);
-    setShowActions(true);
-  }, []);
-
-  // Handle action from the sheet
-  const handleAction = useCallback((action) => {
-    if (!actionMessage) return;
-
-    switch (action) {
-      case 'react':
-        setShowEmojiPicker(true);
-        break;
-      case 'copy':
-        if (actionMessage.content) {
-          Clipboard.setStringAsync(actionMessage.content);
-          successNotification();
-          toast.success('Copied to clipboard');
-        }
-        break;
-      case 'edit':
-        setEditingMessage(actionMessage);
-        break;
-      case 'save':
-        (async () => {
-          try {
-            const img = actionMessage.attachments?.find(a => a.type === 'IMAGE');
-            if (!img?.url) return;
-            const { status } = await MediaLibrary.requestPermissionsAsync();
-            if (status !== 'granted' && status !== 'limited') {
-              Alert.alert('Permission needed', 'Allow BandChat to save photos to your library.');
-              return;
-            }
-            let filename = img.url.split('/').pop()?.split('?')[0] || '';
-            filename = filename.replace(/[^a-zA-Z0-9._-]/g, '');
-            if (!filename || !filename.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-              filename = `image-${Date.now()}.jpg`;
-            }
-            const file = new File(Paths.cache, filename);
-            await file.downloadFrom(img.url);
-            await MediaLibrary.saveToLibraryAsync(file.uri);
-            Alert.alert('Saved', 'Image saved to your photo library.');
-          } catch (err) {
-            Alert.alert('Error', err.message || 'Failed to save image.');
-          }
-        })();
-        break;
-      case 'delete':
-        Alert.alert(
-          'Delete Message',
-          'Are you sure you want to delete this message?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Delete',
-              style: 'destructive',
-              onPress: async () => {
-                try {
-                  await api.deleteMessage(actionMessage.id);
-                } catch (err) {
-                  // silently fail
-                }
-              },
-            },
-          ]
-        );
-        break;
-    }
-  }, [actionMessage]);
-
-  // Add/remove reaction (toggle)
-  const handleAddReaction = useCallback(async (emoji) => {
-    if (!actionMessage) return;
-    try {
-      const hasReacted = actionMessage.reactions?.some(
-        r => r.emoji === emoji && r.userId === user?.id
-      );
-      if (hasReacted) {
-        await api.removeReaction(actionMessage.id, emoji);
-      } else {
-        await api.addReaction(actionMessage.id, emoji);
-      }
-    } catch (err) {
-      // silently fail
-    }
-    setActionMessage(null);
-  }, [actionMessage, user?.id]);
-
-  // Edit message
-  const handleSendEdit = useCallback(async (messageId, content) => {
-    try {
-      await api.updateMessage(messageId, content);
-    } catch (err) {
-      // silently fail
-    }
-    setEditingMessage(null);
-  }, []);
-
-  const handleCancelEdit = useCallback(() => {
-    setEditingMessage(null);
-  }, []);
-
-  // Tap reaction to toggle
-  const handleReactionPress = useCallback(async (messageId, emoji) => {
-    try {
-      const allMessages = [parentRef.current, ...repliesRef.current];
-      const msg = allMessages.find(m => m.id === messageId);
-      const hasReacted = msg?.reactions?.some(r => r.emoji === emoji && r.userId === user?.id);
-      if (hasReacted) {
-        await api.removeReaction(messageId, emoji);
-      } else {
-        await api.addReaction(messageId, emoji);
-      }
-    } catch (err) {
-      // silently fail
-    }
-  }, [user?.id]);
 
   // Avatar press → profile
   const handleAvatarPress = useCallback((author) => {
@@ -332,20 +237,6 @@ export default function ThreadScreen({ navigation, route }) {
       });
     }
   }, [navigation, workspaceId]);
-
-  // Image viewer
-  const handleImagePress = useCallback((url) => {
-    setViewingImage(url);
-  }, []);
-
-  // Toggle link preview visibility
-  const handleTogglePreview = useCallback(async (messageId) => {
-    try {
-      await api.toggleMessagePreview(messageId);
-    } catch (err) {
-      // silently fail
-    }
-  }, []);
 
   // Build list: parent message + separator + replies
   const listData = useMemo(() => {
@@ -385,12 +276,40 @@ export default function ThreadScreen({ navigation, route }) {
     );
   }, [colors, handleLongPress, handleImagePress, handleReactionPress, handleAvatarPress, handleTogglePreview, workspaceMembers, user?.id, blockedDomains, handleLinkLongPress]);
 
+  const handleRetry = useCallback(() => {
+    setLoading(true);
+    setLoadError(null);
+    (async () => {
+      try {
+        const data = await api.getReplies(parentMessage.id);
+        setReplies(data.replies || []);
+        await api.markThreadRead(parentMessage.id);
+      } catch (err) {
+        setLoadError('Failed to load replies');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [parentMessage.id]);
+
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
+      </View>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+        <ErrorState
+          title="Couldn't load thread"
+          message={loadError}
+          onRetry={handleRetry}
+        />
       </View>
     );
   }
@@ -412,6 +331,7 @@ export default function ThreadScreen({ navigation, route }) {
       />
       <MessageInput
         onSend={handleSend}
+        onSendVoice={handleSendVoice}
         onTyping={handleTyping}
         editingMessage={editingMessage}
         onCancelEdit={handleCancelEdit}
@@ -456,13 +376,7 @@ export default function ThreadScreen({ navigation, route }) {
           const isBlocked = blockedDomains.has(domain);
           return [{
             label: isBlocked ? `Show previews from ${domain}` : `Block previews from ${domain}`,
-            onPress: () => {
-              const next = new Set(blockedDomains);
-              if (isBlocked) { next.delete(domain); } else { next.add(domain); }
-              AsyncStorage.setItem('bandchat_blocked_preview_domains', JSON.stringify([...next]));
-              setBlockedDomains(next);
-              setLinkActionUrl(null);
-            },
+            onPress: () => toggleBlockedDomain(linkActionUrl),
           }];
         })()}
       />

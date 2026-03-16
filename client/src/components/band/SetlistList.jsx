@@ -5,7 +5,9 @@ import { useToast } from '../../context/ToastContext';
 import { escapeHtml } from '../../utils/escapeHtml';
 import { formatDuration } from '../../utils/formatDuration';
 import SetlistBuilder from './SetlistBuilder';
+import Modal from '../common/Modal';
 import ConfirmDialog from '../common/ConfirmDialog';
+import ActionDropdown from '../common/ActionDropdown';
 import ContextMenu from '../common/ContextMenu';
 import useLongPress from '../../hooks/useLongPress';
 import Skeleton from '../common/Skeleton';
@@ -13,7 +15,6 @@ import ErrorMessage from '../common/ErrorMessage';
 import LiveMode from './LiveMode';
 
 const SetlistCard = memo(function SetlistCard({ setlist, onTap, onEdit, onRename, onDuplicate, onDelete, onContextMenu, calculateDuration, formatTime12h }) {
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const longPress = useLongPress({
     onLongPress: (pos) => onContextMenu(pos),
     onTap,
@@ -44,46 +45,12 @@ const SetlistCard = memo(function SetlistCard({ setlist, onTap, onEdit, onRename
           <button onClick={(e) => { e.stopPropagation(); onDuplicate(); }} className="p-1 text-[var(--color-text-muted)] hover:text-blue-400" title="Copy">📋</button>
           <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1 text-[var(--color-text-muted)] hover:text-red-400" title="Delete">🗑️</button>
         </div>
-        <div className="relative sm:hidden ml-2">
-          <button
-            onClick={(e) => { e.stopPropagation(); setShowMobileMenu(!showMobileMenu); }}
-            className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-lg"
-            aria-label="More actions"
-          >
-            ...
-          </button>
-          {showMobileMenu && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); }} />
-              <div className="absolute right-0 top-full mt-1 bg-[var(--color-bg-secondary)] rounded-lg shadow-xl border border-[var(--color-border)] py-1 z-50 min-w-[140px]">
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onEdit(); }}
-                  className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]"
-                >
-                  ✏️ Edit Songs
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onRename(); }}
-                  className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-yellow-300"
-                >
-                  ✍️ Rename
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onDuplicate(); }}
-                  className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-blue-300"
-                >
-                  📋 Copy
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onDelete(); }}
-                  className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-[var(--color-bg-tertiary)] hover:text-red-300"
-                >
-                  🗑️ Delete
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+        <ActionDropdown actions={[
+          { label: 'Edit Songs', icon: '✏️', onClick: onEdit },
+          { label: 'Rename', icon: '✍️', onClick: onRename },
+          { label: 'Copy', icon: '📋', onClick: onDuplicate },
+          { label: 'Delete', icon: '🗑️', onClick: onDelete, danger: true },
+        ]} />
       </div>
 
       <div className="flex flex-wrap gap-2 text-xs mb-3">
@@ -1369,58 +1336,46 @@ function SetlistList({ workspaceId, workspaceName }) {
       />
 
       {/* Duplicate Name Dialog */}
-      {duplicateSetlistId && (
-        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) { setDuplicateSetlistId(null); setDuplicateName(''); } }}>
-          <div className="modal-content max-w-sm">
-            <div className="p-6">
-              <h3 className="text-lg font-bold text-white mb-4">Duplicate Setlist</h3>
-              <input
-                type="text"
-                value={duplicateName}
-                onChange={(e) => setDuplicateName(e.target.value)}
-                className="modal-input mb-4"
-                placeholder="Name for the copy"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleDuplicateSetlist();
-                  if (e.key === 'Escape') { setDuplicateSetlistId(null); setDuplicateName(''); }
-                }}
-              />
-              <div className="flex gap-3 justify-end">
-                <button onClick={() => { setDuplicateSetlistId(null); setDuplicateName(''); }} className="btn btn-secondary">Cancel</button>
-                <button onClick={handleDuplicateSetlist} disabled={!duplicateName.trim()} className="btn bg-green-600 hover:bg-green-700 text-white">Duplicate</button>
-              </div>
-            </div>
+      <Modal isOpen={!!duplicateSetlistId} onClose={() => { setDuplicateSetlistId(null); setDuplicateName(''); }} title="Duplicate Setlist" maxWidth="max-w-sm">
+        <div className="p-6 pt-0">
+          <input
+            type="text"
+            value={duplicateName}
+            onChange={(e) => setDuplicateName(e.target.value)}
+            className="modal-input mb-4"
+            placeholder="Name for the copy"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleDuplicateSetlist();
+            }}
+          />
+          <div className="flex gap-3 justify-end">
+            <button onClick={() => { setDuplicateSetlistId(null); setDuplicateName(''); }} className="btn btn-secondary">Cancel</button>
+            <button onClick={handleDuplicateSetlist} disabled={!duplicateName.trim()} className="btn bg-green-600 hover:bg-green-700 text-white">Duplicate</button>
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* Rename Dialog */}
-      {renameSetlistId && (
-        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) { setRenameSetlistId(null); setRenameName(''); } }}>
-          <div className="modal-content max-w-sm">
-            <div className="p-6">
-              <h3 className="text-lg font-bold text-white mb-4">Rename Setlist</h3>
-              <input
-                type="text"
-                value={renameName}
-                onChange={(e) => setRenameName(e.target.value)}
-                className="modal-input mb-4"
-                placeholder="New name"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleRenameSetlist();
-                  if (e.key === 'Escape') { setRenameSetlistId(null); setRenameName(''); }
-                }}
-              />
-              <div className="flex gap-3 justify-end">
-                <button onClick={() => { setRenameSetlistId(null); setRenameName(''); }} className="btn btn-secondary">Cancel</button>
-                <button onClick={handleRenameSetlist} disabled={!renameName.trim()} className="btn bg-green-600 hover:bg-green-700 text-white">Rename</button>
-              </div>
-            </div>
+      <Modal isOpen={!!renameSetlistId} onClose={() => { setRenameSetlistId(null); setRenameName(''); }} title="Rename Setlist" maxWidth="max-w-sm">
+        <div className="p-6 pt-0">
+          <input
+            type="text"
+            value={renameName}
+            onChange={(e) => setRenameName(e.target.value)}
+            className="modal-input mb-4"
+            placeholder="New name"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleRenameSetlist();
+            }}
+          />
+          <div className="flex gap-3 justify-end">
+            <button onClick={() => { setRenameSetlistId(null); setRenameName(''); }} className="btn btn-secondary">Cancel</button>
+            <button onClick={handleRenameSetlist} disabled={!renameName.trim()} className="btn bg-green-600 hover:bg-green-700 text-white">Rename</button>
           </div>
         </div>
-      )}
+      </Modal>
 
       <ContextMenu
         isOpen={contextMenu !== null}

@@ -5,7 +5,7 @@ import api from '../../services/api';
 import { getCurrencySymbol } from '../../utils/currencies';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ImageLightbox from '../common/ImageLightbox';
-import { formatDuration } from '../../utils/formatDuration';
+import { formatDuration, formatTotalDuration } from '../../utils/formatDuration';
 import getInitial from '../../utils/getInitial';
 
 function GigArchive({ workspaceId, isAdmin, workspace }) {
@@ -649,16 +649,6 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
   // Note: lightbox keyboard handling is done by ImageLightbox component
 
 
-  // Format total duration as Xh Xm
-  const formatTotalDuration = (seconds) => {
-    if (!seconds) return '';
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) {
-      return `${hours}h ${mins}m`;
-    }
-    return `${mins}m`;
-  };
 
   const getSetlistStats = (setlist) => {
     if (!setlist?.songs) return { songCount: 0, totalDuration: 0 };

@@ -34,7 +34,7 @@ describe('Announcements API', () => {
         .send({
           title: 'Band Meeting',
           content: 'Please attend the band meeting this Friday.',
-          priority: 'HIGH',
+          priority: 'high',
         });
 
       expect(res.status).toBe(201);

@@ -5,6 +5,7 @@ import { useToast } from '../../context/ToastContext';
 import SongForm from './SongForm';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ContextMenu from '../common/ContextMenu';
+import ActionDropdown from '../common/ActionDropdown';
 import useLongPress from '../../hooks/useLongPress';
 import Modal from '../common/Modal';
 import Skeleton from '../common/Skeleton';
@@ -22,7 +23,6 @@ function PracticeIndicator({ songId, practiceSummary }) {
 }
 
 const SongCard = memo(function SongCard({ song, onEdit, onDelete, onContextMenu, practiceSummary }) {
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const longPress = useLongPress({
     onLongPress: (pos) => onContextMenu(pos),
   });
@@ -39,7 +39,7 @@ const SongCard = memo(function SongCard({ song, onEdit, onDelete, onContextMenu,
             <p className="text-[var(--color-text-muted)] text-sm truncate">{song.artist}</p>
           )}
           {song.shortName && (
-            <p className="text-gray-500 text-xs truncate">aka "{song.shortName}"</p>
+            <p className="text-[var(--color-text-muted)] text-xs truncate">aka "{song.shortName}"</p>
           )}
         </div>
         <div className="hidden sm:flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -58,34 +58,10 @@ const SongCard = memo(function SongCard({ song, onEdit, onDelete, onContextMenu,
             🗑️
           </button>
         </div>
-        <div className="relative sm:hidden ml-2">
-          <button
-            onClick={(e) => { e.stopPropagation(); setShowMobileMenu(!showMobileMenu); }}
-            className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-lg"
-            aria-label="More actions"
-          >
-            ...
-          </button>
-          {showMobileMenu && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); }} />
-              <div className="absolute right-0 top-full mt-1 bg-[var(--color-bg-secondary)] rounded-lg shadow-xl border border-[var(--color-border)] py-1 z-50 min-w-[140px]">
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onEdit(); }}
-                  className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]"
-                >
-                  ✏️ Edit
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onDelete(); }}
-                  className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-[var(--color-bg-tertiary)] hover:text-red-300"
-                >
-                  🗑️ Delete
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+        <ActionDropdown actions={[
+          { label: 'Edit', icon: '✏️', onClick: onEdit },
+          { label: 'Delete', icon: '🗑️', onClick: onDelete, danger: true },
+        ]} />
       </div>
 
       <div className="flex flex-wrap gap-2 text-xs">

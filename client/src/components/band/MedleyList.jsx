@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
+import Modal from '../common/Modal';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ErrorMessage from '../common/ErrorMessage';
 import Skeleton from '../common/Skeleton';
@@ -357,13 +358,7 @@ function MedleyForm({ medley, songs, onSave, onClose }) {
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal-content max-w-2xl max-h-modal overflow-y-auto">
-        <div className="modal-header">
-          <h3>{medley ? 'Edit Medley' : 'Create Medley'}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl" aria-label="Close">&times;</button>
-        </div>
-
+    <Modal isOpen={true} onClose={onClose} title={medley ? 'Edit Medley' : 'Create Medley'} maxWidth="max-w-2xl" className="max-h-modal overflow-y-auto">
         <div className="modal-body">
           {error && (
             <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded-lg mb-4">
@@ -514,8 +509,7 @@ function MedleyForm({ medley, songs, onSave, onClose }) {
             </div>
           </form>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

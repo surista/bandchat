@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef, useLayoutEffect, useMemo, useCallback } from 'react';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
+import useIsAdmin from '../../hooks/useIsAdmin';
 import api from '../../services/api';
 import MessageList from '../messages/MessageList';
 import MessageInput from '../messages/MessageInput';
@@ -51,7 +52,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   const [loadError, setLoadError] = useState(null);
   const [setlistExpanded, setSetlistExpanded] = useState(false);
   const [setlistSongs, setSetlistSongs] = useState(null);
-  const isAdmin = workspace?.members?.find(m => m.user?.id === user?.id)?.role === 'ADMIN';
+  const isAdmin = useIsAdmin(workspace);
   const lastReadAtRef = useRef(null);
   const descriptionSavedRef = useRef(false);
   const messagesEndRef = useRef(null);
@@ -541,6 +542,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       await api.updateMessage(messageId, content);
     } catch (err) {
       console.error('Failed to edit message:', err);
+      toast.error('Failed to edit message');
     }
   };
 
@@ -549,6 +551,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       await api.deleteMessage(messageId);
     } catch (err) {
       console.error('Failed to delete message:', err);
+      toast.error('Failed to delete message');
     }
   };
 
@@ -573,6 +576,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       await api.addReaction(messageId, emoji);
     } catch (err) {
       console.error('Failed to add reaction:', err);
+      toast.error('Failed to add reaction');
     }
   };
 
@@ -581,6 +585,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       await api.removeReaction(messageId, emoji);
     } catch (err) {
       console.error('Failed to remove reaction:', err);
+      toast.error('Failed to remove reaction');
     }
   };
 

@@ -116,7 +116,7 @@ function AudioPlayer({ url, colors }) {
 export default function RecordingDetailScreen({ navigation, route }) {
   const { recordingId, workspaceId, editing: startEditing } = route.params;
   const isNew = !recordingId;
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
 
   const [recording, setRecording] = useState(null);

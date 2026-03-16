@@ -385,6 +385,9 @@ function DraggableItem({ item, stageLayout, onMove, onRemove, onLongPress, onUpd
           item.type === 'text' && { width: 'auto' },
           animatedStyle,
         ]}
+        accessibilityRole="adjustable"
+        accessibilityLabel={item.type === 'text' ? `Text label: ${item.text || 'empty'}` : (item.label || LABEL_MAP[item.type])}
+        accessibilityHint="Drag to reposition. Long press for options."
       >
         {item.type === 'text' ? (
           <TextInput
@@ -394,6 +397,7 @@ function DraggableItem({ item, stageLayout, onMove, onRemove, onLongPress, onUpd
             placeholder="Type here..."
             placeholderTextColor="rgba(255,255,255,0.35)"
             multiline={false}
+            accessibilityLabel="Stage text label"
           />
         ) : (
           <>
@@ -656,6 +660,7 @@ export default function StagePlotEditorScreen({ navigation, route }) {
               onChangeText={handleTitleChange}
               placeholder="Plot title"
               placeholderTextColor={colors.textSecondary}
+              accessibilityLabel="Plot title"
             />
           </View>
           <View style={styles.infoField}>
@@ -666,6 +671,7 @@ export default function StagePlotEditorScreen({ navigation, route }) {
               onChangeText={handleBandNameChange}
               placeholder="Band name"
               placeholderTextColor={colors.textSecondary}
+              accessibilityLabel="Band name"
             />
           </View>
         </View>
@@ -678,6 +684,7 @@ export default function StagePlotEditorScreen({ navigation, route }) {
               onChangeText={handleEventNameChange}
               placeholder="Event or venue"
               placeholderTextColor={colors.textSecondary}
+              accessibilityLabel="Event or venue name"
             />
           </View>
         </View>
@@ -692,6 +699,7 @@ export default function StagePlotEditorScreen({ navigation, route }) {
       <View
         style={[styles.stageCanvas, { borderColor: colors.border, backgroundColor: colors.bgSecondary }]}
         onLayout={handleStageLayout}
+        accessibilityLabel={`Stage canvas with ${items.length} item${items.length !== 1 ? 's' : ''}`}
       >
         {stageLayout.width > 0 && items.map((item) => (
           <DraggableItem
@@ -728,7 +736,7 @@ export default function StagePlotEditorScreen({ navigation, route }) {
 
       {/* Instrument palette modal */}
       <Modal visible={showPalette} transparent animationType="fade" onRequestClose={() => setShowPalette(false)}>
-        <TouchableOpacity style={styles.paletteOverlay} activeOpacity={1} onPress={() => setShowPalette(false)}>
+        <TouchableOpacity style={styles.paletteOverlay} activeOpacity={1} onPress={() => setShowPalette(false)} accessibilityRole="button" accessibilityLabel="Close instrument palette">
           <View style={[styles.paletteSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.paletteHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.paletteTitle, { color: colors.textPrimary }]}>Add Instrument</Text>
@@ -741,6 +749,8 @@ export default function StagePlotEditorScreen({ navigation, route }) {
                       style={[styles.paletteSectionHeader, { borderTopColor: colors.border }]}
                       onPress={() => setCollapsedSections(prev => ({ ...prev, [section.label]: !prev[section.label] }))}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${section.label} section, ${isCollapsed ? 'collapsed' : 'expanded'}`}
                     >
                       <Text style={[styles.paletteSectionChevron, { color: colors.textSecondary }]}>
                         {isCollapsed ? '\u25B6' : '\u25BC'}
@@ -757,6 +767,8 @@ export default function StagePlotEditorScreen({ navigation, route }) {
                             style={[styles.paletteItem, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
                             onPress={() => addItem(type)}
                             activeOpacity={0.7}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Add ${LABEL_MAP[type]} to stage`}
                           >
                             <InstrumentSvg type={type} size={40} />
                             <Text style={[styles.paletteItemLabel, { color: colors.textPrimary }]}>{LABEL_MAP[type]}</Text>

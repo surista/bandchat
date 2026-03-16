@@ -25,7 +25,7 @@ function formatMessageDate(date) {
 
 export default function TimelineScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
   const { socket } = useSocket();
   const { user } = useAuth();

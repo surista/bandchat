@@ -42,6 +42,7 @@ import websiteRoutes from './routes/website.js';
 import adminRoutes from './routes/admin.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
+import { isValidUUID } from './lib/validators.js';
 
 export function createApp() {
   const app = express();
@@ -68,6 +69,8 @@ export function createApp() {
   const r2CspDomain = r2PublicUrl ? r2PublicUrl.replace(/\/$/, '') : null;
 
   // Admin dashboard — standalone HTML with its own CSP (served before Helmet)
+  // Note: HTML/CSS/JS served without auth (dashboard handles auth client-side via API calls).
+  // All /api/admin/* endpoints require isSystemAdmin — the static files are not sensitive.
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const adminDir = path.join(__dirname, 'admin');
 
@@ -126,6 +129,17 @@ export function createApp() {
 
   // Rate limiting
   app.use('/api', apiLimiter);
+
+  // Validate UUID route params (reject malformed IDs early)
+  const UUID_PARAMS = ['workspaceId', 'channelId', 'messageId', 'songId', 'gigId', 'setlistId', 'memberId', 'userId', 'recordingId', 'plotId', 'medleyId', 'pollId', 'announcementId', 'contactId', 'achievementId', 'groupId', 'transactionId'];
+  for (const param of UUID_PARAMS) {
+    app.param(param, (req, res, next, value) => {
+      if (!isValidUUID(value)) {
+        return res.status(400).json({ error: `Invalid ${param}` });
+      }
+      next();
+    });
+  }
 
   // Routes
   app.use('/api/auth', authRoutes);

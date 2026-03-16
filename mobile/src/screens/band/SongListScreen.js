@@ -40,7 +40,7 @@ function Badge({ label, color, bgColor }) {
 
 export default function SongListScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
 
   const [songs, setSongs] = useState([]);

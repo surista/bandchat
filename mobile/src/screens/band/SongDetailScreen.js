@@ -39,7 +39,7 @@ function parseDuration(str) {
 export default function SongDetailScreen({ navigation, route }) {
   const { songId, workspaceId, editing: startEditing } = route.params;
   const isNew = !songId;
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
   const insets = useSafeAreaInsets();
 

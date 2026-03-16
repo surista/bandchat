@@ -167,6 +167,7 @@ const reserveStorageQuota = async (workspaceId, fileSize) => {
   if (!workspaceId) return null;
 
   try {
+    // Atomic check-and-increment using $executeRawUnsafe to prevent TOCTOU race
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
       select: { storageUsedBytes: true, plan: true, planExpiresAt: true },
@@ -174,16 +175,19 @@ const reserveStorageQuota = async (workspaceId, fileSize) => {
     if (!workspace) return null;
 
     const limits = getPlanLimits(workspace);
-    const used = workspace.storageUsedBytes ?? 0n;
-    if (used + BigInt(fileSize) > limits.storageBytes) {
+    const fileSizeBigInt = BigInt(fileSize);
+
+    // Atomic conditional update: only increment if within quota
+    const updated = await prisma.$executeRawUnsafe(
+      `UPDATE "Workspace" SET "storageUsedBytes" = "storageUsedBytes" + $1::bigint WHERE "id" = $2 AND "storageUsedBytes" + $1::bigint <= $3::bigint`,
+      fileSizeBigInt,
+      workspaceId,
+      limits.storageBytes
+    );
+
+    if (updated === 0) {
       return { error: 'Storage limit reached. Upgrade to Pro for more storage.', upgrade: true };
     }
-
-    // Increment storage counter (slight over-count on concurrent uploads is acceptable)
-    await prisma.workspace.update({
-      where: { id: workspaceId },
-      data: { storageUsedBytes: { increment: BigInt(fileSize) } },
-    });
     return null;
   } catch (error) {
     // Don't block uploads on quota tracking errors

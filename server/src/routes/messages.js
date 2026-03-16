@@ -9,7 +9,7 @@ import { sendPushToUser } from './push.js';
 import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
 
 // L7: Allowed attachment types and size limits for validation
-const ALLOWED_ATTACHMENT_TYPES = ['IMAGE', 'AUDIO', 'VIDEO'];
+const ALLOWED_ATTACHMENT_TYPES = ['IMAGE', 'AUDIO', 'VIDEO', 'DOCUMENT'];
 const MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024; // 50MB (video max)
 
 const router = express.Router();

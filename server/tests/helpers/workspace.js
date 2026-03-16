@@ -17,6 +17,12 @@ export async function createTestWorkspace(token, overrides = {}) {
     throw new Error(`Failed to create workspace: ${res.status} ${JSON.stringify(res.body)}`);
   }
 
+  // Set test workspaces to PRO so all features are available
+  await prisma.workspace.update({
+    where: { id: res.body.id },
+    data: { plan: 'PRO', planSource: 'MANUAL' },
+  });
+
   return res.body;
 }
 

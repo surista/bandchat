@@ -25,7 +25,7 @@ function formatTimestamp(dateStr) {
 
 export default function SearchScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
 
   const [query, setQuery] = useState('');

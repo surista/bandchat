@@ -21,7 +21,7 @@ import { useLayout } from '../../hooks/useLayout';
 export default function MedleyDetailScreen({ navigation, route }) {
   const { medleyId, workspaceId, editing: startEditing } = route.params;
   const isNew = !medleyId;
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
 
   const [medley, setMedley] = useState(null);

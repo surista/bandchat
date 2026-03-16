@@ -2,7 +2,7 @@ import express from 'express';
 import crypto from 'crypto';
 import rateLimit from 'express-rate-limit';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
-import prisma from '../lib/prisma.js';
+import prisma, { USER_SELECT_BRIEF } from '../lib/prisma.js';
 import { deleteFile, isR2Url } from '../lib/storage.js';
 import { safeDecrementStorage } from './uploads.js';
 import { parseICS, parseICSMultiple } from '../lib/icsParser.js';
@@ -54,7 +54,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
       where,
       include: {
         createdBy: {
-          select: { id: true, displayName: true }
+          select: USER_SELECT_BRIEF
         },
         setlist: {
           include: {
@@ -187,7 +187,7 @@ router.get('/all-workspaces', authenticate, async (req, res) => {
           select: { id: true, name: true }
         },
         createdBy: {
-          select: { id: true, displayName: true }
+          select: USER_SELECT_BRIEF
         },
         setlist: {
           include: {
@@ -672,7 +672,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       },
       include: {
         createdBy: {
-          select: { id: true, displayName: true }
+          select: USER_SELECT_BRIEF
         },
         setlist: {
           select: { id: true, name: true }
@@ -730,7 +730,7 @@ router.get('/:gigId', authenticate, async (req, res) => {
       where: { id: req.params.gigId },
       include: {
         createdBy: {
-          select: { id: true, displayName: true }
+          select: USER_SELECT_BRIEF
         },
         setlist: {
           include: {
@@ -925,7 +925,7 @@ router.put('/:gigId', authenticate, async (req, res) => {
       },
       include: {
         createdBy: {
-          select: { id: true, displayName: true }
+          select: USER_SELECT_BRIEF
         },
         setlist: {
           select: { id: true, name: true }
@@ -1038,7 +1038,7 @@ router.put('/:gigId/complete', authenticate, async (req, res) => {
       where: { id: req.params.gigId },
       include: {
         createdBy: {
-          select: { id: true, displayName: true }
+          select: USER_SELECT_BRIEF
         },
         setlist: {
           select: { id: true, name: true }
@@ -1084,7 +1084,7 @@ router.put('/:gigId/complete', authenticate, async (req, res) => {
             },
             include: {
               gig: { select: { id: true, title: true, date: true } },
-              createdBy: { select: { id: true, displayName: true } }
+              createdBy: { select: USER_SELECT_BRIEF }
             }
           });
 
@@ -1264,7 +1264,7 @@ router.post('/:gigId/duplicate', authenticate, async (req, res) => {
       },
       include: {
         createdBy: {
-          select: { id: true, displayName: true }
+          select: USER_SELECT_BRIEF
         },
         setlist: {
           include: {
@@ -1687,7 +1687,7 @@ router.post('/workspace/:workspaceId/auto-link-setlists', authenticate, isWorksp
 });
 
 // Generate/regenerate calendar token for a workspace
-router.post('/workspace/:workspaceId/calendar-token', authenticate, isWorkspaceMember, async (req, res) => {
+router.post('/workspace/:workspaceId/calendar-token', authenticate, isWorkspaceAdmin, async (req, res) => {
   try {
     const token = crypto.randomBytes(32).toString('hex');
     await prisma.workspace.update({
@@ -1826,7 +1826,7 @@ router.post('/workspace/:workspaceId/import-ics', authenticate, isWorkspaceAdmin
           },
           include: {
             createdBy: {
-              select: { id: true, displayName: true }
+              select: USER_SELECT_BRIEF
             }
           }
         });

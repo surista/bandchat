@@ -16,7 +16,7 @@ import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
 
 export default function ForgotPasswordScreen({ navigation }) {
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');

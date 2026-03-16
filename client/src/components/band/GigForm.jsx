@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import api from '../../services/api';
+import Modal from '../common/Modal';
 import { getCurrencySymbol } from '../../utils/currencies';
 
 // Generate Google Calendar URL
@@ -38,15 +39,6 @@ const getGoogleCalendarUrl = (gig) => {
 function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmin, workspaceId, workspace, workspaceMembers = [], previousEvents = [] }) {
   // Read-only mode: locked events can be viewed but not edited by non-admins
   const readOnly = gig?.isLocked && !isAdmin;
-
-  // ESC to close
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
 
   const getDefaultDate = () => {
     if (gig?.date) return format(new Date(gig.date), 'yyyy-MM-dd');
@@ -228,19 +220,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal-content max-w-lg max-h-modal overflow-y-auto">
-        <div className="modal-header">
-          <h3>{readOnly ? 'Event Details' : gig ? 'Edit Event' : 'New Event'}</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white text-2xl leading-none"
-            aria-label="Close"
-          >
-            &times;
-          </button>
-        </div>
-
+    <Modal isOpen={true} onClose={onClose} title={readOnly ? 'Event Details' : gig ? 'Edit Event' : 'New Event'} maxWidth="max-w-lg" className="max-h-modal overflow-y-auto">
         <div className="modal-body">
           {readOnly && (
             <div className="bg-yellow-900/30 border border-yellow-600/50 text-yellow-200 px-4 py-2 rounded-lg mb-4 flex items-center gap-2">
@@ -955,8 +935,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
             </div>
           </form>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

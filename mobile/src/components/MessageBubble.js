@@ -2,7 +2,7 @@ import { memo, useState, useEffect, useRef, useMemo, forwardRef, useImperativeHa
 import { View, Text, Image, TouchableOpacity, Pressable, Animated, Linking, StyleSheet } from 'react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Reanimated, { useAnimatedStyle, interpolate } from 'react-native-reanimated';
-import { Video, ResizeMode } from 'expo-av';
+import { Audio, Video, ResizeMode } from 'expo-av';
 import { format, isToday, isYesterday } from 'date-fns';
 import { useTheme } from '../context/ThemeContext';
 import { lightImpact } from '../utils/haptics';
@@ -376,7 +376,6 @@ function renderAttachments(attachments, onImagePress, imgWidth, imgHeight) {
 }
 
 function VideoAttachment({ url }) {
-  const { colors } = useTheme();
   return (
     <View style={styles.videoContainer}>
       <Video
@@ -437,7 +436,6 @@ function AudioAttachment({ url, filename }) {
       setPlaying(true);
     } else {
       try {
-        const { Audio } = require('expo-av');
         const { sound: newSound } = await Audio.Sound.createAsync(
           { uri: url },
           { shouldPlay: true },

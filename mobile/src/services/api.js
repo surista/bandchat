@@ -236,6 +236,14 @@ class ApiService {
     }
     const data = await this.request(endpoint);
     this._cache.set(endpoint, { data, timestamp: Date.now() });
+    // Evict oldest entries if cache exceeds max size
+    if (this._cache.size > 200) {
+      const keys = [...this._cache.keys()];
+      const oldest = keys.sort((a, b) => this._cache.get(a).timestamp - this._cache.get(b).timestamp);
+      for (let i = 0; i < keys.length - 200; i++) {
+        this._cache.delete(oldest[i]);
+      }
+    }
     return data;
   }
 
@@ -267,14 +275,7 @@ class ApiService {
   }
 
   async request(endpoint, options = {}, timeout = DEFAULT_TIMEOUT) {
-    if (this.refreshToken && this.isTokenExpiringSoon()) {
-      if (!this._refreshPromise) {
-        this._refreshPromise = this.refreshAccessToken().finally(() => {
-          this._refreshPromise = null;
-        });
-      }
-      await this._refreshPromise;
-    }
+    await this.ensureFreshToken();
 
     // Invalidate cache on mutations (POST/PUT/PATCH/DELETE)
     if (options.method && options.method !== 'GET') {

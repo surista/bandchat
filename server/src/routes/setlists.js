@@ -1,7 +1,7 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { isWorkspaceMember } from '../middleware/auth.js';
-import prisma from '../lib/prisma.js';
+import prisma, { USER_SELECT_BRIEF } from '../lib/prisma.js';
 import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
 import { triggerWebsiteSync } from '../services/websiteDeployment.js';
 
@@ -14,7 +14,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
       where: { workspaceId: req.params.workspaceId },
       include: {
         createdBy: {
-          select: { id: true, displayName: true }
+          select: USER_SELECT_BRIEF
         },
         songs: {
           include: {
@@ -89,7 +89,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       },
       include: {
         createdBy: {
-          select: { id: true, displayName: true }
+          select: USER_SELECT_BRIEF
         },
         songs: {
           include: { song: true },
@@ -119,7 +119,7 @@ router.get('/:setlistId', authenticate, async (req, res) => {
       where: { id: req.params.setlistId },
       include: {
         createdBy: {
-          select: { id: true, displayName: true }
+          select: USER_SELECT_BRIEF
         },
         songs: {
           include: {
@@ -214,7 +214,7 @@ router.put('/:setlistId', authenticate, async (req, res) => {
       },
       include: {
         createdBy: {
-          select: { id: true, displayName: true }
+          select: USER_SELECT_BRIEF
         },
         songs: {
           include: { song: true },
@@ -341,7 +341,7 @@ router.post('/:setlistId/duplicate', authenticate, async (req, res) => {
       },
       include: {
         createdBy: {
-          select: { id: true, displayName: true }
+          select: USER_SELECT_BRIEF
         },
         songs: {
           include: { song: true },
@@ -763,7 +763,7 @@ router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceMember, a
       },
       include: {
         createdBy: {
-          select: { id: true, displayName: true }
+          select: USER_SELECT_BRIEF
         },
         songs: {
           include: { song: true },
@@ -921,7 +921,7 @@ router.post('/workspace/:workspaceId/import-multiset', authenticate, isWorkspace
         }
       },
       include: {
-        createdBy: { select: { id: true, displayName: true } },
+        createdBy: { select: USER_SELECT_BRIEF },
         songs: { include: { song: true }, orderBy: { position: 'asc' } }
       }
     });

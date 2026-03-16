@@ -10,6 +10,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
+import useIsAdmin from '../../hooks/useIsAdmin';
+import Modal from '../common/Modal';
 import { CURRENCIES } from '../../utils/currencies';
 import BandMemberForm from '../band/BandMembers/BandMemberForm';
 import Skeleton from '../common/Skeleton';
@@ -58,6 +60,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
   // Account deletion
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
   // Workspace leave/delete
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const [deleteWsConfirmOpen, setDeleteWsConfirmOpen] = useState(false);
@@ -149,7 +152,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
     }
   }, [settingsTab, workspace?.id]);
 
-  const isAdmin = workspace?.members?.find(m => m.user?.id === user?.id)?.role === 'ADMIN';
+  const isAdmin = useIsAdmin(workspace);
 
   const loadBandMembers = async () => {
     setBandMembersLoading(true);
@@ -582,16 +585,30 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                         <p className="text-sm text-red-300 font-medium">
                           Are you sure? This will permanently delete your account. Your messages will be anonymized and your profile data removed.
                         </p>
+                        {user?.hasPassword && (
+                          <input
+                            type="password"
+                            placeholder="Enter your password to confirm"
+                            value={deletePassword}
+                            onChange={(e) => setDeletePassword(e.target.value)}
+                            className="modal-input w-full"
+                            autoComplete="current-password"
+                          />
+                        )}
                         {deleteError && (
                           <p className="text-sm text-red-400">{deleteError}</p>
                         )}
                         <div className="flex gap-2">
                           <button
                             onClick={async () => {
+                              if (user?.hasPassword && !deletePassword) {
+                                setDeleteError('Password is required');
+                                return;
+                              }
                               setDeleteError('');
                               setDeleteLoading(true);
                               try {
-                                await api.deleteAccount();
+                                await api.deleteAccount(deletePassword || undefined);
                                 onLogout();
                               } catch (err) {
                                 setDeleteError(err.message);
@@ -599,13 +616,13 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                                 setDeleteLoading(false);
                               }
                             }}
-                            disabled={deleteLoading}
+                            disabled={deleteLoading || (user?.hasPassword && !deletePassword)}
                             className="btn btn-danger"
                           >
                             {deleteLoading ? 'Deleting...' : 'Permanently Delete'}
                           </button>
                           <button
-                            onClick={() => { setDeleteConfirmOpen(false); setDeleteError(''); }}
+                            onClick={() => { setDeleteConfirmOpen(false); setDeleteError(''); setDeletePassword(''); }}
                             className="btn btn-secondary"
                           >
                             Cancel
@@ -875,13 +892,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                   ))}
 
                   {/* Remove Member Modal */}
-                  {removingMember && createPortal(
-                    <div className="modal-backdrop">
-                      <div className="modal-content max-w-md mx-4">
-                        <div className="p-6">
-                          <h3 className="text-lg font-bold text-[var(--color-text-primary)] mb-4">
-                            Remove {removingMember.user.displayName}?
-                          </h3>
+                  <Modal isOpen={!!removingMember} onClose={() => setRemovingMember(null)} title={removingMember ? `Remove ${removingMember.user.displayName}?` : ''}>
+                        <div className="p-6 pt-0">
                           <p className="text-[var(--color-text-muted)] text-sm mb-4">
                             What should happen to their messages?
                           </p>
@@ -990,10 +1002,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                             </button>
                           </div>
                         </div>
-                      </div>
-                    </div>,
-                    document.body
-                  )}
+                  </Modal>
                 </div>
               )}
 
@@ -1932,11 +1941,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
       />
 
       {/* Password Reset Modal */}
-      {passwordResetMember && createPortal(
-        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setPasswordResetMember(null); }}>
-          <div className="modal-content max-w-sm">
-            <div className="p-6">
-              <h3 className="text-lg font-bold text-[var(--color-text-primary)] mb-4">Reset Password for {passwordResetMember.user.displayName}</h3>
+      <Modal isOpen={!!passwordResetMember} onClose={() => setPasswordResetMember(null)} title={passwordResetMember ? `Reset Password for ${passwordResetMember.user.displayName}` : ''} maxWidth="max-w-sm">
+            <div className="p-6 pt-0">
               <div className="space-y-3">
                 <div>
                   <label className="text-sm text-[var(--color-text-muted)] mb-1 block">Your password (confirm)</label>
@@ -1988,10 +1994,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                 </button>
               </div>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+      </Modal>
 
       {showSlackImport && (
         <SlackImportWizard

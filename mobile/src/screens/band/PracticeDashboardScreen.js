@@ -60,7 +60,7 @@ function groupByDate(sessions) {
 
 export default function PracticeDashboardScreen({ route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
 
   const [sessions, setSessions] = useState([]);

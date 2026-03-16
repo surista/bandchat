@@ -19,7 +19,7 @@ import { useLayout } from '../../hooks/useLayout';
 
 export default function StagePlotListScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
   const { user } = useAuth();
 

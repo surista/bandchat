@@ -1,21 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import Modal from './Modal';
 
 function Footer({ theme = 'dark' }) {
   const [showAbout, setShowAbout] = useState(false);
   const [showWhatsNew, setShowWhatsNew] = useState(false);
-
-  // ESC key to close modals
-  useEffect(() => {
-    const handleEsc = (e) => {
-      if (e.key === 'Escape') {
-        if (showAbout) setShowAbout(false);
-        if (showWhatsNew) setShowWhatsNew(false);
-      }
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [showAbout, showWhatsNew]);
 
   const textColor = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
   const hoverColor = theme === 'dark' ? 'hover:text-gray-200' : 'hover:text-gray-700';
@@ -84,19 +73,7 @@ function Footer({ theme = 'dark' }) {
       </footer>
 
       {/* About Modal */}
-      {showAbout && (
-        <div className="modal-backdrop">
-          <div className="modal-content max-w-2xl max-h-modal overflow-y-auto">
-            <div className="modal-header">
-              <h3>About BandChat</h3>
-              <button
-                onClick={() => setShowAbout(false)}
-                className="text-gray-400 hover:text-white text-2xl leading-none"
-              >
-                &times;
-              </button>
-            </div>
-
+      <Modal isOpen={showAbout} onClose={() => setShowAbout(false)} title="About BandChat" maxWidth="max-w-2xl" className="max-h-modal overflow-y-auto">
             <div className="modal-body space-y-6">
               <div className="text-center py-4">
                 <img
@@ -160,24 +137,10 @@ function Footer({ theme = 'dark' }) {
                 Made with ♥ for musicians everywhere
               </div>
             </div>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* What's New Modal */}
-      {showWhatsNew && (
-        <div className="modal-backdrop">
-          <div className="modal-content max-w-2xl max-h-modal overflow-y-auto">
-            <div className="modal-header">
-              <h3>What's New</h3>
-              <button
-                onClick={() => setShowWhatsNew(false)}
-                className="text-gray-400 hover:text-white text-2xl leading-none"
-              >
-                &times;
-              </button>
-            </div>
-
+      <Modal isOpen={showWhatsNew} onClose={() => setShowWhatsNew(false)} title="What's New" maxWidth="max-w-2xl" className="max-h-modal overflow-y-auto">
             <div className="modal-body space-y-4">
               <div className="border-b border-[var(--color-modal-border)] pb-4">
                 <div className="flex items-center gap-2 mb-2">
@@ -352,9 +315,7 @@ function Footer({ theme = 'dark' }) {
                 </p>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+      </Modal>
     </>
   );
 }

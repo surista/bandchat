@@ -19,7 +19,7 @@ import { useLayout } from '../../hooks/useLayout';
 
 export default function PinnedMessagesScreen({ navigation, route }) {
   const { channelId } = route.params;
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
   const { socket } = useSocket();
 

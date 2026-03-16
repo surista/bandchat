@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 /**
  * Reusable modal base component with portal, ARIA, focus trapping, and ESC/backdrop close.
  */
 function Modal({ isOpen, onClose, title, maxWidth = 'max-w-md', children, className = '' }) {
+  const titleId = useId();
   const modalRef = useRef(null);
 
   // Focus first focusable element on open
@@ -56,13 +57,13 @@ function Modal({ isOpen, onClose, title, maxWidth = 'max-w-md', children, classN
       className="modal-backdrop"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="modal-title"
+      aria-labelledby={titleId}
       onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
     >
       <div ref={modalRef} className={`modal-content ${maxWidth} ${className}`}>
         {title && (
           <div className="modal-header">
-            <h3 id="modal-title">{title}</h3>
+            <h3 id={titleId}>{title}</h3>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-white text-2xl leading-none"

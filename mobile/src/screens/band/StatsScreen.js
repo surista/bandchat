@@ -15,33 +15,7 @@ import ErrorState from '../../components/ErrorState';
 import api from '../../services/api';
 import { formatTotalDuration } from '../../utils/formatDuration';
 import { useLayout } from '../../hooks/useLayout';
-
-const CURRENCIES = [
-  { code: 'USD', symbol: '$' },
-  { code: 'EUR', symbol: '\u20AC' },
-  { code: 'GBP', symbol: '\u00A3' },
-  { code: 'JPY', symbol: '\u00A5' },
-  { code: 'CAD', symbol: 'C$' },
-  { code: 'AUD', symbol: 'A$' },
-  { code: 'CHF', symbol: 'CHF' },
-  { code: 'CNY', symbol: '\u00A5' },
-  { code: 'KRW', symbol: '\u20A9' },
-  { code: 'INR', symbol: '\u20B9' },
-  { code: 'BRL', symbol: 'R$' },
-  { code: 'MXN', symbol: 'MX$' },
-  { code: 'SEK', symbol: 'kr' },
-  { code: 'NOK', symbol: 'kr' },
-  { code: 'DKK', symbol: 'kr' },
-  { code: 'NZD', symbol: 'NZ$' },
-  { code: 'SGD', symbol: 'S$' },
-  { code: 'HKD', symbol: 'HK$' },
-  { code: 'THB', symbol: '\u0E3F' },
-  { code: 'PHP', symbol: '\u20B1' },
-];
-
-function getCurrencySymbol(code) {
-  return CURRENCIES.find(c => c.code === code)?.symbol || '$';
-}
+import getCurrencySymbol from '../../utils/getCurrencySymbol';
 
 function formatDateShort(dateStr) {
   if (!dateStr) return '';
@@ -97,7 +71,7 @@ function FunFactCard({ label, value, detail, colors }) {
 
 export default function StatsScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
 
   const [stats, setStats] = useState(null);

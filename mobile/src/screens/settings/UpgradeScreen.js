@@ -46,7 +46,7 @@ const PRO_FEATURES = [
 ];
 
 export default function UpgradeScreen({ route }) {
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
   const { workspaceId } = route.params;
 

@@ -5,6 +5,8 @@ import { sendPushToUser } from './push.js';
 
 const router = express.Router();
 
+const VALID_PRIORITIES = ['low', 'normal', 'high', 'urgent'];
+
 // Get all announcements for a workspace
 router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
@@ -74,8 +76,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (re
     if (title.length > 200) return res.status(400).json({ error: 'Title must be 200 characters or less' });
     if (content.length > 10000) return res.status(400).json({ error: 'Content must be 10,000 characters or less' });
 
-    const validPriorities = ['low', 'normal', 'high', 'urgent'];
-    if (priority && !validPriorities.includes(priority)) {
+    if (priority && !VALID_PRIORITIES.includes(priority)) {
       return res.status(400).json({ error: 'Invalid priority. Must be low, normal, high, or urgent' });
     }
 
@@ -201,8 +202,7 @@ router.put('/:announcementId', authenticate, async (req, res) => {
     if (title && title.length > 200) return res.status(400).json({ error: 'Title must be 200 characters or less' });
     if (content && content.length > 10000) return res.status(400).json({ error: 'Content must be 10,000 characters or less' });
 
-    const validPriorities = ['low', 'normal', 'high', 'urgent'];
-    if (priority && !validPriorities.includes(priority)) {
+    if (priority && !VALID_PRIORITIES.includes(priority)) {
       return res.status(400).json({ error: 'Invalid priority. Must be low, normal, high, or urgent' });
     }
 

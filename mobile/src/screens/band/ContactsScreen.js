@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import ActionSheet from '../../components/ActionSheet';
 import ErrorState from '../../components/ErrorState';
+import { SkeletonList } from '../../components/SkeletonLoader';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
 
@@ -58,7 +59,7 @@ const CATEGORY_PICKER = [
 
 export default function ContactsScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
 
   const [contacts, setContacts] = useState([]);
@@ -280,9 +281,7 @@ export default function ContactsScreen({ navigation, route }) {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        <SkeletonList count={5} />
       </SafeAreaView>
     );
   }

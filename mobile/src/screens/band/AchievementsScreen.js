@@ -15,6 +15,7 @@ import { useTheme } from '../../context/ThemeContext';
 import formatDate from '../../utils/formatDate';
 import api from '../../services/api';
 import ErrorState from '../../components/ErrorState';
+import { SkeletonList } from '../../components/SkeletonLoader';
 import { useLayout } from '../../hooks/useLayout';
 
 const TABS = ['band', 'my', 'leaderboard'];
@@ -39,7 +40,7 @@ function StatCard({ label, value, color, bgColor }) {
 
 export default function AchievementsScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
 
   const [definitions, setDefinitions] = useState([]);
@@ -172,9 +173,7 @@ export default function AchievementsScreen({ navigation, route }) {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        <SkeletonList count={5} />
       </SafeAreaView>
     );
   }

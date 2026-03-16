@@ -3,6 +3,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSam
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
+import useIsAdmin from '../../hooks/useIsAdmin';
 import GigForm from './GigForm';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ContextMenu from '../common/ContextMenu';
@@ -147,7 +148,7 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); }}
-                        className="block w-full px-4 py-2 text-left text-sm text-orange-400 hover:bg-gray-700 hover:text-orange-300"
+                        className="block w-full px-4 py-2 text-left text-sm text-orange-400 hover:bg-[var(--color-bg-tertiary)] hover:text-orange-300"
                       >
                         📅 + Google Cal
                       </a>
@@ -156,21 +157,21 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
                           {canEdit && (
                             <button
                               onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onEdit(); }}
-                              className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+                              className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]"
                             >
                               ✏️ Edit
                             </button>
                           )}
                           <button
                             onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onDuplicate(); }}
-                            className="w-full px-4 py-2 text-left text-sm text-blue-400 hover:bg-gray-700 hover:text-blue-300"
+                            className="w-full px-4 py-2 text-left text-sm text-blue-400 hover:bg-[var(--color-bg-tertiary)] hover:text-blue-300"
                           >
                             📋 Copy
                           </button>
                           {gig.status === 'SCHEDULED' && canEdit && (
                             <button
                               onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onComplete(); }}
-                              className="w-full px-4 py-2 text-left text-sm text-green-400 hover:bg-gray-700 hover:text-green-300"
+                              className="w-full px-4 py-2 text-left text-sm text-green-400 hover:bg-[var(--color-bg-tertiary)] hover:text-green-300"
                             >
                               ✅ Mark Complete
                             </button>
@@ -178,7 +179,7 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
                           {canEdit && (
                             <button
                               onClick={(e) => { e.stopPropagation(); setShowMobileMenu(false); onDelete(); }}
-                              className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-gray-700 hover:text-red-300"
+                              className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-[var(--color-bg-tertiary)] hover:text-red-300"
                             >
                               🗑️ Delete
                             </button>
@@ -268,12 +269,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
   const { user } = useAuth();
   const toast = useToast();
 
-  // Determine if current user is an admin
-  const isAdmin = useMemo(() => {
-    if (!workspace?.members || !user) return false;
-    const membership = workspace.members.find(m => m.user?.id === user.id);
-    return membership?.role === 'ADMIN';
-  }, [workspace, user]);
+  const isAdmin = useIsAdmin(workspace);
   const [gigs, setGigs] = useState([]);
   const [otherWorkspaceGigs, setOtherWorkspaceGigs] = useState([]);
   const [showOtherWorkspaces, setShowOtherWorkspaces] = useState(false);

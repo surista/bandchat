@@ -1,6 +1,7 @@
 import { isSafeUrl } from '../../utils/urlSafety';
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
+import Modal from '../common/Modal';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ErrorMessage from '../common/ErrorMessage';
 import Skeleton from '../common/Skeleton';
@@ -308,13 +309,7 @@ function ContactForm({ contact, onSave, onClose }) {
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal-content max-w-lg">
-        <div className="modal-header">
-          <h3>{contact ? 'Edit Contact' : 'Add Contact'}</h3>
-          <button onClick={onClose} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl" aria-label="Close">&times;</button>
-        </div>
-
+    <Modal isOpen={true} onClose={onClose} title={contact ? 'Edit Contact' : 'Add Contact'} maxWidth="max-w-lg">
         <div className="modal-body">
           {error && (
             <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded-lg mb-4">
@@ -418,8 +413,7 @@ function ContactForm({ contact, onSave, onClose }) {
             </div>
           </form>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

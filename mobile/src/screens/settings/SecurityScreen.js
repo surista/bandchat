@@ -151,6 +151,7 @@ export default function SecurityScreen() {
   const [exporting, setExporting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
 
   const handleChangePassword = useCallback(async () => {
     if (!currentPassword || !newPassword) {
@@ -482,17 +483,29 @@ export default function SecurityScreen() {
         </View>
       </Modal>
       {/* Delete Account Modal */}
-      <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
+      <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => { setShowDeleteModal(false); setDeletePassword(''); }}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: '#ef4444' }]} accessibilityRole="header">Delete Account</Text>
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
               This will permanently delete your account. Your messages will show as "Deleted User" and your profile data will be removed. This cannot be undone.
             </Text>
+            {hasPassword && (
+              <TextInput
+                style={[styles.deletePasswordInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                placeholder="Enter your password to confirm"
+                placeholderTextColor={colors.textSecondary}
+                secureTextEntry
+                value={deletePassword}
+                onChangeText={setDeletePassword}
+                autoComplete="current-password"
+                accessibilityLabel="Password confirmation for account deletion"
+              />
+            )}
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
-                onPress={() => setShowDeleteModal(false)}
+                onPress={() => { setShowDeleteModal(false); setDeletePassword(''); }}
                 disabled={deleting}
                 accessibilityRole="button"
                 accessibilityLabel="Cancel account deletion"
@@ -500,14 +513,16 @@ export default function SecurityScreen() {
                 <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: '#ef4444' }]}
+                style={[styles.modalButton, { backgroundColor: '#ef4444', opacity: (hasPassword && !deletePassword) ? 0.5 : 1 }]}
                 accessibilityRole="button"
                 accessibilityLabel="Delete account permanently"
                 onPress={async () => {
+                  if (hasPassword && !deletePassword) return;
                   setDeleting(true);
                   try {
-                    await api.deleteAccount();
+                    await api.deleteAccount(hasPassword ? deletePassword : undefined);
                     setShowDeleteModal(false);
+                    setDeletePassword('');
                     logout();
                   } catch (err) {
                     Alert.alert('Error', err.message || 'Failed to delete account');
@@ -515,7 +530,7 @@ export default function SecurityScreen() {
                     setDeleting(false);
                   }
                 }}
-                disabled={deleting}
+                disabled={deleting || (hasPassword && !deletePassword)}
               >
                 {deleting ? (
                   <ActivityIndicator color="#ffffff" size="small" />
@@ -589,6 +604,7 @@ const styles = StyleSheet.create({
   modalContent: { borderRadius: 12, padding: 24, maxWidth: 500, width: '100%' },
   modalTitle: { fontSize: 20, fontWeight: '700', marginBottom: 8 },
   modalDesc: { fontSize: 14, marginBottom: 20 },
+  deletePasswordInput: { borderWidth: 1, borderRadius: 8, padding: 12, fontSize: 15, marginBottom: 16 },
   modalActions: { flexDirection: 'row', gap: 10 },
   modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
   modalButtonText: { fontSize: 15, fontWeight: '600' },

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { api } from '../../services/api';
+import api from '../../services/api';
 import { formatDate } from '../../utils/formatDate';
 import { formatDuration } from '../../utils/formatDuration';
 import { useToast } from '../../context/ToastContext';

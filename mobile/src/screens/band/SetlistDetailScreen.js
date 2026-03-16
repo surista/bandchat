@@ -23,6 +23,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useLayout } from '../../hooks/useLayout';
 import ErrorState from '../../components/ErrorState';
+import { SkeletonList } from '../../components/SkeletonLoader';
 
 function Badge({ label, color, bgColor }) {
   return (
@@ -34,7 +35,7 @@ function Badge({ label, color, bgColor }) {
 
 export default function SetlistDetailScreen({ navigation, route }) {
   const { setlistId, workspaceId, editing: startEditing } = route.params;
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
   const insets = useSafeAreaInsets();
 
@@ -412,9 +413,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        <SkeletonList count={3} lines={3} />
       </View>
     );
   }

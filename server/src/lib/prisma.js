@@ -56,13 +56,27 @@ prisma.$use(async (params, next) => {
     return next(params);
   }
 
-  // For update/delete operations, don't interfere
+  // For updateMany/deleteMany, also filter out soft-deleted records
+  if (params.action === 'updateMany' || params.action === 'deleteMany') {
+    if (hasDeletedAtFilter(params.args?.where)) return next(params);
+
+    if (!params.args) params.args = {};
+    if (!params.args.where) params.args.where = {};
+    params.args.where.deletedAt = null;
+    return next(params);
+  }
+
+  // For other update/delete operations, don't interfere
   return next(params);
 });
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }
+
+// Reusable select clauses for common user includes
+export const USER_SELECT_BRIEF = { id: true, displayName: true };
+export const USER_SELECT_WITH_AVATAR = { id: true, displayName: true, avatarUrl: true };
 
 export { prisma };
 export default prisma;

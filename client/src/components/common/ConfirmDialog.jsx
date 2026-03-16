@@ -29,12 +29,12 @@ function ConfirmDialog({
   const confirmButtonRef = useRef(null);
   const cancelButtonRef = useRef(null);
 
-  // Focus the confirm button when dialog opens
+  // Focus cancel button for danger dialogs, confirm button otherwise
   useEffect(() => {
-    if (isOpen && confirmButtonRef.current) {
-      confirmButtonRef.current.focus();
-    }
-  }, [isOpen]);
+    if (!isOpen) return;
+    const target = confirmVariant === 'danger' ? cancelButtonRef.current : confirmButtonRef.current;
+    if (target) target.focus();
+  }, [isOpen, confirmVariant]);
 
   // Handle escape key
   useEffect(() => {

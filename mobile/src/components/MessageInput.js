@@ -3,6 +3,7 @@ import { View, TextInput, TouchableOpacity, Text, Image, StyleSheet, Platform, A
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
 import { useTheme } from '../context/ThemeContext';
+import { formatDuration as formatRecordingDuration } from '../utils/formatDuration';
 
 const MAX_HEIGHT = 120;
 
@@ -327,11 +328,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
     }
   }, []);
 
-  const formatDuration = (seconds) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
+  const formatDuration = (seconds) => formatRecordingDuration(seconds) || '0:00';
 
   const canSend = text.trim().length > 0 || attachment;
   const showMic = !editingMessage && !canSend;

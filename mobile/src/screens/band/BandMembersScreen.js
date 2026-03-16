@@ -21,6 +21,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import useDebounce from '../../hooks/useDebounce';
 import ErrorState from '../../components/ErrorState';
+import { SkeletonList } from '../../components/SkeletonLoader';
 import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
@@ -69,7 +70,7 @@ function getDateRange(member) {
 
 export default function BandMembersScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
   const { user } = useAuth();
 
@@ -321,9 +322,7 @@ export default function BandMembersScreen({ navigation, route }) {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        <SkeletonList count={5} />
       </SafeAreaView>
     );
   }

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import useIsAdmin from '../../hooks/useIsAdmin';
 import api from '../../services/api';
 import { formatDistanceToNow } from 'date-fns';
+import Modal from '../common/Modal';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ErrorMessage from '../common/ErrorMessage';
 import Skeleton from '../common/Skeleton';
@@ -22,7 +24,7 @@ function AnnouncementsList({ workspaceId, workspace }) {
   const [editingAnnouncement, setEditingAnnouncement] = useState(null);
   const [deleteAnnouncementId, setDeleteAnnouncementId] = useState(null);
 
-  const isAdmin = workspace?.members?.find(m => m.user.id === user?.id)?.role === 'ADMIN';
+  const isAdmin = useIsAdmin(workspace);
 
   useEffect(() => {
     loadAnnouncements();
@@ -311,13 +313,7 @@ function AnnouncementForm({ announcement, onSave, onClose }) {
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal-content max-w-lg">
-        <div className="modal-header">
-          <h3>{announcement ? 'Edit Announcement' : 'New Announcement'}</h3>
-          <button onClick={onClose} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl" aria-label="Close">&times;</button>
-        </div>
-
+    <Modal isOpen={true} onClose={onClose} title={announcement ? 'Edit Announcement' : 'New Announcement'} maxWidth="max-w-lg">
         <div className="modal-body">
           {error && (
             <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded-lg mb-4">
@@ -390,8 +386,7 @@ function AnnouncementForm({ announcement, onSave, onClose }) {
             </div>
           </form>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

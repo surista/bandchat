@@ -1,7 +1,7 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { isWorkspaceMember } from '../middleware/auth.js';
-import prisma from '../lib/prisma.js';
+import prisma, { USER_SELECT_BRIEF } from '../lib/prisma.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 import { deleteFile, isR2Url } from '../lib/storage.js';
 import { safeDecrementStorage } from './uploads.js';
@@ -18,6 +18,90 @@ const router = express.Router();
 // Per-workspace lock to prevent concurrent enrichment/bulk-import-with-metadata
 const enrichmentLocks = new Set();
 
+/**
+ * Enrich a single song with metadata from external services.
+ * Returns { updates, fieldsUpdated } where updates is the object to pass to prisma.song.update.
+ */
+async function enrichSong(song, { needsBpm, needsKey, needsDuration, needsYoutube, needsSpotify } = {}) {
+  // Default: enrich whatever is missing
+  if (needsBpm === undefined) needsBpm = !song.bpm;
+  if (needsKey === undefined) needsKey = !song.key;
+  if (needsDuration === undefined) needsDuration = !song.duration;
+  if (needsYoutube === undefined) needsYoutube = !song.youtubeUrl;
+  if (needsSpotify === undefined) needsSpotify = !song.spotifyUrl;
+
+  const updates = {};
+  const fieldsUpdated = [];
+
+  // Fetch BPM and Key from SongBPM.com scraper
+  if (needsBpm || needsKey) {
+    try {
+      const scraperData = await songBPMScraperService.getTrackMetadata(song.title, song.artist);
+      if (scraperData?.bpm && needsBpm) {
+        updates.bpm = scraperData.bpm;
+        fieldsUpdated.push('bpm');
+      }
+      if (scraperData?.key && needsKey) {
+        updates.key = scraperData.key;
+        fieldsUpdated.push('key');
+      }
+      await delay(1500);
+    } catch (err) {
+      console.error('SongBPM scraper failed for:', song.title, err.message);
+    }
+  }
+
+  // Fallback to Deezer for BPM if still missing
+  if (needsBpm && !updates.bpm) {
+    try {
+      const deezerData = await deezerService.getTrackMetadata(song.title, song.artist);
+      if (deezerData?.bpm) {
+        updates.bpm = deezerData.bpm;
+        fieldsUpdated.push('bpm');
+      }
+      await delay(500);
+    } catch (err) {
+      console.error('Deezer lookup failed for:', song.title, err.message);
+    }
+  }
+
+  // Fetch duration from iTunes
+  if (needsDuration) {
+    try {
+      const itunesData = await itunesService.searchTrack(song.title, song.artist);
+      if (itunesData?.duration) {
+        updates.duration = itunesData.duration;
+        fieldsUpdated.push('duration');
+      }
+      await delay(300);
+    } catch (err) {
+      console.error('iTunes lookup failed for:', song.title, err.message);
+    }
+  }
+
+  // Fetch YouTube link
+  if (needsYoutube) {
+    try {
+      const ytData = await youtubeService.searchVideo(song.title, song.artist);
+      if (ytData?.url) {
+        updates.youtubeUrl = ytData.url;
+        fieldsUpdated.push('youtube');
+      }
+      await delay(500);
+    } catch (err) {
+      console.error('YouTube lookup failed for:', song.title, err.message);
+    }
+  }
+
+  // Generate Spotify search URL
+  if (needsSpotify) {
+    updates.spotifyUrl = spotifyService.generateSearchUrl(song.title, song.artist);
+    fieldsUpdated.push('spotify');
+  }
+
+  return { updates, fieldsUpdated };
+}
+
 // Get all songs for a workspace
 router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
@@ -25,7 +109,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
       where: { workspaceId: req.params.workspaceId },
       include: {
         createdBy: {
-          select: { id: true, displayName: true }
+          select: USER_SELECT_BRIEF
         },
         _count: {
           select: { setlistSongs: true, gigSongs: true }
@@ -93,7 +177,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       },
       include: {
         createdBy: {
-          select: { id: true, displayName: true }
+          select: USER_SELECT_BRIEF
         }
       }
     });
@@ -163,93 +247,13 @@ router.post('/workspace/:workspaceId/enrich', authenticate, isWorkspaceMember, a
 
     for (const song of songs) {
       results.processed++;
-      const updates = {};
-      const fieldsUpdated = [];
-
-      // Check what's missing and try to fill it
-      const needsBpm = !song.bpm;
-      const needsKey = !song.key;
-      const needsDuration = !song.duration;
-      const needsYoutube = !song.youtubeUrl;
-      const needsSpotify = !song.spotifyUrl;
 
       // Skip if nothing is missing
-      if (!needsBpm && !needsKey && !needsDuration && !needsYoutube && !needsSpotify) {
+      if (song.bpm && song.key && song.duration && song.youtubeUrl && song.spotifyUrl) {
         continue;
       }
 
-      // Fetch BPM and Key from SongBPM.com scraper
-      if (needsBpm || needsKey) {
-        try {
-          console.log(`Fetching BPM/Key for "${song.title}" by "${song.artist}"`);
-          const scraperData = await songBPMScraperService.getTrackMetadata(song.title, song.artist);
-          console.log(`SongBPM scraper data for "${song.title}":`, scraperData);
-          if (scraperData?.bpm && needsBpm) {
-            updates.bpm = scraperData.bpm;
-            fieldsUpdated.push('bpm');
-          }
-          if (scraperData?.key && needsKey) {
-            updates.key = scraperData.key;
-            fieldsUpdated.push('key');
-          }
-          // Rate limit: wait 1.5s between songbpm requests
-          await delay(1500);
-        } catch (err) {
-          console.error('SongBPM scraper failed for:', song.title, err.message);
-        }
-      }
-
-      // Fallback to Deezer for BPM if still missing
-      if (needsBpm && !updates.bpm) {
-        try {
-          console.log(`Trying Deezer for "${song.title}"`);
-          const deezerData = await deezerService.getTrackMetadata(song.title, song.artist);
-          console.log(`Deezer data for "${song.title}":`, deezerData);
-          if (deezerData?.bpm) {
-            updates.bpm = deezerData.bpm;
-            fieldsUpdated.push('bpm');
-          }
-          // Rate limit: wait 500ms between Deezer requests
-          await delay(500);
-        } catch (err) {
-          console.error('Deezer lookup failed for:', song.title, err.message);
-        }
-      }
-
-      // Fetch duration from iTunes
-      if (needsDuration) {
-        try {
-          const itunesData = await itunesService.searchTrack(song.title, song.artist);
-          if (itunesData?.duration) {
-            updates.duration = itunesData.duration;
-            fieldsUpdated.push('duration');
-          }
-          await delay(300);
-        } catch (err) {
-          console.error('iTunes lookup failed for:', song.title, err.message);
-        }
-      }
-
-      // Fetch YouTube link
-      if (needsYoutube) {
-        try {
-          const ytData = await youtubeService.searchVideo(song.title, song.artist);
-          if (ytData?.url) {
-            updates.youtubeUrl = ytData.url;
-            fieldsUpdated.push('youtube');
-          }
-          await delay(500);
-        } catch (err) {
-          console.error('YouTube lookup failed for:', song.title, err.message);
-        }
-      }
-
-      // Generate Spotify search URL
-      if (needsSpotify) {
-        const spotifyUrl = spotifyService.generateSearchUrl(song.title, song.artist);
-        updates.spotifyUrl = spotifyUrl;
-        fieldsUpdated.push('spotify');
-      }
+      const { updates, fieldsUpdated } = await enrichSong(song);
 
       // Update the song if we have any updates
       if (Object.keys(updates).length > 0) {
@@ -290,7 +294,7 @@ router.get('/:songId', authenticate, async (req, res) => {
       where: { id: req.params.songId },
       include: {
         createdBy: {
-          select: { id: true, displayName: true }
+          select: USER_SELECT_BRIEF
         },
         attachments: {
           orderBy: { createdAt: 'desc' }
@@ -383,7 +387,7 @@ router.put('/:songId', authenticate, async (req, res) => {
       },
       include: {
         createdBy: {
-          select: { id: true, displayName: true }
+          select: USER_SELECT_BRIEF
         }
       }
     });
@@ -462,7 +466,7 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
           },
           include: {
             createdBy: {
-              select: { id: true, displayName: true }
+              select: USER_SELECT_BRIEF
             }
           }
         });
@@ -513,68 +517,9 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
 
           for (let i = 0; i < songsToEnrich.length; i++) {
             const song = songsToEnrich[i];
-            const updates = {};
-            const fieldsUpdated = [];
-
             emitProgress(i + 1, songsToEnrich.length, song.title);
 
-            // Fetch BPM and Key from SongBPM.com scraper
-            try {
-              const scraperData = await songBPMScraperService.getTrackMetadata(song.title, song.artist);
-              if (scraperData?.bpm) {
-                updates.bpm = scraperData.bpm;
-                fieldsUpdated.push('bpm');
-              }
-              if (scraperData?.key) {
-                updates.key = scraperData.key;
-                fieldsUpdated.push('key');
-              }
-              await delay(1500);
-            } catch (err) {
-              console.error('SongBPM scraper failed for:', song.title, err.message);
-            }
-
-            // Fallback to Deezer for BPM if missing
-            if (!updates.bpm) {
-              try {
-                const deezerData = await deezerService.getTrackMetadata(song.title, song.artist);
-                if (deezerData?.bpm) {
-                  updates.bpm = deezerData.bpm;
-                  fieldsUpdated.push('bpm');
-                }
-                await delay(500);
-              } catch (err) {
-                console.error('Deezer lookup failed for:', song.title, err.message);
-              }
-            }
-
-            // Fetch duration from iTunes
-            try {
-              const itunesData = await itunesService.searchTrack(song.title, song.artist);
-              if (itunesData?.duration) {
-                updates.duration = itunesData.duration;
-                fieldsUpdated.push('duration');
-              }
-              await delay(300);
-            } catch (err) {
-              console.error('iTunes lookup failed for:', song.title, err.message);
-            }
-
-            // Fetch YouTube link
-            try {
-              const ytData = await youtubeService.searchVideo(song.title, song.artist);
-              if (ytData?.url) {
-                updates.youtubeUrl = ytData.url;
-                fieldsUpdated.push('youtube');
-              }
-              await delay(500);
-            } catch (err) {
-              console.error('YouTube lookup failed for:', song.title, err.message);
-            }
-
-            // Generate Spotify search URL
-            updates.spotifyUrl = spotifyService.generateSearchUrl(song.title, song.artist);
-            fieldsUpdated.push('spotify');
+            const { updates, fieldsUpdated } = await enrichSong(song);
 
             if (fieldsUpdated.length > 1) { // More than just spotify
               metadataMatches++;
@@ -588,7 +533,7 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
                   data: updates,
                   include: {
                     createdBy: {
-                      select: { id: true, displayName: true }
+                      select: USER_SELECT_BRIEF
                     }
                   }
                 });

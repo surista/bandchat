@@ -13,11 +13,12 @@ export const apiLimiter = rateLimit({
   legacyHeaders: false
 });
 
-// Stricter limit for auth endpoints (login, signup)
+// Stricter limit for auth endpoints (login, signup, account changes)
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10,
   skip: skipInTest,
+  keyGenerator: (req) => req.user?.id || req.ip,
   message: { error: 'Too many login attempts, please try again later' },
   standardHeaders: true,
   legacyHeaders: false
@@ -49,6 +50,7 @@ export const messageLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 30,
   skip: skipInTest,
+  keyGenerator: (req) => req.user?.id || req.ip,
   message: { error: 'Slow down! Too many messages' },
   standardHeaders: true,
   legacyHeaders: false
@@ -59,6 +61,7 @@ export const exportLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 5,
   skip: skipInTest,
+  keyGenerator: (req) => req.user?.id || req.ip,
   message: { error: 'Too many export requests, please try again later' },
   standardHeaders: true,
   legacyHeaders: false
@@ -69,6 +72,7 @@ export const searchLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 30,
   skip: skipInTest,
+  keyGenerator: (req) => req.user?.id || req.ip,
   message: { error: 'Too many search requests, please slow down' },
   standardHeaders: true,
   legacyHeaders: false

@@ -15,7 +15,7 @@ import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
 
 export default function BlockedUsersScreen() {
-  const { colors } = useTheme()
+  const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
   const [blockedUsers, setBlockedUsers] = useState([]);
   const [loading, setLoading] = useState(true);

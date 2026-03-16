@@ -19,9 +19,11 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import ActionSheet from '../../components/ActionSheet';
 import ErrorState from '../../components/ErrorState';
+import { SkeletonList } from '../../components/SkeletonLoader';
 import formatDate from '../../utils/formatDate';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
+import getCurrencySymbol, { CURRENCIES } from '../../utils/getCurrencySymbol';
 
 const TRANSACTION_TYPES = [
   { key: 'GIG_PAY', label: 'Gig Pay', icon: '\uD83C\uDFA4', positive: true },
@@ -46,33 +48,6 @@ const FILTER_TABS = [
   { key: 'income', label: 'Income' },
   { key: 'expenses', label: 'Expenses' },
 ];
-
-const CURRENCIES = [
-  { code: 'USD', symbol: '$' },
-  { code: 'EUR', symbol: '\u20AC' },
-  { code: 'GBP', symbol: '\u00A3' },
-  { code: 'JPY', symbol: '\u00A5' },
-  { code: 'AUD', symbol: 'A$' },
-  { code: 'CAD', symbol: 'C$' },
-  { code: 'CHF', symbol: 'Fr' },
-  { code: 'CNY', symbol: '\u00A5' },
-  { code: 'SEK', symbol: 'kr' },
-  { code: 'NZD', symbol: 'NZ$' },
-  { code: 'MXN', symbol: 'MX$' },
-  { code: 'SGD', symbol: 'S$' },
-  { code: 'HKD', symbol: 'HK$' },
-  { code: 'NOK', symbol: 'kr' },
-  { code: 'KRW', symbol: '\u20A9' },
-  { code: 'INR', symbol: '\u20B9' },
-  { code: 'BRL', symbol: 'R$' },
-  { code: 'ZAR', symbol: 'R' },
-  { code: 'PHP', symbol: '\u20B1' },
-  { code: 'THB', symbol: '\u0E3F' },
-];
-
-function getCurrencySymbol(code) {
-  return CURRENCIES.find(c => c.code === code)?.symbol || '$';
-}
 
 function formatAmount(amount, currency) {
   const sym = getCurrencySymbol(currency);
@@ -375,9 +350,7 @@ export default function KittyScreen({ navigation, route }) {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        <SkeletonList count={5} />
       </SafeAreaView>
     );
   }
