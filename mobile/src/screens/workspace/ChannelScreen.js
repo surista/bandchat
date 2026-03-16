@@ -883,7 +883,7 @@ export default function ChannelScreen({ navigation, route }) {
                       setNumber++;
                       songIndex = 0;
                       return (
-                        <View key={ss.id} style={{ marginVertical: 8, borderTopWidth: 1, borderTopColor: colors.border }}
+                        <View key={ss.id} style={{ marginVertical: 8, borderTopWidth: 1, borderTopColor: colors.border }} />
                       );
                     }
                     songIndex++;
