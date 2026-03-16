@@ -2,7 +2,7 @@
 
 All notable changes to BandChat are documented here.
 
-## [1.05.20] - 2026-03-16
+## [1.05.24] - 2026-03-16
 
 ### Added
 - **Website Builder** — Workspace admins can launch a professional band website from Settings > Website tab. Full deployment pipeline: GitHub repo creation from template, Vercel project setup, custom domain at `bandname.bandchat.app`, auto-sync on data changes.
@@ -21,6 +21,29 @@ All notable changes to BandChat are documented here.
 - **Image download** — Migrated from deprecated `expo-file-system` `downloadAsync` to new `File`/`Paths` API across all 5 files.
 - **Swipe gesture directions** — Fixed swipe right = Reply (was incorrectly triggering Like), swipe left = Like.
 - **Website data endpoint** — Filters to GIG type only (excludes rehearsals), stats computed from past gigs only.
+
+### Added (v1.05.21–v1.05.24)
+- **Blue flame custom emoji** — BandChat blue flame available as the first reaction in the emoji picker (web + mobile).
+- **"thank you" text reaction** — Added to the text reactions category.
+- **Multiple hero image uploads** — Drag-and-drop or multi-select for hero images in website config.
+- **Media photo uploads** — Separate section for promo shots and band portraits alongside auto-synced gig photos.
+- **Unread channels section** — New "Unread" section at top of mobile channel list showing channels with unread messages (DMs first).
+- **Mobile setlist creation** — Date and venue fields added to the create setlist form.
+- **Set break dividers** — Set breaks now render as clean line dividers instead of duplicating set labels.
+
+### Fixed (v1.05.21–v1.05.24)
+- **Message input safe area** — Input box no longer overlaps iOS home indicator on ChannelScreen and ThreadScreen.
+- **KeyboardAvoidingView** — Added to 9 mobile screens (EditProfile, Security, Invite, ChannelSettings, Search, WorkspaceList, StagePlotEditor, RecordingList, ShareReceive).
+- **Touch targets** — Availability badge (27pt→44pt), ChannelItem rows (39pt→44pt), filter chips (28pt→36pt), web header buttons increased.
+- **Bottom safe area** — SetlistDetail edit toolbar and SongDetail view mode now respect home indicator.
+- **Inline error states** — SongDetail, SetlistDetail, GigDetail now show retry instead of Alert+goBack.
+- **Light mode colors** — Fixed hardcoded dark-mode colors in ConfirmDialog, Skeleton, MessageInput (~25 replacements).
+- **Error retry** — Added ErrorMessage with retry to SongList, GigCalendar, SetlistList, BandKitty, PracticeDashboard.
+- **Toast on errors** — Pin/unpin/save/unsave message actions now show toast on failure.
+- **Tab overflow** — Settings modal tabs scroll on narrow screens.
+- **Band website repos** — Now created as private (were public).
+- **Website README** — Generic BandChat template instead of Frozen Assets.
+- **Accessibility** — Labels on pinned setlist banner, profile avatar, TextInputs. aria-labels on web header buttons.
 
 ## [1.05.07] - 2026-03-15
 
