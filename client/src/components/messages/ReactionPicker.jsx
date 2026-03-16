@@ -5,7 +5,7 @@ const EMOJI_REGEX = /\p{Emoji}/u;
 
 // Custom emoji that renders as an image
 export const CUSTOM_EMOJI = {
-  ':bandchat:': { src: '/bc_icon_06.png', alt: 'BandChat' },
+  ':bandchat:': { src: '/blue_flame_emoji.png', alt: 'BandChat' },
 };
 
 export function renderEmoji(emoji, size = 18) {

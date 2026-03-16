@@ -14,7 +14,7 @@ import { getRecentEmojis, addRecentEmoji } from '../services/storage';
 
 // Custom emoji rendered as images
 export const CUSTOM_EMOJI = {
-  ':bandchat:': { source: require('../../assets/icon.png'), alt: 'BandChat' },
+  ':bandchat:': { source: require('../../assets/blue_flame_emoji.png'), alt: 'BandChat' },
 };
 
 export function renderCustomEmoji(emoji, size = 18) {
