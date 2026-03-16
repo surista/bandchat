@@ -859,6 +859,8 @@ export default function ChannelScreen({ navigation, route }) {
               setSetlistExpanded(prev => !prev);
             }}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Toggle pinned setlist"
           >
             <Text style={{ color: colors.textSecondary, fontSize: 10 }}>{setlistExpanded ? '▼' : '▶'}</Text>
             <Text style={{ fontSize: 14 }}>📋</Text>

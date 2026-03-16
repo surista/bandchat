@@ -431,7 +431,7 @@ export default function GigListScreen({ navigation, route }) {
                   styles.availabilityBadge,
                   { backgroundColor: statusInfo ? statusInfo.color + '20' : colors.bgTertiary }
                 ]}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 accessibilityRole="button"
                 accessibilityLabel={`Set availability: ${statusInfo?.label || 'Not set'}`}
               >
@@ -782,8 +782,9 @@ const styles = StyleSheet.create({
   },
   filterChip: {
     paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingVertical: 10,
     borderRadius: 16,
+    minHeight: 36,
   },
   filterChipText: { fontSize: 14, fontWeight: '600' },
   // List
@@ -858,7 +859,7 @@ const styles = StyleSheet.create({
   desktopHintText: { fontSize: 12, textAlign: 'center' },
   // Availability
   dateRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' },
-  availabilityBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  availabilityBadge: { paddingHorizontal: 6, paddingVertical: 8, borderRadius: 4 },
   availabilityText: { fontSize: 11, fontWeight: '600' },
   availabilityDateLabel: { fontSize: 14, textAlign: 'center', marginBottom: 16 },
   availabilityOption: { paddingVertical: 16, borderRadius: 10, alignItems: 'center', marginBottom: 8, marginHorizontal: 16 },

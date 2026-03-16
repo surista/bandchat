@@ -66,11 +66,12 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 6,
     marginHorizontal: 8,
     marginVertical: 1,
+    minHeight: 44,
   },
   channelIcon: {
     fontSize: 18,

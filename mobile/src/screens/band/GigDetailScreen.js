@@ -24,6 +24,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
+import ErrorState from '../../components/ErrorState';
 
 const ATTENDEE_STATUSES = ['ATTENDING', 'MAYBE', 'NOT_ATTENDING'];
 const ATTENDEE_LABELS = { ATTENDING: 'Going', MAYBE: 'Maybe', NOT_ATTENDING: 'Not Going' };
@@ -91,6 +92,7 @@ export default function GigDetailScreen({ navigation, route }) {
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [loadError, setLoadError] = useState(null);
 
   // Load workspace currency and admin status
   useEffect(() => {
@@ -113,8 +115,7 @@ export default function GigDetailScreen({ navigation, route }) {
         setGigMedia(mediaData);
         populateForm(data);
       } catch (err) {
-        Alert.alert('Error', 'Failed to load event');
-        navigation.goBack();
+        setLoadError(err.message || 'Failed to load event');
       } finally {
         setLoading(false);
       }
@@ -367,12 +368,38 @@ export default function GigDetailScreen({ navigation, route }) {
     }
   }, [gigId]);
 
+  const loadGig = useCallback(async () => {
+    setLoadError(null);
+    setLoading(true);
+    try {
+      const [data, mediaData] = await Promise.all([
+        api.getGig(gigId),
+        api.getGigMedia(gigId).catch(() => []),
+      ]);
+      setGig(data);
+      setGigMedia(mediaData);
+      populateForm(data);
+    } catch (err) {
+      setLoadError(err.message || 'Failed to load event');
+    } finally {
+      setLoading(false);
+    }
+  }, [gigId, populateForm]);
+
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
+      </View>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
+        <ErrorState emoji={"\uD83D\uDCC5"} title="Couldn't load event" message={loadError} onRetry={loadGig} />
       </View>
     );
   }

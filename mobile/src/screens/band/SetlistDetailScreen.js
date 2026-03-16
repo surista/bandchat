@@ -13,7 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
@@ -22,6 +22,7 @@ import DraggableList from '../../components/DraggableList';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useLayout } from '../../hooks/useLayout';
+import ErrorState from '../../components/ErrorState';
 
 function Badge({ label, color, bgColor }) {
   return (
@@ -35,9 +36,11 @@ export default function SetlistDetailScreen({ navigation, route }) {
   const { setlistId, workspaceId, editing: startEditing } = route.params;
   const { colors } = useTheme()
   const { isTablet, contentMaxWidth } = useLayout();
+  const insets = useSafeAreaInsets();
 
   const [setlist, setSetlist] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [editing, setEditing] = useState(startEditing || false);
 
   // Song picker
@@ -60,6 +63,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
   const [savingPerformers, setSavingPerformers] = useState(false);
 
   const loadSetlist = useCallback(async () => {
+    setLoadError(null);
     try {
       const [data, perfs] = await Promise.all([
         api.getSetlist(setlistId),
@@ -68,12 +72,11 @@ export default function SetlistDetailScreen({ navigation, route }) {
       setSetlist(data);
       setPerformers(perfs);
     } catch (err) {
-      Alert.alert('Error', 'Failed to load setlist');
-      navigation.goBack();
+      setLoadError(err.message || 'Failed to load setlist');
     } finally {
       setLoading(false);
     }
-  }, [setlistId, navigation]);
+  }, [setlistId]);
 
   useEffect(() => {
     loadSetlist();
@@ -416,6 +419,14 @@ export default function SetlistDetailScreen({ navigation, route }) {
     );
   }
 
+  if (loadError) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
+        <ErrorState emoji={"\uD83C\uDFB5"} title="Couldn't load setlist" message={loadError} onRetry={loadSetlist} />
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
       {/* Stats header */}
@@ -528,7 +539,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
 
       {/* Edit mode toolbar */}
       {editing && (
-        <View style={[styles.editToolbar, { backgroundColor: colors.bgSecondary, borderTopColor: colors.border }]}>
+        <View style={[styles.editToolbar, { backgroundColor: colors.bgSecondary, borderTopColor: colors.border, paddingBottom: insets.bottom + 10 }]}>
           <TouchableOpacity style={[styles.toolbarButton, { backgroundColor: colors.primary }]} onPress={openSongPicker} accessibilityRole="button" accessibilityLabel="Add song">
             <Text style={styles.toolbarButtonText}>+ Song</Text>
           </TouchableOpacity>

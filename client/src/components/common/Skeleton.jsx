@@ -12,7 +12,7 @@
 function Skeleton({ className = '' }) {
   return (
     <div
-      className={`animate-pulse bg-gray-700 rounded ${className}`}
+      className={`animate-pulse bg-[var(--color-bg-tertiary)] rounded ${className}`}
       aria-hidden="true"
     />
   );
@@ -48,7 +48,7 @@ Skeleton.Channel = function SkeletonChannel() {
 // Pre-built skeleton for cards (songs, setlists, etc.)
 Skeleton.Card = function SkeletonCard() {
   return (
-    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700" aria-hidden="true">
+    <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4 border border-[var(--color-border)]" aria-hidden="true">
       <div className="flex items-start gap-4">
         <Skeleton className="w-12 h-12 rounded" />
         <div className="flex-1 space-y-2">
@@ -80,7 +80,7 @@ Skeleton.TableRow = function SkeletonTableRow({ cols = 4 }) {
 // Pre-built skeleton for list view items (calendar events, etc.)
 Skeleton.ListItem = function SkeletonListItem() {
   return (
-    <div className="bg-gray-800 rounded-lg p-4 border border-gray-700" aria-hidden="true">
+    <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4 border border-[var(--color-border)]" aria-hidden="true">
       <div className="flex items-start gap-4">
         <Skeleton className="w-2 h-16 rounded" />
         <div className="flex-1 space-y-2">

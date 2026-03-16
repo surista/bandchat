@@ -11,6 +11,7 @@ import {
   Alert,
   Platform,
   StyleSheet,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -150,6 +151,7 @@ export default function WorkspaceListScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.sidebar }]}>
         <View>
@@ -216,6 +218,8 @@ export default function WorkspaceListScreen({ navigation, route }) {
       <Text style={[styles.versionText, { color: colors.textSecondary }]}>
         v{Constants.expoConfig?.version || '1.0.0'}
       </Text>
+
+      </KeyboardAvoidingView>
 
       {/* Create Workspace Modal */}
       <Modal visible={showCreate} transparent animationType="fade" onRequestClose={() => setShowCreate(false)}>

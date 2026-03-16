@@ -93,6 +93,15 @@ code {
   height: 100dvh;
 }
 
+/* Hide scrollbar utility (for tab bars, etc.) */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Scrollbar styles */
 * {
   scrollbar-width: thin;

@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
@@ -205,6 +207,7 @@ export default function SearchScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       {/* Search Input */}
       <View style={[styles.searchBar, { backgroundColor: colors.bgSecondary, borderBottomColor: colors.border }]}>
         <Text style={styles.searchIcon}>{'\uD83D\uDD0D'}</Text>
@@ -331,6 +334,7 @@ export default function SearchScreen({ navigation, route }) {
           keyboardDismissMode="on-drag"
         />
       )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

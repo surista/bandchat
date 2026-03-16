@@ -4,6 +4,7 @@ import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import ConfirmDialog from '../common/ConfirmDialog';
 import Skeleton from '../common/Skeleton';
+import ErrorMessage from '../common/ErrorMessage';
 
 function formatMinutes(totalMinutes) {
   if (!totalMinutes) return '0 min';
@@ -55,6 +56,7 @@ function PracticeDashboard({ workspaceId }) {
   const [loading, setLoading] = useState(true);
   const [nextCursor, setNextCursor] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState(null);
   const [deleteSession, setDeleteSession] = useState(null);
 
   const loadData = useCallback(async () => {
@@ -66,8 +68,9 @@ function PracticeDashboard({ workspaceId }) {
       setSessions(practiceData.sessions);
       setNextCursor(practiceData.nextCursor);
       setSummary(summaryData);
+      setError(null);
     } catch (err) {
-      toast.error('Failed to load practice data');
+      setError('Failed to load practice data');
       console.error('Failed to load practice data:', err);
     } finally {
       setLoading(false);
@@ -167,7 +170,8 @@ function PracticeDashboard({ workspaceId }) {
 
       {/* Sessions List */}
       <div className="flex-1 overflow-y-auto p-4">
-        {sessions.length === 0 ? (
+        {error && <ErrorMessage message={error} onRetry={loadData} />}
+        {!error && sessions.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
             <div className="text-4xl mb-4">🎸</div>
             <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">

@@ -385,6 +385,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       await api.pinMessage(messageId);
     } catch (err) {
       console.error('Failed to pin message:', err);
+      toast.error('Failed to pin message');
     }
   };
 
@@ -393,6 +394,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       await api.unpinMessage(messageId);
     } catch (err) {
       console.error('Failed to unpin message:', err);
+      toast.error('Failed to unpin message');
     }
   };
 
@@ -413,6 +415,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       setSavedMessageIds(prev => new Set([...prev, messageId]));
     } catch (err) {
       console.error('Failed to save message:', err);
+      toast.error('Failed to save message');
     }
   };
 
@@ -426,6 +429,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       });
     } catch (err) {
       console.error('Failed to unsave message:', err);
+      toast.error('Failed to unsave message');
     }
   };
 
@@ -675,8 +679,9 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
                 if (import.meta.env.DEV) console.error('Failed to toggle mute:', err);
               }
             }}
-            className={`p-2 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors ${channel.muted ? 'text-yellow-500' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
+            className={`p-2.5 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors ${channel.muted ? 'text-yellow-500' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
             title={channel.muted ? 'Unmute channel' : 'Mute channel'}
+            aria-label={channel.muted ? 'Unmute channel' : 'Mute channel'}
           >
             {channel.muted ? (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -692,8 +697,9 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
           {onOpenSearch && (
             <button
               onClick={onOpenSearch}
-              className="p-2 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hidden md:block"
+              className="p-2.5 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hidden md:block"
               title="Search messages"
+              aria-label="Search messages"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -702,8 +708,9 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
           )}
           <button
             onClick={() => setShowPinned(prev => !prev)}
-            className={`p-2 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors relative ${showPinned ? 'text-[var(--color-text-primary)] bg-[var(--color-bg-tertiary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
+            className={`p-2.5 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors relative ${showPinned ? 'text-[var(--color-text-primary)] bg-[var(--color-bg-tertiary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
             title="Pinned messages"
+            aria-label="Pinned messages"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
@@ -728,8 +735,9 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
                   } catch {}
                   setShowSetlistPicker(true);
                 }}
-                className={`p-2 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors ${showSetlistPicker ? 'text-[var(--color-text-primary)] bg-[var(--color-bg-tertiary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
+                className={`p-2.5 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors ${showSetlistPicker ? 'text-[var(--color-text-primary)] bg-[var(--color-bg-tertiary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
                 title="Pin a setlist"
+                aria-label="Pin a setlist"
               >
                 <span className="text-base">📋</span>
               </button>
@@ -765,8 +773,9 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
           )}
           <button
             onClick={() => setShowMembers(prev => !prev)}
-            className={`p-2 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors ${showMembers ? 'text-[var(--color-text-primary)] bg-[var(--color-bg-tertiary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
+            className={`p-2.5 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors ${showMembers ? 'text-[var(--color-text-primary)] bg-[var(--color-bg-tertiary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
             title="Members"
+            aria-label="Members"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />

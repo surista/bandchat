@@ -4,6 +4,7 @@ import api from '../../services/api';
 import ConfirmDialog from '../common/ConfirmDialog';
 import Modal from '../common/Modal';
 import Skeleton from '../common/Skeleton';
+import ErrorMessage from '../common/ErrorMessage';
 import { CURRENCIES, getCurrencySymbol } from '../../utils/currencies';
 
 const TRANSACTION_TYPES = [
@@ -290,11 +291,7 @@ function BandKitty({ workspaceId }) {
 
       {/* Transaction List */}
       <div className="flex-1 overflow-y-auto p-4">
-        {error && (
-          <div className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded text-red-300 text-sm">
-            {error}
-          </div>
-        )}
+        {error && <ErrorMessage message={error} onRetry={loadKitty} />}
 
         {Object.keys(groupedTransactions).length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">

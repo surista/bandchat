@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   Image,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -642,6 +644,7 @@ export default function StagePlotEditorScreen({ navigation, route }) {
 
   return (
     <GestureHandlerRootView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       {/* Info bar */}
       <View style={[styles.infoBar, { backgroundColor: colors.bgSecondary, borderBottomColor: colors.border }]}>
         <View style={styles.infoRow}>
@@ -720,6 +723,8 @@ export default function StagePlotEditorScreen({ navigation, route }) {
       <Text style={[styles.itemCount, { color: colors.textSecondary }]}>
         {items.length} item{items.length !== 1 ? 's' : ''} {'\u00B7'} Auto-saved
       </Text>
+
+      </KeyboardAvoidingView>
 
       {/* Instrument palette modal */}
       <Modal visible={showPalette} transparent animationType="fade" onRequestClose={() => setShowPalette(false)}>

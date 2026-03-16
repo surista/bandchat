@@ -497,12 +497,12 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
       {isRecording && (
         <div className="mb-2 flex items-center gap-3 bg-[var(--color-bg-secondary)] px-4 py-3 rounded-lg">
           <span className="inline-block w-3 h-3 rounded-full bg-red-500 animate-pulse" />
-          <span className="text-white font-mono text-sm">{formatRecordingTime(recordingDuration)}</span>
-          <span className="text-gray-400 text-sm flex-1">Recording...</span>
+          <span className="text-[var(--color-text-primary)] font-mono text-sm">{formatRecordingTime(recordingDuration)}</span>
+          <span className="text-[var(--color-text-muted)] text-sm flex-1">Recording...</span>
           <button
             type="button"
             onClick={cancelRecording}
-            className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+            className="p-2 text-[var(--color-text-muted)] hover:text-red-400 transition-colors"
             title="Cancel recording"
             aria-label="Cancel voice recording"
           >
@@ -528,16 +528,16 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
           {previews.map((preview, index) => (
             <div
               key={preview.name + '-' + preview.size}
-              className="relative group bg-gray-700 rounded-lg p-2 flex items-center gap-2"
+              className="relative group bg-[var(--color-bg-tertiary)] rounded-lg p-2 flex items-center gap-2"
             >
               {preview.type === 'audio' ? (
-                <div className="w-16 h-16 bg-gray-600 rounded flex items-center justify-center">
-                  <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-16 h-16 bg-[var(--color-bg-secondary)] rounded flex items-center justify-center">
+                  <svg className="w-8 h-8 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                   </svg>
                 </div>
               ) : preview.type === 'video' ? (
-                <div className="w-16 h-16 bg-gray-600 rounded flex items-center justify-center relative overflow-hidden">
+                <div className="w-16 h-16 bg-[var(--color-bg-secondary)] rounded flex items-center justify-center relative overflow-hidden">
                   <video src={preview.url} className="w-full h-full object-cover" muted />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                     <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -553,10 +553,10 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
                 />
               )}
               <div className="flex flex-col min-w-0">
-                <span className="text-sm text-white truncate max-w-[150px]">
+                <span className="text-sm text-[var(--color-text-primary)] truncate max-w-[150px]">
                   {preview.name}
                 </span>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-[var(--color-text-muted)]">
                   {formatFileSize(preview.size)}
                 </span>
               </div>
@@ -577,7 +577,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
         {/* Slash command dropdown */}
         {showSlashCommands && filteredSlashCommands.length > 0 && (
           <div className="absolute bottom-full left-0 mb-1 w-64 bg-[var(--color-bg-secondary)] rounded-lg shadow-lg border border-[var(--color-border)] py-1 z-50">
-            <div className="px-3 py-1.5 text-xs text-gray-400 font-medium uppercase">Commands</div>
+            <div className="px-3 py-1.5 text-xs text-[var(--color-text-muted)] font-medium uppercase">Commands</div>
             {filteredSlashCommands.map((cmd, idx) => (
               <button
                 key={cmd.command}
@@ -593,8 +593,8 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
               >
                 <span className="text-lg">{cmd.icon}</span>
                 <div>
-                  <div className="text-white text-sm font-medium">{cmd.command}</div>
-                  <div className="text-gray-400 text-xs">{cmd.label}</div>
+                  <div className="text-[var(--color-text-primary)] text-sm font-medium">{cmd.command}</div>
+                  <div className="text-[var(--color-text-muted)] text-xs">{cmd.label}</div>
                 </div>
               </button>
             ))}
@@ -619,12 +619,12 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
                   idx === mentionIndex ? 'bg-blue-600' : 'hover:bg-[var(--color-bg-tertiary)]'
                 }`}
               >
-                <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-xs text-white">
+                <div className="w-6 h-6 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center text-xs text-[var(--color-text-primary)]">
                   {member.user.displayName.charAt(0).toUpperCase()}
                 </div>
-                <span className="text-white">{member.user.displayName}</span>
+                <span className="text-[var(--color-text-primary)]">{member.user.displayName}</span>
                 {member.role === 'ADMIN' && (
-                  <span className="text-xs text-gray-400">admin</span>
+                  <span className="text-xs text-[var(--color-text-muted)]">admin</span>
                 )}
               </button>
             ))}
@@ -642,7 +642,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
           aria-label={`Message ${channelName}`}
           aria-expanded={showMentions}
           aria-controls="mention-listbox"
-          className={`w-full bg-transparent text-white px-4 py-3 resize-none outline-none placeholder-gray-400 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`w-full bg-transparent text-[var(--color-text-primary)] px-4 py-3 resize-none outline-none placeholder-[var(--color-text-muted)] ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           rows={1}
           disabled={sending || disabled || isRecording}
         />
@@ -650,25 +650,25 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
           <div className="flex items-center gap-2">
             {/* Formatting toolbar */}
             <div className="hidden md:flex items-center gap-0.5 pr-2 mr-2 border-r border-[var(--color-border)]">
-              <button type="button" onClick={() => wrapSelection('**')} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded hover:bg-[var(--color-bg-tertiary)]" title="Bold (Ctrl+B)" disabled={sending || isRecording}>
+              <button type="button" onClick={() => wrapSelection('**')} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-tertiary)]" title="Bold (Ctrl+B)" disabled={sending || isRecording}>
                 <span className="font-bold text-sm w-5 h-5 flex items-center justify-center">B</span>
               </button>
-              <button type="button" onClick={() => wrapSelection('*')} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded hover:bg-[var(--color-bg-tertiary)]" title="Italic (Ctrl+I)" disabled={sending || isRecording}>
+              <button type="button" onClick={() => wrapSelection('*')} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-tertiary)]" title="Italic (Ctrl+I)" disabled={sending || isRecording}>
                 <span className="italic text-sm w-5 h-5 flex items-center justify-center">I</span>
               </button>
-              <button type="button" onClick={() => wrapSelection('~~')} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded hover:bg-[var(--color-bg-tertiary)]" title="Strikethrough (Ctrl+Shift+X)" disabled={sending || isRecording}>
+              <button type="button" onClick={() => wrapSelection('~~')} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-tertiary)]" title="Strikethrough (Ctrl+Shift+X)" disabled={sending || isRecording}>
                 <span className="line-through text-sm w-5 h-5 flex items-center justify-center">S</span>
               </button>
-              <button type="button" onClick={() => wrapSelection('`')} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded hover:bg-[var(--color-bg-tertiary)]" title="Code (Ctrl+E)" disabled={sending || isRecording}>
+              <button type="button" onClick={() => wrapSelection('`')} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-tertiary)]" title="Code (Ctrl+E)" disabled={sending || isRecording}>
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
               </button>
-              <button type="button" onClick={() => wrapSelection('```\n', '\n```')} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded hover:bg-[var(--color-bg-tertiary)]" title="Code block" disabled={sending || isRecording}>
+              <button type="button" onClick={() => wrapSelection('```\n', '\n```')} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-tertiary)]" title="Code block" disabled={sending || isRecording}>
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M4 12h16M4 17h10" /></svg>
               </button>
-              <button type="button" onClick={() => { const ta = textareaRef.current; if (ta) { const start = ta.selectionStart; const lineStart = content.lastIndexOf('\n', start - 1) + 1; setContent(content.slice(0, lineStart) + '> ' + content.slice(lineStart)); setTimeout(() => { ta.focus(); ta.setSelectionRange(start + 2, start + 2); }, 0); }}} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded hover:bg-[var(--color-bg-tertiary)]" title="Quote" disabled={sending || isRecording}>
+              <button type="button" onClick={() => { const ta = textareaRef.current; if (ta) { const start = ta.selectionStart; const lineStart = content.lastIndexOf('\n', start - 1) + 1; setContent(content.slice(0, lineStart) + '> ' + content.slice(lineStart)); setTimeout(() => { ta.focus(); ta.setSelectionRange(start + 2, start + 2); }, 0); }}} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-tertiary)]" title="Quote" disabled={sending || isRecording}>
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
               </button>
-              <button type="button" onClick={() => { const ta = textareaRef.current; if (ta) { const start = ta.selectionStart; const lineStart = content.lastIndexOf('\n', start - 1) + 1; setContent(content.slice(0, lineStart) + '- ' + content.slice(lineStart)); setTimeout(() => { ta.focus(); ta.setSelectionRange(start + 2, start + 2); }, 0); }}} className="p-1.5 text-gray-400 hover:text-white transition-colors rounded hover:bg-[var(--color-bg-tertiary)]" title="Bullet list" disabled={sending || isRecording}>
+              <button type="button" onClick={() => { const ta = textareaRef.current; if (ta) { const start = ta.selectionStart; const lineStart = content.lastIndexOf('\n', start - 1) + 1; setContent(content.slice(0, lineStart) + '- ' + content.slice(lineStart)); setTimeout(() => { ta.focus(); ta.setSelectionRange(start + 2, start + 2); }, 0); }}} className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-tertiary)]" title="Bullet list" disabled={sending || isRecording}>
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /><circle cx="2" cy="6" r="1" fill="currentColor" /><circle cx="2" cy="12" r="1" fill="currentColor" /><circle cx="2" cy="18" r="1" fill="currentColor" /></svg>
               </button>
             </div>
@@ -683,7 +683,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="p-2 -m-1 text-gray-400 hover:text-white transition-colors"
+              className="p-2 -m-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
               title="Add file (images 10MB, audio 30MB, video 50MB)"
               disabled={sending || isRecording}
             >
@@ -695,7 +695,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
             <button
               type="button"
               onClick={isRecording ? stopRecording : startRecording}
-              className={`p-2 -m-1 transition-colors ${isRecording ? 'text-red-400 hover:text-red-300' : 'text-gray-400 hover:text-white'}`}
+              className={`p-2 -m-1 transition-colors ${isRecording ? 'text-red-400 hover:text-red-300' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
               title={isRecording ? 'Stop recording' : 'Record voice message'}
               aria-label={isRecording ? 'Stop voice recording' : 'Record voice message'}
               disabled={sending}
@@ -713,7 +713,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
                 setMentionFilter('');
                 textareaRef.current?.focus();
               }}
-              className="p-2 -m-1 text-gray-400 hover:text-white transition-colors"
+              className="p-2 -m-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
               title="Mention someone"
             >
               <span className="text-lg font-bold">@</span>
@@ -728,12 +728,12 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
           </button>
         </div>
       </div>
-      <p className="hidden md:block text-xs text-gray-500 mt-2">
-        <kbd className="bg-gray-700 px-1 rounded">Enter</kbd> send{' · '}
-        <kbd className="bg-gray-700 px-1 rounded">Shift+Enter</kbd> new line{' · '}
-        <kbd className="bg-gray-700 px-1 rounded">@</kbd> mention{' · '}
-        <kbd className="bg-gray-700 px-1 rounded">Ctrl+B</kbd> bold{' · '}
-        <kbd className="bg-gray-700 px-1 rounded">Ctrl+I</kbd> italic
+      <p className="hidden md:block text-xs text-[var(--color-text-muted)] mt-2">
+        <kbd className="bg-[var(--color-bg-tertiary)] px-1 rounded">Enter</kbd> send{' · '}
+        <kbd className="bg-[var(--color-bg-tertiary)] px-1 rounded">Shift+Enter</kbd> new line{' · '}
+        <kbd className="bg-[var(--color-bg-tertiary)] px-1 rounded">@</kbd> mention{' · '}
+        <kbd className="bg-[var(--color-bg-tertiary)] px-1 rounded">Ctrl+B</kbd> bold{' · '}
+        <kbd className="bg-[var(--color-bg-tertiary)] px-1 rounded">Ctrl+I</kbd> italic
       </p>
     </form>
   );

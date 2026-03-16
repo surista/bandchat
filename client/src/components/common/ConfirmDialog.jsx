@@ -100,13 +100,13 @@ function ConfirmDialog({
         <div className="p-6">
           <h3
             id="confirm-dialog-title"
-            className="text-lg font-bold text-white mb-2"
+            className="text-lg font-bold text-[var(--color-text-primary)] mb-2"
           >
             {title}
           </h3>
           <p
             id="confirm-dialog-description"
-            className="text-gray-300 mb-6"
+            className="text-[var(--color-text-secondary)] mb-6"
           >
             {message}
           </p>

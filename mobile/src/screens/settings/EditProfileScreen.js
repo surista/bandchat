@@ -9,6 +9,8 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -81,6 +83,7 @@ export default function EditProfileScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
         {/* Avatar */}
         <TouchableOpacity
@@ -88,6 +91,8 @@ export default function EditProfileScreen({ navigation }) {
           onPress={handlePickAvatar}
           disabled={uploadingAvatar}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Change profile photo"
         >
           <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
             {uploadingAvatar ? (
@@ -125,6 +130,7 @@ export default function EditProfileScreen({ navigation }) {
           placeholderTextColor={colors.textSecondary}
           maxLength={50}
           autoCapitalize="words"
+          accessibilityLabel="Display name"
         />
         {fieldErrors.displayName && (
           <Text style={styles.fieldError}>{fieldErrors.displayName}</Text>
@@ -144,6 +150,7 @@ export default function EditProfileScreen({ navigation }) {
           multiline
           maxLength={500}
           textAlignVertical="top"
+          accessibilityLabel="Bio"
         />
         <Text style={[styles.charCount, { color: colors.textSecondary }]}>
           {bio.length}/500
@@ -165,6 +172,7 @@ export default function EditProfileScreen({ navigation }) {
           )}
         </TouchableOpacity>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

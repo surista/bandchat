@@ -234,7 +234,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
             {/* Tabs */}
             <div className="border-b border-[var(--color-modal-border)]" role="tablist">
               {/* Row 1: Personal settings + general */}
-              <div className="flex justify-center">
+              <div className="flex justify-center overflow-x-auto scrollbar-hide">
                 {[
                   ['profile', 'Profile'],
                   ['workspace', 'Workspace'],
@@ -261,7 +261,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
               </div>
               {/* Row 2: Admin-only tabs */}
               {isAdmin && (
-                <div className="flex justify-center">
+                <div className="flex justify-center overflow-x-auto scrollbar-hide">
                   {[
                     ['members', 'Members'],
                     ['bandmembers', 'Band'],

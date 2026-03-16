@@ -11,6 +11,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Audio } from 'expo-av';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -278,6 +280,7 @@ export default function RecordingListScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <View style={[styles.searchBar, { borderBottomColor: colors.border }]}>
         <TextInput
           style={[styles.searchInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary }]}
@@ -393,6 +396,7 @@ export default function RecordingListScreen({ navigation, route }) {
           </View>
         }
       />
+      </KeyboardAvoidingView>
 
       {/* Action Sheet */}
       <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => setShowActions(false)}>

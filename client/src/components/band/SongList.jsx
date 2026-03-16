@@ -8,6 +8,7 @@ import ContextMenu from '../common/ContextMenu';
 import useLongPress from '../../hooks/useLongPress';
 import Modal from '../common/Modal';
 import Skeleton from '../common/Skeleton';
+import ErrorMessage from '../common/ErrorMessage';
 
 function PracticeIndicator({ songId, practiceSummary }) {
   const stat = practiceSummary?.songStats?.find(s => s.songId === songId);
@@ -421,11 +422,7 @@ function SongList({ workspaceId, onSelectSong }) {
 
       {/* Song Grid */}
       <div className="flex-1 overflow-y-auto p-4">
-        {error && (
-          <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded mb-4">
-            {error}
-          </div>
-        )}
+        {error && <ErrorMessage message={error} onRetry={loadSongs} />}
 
         {enrichResults && (
           <div className="bg-blue-900/50 border border-blue-500 text-blue-200 px-4 py-3 rounded mb-4">

@@ -9,6 +9,7 @@ import ContextMenu from '../common/ContextMenu';
 import useLongPress from '../../hooks/useLongPress';
 import Modal from '../common/Modal';
 import Skeleton from '../common/Skeleton';
+import ErrorMessage from '../common/ErrorMessage';
 import { getCurrencySymbol } from '../../utils/currencies';
 
 // Compact single-line row for list view
@@ -1079,11 +1080,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
-        {error && (
-          <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded mb-4">
-            {error}
-          </div>
-        )}
+        {error && <ErrorMessage message={error} onRetry={loadData} />}
 
         {view === 'calendar' ? (
           /* Calendar View */

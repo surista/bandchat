@@ -15,12 +15,13 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import Badge from '../../components/Badge';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
 import { useLayout } from '../../hooks/useLayout';
+import ErrorState from '../../components/ErrorState';
 
 const KEY_ROOTS = ['C', 'C#/Db', 'D', 'D#/Eb', 'E', 'F', 'F#/Gb', 'G', 'G#/Ab', 'A', 'A#/Bb', 'B'];
 const KEY_SUFFIXES = ['major', 'minor'];
@@ -40,6 +41,7 @@ export default function SongDetailScreen({ navigation, route }) {
   const isNew = !songId;
   const { colors } = useTheme()
   const { isTablet, contentMaxWidth } = useLayout();
+  const insets = useSafeAreaInsets();
 
   const [song, setSong] = useState(null);
   const [loading, setLoading] = useState(!isNew);
@@ -61,6 +63,7 @@ export default function SongDetailScreen({ navigation, route }) {
 
   const [showKeyPicker, setShowKeyPicker] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
+  const [loadError, setLoadError] = useState(null);
 
   // Practice logging
   const [showPracticeModal, setShowPracticeModal] = useState(false);
@@ -76,8 +79,7 @@ export default function SongDetailScreen({ navigation, route }) {
         setSong(data);
         populateForm(data);
       } catch (err) {
-        Alert.alert('Error', 'Failed to load song');
-        navigation.goBack();
+        setLoadError(err.message || 'Failed to load song');
       } finally {
         setLoading(false);
       }
@@ -225,12 +227,34 @@ export default function SongDetailScreen({ navigation, route }) {
     }
   }, [workspaceId, songId, song, practiceDuration, practiceNotes]);
 
+  const loadSong = useCallback(async () => {
+    setLoadError(null);
+    setLoading(true);
+    try {
+      const data = await api.getSong(songId);
+      setSong(data);
+      populateForm(data);
+    } catch (err) {
+      setLoadError(err.message || 'Failed to load song');
+    } finally {
+      setLoading(false);
+    }
+  }, [songId, populateForm]);
+
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
+      </View>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
+        <ErrorState emoji={"\uD83C\uDFB5"} title="Couldn't load song" message={loadError} onRetry={loadSong} />
       </View>
     );
   }
@@ -472,7 +496,7 @@ export default function SongDetailScreen({ navigation, route }) {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-      contentContainerStyle={[styles.viewContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
+      contentContainerStyle={[styles.viewContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }, { paddingBottom: insets.bottom + 16 }]}
     >
       {song?.artist ? (
         <Text style={[styles.viewArtist, { color: colors.textSecondary }]}>{song.artist}</Text>
