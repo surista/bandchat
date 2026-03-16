@@ -59,3 +59,13 @@ export async function cleanupWorkspace(workspaceId) {
     // Workspace might already be deleted
   }
 }
+
+/**
+ * Set workspace plan. Use to test FREE vs PRO gating.
+ */
+export async function setWorkspacePlan(workspaceId, plan, expiresAt = null) {
+  await prisma.workspace.update({
+    where: { id: workspaceId },
+    data: { plan, planSource: 'MANUAL', planExpiresAt: expiresAt },
+  });
+}

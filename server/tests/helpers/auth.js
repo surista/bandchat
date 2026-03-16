@@ -61,3 +61,13 @@ export async function cleanupUser(userId) {
     // User might already be deleted
   }
 }
+
+/**
+ * Promote a user to system admin via direct DB update.
+ */
+export async function makeSystemAdmin(userId) {
+  await prisma.user.update({
+    where: { id: userId },
+    data: { isSystemAdmin: true },
+  });
+}

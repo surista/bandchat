@@ -16,7 +16,7 @@ const app = createApp();
 app.set('io', {
   to: () => ({ emit: () => {} }),
   emit: () => {},
-  in: () => ({ emit: () => {} }),
+  in: () => ({ emit: () => {}, fetchSockets: async () => [] }),
 });
 
 export default app;
