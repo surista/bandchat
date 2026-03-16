@@ -3,9 +3,22 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 // Pre-compiled regex for emoji detection (avoid creating on every render)
 const EMOJI_REGEX = /\p{Emoji}/u;
 
+// Custom emoji that renders as an image
+export const CUSTOM_EMOJI = {
+  ':bandchat:': { src: '/bc_icon_06.png', alt: 'BandChat' },
+};
+
+export function renderEmoji(emoji, size = 18) {
+  const custom = CUSTOM_EMOJI[emoji];
+  if (custom) {
+    return <img src={custom.src} alt={custom.alt} style={{ width: size, height: size, display: 'inline-block', verticalAlign: 'middle', borderRadius: 3 }} />;
+  }
+  return emoji;
+}
+
 const EMOJI_CATEGORIES = {
-  reactions: ['👍', '👎', '❤️', '🔥', '😂', '😮', '😢', '😡', '🎉', '🙏', '👏', '💯', '✅', '❌', '👀', '🤔', '💪', '🙌', '😍', '🥳'],
-  text: ['LGTM', 'thx', 'lol', 'wtf?', 'nice!', 'nope', 'yep', 'gg', 'brb', 'omg'],
+  reactions: [':bandchat:', '👍', '👎', '❤️', '🔥', '😂', '😮', '😢', '😡', '🎉', '🙏', '👏', '💯', '✅', '❌', '👀', '🤔', '💪', '🙌', '😍', '🥳'],
+  text: ['LGTM', 'thx', 'thank you', 'lol', 'wtf?', 'nice!', 'nope', 'yep', 'gg', 'brb', 'omg'],
   food: ['🍕', '🍔', '🍟', '🌮', '🍣', '🍜', '🍺', '🍷', '☕', '🍰', '🍩', '🌭', '🥗', '🍝', '🥤'],
   music: ['🎸', '🥁', '🎤', '🎹', '🎵', '🎶', '🎧', '🎼', '🎺', '🎻', '🪘', '🎷', '🪗', '🎚️', '🔊'],
   people: ['😀', '😎', '🤘', '🤟', '👋', '🙋', '💃', '🕺', '🧑‍🎤', '👨‍🎤', '👩‍🎤', '🤷', '🙅', '🙆', '💁', '🫃'],
@@ -81,17 +94,20 @@ export default function ReactionPicker({ onSelect, onClose }) {
     setExpandedCategory(expandedCategory === category ? null : category);
   };
 
-  const renderEmojiButton = (emoji, isText = false) => (
-    <button
-      key={emoji}
-      onClick={() => handleSelect(emoji)}
-      className={`${isText ? 'px-2 min-w-[40px]' : 'w-10'} h-10 sm:h-8 flex items-center justify-center hover:bg-gray-700 active:bg-gray-600 rounded transition-colors touch-manipulation ${isText ? 'text-xs font-medium text-gray-200' : 'text-lg'}`}
-      title={`React with ${emoji}`}
-      aria-label={`React with ${emoji}`}
-    >
-      {emoji}
-    </button>
-  );
+  const renderEmojiButton = (emoji, isText = false) => {
+    const custom = CUSTOM_EMOJI[emoji];
+    return (
+      <button
+        key={emoji}
+        onClick={() => handleSelect(emoji)}
+        className={`${isText ? 'px-2 min-w-[40px]' : 'w-10'} h-10 sm:h-8 flex items-center justify-center hover:bg-gray-700 active:bg-gray-600 rounded transition-colors touch-manipulation ${isText ? 'text-xs font-medium text-gray-200' : 'text-lg'}`}
+        title={`React with ${custom?.alt || emoji}`}
+        aria-label={`React with ${custom?.alt || emoji}`}
+      >
+        {custom ? <img src={custom.src} alt={custom.alt} className="w-5 h-5 rounded-sm" /> : emoji}
+      </button>
+    );
+  };
 
   // Quick reactions row (frequent + top reactions)
   const quickReactions = frequentEmojis.length > 0

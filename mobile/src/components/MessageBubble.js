@@ -8,6 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 import { lightImpact } from '../utils/haptics';
 import LinkPreview from './LinkPreview';
 import getAvatarColor from '../utils/getAvatarColor';
+import { CUSTOM_EMOJI, renderCustomEmoji } from './EmojiPicker';
 import { buildMentionRegex } from '../utils/parseMentions';
 import { isSafeUrl } from '../utils/urlSafety';
 import { useLayout } from '../hooks/useLayout';
@@ -530,7 +531,7 @@ function renderReactions(reactions, colors, messageId, onReactionPress) {
           accessibilityRole="button"
           accessibilityLabel={`${emoji} reaction, ${count} ${count === 1 ? 'person' : 'people'}`}
         >
-          <Text style={styles.reactionEmoji}>{emoji}</Text>
+          {CUSTOM_EMOJI[emoji] ? renderCustomEmoji(emoji, 16) : <Text style={styles.reactionEmoji}>{emoji}</Text>}
           <Text style={[styles.reactionCount, { color: colors.textSecondary }]}>{count}</Text>
         </TouchableOpacity>
       ))}

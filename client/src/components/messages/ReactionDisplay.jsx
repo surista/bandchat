@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { renderEmoji } from './ReactionPicker';
 
 export default function ReactionDisplay({ reactions, currentUserId, onToggleReaction }) {
   // Group reactions by emoji and count them
@@ -45,7 +46,7 @@ export default function ReactionDisplay({ reactions, currentUserId, onToggleReac
           }`}
           title={users.map(u => u.displayName).join(', ')}
         >
-          <span>{emoji}</span>
+          <span>{renderEmoji(emoji, 16)}</span>
           <span className="text-xs">{count}</span>
         </button>
       ))}

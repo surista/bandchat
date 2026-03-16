@@ -2,6 +2,7 @@ import { useState, useEffect, memo } from 'react';
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   Modal,
   ScrollView,
@@ -11,8 +12,21 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import { getRecentEmojis, addRecentEmoji } from '../services/storage';
 
+// Custom emoji rendered as images
+export const CUSTOM_EMOJI = {
+  ':bandchat:': { source: require('../../assets/icon.png'), alt: 'BandChat' },
+};
+
+export function renderCustomEmoji(emoji, size = 18) {
+  const custom = CUSTOM_EMOJI[emoji];
+  if (custom) {
+    return <Image source={custom.source} style={{ width: size, height: size, borderRadius: 3 }} />;
+  }
+  return null;
+}
+
 const EMOJI_CATEGORIES = {
-  Reactions: ['👍', '👎', '❤️', '🔥', '😂', '😮', '😢', '😡', '🎉', '🙏', '👏', '💯', '✅', '❌', '👀', '🤔', '💪', '🙌', '😍', '🥳'],
+  Reactions: [':bandchat:', '👍', '👎', '❤️', '🔥', '😂', '😮', '😢', '😡', '🎉', '🙏', '👏', '💯', '✅', '❌', '👀', '🤔', '💪', '🙌', '😍', '🥳'],
   Music: ['🎸', '🥁', '🎤', '🎹', '🎵', '🎶', '🎧', '🎼', '🎺', '🎻', '🪘', '🎷', '🪗', '🎚️', '🔊'],
   People: ['😀', '😎', '🤘', '🤟', '👋', '🙋', '💃', '🕺', '🧑‍🎤', '👨‍🎤', '👩‍🎤', '🤷', '🙅', '🙆', '💁'],
   Food: ['🍕', '🍔', '🍟', '🌮', '🍣', '🍜', '🍺', '🍷', '☕', '🍰', '🍩', '🌭', '🥗', '🍝', '🥤'],
@@ -74,18 +88,25 @@ function EmojiPicker({ visible, onClose, onSelect }) {
 
           {/* Emoji grid */}
           <ScrollView contentContainerStyle={styles.grid}>
-            {currentEmojis.map((emoji, idx) => (
-              <TouchableOpacity
-                key={`${emoji}-${idx}`}
-                style={styles.emojiButton}
-                onPress={() => handleSelect(emoji)}
-                activeOpacity={0.5}
-                accessibilityRole="button"
-                accessibilityLabel={`Select ${emoji}`}
-              >
-                <Text style={styles.emoji}>{emoji}</Text>
-              </TouchableOpacity>
-            ))}
+            {currentEmojis.map((emoji, idx) => {
+              const custom = CUSTOM_EMOJI[emoji];
+              return (
+                <TouchableOpacity
+                  key={`${emoji}-${idx}`}
+                  style={styles.emojiButton}
+                  onPress={() => handleSelect(emoji)}
+                  activeOpacity={0.5}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Select ${custom?.alt || emoji}`}
+                >
+                  {custom ? (
+                    <Image source={custom.source} style={{ width: 28, height: 28, borderRadius: 4 }} />
+                  ) : (
+                    <Text style={styles.emoji}>{emoji}</Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </Pressable>
       </Pressable>
