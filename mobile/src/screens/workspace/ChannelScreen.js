@@ -18,6 +18,7 @@ import * as MediaLibrary from 'expo-media-library';
 import { File, Paths } from 'expo-file-system/next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useHeaderHeight } from '@react-navigation/elements';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
@@ -46,6 +47,7 @@ export default function ChannelScreen({ navigation, route }) {
   const { socket, joinChannel, leaveChannel, startTyping, stopTyping } = useSocket();
   const toast = useToast();
   const headerHeight = useHeaderHeight();
+  const insets = useSafeAreaInsets();
   const { isTablet, contentMaxWidth } = useLayout();
 
   const [messages, setMessages] = useState([]);
@@ -966,6 +968,7 @@ export default function ChannelScreen({ navigation, route }) {
         onSendEdit={handleSendEdit}
         members={workspaceMembers}
       />
+      {insets.bottom > 0 && <View style={{ height: insets.bottom }} />}
       </View>
 
       {/* Action Sheet */}

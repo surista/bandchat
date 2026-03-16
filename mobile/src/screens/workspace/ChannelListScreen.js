@@ -621,7 +621,17 @@ export default function ChannelListScreen({ navigation, route }) {
       data: bandData,
     };
 
-    return [...channelSections, dmSection, bandSection];
+    // Unread section — DMs first, then channels
+    const unreadDMs = directMessages.filter(dm => (dm.unreadCount || 0) > 0).map(dm => ({ ...dm, _type: 'dm' }));
+    const unreadChannels = channels.filter(c => (c.unreadCount || 0) > 0).map(c => ({ ...c, _type: 'channel' }));
+    const unreadItems = [...unreadDMs, ...unreadChannels];
+    const unreadSection = unreadItems.length > 0 ? [{
+      title: 'Unread',
+      isUnread: true,
+      data: unreadItems,
+    }] : [];
+
+    return [...unreadSection, ...channelSections, dmSection, bandSection];
   }, [channels, channelGroups, directMessages, collapsedGroups, collapsedBand, collapsedBandCats, collapsedDMs]);
 
   const toggleBandCat = useCallback((catKey) => {

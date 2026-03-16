@@ -27,6 +27,7 @@ import EmojiPicker from '../../components/EmojiPicker';
 import ImageViewer from '../../components/ImageViewer';
 import ActionSheet from '../../components/ActionSheet';
 import { useLayout } from '../../hooks/useLayout';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ThreadScreen({ navigation, route }) {
   const { parentMessage, channelId, workspaceId } = route.params;
@@ -35,6 +36,7 @@ export default function ThreadScreen({ navigation, route }) {
   const { socket, startTyping, stopTyping } = useSocket();
   const toast = useToast();
   const headerHeight = useHeaderHeight();
+  const insets = useSafeAreaInsets();
   const { isTablet, contentMaxWidth } = useLayout();
 
   const [parent, setParent] = useState(parentMessage);
@@ -415,6 +417,7 @@ export default function ThreadScreen({ navigation, route }) {
         onCancelEdit={handleCancelEdit}
         onSendEdit={handleSendEdit}
       />
+      {insets.bottom > 0 && <View style={{ height: insets.bottom }} />}
 
       {/* Action Sheet */}
       <MessageActionSheet
