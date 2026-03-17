@@ -151,9 +151,12 @@ router.get('/all-workspaces', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Invalid to date' });
     }
 
-    // Get all workspace IDs user belongs to
+    // Get all workspace IDs user belongs to (exclude soft-deleted workspaces)
     const memberships = await prisma.workspaceMember.findMany({
-      where: { userId: req.user.id },
+      where: {
+        userId: req.user.id,
+        workspace: { deletedAt: null }
+      },
       select: { workspaceId: true }
     });
 

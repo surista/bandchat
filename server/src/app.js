@@ -79,7 +79,7 @@ export function createApp() {
     setHeaders: (res, filePath) => {
       // Set CSP for all admin assets
       res.setHeader('Content-Security-Policy',
-        `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://res.cloudinary.com${r2CspDomain ? ' ' + r2CspDomain : ''}; connect-src 'self'; frame-ancestors 'none'; media-src 'self' https://res.cloudinary.com${r2CspDomain ? ' ' + r2CspDomain : ''}`
+        `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://res.cloudinary.com${r2CspDomain ? ' ' + r2CspDomain : ''}; connect-src 'self'; frame-ancestors 'none'; media-src 'self' https://res.cloudinary.com${r2CspDomain ? ' ' + r2CspDomain : ''}`
       );
     }
   }));
@@ -87,7 +87,7 @@ export function createApp() {
   // Serve admin dashboard HTML
   app.get('/admin', (req, res) => {
     res.setHeader('Content-Security-Policy',
-      `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://res.cloudinary.com${r2CspDomain ? ' ' + r2CspDomain : ''}; connect-src 'self'; frame-ancestors 'none'; media-src 'self' https://res.cloudinary.com${r2CspDomain ? ' ' + r2CspDomain : ''}`
+      `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://res.cloudinary.com${r2CspDomain ? ' ' + r2CspDomain : ''}; connect-src 'self'; frame-ancestors 'none'; media-src 'self' https://res.cloudinary.com${r2CspDomain ? ' ' + r2CspDomain : ''}`
     );
     res.sendFile(path.join(adminDir, 'index.html'));
   });
