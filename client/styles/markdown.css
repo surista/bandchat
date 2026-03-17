@@ -67,10 +67,12 @@
 
 /* Message highlight animation for linked messages */
 @keyframes msgHighlight {
-  0% { background-color: rgba(234, 179, 8, 0.3); }
+  0% { background-color: rgba(234, 179, 8, 0.35); }
+  70% { background-color: rgba(234, 179, 8, 0.15); }
   100% { background-color: transparent; }
 }
 
 .msg-highlight {
-  animation: msgHighlight 2s ease-out;
+  animation: msgHighlight 2.5s ease-out;
+  border-radius: 6px;
 }

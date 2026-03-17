@@ -702,13 +702,13 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
         )}
 
         {/* #Channel dropdown */}
-        {showChannels && filteredChannels.length > 0 && (
+        {showChannels && (
           <div
             className="absolute bottom-full left-0 mb-1 w-64 bg-[var(--color-bg-secondary)] rounded-lg shadow-lg border border-[var(--color-border)] py-1 max-h-48 overflow-y-auto z-50"
             role="listbox"
             id="channel-listbox"
           >
-            {filteredChannels.map((ch, idx) => (
+            {filteredChannels.length > 0 ? filteredChannels.map((ch, idx) => (
               <button
                 key={ch.id}
                 type="button"
@@ -722,7 +722,9 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
                 <span className="text-[var(--color-text-muted)]">{ch.isPrivate ? '🔒' : '#'}</span>
                 <span className="text-[var(--color-text-primary)]">{ch.name}</span>
               </button>
-            ))}
+            )) : (
+              <div className="px-3 py-2 text-sm text-[var(--color-text-muted)]">No channels found</div>
+            )}
           </div>
         )}
 
@@ -736,7 +738,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
           placeholder={disabled ? "You're offline" : `Message #${channelName}`}
           aria-label={`Message ${channelName}`}
           aria-expanded={showMentions || showChannels}
-          aria-controls={showChannels ? 'channel-listbox' : 'mention-listbox'}
+          aria-controls={showChannels ? 'channel-listbox' : showMentions ? 'mention-listbox' : undefined}
           className={`w-full bg-transparent text-[var(--color-text-primary)] px-4 py-3 resize-none outline-none placeholder-[var(--color-text-muted)] ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           rows={1}
           disabled={sending || disabled || isRecording}

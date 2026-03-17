@@ -425,10 +425,11 @@ function MessageList({
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         setHighlightedId(highlightMessageId);
-        // Remove highlight after animation
         setTimeout(() => setHighlightedId(null), 2000);
+      } else {
+        toast.info('Linked message is not in the current view');
       }
-    }, 100);
+    }, 300);
     return () => clearTimeout(timer);
   }, [highlightMessageId]);
 
