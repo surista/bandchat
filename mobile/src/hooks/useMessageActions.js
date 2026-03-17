@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { mediumImpact, successNotification } from '../utils/haptics';
 import api from '../services/api';
+import { APP_BASE_URL } from '../utils/constants';
 
 /**
  * Shared message action logic for ChannelScreen and ThreadScreen.
@@ -17,7 +18,7 @@ import api from '../services/api';
  * @param {Function} options.findMessage - Function to find a message by ID from current messages
  * @param {object} options.extraActions - Additional action cases for handleAction switch (e.g., reply, pin, bookmark, report)
  */
-export default function useMessageActions({ findMessage, extraActions = {} } = {}) {
+export default function useMessageActions({ findMessage, extraActions = {}, workspaceId, channelId } = {}) {
   const { user } = useAuth();
   const toast = useToast();
 
@@ -68,6 +69,14 @@ export default function useMessageActions({ findMessage, extraActions = {} } = {
           toast.success('Copied to clipboard');
         }
         break;
+      case 'copyLink':
+        if (workspaceId && channelId && actionMessage.id) {
+          const msgUrl = `${APP_BASE_URL}/workspace/${workspaceId}?channel=${channelId}&msg=${actionMessage.id}`;
+          Clipboard.setStringAsync(msgUrl);
+          successNotification();
+          toast.success('Link copied to clipboard');
+        }
+        break;
       case 'edit':
         setEditingMessage(actionMessage);
         break;
@@ -116,7 +125,7 @@ export default function useMessageActions({ findMessage, extraActions = {} } = {
         );
         break;
     }
-  }, [actionMessage, extraActions, toast]);
+  }, [actionMessage, extraActions, toast, workspaceId, channelId]);
 
   const handleAddReaction = useCallback(async (emoji) => {
     if (!actionMessage) return;

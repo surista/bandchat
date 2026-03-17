@@ -203,6 +203,9 @@ function WorkspaceView() {
   });
   const [bandViewKey, setBandViewKey] = useState(0);
   const [pendingChannelId, setPendingChannelId] = useState(() => {
+    // Prioritize channel ID from URL query param (from copy-link)
+    const urlChannelId = new URLSearchParams(window.location.search).get('channel');
+    if (urlChannelId) return urlChannelId;
     return localStorage.getItem(`selectedChannel:${workspaceId}`) || null;
   });
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -223,7 +226,12 @@ function WorkspaceView() {
 
   // Update pendingChannelId when workspaceId changes
   useEffect(() => {
-    setPendingChannelId(localStorage.getItem(`selectedChannel:${workspaceId}`) || null);
+    const urlChannelId = new URLSearchParams(window.location.search).get('channel');
+    if (urlChannelId) {
+      setPendingChannelId(urlChannelId);
+    } else {
+      setPendingChannelId(localStorage.getItem(`selectedChannel:${workspaceId}`) || null);
+    }
   }, [workspaceId]);
 
   // Cmd+K / Ctrl+K to open search
@@ -434,9 +442,13 @@ function WorkspaceView() {
       setDirectMessages(dmsData);
 
       // Restore saved channel/DM or select first channel by default
-      if (pendingChannelId && !selectedChannel) {
-        const savedChannel = channelsData.find(c => c.id === pendingChannelId);
-        const savedDM = dmsData.find(d => d.id === pendingChannelId);
+      // If URL has a ?channel= param, use that (from copy-link feature)
+      const urlChannelParam = new URLSearchParams(window.location.search).get('channel');
+      const effectivePendingId = urlChannelParam || pendingChannelId;
+
+      if (effectivePendingId && !selectedChannel) {
+        const savedChannel = channelsData.find(c => c.id === effectivePendingId);
+        const savedDM = dmsData.find(d => d.id === effectivePendingId);
         if (savedChannel) {
           setSelectedChannel(savedChannel);
         } else if (savedDM) {
@@ -448,6 +460,15 @@ function WorkspaceView() {
       } else if (channelsData.length > 0 && !selectedChannel) {
         const generalChannel = channelsData.find(c => c.name === 'general');
         setSelectedChannel(generalChannel || channelsData[0]);
+      }
+
+      // Clean up the channel param from URL (keep msg for ChannelView to handle)
+      if (urlChannelParam) {
+        const params = new URLSearchParams(window.location.search);
+        params.delete('channel');
+        const newSearch = params.toString();
+        const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : '');
+        window.history.replaceState({}, '', newUrl);
       }
     } catch (err) {
       console.error('Failed to load workspace:', err);
@@ -734,6 +755,12 @@ function WorkspaceView() {
             setSelectedChannel(prev => prev ? { ...prev, muted } : prev);
           }
         }}
+        onStarChannel={(channelId, starred) => {
+          setChannels(prev => prev.map(c => c.id === channelId ? { ...c, starred } : c));
+          if (selectedChannel?.id === channelId) {
+            setSelectedChannel(prev => prev ? { ...prev, starred } : prev);
+          }
+        }}
       />
 
       {/* Main Content */}
@@ -812,6 +839,11 @@ function WorkspaceView() {
                   setActiveBandView('songs');
                   // Store pre-fill data for SongForm
                   sessionStorage.setItem('prefillSong', JSON.stringify({ title: title || '', referenceUrl: url }));
+                }}
+                channels={channels}
+                onSelectChannel={(ch) => {
+                  setSelectedChannel(ch);
+                  setActiveBandView(null);
                 }}
               />
             ) : (

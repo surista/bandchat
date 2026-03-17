@@ -14,7 +14,7 @@ import useLongPress from '../../hooks/useLongPress';
 import { hapticLight } from '../../services/haptic';
 import LinkPreviewCard from './LinkPreviewCard';
 import { handleDownload } from '../../utils/download';
-import { buildMentionRegex } from '../../utils/parseMentions';
+import { buildMentionRegex, buildChannelRegex } from '../../utils/parseMentions';
 import api from '../../services/api';
 import EmbedCard from './EmbedCard';
 import '../../../styles/markdown.css';
@@ -177,7 +177,7 @@ function renderUrlPart(part, i, message, onOpenLightbox, onAddToLibrary, isOwn, 
 }
 
 /** Process a text segment through embed detection, URL splitting, mention highlighting, and inline markdown */
-function processTextSegment(text, segKey, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview, blockedDomains) {
+function processTextSegment(text, segKey, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview, blockedDomains, channels, onSelectChannel) {
   // Detect embed tokens [type:uuid]
   const embedRegex = /\[(song|setlist|gig|poll):([a-f0-9-]+)\]/gi;
   const embedParts = text.split(embedRegex);
@@ -188,7 +188,7 @@ function processTextSegment(text, segKey, message, onOpenLightbox, members, onAd
     for (let ei = 0; ei < embedParts.length; ei += 3) {
       const textPart = embedParts[ei];
       if (textPart) {
-        result.push(...processTextInner(textPart, `${segKey}-e${ei}`, message, onOpenLightbox, members, onAddToLibrary, isOwn, onTogglePreview, blockedDomains));
+        result.push(...processTextInner(textPart, `${segKey}-e${ei}`, message, onOpenLightbox, members, onAddToLibrary, isOwn, onTogglePreview, blockedDomains, channels, onSelectChannel));
       }
       if (ei + 2 < embedParts.length) {
         const embedType = embedParts[ei + 1];
@@ -199,11 +199,11 @@ function processTextSegment(text, segKey, message, onOpenLightbox, members, onAd
     return result;
   }
 
-  return processTextInner(text, segKey, message, onOpenLightbox, members, onAddToLibrary, isOwn, onTogglePreview, blockedDomains);
+  return processTextInner(text, segKey, message, onOpenLightbox, members, onAddToLibrary, isOwn, onTogglePreview, blockedDomains, channels, onSelectChannel);
 }
 
-/** Inner text processing: URL splitting, mentions, inline markdown */
-function processTextInner(text, segKey, message, onOpenLightbox, members, onAddToLibrary, isOwn, onTogglePreview, blockedDomains) {
+/** Inner text processing: URL splitting, mentions, channel references, inline markdown */
+function processTextInner(text, segKey, message, onOpenLightbox, members, onAddToLibrary, isOwn, onTogglePreview, blockedDomains, channels, onSelectChannel) {
   const urlRegex = /(https?:\/\/[^\s\[\]<>]+?)(?=[\[\])\s]|[.,;:!?"'](?:\s|$)|$)/g;
   const parts = text.split(urlRegex);
 
@@ -215,18 +215,52 @@ function processTextInner(text, segKey, message, onOpenLightbox, members, onAddT
     // Apply @mentions then inline markdown on remaining text
     const mentionRegex = buildMentionRegex(members || []) || /(^|[\s])@(\w+)/g;
     const mentionParts = part.split(mentionRegex);
-    const result = [];
+    const afterMentions = [];
 
     for (let j = 0; j < mentionParts.length; j += 3) {
       const txt = mentionParts[j];
-      if (txt) result.push(...applyInlineMarkdown(txt, `${segKey}-${i}-${j}`));
+      if (txt) afterMentions.push(txt);
       if (j + 2 < mentionParts.length) {
         const ws = mentionParts[j + 1];
         const name = mentionParts[j + 2];
-        if (ws) result.push(ws);
-        result.push(
+        if (ws) afterMentions.push(ws);
+        afterMentions.push(
           <span key={`${segKey}-${i}-m${j}`} className="bg-blue-900 text-blue-300 px-1 rounded">@{name}</span>
         );
+      }
+    }
+
+    // Apply #channel references on text fragments
+    const channelRegex = (channels && channels.length > 0) ? buildChannelRegex(channels) : null;
+    const result = [];
+    for (const fragment of afterMentions) {
+      if (typeof fragment !== 'string' || !channelRegex) {
+        if (typeof fragment === 'string') {
+          result.push(...applyInlineMarkdown(fragment, `${segKey}-${i}-ch`));
+        } else {
+          result.push(fragment);
+        }
+        continue;
+      }
+      // Reset regex state
+      channelRegex.lastIndex = 0;
+      const chParts = fragment.split(channelRegex);
+      for (let k = 0; k < chParts.length; k += 3) {
+        const txt = chParts[k];
+        if (txt) result.push(...applyInlineMarkdown(txt, `${segKey}-${i}-${k}`));
+        if (k + 2 < chParts.length) {
+          const ws = chParts[k + 1];
+          const chName = chParts[k + 2];
+          if (ws) result.push(ws);
+          const matchedChannel = channels.find(c => c.name === chName);
+          result.push(
+            <span
+              key={`${segKey}-${i}-ch${k}`}
+              className="bg-teal-900/50 text-teal-300 hover:bg-teal-800/50 cursor-pointer px-1 rounded"
+              onClick={() => matchedChannel && onSelectChannel?.(matchedChannel)}
+            >#{chName}</span>
+          );
+        }
       }
     }
     return result;
@@ -237,7 +271,7 @@ function processTextInner(text, segKey, message, onOpenLightbox, members, onAddT
  * Memoized component for rendering message content with markdown formatting,
  * URL detection, embeds (Google Docs, YouTube), images, videos, and @mentions.
  */
-const MessageContent = React.memo(({ content, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview, blockedDomains }) => {
+const MessageContent = React.memo(({ content, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview, blockedDomains, channels, onSelectChannel }) => {
   // Step 1: Extract fenced code blocks
   const codeBlockRegex = /```(\w*)\n?([\s\S]*?)```/g;
   const segments = [];
@@ -301,7 +335,7 @@ const MessageContent = React.memo(({ content, message, onOpenLightbox, members, 
           <blockquote key={key}>
             {block.lines.map((l, li) => (
               <React.Fragment key={li}>
-                {processTextSegment(l, `${key}-${li}`, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview, blockedDomains)}
+                {processTextSegment(l, `${key}-${li}`, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview, blockedDomains, channels, onSelectChannel)}
                 {li < block.lines.length - 1 && <br />}
               </React.Fragment>
             ))}
@@ -312,12 +346,12 @@ const MessageContent = React.memo(({ content, message, onOpenLightbox, members, 
         return (
           <ul key={key}>
             {block.lines.map((l, li) => (
-              <li key={li}>{processTextSegment(l, `${key}-${li}`, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview, blockedDomains)}</li>
+              <li key={li}>{processTextSegment(l, `${key}-${li}`, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview, blockedDomains, channels, onSelectChannel)}</li>
             ))}
           </ul>
         );
       }
-      return <React.Fragment key={key}>{processTextSegment(block.value, key, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview, blockedDomains)}</React.Fragment>;
+      return <React.Fragment key={key}>{processTextSegment(block.value, key, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview, blockedDomains, channels, onSelectChannel)}</React.Fragment>;
     });
   });
 
@@ -356,7 +390,10 @@ function MessageList({
   onAvatarClick,
   onAddToLibrary,
   onTogglePreview,
-  workspaceId
+  workspaceId,
+  channels,
+  onSelectChannel,
+  highlightMessageId
 }) {
   const [editingId, setEditingId] = useState(null);
   const [editContent, setEditContent] = useState('');
@@ -371,6 +408,23 @@ function MessageList({
   const [seenByCount, setSeenByCount] = useState(null);
   const [seenByMessageId, setSeenByMessageId] = useState(null);
   const [blockedDomains, setBlockedDomains] = useState(() => getBlockedDomains());
+  const [highlightedId, setHighlightedId] = useState(null);
+
+  // Scroll to and highlight a specific message when highlightMessageId changes
+  useEffect(() => {
+    if (!highlightMessageId) return;
+    // Wait for DOM to render, then scroll
+    const timer = setTimeout(() => {
+      const el = document.querySelector(`[data-message-id="${highlightMessageId}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setHighlightedId(highlightMessageId);
+        // Remove highlight after animation
+        setTimeout(() => setHighlightedId(null), 2000);
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [highlightMessageId]);
 
   // Build avatar lookup from workspace members (includes BandMember fallback)
   const memberAvatarMap = useMemo(() => {
@@ -575,7 +629,7 @@ function MessageList({
           {/* Message */}
           <div
             data-message-id={message.id}
-            className={`group flex gap-3 py-2 hover:bg-[var(--color-bg-tertiary)]/30 rounded px-2 -mx-2 relative ${message.pending ? 'opacity-60' : ''}`}
+            className={`group flex gap-3 py-2 hover:bg-[var(--color-bg-tertiary)]/30 rounded px-2 -mx-2 relative ${message.pending ? 'opacity-60' : ''} ${highlightedId === message.id ? 'msg-highlight' : ''}`}
             onContextMenu={(e) => {
               e.preventDefault();
               // Detect if right-clicked on a link or link preview
@@ -659,7 +713,7 @@ function MessageList({
                 </div>
               ) : (
                 <div className="message-content text-[var(--color-text-secondary)] break-words whitespace-pre-wrap">
-                  <MessageContent content={message.content} message={message} onOpenLightbox={openLightbox} members={members} onAddToLibrary={onAddToLibrary} workspaceId={workspaceId} isOwn={message.author?.id === currentUser?.id} onTogglePreview={onTogglePreview} blockedDomains={blockedDomains} />
+                  <MessageContent content={message.content} message={message} onOpenLightbox={openLightbox} members={members} onAddToLibrary={onAddToLibrary} workspaceId={workspaceId} isOwn={message.author?.id === currentUser?.id} onTogglePreview={onTogglePreview} blockedDomains={blockedDomains} channels={channels} onSelectChannel={onSelectChannel} />
                 </div>
               )}
 
@@ -948,6 +1002,10 @@ function MessageList({
           { label: 'Reply in Thread', icon: '💬', onClick: () => onOpenThread(msg) },
           { label: 'Add Reaction', icon: '😀', onClick: () => setReactionPickerMessageId(msg.id) },
           { label: 'Copy Text', icon: '📋', onClick: () => handleCopyText(msg.id) },
+          { label: 'Copy Link', icon: '🔗', onClick: () => {
+            const url = `${window.location.origin}/workspace/${workspaceId}?channel=${msg.channelId}&msg=${msg.id}`;
+            navigator.clipboard.writeText(url).catch(() => {});
+          } },
           { label: isPinned ? 'Unpin Message' : 'Pin Message', icon: '📌', onClick: () => isPinned ? onUnpinMessage?.(msg.id) : onPinMessage?.(msg.id), show: !!(onPinMessage && onUnpinMessage) },
           { label: savedMessageIds?.has(msg.id) ? 'Unsave Message' : 'Save Message', icon: '🔖', onClick: () => savedMessageIds?.has(msg.id) ? onUnsaveMessage?.(msg.id) : onSaveMessage?.(msg.id), show: !!(onSaveMessage && onUnsaveMessage) },
           { divider: true, label: 'link-divider', onClick: () => {}, show: !!linkDomain },

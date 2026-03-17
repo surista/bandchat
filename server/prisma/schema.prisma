@@ -207,6 +207,7 @@ model ChannelMember {
   userId    String
   channelId String
   muted     Boolean  @default(false)
+  starred   Boolean  @default(false)
   lastRead  DateTime @default(now())
   joinedAt  DateTime @default(now())
 

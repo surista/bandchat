@@ -99,18 +99,20 @@ export default function ChannelListScreen({ navigation, route }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const [savedGroups, savedBand, savedBandCats, savedDMs, savedQuickLinks] = await Promise.all([
+        const [savedGroups, savedBand, savedBandCats, savedDMs, savedQuickLinks, savedStarred] = await Promise.all([
           AsyncStorage.getItem(`collapsedGroups:${workspaceId}`),
           AsyncStorage.getItem(`collapsedBand:${workspaceId}`),
           AsyncStorage.getItem(`collapsedBandCats:${workspaceId}`),
           AsyncStorage.getItem(`collapsedDMs:${workspaceId}`),
           AsyncStorage.getItem(`collapsedQuickLinks:${workspaceId}`),
+          AsyncStorage.getItem(`collapsedStarred:${workspaceId}`),
         ]);
         if (savedGroups) setCollapsedGroups(JSON.parse(savedGroups));
         if (savedBand) setCollapsedBand(JSON.parse(savedBand));
         if (savedBandCats) setCollapsedBandCats(JSON.parse(savedBandCats));
         if (savedDMs) setCollapsedDMs(JSON.parse(savedDMs));
         if (savedQuickLinks) setCollapsedQuickLinks(JSON.parse(savedQuickLinks));
+        if (savedStarred) setCollapsedStarred(JSON.parse(savedStarred));
       } catch {}
     };
     load();
@@ -132,6 +134,9 @@ export default function ChannelListScreen({ navigation, route }) {
   useEffect(() => {
     AsyncStorage.setItem(`collapsedQuickLinks:${workspaceId}`, JSON.stringify(collapsedQuickLinks)).catch(() => {});
   }, [collapsedQuickLinks, workspaceId]);
+  useEffect(() => {
+    AsyncStorage.setItem(`collapsedStarred:${workspaceId}`, JSON.stringify(collapsedStarred)).catch(() => {});
+  }, [collapsedStarred, workspaceId]);
 
   // Create channel modal
   const [showCreateChannel, setShowCreateChannel] = useState(false);
@@ -148,6 +153,9 @@ export default function ChannelListScreen({ navigation, route }) {
 
   // Onboarding tour
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showChannelActions, setShowChannelActions] = useState(false);
+  const [selectedChannel, setSelectedChannel] = useState(null);
+  const [collapsedStarred, setCollapsedStarred] = useState(false);
 
   useEffect(() => {
     let timer;
@@ -535,6 +543,28 @@ export default function ChannelListScreen({ navigation, route }) {
     setShowGroupModal(true);
   }, []);
 
+  // Channel long-press → show action sheet
+  const handleChannelLongPress = useCallback((channel) => {
+    mediumImpact();
+    setSelectedChannel(channel);
+    setShowChannelActions(true);
+  }, []);
+
+  // Star/unstar channel
+  const handleToggleStar = useCallback(async () => {
+    if (!selectedChannel) return;
+    const newStarred = !selectedChannel.starred;
+    try {
+      await api.starChannel(selectedChannel.id, newStarred);
+      setChannels(prev => prev.map(c => c.id === selectedChannel.id ? { ...c, starred: newStarred } : c));
+      successNotification();
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to update star');
+    }
+    setShowChannelActions(false);
+    setSelectedChannel(null);
+  }, [selectedChannel]);
+
   const PRO_ONLY_FEATURES = ['kitty', 'stats', 'intelligence', 'practice', 'timeline', 'achievements'];
 
   const handleBandItemPress = useCallback((key) => {
@@ -631,8 +661,16 @@ export default function ChannelListScreen({ navigation, route }) {
       data: unreadItems,
     }] : [];
 
-    return [...unreadSection, ...channelSections, dmSection, bandSection];
-  }, [channels, channelGroups, directMessages, collapsedGroups, collapsedBand, collapsedBandCats, collapsedDMs]);
+    // Starred channels section
+    const starredChannels = channels.filter(c => c.starred);
+    const starredSection = starredChannels.length > 0 ? [{
+      title: 'Starred',
+      isStarred: true,
+      data: collapsedStarred ? [] : starredChannels.map(c => ({ ...c, _type: 'channel' })),
+    }] : [];
+
+    return [...unreadSection, ...starredSection, ...channelSections, dmSection, bandSection];
+  }, [channels, channelGroups, directMessages, collapsedGroups, collapsedBand, collapsedBandCats, collapsedDMs, collapsedStarred]);
 
   const toggleBandCat = useCallback((catKey) => {
     setCollapsedBandCats(prev => ({ ...prev, [catKey]: !prev[catKey] }));
@@ -682,21 +720,24 @@ export default function ChannelListScreen({ navigation, route }) {
         isDM={isDM}
         dmMembers={isDM ? getDMDisplayName(item) : null}
         onPress={() => handleChannelPress(item, isDM)}
+        onLongPress={!isDM ? handleChannelLongPress : undefined}
         unreadCount={item.unreadCount || 0}
       />
     );
-  }, [getDMDisplayName, handleChannelPress, handleBandItemPress, colors, collapsedBandCats, toggleBandCat]);
+  }, [getDMDisplayName, handleChannelPress, handleChannelLongPress, handleBandItemPress, colors, collapsedBandCats, toggleBandCat]);
 
   const renderSectionHeader = useCallback(({ section }) => {
-    const isCollapsible = section.isGroup || section.isBand || section.isDM;
-    const isCollapsed = section.isGroup ? collapsedGroups[section.groupId] : section.isBand ? collapsedBand : section.isDM ? collapsedDMs : false;
+    const isCollapsible = section.isGroup || section.isBand || section.isDM || section.isStarred;
+    const isCollapsed = section.isGroup ? collapsedGroups[section.groupId] : section.isBand ? collapsedBand : section.isDM ? collapsedDMs : section.isStarred ? collapsedStarred : false;
     const handlePress = section.isGroup
       ? () => toggleGroup(section.groupId)
       : section.isBand
         ? () => setCollapsedBand(prev => !prev)
         : section.isDM
           ? () => setCollapsedDMs(prev => !prev)
-          : undefined;
+          : section.isStarred
+            ? () => setCollapsedStarred(prev => !prev)
+            : undefined;
     const handleLongPress = section.isGroup && isAdmin
       ? () => {
           mediumImpact();
@@ -756,7 +797,7 @@ export default function ChannelListScreen({ navigation, route }) {
         )}
       </View>
     );
-  }, [collapsedGroups, collapsedBand, collapsedDMs, toggleGroup, colors, openNewDM, isAdmin, openNewGroupModal]);
+  }, [collapsedGroups, collapsedBand, collapsedDMs, collapsedStarred, toggleGroup, colors, openNewDM, isAdmin, openNewGroupModal]);
 
   if (loading) {
     return (
@@ -999,6 +1040,35 @@ export default function ChannelListScreen({ navigation, route }) {
             </View>
           </View>
         </View>
+      </Modal>
+
+      {/* Channel Actions Modal (Star/Unstar) */}
+      <Modal visible={showChannelActions} transparent animationType="fade" onRequestClose={() => setShowChannelActions(false)}>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowChannelActions(false)}
+        >
+          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
+            <Text style={[styles.actionSheetTitle, { color: colors.textPrimary }]}>
+              #{selectedChannel?.name}
+            </Text>
+            <TouchableOpacity
+              style={styles.actionItem}
+              onPress={handleToggleStar}
+            >
+              <Text style={[styles.actionText, { color: colors.textPrimary }]}>
+                {selectedChannel?.starred ? 'Unstar Channel' : 'Star Channel'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionItem, styles.cancelAction, { borderTopColor: colors.border }]}
+              onPress={() => setShowChannelActions(false)}
+            >
+              <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
       </Modal>
 
       {/* Group Actions Modal (Rename/Delete) */}

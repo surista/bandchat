@@ -19,6 +19,7 @@ const ACTIONS = [
   { key: 'bookmark', label: 'Save Message', icon: '\u{1F516}' },
   { key: 'save', label: 'Save Image', icon: '\u{2B07}\u{FE0F}', imageOnly: true },
   { key: 'copy', label: 'Copy Text', icon: '\u{1F4CB}' },
+  { key: 'copyLink', label: 'Copy Link', icon: '\u{1F517}' },
   { key: 'edit', label: 'Edit Message', icon: '\u{270F}\u{FE0F}', ownOnly: true },
   { key: 'delete', label: 'Delete Message', icon: '\u{1F5D1}\u{FE0F}', ownOnly: true, destructive: true },
   { key: 'report', label: 'Report Message', icon: '\u{26A0}\u{FE0F}', notOwn: true, destructive: true },

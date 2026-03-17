@@ -73,6 +73,7 @@ export default function ChannelScreen({ navigation, route }) {
   const [savedMessageIds, setSavedMessageIds] = useState(new Set());
   const [uploadProgress, setUploadProgress] = useState(null);
   const [lastReadAt, setLastReadAt] = useState(null);
+  const [workspaceChannels, setWorkspaceChannels] = useState([]);
   const channelIdRef = useRef(channel.id);
   const userIdRef = useRef(user?.id);
   const flatListRef = useRef(null);
@@ -125,7 +126,7 @@ export default function ChannelScreen({ navigation, route }) {
     handleLongPress, handleAction, handleAddReaction, handleSendEdit,
     handleCancelEdit, handleReactionPress, handleImagePress, handleTogglePreview,
     handleLinkLongPress, toggleBlockedDomain,
-  } = useMessageActions({ findMessage, extraActions });
+  } = useMessageActions({ findMessage, extraActions, workspaceId, channelId: channel.id });
 
   useEffect(() => {
     channelIdRef.current = channel.id;
@@ -177,11 +178,14 @@ export default function ChannelScreen({ navigation, route }) {
     }).catch(() => {});
   }, []);
 
-  // Load workspace members for @mention highlighting
+  // Load workspace members for @mention highlighting and channels for #channel references
   useEffect(() => {
     if (workspaceId) {
       api.getWorkspace(workspaceId).then(ws => {
         setWorkspaceMembers(ws.members || []);
+      }).catch(() => {});
+      api.getChannels(workspaceId).then(ch => {
+        setWorkspaceChannels(ch);
       }).catch(() => {});
     }
   }, [workspaceId]);
@@ -544,6 +548,13 @@ export default function ChannelScreen({ navigation, route }) {
     }
   }, [navigation, workspaceId]);
 
+  // Channel reference tap → navigate to that channel
+  const handleChannelRefPress = useCallback((ch) => {
+    if (ch?.id) {
+      navigation.navigate('Channel', { channel: ch, workspaceId });
+    }
+  }, [navigation, workspaceId]);
+
   // Submit report
   const handleSubmitReport = useCallback(async () => {
     if (!reportReason.trim() || !actionMessage) {
@@ -646,10 +657,12 @@ export default function ChannelScreen({ navigation, route }) {
           onTogglePreview={handleTogglePreview}
           blockedDomains={blockedDomains}
           onLinkLongPress={handleLinkLongPress}
+          channels={workspaceChannels}
+          onChannelPress={handleChannelRefPress}
         />
       </View>
     );
-  }, [colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, handleAvatarPress, handleTogglePreview, lastOwnMessageId, seenByCount, workspaceMembers, firstUnreadId, user?.id, blockedDomains, handleLinkLongPress]);
+  }, [colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, handleAvatarPress, handleTogglePreview, lastOwnMessageId, seenByCount, workspaceMembers, firstUnreadId, user?.id, blockedDomains, handleLinkLongPress, workspaceChannels, handleChannelRefPress]);
 
   const renderFooter = useCallback(() => {
     if (!loadingMore) return null;
@@ -817,6 +830,7 @@ export default function ChannelScreen({ navigation, route }) {
         onCancelEdit={handleCancelEdit}
         onSendEdit={handleSendEdit}
         members={workspaceMembers}
+        channels={workspaceChannels}
       />
       {insets.bottom > 0 && <View style={{ height: insets.bottom }} />}
       </View>

@@ -7,7 +7,7 @@ import { formatDuration as formatRecordingDuration } from '../utils/formatDurati
 
 const MAX_HEIGHT = 120;
 
-export default function MessageInput({ onSend, onSendVoice, onTyping, editingMessage, onCancelEdit, onSendEdit, members = [] }) {
+export default function MessageInput({ onSend, onSendVoice, onTyping, editingMessage, onCancelEdit, onSendEdit, members = [], channels = [] }) {
   const { colors } = useTheme();
   const [text, setText] = useState('');
   const [inputHeight, setInputHeight] = useState(40);
@@ -15,6 +15,9 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
   const [mentionFilter, setMentionFilter] = useState('');
   const [mentionStart, setMentionStart] = useState(-1);
   const [showMentions, setShowMentions] = useState(false);
+  const [channelFilter, setChannelFilter] = useState('');
+  const [channelStart, setChannelStart] = useState(-1);
+  const [showChannels, setShowChannels] = useState(false);
   const typingTimeoutRef = useRef(null);
   const inputRef = useRef(null);
   const selectionRef = useRef({ start: 0, end: 0 });
@@ -101,6 +104,15 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
       .slice(0, 8);
   }, [members, showMentions, mentionFilter]);
 
+  const filteredChannels = useMemo(() => {
+    if (!showChannels) return [];
+    if (!channelFilter) return channels.slice(0, 8);
+    const lower = channelFilter.toLowerCase();
+    return channels
+      .filter(c => c.name?.toLowerCase().includes(lower))
+      .slice(0, 8);
+  }, [channels, showChannels, channelFilter]);
+
   const handleChangeText = useCallback((value) => {
     setText(value);
 
@@ -116,6 +128,18 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
       setShowMentions(false);
       setMentionStart(-1);
       setMentionFilter('');
+    }
+
+    // Detect #channel trigger
+    const channelMatch = textBeforeCursor.match(/(^|\s)#([\w-]*)$/);
+    if (channelMatch) {
+      setShowChannels(true);
+      setChannelStart(textBeforeCursor.lastIndexOf('#'));
+      setChannelFilter(channelMatch[2]);
+    } else {
+      setShowChannels(false);
+      setChannelStart(-1);
+      setChannelFilter('');
     }
 
     if (onTyping && !editingMessage) {
@@ -137,6 +161,17 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
     setMentionFilter('');
     inputRef.current?.focus();
   }, [text, mentionStart]);
+
+  const insertChannel = useCallback((channelName) => {
+    const before = text.slice(0, channelStart);
+    const after = text.slice(selectionRef.current?.start ?? text.length);
+    const newText = `${before}#${channelName} ${after}`;
+    setText(newText);
+    setShowChannels(false);
+    setChannelStart(-1);
+    setChannelFilter('');
+    inputRef.current?.focus();
+  }, [text, channelStart]);
 
   const handleSelectionChange = useCallback((e) => {
     selectionRef.current = e.nativeEvent.selection;
@@ -414,6 +449,28 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
         </View>
       )}
 
+      {/* Channel autocomplete dropdown */}
+      {showChannels && filteredChannels.length > 0 && !isRecording && (
+        <View style={[styles.mentionList, { backgroundColor: colors.bgTertiary, borderBottomColor: colors.border }]}>
+          <FlatList
+            data={filteredChannels}
+            keyExtractor={(item) => item.id}
+            keyboardShouldPersistTaps="always"
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[styles.mentionItem, { borderBottomColor: colors.border }]}
+                onPress={() => insertChannel(item.name)}
+                accessibilityRole="button"
+                accessibilityLabel={`Channel ${item.name}`}
+              >
+                <Text style={[styles.channelHashIcon, { color: colors.textSecondary }]}>#</Text>
+                <Text style={[styles.mentionName, { color: colors.textPrimary }]}>{item.name}</Text>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      )}
+
       {!isRecording && (
         <View style={styles.inputRow}>
           {/* Attachment button */}
@@ -665,5 +722,12 @@ const styles = StyleSheet.create({
   mentionName: {
     fontSize: 15,
     fontWeight: '500',
+  },
+  channelHashIcon: {
+    fontSize: 18,
+    fontWeight: '700',
+    width: 28,
+    textAlign: 'center',
+    marginRight: 10,
   },
 });

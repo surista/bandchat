@@ -27,7 +27,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
         },
         members: {
           where: { userId: req.user.id },
-          select: { muted: true, lastRead: true }
+          select: { muted: true, starred: true, lastRead: true }
         },
         group: {
           select: {
@@ -52,7 +52,8 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
       const membership = c.members[0];
       channelMeta.set(c.id, {
         lastRead: membership?.lastRead || new Date(0),
-        isMuted: membership?.muted || false
+        isMuted: membership?.muted || false,
+        isStarred: membership?.starred || false
       });
     });
 
@@ -162,6 +163,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
         ...channel,
         groupId: channel.group?.id || null,
         muted: meta.isMuted,
+        starred: meta.isStarred,
         unreadCount: meta.isMuted ? 0 : (unreadCountMap.get(channel.id) || 0),
         unreadThreadReplies: meta.isMuted ? 0 : (threadUnreadMap.get(channel.id) || 0),
         lastRead: meta.lastRead.toISOString(),
@@ -547,6 +549,27 @@ router.put('/:channelId/mute', authenticate, isChannelMember, async (req, res) =
     res.json({ muted });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update mute setting' });
+  }
+});
+
+// Star/unstar channel
+router.put('/:channelId/star', authenticate, isChannelMember, async (req, res) => {
+  try {
+    const { starred } = req.body;
+
+    await prisma.channelMember.update({
+      where: {
+        userId_channelId: {
+          userId: req.user.id,
+          channelId: req.params.channelId
+        }
+      },
+      data: { starred: !!starred }
+    });
+
+    res.json({ starred: !!starred });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update star setting' });
   }
 });
 

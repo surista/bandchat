@@ -9,7 +9,7 @@ import { lightImpact } from '../utils/haptics';
 import LinkPreview from './LinkPreview';
 import getAvatarColor from '../utils/getAvatarColor';
 import { CUSTOM_EMOJI, renderCustomEmoji } from './EmojiPicker';
-import { buildMentionRegex } from '../utils/parseMentions';
+import { buildMentionRegex, buildChannelRegex } from '../utils/parseMentions';
 import { isSafeUrl } from '../utils/urlSafety';
 import { useLayout } from '../hooks/useLayout';
 
@@ -33,7 +33,7 @@ const SWIPE_COOLDOWN = 500; // ms between swipe actions
 
 const SWIPE_REACT_EMOJI = '\uD83D\uDC4D'; // 👍
 
-const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress, onSwipeReply, onSwipeReact, onAvatarPress, members, isOwn, onTogglePreview, blockedDomains, onLinkLongPress }, ref) {
+const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress, onSwipeReply, onSwipeReact, onAvatarPress, members, isOwn, onTogglePreview, blockedDomains, onLinkLongPress, channels, onChannelPress }, ref) {
   const { colors, density } = useTheme();
   const { attachmentWidth, attachmentHeight } = useLayout();
   const swipeableRef = useRef(null);
@@ -91,6 +91,42 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
   };
 
   /**
+   * Render a text segment with #channel reference highlighting.
+   */
+  const renderChannelRefs = (fragments, keyPrefix) => {
+    const channelRegex = (channels && channels.length > 0) ? buildChannelRegex(channels) : null;
+    if (!channelRegex) return fragments;
+    const result = [];
+    for (let i = 0; i < fragments.length; i++) {
+      const fragment = fragments[i];
+      if (typeof fragment !== 'string') {
+        result.push(fragment);
+        continue;
+      }
+      channelRegex.lastIndex = 0;
+      const chParts = fragment.split(channelRegex);
+      for (let k = 0; k < chParts.length; k += 3) {
+        if (chParts[k]) result.push(chParts[k]);
+        if (k + 2 < chParts.length) {
+          if (chParts[k + 1]) result.push(chParts[k + 1]);
+          const chName = chParts[k + 2];
+          const matchedChannel = channels.find(c => c.name === chName);
+          result.push(
+            <Text
+              key={`${keyPrefix}-ch${i}-${k}`}
+              style={{ color: '#2dd4bf', fontWeight: '600' }}
+              onPress={() => matchedChannel && onChannelPress?.(matchedChannel)}
+            >
+              #{chName}
+            </Text>
+          );
+        }
+      }
+    }
+    return result;
+  };
+
+  /**
    * Render message content with clickable URLs and @mentions.
    */
   const renderContent = (text) => {
@@ -123,13 +159,11 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
           result.push(part);
         }
       } else {
-        // Not a URL, apply mention highlighting
+        // Not a URL, apply mention highlighting then channel references
         const mentionResult = renderMentions(part, `p${i}`);
-        if (Array.isArray(mentionResult)) {
-          result.push(...mentionResult);
-        } else if (mentionResult) {
-          result.push(mentionResult);
-        }
+        const mentionFragments = Array.isArray(mentionResult) ? mentionResult : mentionResult ? [mentionResult] : [];
+        const withChannels = renderChannelRefs(mentionFragments, `p${i}`);
+        result.push(...withChannels);
       }
     });
 

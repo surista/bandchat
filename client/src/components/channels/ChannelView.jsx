@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useRef, useLayoutEffect, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
 import useIsAdmin from '../../hooks/useIsAdmin';
@@ -28,7 +29,7 @@ import { useToast } from '../../context/ToastContext';
  * @param {function} props.onOpenThread - Callback when user clicks to open a thread
  * @param {function} props.onUpdateUnread - Callback to update unread count (called with 0 on channel select)
  */
-function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThreadId, onOpenSearch, onStartDM, onMuteChannel, onAddToLibrary }) {
+function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThreadId, onOpenSearch, onStartDM, onMuteChannel, onAddToLibrary, channels, onSelectChannel }) {
   const { user } = useAuth();
   const { socket, joinChannel, leaveChannel, startTyping, stopTyping, presenceMap } = useSocket();
   const isOnline = useOnlineStatus();
@@ -53,6 +54,24 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   const [setlistExpanded, setSetlistExpanded] = useState(false);
   const [setlistSongs, setSetlistSongs] = useState(null);
   const isAdmin = useIsAdmin(workspace);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const highlightMessageId = searchParams.get('msg') || null;
+
+  // Clear the msg param after reading so it doesn't persist on navigation
+  useEffect(() => {
+    if (highlightMessageId) {
+      // Remove msg param from URL without navigation
+      const timer = setTimeout(() => {
+        setSearchParams(prev => {
+          const next = new URLSearchParams(prev);
+          next.delete('msg');
+          return next;
+        }, { replace: true });
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightMessageId, setSearchParams]);
+
   const lastReadAtRef = useRef(null);
   const descriptionSavedRef = useRef(false);
   const messagesEndRef = useRef(null);
@@ -942,6 +961,9 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
               onAddToLibrary={onAddToLibrary}
               onTogglePreview={handleTogglePreview}
               workspaceId={workspace?.id}
+              channels={channels}
+              onSelectChannel={onSelectChannel}
+              highlightMessageId={highlightMessageId}
             />
             <div ref={messagesEndRef} />
           </>
@@ -975,6 +997,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
         disabled={!isOnline}
         workspaceId={workspace?.id}
         onSlashCommand={setSlashCommandType}
+        channels={channels}
       />
 
       {/* Members Panel */}

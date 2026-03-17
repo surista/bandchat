@@ -23,3 +23,24 @@ export function buildMentionRegex(members) {
   // Lookbehind: must be preceded by whitespace or start of string (not a word char, avoids emails)
   return new RegExp(`(^|[\\s])@(${escaped.join('|')})`, 'g');
 }
+
+/**
+ * Build a regex that matches #channel references.
+ * Channel names are sorted longest-first so "general-chat" matches before "general".
+ *
+ * @param {Array} channels - Channel array with { name } properties
+ * @returns {RegExp|null} - Regex with capture group for the channel name, or null if no channels
+ */
+export function buildChannelRegex(channels) {
+  const names = channels
+    .map(c => c.name)
+    .filter(Boolean);
+
+  const unique = [...new Set(names)];
+  if (!unique.length) return null;
+
+  unique.sort((a, b) => b.length - a.length);
+
+  const escaped = unique.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return new RegExp(`(^|[\\s])#(${escaped.join('|')})`, 'g');
+}

@@ -108,7 +108,7 @@ function SortableGroupWrapper({ group, children, disabled }) {
 }
 
 /** Channel item with long-press support for mobile context menus */
-function ChannelItem({ channel, isSelected, onSelect, onLongPress, isAdmin }) {
+function ChannelItem({ channel, isSelected, onSelect, onLongPress, onContextMenu, isAdmin }) {
   const longPress = useLongPress({
     onLongPress: (pos) => onLongPress(pos),
     onTap: onSelect,
@@ -118,6 +118,7 @@ function ChannelItem({ channel, isSelected, onSelect, onLongPress, isAdmin }) {
     <button
       className={`channel-item w-full ${isSelected ? 'active' : ''} ${channel.muted ? 'opacity-60' : ''}`}
       {...longPress}
+      onContextMenu={onContextMenu}
     >
       <span className="text-gray-400">
         {channel.isPrivate ? '🔒' : '#'}
@@ -186,7 +187,8 @@ function Sidebar({
   onResizeStart,
   onReorderGroups,
   onRefreshWorkspace,
-  onMuteChannel
+  onMuteChannel,
+  onStarChannel
 }) {
   const navigate = useNavigate();
   const toast = useToast();
@@ -338,6 +340,11 @@ function Sidebar({
     return { groupedChannels: grouped, ungroupedChannels: ungrouped };
   }, [channels]);
 
+  const starredChannels = useMemo(() => channels.filter(c => c.starred), [channels]);
+  const unreadChannels = useMemo(() =>
+    channels.filter(c => !c.starred && !c.muted && c.unreadCount > 0),
+  [channels]);
+
   const isAdmin = useIsAdmin(workspace);
 
   // Filter blocked users from sidebar members list
@@ -470,10 +477,12 @@ function Sidebar({
 
   // Context menu handlers (admin only)
   const handleContextMenu = (e, type, id, name) => {
-    if (!isAdmin) return;
     e.preventDefault();
     e.stopPropagation();
-    setContextMenu({ type, id, name, x: e.clientX, y: e.clientY });
+    // Non-admins can only right-click channels (for mute/star)
+    if (!isAdmin && type !== 'channel') return;
+    const channel = type === 'channel' ? channels.find(c => c.id === id) : null;
+    setContextMenu({ type, id, name, muted: channel?.muted, starred: channel?.starred, x: e.clientX, y: e.clientY });
   };
 
   const closeContextMenu = () => {
@@ -532,7 +541,7 @@ function Sidebar({
 
   // handleLongPress for channel items (enables mobile context menu)
   const handleChannelLongPress = (channel, pos) => {
-    setContextMenu({ type: 'channel', id: channel.id, name: channel.name, muted: channel.muted, x: pos.x, y: pos.y });
+    setContextMenu({ type: 'channel', id: channel.id, name: channel.name, muted: channel.muted, starred: channel.starred, x: pos.x, y: pos.y });
   };
 
   const handleToggleMute = async () => {
@@ -547,6 +556,18 @@ function Sidebar({
     setContextMenu(null);
   };
 
+  const handleToggleStar = async () => {
+    if (!contextMenu || contextMenu.type !== 'channel') return;
+    const newStarred = !contextMenu.starred;
+    try {
+      await api.starChannel(contextMenu.id, newStarred);
+      onStarChannel?.(contextMenu.id, newStarred);
+    } catch (err) {
+      if (import.meta.env.DEV) console.error('Failed to toggle star:', err);
+    }
+    setContextMenu(null);
+  };
+
   const renderChannel = (channel) => {
     const channelButton = (
       <ChannelItem
@@ -555,6 +576,7 @@ function Sidebar({
         isSelected={selectedChannel?.id === channel.id}
         onSelect={() => onSelectChannel(channel)}
         onLongPress={(pos) => handleChannelLongPress(channel, pos)}
+        onContextMenu={(e) => handleContextMenu(e, 'channel', channel.id, channel.name)}
         isAdmin={isAdmin}
       />
     );
@@ -702,6 +724,48 @@ function Sidebar({
               <span className="text-gray-400">🔖</span>
               <span className="flex-1 truncate">Saved Messages</span>
             </button>
+          </>
+        )}
+
+        {/* Starred Channels */}
+        {starredChannels.length > 0 && (
+          <>
+            <div className="px-4 mb-1 mt-1 flex items-center">
+              <button
+                onClick={() => toggleSectionCollapse('starred')}
+                className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors"
+                aria-expanded={!collapsedSections.starred}
+              >
+                <span className={`transform transition-transform text-xs ${collapsedSections.starred ? '' : 'rotate-90'}`}>▶</span>
+                <span className="text-xs font-semibold uppercase tracking-wide">Starred</span>
+              </button>
+            </div>
+            {!collapsedSections.starred && (
+              <div className="mb-2">
+                {starredChannels.map(renderChannel)}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Unread Channels */}
+        {unreadChannels.length > 0 && (
+          <>
+            <div className="px-4 mb-1 mt-1 flex items-center">
+              <button
+                onClick={() => toggleSectionCollapse('unread')}
+                className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors"
+                aria-expanded={!collapsedSections.unread}
+              >
+                <span className={`transform transition-transform text-xs ${collapsedSections.unread ? '' : 'rotate-90'}`}>▶</span>
+                <span className="text-xs font-semibold uppercase tracking-wide">Unread</span>
+              </button>
+            </div>
+            {!collapsedSections.unread && (
+              <div className="mb-2">
+                {unreadChannels.map(renderChannel)}
+              </div>
+            )}
           </>
         )}
 
@@ -1363,6 +1427,10 @@ function Sidebar({
         onClose={closeContextMenu}
         items={[
           ...(contextMenu?.type === 'channel' ? [{
+            label: contextMenu?.starred ? 'Unstar channel' : 'Star channel',
+            icon: contextMenu?.starred ? '★' : '☆',
+            onClick: handleToggleStar
+          }, {
             label: contextMenu?.muted ? 'Unmute channel' : 'Mute channel',
             icon: contextMenu?.muted ? '🔔' : '🔕',
             onClick: handleToggleMute

@@ -44,6 +44,7 @@ export default function ThreadScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [workspaceMembers, setWorkspaceMembers] = useState([]);
+  const [workspaceChannels, setWorkspaceChannels] = useState([]);
 
   const parentIdRef = useRef(parentMessage.id);
 
@@ -59,7 +60,7 @@ export default function ThreadScreen({ navigation, route }) {
     handleLongPress, handleAction, handleAddReaction, handleSendEdit,
     handleCancelEdit, handleReactionPress, handleImagePress, handleTogglePreview,
     handleLinkLongPress, toggleBlockedDomain,
-  } = useMessageActions({ findMessage });
+  } = useMessageActions({ findMessage, workspaceId, channelId });
 
   useEffect(() => {
     let cancelled = false;
@@ -82,11 +83,14 @@ export default function ThreadScreen({ navigation, route }) {
     return () => { cancelled = true; };
   }, [parentMessage.id]);
 
-  // Load workspace members for @mention highlighting
+  // Load workspace members for @mention highlighting and channels for #channel references
   useEffect(() => {
     if (workspaceId) {
       api.getWorkspace(workspaceId).then(ws => {
         setWorkspaceMembers(ws.members || []);
+      }).catch(() => {});
+      api.getChannels(workspaceId).then(ch => {
+        setWorkspaceChannels(ch);
       }).catch(() => {});
     }
   }, [workspaceId]);
@@ -238,6 +242,13 @@ export default function ThreadScreen({ navigation, route }) {
     }
   }, [navigation, workspaceId]);
 
+  // Channel reference tap → navigate to that channel
+  const handleChannelRefPress = useCallback((ch) => {
+    if (ch?.id) {
+      navigation.navigate('Channel', { channel: ch, workspaceId });
+    }
+  }, [navigation, workspaceId]);
+
   // Build list: parent message + separator + replies
   const listData = useMemo(() => {
     const items = [
@@ -272,9 +283,11 @@ export default function ThreadScreen({ navigation, route }) {
         onTogglePreview={handleTogglePreview}
         blockedDomains={blockedDomains}
         onLinkLongPress={handleLinkLongPress}
+        channels={workspaceChannels}
+        onChannelPress={handleChannelRefPress}
       />
     );
-  }, [colors, handleLongPress, handleImagePress, handleReactionPress, handleAvatarPress, handleTogglePreview, workspaceMembers, user?.id, blockedDomains, handleLinkLongPress]);
+  }, [colors, handleLongPress, handleImagePress, handleReactionPress, handleAvatarPress, handleTogglePreview, workspaceMembers, user?.id, blockedDomains, handleLinkLongPress, workspaceChannels, handleChannelRefPress]);
 
   const handleRetry = useCallback(() => {
     setLoading(true);
@@ -336,6 +349,8 @@ export default function ThreadScreen({ navigation, route }) {
         editingMessage={editingMessage}
         onCancelEdit={handleCancelEdit}
         onSendEdit={handleSendEdit}
+        members={workspaceMembers}
+        channels={workspaceChannels}
       />
       {insets.bottom > 0 && <View style={{ height: insets.bottom }} />}
 

@@ -679,6 +679,13 @@ class ApiService {
     });
   }
 
+  async starChannel(channelId, starred) {
+    return this.request(`/channels/${channelId}/star`, {
+      method: 'PUT',
+      body: JSON.stringify({ starred }),
+    });
+  }
+
   async markChannelRead(channelId) {
     return this.request(`/channels/${channelId}/read`, {
       method: 'POST',

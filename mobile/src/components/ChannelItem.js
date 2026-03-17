@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import getAvatarColor from '../utils/getAvatarColor';
 
-function ChannelItem({ channel, isDM, dmMembers, onPress, unreadCount }) {
+function ChannelItem({ channel, isDM, dmMembers, onPress, onLongPress, unreadCount }) {
   const { colors } = useTheme();
 
   const renderIcon = () => {
@@ -30,6 +30,8 @@ function ChannelItem({ channel, isDM, dmMembers, onPress, unreadCount }) {
     <TouchableOpacity
       style={styles.container}
       onPress={onPress}
+      onLongPress={onLongPress ? () => onLongPress(channel) : undefined}
+      delayLongPress={400}
       activeOpacity={0.6}
       delayPressIn={80}
       accessibilityRole="button"
@@ -46,6 +48,9 @@ function ChannelItem({ channel, isDM, dmMembers, onPress, unreadCount }) {
       >
         {displayName}
       </Text>
+      {!isDM && channel.starred && (
+        <Text style={{ color: '#facc15', fontSize: 12, marginLeft: 4 }}>★</Text>
+      )}
       {!isDM && channel.pinnedSetlistId && (
         <Text style={{ color: '#4ade80', fontSize: 12, marginLeft: 4 }}>♫</Text>
       )}

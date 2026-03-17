@@ -26,7 +26,7 @@ const SLASH_COMMANDS = [
   { command: '/poll', label: 'Create a poll', icon: '📊' },
 ];
 
-function MessageInput({ channelName, onSend, onTyping, members = [], disabled = false, workspaceId, onSlashCommand }) {
+function MessageInput({ channelName, onSend, onTyping, members = [], disabled = false, workspaceId, onSlashCommand, channels = [] }) {
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -39,6 +39,10 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
   const [showSlashCommands, setShowSlashCommands] = useState(false);
   const [slashFilter, setSlashFilter] = useState('');
   const [slashIndex, setSlashIndex] = useState(0);
+  const [showChannels, setShowChannels] = useState(false);
+  const [channelFilter, setChannelFilter] = useState('');
+  const [channelStart, setChannelStart] = useState(-1);
+  const [channelIndex, setChannelIndex] = useState(0);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const onSendRef = useRef(onSend);
@@ -62,10 +66,20 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
     c.command.startsWith('/' + slashFilter)
   );
 
+  // Filter channels for # autocomplete (exclude DM channels)
+  const filteredChannels = channels
+    .filter(c => !c.isDirect && c.name?.toLowerCase().includes(channelFilter.toLowerCase()))
+    .slice(0, 6);
+
   // Reset mention index when filter changes
   useEffect(() => {
     setMentionIndex(0);
   }, [mentionFilter]);
+
+  // Reset channel index when filter changes
+  useEffect(() => {
+    setChannelIndex(0);
+  }, [channelFilter]);
 
   // Cleanup recording on unmount
   useEffect(() => {
@@ -194,6 +208,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
     setSending(true);
     setError('');
     setShowMentions(false);
+    setShowChannels(false);
     hapticLight();
     try {
       await onSend(content.trim(), selectedFiles);
@@ -232,6 +247,25 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
     }, 0);
   };
 
+  const insertChannel = (channelName) => {
+    if (channelStart === -1) return;
+
+    const before = content.slice(0, channelStart);
+    const after = content.slice(textareaRef.current?.selectionStart || content.length);
+    const newContent = `${before}#${channelName} ${after}`;
+
+    setContent(newContent);
+    setShowChannels(false);
+    setChannelFilter('');
+    setChannelStart(-1);
+
+    setTimeout(() => {
+      const newPos = channelStart + channelName.length + 2; // +2 for # and space
+      textareaRef.current?.focus();
+      textareaRef.current?.setSelectionRange(newPos, newPos);
+    }, 0);
+  };
+
   const handleKeyDown = (e) => {
     // Handle slash command dropdown navigation
     if (showSlashCommands && filteredSlashCommands.length > 0) {
@@ -256,6 +290,30 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
       if (e.key === 'Escape') {
         e.preventDefault();
         setShowSlashCommands(false);
+        return;
+      }
+    }
+
+    // Handle channel dropdown navigation
+    if (showChannels && filteredChannels.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setChannelIndex(prev => (prev + 1) % filteredChannels.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setChannelIndex(prev => (prev - 1 + filteredChannels.length) % filteredChannels.length);
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        insertChannel(filteredChannels[channelIndex].name);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowChannels(false);
         return;
       }
     }
@@ -319,6 +377,18 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
       setShowMentions(false);
       setMentionFilter('');
       setMentionStart(-1);
+    }
+
+    // Check for # channel trigger
+    const hashMatch = textBeforeCursor.match(/#([\w-]*)$/);
+    if (hashMatch) {
+      setShowChannels(true);
+      setChannelFilter(hashMatch[1]);
+      setChannelStart(cursorPos - hashMatch[0].length);
+    } else {
+      setShowChannels(false);
+      setChannelFilter('');
+      setChannelStart(-1);
     }
 
     // Check for slash command trigger (/ at start of input)
@@ -631,6 +701,31 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
           </div>
         )}
 
+        {/* #Channel dropdown */}
+        {showChannels && filteredChannels.length > 0 && (
+          <div
+            className="absolute bottom-full left-0 mb-1 w-64 bg-[var(--color-bg-secondary)] rounded-lg shadow-lg border border-[var(--color-border)] py-1 max-h-48 overflow-y-auto z-50"
+            role="listbox"
+            id="channel-listbox"
+          >
+            {filteredChannels.map((ch, idx) => (
+              <button
+                key={ch.id}
+                type="button"
+                role="option"
+                aria-selected={idx === channelIndex}
+                onClick={() => insertChannel(ch.name)}
+                className={`w-full px-3 py-2 text-left flex items-center gap-2 ${
+                  idx === channelIndex ? 'bg-blue-600' : 'hover:bg-[var(--color-bg-tertiary)]'
+                }`}
+              >
+                <span className="text-[var(--color-text-muted)]">{ch.isPrivate ? '🔒' : '#'}</span>
+                <span className="text-[var(--color-text-primary)]">{ch.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         <textarea
           ref={textareaRef}
           value={content}
@@ -640,8 +735,8 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
           onPaste={handlePaste}
           placeholder={disabled ? "You're offline" : `Message #${channelName}`}
           aria-label={`Message ${channelName}`}
-          aria-expanded={showMentions}
-          aria-controls="mention-listbox"
+          aria-expanded={showMentions || showChannels}
+          aria-controls={showChannels ? 'channel-listbox' : 'mention-listbox'}
           className={`w-full bg-transparent text-[var(--color-text-primary)] px-4 py-3 resize-none outline-none placeholder-[var(--color-text-muted)] ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           rows={1}
           disabled={sending || disabled || isRecording}
@@ -732,6 +827,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
         <kbd className="bg-[var(--color-bg-tertiary)] px-1 rounded">Enter</kbd> send{' · '}
         <kbd className="bg-[var(--color-bg-tertiary)] px-1 rounded">Shift+Enter</kbd> new line{' · '}
         <kbd className="bg-[var(--color-bg-tertiary)] px-1 rounded">@</kbd> mention{' · '}
+        <kbd className="bg-[var(--color-bg-tertiary)] px-1 rounded">#</kbd> channel{' · '}
         <kbd className="bg-[var(--color-bg-tertiary)] px-1 rounded">Ctrl+B</kbd> bold{' · '}
         <kbd className="bg-[var(--color-bg-tertiary)] px-1 rounded">Ctrl+I</kbd> italic
       </p>
