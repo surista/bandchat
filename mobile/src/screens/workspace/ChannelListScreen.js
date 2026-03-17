@@ -653,7 +653,7 @@ export default function ChannelListScreen({ navigation, route }) {
 
     // Unread section — DMs first, then channels
     const unreadDMs = directMessages.filter(dm => (dm.unreadCount || 0) > 0).map(dm => ({ ...dm, _type: 'dm' }));
-    const unreadChannels = channels.filter(c => (c.unreadCount || 0) > 0).map(c => ({ ...c, _type: 'channel' }));
+    const unreadChannels = channels.filter(c => !c.starred && !c.muted && (c.unreadCount || 0) > 0).map(c => ({ ...c, _type: 'channel' }));
     const unreadItems = [...unreadDMs, ...unreadChannels];
     const unreadSection = unreadItems.length > 0 ? [{
       title: 'Unread',

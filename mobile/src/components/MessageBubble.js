@@ -114,7 +114,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
           result.push(
             <Text
               key={`${keyPrefix}-ch${i}-${k}`}
-              style={{ color: '#2dd4bf', fontWeight: '600' }}
+              style={{ color: colors.primary, fontWeight: '600' }}
               onPress={() => matchedChannel && onChannelPress?.(matchedChannel)}
             >
               #{chName}

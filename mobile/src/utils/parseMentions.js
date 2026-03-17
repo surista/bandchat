@@ -42,5 +42,5 @@ export function buildChannelRegex(channels) {
   unique.sort((a, b) => b.length - a.length);
 
   const escaped = unique.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  return new RegExp(`(^|[\\s])#(${escaped.join('|')})`, 'g');
+  return new RegExp(`(^|[\\s])#(${escaped.join('|')})(?=[\\s.,!?;:)\\]}]|$)`, 'g');
 }

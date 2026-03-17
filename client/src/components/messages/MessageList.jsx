@@ -13,6 +13,7 @@ import ImageLightbox from '../common/ImageLightbox';
 import useLongPress from '../../hooks/useLongPress';
 import { hapticLight } from '../../services/haptic';
 import LinkPreviewCard from './LinkPreviewCard';
+import { useToast } from '../../context/ToastContext';
 import { handleDownload } from '../../utils/download';
 import { buildMentionRegex, buildChannelRegex } from '../../utils/parseMentions';
 import api from '../../services/api';
@@ -257,7 +258,11 @@ function processTextInner(text, segKey, message, onOpenLightbox, members, onAddT
             <span
               key={`${segKey}-${i}-ch${k}`}
               className="bg-teal-900/50 text-teal-300 hover:bg-teal-800/50 cursor-pointer px-1 rounded"
+              role="link"
+              tabIndex={0}
+              aria-label={`Go to channel ${chName}`}
               onClick={() => matchedChannel && onSelectChannel?.(matchedChannel)}
+              onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && matchedChannel) { e.preventDefault(); onSelectChannel?.(matchedChannel); } }}
             >#{chName}</span>
           );
         }
@@ -395,6 +400,7 @@ function MessageList({
   onSelectChannel,
   highlightMessageId
 }) {
+  const toast = useToast();
   const [editingId, setEditingId] = useState(null);
   const [editContent, setEditContent] = useState('');
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState(null);
@@ -412,7 +418,7 @@ function MessageList({
 
   // Scroll to and highlight a specific message when highlightMessageId changes
   useEffect(() => {
-    if (!highlightMessageId) return;
+    if (!highlightMessageId || !/^[a-zA-Z0-9_-]+$/.test(highlightMessageId)) return;
     // Wait for DOM to render, then scroll
     const timer = setTimeout(() => {
       const el = document.querySelector(`[data-message-id="${highlightMessageId}"]`);
@@ -1004,7 +1010,9 @@ function MessageList({
           { label: 'Copy Text', icon: '📋', onClick: () => handleCopyText(msg.id) },
           { label: 'Copy Link', icon: '🔗', onClick: () => {
             const url = `${window.location.origin}/workspace/${workspaceId}?channel=${msg.channelId}&msg=${msg.id}`;
-            navigator.clipboard.writeText(url).catch(() => {});
+            navigator.clipboard.writeText(url)
+              .then(() => toast.success('Link copied'))
+              .catch(() => toast.error('Failed to copy link'));
           } },
           { label: isPinned ? 'Unpin Message' : 'Pin Message', icon: '📌', onClick: () => isPinned ? onUnpinMessage?.(msg.id) : onPinMessage?.(msg.id), show: !!(onPinMessage && onUnpinMessage) },
           { label: savedMessageIds?.has(msg.id) ? 'Unsave Message' : 'Save Message', icon: '🔖', onClick: () => savedMessageIds?.has(msg.id) ? onUnsaveMessage?.(msg.id) : onSaveMessage?.(msg.id), show: !!(onSaveMessage && onUnsaveMessage) },

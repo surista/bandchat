@@ -124,6 +124,9 @@ function ChannelItem({ channel, isSelected, onSelect, onLongPress, onContextMenu
         {channel.isPrivate ? '🔒' : '#'}
       </span>
       <span className="flex-1 truncate">{channel.name}</span>
+      {channel.starred && (
+        <span className="text-yellow-500 text-xs flex-shrink-0" title="Starred">★</span>
+      )}
       {channel.pinnedSetlistId && (
         <span className="text-green-400 text-xs flex-shrink-0" title="Setlist pinned">♫</span>
       )}
@@ -562,8 +565,9 @@ function Sidebar({
     try {
       await api.starChannel(contextMenu.id, newStarred);
       onStarChannel?.(contextMenu.id, newStarred);
+      toast.success(newStarred ? 'Channel starred' : 'Channel unstarred');
     } catch (err) {
-      if (import.meta.env.DEV) console.error('Failed to toggle star:', err);
+      toast.error('Failed to update star');
     }
     setContextMenu(null);
   };
