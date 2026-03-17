@@ -34,9 +34,12 @@ router.get('/channel/:channelId', authenticate, isChannelMember, async (req, res
     const { cursor, limit = 50 } = req.query;
     const take = Math.min(parseInt(limit) || 50, 100);
 
-    // Check message retention limit based on plan
-    const channel = await prisma.channel.findUnique({ where: { id: req.params.channelId }, select: { workspaceId: true } });
-    const workspace = await prisma.workspace.findUnique({ where: { id: channel.workspaceId }, select: { plan: true, planExpiresAt: true } });
+    // Check message retention limit based on plan (use channel from middleware to avoid null dereference)
+    const channelWorkspaceId = req.channel?.workspaceId;
+    if (!channelWorkspaceId) {
+      return res.status(404).json({ error: 'Channel not found' });
+    }
+    const workspace = await prisma.workspace.findUnique({ where: { id: channelWorkspaceId }, select: { plan: true, planExpiresAt: true } });
     const limits = getPlanLimits(workspace);
     const retentionFilter = limits.messageRetentionDays
       ? { gte: new Date(Date.now() - limits.messageRetentionDays * 86400000) }

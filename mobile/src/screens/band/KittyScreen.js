@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import ActionSheet from '../../components/ActionSheet';
+import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import formatDate from '../../utils/formatDate';
@@ -115,7 +116,7 @@ export default function KittyScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Kitty settings"
             >
-              <Text style={{ fontSize: 20 }}>{'\u2699\uFE0F'}</Text>
+              <Ionicons name="settings-outline" size={22} color={colors.primary} />
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -124,7 +125,7 @@ export default function KittyScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel="Add transaction"
           >
-            <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
+            <Ionicons name="add" size={28} color={colors.primary} />
           </TouchableOpacity>
         </View>
       ),

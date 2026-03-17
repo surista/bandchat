@@ -10,6 +10,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
 import ErrorState from '../../components/ErrorState';
@@ -34,7 +35,7 @@ export default function PinnedMessagesScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Text style={{ fontSize: 16, color: colors.primary }}>← Back</Text>
+          <Ionicons name="chevron-back" size={22} color={colors.primary} />
         </TouchableOpacity>
       ),
     });

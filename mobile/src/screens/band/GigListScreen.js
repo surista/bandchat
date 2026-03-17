@@ -22,6 +22,7 @@ import { mediumImpact, successNotification } from '../../utils/haptics';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import api from '../../services/api';
 import { getLocalGigs, upsertGigs, deleteLocalGig } from '../../services/database';
+import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
 import { useLayout } from '../../hooks/useLayout';
 import getCurrencySymbol from '../../utils/getCurrencySymbol';
@@ -160,7 +161,7 @@ export default function GigListScreen({ navigation, route }) {
             {calendarLoading ? (
               <ActivityIndicator size="small" color={colors.primary} />
             ) : (
-              <Text style={{ color: colors.primary, fontSize: 18 }}>{'\uD83D\uDCC5'}</Text>
+              <Ionicons name="calendar-outline" size={22} color={colors.primary} />
             )}
           </TouchableOpacity>
           <TouchableOpacity
@@ -169,7 +170,7 @@ export default function GigListScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel="Create event"
           >
-            <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
+            <Ionicons name="add" size={28} color={colors.primary} />
           </TouchableOpacity>
         </View>
       ),
@@ -472,7 +473,7 @@ export default function GigListScreen({ navigation, route }) {
   if (loadError && gigs.length === 0) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-        <ErrorState emoji="📅" title="Couldn't load events" message={loadError} onRetry={loadGigs} />
+        <ErrorState iconName="calendar-outline" title="Couldn't load events" message={loadError} onRetry={loadGigs} />
       </SafeAreaView>
     );
   }

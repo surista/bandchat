@@ -524,7 +524,7 @@ export default function OnboardingWizard({ onComplete, onClose }) {
   };
 
   const content = (
-    <div className="modal-backdrop" style={{ zIndex: 10000 }} onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
+    <div className="modal-backdrop" style={{ zIndex: 10000 }} role="dialog" aria-modal="true" aria-label="Create Your Workspace" onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
       <div className="modal-content" style={{ maxWidth: '40rem', width: '100%', maxHeight: '90dvh', display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid var(--color-modal-border)' }}>

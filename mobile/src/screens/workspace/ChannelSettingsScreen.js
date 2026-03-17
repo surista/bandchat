@@ -15,6 +15,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
@@ -53,7 +54,7 @@ export default function ChannelSettingsScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Text style={{ fontSize: 16, color: colors.primary }}>← Back</Text>
+          <Ionicons name="chevron-back" size={22} color={colors.primary} />
         </TouchableOpacity>
       ),
     });

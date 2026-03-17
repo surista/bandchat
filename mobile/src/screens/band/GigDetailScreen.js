@@ -382,7 +382,7 @@ export default function GigDetailScreen({ navigation, route }) {
   if (loadError) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
-        <ErrorState emoji={"\uD83D\uDCC5"} title="Couldn't load event" message={loadError} onRetry={loadGig} />
+        <ErrorState iconName="calendar-outline" title="Couldn't load event" message={loadError} onRetry={loadGig} />
       </View>
     );
   }

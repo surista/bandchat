@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import Badge from '../../components/Badge';
+import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
@@ -46,7 +47,7 @@ export default function MedleyListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Create medley"
         >
-          <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
+          <Ionicons name="add" size={28} color={colors.primary} />
         </TouchableOpacity>
       ),
     });

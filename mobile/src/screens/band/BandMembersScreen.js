@@ -20,6 +20,7 @@ import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import useDebounce from '../../hooks/useDebounce';
+import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import getInitial from '../../utils/getInitial';
@@ -115,7 +116,7 @@ export default function BandMembersScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Add member"
         >
-          <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
+          <Ionicons name="add" size={28} color={colors.primary} />
         </TouchableOpacity>
       ) : null,
     });

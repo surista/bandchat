@@ -19,6 +19,7 @@ import { SkeletonList } from '../../components/SkeletonLoader';
 import { successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import { getLocalSongs, upsertSongs, deleteLocalSong } from '../../services/database';
+import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
 import { formatDuration } from '../../utils/formatDuration';
 import useDebounce from '../../hooks/useDebounce';
@@ -96,7 +97,7 @@ export default function SongListScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel="More options"
           >
-            <Text style={{ color: colors.primary, fontSize: 20, fontWeight: '700' }}>{'\u22EF'}</Text>
+            <Ionicons name="ellipsis-horizontal" size={22} color={colors.primary} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('SongDetail', { workspaceId })}
@@ -104,7 +105,7 @@ export default function SongListScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel="Add song"
           >
-            <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
+            <Ionicons name="add" size={28} color={colors.primary} />
           </TouchableOpacity>
         </View>
       ),
@@ -306,7 +307,7 @@ export default function SongListScreen({ navigation, route }) {
   if (loadError && songs.length === 0) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-        <ErrorState emoji="🎵" title="Couldn't load songs" message={loadError} onRetry={loadSongs} />
+        <ErrorState iconName="musical-notes-outline" title="Couldn't load songs" message={loadError} onRetry={loadSongs} />
       </SafeAreaView>
     );
   }

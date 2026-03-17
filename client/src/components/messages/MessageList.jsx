@@ -8,6 +8,7 @@ import { format, isToday, isYesterday } from 'date-fns';
 import ReactionDisplay from './ReactionDisplay';
 import ReactionPicker from './ReactionPicker';
 import ConfirmDialog from '../common/ConfirmDialog';
+import Modal from '../common/Modal';
 import ContextMenu from '../common/ContextMenu';
 import ImageLightbox from '../common/ImageLightbox';
 import useLongPress from '../../hooks/useLongPress';
@@ -1041,57 +1042,49 @@ function MessageList({
     )}
 
     {/* Report Message Dialog */}
-    {reportMessageId && (
-      <div className="modal-backdrop z-[10001]" onClick={(e) => { if (e.target === e.currentTarget) { setReportMessageId(null); } }}>
-        <div className="modal-content max-w-md w-full">
-          <div className="modal-header">
-            <h3>Report Message</h3>
-            <button onClick={() => setReportMessageId(null)} className="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
-          </div>
-          <div className="modal-body px-6 py-4">
-            <p className="text-sm text-[var(--color-text-secondary)] mb-3">
-              This message will be reported to the BandChat team for review.
-            </p>
-            <textarea
-              value={reportReason}
-              onChange={(e) => setReportReason(e.target.value)}
-              className="modal-input w-full px-3 py-2.5 text-sm min-h-[80px] resize-y"
-              placeholder="Why are you reporting this message?"
-              autoFocus
-            />
-            {reportError && (
-              <p className="text-[13px] text-red-500 mt-2" role="alert">{reportError}</p>
-            )}
-          </div>
-          <div className="flex justify-end gap-2 px-6 py-3 border-t border-[var(--color-modal-border)]">
-            <button onClick={() => setReportMessageId(null)} className="btn btn-secondary">Cancel</button>
-            <button
-              onClick={async () => {
-                if (!reportReason.trim()) {
-                  setReportError('Please provide a reason');
-                  return;
-                }
-                setReportLoading(true);
-                setReportError('');
-                try {
-                  await api.reportMessage(reportMessageId, reportReason.trim());
-                  setReportMessageId(null);
-                  setReportReason('');
-                } catch (err) {
-                  setReportError(err.message);
-                } finally {
-                  setReportLoading(false);
-                }
-              }}
-              className="btn btn-primary bg-red-600 hover:bg-red-700"
-              disabled={reportLoading || !reportReason.trim()}
-            >
-              {reportLoading ? 'Submitting...' : 'Submit Report'}
-            </button>
-          </div>
-        </div>
+    <Modal isOpen={!!reportMessageId} onClose={() => { setReportMessageId(null); setReportReason(''); setReportError(''); }} title="Report Message">
+      <div className="modal-body px-6 py-4">
+        <p className="text-sm text-[var(--color-text-secondary)] mb-3">
+          This message will be reported to the BandChat team for review.
+        </p>
+        <textarea
+          value={reportReason}
+          onChange={(e) => setReportReason(e.target.value)}
+          className="modal-input w-full px-3 py-2.5 text-sm min-h-[80px] resize-y"
+          placeholder="Why are you reporting this message?"
+          autoFocus
+        />
+        {reportError && (
+          <p className="text-[13px] text-red-500 mt-2" role="alert">{reportError}</p>
+        )}
       </div>
-    )}
+      <div className="flex justify-end gap-2 px-6 py-3 border-t border-[var(--color-modal-border)]">
+        <button onClick={() => { setReportMessageId(null); setReportReason(''); setReportError(''); }} className="btn btn-secondary">Cancel</button>
+        <button
+          onClick={async () => {
+            if (!reportReason.trim()) {
+              setReportError('Please provide a reason');
+              return;
+            }
+            setReportLoading(true);
+            setReportError('');
+            try {
+              await api.reportMessage(reportMessageId, reportReason.trim());
+              setReportMessageId(null);
+              setReportReason('');
+            } catch (err) {
+              setReportError(err.message);
+            } finally {
+              setReportLoading(false);
+            }
+          }}
+          className="btn btn-primary bg-red-600 hover:bg-red-700"
+          disabled={reportLoading || !reportReason.trim()}
+        >
+          {reportLoading ? 'Submitting...' : 'Submit Report'}
+        </button>
+      </div>
+    </Modal>
     </>
   );
 }

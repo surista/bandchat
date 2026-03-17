@@ -19,6 +19,7 @@ import { formatDistanceToNow, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import ActionSheet from '../../components/ActionSheet';
+import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import api from '../../services/api';
@@ -82,7 +83,7 @@ export default function AnnouncementsScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Create announcement"
         >
-          <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
+          <Ionicons name="add" size={28} color={colors.primary} />
         </TouchableOpacity>
       ),
     });

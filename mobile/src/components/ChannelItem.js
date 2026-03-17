@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import getAvatarColor from '../utils/getAvatarColor';
 
@@ -16,9 +17,16 @@ function ChannelItem({ channel, isDM, dmMembers, onPress, onLongPress, unreadCou
         </View>
       );
     }
+    if (channel.isPrivate) {
+      return (
+        <View style={styles.channelIconWrap}>
+          <Ionicons name="lock-closed" size={14} color={colors.channelListText} />
+        </View>
+      );
+    }
     return (
       <Text style={[styles.channelIcon, { color: colors.channelListText }]}>
-        {channel.isPrivate ? '\u{1F512}' : '#'}
+        #
       </Text>
     );
   };
@@ -49,10 +57,10 @@ function ChannelItem({ channel, isDM, dmMembers, onPress, onLongPress, unreadCou
         {displayName}
       </Text>
       {!isDM && channel.starred && (
-        <Text style={{ color: '#facc15', fontSize: 12, marginLeft: 4 }}>★</Text>
+        <Ionicons name="star" size={12} color="#facc15" style={{ marginLeft: 4 }} />
       )}
       {!isDM && channel.pinnedSetlistId && (
-        <Text style={{ color: '#4ade80', fontSize: 12, marginLeft: 4 }}>♫</Text>
+        <Ionicons name="musical-notes" size={12} color="#4ade80" style={{ marginLeft: 4 }} />
       )}
       {hasUnread && (
         <View style={[styles.badge, { backgroundColor: colors.primary }]}>
@@ -83,6 +91,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     width: 28,
     textAlign: 'center',
+  },
+  channelIconWrap: {
+    width: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dmAvatar: {
     width: 28,

@@ -1,3 +1,5 @@
+import { View, Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import WorkspaceListScreen from '../screens/workspaces/WorkspaceListScreen';
 import ChannelListScreen from '../screens/workspace/ChannelListScreen';
@@ -83,8 +85,17 @@ export default function AppStack() {
               || 'Direct Message';
             return { title: name };
           }
-          const prefix = ch?.isPrivate ? '\u{1F512} ' : '# ';
-          return { title: prefix + (ch?.name || 'Channel') };
+          if (ch?.isPrivate) {
+            return {
+              headerTitle: () => (
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="lock-closed" size={14} color="#ffffff" style={{ marginRight: 5 }} />
+                  <Text style={{ color: '#ffffff', fontSize: 17, fontWeight: '600' }}>{ch?.name || 'Channel'}</Text>
+                </View>
+              ),
+            };
+          }
+          return { title: '# ' + (ch?.name || 'Channel') };
         }}
       />
       <Stack.Screen

@@ -171,10 +171,21 @@ router.get('/all-workspaces', authenticate, async (req, res) => {
       return res.json([]);
     }
 
+    // Validate enum query params against allowed values (same as single-workspace endpoint)
+    const VALID_GIG_TYPES = ['GIG', 'REHEARSAL', 'RECORDING', 'OTHER'];
+    const VALID_GIG_STATUSES = ['SCHEDULED', 'COMPLETED', 'CANCELLED'];
+    const validType = type && VALID_GIG_TYPES.includes(type) ? type : undefined;
+    const validStatus = status && VALID_GIG_STATUSES.includes(status) ? status : undefined;
+
     const where = {
       workspaceId: { in: workspaceIds },
-      ...(type && { type }),
-      ...(status && { status }),
+      // Filter: show non-personal events OR personal events created by current user
+      OR: [
+        { isPersonal: false },
+        { isPersonal: true, createdById: req.user.id }
+      ],
+      ...(validType && { type: validType }),
+      ...(validStatus && { status: validStatus }),
       ...(from || to) && {
         date: {
           ...(from && { gte: new Date(from) }),

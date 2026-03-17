@@ -17,6 +17,7 @@ import { useTheme } from '../../context/ThemeContext';
 import Badge from '../../components/Badge';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import { successNotification } from '../../utils/haptics';
+import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
 import useDebounce from '../../hooks/useDebounce';
 import api from '../../services/api';
@@ -72,7 +73,7 @@ export default function SetlistListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Create setlist"
         >
-          <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
+          <Ionicons name="add" size={28} color={colors.primary} />
         </TouchableOpacity>
       ),
     });

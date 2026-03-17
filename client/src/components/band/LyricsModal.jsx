@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 
 export function LyricsModal({ lyrics, songTitle, duration, onClose }) {
   const [fontSize, setFontSize] = useState(18);
   const [autoScrolling, setAutoScrolling] = useState(false);
   const scrollRef = useRef(null);
   const scrollIntervalRef = useRef(null);
+  const modalRef = useRef(null);
 
   const MIN_FONT = 12;
   const MAX_FONT = 32;
@@ -17,6 +19,30 @@ export function LyricsModal({ lyrics, songTitle, duration, onClose }) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
+
+  // Focus trap
+  useEffect(() => {
+    if (!modalRef.current) return;
+    const focusable = modalRef.current.querySelectorAll('button');
+    if (focusable.length > 0) focusable[0].focus();
+
+    const handleTab = (e) => {
+      if (e.key !== 'Tab') return;
+      const items = modalRef.current.querySelectorAll('button');
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', handleTab);
+    return () => document.removeEventListener('keydown', handleTab);
+  }, []);
 
   // Auto-scroll
   useEffect(() => {
@@ -55,13 +81,17 @@ export function LyricsModal({ lyrics, songTitle, duration, onClose }) {
     };
   }, [autoScrolling, duration]);
 
-  return (
+  return createPortal(
     <div
+      ref={modalRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Lyrics: ${songTitle}`}
       style={{
         position: 'fixed',
         inset: 0,
         backgroundColor: 'rgba(0,0,0,0.85)',
-        zIndex: 9999,
+        zIndex: 10001,
         display: 'flex',
         flexDirection: 'column',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -94,6 +124,7 @@ export function LyricsModal({ lyrics, songTitle, duration, onClose }) {
               cursor: fontSize <= MIN_FONT ? 'default' : 'pointer',
             }}
             title="Decrease font size"
+            aria-label="Decrease font size"
           >
             A-
           </button>
@@ -112,6 +143,7 @@ export function LyricsModal({ lyrics, songTitle, duration, onClose }) {
               cursor: fontSize >= MAX_FONT ? 'default' : 'pointer',
             }}
             title="Increase font size"
+            aria-label="Increase font size"
           >
             A+
           </button>
@@ -129,6 +161,7 @@ export function LyricsModal({ lyrics, songTitle, duration, onClose }) {
               cursor: 'pointer',
             }}
             title={autoScrolling ? 'Stop auto-scroll' : 'Start auto-scroll'}
+            aria-label={autoScrolling ? 'Stop auto-scroll' : 'Start auto-scroll'}
           >
             {autoScrolling ? 'STOP' : 'SCROLL'}
           </button>
@@ -149,6 +182,7 @@ export function LyricsModal({ lyrics, songTitle, duration, onClose }) {
               marginLeft: 8,
             }}
             title="Close (ESC)"
+            aria-label="Close lyrics"
           >
             &times;
           </button>
@@ -180,7 +214,8 @@ export function LyricsModal({ lyrics, songTitle, duration, onClose }) {
           {lyrics}
         </pre>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

@@ -11,6 +11,7 @@ import {
   Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import Purchases from 'react-native-purchases';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
@@ -32,17 +33,17 @@ const FALLBACK_PRICES = {
 };
 
 const PRO_FEATURES = [
-  { icon: '👥', label: 'Unlimited band members' },
-  { icon: '🎵', label: 'Unlimited songs & setlists' },
-  { icon: '💬', label: 'Full message history' },
-  { icon: '💰', label: 'Band Kitty finances' },
-  { icon: '📊', label: 'Gig stats & insights' },
-  { icon: '🎯', label: 'Practice tracker' },
-  { icon: '🧠', label: 'Song Intelligence' },
-  { icon: '📄', label: 'PDF setlist export' },
-  { icon: '📥', label: 'Slack workspace import' },
-  { icon: '🎨', label: 'All themes unlocked' },
-  { icon: '💾', label: '10 GB storage' },
+  { icon: 'people', label: 'Unlimited band members' },
+  { icon: 'musical-notes', label: 'Unlimited songs & setlists' },
+  { icon: 'chatbubbles', label: 'Full message history' },
+  { icon: 'wallet', label: 'Band Kitty finances' },
+  { icon: 'bar-chart', label: 'Gig stats & insights' },
+  { icon: 'fitness', label: 'Practice tracker' },
+  { icon: 'bulb', label: 'Song Intelligence' },
+  { icon: 'document-text', label: 'PDF setlist export' },
+  { icon: 'download', label: 'Slack workspace import' },
+  { icon: 'color-palette', label: 'All themes unlocked' },
+  { icon: 'cloud-upload', label: '10 GB storage' },
 ];
 
 export default function UpgradeScreen({ route }) {
@@ -199,7 +200,7 @@ export default function UpgradeScreen({ route }) {
         {/* Current Plan Status */}
         {isPro ? (
           <View style={[styles.statusCard, { backgroundColor: '#059669', borderColor: '#059669' }]}>
-            <Text style={styles.statusIcon}>⭐</Text>
+            <Ionicons name="star" size={40} color="#fbbf24" style={{ marginBottom: 8 }} />
             <Text style={[styles.statusTitle, { color: '#fff' }]}>You're on Pro!</Text>
             <Text style={[styles.statusDesc, { color: 'rgba(255,255,255,0.85)' }]}>
               All features are unlocked for this workspace.
@@ -212,7 +213,7 @@ export default function UpgradeScreen({ route }) {
           <>
             {/* Hero */}
             <View style={styles.hero}>
-              <Text style={styles.heroIcon}>🚀</Text>
+              <Ionicons name="rocket-outline" size={48} color="#3b82f6" style={{ marginBottom: 8 }} />
               <Text style={[styles.heroTitle, { color: colors.textPrimary }]}>Upgrade to Pro</Text>
               <Text style={[styles.heroDesc, { color: colors.textSecondary }]}>
                 Unlock the full power of BandChat for your band.
@@ -270,9 +271,9 @@ export default function UpgradeScreen({ route }) {
           </Text>
           {PRO_FEATURES.map((feature, i) => (
             <View key={i} style={[styles.featureRow, { borderBottomColor: colors.border }]}>
-              <Text style={styles.featureIcon}>{feature.icon}</Text>
+              <Ionicons name={feature.icon} size={20} color={colors.textSecondary} style={{ width: 32 }} />
               <Text style={[styles.featureLabel, { color: colors.textPrimary }]}>{feature.label}</Text>
-              {isPro && <Text style={styles.featureCheck}>✓</Text>}
+              {isPro && <Ionicons name="checkmark" size={16} color="#059669" style={{ fontWeight: '700' }} />}
             </View>
           ))}
         </View>

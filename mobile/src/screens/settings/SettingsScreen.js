@@ -17,6 +17,7 @@ import {
 import { File, Paths } from 'expo-file-system/next';
 import * as Sharing from 'expo-sharing';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { successNotification } from '../../utils/haptics';
 import { useAuth } from '../../context/AuthContext';
@@ -43,13 +44,15 @@ function SettingsRow({ icon, label, subtitle, onPress, color, colors, showArrow 
       accessibilityRole="button"
       accessibilityLabel={label}
     >
-      <Text style={styles.rowIcon}>{icon}</Text>
+      <View style={styles.rowIconContainer}>
+        <Ionicons name={icon} size={20} color={color || colors.textSecondary} />
+      </View>
       <View style={{ flex: 1 }}>
         <Text style={[styles.rowLabel, { color: color || colors.textPrimary }]}>{label}</Text>
         {subtitle ? <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>{subtitle}</Text> : null}
       </View>
       {showArrow && (
-        <Text style={[styles.rowArrow, { color: colors.textSecondary }]}>{'\u203A'}</Text>
+        <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
       )}
     </TouchableOpacity>
   );
@@ -223,14 +226,14 @@ export default function SettingsScreen({ navigation, route }) {
               {user?.email || ''}
             </Text>
           </View>
-          <Text style={[styles.rowArrow, { color: colors.textSecondary }]}>{'\u203A'}</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
         </TouchableOpacity>
 
         {/* Subscription */}
         <SectionHeader title="SUBSCRIPTION" colors={colors} />
         <View style={styles.group}>
           <SettingsRow
-            icon="⭐"
+            icon="star-outline"
             label={effectivePlan === 'PRO' ? 'Pro Plan' : 'Upgrade to Pro'}
             onPress={() => navigation.navigate('Upgrade', { workspaceId })}
             colors={colors}
@@ -241,21 +244,21 @@ export default function SettingsScreen({ navigation, route }) {
         <SectionHeader title="ACCOUNT" colors={colors} />
         <View style={styles.group}>
           <SettingsRow
-            icon={'\uD83D\uDC64'}
+            icon="person-outline"
             label="Profile"
             onPress={() => navigation.navigate('EditProfile')}
             colors={colors}
           />
           <View style={[styles.separator, { backgroundColor: colors.border }]} />
           <SettingsRow
-            icon={'\uD83D\uDD12'}
+            icon="lock-closed-outline"
             label="Security"
             onPress={() => navigation.navigate('Security')}
             colors={colors}
           />
           <View style={[styles.separator, { backgroundColor: colors.border }]} />
           <SettingsRow
-            icon={'\uD83D\uDEAB'}
+            icon="ban-outline"
             label="Blocked Users"
             onPress={() => navigation.navigate('BlockedUsers')}
             colors={colors}
@@ -266,21 +269,21 @@ export default function SettingsScreen({ navigation, route }) {
         <SectionHeader title="PREFERENCES" colors={colors} />
         <View style={styles.group}>
           <SettingsRow
-            icon={'\uD83C\uDFA8'}
+            icon="color-palette-outline"
             label="Appearance"
             onPress={() => navigation.navigate('Appearance')}
             colors={colors}
           />
           <View style={[styles.separator, { backgroundColor: colors.border }]} />
           <SettingsRow
-            icon={'\uD83D\uDD14'}
+            icon="notifications-outline"
             label="Notifications"
             onPress={() => navigation.navigate('Notifications', { workspaceId })}
             colors={colors}
           />
           <View style={[styles.separator, { backgroundColor: colors.border }]} />
           <SettingsRow
-            icon={'\u2630'}
+            icon="options-outline"
             label={`Message Density (${messageDensity.charAt(0).toUpperCase() + messageDensity.slice(1)})`}
             onPress={() => {
               Alert.alert('Message Density', 'Choose how much space messages take up.', [
@@ -300,7 +303,7 @@ export default function SettingsScreen({ navigation, route }) {
           {isAdmin && (
             <>
               <SettingsRow
-                icon={'✏️'}
+                icon="pencil-outline"
                 label="Rename Workspace"
                 subtitle={workspaceName}
                 onPress={() => {
@@ -311,14 +314,14 @@ export default function SettingsScreen({ navigation, route }) {
               />
               <View style={[styles.separator, { backgroundColor: colors.border }]} />
               <SettingsRow
-                icon={'\uD83D\uDC65'}
+                icon="people-outline"
                 label="Members"
                 onPress={() => navigation.navigate('WorkspaceMembers', { workspaceId })}
                 colors={colors}
               />
               <View style={[styles.separator, { backgroundColor: colors.border }]} />
               <SettingsRow
-                icon={'\uD83D\uDCE5'}
+                icon="download-outline"
                 label="Export Workspace"
                 onPress={async () => {
                   try {
@@ -335,7 +338,7 @@ export default function SettingsScreen({ navigation, route }) {
               />
               <View style={[styles.separator, { backgroundColor: colors.border }]} />
               <SettingsRow
-                icon={'\uD83D\uDCE8'}
+                icon="cloud-upload-outline"
                 label="Import from Slack"
                 onPress={() => Alert.alert(
                   'Desktop Feature',
@@ -346,21 +349,21 @@ export default function SettingsScreen({ navigation, route }) {
               />
               <View style={[styles.separator, { backgroundColor: colors.border }]} />
               <SettingsRow
-                icon={'\u2709\uFE0F'}
+                icon="person-add-outline"
                 label="Invite People"
                 onPress={() => navigation.navigate('Invite', { workspaceId })}
                 colors={colors}
               />
               <View style={[styles.separator, { backgroundColor: colors.border }]} />
               <SettingsRow
-                icon={'\u2699\uFE0F'}
+                icon="settings-outline"
                 label="Workspace Defaults"
                 onPress={() => setShowDefaultsModal(true)}
                 colors={colors}
               />
               <View style={[styles.separator, { backgroundColor: colors.border }]} />
               <SettingsRow
-                icon={'🌐'}
+                icon="globe-outline"
                 label="Band Website"
                 onPress={() => navigation.navigate('WebsiteSettings', { workspaceId, workspaceName })}
                 colors={colors}
@@ -369,7 +372,7 @@ export default function SettingsScreen({ navigation, route }) {
             </>
           )}
           <SettingsRow
-            icon={'\uD83D\uDEAA'}
+            icon="exit-outline"
             label="Leave Workspace"
             onPress={handleLeaveWorkspace}
             color="#f59e0b"
@@ -380,7 +383,7 @@ export default function SettingsScreen({ navigation, route }) {
             <>
               <View style={[styles.separator, { backgroundColor: colors.border }]} />
               <SettingsRow
-                icon={'\uD83D\uDDD1\uFE0F'}
+                icon="trash-outline"
                 label="Delete Workspace"
                 onPress={() => { setDeleteConfirmText(''); setShowDeleteModal(true); }}
                 color="#ef4444"
@@ -395,7 +398,7 @@ export default function SettingsScreen({ navigation, route }) {
         <SectionHeader title="SUPPORT" colors={colors} />
         <View style={styles.group}>
           <SettingsRow
-            icon={'\u2709\uFE0F'}
+            icon="mail-outline"
             label="Contact Support"
             subtitle="admin@bandchat.app"
             onPress={() => Linking.openURL('mailto:admin@bandchat.app?subject=BandChat Support')}
@@ -403,21 +406,21 @@ export default function SettingsScreen({ navigation, route }) {
           />
           <View style={[styles.separator, { backgroundColor: colors.border }]} />
           <SettingsRow
-            icon={'\uD83D\uDD12'}
+            icon="shield-checkmark-outline"
             label="Privacy Policy"
             onPress={() => Linking.openURL(`${APP_BASE_URL}/privacy`)}
             colors={colors}
           />
           <View style={[styles.separator, { backgroundColor: colors.border }]} />
           <SettingsRow
-            icon={'\uD83D\uDCC4'}
+            icon="document-text-outline"
             label="Terms of Service"
             onPress={() => Linking.openURL(`${APP_BASE_URL}/terms`)}
             colors={colors}
           />
           <View style={[styles.separator, { backgroundColor: colors.border }]} />
           <SettingsRow
-            icon={'\uD83D\uDCAC'}
+            icon="chatbubble-outline"
             label="Send Feedback"
             onPress={() => Linking.openURL('mailto:admin@bandchat.app?subject=BandChat Feedback')}
             colors={colors}
@@ -428,7 +431,7 @@ export default function SettingsScreen({ navigation, route }) {
         <SectionHeader title="APP" colors={colors} />
         <View style={styles.group}>
           <SettingsRow
-            icon={'\uD83D\uDEAA'}
+            icon="log-out-outline"
             label="Log Out"
             onPress={handleLogout}
             color="#ef4444"
@@ -672,7 +675,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
   },
-  rowIcon: { fontSize: 18, width: 30, textAlign: 'center' },
+  rowIconContainer: { width: 30, alignItems: 'center', justifyContent: 'center' },
   rowLabel: { fontSize: 16, marginLeft: 4 },
   rowSubtitle: { fontSize: 13, marginLeft: 4, marginTop: 2 },
   rowArrow: { fontSize: 22, fontWeight: '300' },

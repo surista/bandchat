@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -100,7 +101,7 @@ export default function TimelineScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Add timeline event"
         >
-          <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
+          <Ionicons name="add" size={28} color={colors.primary} />
         </TouchableOpacity>
       ),
     });
@@ -568,7 +569,7 @@ export default function TimelineScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           <View style={styles.centered}>
-            <Text style={styles.emptyIcon}>{debouncedSearch.trim() ? '\uD83D\uDD0D' : '\uD83D\uDCDC'}</Text>
+            <Ionicons name={debouncedSearch.trim() ? 'search' : 'time-outline'} size={40} color={colors.textSecondary} style={{ marginBottom: 12 }} />
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               {debouncedSearch.trim() ? 'No matching events' : "Your band's story starts here!"}
             </Text>

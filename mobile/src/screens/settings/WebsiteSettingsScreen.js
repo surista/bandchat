@@ -14,6 +14,7 @@ import {
   Platform,
   Image,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
@@ -269,7 +270,7 @@ export default function WebsiteSettingsScreen({ route }) {
 
           {!isDeployed && !websiteData?.websiteConfig && (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyEmoji}>🌐</Text>
+              <Ionicons name="globe-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
               <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Launch Your Band Website</Text>
               <Text style={[styles.emptyDesc, { color: colors.textSecondary }]}>
                 Get a professional website for your band in minutes. Automatically syncs your gigs, members, songs, and setlists from BandChat.

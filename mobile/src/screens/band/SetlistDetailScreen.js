@@ -22,6 +22,7 @@ import DraggableList from '../../components/DraggableList';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useLayout } from '../../hooks/useLayout';
+import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
 import { SkeletonList } from '../../components/SkeletonLoader';
 
@@ -113,7 +114,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel="Export setlist as PDF"
           >
-            <Text style={{ fontSize: 18 }}>{'\u2B07'}</Text>
+            <Ionicons name="download-outline" size={22} color={colors.primary} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setEditing(prev => !prev)}
@@ -421,7 +422,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
   if (loadError) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
-        <ErrorState emoji={"\uD83C\uDFB5"} title="Couldn't load setlist" message={loadError} onRetry={loadSetlist} />
+        <ErrorState iconName="list-outline" title="Couldn't load setlist" message={loadError} onRetry={loadSetlist} />
       </View>
     );
   }

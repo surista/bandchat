@@ -316,12 +316,31 @@ function Sidebar({
     return `${Math.round(remaining / 60)}h`;
   };
 
-  // Organize channels by group and sort alphabetically
+  const starredChannels = useMemo(() => channels.filter(c => c.starred), [channels]);
+  const unreadChannels = useMemo(() =>
+    channels.filter(c => !c.starred && !c.muted && c.unreadCount > 0),
+  [channels]);
+
+  // Total channel count per group (including promoted channels, for display in group headers)
+  const groupTotalCounts = useMemo(() => {
+    const counts = {};
+    channels.forEach(c => {
+      if (c.groupId) counts[c.groupId] = (counts[c.groupId] || 0) + 1;
+    });
+    return counts;
+  }, [channels]);
+
+  // Organize channels by group, excluding those already shown in Starred/Unread sections
   const { groupedChannels, ungroupedChannels } = useMemo(() => {
+    const promotedIds = new Set([
+      ...starredChannels.map(c => c.id),
+      ...unreadChannels.map(c => c.id),
+    ]);
     const grouped = {};
     const ungrouped = [];
 
     channels.forEach(channel => {
+      if (promotedIds.has(channel.id)) return; // skip — already in Starred or Unread
       if (channel.groupId) {
         if (!grouped[channel.groupId]) {
           grouped[channel.groupId] = [];
@@ -341,12 +360,7 @@ function Sidebar({
     ungrouped.sort((a, b) => a.name.localeCompare(b.name));
 
     return { groupedChannels: grouped, ungroupedChannels: ungrouped };
-  }, [channels]);
-
-  const starredChannels = useMemo(() => channels.filter(c => c.starred), [channels]);
-  const unreadChannels = useMemo(() =>
-    channels.filter(c => !c.starred && !c.muted && c.unreadCount > 0),
-  [channels]);
+  }, [channels, starredChannels, unreadChannels]);
 
   const isAdmin = useIsAdmin(workspace);
 
@@ -851,7 +865,7 @@ function Sidebar({
                               {group.name}
                             </span>
                             <span className="text-xs text-gray-500 ml-auto">
-                              {groupedChannels[group.id]?.length || 0}
+                              {groupTotalCounts[group.id] || 0}
                             </span>
                           </button>
                         </div>

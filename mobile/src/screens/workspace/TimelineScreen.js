@@ -9,6 +9,7 @@ import {
   Image,
   RefreshControl,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
@@ -169,7 +170,7 @@ export default function TimelineScreen({ navigation, route }) {
                 />
               ) : (
                 <Text key={att.id} style={[styles.attachmentFile, { color: colors.textSecondary }]}>
-                  📎 {att.filename}
+                  <Ionicons name="attach" size={13} color={colors.textSecondary} /> {att.filename}
                 </Text>
               )
             ))}

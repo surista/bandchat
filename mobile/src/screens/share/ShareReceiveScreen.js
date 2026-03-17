@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useShareIntent } from 'expo-share-intent';
 import { useAuth } from '../../context/AuthContext';
@@ -202,7 +203,7 @@ export default function ShareReceiveScreen({ navigation }) {
             {item._count?.members || 0} members
           </Text>
         </View>
-        {isSelected && <Text style={{ color: colors.primary, fontSize: 18 }}>&#10003;</Text>}
+        {isSelected && <Ionicons name="checkmark" size={18} color={colors.primary} />}
       </TouchableOpacity>
     );
   };
@@ -210,7 +211,7 @@ export default function ShareReceiveScreen({ navigation }) {
   // Render channel item
   const renderChannelItem = ({ item }) => {
     const isSelected = selectedChannel?.id === item.id;
-    const prefix = item.isPrivate ? '\u{1F512} ' : '# ';
+    const isPrivate = item.isPrivate;
     return (
       <TouchableOpacity
         style={[
@@ -221,10 +222,14 @@ export default function ShareReceiveScreen({ navigation }) {
         onPress={() => handleSelectChannel(item)}
         activeOpacity={0.7}
       >
-        <Text style={[styles.channelPrefix, { color: colors.textSecondary }]}>{prefix}</Text>
+        {isPrivate ? (
+          <Ionicons name="lock-closed" size={14} color={colors.textSecondary} style={{ marginRight: 6 }} />
+        ) : (
+          <Text style={[styles.channelPrefix, { color: colors.textSecondary }]}># </Text>
+        )}
         <Text style={[styles.channelName, { color: colors.textPrimary }]}>{item.name}</Text>
         {isSelected && (
-          <Text style={{ color: colors.primary, fontSize: 18, marginLeft: 'auto' }}>&#10003;</Text>
+          <Ionicons name="checkmark" size={18} color={colors.primary} style={{ marginLeft: 'auto' }} />
         )}
       </TouchableOpacity>
     );

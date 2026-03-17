@@ -15,6 +15,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import Badge from '../../components/Badge';
@@ -254,7 +255,7 @@ export default function SongDetailScreen({ navigation, route }) {
   if (loadError) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
-        <ErrorState emoji={"\uD83C\uDFB5"} title="Couldn't load song" message={loadError} onRetry={loadSong} />
+        <ErrorState iconName="musical-notes-outline" title="Couldn't load song" message={loadError} onRetry={loadSong} />
       </View>
     );
   }
@@ -565,7 +566,7 @@ export default function SongDetailScreen({ navigation, route }) {
 
       {/* Desktop Feature Hint */}
       <View style={[styles.desktopHint, { backgroundColor: colors.bgTertiary }]}>
-        <Text style={styles.desktopHintIcon}>🔊</Text>
+        <Ionicons name="volume-high-outline" size={20} color={colors.textSecondary} />
         <Text style={[styles.desktopHintText, { color: colors.textSecondary }]}>
           Audio analysis (BPM/key detection) available on web
         </Text>

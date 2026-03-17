@@ -1,8 +1,12 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 
 export default function ErrorState({
   emoji = '\uD83D\uDE15',
+  iconName,
+  iconSize = 48,
+  iconColor,
   title = 'Something went wrong',
   message = 'Please try again',
   onRetry,
@@ -12,7 +16,11 @@ export default function ErrorState({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.emoji}>{emoji}</Text>
+      {iconName ? (
+        <Ionicons name={iconName} size={iconSize} color={iconColor || colors.textSecondary} style={styles.emoji} />
+      ) : (
+        <Text style={styles.emoji}>{emoji}</Text>
+      )}
       <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
       <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text>
       {onRetry && (

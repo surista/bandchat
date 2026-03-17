@@ -23,6 +23,7 @@ import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
 import { addToOfflineQueue, getOfflineQueue, removeFromOfflineQueue } from '../../services/storage';
 import { getLocalMessages, upsertMessages, upsertMessage as upsertLocalMessage } from '../../services/database';
+import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
 import { enqueue as enqueueSync } from '../../services/syncQueue';
 import MessageBubble from '../../components/MessageBubble';
@@ -165,7 +166,7 @@ export default function ChannelScreen({ navigation, route }) {
           accessibilityLabel="More options"
           style={{ paddingHorizontal: 8 }}
         >
-          <Text style={{ fontSize: 20, color: '#ffffff' }}>{'\u2022\u2022\u2022'}</Text>
+          <Ionicons name="ellipsis-horizontal" size={22} color="#ffffff" />
         </TouchableOpacity>
       ),
     });
@@ -693,7 +694,7 @@ export default function ChannelScreen({ navigation, route }) {
   if (loadError && messages.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
-        <ErrorState emoji="💬" title="Couldn't load messages" message={loadError} onRetry={() => { setLoadError(null); setRetryCount(c => c + 1); }} />
+        <ErrorState iconName="chatbubble-outline" title="Couldn't load messages" message={loadError} onRetry={() => { setLoadError(null); setRetryCount(c => c + 1); }} />
       </View>
     );
   }
@@ -723,8 +724,8 @@ export default function ChannelScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel="Toggle pinned setlist"
           >
-            <Text style={[styles.setlistChevron, { color: colors.textSecondary }]}>{setlistExpanded ? '▼' : '▶'}</Text>
-            <Text style={styles.setlistIcon}>📋</Text>
+            <Ionicons name={setlistExpanded ? 'chevron-down' : 'chevron-forward'} size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
+            <Ionicons name="list-outline" size={14} color={colors.textSecondary} />
             <Text style={[styles.setlistName, { color: colors.textPrimary }]}>{pinnedSetlist.name}</Text>
             <Text style={[styles.setlistCount, { color: colors.textSecondary }]}>{pinnedSetlist._count?.songs || 0} songs</Text>
           </TouchableOpacity>
@@ -792,7 +793,7 @@ export default function ChannelScreen({ navigation, route }) {
         ListFooterComponent={renderFooter}
         ListEmptyComponent={!loading ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, transform: [{ scaleY: -1 }] }}>
-            <Text style={{ fontSize: 40, marginBottom: 8 }}>💬</Text>
+            <Ionicons name="chatbubble-outline" size={40} color={colors.textSecondary} style={{ marginBottom: 8 }} />
             <Text style={{ color: colors.textSecondary, fontSize: 16, textAlign: 'center' }}>No messages yet. Say something!</Text>
           </View>
         ) : null}

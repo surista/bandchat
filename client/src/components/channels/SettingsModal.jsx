@@ -222,7 +222,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
   return (
     <>
       {createPortal(
-        <div className="modal-backdrop !items-start !pt-12" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+        <div className="modal-backdrop !items-start !pt-12" role="dialog" aria-modal="true" aria-label="Settings" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
           <div className="modal-content max-w-3xl max-h-modal flex flex-col">
             <div className="modal-header">
               <h3>Settings</h3>

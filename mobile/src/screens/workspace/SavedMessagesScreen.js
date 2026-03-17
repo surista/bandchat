@@ -9,6 +9,7 @@ import {
   Alert,
   Image,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import ErrorState from '../../components/ErrorState';
 import api from '../../services/api';
@@ -87,7 +88,7 @@ export default function SavedMessagesScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel="Unsave message"
           >
-            <Text style={styles.bookmarkIcon}>🔖</Text>
+            <Ionicons name="bookmark" size={20} color="#3b82f6" />
           </TouchableOpacity>
         </View>
         {msg.content ? (
@@ -105,7 +106,7 @@ export default function SavedMessagesScreen({ navigation, route }) {
                 />
               ) : (
                 <Text key={att.id} style={[styles.attachmentFile, { color: colors.textSecondary }]}>
-                  📎 {att.filename}
+                  <Ionicons name="attach" size={13} color={colors.textSecondary} /> {att.filename}
                 </Text>
               )
             ))}
@@ -139,7 +140,7 @@ export default function SavedMessagesScreen({ navigation, route }) {
   if (savedMessages.length === 0) {
     return (
       <View style={[styles.emptyContainer, { backgroundColor: colors.bgPrimary }]}>
-        <Text style={styles.emptyIcon}>🔖</Text>
+        <Ionicons name="bookmark-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 16 }} />
         <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No saved messages yet</Text>
         <Text style={[styles.emptyDescription, { color: colors.textSecondary }]}>
           Save important messages to find them quickly later. Long-press any message and tap "Save Message".

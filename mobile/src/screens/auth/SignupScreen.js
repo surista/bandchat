@@ -11,6 +11,7 @@ import {
   Linking,
   StyleSheet,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -210,7 +211,7 @@ export default function SignupScreen({ navigation }) {
               accessibilityLabel="Agree to Terms of Service and Privacy Policy"
             >
               <View style={[styles.checkbox, { borderColor: colors.border, backgroundColor: agreedToTerms ? colors.primary : 'transparent' }]}>
-                {agreedToTerms && <Text style={styles.checkmark}>✓</Text>}
+                {agreedToTerms && <Ionicons name="checkmark" size={14} color="#ffffff" />}
               </View>
               <Text style={[styles.termsText, { color: colors.textSecondary }]}>
                 I agree to the{' '}

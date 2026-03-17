@@ -208,25 +208,17 @@ const releaseStorageQuota = async (workspaceId, fileSize) => {
 
 /**
  * Safely decrement storage, preventing underflow below 0.
+ * Uses atomic SQL to avoid race conditions with concurrent deletes.
  * Exported so other routes can use the same safe pattern.
  */
 export const safeDecrementStorage = async (workspaceId, bytes) => {
   if (!workspaceId || !bytes || bytes <= 0) return;
 
-  const workspace = await prisma.workspace.findUnique({
-    where: { id: workspaceId },
-    select: { storageUsedBytes: true },
-  });
-  if (!workspace) return;
-
-  const current = workspace.storageUsedBytes ?? 0n;
-  const decrement = BigInt(bytes);
-  const newValue = current > decrement ? current - decrement : 0n;
-
-  await prisma.workspace.update({
-    where: { id: workspaceId },
-    data: { storageUsedBytes: newValue },
-  });
+  await prisma.$executeRawUnsafe(
+    `UPDATE "Workspace" SET "storageUsedBytes" = GREATEST(0, "storageUsedBytes" - $1::bigint) WHERE "id" = $2`,
+    BigInt(bytes),
+    workspaceId
+  );
 };
 
 // Upload single file (image, audio, or video)

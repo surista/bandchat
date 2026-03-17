@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { mediumImpact, successNotification } from '../../utils/haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -28,39 +29,39 @@ import { useLayout } from '../../hooks/useLayout';
 
 const BAND_CATEGORIES = [
   {
-    key: 'band-music', label: 'Music', icon: '\uD83C\uDFB5',
+    key: 'band-music', label: 'Music', icon: 'musical-notes-outline',
     items: [
-      { id: 'band-songs', key: 'songs', label: 'Songs', icon: '\uD83C\uDFB5' },
-      { id: 'band-setlists', key: 'setlists', label: 'Setlists', icon: '\uD83C\uDFB6' },
-      { id: 'band-medleys', key: 'medleys', label: 'Medleys', icon: '\uD83C\uDFB6' },
-      { id: 'band-recordings', key: 'recordings', label: 'Recordings', icon: '\uD83C\uDFA4' },
-      { id: 'band-practice', key: 'practice', label: 'Practice', icon: '\uD83C\uDFAF' },
-      { id: 'band-intelligence', key: 'intelligence', label: 'Song Intelligence', icon: '\uD83E\uDDE0' },
+      { id: 'band-songs', key: 'songs', label: 'Songs', icon: 'musical-notes-outline' },
+      { id: 'band-setlists', key: 'setlists', label: 'Setlists', icon: 'list-outline' },
+      { id: 'band-medleys', key: 'medleys', label: 'Medleys', icon: 'layers-outline' },
+      { id: 'band-recordings', key: 'recordings', label: 'Recordings', icon: 'mic-outline' },
+      { id: 'band-practice', key: 'practice', label: 'Practice', icon: 'stopwatch-outline' },
+      { id: 'band-intelligence', key: 'intelligence', label: 'Song Intelligence', icon: 'bulb-outline' },
     ],
   },
   {
-    key: 'band-gigs', label: 'Gigs', icon: '\uD83D\uDCC5',
+    key: 'band-gigs', label: 'Gigs', icon: 'calendar-outline',
     items: [
-      { id: 'band-calendar', key: 'calendar', label: 'Calendar', icon: '\uD83D\uDCC5' },
-      { id: 'band-stats', key: 'stats', label: 'Stats', icon: '\uD83D\uDCCA' },
-      { id: 'band-stage-plots', key: 'stageplots', label: 'Stage Plots', icon: '\uD83C\uDFAD' },
+      { id: 'band-calendar', key: 'calendar', label: 'Calendar', icon: 'calendar-outline' },
+      { id: 'band-stats', key: 'stats', label: 'Stats', icon: 'stats-chart-outline' },
+      { id: 'band-stage-plots', key: 'stageplots', label: 'Stage Plots', icon: 'map-outline' },
     ],
   },
   {
-    key: 'band-people', label: 'People', icon: '\uD83D\uDC65',
+    key: 'band-people', label: 'People', icon: 'people-outline',
     items: [
-      { id: 'band-members', key: 'members', label: 'Members', icon: '\uD83D\uDC65' },
-      { id: 'band-contacts', key: 'contacts', label: 'Contacts', icon: '\uD83D\uDCD2' },
-      { id: 'band-achievements', key: 'achievements', label: 'Achievements', icon: '\uD83C\uDFC6' },
-      { id: 'band-timeline', key: 'timeline', label: 'Timeline', icon: '\uD83D\uDCDC' },
+      { id: 'band-members', key: 'members', label: 'Members', icon: 'people-outline' },
+      { id: 'band-contacts', key: 'contacts', label: 'Contacts', icon: 'book-outline' },
+      { id: 'band-achievements', key: 'achievements', label: 'Achievements', icon: 'trophy-outline' },
+      { id: 'band-timeline', key: 'timeline', label: 'Timeline', icon: 'time-outline' },
     ],
   },
   {
-    key: 'band-community', label: 'Community', icon: '\uD83D\uDCE2',
+    key: 'band-community', label: 'Community', icon: 'megaphone-outline',
     items: [
-      { id: 'band-announcements', key: 'announcements', label: 'Announcements', icon: '\uD83D\uDCE2' },
-      { id: 'band-polls', key: 'polls', label: 'Polls', icon: '\uD83D\uDDF3\uFE0F' },
-      { id: 'band-kitty', key: 'kitty', label: 'Band Kitty', icon: '\uD83D\uDCB0' },
+      { id: 'band-announcements', key: 'announcements', label: 'Announcements', icon: 'megaphone-outline' },
+      { id: 'band-polls', key: 'polls', label: 'Polls', icon: 'checkbox-outline' },
+      { id: 'band-kitty', key: 'kitty', label: 'Band Kitty', icon: 'wallet-outline' },
     ],
   },
 ];
@@ -190,7 +191,7 @@ export default function ChannelListScreen({ navigation, route }) {
           accessibilityLabel="Switch workspace"
           accessibilityRole="button"
         >
-          <Text style={{ fontSize: 20 }}>{'🏠'}</Text>
+          <Ionicons name="home-outline" size={22} color={colors.primary} />
         </TouchableOpacity>
       ),
       headerRight: () => (
@@ -199,13 +200,13 @@ export default function ChannelListScreen({ navigation, route }) {
             onPress={() => navigation.navigate('Search', { workspaceId })}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={{ fontSize: 20 }}>{'\uD83D\uDD0D'}</Text>
+            <Ionicons name="search-outline" size={22} color={colors.primary} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('Settings', { workspaceId })}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={{ fontSize: 22 }}>{'\u2699\uFE0F'}</Text>
+            <Ionicons name="settings-outline" size={22} color={colors.primary} />
           </TouchableOpacity>
         </View>
       ),
@@ -687,11 +688,9 @@ export default function ChannelListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel={`${item.label}, ${isCollapsed ? 'collapsed' : 'expanded'}`}
         >
-          <Text style={styles.bandCategoryIcon}>{item.icon}</Text>
+          <Ionicons name={item.icon} size={18} color={colors.channelListText} style={styles.bandCategoryIcon} />
           <Text style={[styles.bandCategoryLabel, { color: colors.channelListText }]}>{item.label}</Text>
-          <Text style={[styles.bandCategoryArrow, { color: colors.channelListText }]}>
-            {isCollapsed ? '\u25B6' : '\u25BC'}
-          </Text>
+          <Ionicons name={isCollapsed ? 'chevron-forward' : 'chevron-down'} size={14} color={colors.channelListText} style={styles.bandCategoryArrow} />
         </TouchableOpacity>
       );
     }
@@ -704,7 +703,7 @@ export default function ChannelListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel={item.label}
         >
-          <Text style={styles.bandItemIcon}>{item.icon}</Text>
+          <Ionicons name={item.icon} size={16} color={colors.channelListTextBold} style={styles.bandItemIcon} />
           <Text style={[styles.bandItemLabel, { color: colors.channelListTextBold }]}>{item.label}</Text>
           {PRO_ONLY_FEATURES.includes(item.key) && workspace?.effectivePlan !== 'PRO' && (
             <Text style={[styles.bandItemArrow, { color: colors.channelListText, marginRight: 4 }]}>PRO</Text>
@@ -812,7 +811,7 @@ export default function ChannelListScreen({ navigation, route }) {
   if (loadError && channels.length === 0) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.channelListBg }]} edges={['bottom']}>
-        <ErrorState emoji="💬" title="Couldn't load channels" message={loadError} onRetry={loadData} />
+        <ErrorState iconName="chatbubbles-outline" title="Couldn't load channels" message={loadError} onRetry={loadData} />
       </SafeAreaView>
     );
   }
@@ -850,9 +849,11 @@ export default function ChannelListScreen({ navigation, route }) {
                 accessibilityLabel={`Next event: ${nextGig.title}`}
               >
                 <View style={styles.nextGigRow}>
-                  <Text style={styles.nextGigIcon}>
-                    {nextGig.type === 'GIG' ? '🎸' : nextGig.type === 'REHEARSAL' ? '🥁' : '📅'}
-                  </Text>
+                  <Ionicons
+                    name={nextGig.type === 'GIG' ? 'musical-notes' : nextGig.type === 'REHEARSAL' ? 'musical-notes' : 'calendar'}
+                    size={14}
+                    color={nextGig.type === 'GIG' ? '#22c55e' : nextGig.type === 'REHEARSAL' ? '#3b82f6' : '#a855f7'}
+                  />
                   <Text style={[styles.nextGigTitle, { color: colors.textPrimary }]} numberOfLines={1}>
                     {nextGig.title}
                   </Text>
@@ -885,7 +886,7 @@ export default function ChannelListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Calendar"
             >
-              <Text style={styles.calendarShortcutIcon}>📅</Text>
+              <Ionicons name="calendar-outline" size={16} color={colors.channelListTextBold} />
               <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]}>Calendar</Text>
               <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
             </TouchableOpacity>
@@ -896,7 +897,7 @@ export default function ChannelListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Saved Messages"
             >
-              <Text style={styles.calendarShortcutIcon}>🔖</Text>
+              <Ionicons name="bookmark-outline" size={16} color={colors.channelListTextBold} />
               <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]}>Saved Messages</Text>
               <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
             </TouchableOpacity>
@@ -907,7 +908,7 @@ export default function ChannelListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="All Messages"
             >
-              <Text style={styles.calendarShortcutIcon}>📜</Text>
+              <Ionicons name="chatbubbles-outline" size={16} color={colors.channelListTextBold} />
               <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]}>All Messages</Text>
               <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
             </TouchableOpacity>

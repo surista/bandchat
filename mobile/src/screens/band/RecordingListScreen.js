@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import formatDate from '../../utils/formatDate';
 import api from '../../services/api';
+import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import useDebounce from '../../hooks/useDebounce';
@@ -147,7 +148,7 @@ export default function RecordingListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Add recording"
         >
-          <Text style={{ color: colors.primary, fontSize: 28, fontWeight: '300', lineHeight: 30 }}>+</Text>
+          <Ionicons name="add" size={28} color={colors.primary} />
         </TouchableOpacity>
       ),
     });
