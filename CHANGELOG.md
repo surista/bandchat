@@ -2,6 +2,36 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.05.28] - 2026-03-18
+
+### Fixed
+- **Storage race condition** — `safeDecrementStorage` now uses atomic SQL (`GREATEST(0, ...)`) instead of read-then-write, preventing lost decrements on concurrent deletes.
+- **Null dereference in messages** — Message route now uses `req.channel` from middleware instead of re-fetching, preventing crash if channel is deleted between middleware and route handler.
+- **Cross-workspace personal event leak** — `/all-workspaces` gigs endpoint now filters personal events to only show the creator's own (matching single-workspace behavior). Also adds type/status enum validation.
+- **Starred/unread channel duplication** — Channels shown in Starred or Unread sidebar sections no longer also appear in their group/ungrouped section. Group counts still reflect total membership.
+- **Report dialog state** — Closing or cancelling the Report Message dialog now clears the reason text and error state.
+- **Test database safety** — `globalSetup.js` now refuses to run tests unless `DATABASE_URL` contains "test", "localhost", or "127.0.0.1".
+
+### Changed
+- **Ionicons migration** — Replaced emoji icons with Ionicons (`@expo/vector-icons`) across 30+ mobile files: SettingsScreen, BAND_CATEGORIES, MessageActionSheet, all header buttons (+/... → add/ellipsis-horizontal), ChannelItem (lock, star, setlist), AppStack (header lock), UpgradeScreen (11 feature icons), ErrorState (new `iconName` prop), SignupScreen (checkbox), back buttons (chevron-back), empty states, attachment indicators, and all ErrorState callers.
+- **Modal ARIA compliance** — Report dialog uses `Modal.jsx` (focus trap, portal, ARIA). LyricsModal rewritten with `createPortal`, focus trap, `role="dialog"`, `aria-modal`. Wizards and SettingsModal gain ARIA dialog attributes.
+
+## [1.05.27] - 2026-03-17
+
+### Added
+- **Star channels** — Right-click to star/unstar channels. Starred channels appear in a dedicated "Starred" section at the top of the sidebar.
+- **Unread section** — Channels with unread messages (non-muted, non-starred) appear in an "Unread" section below Starred.
+- **Copy link** — Copy a direct link to any message via context menu. Navigating to the link highlights the message with a gold fade animation.
+- **#channel references** — Typing `#channel-name` in messages creates clickable links that navigate to that channel.
+- **Comprehensive test suite** — 388 tests across 35 files covering all route modules, authorization, compliance, plan gating, and soft-delete.
+
+### Fixed
+- **Toast feedback** — Toast shown on missing message navigation, star/unstar actions, and copy link.
+- **Regex boundary** — Channel reference regex uses word boundary lookahead to prevent false matches.
+- **No-results state** — Search and channel reference matching show helpful empty states.
+- **Deleted workspace gigs** — Cross-workspace calendar excludes gigs from soft-deleted workspaces.
+- **Admin dashboard CSP** — Content Security Policy updated for admin dashboard inline scripts.
+
 ## [1.05.24] - 2026-03-16
 
 ### Added

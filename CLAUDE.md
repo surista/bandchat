@@ -99,6 +99,7 @@ bandchat/
 **Mobile:**
 - Expo SDK ~54 / React Native
 - React Navigation (native-stack)
+- Ionicons (`@expo/vector-icons`) for all UI icons — use outline variant for default state, filled for selected/active
 - Expo Calendar, Contacts, Haptics, Notifications, Image Picker
 - RevenueCat (`react-native-purchases`) for in-app subscriptions
 - EAS Build for iOS/Android
@@ -351,7 +352,8 @@ Empty states should be helpful and actionable. Follow this pattern:
 </div>
 ```
 
-- Include a relevant emoji icon
+- **Web:** Include a relevant emoji icon (text-5xl)
+- **Mobile:** Use `<Ionicons>` instead of emoji. The `ErrorState` component supports `iconName` prop (renders Ionicons) alongside legacy `emoji` prop.
 - Use a clear title ("No songs yet" not just "Empty")
 - Provide a helpful description explaining the feature's purpose
 - Include an action button when the user can create content
