@@ -15,6 +15,8 @@ import GigGalleryScreen from '../screens/band/GigGalleryScreen';
 import StatsScreen from '../screens/band/StatsScreen';
 import BandMembersScreen from '../screens/band/BandMembersScreen';
 import ContactsScreen from '../screens/band/ContactsScreen';
+import VenuesScreen from '../screens/band/VenuesScreen';
+import VenueDetailScreen from '../screens/band/VenueDetailScreen';
 import AnnouncementsScreen from '../screens/band/AnnouncementsScreen';
 import PollsScreen from '../screens/band/PollsScreen';
 import MedleyListScreen from '../screens/band/MedleyListScreen';
@@ -115,6 +117,8 @@ export default function AppStack() {
       <Stack.Screen name="Stats" component={StatsScreen} options={{ title: 'Stats' }} />
       <Stack.Screen name="BandMembers" component={BandMembersScreen} options={{ title: 'Members' }} />
       <Stack.Screen name="Contacts" component={ContactsScreen} options={{ title: 'Contacts' }} />
+      <Stack.Screen name="Venues" component={VenuesScreen} options={{ title: 'Venues' }} />
+      <Stack.Screen name="VenueDetail" component={VenueDetailScreen} options={{ title: 'Venue' }} />
       <Stack.Screen name="Announcements" component={AnnouncementsScreen} options={{ title: 'Announcements' }} />
       <Stack.Screen name="Polls" component={PollsScreen} options={{ title: 'Polls' }} />
       <Stack.Screen name="MedleyList" component={MedleyListScreen} options={{ title: 'Medleys' }} />

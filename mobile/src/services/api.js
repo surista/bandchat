@@ -1277,6 +1277,35 @@ class ApiService {
     });
   }
 
+  // Venues
+  async getVenues(workspaceId) {
+    return this.cachedRequest(`/venues/workspace/${workspaceId}`, 60000);
+  }
+
+  async getVenue(venueId) {
+    return this.request(`/venues/${venueId}`);
+  }
+
+  async createVenue(workspaceId, data) {
+    return this.request(`/venues/workspace/${workspaceId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateVenue(venueId, data) {
+    return this.request(`/venues/${venueId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteVenue(venueId) {
+    return this.request(`/venues/${venueId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Announcements
   async getAnnouncements(workspaceId, pinnedOnly = false) {
     const params = pinnedOnly ? '?pinnedOnly=true' : '';

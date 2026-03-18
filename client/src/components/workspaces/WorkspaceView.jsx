@@ -84,6 +84,7 @@ const PracticeDashboard = lazyRetry(() => import('../band/PracticeDashboard'));
 const SavedMessages = lazyRetry(() => import('../messages/SavedMessages'));
 const AllMessages = lazyRetry(() => import('../messages/AllMessages'));
 const StagePlotCreator = lazyRetry(() => import('../band/StagePlotCreator'));
+const VenueList = lazyRetry(() => import('../band/VenueList'));
 
 /** Safe search-highlight renderer — no dangerouslySetInnerHTML */
 function HighlightedText({ text, query }) {
@@ -118,6 +119,7 @@ const BAND_VIEW_TITLES = {
   practice: 'Practice',
   saved: 'Saved Messages',
   'stage-plots': 'Stage Plots',
+  venues: 'Venues',
 };
 
 /** Lookup for band view components */
@@ -142,6 +144,7 @@ const BAND_VIEW_COMPONENTS = {
   saved: SavedMessages,
   'all-messages': AllMessages,
   'stage-plots': StagePlotCreator,
+  venues: VenueList,
 };
 
 /** Band views that require a Pro plan */
@@ -165,6 +168,7 @@ const BAND_VIEW_EXTRA_PROPS = {
   timeline: (ctx) => ({ isAdmin: ctx.isAdmin }),
   kitty: (ctx) => ({ isAdmin: ctx.isAdmin }),
   'all-messages': (ctx) => ({ onSelectChannel: ctx.onSelectChannel }),
+  venues: (ctx) => ({ workspace: ctx.workspace, isAdmin: ctx.isAdmin }),
 };
 
 /** Views that should use bandViewKey as key prop */

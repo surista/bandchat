@@ -56,6 +56,9 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
         createdBy: {
           select: USER_SELECT_BRIEF
         },
+        venueRecord: {
+          select: { id: true, name: true, address: true, city: true, imageUrl: true }
+        },
         setlist: {
           include: {
             songs: {
@@ -112,6 +115,9 @@ router.get('/workspace/:workspaceId/next', authenticate, isWorkspaceMember, asyn
         isPersonal: false,
       },
       include: {
+        venueRecord: {
+          select: { id: true, name: true, address: true, city: true, imageUrl: true }
+        },
         setlists: {
           include: {
             setlist: { select: { id: true, name: true } }
@@ -589,7 +595,7 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
 // Create a gig
 router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
-    const { title, type, date, endDate, soundCheckTime, eventStartTime, performanceStartTime, venue, address, notes, pay, setlistId, setlistIds, isLocked, isPersonal, bandMemberIds } = req.body;
+    const { title, type, date, endDate, soundCheckTime, eventStartTime, performanceStartTime, venue, address, notes, pay, setlistId, setlistIds, isLocked, isPersonal, bandMemberIds, venueId } = req.body;
 
     if (!title || !date) {
       return res.status(400).json({ error: 'Title and date are required' });
@@ -646,6 +652,17 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       }
     }
 
+    // If venueId provided, look up venue to auto-populate name/address for backward compat
+    let resolvedVenue = venue;
+    let resolvedAddress = address;
+    if (venueId) {
+      const venueRecord = await prisma.venue.findUnique({ where: { id: venueId }, select: { name: true, address: true } });
+      if (venueRecord) {
+        resolvedVenue = venueRecord.name;
+        resolvedAddress = resolvedAddress || venueRecord.address;
+      }
+    }
+
     // Create gig with optional multi-set support
     const gig = await prisma.gig.create({
       data: {
@@ -656,8 +673,9 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
         soundCheckTime: soundCheckTime || null,
         eventStartTime: eventStartTime || null,
         performanceStartTime: performanceStartTime || null,
-        venue,
-        address,
+        venue: resolvedVenue,
+        address: resolvedAddress,
+        venueId: venueId || null,
         notes,
         pay,
         isLocked: canLock ? (isLocked || false) : false,
@@ -687,6 +705,9 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       include: {
         createdBy: {
           select: USER_SELECT_BRIEF
+        },
+        venueRecord: {
+          select: { id: true, name: true, address: true, city: true, imageUrl: true, phone: true, email: true, website: true, capacity: true }
         },
         setlist: {
           select: { id: true, name: true }
@@ -746,6 +767,9 @@ router.get('/:gigId', authenticate, async (req, res) => {
         createdBy: {
           select: USER_SELECT_BRIEF
         },
+        venueRecord: {
+          select: { id: true, name: true, address: true, city: true, imageUrl: true, phone: true, email: true, website: true, capacity: true }
+        },
         setlist: {
           include: {
             songs: {
@@ -804,7 +828,7 @@ router.get('/:gigId', authenticate, async (req, res) => {
 // Update a gig
 router.put('/:gigId', authenticate, async (req, res) => {
   try {
-    const { title, type, date, endDate, soundCheckTime, eventStartTime, performanceStartTime, venue, address, notes, pay, status, setlistId, setlistIds, isLocked, isPersonal, bandMemberIds } = req.body;
+    const { title, type, date, endDate, soundCheckTime, eventStartTime, performanceStartTime, venue, address, notes, pay, status, setlistId, setlistIds, isLocked, isPersonal, bandMemberIds, venueId } = req.body;
 
     // Get the existing gig and check permissions
     const existingGig = await prisma.gig.findUnique({
@@ -913,6 +937,17 @@ router.put('/:gigId', authenticate, async (req, res) => {
       await prisma.$transaction(txOps);
     }
 
+    // If venueId is changing, auto-populate venue/address strings for backward compat
+    let resolvedVenue = venue;
+    let resolvedAddress = address;
+    if (venueId) {
+      const venueRec = await prisma.venue.findUnique({ where: { id: venueId }, select: { name: true, address: true } });
+      if (venueRec) {
+        if (venue === undefined) resolvedVenue = venueRec.name;
+        if (address === undefined) resolvedAddress = venueRec.address;
+      }
+    }
+
     const gig = await prisma.gig.update({
       where: { id: req.params.gigId },
       data: {
@@ -923,8 +958,9 @@ router.put('/:gigId', authenticate, async (req, res) => {
         ...(soundCheckTime !== undefined && { soundCheckTime: soundCheckTime || null }),
         ...(eventStartTime !== undefined && { eventStartTime: eventStartTime || null }),
         ...(performanceStartTime !== undefined && { performanceStartTime: performanceStartTime || null }),
-        ...(venue !== undefined && { venue }),
-        ...(address !== undefined && { address }),
+        ...(venueId !== undefined && { venueId: venueId || null }),
+        ...(resolvedVenue !== undefined && { venue: resolvedVenue }),
+        ...(resolvedAddress !== undefined && { address: resolvedAddress }),
         ...(notes !== undefined && { notes }),
         ...(pay !== undefined && { pay }),
         ...(status && { status }),
@@ -940,6 +976,9 @@ router.put('/:gigId', authenticate, async (req, res) => {
       include: {
         createdBy: {
           select: USER_SELECT_BRIEF
+        },
+        venueRecord: {
+          select: { id: true, name: true, address: true, city: true, imageUrl: true, phone: true, email: true, website: true, capacity: true }
         },
         setlist: {
           select: { id: true, name: true }
@@ -1261,6 +1300,7 @@ router.post('/:gigId/duplicate', authenticate, async (req, res) => {
         endDate: newEndDate,
         venue: source.venue,
         address: source.address,
+        venueId: source.venueId,
         notes: source.notes,
         pay: source.pay,
         status: 'SCHEDULED',

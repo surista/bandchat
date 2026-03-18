@@ -117,6 +117,16 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
   const [attendeeSearch, setAttendeeSearch] = useState('');
   const [showTitleSuggestions, setShowTitleSuggestions] = useState(false);
   const [showVenueSuggestions, setShowVenueSuggestions] = useState(false);
+  const [venues, setVenues] = useState([]);
+  const [selectedVenueId, setSelectedVenueId] = useState(gig?.venueId || null);
+  const [customVenue, setCustomVenue] = useState(!gig?.venueId && !!(gig?.venue));
+
+  // Fetch saved venues
+  useEffect(() => {
+    if (workspaceId) {
+      api.getVenues(workspaceId).then(setVenues).catch(() => {});
+    }
+  }, [workspaceId]);
 
   // Get unique titles and venues from previous events, filtered by type
   const getSuggestions = (field, eventType) => {
@@ -184,6 +194,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
         performanceStartTime: formData.performanceStartTime || null,
         venue: formData.venue || null,
         address: formData.address || null,
+        venueId: selectedVenueId || null,
         notes: formData.notes || null,
         pay: formData.pay ? parseFloat(formData.pay) : null,
         status: formData.status,
@@ -712,38 +723,83 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                 );
               })()}
 
-              <div className="relative">
+              <div>
                 <label className="modal-label">Venue</label>
-                <input
-                  type="text"
-                  value={formData.venue}
-                  onChange={(e) => handleChange('venue', e.target.value)}
-                  onFocus={() => setShowVenueSuggestions(true)}
-                  onBlur={() => setTimeout(() => setShowVenueSuggestions(false), 150)}
-                  className="modal-input"
-                  placeholder="Venue name"
-                />
-                {showVenueSuggestions && filteredVenueSuggestions.length > 0 && (
-                  <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
-                    {filteredVenueSuggestions.slice(0, 8).map(venue => (
+                {venues.length > 0 && !customVenue ? (
+                  <div className="flex gap-2">
+                    <select
+                      value={selectedVenueId || ''}
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        if (id === '__custom') {
+                          setSelectedVenueId(null);
+                          setCustomVenue(true);
+                          handleChange('venue', '');
+                          handleChange('address', '');
+                        } else if (id) {
+                          const v = venues.find(v => v.id === id);
+                          setSelectedVenueId(id);
+                          handleChange('venue', v?.name || '');
+                          handleChange('address', v?.address || '');
+                        } else {
+                          setSelectedVenueId(null);
+                          handleChange('venue', '');
+                          handleChange('address', '');
+                        }
+                      }}
+                      className="modal-input flex-1"
+                      disabled={readOnly}
+                    >
+                      <option value="">Select a venue...</option>
+                      {venues.map(v => (
+                        <option key={v.id} value={v.id}>{v.name}{v.city ? ` — ${v.city}` : ''}</option>
+                      ))}
+                      <option value="__custom">Other (type manually)</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={formData.venue}
+                      onChange={(e) => handleChange('venue', e.target.value)}
+                      onFocus={() => setShowVenueSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowVenueSuggestions(false), 150)}
+                      className="modal-input"
+                      placeholder="Venue name"
+                      disabled={readOnly}
+                    />
+                    {showVenueSuggestions && filteredVenueSuggestions.length > 0 && (
+                      <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg shadow-lg">
+                        {filteredVenueSuggestions.slice(0, 8).map(venue => (
+                          <button
+                            key={venue}
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleChange('venue', venue);
+                              const matchingEvent = previousEvents.find(ev => ev.venue === venue);
+                              if (matchingEvent?.address && !formData.address) {
+                                handleChange('address', matchingEvent.address);
+                              }
+                              setShowVenueSuggestions(false);
+                            }}
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)]"
+                          >
+                            {venue}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {venues.length > 0 && (
                       <button
-                        key={venue}
                         type="button"
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          handleChange('venue', venue);
-                          // Also auto-fill address if we have it from a matching previous event
-                          const matchingEvent = previousEvents.find(ev => ev.venue === venue);
-                          if (matchingEvent?.address && !formData.address) {
-                            handleChange('address', matchingEvent.address);
-                          }
-                          setShowVenueSuggestions(false);
-                        }}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-700 text-gray-300"
+                        onClick={() => { setCustomVenue(false); setSelectedVenueId(null); handleChange('venue', ''); handleChange('address', ''); }}
+                        className="text-xs text-[var(--color-primary)] hover:underline mt-1"
                       >
-                        {venue}
+                        Choose from saved venues
                       </button>
-                    ))}
+                    )}
                   </div>
                 )}
               </div>
@@ -756,6 +812,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                   onChange={(e) => handleChange('address', e.target.value)}
                   className="modal-input"
                   placeholder="Full address"
+                  disabled={readOnly}
                 />
               </div>
 

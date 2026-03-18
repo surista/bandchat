@@ -27,6 +27,8 @@ import { useLayout } from '../../hooks/useLayout';
 import ErrorState from '../../components/ErrorState';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import getCurrencySymbol from '../../utils/getCurrencySymbol';
+import { Ionicons } from '@expo/vector-icons';
+import ActionSheet from '../../components/ActionSheet';
 import { TYPE_COLORS, STATUS_COLORS } from '../../utils/constants';
 
 const ATTENDEE_STATUSES = ['ATTENDING', 'MAYBE', 'NOT_ATTENDING'];
@@ -76,16 +78,21 @@ export default function GigDetailScreen({ navigation, route }) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const [showVenuePicker, setShowVenuePicker] = useState(false);
+  const [venuesList, setVenuesList] = useState([]);
+  const [selectedVenueId, setSelectedVenueId] = useState(null);
+  const [customVenue, setCustomVenue] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [loadError, setLoadError] = useState(null);
 
-  // Load workspace currency and admin status
+  // Load workspace currency, admin status, and venues
   useEffect(() => {
     api.getWorkspace(workspaceId).then(ws => {
       setCurrencySymbol(getCurrencySymbol(ws.currency || 'USD'));
       const membership = ws.members?.find(m => m.userId === user?.id);
       setIsAdmin(membership?.role === 'ADMIN');
     }).catch(() => {});
+    api.getVenues(workspaceId).then(setVenuesList).catch(() => {});
   }, [workspaceId, user?.id]);
 
   useEffect(() => {
@@ -141,6 +148,8 @@ export default function GigDetailScreen({ navigation, route }) {
     setPay(data.pay ? String(data.pay) : '');
     setNotes(data.notes || '');
     setIsLocked(data.isLocked || false);
+    setSelectedVenueId(data.venueId || null);
+    setCustomVenue(!data.venueId && !!(data.venue));
   }, []);
 
   useLayoutEffect(() => {
@@ -208,6 +217,7 @@ export default function GigDetailScreen({ navigation, route }) {
       performanceStartTime: performanceStartTime.trim() || null,
       venue: venue.trim() || null,
       address: address.trim() || null,
+      venueId: selectedVenueId || null,
       pay: pay ? parseFloat(pay) : null,
       notes: notes.trim() || null,
       ...(isAdmin && { isLocked }),
@@ -230,7 +240,7 @@ export default function GigDetailScreen({ navigation, route }) {
     } finally {
       setSaving(false);
     }
-  }, [title, type, status, date, startTime, endTime, venue, address, pay, notes, isNew, workspaceId, gigId, navigation, populateForm]);
+  }, [title, type, status, date, startTime, endTime, venue, address, selectedVenueId, pay, notes, isNew, workspaceId, gigId, navigation, populateForm]);
 
   const handleCancel = useCallback(() => {
     if (isNew) {
@@ -544,14 +554,42 @@ export default function GigDetailScreen({ navigation, route }) {
           )}
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Venue</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-            value={venue}
-            onChangeText={setVenue}
-            placeholder="Venue name"
-            placeholderTextColor={colors.textSecondary}
-            accessibilityLabel="Venue name"
-          />
+          {venuesList.length > 0 && !customVenue ? (
+            <TouchableOpacity
+              style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
+              onPress={() => setShowVenuePicker(true)}
+              accessibilityRole="button"
+              accessibilityLabel={venue ? `Venue: ${venue}` : 'Select a venue'}
+            >
+              <Ionicons name="location-outline" size={16} color={venue ? colors.textPrimary : colors.textSecondary} />
+              <Text style={{ color: venue ? colors.textPrimary : colors.textSecondary, fontSize: 15, flex: 1 }}>
+                {venue || 'Select a venue...'}
+              </Text>
+              <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
+            </TouchableOpacity>
+          ) : (
+            <>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                value={venue}
+                onChangeText={setVenue}
+                placeholder="Venue name"
+                placeholderTextColor={colors.textSecondary}
+                accessibilityLabel="Venue name"
+              />
+              {venuesList.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => { setCustomVenue(false); setVenue(''); setAddress(''); setSelectedVenueId(null); }}
+                  style={styles.switchVenueMode}
+                  accessibilityRole="button"
+                  accessibilityLabel="Choose from saved venues"
+                >
+                  <Ionicons name="list-outline" size={14} color={colors.primary} />
+                  <Text style={[styles.switchVenueModeText, { color: colors.primary }]}>Choose from saved venues</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Address</Text>
           <TextInput
@@ -690,6 +728,35 @@ export default function GigDetailScreen({ navigation, route }) {
             </View>
           </TouchableOpacity>
         </Modal>
+
+        {/* Venue Picker */}
+        <ActionSheet
+          visible={showVenuePicker}
+          title="Select Venue"
+          actions={[
+            ...venuesList.map(v => ({
+              label: v.name + (v.city ? ` - ${v.city}` : ''),
+              onPress: () => {
+                setSelectedVenueId(v.id);
+                setVenue(v.name);
+                setAddress(v.address || '');
+                setCustomVenue(false);
+                setShowVenuePicker(false);
+              },
+            })),
+            {
+              label: 'Custom (type manually)',
+              onPress: () => {
+                setSelectedVenueId(null);
+                setCustomVenue(true);
+                setVenue('');
+                setAddress('');
+                setShowVenuePicker(false);
+              },
+            },
+          ]}
+          onClose={() => setShowVenuePicker(false)}
+        />
       </KeyboardAvoidingView>
     );
   }
@@ -1044,4 +1111,6 @@ const styles = StyleSheet.create({
   },
   checkmark: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
   checkboxLabel: { fontSize: 15 },
+  switchVenueMode: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: -4, marginBottom: 8 },
+  switchVenueModeText: { fontSize: 13, fontWeight: '500' },
 });

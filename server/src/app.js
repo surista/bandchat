@@ -38,6 +38,7 @@ import stagePlotRoutes from './routes/stagePlots.js';
 import workspaceImportRoutes from './routes/workspaceImport.js';
 import subscriptionRoutes from './routes/subscriptions.js';
 import syncRoutes from './routes/sync.js';
+import venueRoutes from './routes/venues.js';
 import websiteRoutes from './routes/website.js';
 import adminRoutes from './routes/admin.js';
 import { apiLimiter } from './middleware/rateLimit.js';
@@ -131,7 +132,7 @@ export function createApp() {
   app.use('/api', apiLimiter);
 
   // Validate UUID route params (reject malformed IDs early)
-  const UUID_PARAMS = ['workspaceId', 'channelId', 'messageId', 'songId', 'gigId', 'setlistId', 'memberId', 'userId', 'recordingId', 'plotId', 'medleyId', 'pollId', 'announcementId', 'contactId', 'achievementId', 'groupId', 'transactionId'];
+  const UUID_PARAMS = ['workspaceId', 'channelId', 'messageId', 'songId', 'gigId', 'setlistId', 'memberId', 'userId', 'recordingId', 'plotId', 'medleyId', 'pollId', 'announcementId', 'contactId', 'achievementId', 'groupId', 'transactionId', 'venueId'];
   for (const param of UUID_PARAMS) {
     app.param(param, (req, res, next, value) => {
       if (!isValidUUID(value)) {
@@ -172,6 +173,7 @@ export function createApp() {
   app.use('/api/workspace-import', workspaceImportRoutes);
   app.use('/api/subscriptions', subscriptionRoutes);
   app.use('/api/sync', syncRoutes);
+  app.use('/api/venues', venueRoutes);
   app.use('/api/website', websiteRoutes);
   app.use('/api/admin', adminRoutes);
 

@@ -64,6 +64,7 @@ model User {
   savedMessages           SavedMessage[]
   expoPushTokens          ExpoPushToken[]
   stagePlots              StagePlot[]
+  venues                  Venue[]
 }
 
 model RefreshToken {
@@ -136,6 +137,7 @@ model Workspace {
   bandKitty           BandKitty?
   practiceSessions    PracticeSession[]
   stagePlots          StagePlot[]
+  venues              Venue[]
   websiteApiTokens    WebsiteApiToken[]
 
   @@index([deletedAt])
@@ -464,6 +466,7 @@ model Gig {
   performanceStartTime String?  // "HH:mm" format e.g. "20:00" (band goes on)
   venue       String?
   address     String?
+  venueId     String?
   notes       String?
   pay         Decimal?  @db.Decimal(10, 2) // Currency stored as decimal to avoid rounding errors
   status      GigStatus @default(SCHEDULED)
@@ -479,6 +482,7 @@ model Gig {
   workspace         Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdBy         User?              @relation(fields: [createdById], references: [id], onDelete: SetNull)
   setlist           Setlist?           @relation(fields: [setlistId], references: [id], onDelete: SetNull)
+  venueRecord       Venue?             @relation(fields: [venueId], references: [id], onDelete: SetNull)
   setlists          GigSetlist[]       // Multi-set support
   songsPlayed       GigSong[]
   media             GigMedia[]
@@ -489,6 +493,7 @@ model Gig {
   @@index([workspaceId, date])
   @@index([createdById])
   @@index([workspaceId, status])
+  @@index([venueId])
 }
 
 model GigAttendee {
@@ -553,6 +558,31 @@ model GigSong {
 
   @@unique([gigId, songId])
   @@index([songId])
+}
+
+model Venue {
+  id          String   @id @default(uuid())
+  name        String
+  address     String?
+  city        String?
+  imageUrl    String?
+  phone       String?
+  email       String?
+  website     String?
+  capacity    Int?
+  notes       String?
+  workspaceId        String
+  createdById        String?
+  removedCreatorName String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  gigs      Gig[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
 }
 
 enum GigType {

@@ -45,6 +45,7 @@ const BAND_CATEGORIES = [
       { id: 'band-calendar', key: 'calendar', label: 'Calendar', icon: 'calendar-outline' },
       { id: 'band-stats', key: 'stats', label: 'Stats', icon: 'stats-chart-outline' },
       { id: 'band-stage-plots', key: 'stageplots', label: 'Stage Plots', icon: 'map-outline' },
+      { id: 'band-venues', key: 'venues', label: 'Venues', icon: 'location-outline' },
     ],
   },
   {
@@ -592,6 +593,7 @@ export default function ChannelListScreen({ navigation, route }) {
       intelligence: 'SongIntelligence',
       practice: 'PracticeDashboard',
       stageplots: 'StagePlotList',
+      venues: 'Venues',
     };
     navigation.navigate(screenMap[key], { workspaceId });
   }, [navigation, workspaceId, workspace?.effectivePlan]);
