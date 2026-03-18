@@ -232,7 +232,7 @@ export default function AnnouncementsScreen({ navigation, route }) {
         <View style={[styles.priorityStripe, { backgroundColor: prioColor }]} />
         <View style={styles.annContent}>
           <View style={styles.annHeaderRow}>
-            {item.isPinned && <Text style={styles.pinIcon}>{'\uD83D\uDCCC'}</Text>}
+            {item.isPinned && <Ionicons name="pin-outline" size={14} color={colors.textSecondary} style={{ marginRight: 6 }} />}
             <Text style={[styles.annTitle, { color: colors.textPrimary }]} numberOfLines={2}>
               {item.title}
             </Text>
@@ -286,7 +286,7 @@ export default function AnnouncementsScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <ErrorState
-          emoji={'\uD83D\uDE15'}
+          iconName="megaphone-outline"
           title="Couldn't load announcements"
           message={error}
           onRetry={() => { setLoading(true); loadAnnouncements(); }}
@@ -314,7 +314,7 @@ export default function AnnouncementsScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           <View style={styles.centered}>
-            <Text style={styles.emptyIcon}>{'\uD83D\uDCE2'}</Text>
+            <Ionicons name="megaphone-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
             <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No announcements yet</Text>
             <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
               Share important updates with your band. Tap + to post an announcement.

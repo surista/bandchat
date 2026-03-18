@@ -11,6 +11,7 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { mediumImpact, successNotification } from '../../utils/haptics';
+import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
 import api from '../../services/api';
 import ActionSheet from '../../components/ActionSheet';
@@ -111,7 +112,7 @@ export default function StagePlotListScreen({ navigation, route }) {
         accessibilityLabel={`Stage plot: ${item.title}`}
       >
         <View style={styles.plotIcon}>
-          <Text style={styles.plotIconText}>{'\uD83C\uDFAD'}</Text>
+          <Ionicons name="map-outline" size={24} color={colors.primary} />
         </View>
         <View style={styles.plotInfo}>
           <Text style={[styles.plotTitle, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -122,7 +123,7 @@ export default function StagePlotListScreen({ navigation, route }) {
           </Text>
           {item.gig && (
             <Text style={[styles.plotGig, { color: colors.primary }]} numberOfLines={1}>
-              {'\uD83C\uDFB8'} {item.gig.title}
+              <Ionicons name="musical-notes-outline" size={13} color={colors.primary} /> {item.gig.title}
             </Text>
           )}
         </View>
@@ -145,7 +146,7 @@ export default function StagePlotListScreen({ navigation, route }) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
         <ErrorState
-          emoji={'\uD83C\uDFAD'}
+          iconName="map-outline"
           title="Couldn't load stage plots"
           message={loadError}
           onRetry={() => { setLoadError(null); loadPlots(); }}
@@ -158,7 +159,7 @@ export default function StagePlotListScreen({ navigation, route }) {
     <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
       {plots.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>{'\uD83C\uDFAD'}</Text>
+          <Ionicons name="map-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
           <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No stage plots yet</Text>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
             Create stage plots to plan your equipment layout for gigs.

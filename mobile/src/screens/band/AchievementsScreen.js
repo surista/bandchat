@@ -182,7 +182,7 @@ export default function AchievementsScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <ErrorState
-          emoji={'\uD83C\uDFC6'}
+          iconName="trophy-outline"
           title="Couldn't load achievements"
           message={loadError}
           onRetry={() => { setLoadError(null); loadData(); }}

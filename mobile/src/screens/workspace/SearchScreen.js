@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { format, isToday, isYesterday } from 'date-fns';
+import { Ionicons } from '@expo/vector-icons';
 import { useLayout } from '../../hooks/useLayout';
 
 function formatTimestamp(dateStr) {
@@ -177,7 +178,7 @@ export default function SearchScreen({ navigation, route }) {
   const renderResult = useCallback(({ item }) => {
     const channel = channels.find(c => c.id === item.channelId);
     const channelName = channel?.name || 'unknown';
-    const prefix = channel?.isPrivate ? '\uD83D\uDD12 ' : '# ';
+    const prefix = channel?.isPrivate ? '' : '# ';
 
     return (
       <TouchableOpacity
@@ -190,7 +191,7 @@ export default function SearchScreen({ navigation, route }) {
         <View style={styles.resultHeader}>
           <View style={[styles.channelBadge, { backgroundColor: colors.bgTertiary }]}>
             <Text style={[styles.channelBadgeText, { color: colors.textSecondary }]}>
-              {prefix}{channelName}
+              {channel?.isPrivate ? <Ionicons name="lock-closed" size={11} color={colors.textSecondary} /> : null}{channel?.isPrivate ? ' ' : '# '}{channelName}
             </Text>
           </View>
           <Text style={[styles.resultTimestamp, { color: colors.textSecondary }]}>
@@ -210,7 +211,7 @@ export default function SearchScreen({ navigation, route }) {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       {/* Search Input */}
       <View style={[styles.searchBar, { backgroundColor: colors.bgSecondary, borderBottomColor: colors.border }]}>
-        <Text style={styles.searchIcon}>{'\uD83D\uDD0D'}</Text>
+        <Ionicons name="search" size={16} color={colors.textSecondary} style={styles.searchIcon} />
         <TextInput
           ref={inputRef}
           style={[styles.searchInput, { color: colors.textPrimary }]}
@@ -308,7 +309,7 @@ export default function SearchScreen({ navigation, route }) {
         </View>
       ) : !searched ? (
         <View style={styles.centerContainer}>
-          <Text style={styles.emptyIcon}>{'\uD83D\uDD0D'}</Text>
+          <Ionicons name="search" size={48} color={colors.textSecondary} style={{ marginBottom: 16 }} />
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
             Search messages
           </Text>

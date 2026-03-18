@@ -27,10 +27,10 @@ import { useLayout } from '../../hooks/useLayout';
 import getCurrencySymbol, { CURRENCIES } from '../../utils/getCurrencySymbol';
 
 const TRANSACTION_TYPES = [
-  { key: 'GIG_PAY', label: 'Gig Pay', icon: '\uD83C\uDFA4', positive: true },
-  { key: 'FEE', label: 'Fee', icon: '\uD83D\uDCB5', positive: true },
-  { key: 'EXPENSE', label: 'Expense', icon: '\uD83D\uDCB8', positive: false },
-  { key: 'OTHER_INCOME', label: 'Other Income', icon: '\uD83D\uDCB0', positive: true },
+  { key: 'GIG_PAY', label: 'Gig Pay', icon: 'cash-outline', positive: true },
+  { key: 'FEE', label: 'Fee', icon: 'card-outline', positive: true },
+  { key: 'EXPENSE', label: 'Expense', icon: 'arrow-up-outline', positive: false },
+  { key: 'OTHER_INCOME', label: 'Other Income', icon: 'arrow-down-outline', positive: true },
 ];
 
 const EXPENSE_CATEGORIES = [
@@ -318,7 +318,7 @@ export default function KittyScreen({ navigation, route }) {
         accessibilityRole="button"
         accessibilityLabel={`${item.description}, ${isExpense ? 'expense' : 'income'} ${formatAmount(item.amount, currency)}. Long press for options`}
       >
-        <Text style={styles.txIcon}>{info.icon}</Text>
+        <Ionicons name={info.icon} size={22} color={isExpense ? '#ef4444' : '#22c55e'} />
         <View style={styles.txInfo}>
           <Text style={[styles.txDescription, { color: colors.textPrimary }]} numberOfLines={1}>
             {item.description}
@@ -360,7 +360,7 @@ export default function KittyScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <ErrorState
-          emoji={'\uD83D\uDCB0'}
+          iconName="wallet-outline"
           title="Couldn't load kitty"
           message={loadError}
           onRetry={() => { setLoadError(null); loadData(); }}
@@ -388,7 +388,7 @@ export default function KittyScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel={`Transaction type: ${getTypeInfo(txType).label}`}
           >
-            <Text style={{ fontSize: 16, marginRight: 8 }}>{getTypeInfo(txType).icon}</Text>
+            <Ionicons name={getTypeInfo(txType).icon} size={16} color={colors.textPrimary} style={{ marginRight: 8 }} />
             <Text style={{ color: colors.textPrimary, fontSize: 15 }}>{getTypeInfo(txType).label}</Text>
           </TouchableOpacity>
 
@@ -468,9 +468,9 @@ export default function KittyScreen({ navigation, route }) {
                   accessibilityRole="button"
                   accessibilityLabel={`${t.label}${txType === t.key ? ', selected' : ''}`}
                 >
-                  <Text style={{ fontSize: 18, marginRight: 10 }}>{t.icon}</Text>
+                  <Ionicons name={t.icon} size={18} color={colors.textPrimary} style={{ marginRight: 10 }} />
                   <Text style={[styles.pickerOptionText, { color: colors.textPrimary }]}>{t.label}</Text>
-                  {txType === t.key && <Text style={{ color: colors.primary, marginLeft: 'auto' }}>{'\u2713'}</Text>}
+                  {txType === t.key && <Ionicons name="checkmark" size={20} color={colors.primary} style={{ marginLeft: 'auto' }} />}
                 </TouchableOpacity>
               ))}
             </View>
@@ -491,7 +491,7 @@ export default function KittyScreen({ navigation, route }) {
                   accessibilityLabel={`${c.label}${txCategory === c.key ? ', selected' : ''}`}
                 >
                   <Text style={[styles.pickerOptionText, { color: colors.textPrimary }]}>{c.label}</Text>
-                  {txCategory === c.key && <Text style={{ color: colors.primary }}>{'\u2713'}</Text>}
+                  {txCategory === c.key && <Ionicons name="checkmark" size={20} color={colors.primary} />}
                 </TouchableOpacity>
               ))}
             </View>
@@ -553,7 +553,7 @@ export default function KittyScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           <View style={styles.centered}>
-            <Text style={styles.emptyIcon}>{'\uD83D\uDCB0'}</Text>
+            <Ionicons name="wallet-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No transactions yet</Text>
           </View>
         }

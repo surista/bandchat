@@ -131,7 +131,7 @@ export default function InviteScreen({ route }) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <ErrorState
-          emoji={'\u2709\uFE0F'}
+          iconName="mail-outline"
           title="Couldn't load invite"
           message={loadError}
           onRetry={() => { setLoadError(null); loadInviteData(); }}

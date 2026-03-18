@@ -128,7 +128,7 @@ export default function SavedMessagesScreen({ navigation, route }) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
         <ErrorState
-          emoji={'\uD83D\uDD16'}
+          iconName="bookmark-outline"
           title="Couldn't load saved messages"
           message={loadError}
           onRetry={() => { setLoadError(null); loadSaved(); }}

@@ -125,7 +125,7 @@ export default function StatsScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <ErrorState
-          emoji={'\uD83D\uDCCA'}
+          iconName="stats-chart-outline"
           title="Couldn't load stats"
           message={loadError}
           onRetry={() => { setLoadError(null); loadStats(); }}

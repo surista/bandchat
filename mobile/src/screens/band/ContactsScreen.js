@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useLayoutEffect, useRef } from 'react';
 import { isSafeUrl } from '../../utils/urlSafety';
+import { successNotification } from '../../utils/haptics';
 import {
   View,
   Text,
@@ -35,11 +36,11 @@ const CATEGORY_FILTERS = [
 ];
 
 const CATEGORY_ICONS = {
-  venue: '\uD83C\uDFE2',
-  sound_engineer: '\uD83C\uDFA7',
-  photographer: '\uD83D\uDCF7',
-  agent: '\uD83D\uDC54',
-  other: '\uD83D\uDCCB',
+  venue: 'business-outline',
+  sound_engineer: 'headset-outline',
+  photographer: 'camera-outline',
+  agent: 'briefcase-outline',
+  other: 'clipboard-outline',
 };
 
 const CATEGORY_LABELS = {
@@ -181,6 +182,7 @@ export default function ContactsScreen({ navigation, route }) {
       } else {
         await api.createContact(workspaceId, data);
       }
+      successNotification();
       setShowModal(false);
       loadContacts();
     } catch (err) {
@@ -200,6 +202,7 @@ export default function ContactsScreen({ navigation, route }) {
         onPress: async () => {
           try {
             await api.deleteContact(selectedContact.id);
+            successNotification();
             setContacts(prev => prev.filter(c => c.id !== selectedContact.id));
           } catch (err) {
             Alert.alert('Error', 'Failed to delete contact');
@@ -239,35 +242,35 @@ export default function ContactsScreen({ navigation, route }) {
         <View style={styles.contactHeader}>
           <Text style={[styles.contactName, { color: colors.textPrimary }]}>{item.name}</Text>
           <View style={[styles.categoryBadge, { backgroundColor: colors.bgTertiary }]}>
-            <Text style={styles.categoryIcon}>{icon}</Text>
+            <Ionicons name={icon} size={12} color={colors.textSecondary} />
             <Text style={[styles.categoryLabel, { color: colors.textSecondary }]}>{catLabel}</Text>
           </View>
         </View>
 
         {item.email && (
           <TouchableOpacity style={styles.contactRow} onPress={() => openLink('email', item.email)} accessibilityRole="button" accessibilityLabel={`Email ${item.email}`}>
-            <Text style={styles.contactRowIcon}>{'\u2709\uFE0F'}</Text>
+            <Ionicons name="mail-outline" size={14} color={colors.textSecondary} style={styles.contactRowIcon} />
             <Text style={[styles.contactRowText, { color: colors.primary }]}>{item.email}</Text>
           </TouchableOpacity>
         )}
 
         {item.phone && (
           <TouchableOpacity style={styles.contactRow} onPress={() => openLink('phone', item.phone)} accessibilityRole="button" accessibilityLabel={`Call ${item.phone}`}>
-            <Text style={styles.contactRowIcon}>{'\uD83D\uDCDE'}</Text>
+            <Ionicons name="call-outline" size={14} color={colors.textSecondary} style={styles.contactRowIcon} />
             <Text style={[styles.contactRowText, { color: colors.primary }]}>{item.phone}</Text>
           </TouchableOpacity>
         )}
 
         {item.website && (
           <TouchableOpacity style={styles.contactRow} onPress={() => openLink('website', item.website)} accessibilityRole="button" accessibilityLabel={`Open website ${item.website}`}>
-            <Text style={styles.contactRowIcon}>{'\uD83C\uDF10'}</Text>
+            <Ionicons name="globe-outline" size={14} color={colors.textSecondary} style={styles.contactRowIcon} />
             <Text style={[styles.contactRowText, { color: colors.primary }]} numberOfLines={1}>{item.website}</Text>
           </TouchableOpacity>
         )}
 
         {item.address && (
           <View style={styles.contactRow}>
-            <Text style={styles.contactRowIcon}>{'\uD83D\uDCCD'}</Text>
+            <Ionicons name="location-outline" size={14} color={colors.textSecondary} style={styles.contactRowIcon} />
             <Text style={[styles.contactRowText, { color: colors.textSecondary }]}>{item.address}</Text>
           </View>
         )}
@@ -291,7 +294,7 @@ export default function ContactsScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <ErrorState
-          emoji={'\uD83D\uDE15'}
+          iconName="book-outline"
           title="Couldn't load contacts"
           message={error}
           onRetry={() => { setLoading(true); loadContacts(); }}
@@ -343,7 +346,7 @@ export default function ContactsScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           <View style={styles.centered}>
-            <Text style={styles.emptyIcon}>{'\uD83D\uDCC7'}</Text>
+            <Ionicons name="book-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
             <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No contacts yet</Text>
             <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
               Keep track of venues, sound engineers, photographers, and more. Tap + to add a contact.

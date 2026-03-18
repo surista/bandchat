@@ -217,7 +217,7 @@ export default function ChannelSettingsScreen({ navigation, route }) {
           <View style={styles.channelIconRow}>
             <View style={[styles.channelIcon, { backgroundColor: colors.primary + '22' }]}>
               <Text style={styles.channelIconText}>
-                {channelData.isPrivate ? '\uD83D\uDD12' : '#'}
+                {channelData.isPrivate ? <Ionicons name="lock-closed" size={22} color={colors.textPrimary} /> : '#'}
               </Text>
             </View>
             <View style={styles.channelInfoText}>
@@ -271,7 +271,7 @@ export default function ChannelSettingsScreen({ navigation, route }) {
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
           {/* Mute toggle */}
           <View style={styles.actionRow}>
-            <Text style={styles.actionIcon}>{'\uD83D\uDD14'}</Text>
+            <View style={styles.actionIcon}><Ionicons name="notifications-outline" size={18} color={colors.textPrimary} /></View>
             <Text style={[styles.actionLabel, { color: colors.textPrimary }]}>Mute Channel</Text>
             <Switch
               value={isMuted}
@@ -288,7 +288,7 @@ export default function ChannelSettingsScreen({ navigation, route }) {
               onPress={() => setEditingName(true)}
               activeOpacity={0.6}
             >
-              <Text style={styles.actionIcon}>{'\u270F\uFE0F'}</Text>
+              <View style={styles.actionIcon}><Ionicons name="pencil-outline" size={18} color={colors.textPrimary} /></View>
               <Text style={[styles.actionLabel, { color: colors.textPrimary }]}>Edit Channel Name</Text>
               <Text style={[styles.actionArrow, { color: colors.textSecondary }]}>{'\u203A'}</Text>
             </TouchableOpacity>
@@ -301,7 +301,7 @@ export default function ChannelSettingsScreen({ navigation, route }) {
               onPress={handleLeave}
               activeOpacity={0.6}
             >
-              <Text style={styles.actionIcon}>{'\uD83D\uDEAA'}</Text>
+              <View style={styles.actionIcon}><Ionicons name="exit-outline" size={18} color="#EF4444" /></View>
               <Text style={[styles.actionLabel, { color: '#EF4444' }]}>Leave Channel</Text>
             </TouchableOpacity>
           )}
@@ -313,7 +313,7 @@ export default function ChannelSettingsScreen({ navigation, route }) {
               onPress={handleDelete}
               activeOpacity={0.6}
             >
-              <Text style={styles.actionIcon}>{'\uD83D\uDDD1\uFE0F'}</Text>
+              <View style={styles.actionIcon}><Ionicons name="trash-outline" size={18} color="#EF4444" /></View>
               <Text style={[styles.actionLabel, { color: '#EF4444' }]}>Delete Channel</Text>
             </TouchableOpacity>
           )}
@@ -520,10 +520,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   actionIcon: {
-    fontSize: 18,
     marginRight: 12,
     width: 24,
-    textAlign: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionLabel: {
     fontSize: 15,

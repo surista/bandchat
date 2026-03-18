@@ -1521,6 +1521,7 @@ router.get('/:workspaceId/export', authenticate, isWorkspaceAdmin, exportLimiter
         contacts: {
           include: { createdBy: { select: { displayName: true } } }
         },
+        venues: true,
         announcements: {
           include: {
             createdBy: { select: { displayName: true } },
@@ -1657,6 +1658,11 @@ router.get('/:workspaceId/export', authenticate, isWorkspaceAdmin, exportLimiter
         name: c.name, category: c.category, email: c.email,
         phone: c.phone, website: c.website, address: c.address, notes: c.notes,
         createdBy: c.createdBy?.displayName || c.removedCreatorName || 'Deleted User'
+      })),
+      venues: workspace.venues.map(v => ({
+        name: v.name, address: v.address, city: v.city,
+        phone: v.phone, email: v.email, website: v.website,
+        capacity: v.capacity, notes: v.notes, imageUrl: v.imageUrl
       })),
       announcements: workspace.announcements.map(a => ({
         title: a.title, content: a.content, priority: a.priority,

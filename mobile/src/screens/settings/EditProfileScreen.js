@@ -18,6 +18,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
+import { Ionicons } from '@expo/vector-icons';
 import { useLayout } from '../../hooks/useLayout';
 
 export default function EditProfileScreen({ navigation }) {
@@ -104,7 +105,7 @@ export default function EditProfileScreen({ navigation }) {
             )}
           </View>
           <View style={[styles.cameraOverlay, { backgroundColor: colors.bgTertiary }]}>
-            <Text style={styles.cameraIcon}>{'\uD83D\uDCF7'}</Text>
+            <Ionicons name="camera-outline" size={16} color={colors.textPrimary} />
           </View>
         </TouchableOpacity>
         <Text style={[styles.avatarHint, { color: colors.textSecondary }]}>

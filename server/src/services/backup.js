@@ -132,6 +132,7 @@ export async function createBackup() {
   const reports = await prisma.report.findMany();
   const blockedUsers = await prisma.blockedUser.findMany();
   const stagePlots = await prisma.stagePlot.findMany();
+  const venues = await prisma.venue.findMany();
 
   const backup = {
     version: 1,
@@ -173,6 +174,7 @@ export async function createBackup() {
       reports,
       blockedUsers,
       stagePlots,
+      venues,
     }
   };
 
@@ -1569,6 +1571,7 @@ export async function createWorkspaceBackup(workspaceId) {
   const availability = await prisma.memberAvailability.findMany({ where: { workspaceId } });
   const practice = await prisma.practiceSession.findMany({ where: { workspaceId } });
   const stagePlots = await prisma.stagePlot.findMany({ where: { workspaceId } });
+  const venues = await prisma.venue.findMany({ where: { workspaceId } });
 
   // Saved messages, thread reads, reports scoped via channel messages
   const messageIds = messages.map(m => m.id);
@@ -1679,6 +1682,7 @@ export async function createWorkspaceBackup(workspaceId) {
       threadReads,
       pinnedMessages: channels.flatMap(ch => ch.pinnedMessages || []),
       stagePlots,
+      venues,
       reports,
     },
   };

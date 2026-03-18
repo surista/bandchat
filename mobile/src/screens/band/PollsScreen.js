@@ -371,7 +371,7 @@ export default function PollsScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <ErrorState
-          emoji={'\uD83D\uDDF3\uFE0F'}
+          iconName="checkbox-outline"
           title="Couldn't load polls"
           message={loadError}
           onRetry={() => { setLoadError(null); loadPolls(); }}
@@ -411,7 +411,7 @@ export default function PollsScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           <View style={styles.centered}>
-            <Text style={styles.emptyIcon}>{'\uD83D\uDCCA'}</Text>
+            <Ionicons name="checkbox-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No polls yet</Text>
             <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
               Create a poll to get the band's input

@@ -397,7 +397,7 @@ export default function GigListScreen({ navigation, route }) {
               ]}
               numberOfLines={1}
             >
-              {item.isLocked && <Text style={{ color: '#64748b' }}>{'\uD83D\uDD12'} </Text>}
+              {item.isLocked && <><Ionicons name="lock-closed" size={12} color="#64748b" />{' '}</>}
               {item.title}
             </Text>
             <View style={[styles.typeBadge, { backgroundColor: typeColor + '25' }]}>
@@ -438,7 +438,7 @@ export default function GigListScreen({ navigation, route }) {
 
           {item.venue ? (
             <Text style={[styles.gigVenue, { color: colors.textSecondary }]} numberOfLines={1}>
-              {'\uD83D\uDCCD'} {item.venue}{item.address ? ` \u00B7 ${item.address}` : ''}
+              <Ionicons name="location-outline" size={13} color={colors.textSecondary} /> {item.venue}{item.address ? ` \u00B7 ${item.address}` : ''}
             </Text>
           ) : null}
 
@@ -448,7 +448,7 @@ export default function GigListScreen({ navigation, route }) {
 
           {setlistNames.length > 0 ? (
             <Text style={[styles.gigSetlists, { color: colors.textSecondary }]} numberOfLines={1}>
-              {'\uD83C\uDFB5'} {setlistNames.join(' \u2192 ')}
+              <Ionicons name="musical-notes-outline" size={13} color={colors.textSecondary} /> {setlistNames.join(' \u2192 ')}
             </Text>
           ) : null}
         </View>
@@ -541,7 +541,7 @@ export default function GigListScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           <View style={styles.centered}>
-            <Text style={styles.emptyIcon}>{'\uD83D\uDCC5'}</Text>
+            <Ionicons name="calendar-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No events scheduled</Text>
             <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
               Tap + to add a gig or rehearsal
@@ -627,7 +627,7 @@ export default function GigListScreen({ navigation, route }) {
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-              {selectedGig?.isLocked && <Text>{'\uD83D\uDD12'} </Text>}
+              {selectedGig?.isLocked && <><Ionicons name="lock-closed" size={14} color={colors.textSecondary} />{' '}</>}
               {selectedGig?.title}
             </Text>
             {/* Only show Edit/Delete if user is admin OR gig is not locked */}

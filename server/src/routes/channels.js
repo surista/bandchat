@@ -912,6 +912,10 @@ router.post('/:channelId/pin-setlist', authenticate, async (req, res) => {
     const channel = await prisma.channel.findUnique({ where: { id: req.params.channelId } });
     if (!channel) return res.status(404).json({ error: 'Channel not found' });
 
+    if (channel.isDirect) {
+      return res.status(400).json({ error: 'Cannot pin setlists to direct messages' });
+    }
+
     // Check workspace membership and require admin role
     const membership = await prisma.workspaceMember.findUnique({
       where: { userId_workspaceId: { userId: req.user.id, workspaceId: channel.workspaceId } }

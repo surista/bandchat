@@ -168,7 +168,7 @@ export default function PinnedMessagesScreen({ navigation, route }) {
         contentContainerStyle={pins.length === 0 ? styles.centered : styles.listContent}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>{'\uD83D\uDCCC'}</Text>
+            <Ionicons name="pin-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
             <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No pinned messages</Text>
             <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
               Long press a message and tap Pin to save it here

@@ -19,6 +19,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import { isSafeUrl } from '../../utils/urlSafety';
+import { successNotification, mediumImpact } from '../../utils/haptics';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
 import ErrorState from '../../components/ErrorState';
@@ -144,12 +145,14 @@ export default function VenueDetailScreen({ navigation, route }) {
         populateForm(created);
         setEditing(false);
         navigation.setParams({ venueId: created.id, isNew: false });
+        successNotification();
         showToast('Venue created');
       } else {
         const updated = await api.updateVenue(venueId, data);
         setVenue(updated);
         populateForm(updated);
         setEditing(false);
+        successNotification();
         showToast('Venue updated');
       }
     } catch (err) {
@@ -169,6 +172,7 @@ export default function VenueDetailScreen({ navigation, route }) {
   }, [isNew, venue, navigation, populateForm]);
 
   const handleDelete = useCallback(() => {
+    mediumImpact();
     Alert.alert('Delete Venue', `Delete "${venue?.name}"? This cannot be undone.`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -177,6 +181,7 @@ export default function VenueDetailScreen({ navigation, route }) {
         onPress: async () => {
           try {
             await api.deleteVenue(venueId);
+            successNotification();
             showToast('Venue deleted');
             navigation.goBack();
           } catch (err) {

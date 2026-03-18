@@ -785,7 +785,7 @@ export default function GigDetailScreen({ navigation, route }) {
         )}
         {gig?.isLocked && (
           <View style={[styles.typeBadge, { backgroundColor: '#64748b25' }]}>
-            <Text style={[styles.typeBadgeText, { color: '#64748b' }]}>{'\uD83D\uDD12'} Locked</Text>
+            <Text style={[styles.typeBadgeText, { color: '#64748b' }]}><Ionicons name="lock-closed" size={12} color="#64748b" /> Locked</Text>
           </View>
         )}
       </View>
@@ -950,7 +950,7 @@ export default function GigDetailScreen({ navigation, route }) {
                   </View>
                 ) : (
                   <View style={[styles.mediaThumbnailImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bgTertiary }]}>
-                    <Text style={{ color: colors.textSecondary, fontSize: 20 }}>{'\uD83D\uDD17'}</Text>
+                    <Ionicons name="link-outline" size={20} color={colors.textSecondary} />
                   </View>
                 )}
               </TouchableOpacity>

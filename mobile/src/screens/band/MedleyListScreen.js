@@ -210,7 +210,7 @@ export default function MedleyListScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <ErrorState
-          emoji={'\uD83C\uDFB6'}
+          iconName="layers-outline"
           title="Couldn't load medleys"
           message={loadError}
           onRetry={() => { setLoadError(null); loadMedleys(); }}
@@ -236,7 +236,7 @@ export default function MedleyListScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           <View style={styles.centered}>
-            <Text style={styles.emptyIcon}>{'\uD83C\uDFB6'}</Text>
+            <Ionicons name="layers-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No medleys yet</Text>
             <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
               Group songs that flow together

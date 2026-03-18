@@ -269,7 +269,7 @@ export default function RecordingListScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <ErrorState
-          emoji={'\uD83D\uDE15'}
+          iconName="mic-outline"
           title="Couldn't load recordings"
           message={error}
           onRetry={() => { setLoading(true); loadData(); }}
@@ -386,7 +386,7 @@ export default function RecordingListScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           <View style={styles.centered}>
-            <Text style={styles.emptyIcon}>{'\uD83C\uDFA4'}</Text>
+            <Ionicons name="mic-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{search ? 'No matching recordings' : 'No recordings yet'}</Text>
             {!search && (
               <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>

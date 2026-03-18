@@ -295,7 +295,7 @@ export default function BandMembersScreen({ navigation, route }) {
         <View style={styles.memberInfo}>
           <View style={styles.nameRow}>
             <Text style={[styles.memberName, { color: item.linkedUserId ? colors.primary : colors.textPrimary }]}>{item.name}</Text>
-            {item.linkedUserId && <Text style={styles.linkedIcon}>{'\uD83D\uDC64'}</Text>}
+            {item.linkedUserId && <Ionicons name="link-outline" size={14} color={colors.primary} />}
           </View>
           {dateRange ? (
             <Text style={[styles.memberDate, { color: colors.textSecondary }]}>{dateRange}</Text>
@@ -332,7 +332,7 @@ export default function BandMembersScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <ErrorState
-          emoji={'\uD83D\uDE15'}
+          iconName="people-outline"
           title="Couldn't load members"
           message={error}
           onRetry={() => { setLoading(true); loadMembers(); }}
@@ -392,7 +392,7 @@ export default function BandMembersScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           <View style={styles.centered}>
-            <Text style={styles.emptyIcon}>{'\uD83C\uDFB8'}</Text>
+            <Ionicons name="people-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
             <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>{search ? 'No matching members' : 'No members yet'}</Text>
             {!search && (
               <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>

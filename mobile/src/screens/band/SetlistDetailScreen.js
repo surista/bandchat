@@ -18,6 +18,7 @@ import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
 import { buildSetlistHTML } from '../../utils/buildSetlistHTML';
+import { successNotification, mediumImpact } from '../../utils/haptics';
 import DraggableList from '../../components/DraggableList';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -168,6 +169,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
   }, [setlistId, loadSetlist]);
 
   const removeItem = useCallback(async (item) => {
+    mediumImpact();
     setSetlist(prev => ({
       ...prev,
       songs: prev.songs.filter(s => s.id !== item.id),
@@ -199,6 +201,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
     setShowSongPicker(false);
     try {
       await api.addSongToSetlist(setlistId, song.id);
+      mediumImpact();
       loadSetlist();
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to add song');
@@ -242,6 +245,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
         venue: editVenue.trim() || null,
       });
       setSetlist(updated);
+      successNotification();
       setShowEditDetails(false);
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to update setlist');
@@ -341,7 +345,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
         <>
           {!isDragItem && setHeader}
           <View style={[styles.itemRow, { backgroundColor: colors.bgSecondary }]}>
-            <Text style={styles.mcIcon}>{'\uD83C\uDFA4'}</Text>
+            <Ionicons name="mic-outline" size={16} color={colors.textSecondary} style={styles.mcIcon} />
             <View style={styles.itemContent}>
               <Text style={[styles.mcLabel, { color: colors.textSecondary }]}>
                 {item.label || 'MC'}
@@ -517,7 +521,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
           contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
           ListEmptyComponent={
             <View style={styles.centered}>
-              <Text style={styles.emptyIcon}>{'\uD83C\uDFB5'}</Text>
+              <Ionicons name="list-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
               <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
                 No songs in this setlist
               </Text>

@@ -209,6 +209,9 @@ router.get('/all-workspaces', authenticate, async (req, res) => {
         createdBy: {
           select: USER_SELECT_BRIEF
         },
+        venueRecord: {
+          select: { id: true, name: true, address: true, city: true, imageUrl: true }
+        },
         setlist: {
           include: {
             songs: {
@@ -652,15 +655,16 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       }
     }
 
-    // If venueId provided, look up venue to auto-populate name/address for backward compat
+    // If venueId provided, verify it belongs to this workspace and auto-populate name/address
     let resolvedVenue = venue;
     let resolvedAddress = address;
     if (venueId) {
-      const venueRecord = await prisma.venue.findUnique({ where: { id: venueId }, select: { name: true, address: true } });
-      if (venueRecord) {
-        resolvedVenue = venueRecord.name;
-        resolvedAddress = resolvedAddress || venueRecord.address;
+      const venueRecord = await prisma.venue.findUnique({ where: { id: venueId }, select: { name: true, address: true, workspaceId: true } });
+      if (!venueRecord || venueRecord.workspaceId !== req.params.workspaceId) {
+        return res.status(400).json({ error: 'Venue not found in this workspace' });
       }
+      resolvedVenue = venueRecord.name;
+      resolvedAddress = resolvedAddress || venueRecord.address;
     }
 
     // Create gig with optional multi-set support
@@ -937,15 +941,16 @@ router.put('/:gigId', authenticate, async (req, res) => {
       await prisma.$transaction(txOps);
     }
 
-    // If venueId is changing, auto-populate venue/address strings for backward compat
+    // If venueId is changing, verify workspace and auto-populate venue/address strings
     let resolvedVenue = venue;
     let resolvedAddress = address;
     if (venueId) {
-      const venueRec = await prisma.venue.findUnique({ where: { id: venueId }, select: { name: true, address: true } });
-      if (venueRec) {
-        if (venue === undefined) resolvedVenue = venueRec.name;
-        if (address === undefined) resolvedAddress = venueRec.address;
+      const venueRec = await prisma.venue.findUnique({ where: { id: venueId }, select: { name: true, address: true, workspaceId: true } });
+      if (!venueRec || venueRec.workspaceId !== existingGig.workspaceId) {
+        return res.status(400).json({ error: 'Venue not found in this workspace' });
       }
+      if (venue === undefined) resolvedVenue = venueRec.name;
+      if (address === undefined) resolvedAddress = venueRec.address;
     }
 
     const gig = await prisma.gig.update({
@@ -1319,6 +1324,9 @@ router.post('/:gigId/duplicate', authenticate, async (req, res) => {
       include: {
         createdBy: {
           select: USER_SELECT_BRIEF
+        },
+        venueRecord: {
+          select: { id: true, name: true, address: true, city: true, imageUrl: true }
         },
         setlist: {
           include: {

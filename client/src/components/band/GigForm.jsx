@@ -262,7 +262,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                   required
                 />
                 {showTitleSuggestions && filteredTitleSuggestions.length > 0 && (
-                  <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+                  <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg shadow-lg">
                     {filteredTitleSuggestions.slice(0, 8).map(title => (
                       <button
                         key={title}
@@ -280,7 +280,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                           }
                           setShowTitleSuggestions(false);
                         }}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-700 text-gray-300"
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]"
                       >
                         {title}
                       </button>
@@ -333,7 +333,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                       ? format(new Date(formData.startDate + 'T00:00:00'), 'dd-MMM-yyyy')
                       : 'Select date'}
                   </span>
-                  <span className="text-gray-500">📅</span>
+                  <span className="text-[var(--color-text-muted)]">📅</span>
                 </div>
                 <input
                   id="gig-date-picker"
@@ -360,7 +360,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                     pattern="[0-2][0-9]:[0-5][0-9]"
                   />
                   {showStartTimeDropdown && (
-                    <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+                    <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg shadow-lg">
                       {timeOptions.map(time => (
                         <button
                           key={time}
@@ -370,8 +370,8 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                             handleChange('startTime', time);
                             setShowStartTimeDropdown(false);
                           }}
-                          className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 ${
-                            formData.startTime === time ? 'bg-blue-600 text-white' : 'text-gray-300'
+                          className={`w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--color-bg-tertiary)] ${
+                            formData.startTime === time ? 'bg-blue-600 text-white' : 'text-[var(--color-text-primary)]'
                           }`}
                         >
                           {time}
@@ -394,7 +394,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                     pattern="[0-2][0-9]:[0-5][0-9]"
                   />
                   {showEndTimeDropdown && (
-                    <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+                    <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg shadow-lg">
                       {timeOptions.map(time => (
                         <button
                           key={time}
@@ -404,8 +404,8 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                             handleChange('endTime', time);
                             setShowEndTimeDropdown(false);
                           }}
-                          className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 ${
-                            formData.endTime === time ? 'bg-blue-600 text-white' : 'text-gray-300'
+                          className={`w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--color-bg-tertiary)] ${
+                            formData.endTime === time ? 'bg-blue-600 text-white' : 'text-[var(--color-text-primary)]'
                           }`}
                         >
                           {time}
@@ -432,11 +432,11 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                       pattern="[0-2][0-9]:[0-5][0-9]"
                     />
                     {showSoundCheckDropdown && (
-                      <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+                      <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg shadow-lg">
                         <button
                           type="button"
                           onMouseDown={(e) => { e.preventDefault(); handleChange('soundCheckTime', ''); setShowSoundCheckDropdown(false); }}
-                          className="w-full px-3 py-1.5 text-left text-sm text-gray-500 hover:bg-gray-700"
+                          className="w-full px-3 py-1.5 text-left text-sm text-[var(--color-text-muted)] hover:bg-[var(--color-bg-tertiary)]"
                         >
                           Clear
                         </button>
@@ -445,7 +445,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                             key={time}
                             type="button"
                             onMouseDown={(e) => { e.preventDefault(); handleChange('soundCheckTime', time); setShowSoundCheckDropdown(false); }}
-                            className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 ${formData.soundCheckTime === time ? 'bg-blue-600 text-white' : 'text-gray-300'}`}
+                            className={`w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--color-bg-tertiary)] ${formData.soundCheckTime === time ? 'bg-blue-600 text-white' : 'text-[var(--color-text-primary)]'}`}
                           >
                             {time}
                           </button>
@@ -467,11 +467,11 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                       pattern="[0-2][0-9]:[0-5][0-9]"
                     />
                     {showEventStartDropdown && (
-                      <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+                      <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg shadow-lg">
                         <button
                           type="button"
                           onMouseDown={(e) => { e.preventDefault(); handleChange('eventStartTime', ''); setShowEventStartDropdown(false); }}
-                          className="w-full px-3 py-1.5 text-left text-sm text-gray-500 hover:bg-gray-700"
+                          className="w-full px-3 py-1.5 text-left text-sm text-[var(--color-text-muted)] hover:bg-[var(--color-bg-tertiary)]"
                         >
                           Clear
                         </button>
@@ -480,7 +480,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                             key={time}
                             type="button"
                             onMouseDown={(e) => { e.preventDefault(); handleChange('eventStartTime', time); setShowEventStartDropdown(false); }}
-                            className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 ${formData.eventStartTime === time ? 'bg-blue-600 text-white' : 'text-gray-300'}`}
+                            className={`w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--color-bg-tertiary)] ${formData.eventStartTime === time ? 'bg-blue-600 text-white' : 'text-[var(--color-text-primary)]'}`}
                           >
                             {time}
                           </button>
@@ -502,11 +502,11 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                       pattern="[0-2][0-9]:[0-5][0-9]"
                     />
                     {showPerformanceDropdown && (
-                      <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-gray-800 border border-gray-600 rounded-lg shadow-lg">
+                      <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg shadow-lg">
                         <button
                           type="button"
                           onMouseDown={(e) => { e.preventDefault(); handleChange('performanceStartTime', ''); setShowPerformanceDropdown(false); }}
-                          className="w-full px-3 py-1.5 text-left text-sm text-gray-500 hover:bg-gray-700"
+                          className="w-full px-3 py-1.5 text-left text-sm text-[var(--color-text-muted)] hover:bg-[var(--color-bg-tertiary)]"
                         >
                           Clear
                         </button>
@@ -515,7 +515,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                             key={time}
                             type="button"
                             onMouseDown={(e) => { e.preventDefault(); handleChange('performanceStartTime', time); setShowPerformanceDropdown(false); }}
-                            className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-700 ${formData.performanceStartTime === time ? 'bg-blue-600 text-white' : 'text-gray-300'}`}
+                            className={`w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--color-bg-tertiary)] ${formData.performanceStartTime === time ? 'bg-blue-600 text-white' : 'text-[var(--color-text-primary)]'}`}
                           >
                             {time}
                           </button>
@@ -528,12 +528,12 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
 
               {/* Availability Summary */}
               {availabilitySummary && availabilitySummary.total > 0 && (
-                <div className="bg-gray-900/50 rounded-lg p-3">
+                <div className="bg-[var(--color-bg-secondary)] rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-400">Team Availability</span>
+                    <span className="text-sm text-[var(--color-text-muted)]">Team Availability</span>
                     <span className="text-sm font-medium">
                       <span className="text-green-400">{availabilitySummary.available}</span>
-                      <span className="text-gray-500">/{availabilitySummary.total}</span>
+                      <span className="text-[var(--color-text-muted)]">/{availabilitySummary.total}</span>
                     </span>
                   </div>
                   <div className="flex gap-0.5 h-2 rounded overflow-hidden mb-2">
@@ -547,7 +547,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                       <div className="bg-red-500" style={{ flex: availabilitySummary.unavailable }} />
                     )}
                     {availabilitySummary.unknown > 0 && (
-                      <div className="bg-gray-600" style={{ flex: availabilitySummary.unknown }} />
+                      <div className="bg-[var(--color-bg-tertiary)]" style={{ flex: availabilitySummary.unknown }} />
                     )}
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs">
@@ -558,7 +558,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                           m.status === 'AVAILABLE' ? 'bg-green-900/50 text-green-300' :
                           m.status === 'UNAVAILABLE' ? 'bg-red-900/50 text-red-300' :
                           m.status === 'MAYBE' ? 'bg-yellow-900/50 text-yellow-300' :
-                          'bg-gray-700 text-gray-400'
+                          'bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]'
                         }`}
                         title={m.note || m.status}
                       >
@@ -594,7 +594,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                     <div className="flex items-center justify-between mb-1">
                       <label className="modal-label mb-0">
                         Attending
-                        <span className="text-gray-500 font-normal ml-2">
+                        <span className="text-[var(--color-text-muted)] font-normal ml-2">
                           ({selectedAttendees.length} selected)
                         </span>
                       </label>
@@ -623,7 +623,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                         placeholder="Search members..."
                         value={attendeeSearch}
                         onChange={(e) => setAttendeeSearch(e.target.value)}
-                        className="w-full px-3 py-1.5 mb-2 bg-gray-800 border border-gray-700 rounded text-white text-sm"
+                        className="w-full px-3 py-1.5 mb-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] text-sm"
                       />
                     )}
 
@@ -651,10 +651,10 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                               isSelected
                                 ? 'bg-green-600 text-white ring-2 ring-green-400'
                                 : availStatus === 'UNAVAILABLE'
-                                ? 'bg-gray-700 text-red-400 hover:bg-gray-600'
+                                ? 'bg-[var(--color-bg-tertiary)] text-red-400 hover:bg-[var(--color-bg-tertiary)]'
                                 : availStatus === 'MAYBE'
-                                ? 'bg-gray-700 text-yellow-400 hover:bg-gray-600'
-                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                ? 'bg-[var(--color-bg-tertiary)] text-yellow-400 hover:bg-[var(--color-bg-tertiary)]'
+                                : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'
                             }`}
                           >
                             {isSelected && <span className="mr-1">✓</span>}
@@ -698,12 +698,12 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                                   className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                                     isSelected
                                       ? 'bg-green-600 text-white ring-2 ring-green-400'
-                                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                      : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'
                                   }`}
                                 >
                                   {isSelected && <span className="mr-1">✓</span>}
                                   {bm.name}
-                                  <span className={`ml-1 text-xs ${bm.isGuest ? 'text-purple-400' : 'text-gray-500'}`}>
+                                  <span className={`ml-1 text-xs ${bm.isGuest ? 'text-purple-400' : 'text-[var(--color-text-muted)]'}`}>
                                     ({label})
                                   </span>
                                 </button>
@@ -715,7 +715,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                     )}
 
                     {selectedAttendees.length === 0 && (
-                      <p className="text-xs text-gray-500 mt-2">
+                      <p className="text-xs text-[var(--color-text-muted)] mt-2">
                         Click members to mark them as attending
                       </p>
                     )}
@@ -831,7 +831,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                       className={`text-xs px-2 py-1 rounded transition-colors ${
                         useMultiSet
                           ? 'bg-indigo-600 text-white'
-                          : 'bg-[var(--color-modal-border)] text-gray-300 hover:bg-gray-500'
+                          : 'bg-[var(--color-modal-border)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
                       }`}
                     >
                       {useMultiSet ? 'Multi-Set Mode' : 'Single Set'}
@@ -921,17 +921,17 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
               </div>
 
               {/* Visibility options */}
-              <div className="space-y-3 pt-2 border-t border-gray-700">
+              <div className="space-y-3 pt-2 border-t border-[var(--color-border)]">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={formData.isPersonal}
                     onChange={(e) => handleChange('isPersonal', e.target.checked)}
-                    className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
+                    className="rounded bg-[var(--color-bg-tertiary)] border-[var(--color-border)] text-blue-500 focus:ring-blue-500"
                   />
                   <div>
-                    <span className="text-gray-200">Personal entry</span>
-                    <p className="text-xs text-gray-500">Only you can see this event</p>
+                    <span className="text-[var(--color-text-primary)]">Personal entry</span>
+                    <p className="text-xs text-[var(--color-text-muted)]">Only you can see this event</p>
                   </div>
                 </label>
 
@@ -941,11 +941,11 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                       type="checkbox"
                       checked={formData.isLocked}
                       onChange={(e) => handleChange('isLocked', e.target.checked)}
-                      className="rounded bg-gray-700 border-gray-600 text-yellow-500 focus:ring-yellow-500"
+                      className="rounded bg-[var(--color-bg-tertiary)] border-[var(--color-border)] text-yellow-500 focus:ring-yellow-500"
                     />
                     <div>
-                      <span className="text-gray-200">Lock event</span>
-                      <p className="text-xs text-gray-500">Only admins can edit or delete</p>
+                      <span className="text-[var(--color-text-primary)]">Lock event</span>
+                      <p className="text-xs text-[var(--color-text-muted)]">Only admins can edit or delete</p>
                     </div>
                   </label>
                 )}

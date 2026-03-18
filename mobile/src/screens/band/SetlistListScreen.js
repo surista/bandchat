@@ -252,7 +252,7 @@ export default function SetlistListScreen({ navigation, route }) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
         <ErrorState
-          emoji={'\uD83D\uDE15'}
+          iconName="list-outline"
           title="Couldn't load setlists"
           message={error}
           onRetry={() => { setLoading(true); loadSetlists(); }}
@@ -289,7 +289,7 @@ export default function SetlistListScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           <View style={styles.centered}>
-            <Text style={styles.emptyIcon}>{'\uD83C\uDFBC'}</Text>
+            <Ionicons name="list-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{search ? 'No matching setlists' : 'No setlists yet'}</Text>
             {!search && (
               <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>

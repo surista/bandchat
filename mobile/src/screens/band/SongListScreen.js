@@ -353,7 +353,7 @@ export default function SongListScreen({ navigation, route }) {
         }
         ListEmptyComponent={
           <View style={styles.centered}>
-            <Text style={styles.emptyIcon}>{'\uD83C\uDFB5'}</Text>
+            <Ionicons name="musical-notes-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               {search ? 'No matching songs' : 'No songs yet'}
             </Text>
@@ -396,7 +396,7 @@ export default function SongListScreen({ navigation, route }) {
                 accessibilityLabel={`Sort by ${opt.label}${sortBy === opt.key ? ', selected' : ''}`}
               >
                 <Text style={[styles.sortOptionText, { color: colors.textPrimary }]}>{opt.label}</Text>
-                {sortBy === opt.key && <Text style={{ color: colors.primary }}>{'\u2713'}</Text>}
+                {sortBy === opt.key && <Ionicons name="checkmark" size={20} color={colors.primary} />}
               </TouchableOpacity>
             ))}
           </View>

@@ -14,6 +14,7 @@ import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
 import ImageViewer from '../../components/ImageViewer';
 import api from '../../services/api';
+import { Ionicons } from '@expo/vector-icons';
 import { useLayout } from '../../hooks/useLayout';
 
 const GAP = 2;
@@ -86,7 +87,7 @@ export default function GigGalleryScreen({ route }) {
           </View>
         ) : (
           <View style={[styles.thumbnail, { backgroundColor: colors.bgTertiary, justifyContent: 'center', alignItems: 'center' }]}>
-            <Text style={{ color: colors.textSecondary, fontSize: 24 }}>{'\uD83D\uDD17'}</Text>
+            <Ionicons name="link-outline" size={24} color={colors.textSecondary} />
           </View>
         )}
         {/* Overlay with uploader info */}

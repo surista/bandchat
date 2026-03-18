@@ -18,6 +18,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import { successNotification } from '../../utils/haptics';
 import api from '../../services/api';
+import { Ionicons } from '@expo/vector-icons';
 import { useLayout } from '../../hooks/useLayout';
 
 function StatBox({ label, value, colors }) {
@@ -39,12 +40,12 @@ function formatDate(dateStr) {
 }
 
 const ACHIEVEMENT_ICONS = {
-  gigs: '\uD83C\uDFB8',
-  songs: '\uD83C\uDFB5',
-  setlists: '\uD83D\uDCCB',
-  rehearsals: '\uD83E\uDD41',
-  messages: '\uD83D\uDCAC',
-  milestones: '\uD83C\uDFC6',
+  gigs: 'calendar-outline',
+  songs: 'musical-notes-outline',
+  setlists: 'list-outline',
+  rehearsals: 'repeat-outline',
+  messages: 'chatbubble-outline',
+  milestones: 'trophy-outline',
 };
 
 export default function MemberProfileScreen({ route, navigation }) {
@@ -269,10 +270,10 @@ export default function MemberProfileScreen({ route, navigation }) {
           </Text>
           <View style={styles.achievementsList}>
             {achievements.map((a, i) => {
-              const icon = ACHIEVEMENT_ICONS[a.category] || '\uD83C\uDFC5';
+              const iconName = ACHIEVEMENT_ICONS[a.category] || 'ribbon-outline';
               return (
                 <View key={a.id || i} style={[styles.achievementCard, { backgroundColor: colors.bgSecondary }]}>
-                  <Text style={styles.achievementIcon}>{icon}</Text>
+                  <Ionicons name={iconName} size={28} color={colors.primary} />
                   <View style={styles.achievementInfo}>
                     <Text style={[styles.achievementName, { color: colors.textPrimary }]}>{a.name}</Text>
                     <Text style={[styles.achievementDesc, { color: colors.textSecondary }]} numberOfLines={2}>

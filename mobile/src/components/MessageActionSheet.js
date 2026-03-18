@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { selectionChanged } from '../utils/haptics';
 
 const QUICK_EMOJIS = ['\uD83D\uDC4D', '\uD83D\uDC4E', '\uD83C\uDFB8', '\uD83D\uDD25', '\u2764\uFE0F'];
 
@@ -90,6 +91,7 @@ function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwn
                 i === filteredActions.length - 1 && styles.lastRow,
               ]}
               onPress={() => {
+                selectionChanged();
                 onClose();
                 // Delay action to let Modal close animation finish (iOS Alert conflicts with Modal)
                 setTimeout(() => onAction(action.key), 350);
