@@ -204,6 +204,22 @@ self.addEventListener('push', (event) => {
   );
 });
 
+// Message from client — dismiss notifications for a specific channel
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'DISMISS_CHANNEL_NOTIFICATIONS' && event.data.channelId) {
+    self.registration.getNotifications().then((notifications) => {
+      notifications.forEach((notification) => {
+        if (notification.data?.channelId === event.data.channelId) {
+          notification.close();
+        }
+      });
+    });
+  }
+  if (event.data?.type === 'CLEAR_BADGE' && 'clearAppBadge' in self.navigator) {
+    self.navigator.clearAppBadge().catch(() => {});
+  }
+});
+
 // Notification click event
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();

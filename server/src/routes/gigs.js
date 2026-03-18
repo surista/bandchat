@@ -750,7 +750,8 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
         body: pushBody,
         tag: `gig-${gig.id}`,
         url: `/workspace/${req.params.workspaceId}`,
-        workspaceId: req.params.workspaceId
+        workspaceId: req.params.workspaceId,
+        threadId: req.params.workspaceId
       }, { category: 'gig', workspaceId: req.params.workspaceId });
     });
 
@@ -1022,7 +1023,8 @@ router.put('/:gigId', authenticate, async (req, res) => {
         body: pushBody,
         tag: `gig-${gig.id}`,
         url: `/workspace/${gig.workspaceId}`,
-        workspaceId: gig.workspaceId
+        workspaceId: gig.workspaceId,
+        threadId: gig.workspaceId
       }, { category: 'gig', workspaceId: gig.workspaceId });
     });
 

@@ -355,6 +355,8 @@ export const sendPushToUser = async (userId, payload, options = {}) => {
         sound: 'default',
         title: payload.title,
         body: payload.body,
+        badge: 1,
+        ...(payload.threadId && { threadId: payload.threadId }),
         data: {
           url: payload.url,
           channelId: payload.channelId,

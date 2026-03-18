@@ -355,73 +355,146 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
       io.to(`channel:${req.params.channelId}`).emit('message:new', message);
     }
 
-    // Send push notification for DMs (to other participants, unless muted)
+    // --- Push notification logic ---
     const channel = req.channel;
+    const notifiedUserIds = new Set(); // Track who's been notified to prevent duplicates
+    const pushBody = content
+      ? (content.length > 100 ? content.substring(0, 100) + '...' : content)
+      : 'Sent an attachment';
+    const pushUrl = `/workspace/${channel.workspaceId}?channel=${req.params.channelId}`;
+    const pushBase = { channelId: req.params.channelId, workspaceId: channel.workspaceId, threadId: req.params.channelId };
+
+    // 1. DM notifications (to other participants, unless muted)
     if (channel.isDirect) {
       const dmMembers = await prisma.channelMember.findMany({
         where: { channelId: req.params.channelId, userId: { not: req.user.id } },
         select: { userId: true, muted: true }
       });
-      const body = content
-        ? (content.length > 100 ? content.substring(0, 100) + '...' : content)
-        : 'Sent an attachment';
       dmMembers.filter(m => !m.muted).forEach(m => {
+        notifiedUserIds.add(m.userId);
         sendPushToUser(m.userId, {
           title: req.user.displayName,
-          body,
+          body: pushBody,
           tag: `dm-${req.params.channelId}`,
-          url: `/workspace/${channel.workspaceId}?channel=${req.params.channelId}`,
-          channelId: req.params.channelId,
-          workspaceId: channel.workspaceId
+          url: pushUrl,
+          ...pushBase
         }, { category: 'dm', workspaceId: channel.workspaceId });
       });
     }
 
-    // Extract mentions and notify
-    // Check for @mentions by matching against workspace member display names
-    if (content && content.includes('@')) {
+    // 2-3. @channel/@everyone/@here and individual @mention notifications
+    if (content && content.includes('@') && !channel.isDirect) {
       const workspaceMembers = await prisma.workspaceMember.findMany({
         where: { workspaceId: channel.workspaceId },
-        include: {
-          user: {
-            select: { id: true, displayName: true }
-          }
-        }
+        include: { user: { select: { id: true, displayName: true } } }
       });
-
       const contentLower = content.toLowerCase();
+
+      // Get all channel members' mute status (needed for both group and individual mentions)
+      const allChannelMembers = await prisma.channelMember.findMany({
+        where: { channelId: req.params.channelId },
+        select: { userId: true, muted: true }
+      });
+      const mutedUserIds = new Set(allChannelMembers.filter(m => m.muted).map(m => m.userId));
+      const channelMemberIds = new Set(allChannelMembers.map(m => m.userId));
+
+      // 2. @channel / @everyone / @here — notify all channel members
+      const hasGroupMention = /@(channel|everyone|here)\b/.test(contentLower);
+      if (hasGroupMention) {
+        allChannelMembers
+          .filter(m => m.userId !== req.user.id && !m.muted)
+          .forEach(m => {
+            notifiedUserIds.add(m.userId);
+            sendPushToUser(m.userId, {
+              title: `#${channel.name}`,
+              body: `${req.user.displayName}: ${pushBody}`,
+              tag: `channel-${req.params.channelId}-${message.id}`,
+              url: pushUrl,
+              ...pushBase
+            }, { category: 'mention', workspaceId: channel.workspaceId });
+          });
+      }
+
+      // 3. Individual @name mentions (skip users already notified via group mention)
       const mentionedUsers = workspaceMembers.filter(m => {
         const name = m.user.displayName?.toLowerCase();
         return name && contentLower.includes(`@${name}`);
       });
 
-      // Check muted status for mentioned users
-      const mentionedUserIds = mentionedUsers.filter(m => m.userId !== req.user.id).map(m => m.userId);
-      const mutedMembers = mentionedUserIds.length > 0
+      mentionedUsers
+        .filter(m => m.userId !== req.user.id && !notifiedUserIds.has(m.userId))
+        .forEach(m => {
+          io.to(`user:${m.userId}`).emit('mention', {
+            channelId: req.params.channelId,
+            message,
+            mentionedBy: req.user
+          });
+
+          if (mutedUserIds.has(m.userId)) return;
+          notifiedUserIds.add(m.userId);
+          sendPushToUser(m.userId, {
+            title: `${req.user.displayName} mentioned you`,
+            body: pushBody,
+            tag: `mention-${message.id}`,
+            url: pushUrl,
+            ...pushBase
+          }, { category: 'mention', workspaceId: channel.workspaceId });
+        });
+    }
+
+    // 4. Thread reply notifications (notify thread participants)
+    if (parentId && !channel.isDirect) {
+      // Get all authors who participated in this thread + the parent author
+      const [parentMsg, threadReplies] = await Promise.all([
+        prisma.message.findUnique({ where: { id: parentId }, select: { authorId: true } }),
+        prisma.message.findMany({ where: { parentId }, select: { authorId: true }, distinct: ['authorId'] })
+      ]);
+
+      const participantIds = new Set(threadReplies.map(r => r.authorId).filter(Boolean));
+      if (parentMsg?.authorId) participantIds.add(parentMsg.authorId);
+      participantIds.delete(req.user.id); // Exclude sender
+
+      // Check mute status for participants
+      const participantMutes = participantIds.size > 0
         ? await prisma.channelMember.findMany({
-            where: { channelId: req.params.channelId, userId: { in: mentionedUserIds } },
+            where: { channelId: req.params.channelId, userId: { in: [...participantIds] } },
             select: { userId: true, muted: true }
           })
         : [];
-      const mutedUserIds = new Set(mutedMembers.filter(m => m.muted).map(m => m.userId));
+      const mutedParticipants = new Set(participantMutes.filter(m => m.muted).map(m => m.userId));
 
-      mentionedUsers.filter(m => m.userId !== req.user.id).forEach(m => {
-        io.to(`user:${m.userId}`).emit('mention', {
-          channelId: req.params.channelId,
-          message,
-          mentionedBy: req.user
-        });
-
-        // Send push notification (skip if channel is muted)
-        if (mutedUserIds.has(m.userId)) return;
-        sendPushToUser(m.userId, {
-          title: `${req.user.displayName} mentioned you`,
-          body: content.length > 100 ? content.substring(0, 100) + '...' : content,
-          tag: `mention-${message.id}`,
-          url: `/workspace/${channel.workspaceId}?channel=${req.params.channelId}`,
-          channelId: req.params.channelId,
-          workspaceId: channel.workspaceId
+      for (const userId of participantIds) {
+        if (notifiedUserIds.has(userId) || mutedParticipants.has(userId)) continue;
+        notifiedUserIds.add(userId);
+        sendPushToUser(userId, {
+          title: `Thread reply in #${channel.name}`,
+          body: `${req.user.displayName}: ${pushBody}`,
+          tag: `thread-${parentId}`,
+          url: pushUrl,
+          ...pushBase,
+          threadId: parentId, // Group thread replies together on iOS
         }, { category: 'mention', workspaceId: channel.workspaceId });
+      }
+    }
+
+    // 5. Channel message notifications (opt-in via notifyChannelMessages)
+    if (!channel.isDirect && notifiedUserIds.size < 100) {
+      const remainingMembers = await prisma.channelMember.findMany({
+        where: {
+          channelId: req.params.channelId,
+          userId: { not: req.user.id, notIn: [...notifiedUserIds] },
+          muted: false
+        },
+        select: { userId: true }
+      });
+      remainingMembers.forEach(m => {
+        sendPushToUser(m.userId, {
+          title: `#${channel.name}`,
+          body: `${req.user.displayName}: ${pushBody}`,
+          tag: `channel-${req.params.channelId}`,
+          url: pushUrl,
+          ...pushBase
+        }, { category: 'channel', workspaceId: channel.workspaceId });
       });
     }
 

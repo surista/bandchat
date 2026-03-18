@@ -94,6 +94,12 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
     // Immediately clear the unread badge when channel is selected
     onUpdateUnread(0);
 
+    // Dismiss any push notifications for this channel
+    if (navigator.serviceWorker?.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'DISMISS_CHANNEL_NOTIFICATIONS', channelId: channel.id });
+      navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_BADGE' });
+    }
+
     let cancelled = false;
 
     // Load messages FIRST, then join socket room to prevent race condition.

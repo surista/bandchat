@@ -21,6 +21,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
+import notificationService from '../../services/notifications';
 import { addToOfflineQueue, getOfflineQueue, removeFromOfflineQueue } from '../../services/storage';
 import { getLocalMessages, upsertMessages, upsertMessage as upsertLocalMessage } from '../../services/database';
 import { Ionicons } from '@expo/vector-icons';
@@ -133,6 +134,14 @@ export default function ChannelScreen({ navigation, route }) {
     channelIdRef.current = channel.id;
     userIdRef.current = user?.id;
   }, [channel.id, user?.id]);
+
+  // Manage push notifications: suppress foreground alerts for this channel, clear badge & dismiss
+  useEffect(() => {
+    notificationService.setActiveChannel(channel.id);
+    notificationService.clearBadge();
+    notificationService.dismissChannelNotifications(channel.id);
+    return () => notificationService.clearActiveChannel();
+  }, [channel.id]);
 
   // Save scroll position on unmount
   useEffect(() => {

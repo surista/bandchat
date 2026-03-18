@@ -145,7 +145,8 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
         body: truncatedQuestion,
         tag: `poll-${poll.id}`,
         url: `/workspace/${req.params.workspaceId}`,
-        workspaceId: req.params.workspaceId
+        workspaceId: req.params.workspaceId,
+        threadId: req.params.workspaceId
       }, { category: 'announcement', workspaceId: req.params.workspaceId });
     });
 

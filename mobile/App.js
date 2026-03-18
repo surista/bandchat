@@ -125,6 +125,7 @@ function AppContent() {
     notificationService.listen(async (data) => {
       // Handle notification tap — navigate to workspace/channel if data provided
       if (data?.workspaceId && data?.channelId && navigationRef.current) {
+        notificationService.clearBadge();
         navigationRef.current.navigate('Workspace', { id: data.workspaceId, name: data.workspaceName || 'Workspace' });
         try {
           const channel = await api.getChannel(data.channelId);
@@ -138,7 +139,16 @@ function AppContent() {
       }
     });
 
-    return () => notificationService.cleanup();
+    // Clear badge when app comes to foreground
+    const { AppState } = require('react-native');
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') notificationService.clearBadge();
+    });
+
+    return () => {
+      notificationService.cleanup();
+      subscription?.remove();
+    };
   }, []);
 
   // Quick actions (3D Touch / long press app icon)

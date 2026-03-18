@@ -14,6 +14,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
+import notificationService from '../../services/notifications';
 import MessageBubble from '../../components/MessageBubble';
 import MessageInput from '../../components/MessageInput';
 import MessageActionSheet from '../../components/MessageActionSheet';
@@ -47,6 +48,13 @@ export default function ThreadScreen({ navigation, route }) {
   const [workspaceChannels, setWorkspaceChannels] = useState([]);
 
   const parentIdRef = useRef(parentMessage.id);
+
+  // Suppress foreground notifications for this channel while viewing thread
+  useEffect(() => {
+    notificationService.setActiveChannel(channelId);
+    notificationService.clearBadge();
+    return () => notificationService.clearActiveChannel();
+  }, [channelId]);
 
   const findMessage = useCallback((id) => {
     if (parentRef.current?.id === id) return parentRef.current;

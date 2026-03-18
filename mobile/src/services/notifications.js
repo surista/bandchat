@@ -4,13 +4,19 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import api from './api';
 
+// Track which channel the user is currently viewing (for foreground suppression)
+let activeChannelId = null;
+
 // Configure how notifications appear when the app is in the foreground
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
+  handleNotification: async (notification) => {
+    const data = notification.request.content.data;
+    // Suppress notification banner if user is viewing the same channel
+    if (activeChannelId && data?.channelId === activeChannelId) {
+      return { shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false };
+    }
+    return { shouldShowAlert: true, shouldPlaySound: true, shouldSetBadge: true };
+  },
 });
 
 class NotificationService {
@@ -114,6 +120,40 @@ class NotificationService {
     }
     if (this.responseListener) {
       this.responseListener.remove();
+    }
+  }
+
+  /** Set the currently active channel (suppresses notifications for it) */
+  setActiveChannel(channelId) {
+    activeChannelId = channelId || null;
+  }
+
+  /** Clear the active channel */
+  clearActiveChannel() {
+    activeChannelId = null;
+  }
+
+  /** Clear the app icon badge */
+  async clearBadge() {
+    try {
+      await Notifications.setBadgeCountAsync(0);
+    } catch {
+      // Best-effort
+    }
+  }
+
+  /** Dismiss delivered notifications for a specific channel */
+  async dismissChannelNotifications(channelId) {
+    try {
+      const delivered = await Notifications.getPresentedNotificationsAsync();
+      const matching = delivered.filter(
+        n => n.request.content.data?.channelId === channelId
+      );
+      await Promise.all(
+        matching.map(n => Notifications.dismissNotificationAsync(n.request.identifier))
+      );
+    } catch {
+      // Best-effort
     }
   }
 }

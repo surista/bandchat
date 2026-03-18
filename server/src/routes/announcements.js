@@ -112,7 +112,8 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (re
         body: announcement.title.length > 100 ? announcement.title.substring(0, 100) + '...' : announcement.title,
         tag: `announcement-${announcement.id}`,
         url: `/workspace/${req.params.workspaceId}`,
-        workspaceId: req.params.workspaceId
+        workspaceId: req.params.workspaceId,
+        threadId: req.params.workspaceId
       }, { category: 'announcement', workspaceId: req.params.workspaceId });
     });
 
