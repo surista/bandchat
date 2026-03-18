@@ -269,7 +269,7 @@ export default function VenueDetailScreen({ navigation, route }) {
     return (
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         keyboardVerticalOffset={100}
       >
         <ScrollView

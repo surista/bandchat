@@ -330,8 +330,8 @@ export default function ThreadScreen({ navigation, route }) {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+      behavior="padding"
+      keyboardVerticalOffset={headerHeight}
     >
       <View style={[styles.chatContainer, isTablet && { maxWidth: contentMaxWidth }]}>
       <FlatList
