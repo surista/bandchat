@@ -18,7 +18,7 @@ function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, on
   const canEdit = !gig.isExternal && (!gig.isLocked || isAdmin);
   const longPress = useLongPress({
     onLongPress: (pos) => onContextMenu(pos),
-    onTap: canEdit ? onEdit : undefined,
+    onTap: !gig.isExternal ? onEdit : undefined, // Always open for viewing (GigForm shows read-only for locked)
   });
 
   return (
@@ -99,7 +99,7 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
   const canEdit = !gig.isExternal && (!gig.isLocked || isAdmin);
   const longPress = useLongPress({
     onLongPress: (pos) => onContextMenu(pos),
-    onTap: canEdit ? onEdit : undefined,
+    onTap: !gig.isExternal ? onEdit : undefined, // Always open for viewing (GigForm shows read-only for locked)
   });
 
   return (
