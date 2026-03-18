@@ -54,6 +54,11 @@ BandChat_Cost_Analysis.docx
 mobile/ipad/
 app.json
 
+# Google service account keys (never commit)
+*-service-account.json
+bandchat-*.json
+!mobile/package.json
+
 # Claude Code
 CLAUDE.md
 nul

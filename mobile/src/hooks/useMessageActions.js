@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as MediaLibrary from 'expo-media-library';
-import { File, Paths } from 'expo-file-system/next';
+import { File, Directory, Paths } from 'expo-file-system/next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -95,8 +95,7 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
             if (!filename || !filename.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
               filename = `image-${Date.now()}.jpg`;
             }
-            const file = new File(Paths.cache, filename);
-            await file.downloadFrom(img.url);
+            const file = await File.downloadFileAsync(img.url, new Directory(Paths.cache), { idempotent: true });
             await MediaLibrary.saveToLibraryAsync(file.uri);
             Alert.alert('Saved', 'Image saved to your photo library.');
           } catch (err) {

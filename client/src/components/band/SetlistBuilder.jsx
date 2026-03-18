@@ -542,7 +542,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
 
   const handleAddSetBreak = async () => {
     const existingBreaks = setlistItems.filter(i => i.type === 'SET_BREAK').length;
-    const label = `Set ${existingBreaks + 1}`;
+    const label = `Set ${existingBreaks + 2}`;
     try {
       const result = await api.addSetBreakToSetlist(setlist.id, label, 900);
       setSetlistItems(prev => [...prev, result]);
