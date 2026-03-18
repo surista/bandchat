@@ -664,7 +664,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
                 <Text style={[styles.detailsButtonText, { color: colors.textPrimary }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.detailsButton, { backgroundColor: colors.primary }]}
+                style={[styles.detailsButton, { backgroundColor: colors.primary }, savingPerformers && { opacity: 0.5 }]}
                 onPress={savePerformers}
                 disabled={savingPerformers}
                 accessibilityRole="button"
@@ -714,7 +714,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
                   <Text style={[styles.detailsButtonText, { color: colors.textPrimary }]}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.detailsButton, { backgroundColor: colors.primary }]}
+                  style={[styles.detailsButton, { backgroundColor: colors.primary }, savingDetails && { opacity: 0.5 }]}
                   onPress={saveDetails}
                   disabled={savingDetails}
                   accessibilityRole="button"

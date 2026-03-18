@@ -210,7 +210,7 @@ export default function TimelineScreen({ navigation, route }) {
   if (messages.length === 0) {
     return (
       <View style={[styles.emptyContainer, { backgroundColor: colors.bgPrimary }]}>
-        <Text style={styles.emptyIcon}>📜</Text>
+        <Ionicons name="time-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
         <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No messages yet</Text>
         <Text style={[styles.emptyDescription, { color: colors.textSecondary }]}>
           Messages from all your channels and DMs will appear here in chronological order.

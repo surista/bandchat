@@ -38,8 +38,8 @@ function VenueList({ workspace, isAdmin }) {
       setVenues(prev => prev.map(v => v.id === venue.id ? venue : v));
     };
 
-    const handleDeleted = ({ id }) => {
-      setVenues(prev => prev.filter(v => v.id !== id));
+    const handleDeleted = ({ venueId }) => {
+      setVenues(prev => prev.filter(v => v.id !== venueId));
     };
 
     socket.on('venue:created', handleCreated);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useLayoutEffect, useRef } from 'react';
 import { isSafeUrl } from '../../utils/urlSafety';
-import { successNotification } from '../../utils/haptics';
+import { successNotification, mediumImpact } from '../../utils/haptics';
 import {
   View,
   Text,
@@ -195,6 +195,7 @@ export default function ContactsScreen({ navigation, route }) {
 
   const handleDelete = useCallback(() => {
     if (!selectedContact) return;
+    mediumImpact();
     Alert.alert('Delete Contact', `Delete "${selectedContact.name}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -465,7 +466,7 @@ export default function ContactsScreen({ navigation, route }) {
                 <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: colors.primary }]}
+                style={[styles.modalButton, { backgroundColor: colors.primary }, (saving || !name.trim()) && { opacity: 0.5 }]}
                 onPress={handleSave}
                 disabled={saving || !name.trim()}
                 accessibilityRole="button"
