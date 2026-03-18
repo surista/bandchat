@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import getAvatarColor from '../utils/getAvatarColor';
 
-function ChannelItem({ channel, isDM, dmMembers, onPress, onLongPress, unreadCount }) {
+function ChannelItem({ channel, isDM, dmMembers, onPress, onLongPress, unreadCount, accessibilityHint }) {
   const { colors } = useTheme();
 
   const renderIcon = () => {
@@ -44,6 +44,7 @@ function ChannelItem({ channel, isDM, dmMembers, onPress, onLongPress, unreadCou
       delayPressIn={80}
       accessibilityRole="button"
       accessibilityLabel={`${isDM ? 'Direct message with' : 'Channel'} ${displayName}${hasUnread ? `, ${unreadCount} unread` : ''}`}
+      accessibilityHint={accessibilityHint || (isDM ? 'Open conversation' : 'Open channel')}
     >
       {renderIcon()}
       <Text

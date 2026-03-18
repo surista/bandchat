@@ -47,6 +47,7 @@ const SongCard = memo(function SongCard({ song, onEdit, onDelete, onContextMenu,
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
             className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
             title="Edit"
+            aria-label="Edit song"
           >
             ✏️
           </button>
@@ -54,6 +55,7 @@ const SongCard = memo(function SongCard({ song, onEdit, onDelete, onContextMenu,
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
             className="p-1 text-[var(--color-text-muted)] hover:text-red-400"
             title="Delete"
+            aria-label="Delete song"
           >
             🗑️
           </button>
@@ -383,6 +385,7 @@ function SongList({ workspaceId, onSelectSong }) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="flex-1 px-3 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] placeholder-gray-400"
+            aria-label="Search songs"
           />
           <select
             value={sortBy}

@@ -14,6 +14,19 @@ import { selectionChanged } from '../utils/haptics';
 
 const QUICK_EMOJIS = ['\uD83D\uDC4D', '\uD83D\uDC4E', '\uD83C\uDFB8', '\uD83D\uDD25', '\u2764\uFE0F'];
 
+const ACTION_HINTS = {
+  reply: 'Opens thread view',
+  react: 'Opens emoji picker',
+  pin: 'Pin this message to the channel',
+  bookmark: 'Save this message for later',
+  save: 'Downloads image to your device',
+  copy: 'Copies message text to clipboard',
+  copyLink: 'Copies a link to this message',
+  edit: 'Opens message editor',
+  delete: 'Permanently removes this message',
+  report: 'Reports this message to admins',
+};
+
 const ACTIONS = [
   { key: 'reply', label: 'Reply in Thread', icon: 'chatbubble-outline' },
   { key: 'react', label: 'Add Reaction', icon: 'happy-outline' },
@@ -99,6 +112,7 @@ function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwn
               activeOpacity={0.6}
               accessibilityRole="button"
               accessibilityLabel={action.label}
+              accessibilityHint={ACTION_HINTS[action.key]}
             >
               <Ionicons name={action.icon} size={20} color={action.destructive ? '#EF4444' : colors.textSecondary} style={styles.actionIcon} />
               <Text

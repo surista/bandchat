@@ -377,7 +377,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
     return (
       <>
         {!isDragItem && setHeader}
-        <View style={[styles.itemRow, { backgroundColor: colors.bgSecondary }]}>
+        <View style={[styles.itemRow, { backgroundColor: colors.bgSecondary }]} accessible accessibilityLabel={`${songNumber}. ${item.song?.title || 'Unknown'}${item.song?.artist ? ` by ${item.song.artist}` : ''}`} accessibilityHint={editing ? 'Drag to reorder' : undefined}>
           <Text style={[styles.songNumber, { color: colors.textSecondary }]}>{songNumber}</Text>
           <View style={styles.itemContent}>
             <Text style={[styles.songTitle, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -544,10 +544,10 @@ export default function SetlistDetailScreen({ navigation, route }) {
       {/* Edit mode toolbar */}
       {editing && (
         <View style={[styles.editToolbar, { backgroundColor: colors.bgSecondary, borderTopColor: colors.border, paddingBottom: insets.bottom + 10 }]}>
-          <TouchableOpacity style={[styles.toolbarButton, { backgroundColor: colors.primary }]} onPress={openSongPicker} accessibilityRole="button" accessibilityLabel="Add song">
+          <TouchableOpacity style={[styles.toolbarButton, { backgroundColor: colors.primary }]} onPress={openSongPicker} accessibilityRole="button" accessibilityLabel="Add song" accessibilityHint="Add a song to this setlist">
             <Text style={styles.toolbarButtonText}>+ Song</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.toolbarButton, { backgroundColor: colors.bgTertiary }]} onPress={addSetBreak} accessibilityRole="button" accessibilityLabel="Add set break">
+          <TouchableOpacity style={[styles.toolbarButton, { backgroundColor: colors.bgTertiary }]} onPress={addSetBreak} accessibilityRole="button" accessibilityLabel="Add set break" accessibilityHint="Add a set break">
             <Text style={[styles.toolbarButtonTextDark, { color: colors.textPrimary }]}>+ Set Break</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.toolbarButton, { backgroundColor: colors.bgTertiary }]} onPress={addMC} accessibilityRole="button" accessibilityLabel="Add MC">

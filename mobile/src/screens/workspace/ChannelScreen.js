@@ -164,6 +164,7 @@ export default function ChannelScreen({ navigation, route }) {
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           accessibilityRole="button"
           accessibilityLabel="More options"
+          accessibilityHint="Channel options"
           style={{ paddingHorizontal: 8 }}
         >
           <Ionicons name="ellipsis-horizontal" size={22} color="#ffffff" />

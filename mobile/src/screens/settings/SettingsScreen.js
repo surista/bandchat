@@ -43,6 +43,7 @@ function SettingsRow({ icon, label, subtitle, onPress, color, colors, showArrow 
       activeOpacity={0.6}
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityHint="Opens setting"
     >
       <View style={styles.rowIconContainer}>
         <Ionicons name={icon} size={20} color={color || colors.textSecondary} />

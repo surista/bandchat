@@ -194,13 +194,13 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
           </div>
 
           {(gig.venue || gig.address) && (
-            <p className="text-gray-400 text-sm mt-2">
+            <p className="text-[var(--color-text-muted)] text-sm mt-2">
               📍 {gig.venue}{gig.address && ` - ${gig.address}`}
             </p>
           )}
 
           {gig.setlists && gig.setlists.length > 0 ? (
-            <div className="text-gray-400 text-sm mt-1">
+            <div className="text-[var(--color-text-muted)] text-sm mt-1">
               <span className="text-indigo-400">🎵 {gig.setlists.length} Sets:</span>
               <span className="ml-2">
                 {gig.setlists
@@ -210,7 +210,7 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
               </span>
             </div>
           ) : gig.setlist && (
-            <p className="text-gray-400 text-sm mt-1">
+            <p className="text-[var(--color-text-muted)] text-sm mt-1">
               🎵 Setlist: {gig.setlist.name}
             </p>
           )}
@@ -222,7 +222,7 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
           )}
 
           {gig.notes && (
-            <p className="text-gray-500 text-sm mt-2 italic">{gig.notes}</p>
+            <p className="text-[var(--color-text-muted)] text-sm mt-2 italic">{gig.notes}</p>
           )}
 
           {/* Action buttons - hidden on mobile, visible on hover on desktop */}
@@ -239,7 +239,7 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
             {!gig.isExternal && (
               <>
                 {canEdit && (
-                  <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="text-sm text-gray-400 hover:text-white">
+                  <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
                     Edit
                   </button>
                 )}
@@ -939,12 +939,12 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Calendar</h2>
           <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer" title="Show member availability">
+            <label className="flex items-center gap-2 text-sm text-[var(--color-text-primary)] cursor-pointer" title="Show member availability">
               <input
                 type="checkbox"
                 checked={showAvailability}
                 onChange={(e) => setShowAvailability(e.target.checked)}
-                className="rounded bg-gray-700 border-gray-600 text-green-500 focus:ring-green-500"
+                className="rounded bg-[var(--color-bg-tertiary)] border-[var(--color-border)] text-green-500 focus:ring-green-500"
               />
               <span className="hidden sm:inline">Availability</span>
               <span className="sm:hidden">Avail</span>
@@ -962,12 +962,12 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                 {editingAvailability ? '✓ Done' : '✏️ Edit Mine'}
               </button>
             )}
-            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-[var(--color-text-primary)] cursor-pointer">
               <input
                 type="checkbox"
                 checked={showOtherWorkspaces}
                 onChange={(e) => setShowOtherWorkspaces(e.target.checked)}
-                className="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500"
+                className="rounded bg-[var(--color-bg-tertiary)] border-[var(--color-border)] text-blue-500 focus:ring-blue-500"
               />
               <span className="hidden sm:inline">Other Bands</span>
               <span className="sm:hidden">Others</span>
@@ -1049,24 +1049,24 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
           <div className="flex items-center justify-between">
             <button
               onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-              className="p-2 text-gray-400 hover:text-white"
+              className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
             >
               ← Prev
             </button>
             <div className="flex items-center gap-3">
-              <h3 className="text-lg font-medium text-white">
+              <h3 className="text-lg font-medium text-[var(--color-text-primary)]">
                 {format(currentMonth, 'MMMM yyyy')}
               </h3>
               <button
                 onClick={() => setCurrentMonth(new Date())}
-                className="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 rounded"
+                className="px-2 py-1 text-xs bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded"
               >
                 Today
               </button>
             </div>
             <button
               onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-              className="p-2 text-gray-400 hover:text-white"
+              className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
             >
               Next →
             </button>
@@ -1137,13 +1137,13 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(e, day)}
                     className={`p-2 min-h-[100px] border-t border-[var(--color-border)] cursor-pointer hover:bg-[var(--color-bg-tertiary)]/50 transition-colors ${
-                      !isCurrentMonth ? 'bg-gray-900/70' : ''
+                      !isCurrentMonth ? 'bg-[var(--color-bg-primary)]' : ''
                     } ${isToday(day) ? 'bg-blue-900/20' : ''} ${
                       isDropTarget ? 'bg-green-900/40 ring-2 ring-green-500 ring-inset' : ''
                     } ${editingAvailability ? 'hover:ring-2 hover:ring-green-500/50 hover:ring-inset' : ''}`}
                   >
                     <div className={`text-sm mb-1 flex items-center justify-between ${
-                      isToday(day) ? 'text-blue-400 font-bold' : isCurrentMonth ? 'text-gray-400' : 'text-gray-600'
+                      isToday(day) ? 'text-blue-400 font-bold' : isCurrentMonth ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-text-muted)]'
                     }`}>
                       <span>{format(day, 'd')}</span>
                       {/* My availability indicator */}
@@ -1178,7 +1178,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                           title={gig.isExternal ? `${gig.workspace?.name || 'Other workspace'}` : gig.isLocked ? `${gig.title} (Locked)` : gig.title}
                           className={`text-xs p-1 rounded text-white truncate ${gig.isExternal || (gig.isLocked && !isAdmin) ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} ${getTypeColor(gig.type, gig.isExternal, gig.workspaceId)} ${
                             gig.status === 'CANCELLED' ? 'opacity-50 line-through' : ''
-                          } ${draggingGig?.id === gig.id ? 'opacity-50' : ''} ${gig.isPersonal ? 'border border-dashed border-gray-400' : ''}`}
+                          } ${draggingGig?.id === gig.id ? 'opacity-50' : ''} ${gig.isPersonal ? 'border border-dashed border-[var(--color-border)]' : ''}`}
                         >
                           {gig.isLocked && <span className="mr-1">🔒</span>}
                           {gig.isPersonal && <span className="mr-1">👤</span>}
@@ -1187,7 +1187,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                         </div>
                       );})}
                       {filteredDayGigs.length > 3 && (
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-[var(--color-text-muted)]">
                           +{filteredDayGigs.length - 3} more
                         </div>
                       )}

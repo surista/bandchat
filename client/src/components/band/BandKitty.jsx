@@ -250,7 +250,7 @@ function BandKitty({ workspaceId }) {
         </div>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
           <div className="bg-[var(--color-bg-secondary)] rounded-lg p-3">
             <div className="text-xs text-[var(--color-text-muted)]">Total Income</div>
             <div className="text-lg font-semibold text-green-400">
@@ -358,6 +358,7 @@ function BandKitty({ workspaceId }) {
                             onClick={() => openEditForm(t)}
                             className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] rounded transition-colors"
                             title="Edit"
+                            aria-label="Edit transaction"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -367,6 +368,7 @@ function BandKitty({ workspaceId }) {
                             onClick={() => setDeleteConfirm(t)}
                             className="p-1.5 text-[var(--color-text-muted)] hover:text-red-400 hover:bg-[var(--color-bg-tertiary)] rounded transition-colors"
                             title="Delete"
+                            aria-label="Delete transaction"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -391,8 +393,9 @@ function BandKitty({ workspaceId }) {
       >
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
               <div>
-                <label className="block text-sm text-[var(--color-text-muted)] mb-1">Type</label>
+                <label className="block text-sm text-[var(--color-text-muted)] mb-1" htmlFor="kitty-type">Type</label>
                 <select
+                  id="kitty-type"
                   value={formType}
                   onChange={(e) => setFormType(e.target.value)}
                   className="modal-input w-full"
@@ -407,8 +410,9 @@ function BandKitty({ workspaceId }) {
 
               {formType === 'EXPENSE' && (
                 <div>
-                  <label className="block text-sm text-[var(--color-text-muted)] mb-1">Category</label>
+                  <label className="block text-sm text-[var(--color-text-muted)] mb-1" htmlFor="kitty-category">Category</label>
                   <select
+                    id="kitty-category"
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
                     className="modal-input w-full"
@@ -421,8 +425,9 @@ function BandKitty({ workspaceId }) {
               )}
 
               <div>
-                <label className="block text-sm text-[var(--color-text-muted)] mb-1">Amount ({currencySymbol})</label>
+                <label className="block text-sm text-[var(--color-text-muted)] mb-1" htmlFor="kitty-amount">Amount ({currencySymbol})</label>
                 <input
+                  id="kitty-amount"
                   type="number"
                   step="0.01"
                   min="0"
@@ -435,8 +440,9 @@ function BandKitty({ workspaceId }) {
               </div>
 
               <div>
-                <label className="block text-sm text-[var(--color-text-muted)] mb-1">Description (optional)</label>
+                <label className="block text-sm text-[var(--color-text-muted)] mb-1" htmlFor="kitty-description">Description (optional)</label>
                 <input
+                  id="kitty-description"
                   type="text"
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
@@ -446,8 +452,9 @@ function BandKitty({ workspaceId }) {
               </div>
 
               <div>
-                <label className="block text-sm text-[var(--color-text-muted)] mb-1">Date</label>
+                <label className="block text-sm text-[var(--color-text-muted)] mb-1" htmlFor="kitty-date">Date</label>
                 <input
+                  id="kitty-date"
                   type="date"
                   value={formDate}
                   onChange={(e) => setFormDate(e.target.value)}
@@ -482,8 +489,9 @@ function BandKitty({ workspaceId }) {
       >
             <form onSubmit={handleSaveSettings} className="p-4 space-y-4">
               <div>
-                <label className="block text-sm text-[var(--color-text-muted)] mb-1">Currency</label>
+                <label className="block text-sm text-[var(--color-text-muted)] mb-1" htmlFor="kitty-currency">Currency</label>
                 <select
+                  id="kitty-currency"
                   value={settingsCurrency}
                   onChange={(e) => setSettingsCurrency(e.target.value)}
                   className="modal-input w-full"
@@ -497,8 +505,9 @@ function BandKitty({ workspaceId }) {
               </div>
 
               <div>
-                <label className="block text-sm text-[var(--color-text-muted)] mb-1">Starting Balance ({currencySymbol})</label>
+                <label className="block text-sm text-[var(--color-text-muted)] mb-1" htmlFor="kitty-starting-balance">Starting Balance ({currencySymbol})</label>
                 <input
+                  id="kitty-starting-balance"
                   type="number"
                   step="0.01"
                   value={settingsBalance}
@@ -512,8 +521,9 @@ function BandKitty({ workspaceId }) {
               </div>
 
               <div>
-                <label className="block text-sm text-[var(--color-text-muted)] mb-1">Balance As Of Date</label>
+                <label className="block text-sm text-[var(--color-text-muted)] mb-1" htmlFor="kitty-balance-date">Balance As Of Date</label>
                 <input
+                  id="kitty-balance-date"
                   type="date"
                   value={settingsDate}
                   onChange={(e) => setSettingsDate(e.target.value)}

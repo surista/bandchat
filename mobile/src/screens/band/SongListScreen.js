@@ -104,6 +104,7 @@ export default function SongListScreen({ navigation, route }) {
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
             accessibilityLabel="Add song"
+            accessibilityHint="Create a new song"
           >
             <Ionicons name="add" size={28} color={colors.primary} />
           </TouchableOpacity>
@@ -253,6 +254,7 @@ export default function SongListScreen({ navigation, route }) {
       activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityLabel={`${item.title}${item.artist ? ` by ${item.artist}` : ''}. Long press for options`}
+      accessibilityHint="View song details"
     >
       <Text style={[styles.songTitle, { color: colors.textPrimary }]} numberOfLines={1}>
         {item.title}
@@ -331,6 +333,7 @@ export default function SongListScreen({ navigation, route }) {
           activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel={`Sort by ${SORT_OPTIONS.find(o => o.key === sortBy)?.label}`}
+          accessibilityHint="Change sort order"
         >
           <Text style={[styles.sortButtonText, { color: colors.textSecondary }]}>
             {SORT_OPTIONS.find(o => o.key === sortBy)?.label}

@@ -689,6 +689,7 @@ export default function ChannelListScreen({ navigation, route }) {
           activeOpacity={0.6}
           accessibilityRole="button"
           accessibilityLabel={`${item.label}, ${isCollapsed ? 'collapsed' : 'expanded'}`}
+          accessibilityHint="Open section"
         >
           <Ionicons name={item.icon} size={18} color={colors.channelListText} style={styles.bandCategoryIcon} />
           <Text style={[styles.bandCategoryLabel, { color: colors.channelListText }]}>{item.label}</Text>
@@ -704,6 +705,7 @@ export default function ChannelListScreen({ navigation, route }) {
           activeOpacity={0.6}
           accessibilityRole="button"
           accessibilityLabel={item.label}
+          accessibilityHint="Open section"
         >
           <Ionicons name={item.icon} size={16} color={colors.channelListTextBold} style={styles.bandItemIcon} />
           <Text style={[styles.bandItemLabel, { color: colors.channelListTextBold }]}>{item.label}</Text>

@@ -240,7 +240,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
             </div>
           )}
           {error && (
-            <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded-lg mb-4">
+            <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded-lg mb-4" role="alert">
               {error}
             </div>
           )}
@@ -248,10 +248,11 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
           <form onSubmit={handleSubmit} className={readOnly ? 'pointer-events-none opacity-75' : ''}>
             <div className="space-y-4">
               <div className="relative">
-                <label className="modal-label">
+                <label className="modal-label" htmlFor="gig-title">
                   Title <span className="text-red-400">*</span>
                 </label>
                 <input
+                  id="gig-title"
                   type="text"
                   value={formData.title}
                   onChange={(e) => handleChange('title', e.target.value)}
@@ -289,7 +290,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="modal-label">Type</label>
                   <select
@@ -346,7 +347,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="relative">
                   <label className="modal-label">Start Time</label>
                   <input
@@ -418,7 +419,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
 
               {/* Optional Gig Times (Sound Check, Event Start, Performance) */}
               {formData.type === 'GIG' && (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="relative">
                     <label className="modal-label text-xs">Sound Check</label>
                     <input
@@ -724,10 +725,11 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
               })()}
 
               <div>
-                <label className="modal-label">Venue</label>
+                <label className="modal-label" htmlFor="gig-venue">Venue</label>
                 {venues.length > 0 && !customVenue ? (
                   <div className="flex gap-2">
                     <select
+                      id="gig-venue"
                       value={selectedVenueId || ''}
                       onChange={(e) => {
                         const id = e.target.value;
@@ -760,6 +762,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                 ) : (
                   <div className="relative">
                     <input
+                      id="gig-venue"
                       type="text"
                       value={formData.venue}
                       onChange={(e) => handleChange('venue', e.target.value)}
@@ -805,8 +808,9 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
               </div>
 
               <div>
-                <label className="modal-label">Address</label>
+                <label className="modal-label" htmlFor="gig-address">Address</label>
                 <input
+                  id="gig-address"
                   type="text"
                   value={formData.address}
                   onChange={(e) => handleChange('address', e.target.value)}
@@ -896,8 +900,9 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
 
               {formData.type === 'GIG' && (
                 <div>
-                  <label className="modal-label">Pay ({getCurrencySymbol(workspace?.currency)})</label>
+                  <label className="modal-label" htmlFor="gig-pay">Pay ({getCurrencySymbol(workspace?.currency)})</label>
                   <input
+                    id="gig-pay"
                     type="number"
                     value={formData.pay}
                     onChange={(e) => handleChange('pay', e.target.value)}
@@ -910,8 +915,9 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
               )}
 
               <div>
-                <label className="modal-label">Notes</label>
+                <label className="modal-label" htmlFor="gig-notes">Notes</label>
                 <textarea
+                  id="gig-notes"
                   value={formData.notes}
                   onChange={(e) => handleChange('notes', e.target.value)}
                   className="modal-input"

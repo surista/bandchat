@@ -38,6 +38,7 @@ export default function VenuesScreen({ navigation, route }) {
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           accessibilityRole="button"
           accessibilityLabel="Add venue"
+          accessibilityHint="Create a new venue"
         >
           <Ionicons name="add" size={28} color={colors.primary} />
         </TouchableOpacity>
@@ -91,6 +92,7 @@ export default function VenuesScreen({ navigation, route }) {
         activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={`${item.name}${item.city ? `, ${item.city}` : ''}`}
+        accessibilityHint="View venue details"
       >
         <View style={styles.venueHeader}>
           <Ionicons name="location" size={20} color={colors.primary} style={styles.venueIcon} />

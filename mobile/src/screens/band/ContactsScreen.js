@@ -97,6 +97,7 @@ export default function ContactsScreen({ navigation, route }) {
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           accessibilityRole="button"
           accessibilityLabel="Add contact"
+          accessibilityHint="Create a new contact"
         >
           <Ionicons name="add" size={28} color={colors.primary} />
         </TouchableOpacity>
@@ -238,6 +239,7 @@ export default function ContactsScreen({ navigation, route }) {
         activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={`${item.name}. Long press for options`}
+        accessibilityHint="View contact details"
       >
         <View style={styles.contactHeader}>
           <Text style={[styles.contactName, { color: colors.textPrimary }]}>{item.name}</Text>

@@ -233,6 +233,7 @@ function ContactCard({ contact, onEdit, onDelete }) {
             onClick={onEdit}
             className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] rounded"
             title="Edit"
+            aria-label="Edit contact"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -242,6 +243,7 @@ function ContactCard({ contact, onEdit, onDelete }) {
             onClick={onDelete}
             className="p-1.5 text-[var(--color-text-muted)] hover:text-red-400 hover:bg-[var(--color-bg-tertiary)] rounded"
             title="Delete"
+            aria-label="Delete contact"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -312,15 +314,16 @@ function ContactForm({ contact, onSave, onClose }) {
     <Modal isOpen={true} onClose={onClose} title={contact ? 'Edit Contact' : 'Add Contact'} maxWidth="max-w-lg">
         <div className="modal-body">
           {error && (
-            <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded-lg mb-4">
+            <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded-lg mb-4" role="alert">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="modal-label">Name <span className="text-red-400">*</span></label>
+              <label className="modal-label" htmlFor="contact-name">Name <span className="text-red-400">*</span></label>
               <input
+                id="contact-name"
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
@@ -331,8 +334,9 @@ function ContactForm({ contact, onSave, onClose }) {
             </div>
 
             <div>
-              <label className="modal-label">Category</label>
+              <label className="modal-label" htmlFor="contact-category">Category</label>
               <select
+                id="contact-category"
                 value={formData.category}
                 onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
                 className="modal-input"
@@ -343,10 +347,11 @@ function ContactForm({ contact, onSave, onClose }) {
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="modal-label">Email</label>
+                <label className="modal-label" htmlFor="contact-email">Email</label>
                 <input
+                  id="contact-email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
@@ -355,8 +360,9 @@ function ContactForm({ contact, onSave, onClose }) {
                 />
               </div>
               <div>
-                <label className="modal-label">Phone</label>
+                <label className="modal-label" htmlFor="contact-phone">Phone</label>
                 <input
+                  id="contact-phone"
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
@@ -367,8 +373,9 @@ function ContactForm({ contact, onSave, onClose }) {
             </div>
 
             <div>
-              <label className="modal-label">Website</label>
+              <label className="modal-label" htmlFor="contact-website">Website</label>
               <input
+                id="contact-website"
                 type="url"
                 value={formData.website}
                 onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
@@ -378,8 +385,9 @@ function ContactForm({ contact, onSave, onClose }) {
             </div>
 
             <div>
-              <label className="modal-label">Address</label>
+              <label className="modal-label" htmlFor="contact-address">Address</label>
               <input
+                id="contact-address"
                 type="text"
                 value={formData.address}
                 onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
@@ -389,8 +397,9 @@ function ContactForm({ contact, onSave, onClose }) {
             </div>
 
             <div>
-              <label className="modal-label">Notes</label>
+              <label className="modal-label" htmlFor="contact-notes">Notes</label>
               <textarea
+                id="contact-notes"
                 value={formData.notes}
                 onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                 className="modal-input"

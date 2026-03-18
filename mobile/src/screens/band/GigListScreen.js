@@ -169,6 +169,7 @@ export default function GigListScreen({ navigation, route }) {
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
             accessibilityLabel="Create event"
+            accessibilityHint="Create a new event"
           >
             <Ionicons name="add" size={28} color={colors.primary} />
           </TouchableOpacity>
@@ -379,6 +380,7 @@ export default function GigListScreen({ navigation, route }) {
         activeOpacity={isOther ? 1 : 0.7}
         accessibilityRole="button"
         accessibilityLabel={`${item.title}, ${item.date ? formatGigDate(item.date) : 'No date'}${item.venue ? `, at ${item.venue}` : ''}`}
+        accessibilityHint="View event details"
       >
         {/* Color stripe */}
         <View style={[styles.typeStripe, { backgroundColor: typeColor }]} />
@@ -420,6 +422,7 @@ export default function GigListScreen({ navigation, route }) {
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 accessibilityRole="button"
                 accessibilityLabel={`Set availability: ${statusInfo?.label || 'Not set'}`}
+                accessibilityHint="Tap to cycle availability status"
               >
                 <Text style={[styles.availabilityText, { color: statusInfo?.color || colors.textSecondary }]}>
                   {statusInfo ? `${statusInfo.icon} ${statusInfo.label}` : '+ Avail'}
