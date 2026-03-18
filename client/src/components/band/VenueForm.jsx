@@ -13,7 +13,7 @@ function VenueForm({ venue, workspaceId, onSave, onClose }) {
     phone: venue?.phone || '',
     email: venue?.email || '',
     website: venue?.website || '',
-    capacity: venue?.capacity || '',
+    capacity: venue?.capacity != null ? String(venue.capacity) : '',
     notes: venue?.notes || '',
     imageUrl: venue?.imageUrl || ''
   });

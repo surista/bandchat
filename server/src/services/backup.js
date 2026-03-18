@@ -805,6 +805,31 @@ export async function restoreFromBackup(key, onProgress) {
       await tx.channel.update({ where: { id: ch.id }, data: { pinnedSetlistId: ch.pinnedSetlistId } });
     }
 
+    // --- Venues (before gigs — FK dependency) ---
+    if (data.venues?.length) {
+      emit('restoring', `Inserting ${data.venues.length} venues...`);
+      await tx.venue.createMany({
+        data: data.venues.map(v => ({
+          id: v.id,
+          name: v.name,
+          address: v.address || null,
+          city: v.city || null,
+          imageUrl: v.imageUrl || null,
+          phone: v.phone || null,
+          email: v.email || null,
+          website: v.website || null,
+          capacity: v.capacity || null,
+          notes: v.notes || null,
+          workspaceId: v.workspaceId,
+          createdById: v.createdById || null,
+          removedCreatorName: v.removedCreatorName || null,
+          createdAt: v.createdAt ? new Date(v.createdAt) : new Date(),
+          updatedAt: v.updatedAt ? new Date(v.updatedAt) : new Date(),
+        })),
+        skipDuplicates: true,
+      });
+    }
+
     // --- Gigs ---
     emit('restoring', `Inserting ${data.gigs.length} gigs...`);
     for (const g of data.gigs) {
@@ -820,6 +845,7 @@ export async function restoreFromBackup(key, onProgress) {
           performanceStartTime: g.performanceStartTime || null,
           venue: g.venue || null,
           address: g.address || null,
+          venueId: g.venueId || null,
           notes: g.notes || null,
           pay: g.pay || null,
           status: g.status || 'SCHEDULED',
@@ -2238,6 +2264,31 @@ export async function restoreWorkspaceBackup(key, onProgress) {
         await tx.channel.update({ where: { id: ch.id }, data: { pinnedSetlistId: ch.pinnedSetlistId } });
       }
 
+      // --- Venues (before gigs — FK dependency) ---
+      if (data.venues?.length) {
+        emit('restoring', `Inserting ${data.venues.length} venues...`);
+        await tx.venue.createMany({
+          data: data.venues.map(v => ({
+            id: v.id,
+            name: v.name,
+            address: v.address || null,
+            city: v.city || null,
+            imageUrl: v.imageUrl || null,
+            phone: v.phone || null,
+            email: v.email || null,
+            website: v.website || null,
+            capacity: v.capacity || null,
+            notes: v.notes || null,
+            workspaceId: wid,
+            createdById: resolveUser(v.createdById),
+            removedCreatorName: resolveUser(v.createdById) ? (v.removedCreatorName || null) : (v.removedCreatorName || getRemovedName(v.createdById)),
+            createdAt: v.createdAt ? new Date(v.createdAt) : new Date(),
+            updatedAt: v.updatedAt ? new Date(v.updatedAt) : new Date(),
+          })),
+          skipDuplicates: true,
+        });
+      }
+
       // --- Gigs ---
       emit('restoring', `Inserting ${data.gigs.length} gigs...`);
       for (const g of data.gigs) {
@@ -2250,6 +2301,7 @@ export async function restoreWorkspaceBackup(key, onProgress) {
             eventStartTime: g.eventStartTime || null,
             performanceStartTime: g.performanceStartTime || null,
             venue: g.venue || null, address: g.address || null,
+            venueId: g.venueId || null,
             notes: g.notes || null, pay: g.pay || null,
             status: g.status || 'SCHEDULED', isLocked: g.isLocked || false,
             isPersonal: g.isPersonal || false,

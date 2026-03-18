@@ -1,9 +1,12 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 
 const router = express.Router();
+
+router.use(apiLimiter);
 
 const VENUE_INCLUDE = {
   createdBy: {
@@ -45,6 +48,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
     if (phone && phone.length > 50) return res.status(400).json({ error: 'Phone must be 50 characters or less' });
     if (email && email.length > 255) return res.status(400).json({ error: 'Email must be 255 characters or less' });
     if (website && website.length > 500) return res.status(400).json({ error: 'Website must be 500 characters or less' });
+    if (website && !/^https?:\/\//i.test(website)) return res.status(400).json({ error: 'Website must start with http:// or https://' });
     if (notes && notes.length > 2000) return res.status(400).json({ error: 'Notes must be 2,000 characters or less' });
     if (capacity !== undefined && capacity !== null && (typeof capacity !== 'number' || capacity < 0)) {
       return res.status(400).json({ error: 'Capacity must be a positive number' });
@@ -139,6 +143,7 @@ router.put('/:venueId', authenticate, async (req, res) => {
     if (phone && phone.length > 50) return res.status(400).json({ error: 'Phone must be 50 characters or less' });
     if (email && email.length > 255) return res.status(400).json({ error: 'Email must be 255 characters or less' });
     if (website && website.length > 500) return res.status(400).json({ error: 'Website must be 500 characters or less' });
+    if (website && !/^https?:\/\//i.test(website)) return res.status(400).json({ error: 'Website must start with http:// or https://' });
     if (notes && notes.length > 2000) return res.status(400).json({ error: 'Notes must be 2,000 characters or less' });
     if (capacity !== undefined && capacity !== null && (typeof capacity !== 'number' || capacity < 0)) {
       return res.status(400).json({ error: 'Capacity must be a positive number' });

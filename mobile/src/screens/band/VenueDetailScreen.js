@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
@@ -38,6 +39,7 @@ export default function VenueDetailScreen({ navigation, route }) {
   const [editing, setEditing] = useState(!!isNew);
   const [saving, setSaving] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [adminLoaded, setAdminLoaded] = useState(false);
 
   // Form fields
   const [name, setName] = useState('');
@@ -48,13 +50,15 @@ export default function VenueDetailScreen({ navigation, route }) {
   const [website, setWebsite] = useState('');
   const [capacity, setCapacity] = useState('');
   const [notes, setNotes] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [imageUploading, setImageUploading] = useState(false);
 
   // Check admin status
   useEffect(() => {
     api.getWorkspace(workspaceId).then(ws => {
       const membership = ws.members?.find(m => m.userId === user?.id);
       setIsAdmin(membership?.role === 'ADMIN');
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => setAdminLoaded(true));
   }, [workspaceId, user?.id]);
 
   const populateForm = useCallback((data) => {
@@ -65,8 +69,9 @@ export default function VenueDetailScreen({ navigation, route }) {
     setPhone(data.phone || '');
     setEmail(data.email || '');
     setWebsite(data.website || '');
-    setCapacity(data.capacity ? String(data.capacity) : '');
+    setCapacity(data.capacity != null ? String(data.capacity) : '');
     setNotes(data.notes || '');
+    setImageUrl(data.imageUrl || '');
   }, []);
 
   const loadVenue = useCallback(async () => {
@@ -86,7 +91,7 @@ export default function VenueDetailScreen({ navigation, route }) {
     if (!isNew) loadVenue();
   }, [isNew, loadVenue]);
 
-  const canEdit = isAdmin || venue?.createdById === user?.id || isNew;
+  const canEdit = isNew || (adminLoaded && (isAdmin || venue?.createdById === user?.id));
 
   useLayoutEffect(() => {
     if (isNew) {
@@ -137,6 +142,7 @@ export default function VenueDetailScreen({ navigation, route }) {
         website: website.trim() || null,
         capacity: capacityNum,
         notes: notes.trim() || null,
+        imageUrl: imageUrl || null,
       };
 
       if (isNew) {
@@ -160,7 +166,7 @@ export default function VenueDetailScreen({ navigation, route }) {
     } finally {
       setSaving(false);
     }
-  }, [name, address, city, phone, email, website, capacity, notes, isNew, workspaceId, venueId, navigation, populateForm, showToast]);
+  }, [name, address, city, phone, email, website, capacity, notes, imageUrl, isNew, workspaceId, venueId, navigation, populateForm, showToast]);
 
   const handleCancel = useCallback(() => {
     if (isNew) {
@@ -170,6 +176,28 @@ export default function VenueDetailScreen({ navigation, route }) {
       setEditing(false);
     }
   }, [isNew, venue, navigation, populateForm]);
+
+  const handlePickImage = useCallback(async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    setImageUploading(true);
+    try {
+      const filename = asset.fileName || 'venue.jpg';
+      const mimeType = asset.mimeType || 'image/jpeg';
+      const uploaded = await api.uploadFile(asset.uri, filename, mimeType, workspaceId);
+      setImageUrl(uploaded.url);
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to upload image');
+    } finally {
+      setImageUploading(false);
+    }
+  }, [workspaceId]);
 
   const handleDelete = useCallback(() => {
     mediumImpact();
@@ -334,6 +362,43 @@ export default function VenueDetailScreen({ navigation, route }) {
             multiline
             accessibilityLabel="Notes"
           />
+
+          {/* Image upload */}
+          <Text style={[styles.label, { color: colors.textSecondary }]}>Venue Image</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            {imageUrl ? (
+              <View style={{ position: 'relative' }}>
+                <Image source={{ uri: imageUrl }} style={{ width: 64, height: 64, borderRadius: 8 }} />
+                <TouchableOpacity
+                  onPress={() => setImageUrl('')}
+                  style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: 11, backgroundColor: '#dc2626', alignItems: 'center', justifyContent: 'center' }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Remove image"
+                >
+                  <Ionicons name="close" size={14} color="#ffffff" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={{ width: 64, height: 64, borderRadius: 8, backgroundColor: colors.bgTertiary, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
+              </View>
+            )}
+            <TouchableOpacity
+              onPress={handlePickImage}
+              disabled={imageUploading}
+              style={[styles.formButton, { backgroundColor: colors.bgTertiary, flex: 0, paddingHorizontal: 16 }]}
+              accessibilityRole="button"
+              accessibilityLabel={imageUrl ? 'Change venue image' : 'Upload venue image'}
+            >
+              {imageUploading ? (
+                <ActivityIndicator size="small" color={colors.textPrimary} />
+              ) : (
+                <Text style={[styles.formButtonText, { color: colors.textPrimary }]}>
+                  {imageUrl ? 'Change Image' : 'Upload Image'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
 
           {/* Save / Cancel buttons */}
           <View style={styles.formActions}>

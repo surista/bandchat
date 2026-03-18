@@ -1059,7 +1059,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
               </h3>
               <button
                 onClick={() => setCurrentMonth(new Date())}
-                className="px-2 py-1 text-xs bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded"
+                className="px-2 py-1 text-xs bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] rounded"
               >
                 Today
               </button>
@@ -1143,7 +1143,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                     } ${editingAvailability ? 'hover:ring-2 hover:ring-green-500/50 hover:ring-inset' : ''}`}
                   >
                     <div className={`text-sm mb-1 flex items-center justify-between ${
-                      isToday(day) ? 'text-blue-400 font-bold' : isCurrentMonth ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-text-muted)]'
+                      isToday(day) ? 'text-blue-400 font-bold' : isCurrentMonth ? 'text-[var(--color-text-secondary)]' : 'text-[var(--color-text-muted)] opacity-40'
                     }`}>
                       <span>{format(day, 'd')}</span>
                       {/* My availability indicator */}
