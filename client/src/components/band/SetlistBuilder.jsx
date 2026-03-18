@@ -209,7 +209,7 @@ function SetColumn({
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-blue-400 font-bold">
-              📋 {set.breakItem?.label || `Set ${setIndex + 1}`}
+              📋 Set {setIndex + 1}
             </h3>
             {timing && (
               <div className="text-cyan-300 text-xs mt-0.5">
@@ -769,9 +769,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
     const bandName = workspaceName || '';
 
     const columnsHtml = sets.map((set, setIndex) => {
-      const setLabel = set.breakItem
-        ? (escapeHtml(set.breakItem.label) || `Set ${setIndex + 1}`)
-        : (numSets > 1 ? `Set ${setIndex + 1}` : '');
+      const setLabel = numSets > 1 ? `Set ${setIndex + 1}` : '';
       const setTimeStr = setTimings?.[setIndex]
         ? ` <span class="set-time">${formatTime12h(setTimings[setIndex].start)} – ${formatTime12h(setTimings[setIndex].end)}</span>`
         : '';
