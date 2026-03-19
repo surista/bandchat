@@ -213,7 +213,7 @@ function AppContent() {
       <ToastProvider>
         <OfflineBanner />
         <RootNavigator />
-        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} backgroundColor="transparent" translucent />
       </ToastProvider>
     </NavigationContainer>
   );

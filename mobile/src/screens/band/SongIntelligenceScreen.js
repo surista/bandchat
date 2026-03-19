@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
   analysisSection: { marginBottom: 8 },
   analysisGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   analysisCard: { width: '48%', flexGrow: 1, borderRadius: 10, padding: 12, alignItems: 'center' },
-  analysisValue: { fontSize: 20, fontWeight: '800' },
+  analysisValue: { fontSize: 20, fontWeight: '700' },
   analysisLabel: { fontSize: 12, fontWeight: '600', opacity: 0.8, marginTop: 2 },
   topArtists: { marginTop: 12 },
   artistChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
   searchLinkText: { fontSize: 13, fontWeight: '600' },
   // Score badge
   scoreBadge: { width: 40, height: 40, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  scoreText: { fontSize: 15, fontWeight: '800' },
+  scoreText: { fontSize: 15, fontWeight: '700' },
   // Mashups
   songSelector: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 12, marginBottom: 12 },
   sourceInfo: { borderRadius: 10, padding: 12, marginBottom: 12 },
@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
   optimizeResult: { borderRadius: 10, padding: 14 },
   flowScoreRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   flowLabel: { fontSize: 13, fontWeight: '600', textTransform: 'uppercase' },
-  flowScore: { fontSize: 24, fontWeight: '800' },
+  flowScore: { fontSize: 24, fontWeight: '700' },
   flowTip: { fontSize: 13, marginBottom: 12 },
   optimizedRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, gap: 10 },
   orderBadge: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },

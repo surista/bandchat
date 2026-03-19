@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Switch,
   Alert,
   ActivityIndicator,
+  BackHandler,
   KeyboardAvoidingView,
   Platform,
   Share,
@@ -82,6 +83,15 @@ export default function OnboardingWizardScreen({ navigation }) {
       ]
     );
   }, [workspace, navigation]);
+
+  // Android hardware back button
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleClose();
+      return true;
+    });
+    return () => sub.remove();
+  }, [handleClose]);
 
   // --- Step 1: Create workspace ---
   const handleCreateWorkspace = useCallback(async () => {
@@ -472,7 +482,7 @@ export default function OnboardingWizardScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           {showBack ? (

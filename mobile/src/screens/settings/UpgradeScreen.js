@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 26,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   heroDesc: {
     fontSize: 15,
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
   },
   pricingPrice: {
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   pricingDesc: {
     fontSize: 13,

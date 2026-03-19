@@ -269,7 +269,7 @@ export default function VenueDetailScreen({ navigation, route }) {
     return (
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-        behavior="padding"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={100}
       >
         <ScrollView
@@ -594,7 +594,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 16,
   },
-  viewName: { fontSize: 24, fontWeight: '800', marginBottom: 4 },
+  viewName: { fontSize: 24, fontWeight: '700', marginBottom: 4 },
   cityRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 },
   cityText: { fontSize: 15 },
   infoRow: {

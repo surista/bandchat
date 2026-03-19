@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
     padding: 14,
     alignItems: 'center',
   },
-  statValue: { fontSize: 22, fontWeight: '800', marginBottom: 2 },
+  statValue: { fontSize: 22, fontWeight: '700', marginBottom: 2 },
   statLabel: { fontSize: 12, fontWeight: '600', opacity: 0.8 },
   // Sections
   section: { marginTop: 16 },

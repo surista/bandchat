@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minWidth: 90,
   },
-  statValue: { fontSize: 18, fontWeight: '800' },
+  statValue: { fontSize: 18, fontWeight: '700' },
   statLabel: { fontSize: 11, fontWeight: '600', opacity: 0.8, marginTop: 2 },
   // Tabs
   tabRow: {
@@ -499,5 +499,5 @@ const styles = StyleSheet.create({
   recentIcons: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   recentIcon: { fontSize: 14 },
   moreCount: { fontSize: 12, marginLeft: 4 },
-  leaderboardCount: { fontSize: 24, fontWeight: '800' },
+  leaderboardCount: { fontSize: 24, fontWeight: '700' },
 });

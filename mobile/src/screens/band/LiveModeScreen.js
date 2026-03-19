@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
+  BackHandler,
   StyleSheet,
   Platform,
   useWindowDimensions,
@@ -81,6 +82,15 @@ export default function LiveModeScreen({ navigation, route }) {
   const handleClose = useCallback(() => {
     navigation.goBack();
   }, [navigation]);
+
+  // Android hardware back button
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleClose();
+      return true;
+    });
+    return () => sub.remove();
+  }, [handleClose]);
 
   // Compute song counter label
   const songNumber = (() => {
@@ -297,7 +307,7 @@ const styles = StyleSheet.create({
   songTitle: {
     color: '#ffffff',
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: '700',
     textAlign: 'center',
     marginBottom: 6,
   },

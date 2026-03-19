@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  BackHandler,
   StyleSheet,
   Platform,
 } from 'react-native';
@@ -75,6 +76,15 @@ export default function LyricsScreen({ navigation, route }) {
   const handleClose = useCallback(() => {
     navigation.goBack();
   }, [navigation]);
+
+  // Android hardware back button
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      handleClose();
+      return true;
+    });
+    return () => sub.remove();
+  }, [handleClose]);
 
   const increaseFontSize = useCallback(() => {
     setFontSize(prev => Math.min(prev + 2, MAX_FONT_SIZE));

@@ -172,10 +172,12 @@ export function AuthProvider({ children }) {
       const available = await checkBiometricAvailable();
       if (!available) return;
 
-      // Determine label
+      // Determine label (platform-aware)
       const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
       const hasFaceId = types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION);
-      const label = hasFaceId ? 'Face ID' : 'Touch ID';
+      const label = Platform.OS === 'ios'
+        ? (hasFaceId ? 'Face ID' : 'Touch ID')
+        : (hasFaceId ? 'Face Unlock' : 'Fingerprint');
 
       await AsyncStorage.setItem(BIOMETRIC_PROMPT_SHOWN_KEY, 'true');
 

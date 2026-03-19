@@ -637,11 +637,11 @@ const styles = StyleSheet.create({
   // Balance
   balanceHeader: { alignItems: 'center', paddingVertical: 16 },
   balanceLabel: { fontSize: 13, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  balanceValue: { fontSize: 32, fontWeight: '800', marginTop: 4 },
+  balanceValue: { fontSize: 32, fontWeight: '700', marginTop: 4 },
   // Summary
   summaryRow: { flexDirection: 'row', paddingHorizontal: 12, gap: 8, marginBottom: 8 },
   summaryCard: { flex: 1, borderRadius: 10, padding: 12, alignItems: 'center' },
-  summaryValue: { fontSize: 16, fontWeight: '800' },
+  summaryValue: { fontSize: 16, fontWeight: '700' },
   summaryLabel: { fontSize: 12, fontWeight: '600', opacity: 0.8, marginTop: 2 },
   // Filters
   filterRow: { flexDirection: 'row', paddingHorizontal: 12, gap: 6, marginBottom: 8 },
@@ -656,7 +656,7 @@ const styles = StyleSheet.create({
   txDescription: { fontSize: 15, fontWeight: '600' },
   txMeta: { fontSize: 12, marginTop: 2 },
   txCreator: { fontSize: 11, marginTop: 1 },
-  txAmount: { fontSize: 16, fontWeight: '800' },
+  txAmount: { fontSize: 16, fontWeight: '700' },
   txBalance: { fontSize: 11, marginTop: 2 },
   // Empty
   emptyIcon: { fontSize: 40, marginBottom: 12 },

@@ -779,7 +779,7 @@ const styles = StyleSheet.create({
   // List
   listContent: { paddingHorizontal: 12, paddingBottom: 20 },
   monthHeader: { paddingVertical: 10, paddingHorizontal: 4, paddingTop: 16, borderBottomWidth: StyleSheet.hairlineWidth },
-  monthText: { fontSize: 13, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
+  monthText: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
   // Gig card
   gigCard: {
     flexDirection: 'row',
