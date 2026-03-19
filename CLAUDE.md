@@ -2,13 +2,61 @@
 
 This file provides guidance to Claude Code when working with this repository.
 
-## Project Overview
+---
 
-BandChat is a real-time communication and management app for bands - like Slack, but built specifically for musicians. It features channels, direct messages, song/setlist management, calendar scheduling, push notifications, subscriptions, and a native mobile app.
+## Design & Development Standards (Reusable Across Projects)
 
-## Build Commands
+> Copy this section into any project's CLAUDE.md to enforce consistent quality standards.
 
-### Client (React frontend)
+### Design Philosophy
+
+UI/UX quality is the top priority. Every screen, every interaction, every pixel should feel intentional and polished. No placeholder UI, no "good enough" — every commit should look ready to ship.
+
+### iOS / Mobile Standards
+
+Follow the [Apple Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/) strictly. When in doubt, do what a native Apple app would do.
+
+- **Native patterns first**: Use platform-native components (NavigationStack, TabView, sheets, alerts) over custom implementations. Never build a custom control when a system one exists.
+- **SF Symbols**: Use SF Symbols for all icons — no third-party icon libraries.
+- **Typography**: Use the system font stack. Support Dynamic Type with `maxFontSizeMultiplier` on all text. Test that layouts don't break at large accessibility sizes.
+- **Layout**: Respect safe areas. Use standard margins (16pt). Design adaptive layouts that work across all iPhone sizes and iPad (regular/compact width). Use SwiftUI/Auto Layout to handle orientation and multitasking.
+- **Touch targets**: Every interactive element must be at least 44×44pt.
+- **Haptic feedback**: Use context-appropriate haptics (selection, light/medium/heavy impact, success, warning, error). Haptics should feel meaningful, not gratuitous.
+- **Animations**: Use system animation curves and spring physics. Transitions should feel physically natural. Prefer `LayoutAnimation` and system-provided transitions over manual animation.
+- **Dark Mode**: Full support required. Test every screen in both modes. Use semantic/system colors wherever possible.
+- **Accessibility**: VoiceOver labels on all interactive elements. Group related content logically. Ensure sufficient color contrast. Never rely on color alone to convey meaning.
+- **States**: Every data-driven view must handle loading, empty, error, and populated states. Empty states should include a clear CTA.
+- **Navigation**: Follow iOS conventions — large titles where appropriate, standard back buttons, swipe-to-go-back, modal presentation for focused tasks.
+- **Keyboard handling**: Use `KeyboardAvoidingView` or equivalent on all input screens. Inputs should never be obscured by the keyboard.
+
+### Web / PWA Standards
+
+Build for a professional, clean, fully responsive experience across all screen sizes.
+
+- **Responsive first**: Every layout must work seamlessly from 320px mobile to ultrawide desktop. Use fluid grids, relative units, and breakpoints. Test at common breakpoints (375, 768, 1024, 1440).
+- **Reactive UI**: All interactions should feel immediate. Use optimistic updates, loading skeletons, and smooth transitions. No jarring layout shifts.
+- **Clean and professional**: Restrained, purposeful design. Consistent spacing, alignment, and typography. Avoid visual clutter.
+- **Progressive enhancement**: Core functionality must work without JavaScript where feasible. Offline support via Service Worker for PWAs.
+- **Performance**: Minimize layout shifts (CLS). Lazy-load non-critical content. Keep bundle sizes lean. Aim for 90+ Lighthouse scores.
+- **Accessibility (web)**: Semantic HTML, ARIA labels where needed, keyboard navigation for all interactive elements, visible focus indicators, sufficient contrast ratios (WCAG AA minimum).
+- **Cross-browser**: Test in Safari, Chrome, and Firefox. Don't rely on vendor-specific features without fallbacks.
+
+### General Code Quality
+
+- **Error handling**: Non-critical errors should never block the user. Surface errors gracefully with clear messaging and recovery paths.
+- **Consistency**: Follow existing code patterns in the project. Check neighboring files before introducing new patterns.
+- **Security**: Sanitize all user input. Validate on both client and server. Use secure storage for sensitive data.
+- **Commits**: Clear, descriptive commit messages. No Co-Authored-By lines.
+
+---
+
+## Project: BandChat
+
+BandChat is a real-time communication and management app for bands — like Slack, but built specifically for musicians. It features channels, direct messages, song/setlist management, calendar scheduling, push notifications, subscriptions, and a native mobile app.
+
+### Build Commands
+
+#### Client (React frontend)
 ```bash
 cd client
 npm run dev          # Start Vite dev server (port 5173)
@@ -17,7 +65,7 @@ npm run preview      # Preview production build
 npm run bump:patch   # Increment patch version (updates all 3 package.json + app.config.js)
 ```
 
-### Server (Express backend)
+#### Server (Express backend)
 ```bash
 cd server
 npm run dev          # Start with nodemon (hot reload, port 3001)
@@ -28,7 +76,7 @@ npm run db:migrate   # Run migrations
 npm run db:studio    # Open Prisma Studio
 ```
 
-### Mobile (Expo/React Native)
+#### Mobile (Expo/React Native)
 ```bash
 cd mobile
 npx expo start       # Start Expo dev server
@@ -38,9 +86,9 @@ eas build --platform ios --profile production    # Build iOS for TestFlight/App 
 eas build --platform android --profile production # Build Android for Play Store
 ```
 
-## Code Architecture
+### Code Architecture
 
-### Project Structure
+#### Project Structure
 ```
 bandchat/
 ├── client/                     # React web frontend
@@ -159,7 +207,7 @@ auth, channels, channelGroups, messages, workspaces, songs, setlists, gigs, band
 - **Database backup** — Daily to R2 with verification (60s after start, then every 24h). Retention: 7 daily + 4 weekly
 - **Soft-delete purge** — Users/workspaces with `deletedAt` > 30 days are permanently deleted daily (2min after start, then every 24h). Users are anonymized before hard delete; workspace R2 files are cleaned up
 
-## Environment Variables
+### Environment Variables
 
 See README.md for full list. Required:
 - `DATABASE_URL` - PostgreSQL connection string
@@ -172,7 +220,7 @@ See README.md for full list. Required:
 
 Legacy (still accepted for existing URLs): `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_UPLOAD_PRESET`
 
-## File Storage (Cloudflare R2)
+### File Storage (Cloudflare R2)
 
 - New uploads go to Cloudflare R2 via `server/src/lib/storage.js` (S3-compatible API)
 - Legacy Cloudinary URLs still work — URL validation accepts both domains (`server/src/lib/validateUrl.js`)
@@ -183,49 +231,49 @@ Legacy (still accepted for existing URLs): `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_
 - Orphan detection: admin dashboard can scan for R2 files with no matching DB record
 - Admin endpoints: `/api/admin/storage/stats`, `/api/admin/storage/orphans`, `/api/admin/storage/cleanup`, `/api/admin/storage/recalculate`
 
-## Soft-Delete System
+### Soft-Delete System
 
 Users and workspaces are soft-deleted with a 30-day grace period before permanent removal.
 
-### How It Works
+#### How It Works
 - **Prisma middleware** (`server/src/lib/prisma.js`) auto-injects `deletedAt: null` into all User/Workspace queries — no changes needed in 40+ query locations
 - **Bypass**: Any query that explicitly includes `deletedAt` in its where clause (e.g. `{ deletedAt: { not: null } }`) skips the auto-filter — used by admin routes
 - `findUnique` calls are transparently converted to `findFirst` with the `deletedAt: null` filter added
 
-### User Deletion Flow
+#### User Deletion Flow
 1. User requests account deletion → `deletedAt` set, refresh tokens revoked, force logout
 2. User cannot log in (auth middleware checks `deletedAt`)
 3. Messages and content remain intact during grace period (author info preserved)
 4. After 30 days: messages anonymized (`removedUserName` set, `authorId` nulled), user hard-deleted
 5. System admin can restore or purge early from the admin dashboard
 
-### Workspace Deletion Flow
+#### Workspace Deletion Flow
 1. Admin deletes workspace → `deletedAt` set, `workspace:deleted` socket event emitted
 2. Workspace hidden from all queries (middleware filter)
 3. After 30 days: R2 files cleaned up, workspace cascade-deleted
 4. System admin can restore or purge early from the admin dashboard
 
-### Admin Endpoints
+#### Admin Endpoints
 - `GET /api/admin/deleted` — List soft-deleted users and workspaces with days remaining
 - `POST /api/admin/users/:id/restore` — Restore a soft-deleted user
 - `POST /api/admin/workspaces/:id/restore` — Restore a soft-deleted workspace
 - `DELETE /api/admin/users/:id/purge` — Permanently delete immediately
 - `DELETE /api/admin/workspaces/:id/purge` — Permanently delete immediately (with R2 cleanup)
 
-## Deployment
+### Deployment
 
 - **Server**: Railway (Node.js service, auto-deploys from `main`)
 - **Client**: Vercel (static site, auto-deploys from `main`)
 - **Database**: Railway PostgreSQL
 - **Mobile**: EAS Build (Expo Application Services) for iOS/Android
 
-## Git Commit Rules
+### Git Commit Rules
 
 - NEVER add "Co-Authored-By" lines to commits
 - Keep commit messages short and descriptive
 - Always prefix with version number (e.g. "v1.04.48 Add soft-delete")
 
-## Admin Roles
+### Admin Roles
 
 BandChat has two distinct admin concepts:
 
@@ -239,7 +287,7 @@ BandChat has two distinct admin concepts:
 - Workspace admin routes use `isWorkspaceAdmin` middleware
 - The two roles are independent: a system admin is not automatically a workspace admin (and vice versa)
 
-### Admin Dashboard Tabs
+#### Admin Dashboard Tabs
 1. **Overview** — User, workspace, message counts with 7d/30d trends, active users, auth providers
 2. **Users** — Searchable user list, detail modal, toggle system admin
 3. **Workspaces** — Searchable workspace list with member/channel/message/storage counts
@@ -247,7 +295,7 @@ BandChat has two distinct admin concepts:
 5. **Backups** — List/download/restore backups, manual backup trigger
 6. **Deleted** — Soft-deleted users/workspaces with restore and purge actions
 
-## Subscription System
+### Subscription System
 
 - **Plan model**: Per-workspace FREE/PRO, `getEffectivePlan()` checks expiry at read time
 - **Limits**: `server/src/lib/planLimits.js` defines per-plan limits (storage, members, songs, etc.)
@@ -256,7 +304,7 @@ BandChat has two distinct admin concepts:
 - **Server**: `server/src/lib/revenuecat.js` helper, activate endpoint + webhook in `subscriptions.js`
 - **Grandfathered**: Existing workspaces set to PRO (`planSource: MANUAL`, `planExpiresAt: null`)
 
-## Development Notes
+### Development Notes
 
 - CSS should go in `/client/styles/` CSS files
 - JavaScript code in `/client/src/` and `/server/src/`
@@ -268,7 +316,7 @@ BandChat has two distinct admin concepts:
 - Bundle splitting: auth/legal routes lazy-loaded via `lazyRetry()` in App.jsx
 - Message virtualization: 150-message DOM cap
 
-## Web + Mobile Parity
+### Web + Mobile Parity
 
 **IMPORTANT:** The web client (`client/`) and mobile app (`mobile/`) are parallel frontends for the same backend. When making changes, ALWAYS consider whether the change applies to both platforms:
 
@@ -279,11 +327,11 @@ BandChat has two distinct admin concepts:
 
 Before marking a task as complete, ask yourself: "Does the other platform need this change too?" If the answer is yes or maybe, apply it to both in the same commit.
 
-## Platform-Specific Features
+### Platform-Specific Features
 
 While most features should exist on both web and mobile, some features make sense on only one platform due to device capabilities or use context.
 
-### Desktop/Web Only
+#### Desktop/Web Only
 These features work better with a keyboard, mouse, or larger screen:
 
 | Feature | Rationale | Mobile Hint |
@@ -291,7 +339,7 @@ These features work better with a keyboard, mouse, or larger screen:
 | **Audio Analyzer** | CPU-intensive WASM (Essentia.js), needs file system access | SongDetailScreen shows hint |
 | **Slack Import Wizard** | One-time admin task, requires uploading large ZIP files | SettingsScreen shows hint |
 
-### Mobile Only
+#### Mobile Only
 These features leverage native device capabilities:
 
 | Feature | Rationale |
@@ -307,7 +355,7 @@ These features leverage native device capabilities:
 | **Print & Share setlists** | expo-print integration |
 | **Offline detection banner** | More relevant for mobile connectivity |
 
-### Both Platforms (Core Features)
+#### Both Platforms (Core Features)
 All communication and reference features work on both:
 
 - Messaging, channels, threads, reactions
@@ -318,7 +366,7 @@ All communication and reference features work on both:
 - Settings, profile, themes, data export
 - Push notifications, Practice Dashboard
 
-### Feature Parity Summary (March 2026)
+#### Feature Parity Summary (March 2026)
 
 | Area | Parity | Notes |
 |------|--------|-------|
@@ -329,11 +377,11 @@ All communication and reference features work on both:
 | Members | 95% | Excellent parity |
 | Settings | 85% | Mobile has more granular security options |
 
-### Implementation Notes
+#### Implementation Notes
 - Desktop-only features show hints on mobile directing users to the web app
 - Core features added to one platform should be added to the other in the same PR when possible
 
-## Empty State Guidelines
+### Empty State Guidelines
 
 Empty states should be helpful and actionable. Follow this pattern:
 
