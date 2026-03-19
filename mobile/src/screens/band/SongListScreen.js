@@ -24,6 +24,9 @@ import ErrorState from '../../components/ErrorState';
 import { formatDuration } from '../../utils/formatDuration';
 import useDebounce from '../../hooks/useDebounce';
 import { useLayout } from '../../hooks/useLayout';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import { buildSongListHTML } from '../../utils/buildSongListHTML';
 
 const SORT_OPTIONS = [
   { key: 'title', label: 'Title' },
@@ -40,7 +43,7 @@ function Badge({ label, color, bgColor }) {
 }
 
 export default function SongListScreen({ navigation, route }) {
-  const { workspaceId } = route.params;
+  const { workspaceId, workspaceName } = route.params;
   const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
 
@@ -51,6 +54,7 @@ export default function SongListScreen({ navigation, route }) {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300); // Debounce search by 300ms
   const [sortBy, setSortBy] = useState('title');
+  const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'compact'
   const [showSortModal, setShowSortModal] = useState(false);
 
   // Practice summary
@@ -72,6 +76,9 @@ export default function SongListScreen({ navigation, route }) {
 
   // Enrichment
   const [enriching, setEnriching] = useState(false);
+
+  const viewModeRef = useRef(viewMode);
+  useEffect(() => { viewModeRef.current = viewMode; }, [viewMode]);
 
   const loadingRef = useRef(loading);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
@@ -217,6 +224,22 @@ export default function SongListScreen({ navigation, route }) {
     }
   }, [workspaceId, loadSongs]);
 
+  const handlePrintSongs = useCallback(async () => {
+    setShowMoreMenu(false);
+    try {
+      const html = buildSongListHTML(filteredSongs, {
+        bandName: workspaceName,
+        searchQuery: debouncedSearch || undefined,
+      });
+      const { uri } = await Print.printToFileAsync({ html });
+      await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Song List PDF' });
+    } catch (err) {
+      if (err.message !== 'User cancelled') {
+        Alert.alert('Error', 'Could not generate PDF');
+      }
+    }
+  }, [filteredSongs, workspaceName, debouncedSearch]);
+
   const handleLongPress = useCallback((song) => {
     setSelectedSong(song);
     setShowActions(true);
@@ -245,58 +268,93 @@ export default function SongListScreen({ navigation, route }) {
     ]);
   }, [selectedSong]);
 
-  const renderSong = useCallback(({ item }) => (
-    <TouchableOpacity
-      style={[styles.songCard, { backgroundColor: colors.bgSecondary }]}
-      onPress={() => navigation.navigate('SongDetail', { songId: item.id, workspaceId })}
-      onLongPress={() => handleLongPress(item)}
-      delayLongPress={400}
-      activeOpacity={0.7}
-      accessibilityRole="button"
-      accessibilityLabel={`${item.title}${item.artist ? ` by ${item.artist}` : ''}. Long press for options`}
-      accessibilityHint="View song details"
-    >
-      <Text style={[styles.songTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-        {item.title}
-      </Text>
-      {item.artist ? (
-        <Text style={[styles.songArtist, { color: colors.textSecondary }]} numberOfLines={1}>
-          {item.artist}
+  const renderItem = useCallback(({ item, index }) => {
+    if (viewModeRef.current === 'compact') {
+      return (
+        <TouchableOpacity
+          style={[styles.compactRow, { borderBottomColor: colors.border }]}
+          onPress={() => navigation.navigate('SongDetail', { songId: item.id, workspaceId })}
+          onLongPress={() => handleLongPress(item)}
+          delayLongPress={400}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={`${index + 1}. ${item.title}${item.artist ? ` by ${item.artist}` : ''}${item.key ? `, key of ${item.key}` : ''}${item.bpm ? `, ${item.bpm} BPM` : ''}${item.duration ? `, ${formatDuration(item.duration)}` : ''}`}
+          accessibilityHint="Tap for details, long press for options"
+        >
+          <Text style={[styles.compactNum, { color: colors.textSecondary }]}>{index + 1}</Text>
+          <View style={styles.compactInfo}>
+            <Text style={[styles.compactTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+              {item.title}
+            </Text>
+            {item.artist ? (
+              <Text style={[styles.compactArtist, { color: colors.textSecondary }]} numberOfLines={1}>
+                {item.artist}
+              </Text>
+            ) : null}
+          </View>
+          <View style={styles.compactMeta}>
+            {item.key ? <Text style={[styles.compactMetaText, { color: '#c084fc' }]}>{item.key}</Text> : null}
+            {item.bpm ? <Text style={[styles.compactMetaText, { color: '#60a5fa' }]}>{item.bpm}</Text> : null}
+            {item.duration ? <Text style={[styles.compactMetaText, { color: colors.textSecondary }]}>{formatDuration(item.duration)}</Text> : null}
+          </View>
+          <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} style={{ opacity: 0.4, marginLeft: 4 }} />
+        </TouchableOpacity>
+      );
+    }
+
+    return (
+      <TouchableOpacity
+        style={[styles.songCard, { backgroundColor: colors.bgSecondary }]}
+        onPress={() => navigation.navigate('SongDetail', { songId: item.id, workspaceId })}
+        onLongPress={() => handleLongPress(item)}
+        delayLongPress={400}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.title}${item.artist ? ` by ${item.artist}` : ''}. Long press for options`}
+        accessibilityHint="View song details"
+      >
+        <Text style={[styles.songTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+          {item.title}
         </Text>
-      ) : null}
-      {item.shortName ? (
-        <Text style={[styles.songShortName, { color: colors.textSecondary }]} numberOfLines={1}>
-          aka "{item.shortName}"
-        </Text>
-      ) : null}
-      <View style={styles.badgeRow}>
-        {item.key ? <Badge label={`Key: ${item.key}`} color="#c084fc" bgColor="rgba(192,132,252,0.15)" /> : null}
-        {item.bpm ? <Badge label={`${item.bpm} BPM`} color="#60a5fa" bgColor="rgba(96,165,250,0.15)" /> : null}
-        {item.duration ? <Badge label={formatDuration(item.duration)} color="#9ca3af" bgColor="rgba(156,163,175,0.15)" /> : null}
-      </View>
-      {item._count?.setlistSongs > 0 ? (
-        <Text style={[styles.setlistCount, { color: colors.textSecondary }]}>
-          In {item._count.setlistSongs} setlist{item._count.setlistSongs !== 1 ? 's' : ''}
-        </Text>
-      ) : null}
-      {(() => {
-        const stat = practiceSummary?.songStats?.find(s => s.songId === item.id);
-        if (stat?.lastPracticedAt) {
-          const days = Math.floor((Date.now() - new Date(stat.lastPracticedAt).getTime()) / (1000 * 60 * 60 * 24));
+        {item.artist ? (
+          <Text style={[styles.songArtist, { color: colors.textSecondary }]} numberOfLines={1}>
+            {item.artist}
+          </Text>
+        ) : null}
+        {item.shortName ? (
+          <Text style={[styles.songShortName, { color: colors.textSecondary }]} numberOfLines={1}>
+            aka "{item.shortName}"
+          </Text>
+        ) : null}
+        <View style={styles.badgeRow}>
+          {item.key ? <Badge label={`Key: ${item.key}`} color="#c084fc" bgColor="rgba(192,132,252,0.15)" /> : null}
+          {item.bpm ? <Badge label={`${item.bpm} BPM`} color="#60a5fa" bgColor="rgba(96,165,250,0.15)" /> : null}
+          {item.duration ? <Badge label={formatDuration(item.duration)} color="#9ca3af" bgColor="rgba(156,163,175,0.15)" /> : null}
+        </View>
+        {item._count?.setlistSongs > 0 ? (
+          <Text style={[styles.setlistCount, { color: colors.textSecondary }]}>
+            In {item._count.setlistSongs} setlist{item._count.setlistSongs !== 1 ? 's' : ''}
+          </Text>
+        ) : null}
+        {(() => {
+          const stat = practiceSummary?.songStats?.find(s => s.songId === item.id);
+          if (stat?.lastPracticedAt) {
+            const days = Math.floor((Date.now() - new Date(stat.lastPracticedAt).getTime()) / (1000 * 60 * 60 * 24));
+            return (
+              <Text style={[styles.practiceInfo, { color: colors.textSecondary }]}>
+                {days === 0 ? 'Practiced today' : `Practiced ${days}d ago`}
+              </Text>
+            );
+          }
           return (
-            <Text style={[styles.practiceInfo, { color: colors.textSecondary }]}>
-              {days === 0 ? 'Practiced today' : `Practiced ${days}d ago`}
+            <Text style={[styles.practiceInfo, { color: colors.textSecondary, opacity: 0.6 }]}>
+              Never practiced
             </Text>
           );
-        }
-        return (
-          <Text style={[styles.practiceInfo, { color: colors.textSecondary, opacity: 0.6 }]}>
-            Never practiced
-          </Text>
-        );
-      })()}
-    </TouchableOpacity>
-  ), [colors, navigation, workspaceId, handleLongPress, practiceSummary]);
+        })()}
+      </TouchableOpacity>
+    );
+  }, [colors, navigation, workspaceId, handleLongPress, practiceSummary]);
 
   if (loading) {
     return (
@@ -339,12 +397,35 @@ export default function SongListScreen({ navigation, route }) {
             {SORT_OPTIONS.find(o => o.key === sortBy)?.label}
           </Text>
         </TouchableOpacity>
+        <View style={[styles.segmentedControl, { backgroundColor: colors.bgTertiary }]}>
+          <TouchableOpacity
+            style={[styles.segmentButton, viewMode === 'cards' && { backgroundColor: colors.primary }]}
+            onPress={() => setViewMode('cards')}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Card view"
+            accessibilityState={{ selected: viewMode === 'cards' }}
+          >
+            <Ionicons name="grid-outline" size={16} color={viewMode === 'cards' ? '#fff' : colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.segmentButton, viewMode === 'compact' && { backgroundColor: colors.primary }]}
+            onPress={() => setViewMode('compact')}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="List view"
+            accessibilityState={{ selected: viewMode === 'compact' }}
+          >
+            <Ionicons name="list-outline" size={16} color={viewMode === 'compact' ? '#fff' : colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
         data={filteredSongs}
         keyExtractor={(item) => item.id}
-        renderItem={renderSong}
+        renderItem={renderItem}
+        extraData={viewMode}
         contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl
@@ -440,6 +521,15 @@ export default function SongListScreen({ navigation, route }) {
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionItem} onPress={handleEnrich} accessibilityRole="button" accessibilityLabel="Fetch missing metadata">
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Fetch Missing Data</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionItem, filteredSongs.length === 0 && { opacity: 0.4 }]}
+              onPress={filteredSongs.length > 0 ? handlePrintSongs : undefined}
+              disabled={filteredSongs.length === 0}
+              accessibilityRole="button"
+              accessibilityLabel="Share song list as PDF"
+            >
+              <Text style={[styles.actionText, { color: colors.textPrimary }]}>Share as PDF</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionItem, styles.actionCancel]}
@@ -631,6 +721,35 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 12, fontWeight: '600' },
   setlistCount: { fontSize: 12, marginTop: 6 },
   practiceInfo: { fontSize: 11, marginTop: 4 },
+  // Compact view
+  compactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 44,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  compactNum: { width: 28, fontSize: 13, textAlign: 'center' },
+  compactInfo: { flex: 1, marginHorizontal: 8 },
+  compactTitle: { fontSize: 15, fontWeight: '600' },
+  compactArtist: { fontSize: 13, marginTop: 1 },
+  compactMeta: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  compactMetaText: { fontSize: 12, fontWeight: '600' },
+  // Segmented control
+  segmentedControl: {
+    flexDirection: 'row',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  segmentButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    minWidth: 38,
+    minHeight: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   emptyIcon: { fontSize: 40, marginBottom: 12 },
   emptyText: { fontSize: 15 },
   emptyHint: { fontSize: 13, marginTop: 6, textAlign: 'center', opacity: 0.7 },
@@ -676,7 +795,7 @@ const styles = StyleSheet.create({
   actionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 16, textAlign: 'center' },
   actionItem: { paddingVertical: 16, alignItems: 'center' },
   actionText: { fontSize: 17 },
-  actionCancel: { marginTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.1)' },
+  actionCancel: { marginTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(128,128,128,0.3)' },
   // Bulk import
   bulkHeader: {
     flexDirection: 'row',

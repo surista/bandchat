@@ -2,6 +2,15 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.05.46] - 2026-03-20
+
+### Added
+- **Compact song list view** — Toggle between card grid and compact table view on both web and mobile. Compact view shows numbered rows with title, artist, key, BPM, and duration. iOS-style segmented control for view toggle, disclosure chevrons on compact rows.
+- **Song list PDF export** — Print/export song list as a formatted PDF. Web uses print dialog; mobile uses expo-print with share sheet ("Share as PDF" in More menu). Professional layout with band name header, numbered table, and song/duration totals. Table headers repeat on each page for long lists.
+
+### Changed
+- **Web filteredSongs memoized** — Song filtering and sorting wrapped in `useMemo` for better performance on large repertoires.
+
 ## [1.05.28] - 2026-03-18
 
 ### Fixed

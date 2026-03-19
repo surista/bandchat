@@ -1,5 +1,5 @@
 import { isSafeUrl } from '../../utils/urlSafety';
-import { useState, useEffect, useCallback, memo } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import SongForm from './SongForm';
@@ -114,7 +114,7 @@ const SongCard = memo(function SongCard({ song, onEdit, onDelete, onContextMenu,
   );
 });
 
-function SongList({ workspaceId, onSelectSong }) {
+function SongList({ workspaceId, workspaceName, onSelectSong }) {
   const toast = useToast();
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -123,6 +123,7 @@ function SongList({ workspaceId, onSelectSong }) {
   const [editingSong, setEditingSong] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('title');
+  const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'compact'
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [bulkText, setBulkText] = useState('');
   const [bulkImporting, setBulkImporting] = useState(false);
@@ -285,7 +286,7 @@ function SongList({ workspaceId, onSelectSong }) {
     }
   };
 
-  const filteredSongs = songs
+  const filteredSongs = useMemo(() => songs
     .filter(song => {
       const query = searchQuery.toLowerCase();
       return song.title.toLowerCase().includes(query) ||
@@ -297,7 +298,150 @@ function SongList({ workspaceId, onSelectSong }) {
       if (sortBy === 'artist') return (a.artist || '').localeCompare(b.artist || '');
       if (sortBy === 'recent') return new Date(b.createdAt) - new Date(a.createdAt);
       return 0;
-    });
+    }), [songs, searchQuery, sortBy]);
+
+  const handlePrintSongs = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.warning('Please allow popups for this site to print');
+      return;
+    }
+
+    const songsToExport = filteredSongs;
+    const totalSeconds = songsToExport.reduce((sum, s) => sum + (s.duration || 0), 0);
+    const totalDuration = totalSeconds > 0
+      ? `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, '0')}`
+      : null;
+
+    const escapeHtml = (str) => {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    };
+
+    const rowsHtml = songsToExport.map((song, i) => `
+      <tr>
+        <td class="num">${i + 1}</td>
+        <td class="title">${escapeHtml(song.title)}${song.shortName ? ` <span class="aka">(${escapeHtml(song.shortName)})</span>` : ''}</td>
+        <td class="artist">${escapeHtml(song.artist || '')}</td>
+        <td class="key">${escapeHtml(song.key || '')}</td>
+        <td class="bpm">${song.bpm || ''}</td>
+        <td class="duration">${song.duration ? `${Math.floor(song.duration / 60)}:${String(song.duration % 60).padStart(2, '0')}` : ''}</td>
+      </tr>`).join('');
+
+    const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const bandName = workspaceName || '';
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <title>${escapeHtml(bandName || 'Songs')} - Song List</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    @page { margin: 12mm; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 20px;
+      color: #111;
+      background: #fff;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 3px solid #222;
+    }
+    .band-name {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .header-divider {
+      width: 60px;
+      height: 3px;
+      background: #0891b2;
+      margin: 8px auto;
+      border-radius: 2px;
+    }
+    .header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .header .date {
+      font-size: 13px;
+      color: #666;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    th {
+      text-align: left;
+      padding: 8px 6px;
+      border-bottom: 2px solid #333;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #555;
+    }
+    td {
+      padding: 6px;
+      border-bottom: 1px solid #e5e5e5;
+      font-size: 13px;
+    }
+    .num { width: 30px; text-align: center; color: #888; }
+    .title { font-weight: 600; }
+    .aka { font-weight: 400; font-style: italic; color: #888; font-size: 12px; }
+    .artist { color: #555; }
+    .key { text-align: center; width: 70px; }
+    .bpm { text-align: center; width: 50px; }
+    .duration { text-align: right; width: 50px; color: #888; }
+    .footer {
+      text-align: center;
+      padding-top: 12px;
+      border-top: 3px solid #222;
+      font-size: 12px;
+      color: #666;
+    }
+    @media print {
+      body { padding: 0; }
+      tr { break-inside: avoid; }
+      thead { display: table-header-group; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    ${bandName ? `<div class="band-name">${escapeHtml(bandName)}</div><div class="header-divider"></div>` : ''}
+    <h1>Song List</h1>
+    <div class="date">${escapeHtml(dateStr)}${searchQuery ? ` &mdash; filtered by "${escapeHtml(searchQuery)}"` : ''}</div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Title</th>
+        <th>Artist</th>
+        <th>Key</th>
+        <th>BPM</th>
+        <th style="text-align:right">Time</th>
+      </tr>
+    </thead>
+    <tbody>${rowsHtml}</tbody>
+  </table>
+  <div class="footer">
+    ${songsToExport.length} song${songsToExport.length !== 1 ? 's' : ''}${totalDuration ? ` &bull; ${totalDuration} total` : ''}
+  </div>
+  <script>window.onload = function() { window.print(); }; window.onafterprint = function() { window.close(); };</script>
+</body>
+</html>`;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
 
   // Memoized callbacks for SongCard to prevent unnecessary re-renders
   const handleEditSong = useCallback((song) => {
@@ -396,6 +540,32 @@ function SongList({ workspaceId, onSelectSong }) {
             <option value="artist">Sort by Artist</option>
             <option value="recent">Sort by Recent</option>
           </select>
+          <div className="flex border border-[var(--color-border)] rounded overflow-hidden">
+            <button
+              onClick={() => setViewMode('cards')}
+              className={`px-2.5 py-2 text-sm ${viewMode === 'cards' ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'}`}
+              title="Card view"
+              aria-label="Card view"
+            >
+              ▦
+            </button>
+            <button
+              onClick={() => setViewMode('compact')}
+              className={`px-2.5 py-2 text-sm ${viewMode === 'compact' ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'}`}
+              title="Compact list view"
+              aria-label="Compact list view"
+            >
+              ☰
+            </button>
+          </div>
+          <button
+            onClick={handlePrintSongs}
+            disabled={filteredSongs.length === 0}
+            className="btn btn-secondary"
+            title="Print / export PDF"
+          >
+            Print
+          </button>
         </div>
       </div>
 
@@ -470,6 +640,71 @@ function SongList({ workspaceId, onSelectSong }) {
                 </button>
               </div>
             )}
+          </div>
+        ) : viewMode === 'compact' ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b-2 border-[var(--color-border)]">
+                  <th className="text-left py-2 px-2 text-xs uppercase tracking-wide text-[var(--color-text-muted)] font-medium w-8">#</th>
+                  <th className="text-left py-2 px-2 text-xs uppercase tracking-wide text-[var(--color-text-muted)] font-medium">Title</th>
+                  <th className="text-left py-2 px-2 text-xs uppercase tracking-wide text-[var(--color-text-muted)] font-medium">Artist</th>
+                  <th className="text-center py-2 px-2 text-xs uppercase tracking-wide text-[var(--color-text-muted)] font-medium w-16">Key</th>
+                  <th className="text-center py-2 px-2 text-xs uppercase tracking-wide text-[var(--color-text-muted)] font-medium w-16">BPM</th>
+                  <th className="text-right py-2 px-2 text-xs uppercase tracking-wide text-[var(--color-text-muted)] font-medium w-16">Time</th>
+                  <th className="w-16"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredSongs.map((song, i) => (
+                  <tr
+                    key={song.id}
+                    className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)] transition-colors group cursor-default"
+                  >
+                    <td className="py-2 px-2 text-[var(--color-text-muted)]">{i + 1}</td>
+                    <td className="py-2 px-2">
+                      <span className="text-[var(--color-text-primary)] font-medium">{song.title}</span>
+                      {song.shortName && (
+                        <span className="text-[var(--color-text-muted)] text-xs italic ml-1.5">({song.shortName})</span>
+                      )}
+                    </td>
+                    <td className="py-2 px-2 text-[var(--color-text-secondary)]">{song.artist || ''}</td>
+                    <td className="py-2 px-2 text-center text-[var(--color-text-secondary)]">{song.key || ''}</td>
+                    <td className="py-2 px-2 text-center text-[var(--color-text-secondary)]">{song.bpm || ''}</td>
+                    <td className="py-2 px-2 text-right text-[var(--color-text-muted)]">
+                      {song.duration ? `${Math.floor(song.duration / 60)}:${String(song.duration % 60).padStart(2, '0')}` : ''}
+                    </td>
+                    <td className="py-2 px-2">
+                      <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => handleEditSong(song)}
+                          className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                          title="Edit"
+                          aria-label="Edit song"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => confirmDeleteSong(song.id)}
+                          className="p-1 text-[var(--color-text-muted)] hover:text-red-400"
+                          title="Delete"
+                          aria-label="Delete song"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="text-center text-xs text-[var(--color-text-muted)] mt-3 pt-3 border-t border-[var(--color-border)]">
+              {filteredSongs.length} song{filteredSongs.length !== 1 ? 's' : ''}
+              {(() => {
+                const total = filteredSongs.reduce((sum, s) => sum + (s.duration || 0), 0);
+                return total > 0 ? ` · ${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')} total` : '';
+              })()}
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

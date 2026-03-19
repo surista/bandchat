@@ -570,8 +570,10 @@ export default function ChannelListScreen({ navigation, route }) {
       stageplots: 'StagePlotList',
       venues: 'Venues',
     };
-    navigation.navigate(screenMap[key], { workspaceId });
-  }, [navigation, workspaceId, workspace?.effectivePlan]);
+    const params = { workspaceId };
+    if (key === 'songs') params.workspaceName = workspace?.name;
+    navigation.navigate(screenMap[key], params);
+  }, [navigation, workspaceId, workspace?.effectivePlan, workspace?.name]);
 
   // Organize channels into groups
   const sections = useMemo(() => {
