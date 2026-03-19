@@ -652,10 +652,10 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                               isSelected
                                 ? 'bg-green-600 text-white ring-2 ring-green-400'
                                 : availStatus === 'UNAVAILABLE'
-                                ? 'bg-[var(--color-bg-tertiary)] text-red-400 hover:bg-[var(--color-bg-tertiary)]'
+                                ? 'bg-[var(--color-bg-tertiary)] text-red-400 hover:bg-[var(--color-bg-secondary)]'
                                 : availStatus === 'MAYBE'
-                                ? 'bg-[var(--color-bg-tertiary)] text-yellow-400 hover:bg-[var(--color-bg-tertiary)]'
-                                : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'
+                                ? 'bg-[var(--color-bg-tertiary)] text-yellow-400 hover:bg-[var(--color-bg-secondary)]'
+                                : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
                             }`}
                           >
                             {isSelected && <span className="mr-1">✓</span>}

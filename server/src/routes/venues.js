@@ -50,7 +50,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
     if (website && website.length > 500) return res.status(400).json({ error: 'Website must be 500 characters or less' });
     if (website && !/^https?:\/\//i.test(website)) return res.status(400).json({ error: 'Website must start with http:// or https://' });
     if (notes && notes.length > 2000) return res.status(400).json({ error: 'Notes must be 2,000 characters or less' });
-    if (capacity !== undefined && capacity !== null && (typeof capacity !== 'number' || capacity < 0)) {
+    if (capacity !== undefined && capacity !== null && (typeof capacity !== 'number' || capacity < 1)) {
       return res.status(400).json({ error: 'Capacity must be a positive number' });
     }
     if (imageUrl && !isAllowedUploadUrl(imageUrl)) {
@@ -145,7 +145,7 @@ router.put('/:venueId', authenticate, async (req, res) => {
     if (website && website.length > 500) return res.status(400).json({ error: 'Website must be 500 characters or less' });
     if (website && !/^https?:\/\//i.test(website)) return res.status(400).json({ error: 'Website must start with http:// or https://' });
     if (notes && notes.length > 2000) return res.status(400).json({ error: 'Notes must be 2,000 characters or less' });
-    if (capacity !== undefined && capacity !== null && (typeof capacity !== 'number' || capacity < 0)) {
+    if (capacity !== undefined && capacity !== null && (typeof capacity !== 'number' || capacity < 1)) {
       return res.status(400).json({ error: 'Capacity must be a positive number' });
     }
     if (imageUrl && !isAllowedUploadUrl(imageUrl)) {

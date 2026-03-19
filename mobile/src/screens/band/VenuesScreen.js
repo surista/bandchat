@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { useSocket } from '../../context/SocketContext';
 import ErrorState from '../../components/ErrorState';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import api from '../../services/api';
@@ -19,6 +20,7 @@ import { useLayout } from '../../hooks/useLayout';
 export default function VenuesScreen({ navigation, route }) {
   const { workspaceId } = route.params;
   const { colors } = useTheme();
+  const { socket } = useSocket();
   const { isTablet, contentMaxWidth } = useLayout();
 
   const [venues, setVenues] = useState([]);
@@ -69,6 +71,30 @@ export default function VenuesScreen({ navigation, route }) {
     });
     return unsubscribe;
   }, [navigation, loadVenues]);
+
+  // Real-time venue updates via Socket.IO
+  useEffect(() => {
+    if (!socket) return;
+    const handleCreated = (venue) => {
+      if (venue.workspaceId === workspaceId) {
+        setVenues(prev => prev.some(v => v.id === venue.id) ? prev : [...prev, venue]);
+      }
+    };
+    const handleUpdated = (venue) => {
+      setVenues(prev => prev.map(v => v.id === venue.id ? venue : v));
+    };
+    const handleDeleted = ({ venueId }) => {
+      setVenues(prev => prev.filter(v => v.id !== venueId));
+    };
+    socket.on('venue:created', handleCreated);
+    socket.on('venue:updated', handleUpdated);
+    socket.on('venue:deleted', handleDeleted);
+    return () => {
+      socket.off('venue:created', handleCreated);
+      socket.off('venue:updated', handleUpdated);
+      socket.off('venue:deleted', handleDeleted);
+    };
+  }, [socket, workspaceId]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);

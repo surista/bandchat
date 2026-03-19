@@ -1,13 +1,13 @@
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useEffect, useRef } from 'react';
-import { Linking, Text, TextInput } from 'react-native';
+import { AppState, Linking, Text, TextInput } from 'react-native';
 
 // Limit Dynamic Type scaling to prevent layout breakage at large accessibility sizes
 if (Text.defaultProps == null) Text.defaultProps = {};
-Text.defaultProps.maxFontSizeMultiplier = 1.3;
+Text.defaultProps.maxFontSizeMultiplier = 1.5;
 if (TextInput.defaultProps == null) TextInput.defaultProps = {};
-TextInput.defaultProps.maxFontSizeMultiplier = 1.3;
+TextInput.defaultProps.maxFontSizeMultiplier = 1.5;
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
@@ -140,7 +140,6 @@ function AppContent() {
     });
 
     // Clear badge when app comes to foreground
-    const { AppState } = require('react-native');
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') notificationService.clearBadge();
     });

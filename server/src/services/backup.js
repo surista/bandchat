@@ -1931,6 +1931,7 @@ export async function restoreWorkspaceBackup(key, onProgress) {
       await tx.$executeRawUnsafe(`DELETE FROM "GigSetlist" WHERE "gigId" IN (SELECT id FROM "Gig" WHERE "workspaceId" = $1)`, wid);
       await tx.$executeRawUnsafe(`DELETE FROM "GigAttendee" WHERE "gigId" IN (SELECT id FROM "Gig" WHERE "workspaceId" = $1)`, wid);
       await tx.$executeRawUnsafe(`DELETE FROM "Gig" WHERE "workspaceId" = $1`, wid);
+      await tx.$executeRawUnsafe(`DELETE FROM "Venue" WHERE "workspaceId" = $1`, wid);
 
       // Band members
       await tx.$executeRawUnsafe(`DELETE FROM "InstrumentStint" WHERE "bandMemberId" IN (SELECT id FROM "BandMember" WHERE "workspaceId" = $1)`, wid);

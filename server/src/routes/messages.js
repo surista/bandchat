@@ -478,24 +478,34 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
     }
 
     // 5. Channel message notifications (opt-in via notifyChannelMessages)
-    if (!channel.isDirect && notifiedUserIds.size < 100) {
-      const remainingMembers = await prisma.channelMember.findMany({
+    // Only fetch members who have opted in to reduce DB overhead
+    if (!channel.isDirect) {
+      const optedInMembers = await prisma.workspaceMember.findMany({
         where: {
-          channelId: req.params.channelId,
-          userId: { not: req.user.id, notIn: [...notifiedUserIds] },
-          muted: false
+          workspaceId: channel.workspaceId,
+          notifyChannelMessages: true,
+          userId: { not: req.user.id, notIn: [...notifiedUserIds] }
         },
         select: { userId: true }
       });
-      remainingMembers.forEach(m => {
-        sendPushToUser(m.userId, {
-          title: `#${channel.name}`,
-          body: `${req.user.displayName}: ${pushBody}`,
-          tag: `channel-${req.params.channelId}`,
-          url: pushUrl,
-          ...pushBase
-        }, { category: 'channel', workspaceId: channel.workspaceId });
-      });
+      if (optedInMembers.length > 0) {
+        // Check mute status for opted-in members
+        const optedInIds = optedInMembers.map(m => m.userId);
+        const mutedOptedIn = await prisma.channelMember.findMany({
+          where: { channelId: req.params.channelId, userId: { in: optedInIds }, muted: true },
+          select: { userId: true }
+        });
+        const mutedOptedInSet = new Set(mutedOptedIn.map(m => m.userId));
+        optedInMembers.filter(m => !mutedOptedInSet.has(m.userId)).forEach(m => {
+          sendPushToUser(m.userId, {
+            title: `#${channel.name}`,
+            body: `${req.user.displayName}: ${pushBody}`,
+            tag: `channel-${req.params.channelId}`,
+            url: pushUrl,
+            ...pushBase
+          }, { category: 'channel', workspaceId: channel.workspaceId });
+        });
+      }
     }
 
     res.status(201).json(message);

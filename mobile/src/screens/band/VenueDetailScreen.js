@@ -111,7 +111,7 @@ export default function VenueDetailScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel="Edit venue"
           >
-            <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>Edit</Text>
+            <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>Edit</Text>
           </TouchableOpacity>
         ) : undefined,
       });

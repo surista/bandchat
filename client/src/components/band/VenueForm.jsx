@@ -42,8 +42,14 @@ function VenueForm({ venue, workspaceId, onSave, onClose }) {
     setError('');
 
     try {
+      // Auto-prepend https:// if website is provided without a scheme
+      let website = formData.website?.trim() || '';
+      if (website && !/^https?:\/\//i.test(website)) {
+        website = `https://${website}`;
+      }
       const payload = {
         ...formData,
+        website: website || '',
         capacity: formData.capacity ? parseInt(formData.capacity, 10) : null
       };
       await onSave(payload);
