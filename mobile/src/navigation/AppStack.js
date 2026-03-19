@@ -2,6 +2,7 @@ import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import WorkspaceListScreen from '../screens/workspaces/WorkspaceListScreen';
+import OnboardingWizardScreen from '../screens/workspaces/OnboardingWizardScreen';
 import ChannelListScreen from '../screens/workspace/ChannelListScreen';
 import ChannelScreen from '../screens/workspace/ChannelScreen';
 import ThreadScreen from '../screens/workspace/ThreadScreen';
@@ -69,6 +70,11 @@ export default function AppStack() {
         name="WorkspaceList"
         component={WorkspaceListScreen}
         options={{ title: 'BandChat', headerShown: false }}
+      />
+      <Stack.Screen
+        name="OnboardingWizard"
+        component={OnboardingWizardScreen}
+        options={{ headerShown: false, presentation: 'fullScreenModal' }}
       />
       <Stack.Screen
         name="Workspace"

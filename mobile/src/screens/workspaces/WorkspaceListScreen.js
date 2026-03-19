@@ -27,9 +27,7 @@ export default function WorkspaceListScreen({ navigation, route }) {
   const [workspaces, setWorkspaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
-  const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -66,24 +64,6 @@ export default function WorkspaceListScreen({ navigation, route }) {
     setRefreshing(true);
     loadWorkspaces();
   }, [loadWorkspaces]);
-
-  const handleCreateWorkspace = async () => {
-    if (!newWorkspaceName.trim()) return;
-    if (submitting) return;
-    setSubmitting(true);
-    try {
-      const workspace = await api.createWorkspace(newWorkspaceName.trim());
-      setWorkspaces(prev => [...prev, workspace]);
-      setShowCreate(false);
-      setNewWorkspaceName('');
-      toast.success('Workspace created!');
-      navigation.navigate('Workspace', { id: workspace.id, name: workspace.name });
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const handleJoinWorkspace = async () => {
     if (!inviteCode.trim()) return;
@@ -188,7 +168,7 @@ export default function WorkspaceListScreen({ navigation, route }) {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.actionButton, { backgroundColor: colors.primary }]}
-          onPress={() => setShowCreate(true)}
+          onPress={() => navigation.navigate('OnboardingWizard')}
           activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel="Create workspace"
@@ -220,50 +200,6 @@ export default function WorkspaceListScreen({ navigation, route }) {
       </Text>
 
       </KeyboardAvoidingView>
-
-      {/* Create Workspace Modal */}
-      <Modal visible={showCreate} transparent animationType="fade" onRequestClose={() => setShowCreate(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Create a Workspace</Text>
-            <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Workspace Name</Text>
-            <TextInput
-              style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-              placeholder="e.g., The Rockers"
-              placeholderTextColor={colors.textSecondary}
-              value={newWorkspaceName}
-              onChangeText={setNewWorkspaceName}
-              autoFocus
-              editable={!submitting}
-              accessibilityLabel="Workspace name"
-            />
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
-                onPress={() => { setShowCreate(false); setNewWorkspaceName(''); }}
-                disabled={submitting}
-                accessibilityRole="button"
-                accessibilityLabel="Cancel creating workspace"
-              >
-                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: colors.primary }]}
-                onPress={handleCreateWorkspace}
-                disabled={submitting || !newWorkspaceName.trim()}
-                accessibilityRole="button"
-                accessibilityLabel="Create workspace"
-              >
-                {submitting ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
-                ) : (
-                  <Text style={styles.modalButtonTextWhite}>Create</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* Join Workspace Modal */}
       <Modal visible={showJoin} transparent animationType="fade" onRequestClose={() => setShowJoin(false)}>

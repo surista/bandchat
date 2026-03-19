@@ -24,7 +24,6 @@ import api from '../../services/api';
 import { getLocalChannels, upsertChannels, upsertMembers } from '../../services/database';
 import ChannelItem from '../../components/ChannelItem';
 import ErrorState from '../../components/ErrorState';
-import OnboardingOverlay from '../../components/OnboardingOverlay';
 import { useLayout } from '../../hooks/useLayout';
 
 const BAND_CATEGORIES = [
@@ -153,34 +152,10 @@ export default function ChannelListScreen({ navigation, route }) {
 
   const activeChannelRef = useRef(null);
 
-  // Onboarding tour
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const [showChannelActions, setShowChannelActions] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [collapsedStarred, setCollapsedStarred] = useState(false);
 
-  useEffect(() => {
-    let timer;
-    const checkOnboarding = async () => {
-      try {
-        const done = await AsyncStorage.getItem('onboarding_complete');
-        if (!done) {
-          timer = setTimeout(() => setShowOnboarding(true), 500);
-        }
-      } catch { }
-    };
-    checkOnboarding();
-    return () => { if (timer) clearTimeout(timer); };
-  }, []);
-
-  const handleOnboardingComplete = useCallback(async () => {
-    setShowOnboarding(false);
-    try {
-      await AsyncStorage.setItem('onboarding_complete', 'true');
-    } catch {
-      // Ignore errors
-    }
-  }, []);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -1151,10 +1126,6 @@ export default function ChannelListScreen({ navigation, route }) {
         </View>
       </Modal>
 
-      {/* Onboarding Overlay */}
-      {showOnboarding && (
-        <OnboardingOverlay onComplete={handleOnboardingComplete} />
-      )}
     </SafeAreaView>
   );
 }
