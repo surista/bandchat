@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { useSocket } from '../../context/SocketContext';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
+import Modal from '../common/Modal';
 
 const STEPS = ['upload', 'users', 'options', 'review', 'progress', 'results'];
 
@@ -127,80 +127,76 @@ export default function WorkspaceImportWizard({ onClose, onComplete }) {
 
   const currentStepIndex = STEPS.indexOf(step);
 
-  const content = (
-    <div className="modal-backdrop" style={{ zIndex: 10000 }} role="dialog" aria-modal="true" aria-label="Import Workspace" onClick={(e) => { if (e.target === e.currentTarget && step !== 'progress') onClose(); }}>
-      <div className="modal-content" style={{ maxWidth: '56rem', width: '100%', maxHeight: '90dvh', display: 'flex', flexDirection: 'column' }}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid var(--color-modal-border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'var(--color-text-primary)' }}>Import Workspace</h3>
-            <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-              Step {Math.min(currentStepIndex + 1, 4)} of 4 &mdash; {STEP_LABELS[step]}
-            </span>
-          </div>
-          {step !== 'progress' && (
-            <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
-          )}
+  return (
+    <Modal isOpen={true} onClose={step === 'progress' ? undefined : onClose} maxWidth="max-w-4xl" className="w-full max-h-[90dvh] flex flex-col">
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid var(--color-modal-border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'var(--color-text-primary)' }}>Import Workspace</h3>
+          <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+            Step {Math.min(currentStepIndex + 1, 4)} of 4 &mdash; {STEP_LABELS[step]}
+          </span>
         </div>
-
-        {/* Step indicators */}
-        <div style={{ display: 'flex', gap: '4px', padding: '12px 24px', borderBottom: '1px solid var(--color-modal-border)' }}>
-          {STEPS.slice(0, 4).map((s, i) => (
-            <div key={s} style={{
-              flex: 1, height: '3px', borderRadius: '2px',
-              backgroundColor: i <= Math.min(currentStepIndex, 3) ? 'var(--color-primary)' : 'var(--color-bg-tertiary)'
-            }} />
-          ))}
-        </div>
-
-        {/* Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
-          {error && (
-            <div style={{ backgroundColor: 'rgba(239,68,68,0.15)', border: '1px solid #ef4444', borderRadius: '8px', padding: '12px', marginBottom: '16px', color: '#ef4444', fontSize: '14px' }}>
-              {error}
-            </div>
-          )}
-
-          {step === 'upload' && renderUploadStep({ file, loading, dragOver, setDragOver, handleFile, handleUpload, setFile, setError })}
-          {step === 'users' && renderUsersStep({ parseResult, userMapping, setUserMapping })}
-          {step === 'options' && renderOptionsStep({ options, setOptions, parseResult })}
-          {step === 'review' && renderReviewStep({ reviewStats, options })}
-          {step === 'progress' && renderProgressStep({ progress })}
-          {step === 'results' && renderResultsStep({ importResult, onComplete })}
-        </div>
-
-        {/* Footer */}
         {step !== 'progress' && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 24px', borderTop: '1px solid var(--color-modal-border)' }}>
-            <div>
-              {currentStepIndex > 0 && currentStepIndex < 4 && (
-                <button className="btn btn-secondary" onClick={() => setStep(STEPS[currentStepIndex - 1])}>Back</button>
-              )}
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {step === 'results' ? (
-                <button className="btn btn-primary" onClick={() => {
-                  if (importResult?.workspaceId) {
-                    onComplete?.(importResult.workspaceId);
-                  } else {
-                    onClose();
-                  }
-                }}>
-                  {importResult?.workspaceId ? 'Go to Workspace' : 'Done'}
-                </button>
-              ) : step === 'review' ? (
-                <button className="btn btn-primary" onClick={handleImport} disabled={loading}>Start Import</button>
-              ) : step !== 'upload' && (
-                <button className="btn btn-primary" onClick={() => setStep(STEPS[currentStepIndex + 1])}>Next</button>
-              )}
-            </div>
-          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
         )}
       </div>
-    </div>
-  );
 
-  return createPortal(content, document.body);
+      {/* Step indicators */}
+      <div style={{ display: 'flex', gap: '4px', padding: '12px 24px', borderBottom: '1px solid var(--color-modal-border)' }}>
+        {STEPS.slice(0, 4).map((s, i) => (
+          <div key={s} style={{
+            flex: 1, height: '3px', borderRadius: '2px',
+            backgroundColor: i <= Math.min(currentStepIndex, 3) ? 'var(--color-primary)' : 'var(--color-bg-tertiary)'
+          }} />
+        ))}
+      </div>
+
+      {/* Body */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+        {error && (
+          <div style={{ backgroundColor: 'rgba(239,68,68,0.15)', border: '1px solid #ef4444', borderRadius: '8px', padding: '12px', marginBottom: '16px', color: '#ef4444', fontSize: '14px' }}>
+            {error}
+          </div>
+        )}
+
+        {step === 'upload' && renderUploadStep({ file, loading, dragOver, setDragOver, handleFile, handleUpload, setFile, setError })}
+        {step === 'users' && renderUsersStep({ parseResult, userMapping, setUserMapping })}
+        {step === 'options' && renderOptionsStep({ options, setOptions, parseResult })}
+        {step === 'review' && renderReviewStep({ reviewStats, options })}
+        {step === 'progress' && renderProgressStep({ progress })}
+        {step === 'results' && renderResultsStep({ importResult, onComplete })}
+      </div>
+
+      {/* Footer */}
+      {step !== 'progress' && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 24px', borderTop: '1px solid var(--color-modal-border)' }}>
+          <div>
+            {currentStepIndex > 0 && currentStepIndex < 4 && (
+              <button className="btn btn-secondary" onClick={() => setStep(STEPS[currentStepIndex - 1])}>Back</button>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {step === 'results' ? (
+              <button className="btn btn-primary" onClick={() => {
+                if (importResult?.workspaceId) {
+                  onComplete?.(importResult.workspaceId);
+                } else {
+                  onClose();
+                }
+              }}>
+                {importResult?.workspaceId ? 'Go to Workspace' : 'Done'}
+              </button>
+            ) : step === 'review' ? (
+              <button className="btn btn-primary" onClick={handleImport} disabled={loading}>Start Import</button>
+            ) : step !== 'upload' && (
+              <button className="btn btn-primary" onClick={() => setStep(STEPS[currentStepIndex + 1])}>Next</button>
+            )}
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
 }
 
 // --- Step renderers ---

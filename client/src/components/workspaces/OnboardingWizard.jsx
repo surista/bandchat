@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import api from '../../services/api';
+import Modal from '../common/Modal';
 import SlackImportWizard from './SlackImportWizard';
 
 const STEPS = ['name', 'channels', 'invite', 'import', 'done'];
@@ -523,9 +523,9 @@ export default function OnboardingWizard({ onComplete, onClose }) {
     }
   };
 
-  const content = (
-    <div className="modal-backdrop" style={{ zIndex: 10000 }} role="dialog" aria-modal="true" aria-label="Create Your Workspace" onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
-      <div className="modal-content" style={{ maxWidth: '40rem', width: '100%', maxHeight: '90dvh', display: 'flex', flexDirection: 'column' }}>
+  return (
+    <>
+      <Modal isOpen={true} onClose={handleClose} maxWidth="max-w-2xl" className="w-full max-h-[90dvh] flex flex-col">
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid var(--color-modal-border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -586,7 +586,7 @@ export default function OnboardingWizard({ onComplete, onClose }) {
             </button>
           </div>
         </div>
-      </div>
+      </Modal>
 
       {/* Slack Import sub-wizard */}
       {showSlackImport && workspace && (
@@ -598,8 +598,6 @@ export default function OnboardingWizard({ onComplete, onClose }) {
           }}
         />
       )}
-    </div>
+    </>
   );
-
-  return createPortal(content, document.body);
 }

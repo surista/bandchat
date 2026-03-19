@@ -7,6 +7,7 @@ import ConfirmDialog from '../common/ConfirmDialog';
 import ImageLightbox from '../common/ImageLightbox';
 import { formatDuration, formatTotalDuration } from '../../utils/formatDuration';
 import getInitial from '../../utils/getInitial';
+import ErrorMessage from '../common/ErrorMessage';
 
 function GigArchive({ workspaceId, isAdmin, workspace }) {
   const [setlists, setSetlists] = useState([]);
@@ -68,6 +69,7 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
   }, [lightboxImage, showSetlistPicker, showEditDetails, showEditPerformers, showAddMedia, selectedEntry]);
 
   const loadData = async () => {
+    setError(null);
     try {
       setLoading(true);
       // Auto-link any unlinked gigs to matching setlists (runs silently)
@@ -705,10 +707,7 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
       </div>
 
       {error && (
-        <div className="mx-4 mt-4 bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded">
-          {error}
-          <button onClick={() => setError(null)} className="float-right">&times;</button>
-        </div>
+        <ErrorMessage message={error} onRetry={loadData} className="mx-4 mt-4" />
       )}
 
       {/* Content */}

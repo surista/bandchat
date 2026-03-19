@@ -205,6 +205,10 @@ router.post('/', authenticate, async (req, res) => {
 
     workspace.effectivePlan = getEffectivePlan(workspace);
     workspace.planLimits = serializePlanLimits(getPlanLimits(workspace));
+
+    // Audit log
+    import('../lib/audit.js').then(({ logAudit }) => logAudit('workspace.created', { actorId: req.user.id, targetId: workspace.id, metadata: { name: workspace.name } })).catch(() => {});
+
     res.status(201).json(workspace);
   } catch (error) {
     console.error('Create workspace error:', error);

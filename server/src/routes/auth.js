@@ -268,6 +268,9 @@ router.post('/signup', authLimiter, async (req, res) => {
     // Send verification email (non-blocking)
     sendVerificationEmail(email.toLowerCase(), verificationToken).catch(console.error);
 
+    // Audit log
+    import('../lib/audit.js').then(({ logAudit }) => logAudit('user.created', { targetId: user.id, metadata: { email: email.toLowerCase(), provider: 'local' } })).catch(() => {});
+
     const tokens = await generateTokens(user.id);
 
     // Set refresh token as httpOnly cookie for web clients

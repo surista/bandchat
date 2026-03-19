@@ -83,9 +83,47 @@ export default function EmbedCard({ type, id, workspaceId, onClick }) {
   }
 
   if (error || !data) {
+    const handleRetry = () => {
+      setError(false);
+      setLoading(true);
+      setData(null);
+      const cacheKey = `${type}:${id}`;
+      embedCache.delete(cacheKey);
+      // Re-trigger by forcing a state change — the useEffect depends on type/id
+      // so we manually re-run the fetch
+      (async () => {
+        try {
+          let item;
+          if (type === 'song') {
+            item = await api.getSong(id);
+            setData({ title: item.title, subtitle: item.artist || '', image: item.artworkUrl, meta: [item.key, item.bpm ? `${item.bpm} BPM` : null].filter(Boolean).join(' · '), icon: '🎵' });
+          } else if (type === 'setlist') {
+            item = await api.getSetlist(id);
+            setData({ title: item.name, subtitle: `${item.songs?.length || 0} songs`, meta: item.description || '', icon: '📋' });
+          } else if (type === 'gig') {
+            item = await api.getGig(id);
+            setData({ title: item.title, subtitle: new Date(item.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }), meta: item.venue || '', icon: '🎤' });
+          } else if (type === 'poll') {
+            item = await api.getPoll(id);
+            setData({ title: item.question, subtitle: `${item.options?.length || 0} options`, meta: item.closed ? 'Closed' : 'Active', icon: '📊' });
+          }
+        } catch {
+          setError(true);
+        } finally {
+          setLoading(false);
+        }
+      })();
+    };
+
     return (
-      <div className="my-2 max-w-sm rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] p-3 text-[var(--color-text-muted)] text-sm italic">
-        Could not load {type}
+      <div className="my-2 max-w-sm rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] p-3 text-[var(--color-text-muted)] text-sm italic flex items-center justify-between">
+        <span>Could not load {type}</span>
+        <button
+          onClick={handleRetry}
+          className="ml-2 text-xs text-blue-400 hover:text-blue-300 not-italic font-medium"
+        >
+          Retry
+        </button>
       </div>
     );
   }

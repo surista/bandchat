@@ -3,6 +3,7 @@ import path from 'path';
 import rateLimit from 'express-rate-limit';
 import { authenticate, isSystemAdmin } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
+import { logAudit } from '../lib/audit.js';
 import { listAllObjects, deleteFile, isConfigured as isR2Configured } from '../lib/storage.js';
 import { createBackup, listBackups, getBackupStream, cleanupOldBackups, previewBackup, restoreFromBackup, createWorkspaceBackup, listWorkspaceBackups, previewWorkspaceBackup, restoreWorkspaceBackup, cleanupWorkspaceBackups } from '../services/backup.js';
 
@@ -796,6 +797,7 @@ router.post('/users/:userId/restore', async (req, res) => {
       data: { deletedAt: null },
     });
 
+    logAudit('admin.user.restored', { actorId: req.user.id, targetId: req.params.id, metadata: { displayName: user.displayName } });
     res.json({ message: `User "${user.displayName}" restored successfully` });
   } catch (error) {
     console.error('Admin user restore error:', error);
@@ -842,6 +844,7 @@ router.post('/workspaces/:workspaceId/restore', async (req, res) => {
       data: { deletedAt: null },
     });
 
+    logAudit('admin.workspace.restored', { actorId: req.user.id, targetId: req.params.id, metadata: { name: workspace.name } });
     res.json({ message: `Workspace "${workspace.name}" restored successfully` });
   } catch (error) {
     console.error('Admin workspace restore error:', error);
@@ -884,6 +887,7 @@ router.delete('/users/:userId/purge', async (req, res) => {
     ]);
 
     console.log(`Admin purged user: ${displayName} (${userId})`);
+    logAudit('admin.user.purged', { actorId: req.user.id, targetId: userId, metadata: { displayName } });
     res.json({ message: `User "${displayName}" permanently deleted` });
   } catch (error) {
     console.error('Admin user purge error:', error);
@@ -943,10 +947,68 @@ router.delete('/workspaces/:workspaceId/purge', async (req, res) => {
     await prisma.workspace.delete({ where: { id: workspace.id } });
 
     console.log(`Admin purged workspace: ${workspace.name} (${workspace.id})`);
+    logAudit('admin.workspace.purged', { actorId: req.user.id, targetId: workspace.id, metadata: { name: workspace.name } });
     res.json({ message: `Workspace "${workspace.name}" permanently deleted` });
   } catch (error) {
     console.error('Admin workspace purge error:', error);
     res.status(500).json({ error: 'Failed to purge workspace' });
+  }
+});
+
+// --- Audit Log ---
+
+// GET /api/admin/audit — List audit log entries
+router.get('/audit', async (req, res) => {
+  try {
+    const { action, actorId, limit = 50, cursor } = req.query;
+    const take = Math.min(parseInt(limit) || 50, 200);
+
+    const where = {};
+    if (action) where.action = { startsWith: action };
+    if (actorId) where.actorId = actorId;
+
+    const entries = await prisma.auditLog.findMany({
+      where,
+      include: {
+        actor: { select: { id: true, displayName: true, email: true, avatarUrl: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: take + 1,
+      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+    });
+
+    const hasMore = entries.length > take;
+    if (hasMore) entries.pop();
+
+    res.json({
+      entries,
+      hasMore,
+      nextCursor: hasMore ? entries[entries.length - 1]?.id : null,
+    });
+  } catch (error) {
+    console.error('Audit log fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch audit log' });
+  }
+});
+
+// GET /api/admin/audit/stats — Audit log summary
+router.get('/audit/stats', async (req, res) => {
+  try {
+    const now = new Date();
+    const last24h = new Date(now - 24 * 60 * 60 * 1000);
+    const last7d = new Date(now - 7 * 24 * 60 * 60 * 1000);
+
+    const [total, last24hCount, last7dCount, topActions] = await Promise.all([
+      prisma.auditLog.count(),
+      prisma.auditLog.count({ where: { createdAt: { gte: last24h } } }),
+      prisma.auditLog.count({ where: { createdAt: { gte: last7d } } }),
+      prisma.$queryRaw`SELECT action, COUNT(*)::int as count FROM "AuditLog" WHERE "createdAt" >= ${last7d} GROUP BY action ORDER BY count DESC LIMIT 10`,
+    ]);
+
+    res.json({ total, last24h: last24hCount, last7d: last7dCount, topActions });
+  } catch (error) {
+    console.error('Audit stats error:', error);
+    res.status(500).json({ error: 'Failed to fetch audit stats' });
   }
 });
 

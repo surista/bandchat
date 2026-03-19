@@ -4,6 +4,7 @@ import api from '../../services/api';
 import { formatDate } from '../../utils/formatDate';
 import { useAuth } from '../../context/AuthContext';
 import Modal from './Modal';
+import ErrorMessage from './ErrorMessage';
 
 export default function MemberProfile({ userId, workspaceId, onClose, onStartDM }) {
   const { user: currentUser } = useAuth();
@@ -32,6 +33,8 @@ export default function MemberProfile({ userId, workspaceId, onClose, onStartDM 
   }, [userId, workspaceId]);
 
   async function loadProfile() {
+    setError(null);
+    setLoading(true);
     try {
       const data = await api.getMemberProfile(workspaceId, userId);
       setProfile(data);
@@ -80,7 +83,7 @@ export default function MemberProfile({ userId, workspaceId, onClose, onStartDM 
       {loading ? (
         <div className="p-8 text-center text-gray-400">Loading profile...</div>
       ) : error ? (
-        <div className="p-8 text-center text-red-400">{error}</div>
+        <ErrorMessage message={error} onRetry={loadProfile} className="py-8" />
       ) : profile ? (
         <>
           {/* Header with avatar */}

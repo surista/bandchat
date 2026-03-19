@@ -37,9 +37,9 @@ const TYPE_FILTERS = [
 ];
 
 const AVAILABILITY_STATUS = {
-  AVAILABLE: { label: 'Available', color: '#22c55e', icon: '✓' },
-  MAYBE: { label: 'Maybe', color: '#eab308', icon: '?' },
-  UNAVAILABLE: { label: 'Unavailable', color: '#ef4444', icon: '✗' },
+  AVAILABLE: { label: 'Available', color: '#22c55e', iconName: 'checkmark-circle' },
+  MAYBE: { label: 'Maybe', color: '#eab308', iconName: 'help-circle-outline' },
+  UNAVAILABLE: { label: 'Unavailable', color: '#ef4444', iconName: 'close-circle-outline' },
 };
 
 function formatGigDate(dateStr) {
@@ -425,7 +425,7 @@ export default function GigListScreen({ navigation, route }) {
                 accessibilityHint="Tap to cycle availability status"
               >
                 <Text style={[styles.availabilityText, { color: statusInfo?.color || colors.textSecondary }]}>
-                  {statusInfo ? `${statusInfo.icon} ${statusInfo.label}` : '+ Avail'}
+                  {statusInfo ? <><Ionicons name={statusInfo.iconName} size={14} color={statusInfo.color} /> {statusInfo.label}</> : '+ Avail'}
                 </Text>
               </TouchableOpacity>
             )}
@@ -668,7 +668,7 @@ export default function GigListScreen({ navigation, route }) {
             )}
             {selectedGig?.status === 'SCHEDULED' && (isAdmin || !selectedGig?.isLocked) && (
               <TouchableOpacity style={styles.actionItem} onPress={handleComplete} accessibilityRole="button" accessibilityLabel="Mark event as complete">
-                <Text style={[styles.actionText, { color: '#22c55e' }]}>{'\u2713'} Mark Complete</Text>
+                <Text style={[styles.actionText, { color: '#22c55e' }]}><Ionicons name="checkmark-circle" size={16} color="#22c55e" /> Mark Complete</Text>
               </TouchableOpacity>
             )}
             {(isAdmin || !selectedGig?.isLocked) && (
@@ -714,7 +714,7 @@ export default function GigListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Set as available"
             >
-              <Text style={[styles.availabilityOptionText, { color: '#22c55e' }]}>✓ Available</Text>
+              <Text style={[styles.availabilityOptionText, { color: '#22c55e' }]}><Ionicons name="checkmark-circle" size={16} color="#22c55e" /> Available</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.availabilityOption, { backgroundColor: '#eab30820' }]}
@@ -722,7 +722,7 @@ export default function GigListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Set as maybe"
             >
-              <Text style={[styles.availabilityOptionText, { color: '#eab308' }]}>? Maybe</Text>
+              <Text style={[styles.availabilityOptionText, { color: '#eab308' }]}><Ionicons name="help-circle-outline" size={16} color="#eab308" /> Maybe</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.availabilityOption, { backgroundColor: '#ef444420' }]}
@@ -730,7 +730,7 @@ export default function GigListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Set as unavailable"
             >
-              <Text style={[styles.availabilityOptionText, { color: '#ef4444' }]}>✗ Unavailable</Text>
+              <Text style={[styles.availabilityOptionText, { color: '#ef4444' }]}><Ionicons name="close-circle-outline" size={16} color="#ef4444" /> Unavailable</Text>
             </TouchableOpacity>
             {availability[availabilityDate] && (
               <TouchableOpacity

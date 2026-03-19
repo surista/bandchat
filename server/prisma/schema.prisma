@@ -8,63 +8,64 @@ datasource db {
 }
 
 model User {
-  id                      String    @id @default(uuid())
-  email                   String    @unique
-  password                String?
-  displayName             String
-  avatarUrl               String?
-  bio                     String?
-  emailVerified           Boolean   @default(false)
-  verificationToken       String?   @unique
-  verificationExpires     DateTime?
-  pendingEmail            String?
-  passwordResetToken      String?   @unique
-  passwordResetExpires    DateTime?
-  googleId                String?   @unique
-  appleId                 String?   @unique
-  authProvider            String    @default("local")
-  isSystemAdmin           Boolean   @default(false)
+  id                        String    @id @default(uuid())
+  email                     String    @unique
+  password                  String?
+  displayName               String
+  avatarUrl                 String?
+  bio                       String?
+  emailVerified             Boolean   @default(false)
+  verificationToken         String?   @unique
+  verificationExpires       DateTime?
+  pendingEmail              String?
+  passwordResetToken        String?   @unique
+  passwordResetExpires      DateTime?
+  googleId                  String?   @unique
+  appleId                   String?   @unique
+  authProvider              String    @default("local")
+  isSystemAdmin             Boolean   @default(false)
   notificationsSnoozedUntil DateTime? // null = active, future date = snoozed until then
-  deletedAt               DateTime?
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
+  deletedAt                 DateTime?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  workspaces         WorkspaceMember[]
+  messages           Message[]
+  channelMembers     ChannelMember[]
+  pushSubscriptions  PushSubscription[]
+  refreshTokens      RefreshToken[]
+  reactions          Reaction[]
+  songs              Song[]
+  setlists           Setlist[]
+  gigs               Gig[]
+  availability       MemberAvailability[]
+  medleys            Medley[]
+  contacts           Contact[]
+  announcements      Announcement[]
+  acknowledgments    AnnouncementAcknowledgment[]
+  polls              Poll[]
+  pollVotes          PollVote[]
+  timelineEvents     TimelineEvent[]
+  memberAchievements MemberAchievement[]
+  recordings         Recording[]
+  bandMemberLinks    BandMember[]
+  kittyTransactions  KittyTransaction[]
+  threadReads        ThreadRead[]
+  pinnedMessages     PinnedMessage[]
+  reportsMade        Report[]                     @relation("reportsMade")
+  blocksInitiated    BlockedUser[]                @relation("blocksInitiated")
+  blocksReceived     BlockedUser[]                @relation("blocksReceived")
+  practiceSessions   PracticeSession[]
+  uploadedGigMedia   GigMedia[]
+  savedMessages      SavedMessage[]
+  expoPushTokens     ExpoPushToken[]
+  stagePlots         StagePlot[]
+  venues             Venue[]
+  AuditLog           AuditLog[]
 
   @@index([isSystemAdmin])
   @@index([authProvider])
   @@index([deletedAt])
-
-  workspaces              WorkspaceMember[]
-  messages                Message[]
-  channelMembers          ChannelMember[]
-  pushSubscriptions       PushSubscription[]
-  refreshTokens           RefreshToken[]
-  reactions               Reaction[]
-  songs                   Song[]
-  setlists                Setlist[]
-  gigs                    Gig[]
-  availability            MemberAvailability[]
-  medleys                 Medley[]
-  contacts                Contact[]
-  announcements           Announcement[]
-  acknowledgments         AnnouncementAcknowledgment[]
-  polls                   Poll[]
-  pollVotes               PollVote[]
-  timelineEvents          TimelineEvent[]
-  memberAchievements      MemberAchievement[]
-  recordings              Recording[]
-  bandMemberLinks         BandMember[]
-  kittyTransactions       KittyTransaction[]
-  threadReads             ThreadRead[]
-  pinnedMessages          PinnedMessage[]
-  reportsMade             Report[]        @relation("reportsMade")
-  blocksInitiated         BlockedUser[]   @relation("blocksInitiated")
-  blocksReceived          BlockedUser[]   @relation("blocksReceived")
-  practiceSessions        PracticeSession[]
-  uploadedGigMedia        GigMedia[]
-  savedMessages           SavedMessage[]
-  expoPushTokens          ExpoPushToken[]
-  stagePlots              StagePlot[]
-  venues                  Venue[]
 }
 
 model RefreshToken {
@@ -86,27 +87,27 @@ model Workspace {
   slug                String?   @unique
   inviteCode          String    @unique
   inviteCodeExpiresAt DateTime?
-  inviteMaxUses       Int?      // null = unlimited
+  inviteMaxUses       Int? // null = unlimited
   inviteUsedCount     Int       @default(0)
   storageUsedBytes    BigInt    @default(0)
   deletedAt           DateTime?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
-  calendarToken    String?   @unique
-  currency         String    @default("USD")
-  defaultEventType String    @default("GIG")
-  defaultStartTime String    @default("19:00")
-  defaultEndTime   String    @default("21:00")
+  calendarToken    String? @unique
+  currency         String  @default("USD")
+  defaultEventType String  @default("GIG")
+  defaultStartTime String  @default("19:00")
+  defaultEndTime   String  @default("21:00")
   defaultVenue     String?
 
   // Subscription
-  plan              String    @default("FREE")   // "FREE" or "PRO"
-  planSource        String?                       // "APPLE", "GOOGLE", "STRIPE", "MANUAL"
-  planProductId     String?                       // IAP product ID
-  planExpiresAt     DateTime?                     // null = lifetime or free
-  planOriginalTxId  String?   @unique             // prevents duplicate redemption
-  planUpdatedAt     DateTime?
+  plan             String    @default("FREE") // "FREE" or "PRO"
+  planSource       String? // "APPLE", "GOOGLE", "STRIPE", "MANUAL"
+  planProductId    String? // IAP product ID
+  planExpiresAt    DateTime? // null = lifetime or free
+  planOriginalTxId String?   @unique // prevents duplicate redemption
+  planUpdatedAt    DateTime?
 
   // Website
   websiteEnabled    Boolean   @default(false)
@@ -115,30 +116,31 @@ model Workspace {
   websiteVercelId   String?
   websiteConfig     Json?
   websiteDeployedAt DateTime?
-  websiteStatus     String?   // 'deploying' | 'active' | 'error'
+  websiteStatus     String? // 'deploying' | 'active' | 'error'
   websiteDeployHook String?
 
-  members       WorkspaceMember[]
-  channels      Channel[]
-  channelGroups ChannelGroup[]
-  songs         Song[]
-  setlists      Setlist[]
-  gigs          Gig[]
-  bandMembers   BandMember[]
-  availability  MemberAvailability[]
-  medleys       Medley[]
-  contacts      Contact[]
-  announcements       Announcement[]
-  polls               Poll[]
-  timelineEvents      TimelineEvent[]
-  memberAchievements  MemberAchievement[]
-  bandAchievements    BandAchievement[]
-  recordings          Recording[]
-  bandKitty           BandKitty?
-  practiceSessions    PracticeSession[]
-  stagePlots          StagePlot[]
-  venues              Venue[]
-  websiteApiTokens    WebsiteApiToken[]
+  members            WorkspaceMember[]
+  channels           Channel[]
+  channelGroups      ChannelGroup[]
+  songs              Song[]
+  setlists           Setlist[]
+  gigs               Gig[]
+  bandMembers        BandMember[]
+  availability       MemberAvailability[]
+  medleys            Medley[]
+  contacts           Contact[]
+  announcements      Announcement[]
+  polls              Poll[]
+  timelineEvents     TimelineEvent[]
+  memberAchievements MemberAchievement[]
+  bandAchievements   BandAchievement[]
+  recordings         Recording[]
+  bandKitty          BandKitty?
+  practiceSessions   PracticeSession[]
+  stagePlots         StagePlot[]
+  venues             Venue[]
+  websiteApiTokens   WebsiteApiToken[]
+  auditLogs          AuditLog[]
 
   @@index([deletedAt])
 }
@@ -192,9 +194,9 @@ model Channel {
 
   pinnedSetlistId String?
 
-  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  group     ChannelGroup?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  pinnedSetlist  Setlist?    @relation("ChannelPinnedSetlist", fields: [pinnedSetlistId], references: [id], onDelete: SetNull)
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  group          ChannelGroup?   @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  pinnedSetlist  Setlist?        @relation("ChannelPinnedSetlist", fields: [pinnedSetlistId], references: [id], onDelete: SetNull)
   members        ChannelMember[]
   messages       Message[]
   polls          Poll[]
@@ -228,20 +230,20 @@ model Message {
   parentId        String?
   isHidden        Boolean  @default(false)
   hidePreview     Boolean  @default(false)
-  removedUserName String?  // Set when user is removed/deleted (preserves display name)
+  removedUserName String? // Set when user is removed/deleted (preserves display name)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  author      User?        @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  channel     Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  parent      Message?     @relation("Threads", fields: [parentId], references: [id], onDelete: SetNull)
-  replies     Message[]    @relation("Threads")
-  attachments Attachment[]
-  reactions       Reaction[]
-  threadReads     ThreadRead[]
-  pinnedMessages  PinnedMessage[]
-  savedMessages   SavedMessage[]
-  reports         Report[]
+  author         User?           @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  channel        Channel         @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  parent         Message?        @relation("Threads", fields: [parentId], references: [id], onDelete: SetNull)
+  replies        Message[]       @relation("Threads")
+  attachments    Attachment[]
+  reactions      Reaction[]
+  threadReads    ThreadRead[]
+  pinnedMessages PinnedMessage[]
+  savedMessages  SavedMessage[]
+  reports        Report[]
 
   @@index([channelId, createdAt])
   @@index([parentId])
@@ -295,7 +297,7 @@ model ExpoPushToken {
   id        String   @id @default(cuid())
   userId    String
   token     String   @unique
-  platform  String   // "ios" or "android"
+  platform  String // "ios" or "android"
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -335,9 +337,9 @@ model PinnedMessage {
   pinnedById String?
   createdAt  DateTime @default(now())
 
-  message    Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  channel    Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  pinnedBy   User?    @relation(fields: [pinnedById], references: [id], onDelete: SetNull)
+  message  Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  channel  Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  pinnedBy User?   @relation(fields: [pinnedById], references: [id], onDelete: SetNull)
 
   @@unique([messageId, channelId])
   @@index([channelId])
@@ -359,26 +361,26 @@ model SavedMessage {
 // Band Features
 
 model Song {
-  id          String   @id @default(uuid())
-  title       String
-  shortName   String?
-  artist      String?
-  duration    Int?
-  key         String?
-  bpm         Int?
-  notes       String?
-  lyrics      String?  // Lyrics or chord chart text
-  arrangement String?  // Custom arrangement notes (intro, solo, ending, etc.)
-  youtubeUrl  String?
-  spotifyUrl  String?
+  id                 String   @id @default(uuid())
+  title              String
+  shortName          String?
+  artist             String?
+  duration           Int?
+  key                String?
+  bpm                Int?
+  notes              String?
+  lyrics             String? // Lyrics or chord chart text
+  arrangement        String? // Custom arrangement notes (intro, solo, ending, etc.)
+  youtubeUrl         String?
+  spotifyUrl         String?
   workspaceId        String
   createdById        String?
   removedCreatorName String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  workspace        Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy        User?            @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy        User?             @relation(fields: [createdById], references: [id], onDelete: SetNull)
   setlistSongs     SetlistSong[]
   gigSongs         GigSong[]
   attachments      SongAttachment[]
@@ -396,7 +398,7 @@ model SongAttachment {
   songId    String
   filename  String
   url       String
-  type      String   // 'pdf', 'doc', 'image', etc.
+  type      String // 'pdf', 'doc', 'image', etc.
   size      Int?
   createdAt DateTime @default(now())
 
@@ -406,26 +408,26 @@ model SongAttachment {
 }
 
 model Setlist {
-  id            String    @id @default(uuid())
-  name          String
-  description   String?
-  useShortNames Boolean   @default(false)
-  performedAt   DateTime? // Date the setlist was performed
-  venue         String?   // Venue name for the performance
-  startTime     String?   // "HH:mm" format e.g. "19:30"
-  isAutoCreated Boolean   @default(false) // True if auto-created with a gig
+  id                 String    @id @default(uuid())
+  name               String
+  description        String?
+  useShortNames      Boolean   @default(false)
+  performedAt        DateTime? // Date the setlist was performed
+  venue              String? // Venue name for the performance
+  startTime          String? // "HH:mm" format e.g. "19:30"
+  isAutoCreated      Boolean   @default(false) // True if auto-created with a gig
   workspaceId        String
   createdById        String?
   removedCreatorName String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  workspace       Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy       User?               @relation(fields: [createdById], references: [id], onDelete: SetNull)
-  songs           SetlistSong[]
-  gigs            Gig[]               // Legacy single-setlist relation
-  gigSetlists     GigSetlist[]        // Multi-set support
-  performers      SetlistPerformer[]  // Band members who performed this setlist
+  workspace        Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy        User?              @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  songs            SetlistSong[]
+  gigs             Gig[] // Legacy single-setlist relation
+  gigSetlists      GigSetlist[] // Multi-set support
+  performers       SetlistPerformer[] // Band members who performed this setlist
   pinnedInChannels Channel[]          @relation("ChannelPinnedSetlist")
 
   @@unique([workspaceId, name])
@@ -439,8 +441,8 @@ model SetlistSong {
   songId    String?
   position  Int
   type      SetlistItemType @default(SONG)
-  duration  Int?            // For MC/break items (in seconds)
-  label     String?         // Optional label for MC sections
+  duration  Int? // For MC/break items (in seconds)
+  label     String? // Optional label for MC sections
 
   setlist Setlist @relation(fields: [setlistId], references: [id], onDelete: Cascade)
   song    Song?   @relation(fields: [songId], references: [id], onDelete: Cascade)
@@ -456,34 +458,34 @@ enum SetlistItemType {
 }
 
 model Gig {
-  id          String    @id @default(uuid())
-  title       String
-  type        GigType   @default(GIG)
-  date        DateTime
-  endDate     DateTime?
-  soundCheckTime      String?   // "HH:mm" format e.g. "16:00"
-  eventStartTime      String?   // "HH:mm" format e.g. "19:00" (doors open)
-  performanceStartTime String?  // "HH:mm" format e.g. "20:00" (band goes on)
-  venue       String?
-  address     String?
-  venueId     String?
-  notes       String?
-  pay         Decimal?  @db.Decimal(10, 2) // Currency stored as decimal to avoid rounding errors
-  status      GigStatus @default(SCHEDULED)
-  isLocked    Boolean   @default(false) // Admin-only: non-admins cannot edit/delete
-  isPersonal  Boolean   @default(false) // Personal entry: only visible to creator
-  setlistId   String?   // Legacy single setlist - kept for backward compatibility
-  workspaceId        String
-  createdById        String?
-  removedCreatorName String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  id                   String    @id @default(uuid())
+  title                String
+  type                 GigType   @default(GIG)
+  date                 DateTime
+  endDate              DateTime?
+  soundCheckTime       String? // "HH:mm" format e.g. "16:00"
+  eventStartTime       String? // "HH:mm" format e.g. "19:00" (doors open)
+  performanceStartTime String? // "HH:mm" format e.g. "20:00" (band goes on)
+  venue                String?
+  address              String?
+  venueId              String?
+  notes                String?
+  pay                  Decimal?  @db.Decimal(10, 2) // Currency stored as decimal to avoid rounding errors
+  status               GigStatus @default(SCHEDULED)
+  isLocked             Boolean   @default(false) // Admin-only: non-admins cannot edit/delete
+  isPersonal           Boolean   @default(false) // Personal entry: only visible to creator
+  setlistId            String? // Legacy single setlist - kept for backward compatibility
+  workspaceId          String
+  createdById          String?
+  removedCreatorName   String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   workspace         Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdBy         User?              @relation(fields: [createdById], references: [id], onDelete: SetNull)
   setlist           Setlist?           @relation(fields: [setlistId], references: [id], onDelete: SetNull)
   venueRecord       Venue?             @relation(fields: [venueId], references: [id], onDelete: SetNull)
-  setlists          GigSetlist[]       // Multi-set support
+  setlists          GigSetlist[] // Multi-set support
   songsPlayed       GigSong[]
   media             GigMedia[]
   attendees         GigAttendee[]
@@ -497,11 +499,11 @@ model Gig {
 }
 
 model GigAttendee {
-  id           String   @id @default(uuid())
+  id           String         @id @default(uuid())
   gigId        String
   bandMemberId String
   status       AttendeeStatus @default(ATTENDING)
-  createdAt    DateTime @default(now())
+  createdAt    DateTime       @default(now())
 
   gig        Gig        @relation(fields: [gigId], references: [id], onDelete: Cascade)
   bandMember BandMember @relation(fields: [bandMemberId], references: [id], onDelete: Cascade)
@@ -520,7 +522,7 @@ model GigSetlist {
   id        String   @id @default(uuid())
   gigId     String
   setlistId String
-  setNumber Int      // 1, 2, 3, etc.
+  setNumber Int // 1, 2, 3, etc.
   createdAt DateTime @default(now())
 
   gig     Gig     @relation(fields: [gigId], references: [id], onDelete: Cascade)
@@ -534,9 +536,9 @@ model GigSetlist {
 model GigMedia {
   id           String   @id @default(uuid())
   gigId        String
-  type         String   // 'image', 'video', 'youtube', 'link'
+  type         String // 'image', 'video', 'youtube', 'link'
   url          String
-  size         Int?     // File size in bytes
+  size         Int? // File size in bytes
   caption      String?
   uploadedById String?
   createdAt    DateTime @default(now())
@@ -561,16 +563,16 @@ model GigSong {
 }
 
 model Venue {
-  id          String   @id @default(uuid())
-  name        String
-  address     String?
-  city        String?
-  imageUrl    String?
-  phone       String?
-  email       String?
-  website     String?
-  capacity    Int?
-  notes       String?
+  id                 String   @id @default(uuid())
+  name               String
+  address            String?
+  city               String?
+  imageUrl           String?
+  phone              String?
+  email              String?
+  website            String?
+  capacity           Int?
+  notes              String?
   workspaceId        String
   createdById        String?
   removedCreatorName String?
@@ -599,18 +601,18 @@ enum GigStatus {
 }
 
 model BandMember {
-  id           String    @id @default(uuid())
+  id           String   @id @default(uuid())
   name         String
   imageUrl     String?
   notes        String?
-  isGuest      Boolean   @default(false)
-  linkedUserId String?   // Optional link to a workspace user account
+  isGuest      Boolean  @default(false)
+  linkedUserId String? // Optional link to a workspace user account
   workspaceId  String
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  workspace      Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  linkedUser     User?               @relation(fields: [linkedUserId], references: [id], onDelete: SetNull)
+  workspace      Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  linkedUser     User?              @relation(fields: [linkedUserId], references: [id], onDelete: SetNull)
   stints         InstrumentStint[]
   performances   SetlistPerformer[]
   gigAttendances GigAttendee[]
@@ -671,9 +673,9 @@ enum AvailabilityStatus {
 
 // Medley - group of songs that play back-to-back
 model Medley {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
+  id                 String   @id @default(uuid())
+  name               String
+  description        String?
   workspaceId        String
   createdById        String?
   removedCreatorName String?
@@ -689,10 +691,10 @@ model Medley {
 }
 
 model MedleySong {
-  id        String @id @default(uuid())
-  medleyId  String
-  songId    String
-  position  Int
+  id       String @id @default(uuid())
+  medleyId String
+  songId   String
+  position Int
 
   medley Medley @relation(fields: [medleyId], references: [id], onDelete: Cascade)
   song   Song   @relation(fields: [songId], references: [id], onDelete: Cascade)
@@ -703,14 +705,14 @@ model MedleySong {
 
 // Shared Contacts (venues, sound engineers, photographers, etc.)
 model Contact {
-  id          String   @id @default(uuid())
-  name        String
-  category    String   // 'venue', 'sound_engineer', 'photographer', 'agent', 'other'
-  email       String?
-  phone       String?
-  website     String?
-  address     String?
-  notes       String?
+  id                 String   @id @default(uuid())
+  name               String
+  category           String // 'venue', 'sound_engineer', 'photographer', 'agent', 'other'
+  email              String?
+  phone              String?
+  website            String?
+  address            String?
+  notes              String?
   workspaceId        String
   createdById        String?
   removedCreatorName String?
@@ -726,21 +728,21 @@ model Contact {
 
 // Announcements - pinned messages with acknowledgment tracking
 model Announcement {
-  id          String   @id @default(uuid())
-  title       String
-  content     String
-  priority    String   @default("normal") // 'low', 'normal', 'high', 'urgent'
-  isPinned    Boolean  @default(true)
+  id                 String    @id @default(uuid())
+  title              String
+  content            String
+  priority           String    @default("normal") // 'low', 'normal', 'high', 'urgent'
+  isPinned           Boolean   @default(true)
   workspaceId        String
   createdById        String?
   removedCreatorName String?
   expiresAt          DateTime?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  workspace        Workspace                     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy        User?                         @relation(fields: [createdById], references: [id], onDelete: SetNull)
-  acknowledgments  AnnouncementAcknowledgment[]
+  workspace       Workspace                    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy       User?                        @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  acknowledgments AnnouncementAcknowledgment[]
 
   @@index([workspaceId])
   @@index([workspaceId, isPinned])
@@ -762,14 +764,14 @@ model AnnouncementAcknowledgment {
 
 // Polls/Voting
 model Poll {
-  id          String    @id @default(uuid())
-  question    String
-  description String?
-  allowMultiple Boolean @default(false)
-  isAnonymous Boolean   @default(false)
-  isClosed    Boolean   @default(false)
-  workspaceId String
-  channelId          String?   // Optional: poll can be in a channel
+  id                 String    @id @default(uuid())
+  question           String
+  description        String?
+  allowMultiple      Boolean   @default(false)
+  isAnonymous        Boolean   @default(false)
+  isClosed           Boolean   @default(false)
+  workspaceId        String
+  channelId          String? // Optional: poll can be in a channel
   createdById        String?
   removedCreatorName String?
   expiresAt          DateTime?
@@ -813,12 +815,12 @@ model PollVote {
 
 // Band Timeline - milestones and events in band history
 model TimelineEvent {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  eventType   String   // 'formation', 'first_gig', 'member_joined', 'member_left', 'album_release', 'milestone', 'custom'
-  eventDate   DateTime
-  imageUrl    String?
+  id                 String   @id @default(uuid())
+  title              String
+  description        String?
+  eventType          String // 'formation', 'first_gig', 'member_joined', 'member_left', 'album_release', 'milestone', 'custom'
+  eventDate          DateTime
+  imageUrl           String?
   workspaceId        String
   createdById        String?
   removedCreatorName String?
@@ -838,9 +840,9 @@ model Achievement {
   code        String   @unique // 'first_gig', 'hundred_gigs', 'road_warrior', etc.
   name        String
   description String
-  icon        String   // emoji or icon name
-  category    String   // 'gigs', 'songs', 'rehearsals', 'social', 'milestones'
-  threshold   Int?     // numeric threshold for auto-awards (e.g., 100 for "100 gigs")
+  icon        String // emoji or icon name
+  category    String // 'gigs', 'songs', 'rehearsals', 'social', 'milestones'
+  threshold   Int? // numeric threshold for auto-awards (e.g., 100 for "100 gigs")
   isBandWide  Boolean  @default(false) // true = band achievement, false = member achievement
   createdAt   DateTime @default(now())
 
@@ -855,7 +857,7 @@ model MemberAchievement {
   userId        String
   workspaceId   String
   earnedAt      DateTime @default(now())
-  metadata      Json?    // Extra data like "gigId" for context
+  metadata      Json? // Extra data like "gigId" for context
 
   achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -882,14 +884,14 @@ model BandAchievement {
 
 // Quick audio/video recordings
 model Recording {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  url         String   // R2 URL
-  type        String   // 'audio', 'video'
-  duration    Int?     // Duration in seconds
-  size        Int?     // File size in bytes
-  songId      String?  // Optional link to a song
+  id                 String   @id @default(uuid())
+  title              String
+  description        String?
+  url                String // R2 URL
+  type               String // 'audio', 'video'
+  duration           Int? // Duration in seconds
+  size               Int? // File size in bytes
+  songId             String? // Optional link to a song
   workspaceId        String
   createdById        String?
   removedCreatorName String?
@@ -920,14 +922,14 @@ model BandKitty {
 }
 
 model KittyTransaction {
-  id          String               @id @default(uuid())
-  kittyId     String
-  type        KittyTransactionType
-  category    String?              // For EXPENSE: 'equipment', 'travel', 'rehearsal', 'promo', 'other'
-  amount      Decimal              @db.Decimal(10, 2) // Currency as decimal
-  description String
-  date        DateTime             @default(now())
-  gigId       String?              // Link to gig if auto-created from gig completion
+  id                 String               @id @default(uuid())
+  kittyId            String
+  type               KittyTransactionType
+  category           String? // For EXPENSE: 'equipment', 'travel', 'rehearsal', 'promo', 'other'
+  amount             Decimal              @db.Decimal(10, 2) // Currency as decimal
+  description        String
+  date               DateTime             @default(now())
+  gigId              String? // Link to gig if auto-created from gig completion
   createdById        String?
   removedCreatorName String?
   createdAt          DateTime             @default(now())
@@ -981,7 +983,7 @@ model PracticeSession {
   songId      String
   userId      String
   workspaceId String
-  duration    Int      // minutes
+  duration    Int // minutes
   notes       String?
   practicedAt DateTime @default(now())
   createdAt   DateTime @default(now())
@@ -998,7 +1000,7 @@ model PracticeSession {
 model StagePlot {
   id                 String   @id @default(uuid())
   title              String
-  data               Json     // { items, stageWidth, stageHeight, theme }
+  data               Json // { items, stageWidth, stageHeight, theme }
   workspaceId        String
   gigId              String?
   createdById        String?
@@ -1016,12 +1018,29 @@ model StagePlot {
 }
 
 model WebsiteApiToken {
-  id          String    @id @default(uuid())
-  token       String    @unique   // SHA-256 hashed
+  id          String   @id @default(uuid())
+  token       String   @unique // SHA-256 hashed
   workspaceId String
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime @default(now())
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String // e.g., "user.created", "workspace.deleted", "admin.restore"
+  actorId   String? // User who performed the action (null for system actions)
+  targetId  String? // ID of the affected entity (user, workspace, etc.)
+  metadata  Json? // Additional context (old values, new values, etc.)
+  createdAt DateTime @default(now())
+
+  actor       User?      @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  Workspace   Workspace? @relation(fields: [workspaceId], references: [id])
+  workspaceId String?
+
+  @@index([action])
+  @@index([actorId])
+  @@index([createdAt])
 }

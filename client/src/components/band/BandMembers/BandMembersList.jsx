@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../../services/api';
 import BandTimeline from './BandTimeline';
 import MemberProfile from '../../common/MemberProfile';
+import ErrorMessage from '../../common/ErrorMessage';
 
 function BandMembersList({ workspaceId, workspace }) {
   const [members, setMembers] = useState({ current: [], former: [], guests: [], all: [] });
@@ -17,6 +18,7 @@ function BandMembersList({ workspaceId, workspace }) {
   }, [workspaceId]);
 
   const loadMembers = async () => {
+    setError(null);
     try {
       setLoading(true);
       const data = await api.getBandMembers(workspaceId);
@@ -104,11 +106,7 @@ function BandMembersList({ workspaceId, workspace }) {
 
   if (error) {
     return (
-      <div className="p-4">
-        <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-2 rounded">
-          {error}
-        </div>
-      </div>
+      <ErrorMessage message={error} onRetry={loadMembers} className="py-16" />
     );
   }
 

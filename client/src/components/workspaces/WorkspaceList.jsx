@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import Footer from '../common/Footer';
 import Modal from '../common/Modal';
+import ErrorMessage from '../common/ErrorMessage';
 import OnboardingWizard from './OnboardingWizard';
 import WorkspaceImportWizard from './WorkspaceImportWizard';
 
@@ -23,6 +24,7 @@ function WorkspaceList() {
   }, []);
 
   const loadWorkspaces = async () => {
+    setError('');
     try {
       const data = await api.getWorkspaces();
       setWorkspaces(data);
@@ -105,11 +107,13 @@ function WorkspaceList() {
           </div>
         </div>
 
-        {error && (
+        {error && workspaces.length === 0 && !showJoin ? (
+          <ErrorMessage message={error} onRetry={loadWorkspaces} className="py-16" />
+        ) : error ? (
           <div className="bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded mb-4">
             {error}
           </div>
-        )}
+        ) : null}
 
         {workspaces.length === 0 ? (
           <div className="bg-white/10 rounded-lg p-8 text-center">

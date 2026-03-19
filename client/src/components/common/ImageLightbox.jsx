@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 
 export default function ImageLightbox({ images: imagesProp, initialIndex = 0, src, alt, onClose }) {
   // Backward compatibility: convert legacy single-image props to array
@@ -222,9 +223,12 @@ export default function ImageLightbox({ images: imagesProp, initialIndex = 0, sr
 
   if (images.length === 0) return null;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[9000] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Image preview"
       onClick={handleBackdropClick}
     >
       {/* Close button */}
@@ -291,6 +295,7 @@ export default function ImageLightbox({ images: imagesProp, initialIndex = 0, sr
           {currentImage.alt}
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
