@@ -760,7 +760,7 @@ function MessageList({
                         </div>
                       )}
                       {att.type === 'VIDEO' && (
-                        <video src={att.url} controls className="max-w-full md:max-w-md rounded" />
+                        <video src={att.url} controls playsInline preload="metadata" className="max-w-full md:max-w-md rounded" />
                       )}
                       {att.type === 'AUDIO' && (
                         <div className="bg-[var(--color-bg-tertiary)] rounded-lg p-3 max-w-full md:max-w-md">

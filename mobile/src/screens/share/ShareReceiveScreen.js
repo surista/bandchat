@@ -75,9 +75,7 @@ export default function ShareReceiveScreen({ navigation }) {
   const loadChannels = async (workspaceId) => {
     try {
       const data = await api.getChannels(workspaceId);
-      // Filter to only show channels user can post to (exclude DMs for simplicity)
-      const postableChannels = data.filter(ch => !ch.isDM);
-      setChannels(postableChannels);
+      setChannels(data);
     } catch (err) {
       toast.error('Failed to load channels');
     } finally {
@@ -211,6 +209,7 @@ export default function ShareReceiveScreen({ navigation }) {
   // Render channel item
   const renderChannelItem = ({ item }) => {
     const isSelected = selectedChannel?.id === item.id;
+    const isDM = item.isDM || item.isDirect;
     const isPrivate = item.isPrivate;
     return (
       <TouchableOpacity
@@ -222,12 +221,14 @@ export default function ShareReceiveScreen({ navigation }) {
         onPress={() => handleSelectChannel(item)}
         activeOpacity={0.7}
       >
-        {isPrivate ? (
+        {isDM ? (
+          <Ionicons name="person" size={14} color={colors.textSecondary} style={{ marginRight: 6 }} />
+        ) : isPrivate ? (
           <Ionicons name="lock-closed" size={14} color={colors.textSecondary} style={{ marginRight: 6 }} />
         ) : (
           <Text style={[styles.channelPrefix, { color: colors.textSecondary }]}># </Text>
         )}
-        <Text style={[styles.channelName, { color: colors.textPrimary }]}>{item.name}</Text>
+        <Text style={[styles.channelName, { color: colors.textPrimary }]}>{item.displayName || item.name}</Text>
         {isSelected && (
           <Ionicons name="checkmark" size={18} color={colors.primary} style={{ marginLeft: 'auto' }} />
         )}
@@ -328,7 +329,7 @@ export default function ShareReceiveScreen({ navigation }) {
         {selectedWorkspace && (
           <>
             <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginTop: 20 }]}>
-              Select Channel{workspaces.length === 1 ? ` in ${selectedWorkspace.name}` : ''}
+              Select Conversation{workspaces.length === 1 ? ` in ${selectedWorkspace.name}` : ''}
             </Text>
             {channels.length === 0 ? (
               <View style={[styles.noChannels, { backgroundColor: colors.bgSecondary }]}>
