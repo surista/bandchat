@@ -11,6 +11,7 @@ import MobileNav from '../navigation/MobileNav';
 import Skeleton from '../common/Skeleton';
 import ErrorMessage from '../common/ErrorMessage';
 import UpgradePrompt from '../common/UpgradePrompt';
+import { useTheme } from '../../context/ThemeContext';
 import useSwipeGesture from '../../hooks/useSwipeGesture';
 import getInitial from '../../utils/getInitial';
 
@@ -180,6 +181,7 @@ function WorkspaceView() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { socket, joinWorkspace } = useSocket();
+  const { setActiveWorkspaceId } = useTheme();
   const [workspace, setWorkspace] = useState(null);
   const [channels, setChannels] = useState([]);
   const [channelGroups, setChannelGroups] = useState([]);
@@ -226,7 +228,9 @@ function WorkspaceView() {
   });
 
   useEffect(() => {
+    setActiveWorkspaceId(workspaceId);
     loadWorkspace();
+    return () => setActiveWorkspaceId(null);
   }, [workspaceId]);
 
   // Update pendingChannelId when workspaceId changes

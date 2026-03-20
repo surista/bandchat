@@ -9,12 +9,34 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme, themes } from '../../context/ThemeContext';
 import { useLayout } from '../../hooks/useLayout';
+import { selectionFeedback } from '../../utils/haptics';
 
 const themeKeys = Object.keys(themes);
 
-export default function AppearanceScreen() {
-  const { currentTheme, setTheme, mode, toggleMode, colors } = useTheme()
+export default function AppearanceScreen({ route }) {
+  const workspaceId = route?.params?.workspaceId;
+  const { currentTheme, setTheme, mode, toggleMode, colors, globalTheme, setGlobalTheme, setWorkspaceTheme, getWorkspaceTheme } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
+
+  const hasCustomTheme = workspaceId ? !!getWorkspaceTheme(workspaceId) : false;
+
+  const handleThemeSelect = (key) => {
+    selectionFeedback();
+    if (workspaceId && hasCustomTheme) {
+      setWorkspaceTheme(workspaceId, key);
+    } else {
+      setGlobalTheme(key);
+    }
+  };
+
+  const handleToggleCustomTheme = () => {
+    selectionFeedback();
+    if (hasCustomTheme) {
+      setWorkspaceTheme(workspaceId, null);
+    } else {
+      setWorkspaceTheme(workspaceId, currentTheme);
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
@@ -34,8 +56,34 @@ export default function AppearanceScreen() {
           </View>
         </View>
 
+        {/* Per-band theme toggle */}
+        {workspaceId && (
+          <>
+            <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>BAND THEME</Text>
+            <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
+              <View style={styles.modeRow}>
+                <View style={{ flex: 1, marginRight: 12 }}>
+                  <Text style={[styles.modeLabel, { color: colors.textPrimary }]}>Custom theme for this band</Text>
+                  <Text style={[styles.hint, { color: colors.textSecondary }]}>
+                    {hasCustomTheme ? 'This band has its own look' : 'Uses your default theme'}
+                  </Text>
+                </View>
+                <Switch
+                  value={hasCustomTheme}
+                  onValueChange={handleToggleCustomTheme}
+                  trackColor={{ false: '#767577', true: colors.primary }}
+                  thumbColor="#ffffff"
+                  accessibilityLabel="Custom theme for this band"
+                />
+              </View>
+            </View>
+          </>
+        )}
+
         {/* Theme Grid */}
-        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>THEME</Text>
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>
+          {workspaceId && hasCustomTheme ? 'BAND THEME' : 'THEME'}
+        </Text>
         <View style={styles.grid}>
           {themeKeys.map(key => {
             const theme = themes[key];
@@ -48,7 +96,7 @@ export default function AppearanceScreen() {
                   { backgroundColor: colors.bgSecondary },
                   isActive && { borderColor: colors.primary, borderWidth: 2 },
                 ]}
-                onPress={() => setTheme(key)}
+                onPress={() => handleThemeSelect(key)}
                 activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel={`${theme.name} theme${isActive ? ', selected' : ''}`}
@@ -98,6 +146,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modeLabel: { fontSize: 16, fontWeight: '500' },
+  hint: { fontSize: 13, marginTop: 2 },
   // Theme grid
   grid: {
     flexDirection: 'row',

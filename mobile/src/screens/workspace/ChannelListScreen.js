@@ -69,7 +69,7 @@ const BAND_CATEGORIES = [
 export default function ChannelListScreen({ navigation, route }) {
   const { id: workspaceId, name: workspaceName } = route.params;
   const { user } = useAuth();
-  const { colors } = useTheme();
+  const { colors, setActiveWorkspaceId } = useTheme();
   const { socket, joinWorkspace } = useSocket();
   const { isTablet, contentMaxWidth } = useLayout();
 
@@ -199,6 +199,12 @@ export default function ChannelListScreen({ navigation, route }) {
       }
     }).catch(() => {});
   }, [workspaceId]);
+
+  // Set active workspace for per-band theme
+  useEffect(() => {
+    setActiveWorkspaceId(workspaceId);
+    return () => setActiveWorkspaceId(null);
+  }, [workspaceId, setActiveWorkspaceId]);
 
   const loadData = useCallback(async () => {
     try {

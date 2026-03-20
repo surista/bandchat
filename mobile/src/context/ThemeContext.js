@@ -252,10 +252,15 @@ const DENSITY_VALUES = {
 
 export function ThemeProvider({ children }) {
   const systemColorScheme = useColorScheme();
-  const [currentTheme, setCurrentTheme] = useState('default');
+  const [globalTheme, setGlobalTheme] = useState('default');
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState(null);
+  const [workspaceThemes, setWorkspaceThemesState] = useState({});
   const [mode, setMode] = useState(systemColorScheme === 'light' ? 'light' : 'dark');
   const [messageDensity, setMessageDensityState] = useState('default');
   const [loaded, setLoaded] = useState(false);
+
+  // Resolve which theme to actually use
+  const currentTheme = (activeWorkspaceId && workspaceThemes[activeWorkspaceId]) || globalTheme;
 
   useEffect(() => {
     const loadTheme = async () => {
@@ -263,12 +268,16 @@ export function ThemeProvider({ children }) {
         const savedTheme = await AsyncStorage.getItem('bandchat-theme');
         const savedMode = await AsyncStorage.getItem('bandchat-mode');
         const savedDensity = await AsyncStorage.getItem('bandchat-density');
-        if (savedTheme && themes[savedTheme]) setCurrentTheme(savedTheme);
+        const savedWsThemes = await AsyncStorage.getItem('bandchat-workspace-themes');
+        if (savedTheme && themes[savedTheme]) setGlobalTheme(savedTheme);
         if (savedMode) {
           setMode(savedMode);
         }
         if (savedDensity && DENSITY_VALUES[savedDensity]) {
           setMessageDensityState(savedDensity);
+        }
+        if (savedWsThemes) {
+          try { setWorkspaceThemesState(JSON.parse(savedWsThemes)); } catch {}
         }
       } catch {
         // Use defaults
@@ -281,11 +290,12 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     if (loaded) {
-      AsyncStorage.setItem('bandchat-theme', currentTheme);
+      AsyncStorage.setItem('bandchat-theme', globalTheme);
       AsyncStorage.setItem('bandchat-mode', mode);
       AsyncStorage.setItem('bandchat-density', messageDensity);
+      AsyncStorage.setItem('bandchat-workspace-themes', JSON.stringify(workspaceThemes));
     }
-  }, [currentTheme, mode, messageDensity, loaded]);
+  }, [globalTheme, mode, messageDensity, workspaceThemes, loaded]);
 
   const setMessageDensity = useCallback((density) => {
     if (DENSITY_VALUES[density]) {
@@ -294,10 +304,28 @@ export function ThemeProvider({ children }) {
   }, []);
 
   const setTheme = useCallback((themeId) => {
-    if (themes[themeId]) {
-      setCurrentTheme(themeId);
+    if (!themes[themeId]) return;
+    if (activeWorkspaceId && workspaceThemes[activeWorkspaceId]) {
+      const updated = { ...workspaceThemes, [activeWorkspaceId]: themeId };
+      setWorkspaceThemesState(updated);
+    } else {
+      setGlobalTheme(themeId);
     }
-  }, []);
+  }, [activeWorkspaceId, workspaceThemes]);
+
+  const setWorkspaceTheme = useCallback((workspaceId, themeId) => {
+    const updated = { ...workspaceThemes };
+    if (themeId) {
+      updated[workspaceId] = themeId;
+    } else {
+      delete updated[workspaceId];
+    }
+    setWorkspaceThemesState(updated);
+  }, [workspaceThemes]);
+
+  const getWorkspaceTheme = useCallback((workspaceId) => {
+    return workspaceThemes[workspaceId] || null;
+  }, [workspaceThemes]);
 
   const toggleMode = useCallback(() => {
     setMode(prev => (prev === 'dark' ? 'light' : 'dark'));
@@ -338,7 +366,13 @@ export function ThemeProvider({ children }) {
     messageDensity,
     setMessageDensity,
     density,
-  }), [currentTheme, setTheme, mode, toggleMode, colors, messageDensity, setMessageDensity, density]);
+    globalTheme,
+    setGlobalTheme: (id) => { if (themes[id]) setGlobalTheme(id); },
+    activeWorkspaceId,
+    setActiveWorkspaceId,
+    setWorkspaceTheme,
+    getWorkspaceTheme,
+  }), [currentTheme, setTheme, mode, toggleMode, colors, messageDensity, setMessageDensity, density, globalTheme, activeWorkspaceId, setWorkspaceTheme, getWorkspaceTheme]);
 
   return (
     <ThemeContext.Provider value={contextValue}>

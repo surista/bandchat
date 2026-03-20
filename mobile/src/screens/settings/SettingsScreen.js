@@ -272,7 +272,7 @@ export default function SettingsScreen({ navigation, route }) {
           <SettingsRow
             icon="color-palette-outline"
             label="Appearance"
-            onPress={() => navigation.navigate('Appearance')}
+            onPress={() => navigation.navigate('Appearance', { workspaceId })}
             colors={colors}
           />
           <View style={[styles.separator, { backgroundColor: colors.border }]} />

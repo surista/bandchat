@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 
 const themes = {
   default: {
@@ -180,15 +180,30 @@ const structuralColors = {
 
 const ThemeContext = createContext();
 
+function getWorkspaceThemes() {
+  try {
+    return JSON.parse(localStorage.getItem('bandchat-workspace-themes') || '{}');
+  } catch { return {}; }
+}
+
+function saveWorkspaceThemes(map) {
+  localStorage.setItem('bandchat-workspace-themes', JSON.stringify(map));
+}
+
 export function ThemeProvider({ children }) {
-  const [currentTheme, setCurrentTheme] = useState(() => {
+  const [globalTheme, setGlobalTheme] = useState(() => {
     return localStorage.getItem('bandchat-theme') || 'default';
   });
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState(null);
+  const [workspaceThemes, setWorkspaceThemes] = useState(getWorkspaceThemes);
   const [mode, setMode] = useState(() => {
     const saved = localStorage.getItem('bandchat-mode');
     if (saved) return saved;
     return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
   });
+
+  // Resolve which theme to actually use
+  const currentTheme = (activeWorkspaceId && workspaceThemes[activeWorkspaceId]) || globalTheme;
 
   useEffect(() => {
     const theme = themes[currentTheme] || themes.default;
@@ -226,9 +241,9 @@ export function ThemeProvider({ children }) {
     // Set data attribute for CSS selectors
     root.dataset.mode = mode;
 
-    localStorage.setItem('bandchat-theme', currentTheme);
+    localStorage.setItem('bandchat-theme', globalTheme);
     localStorage.setItem('bandchat-mode', mode);
-  }, [currentTheme, mode]);
+  }, [currentTheme, globalTheme, mode]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
@@ -241,11 +256,33 @@ export function ThemeProvider({ children }) {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  const setTheme = (themeId) => {
-    if (themes[themeId]) {
-      setCurrentTheme(themeId);
+  const setTheme = useCallback((themeId) => {
+    if (!themes[themeId]) return;
+    if (activeWorkspaceId && workspaceThemes[activeWorkspaceId]) {
+      // If this workspace has a custom theme, update the workspace theme
+      const updated = { ...workspaceThemes, [activeWorkspaceId]: themeId };
+      setWorkspaceThemes(updated);
+      saveWorkspaceThemes(updated);
+    } else {
+      // Otherwise update the global theme
+      setGlobalTheme(themeId);
     }
-  };
+  }, [activeWorkspaceId, workspaceThemes]);
+
+  const setWorkspaceTheme = useCallback((workspaceId, themeId) => {
+    const updated = { ...workspaceThemes };
+    if (themeId) {
+      updated[workspaceId] = themeId;
+    } else {
+      delete updated[workspaceId];
+    }
+    setWorkspaceThemes(updated);
+    saveWorkspaceThemes(updated);
+  }, [workspaceThemes]);
+
+  const getWorkspaceTheme = useCallback((workspaceId) => {
+    return workspaceThemes[workspaceId] || null;
+  }, [workspaceThemes]);
 
   const toggleMode = () => {
     setMode(prev => prev === 'dark' ? 'light' : 'dark');
@@ -260,7 +297,11 @@ export function ThemeProvider({ children }) {
   const contextValue = useMemo(() => ({
     currentTheme, setTheme, themes, mode, toggleMode, followSystem,
     isFollowingSystem: !localStorage.getItem('bandchat-mode'),
-  }), [currentTheme, mode]);
+    globalTheme,
+    setGlobalTheme: (themeId) => { if (themes[themeId]) setGlobalTheme(themeId); },
+    activeWorkspaceId, setActiveWorkspaceId,
+    setWorkspaceTheme, getWorkspaceTheme,
+  }), [currentTheme, globalTheme, mode, activeWorkspaceId, setTheme, setWorkspaceTheme, getWorkspaceTheme]);
 
   return (
     <ThemeContext.Provider value={contextValue}>

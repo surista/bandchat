@@ -22,7 +22,7 @@ import WebsiteTab from './WebsiteTab';
 function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWorkspace }) {
   const navigate = useNavigate();
   const { updateUser } = useAuth();
-  const { currentTheme, setTheme, themes, mode, toggleMode } = useTheme();
+  const { currentTheme, setTheme, themes, mode, toggleMode, globalTheme, setGlobalTheme, setWorkspaceTheme, getWorkspaceTheme } = useTheme();
   const toast = useToast();
 
   const [settingsTab, setSettingsTab] = useState('profile');
@@ -665,20 +665,62 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                       </button>
                     </div>
                   </div>
-                  <p className="text-[var(--color-text-muted)] mb-4">Choose a theme for your sidebar</p>
+                  {/* Per-workspace theme toggle */}
+                  {workspace && (
+                    <div className="flex items-center justify-between mb-4 p-3 bg-[var(--color-bg-secondary)] rounded-lg">
+                      <div>
+                        <span className="text-sm font-medium text-[var(--color-text-primary)]">Custom theme for {workspace.name}</span>
+                        <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                          {getWorkspaceTheme(workspace.id)
+                            ? 'This band has its own theme'
+                            : 'Uses your default theme'}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (getWorkspaceTheme(workspace.id)) {
+                            setWorkspaceTheme(workspace.id, null);
+                          } else {
+                            setWorkspaceTheme(workspace.id, currentTheme);
+                          }
+                        }}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          getWorkspaceTheme(workspace.id) ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-bg-tertiary)]'
+                        }`}
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          getWorkspaceTheme(workspace.id) ? 'translate-x-6' : 'translate-x-1'
+                        }`} />
+                      </button>
+                    </div>
+                  )}
+
+                  <p className="text-[var(--color-text-muted)] mb-4">
+                    {workspace && getWorkspaceTheme(workspace.id)
+                      ? `Choose a theme for ${workspace.name}`
+                      : 'Choose your default theme'}
+                  </p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                     {Object.entries(themes).map(([id, theme]) => {
                       // Note: FREE_THEME_IDS is also defined in server/src/lib/planLimits.js.
                       // If these values change, update both locations.
                       const FREE_THEME_IDS = ['default', 'midnight', 'ocean'];
                       const isLocked = workspace?.effectivePlan !== 'PRO' && !FREE_THEME_IDS.includes(id);
+                      const isActive = currentTheme === id;
                       return (
                       <button
                         key={id}
-                        onClick={() => !isLocked && setTheme(id)}
+                        onClick={() => {
+                          if (isLocked) return;
+                          if (workspace && getWorkspaceTheme(workspace.id)) {
+                            setWorkspaceTheme(workspace.id, id);
+                          } else {
+                            setGlobalTheme(id);
+                          }
+                        }}
                         className={`p-3 rounded-lg border-2 transition-all ${
                           isLocked ? 'opacity-50 cursor-not-allowed' :
-                          currentTheme === id
+                          isActive
                             ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/30'
                             : 'border-[var(--color-modal-border)] hover:border-[var(--color-border)]'
                         }`}
@@ -700,7 +742,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                         <div className="text-xs font-medium text-[var(--color-text-secondary)]">
                           {isLocked ? '🔒 ' : ''}{theme.name}
                         </div>
-                        {currentTheme === id && (
+                        {isActive && (
                           <div className="text-xs text-[var(--color-primary)] mt-1">Active</div>
                         )}
                       </button>
