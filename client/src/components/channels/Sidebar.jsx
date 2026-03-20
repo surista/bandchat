@@ -26,11 +26,9 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { pushService } from '../../services/push';
 import { useToast } from '../../context/ToastContext';
-import { useSocket } from '../../context/SocketContext';
 import api from '../../services/api';
 import useIsAdmin from '../../hooks/useIsAdmin';
 import MemberProfile from '../common/MemberProfile';
-import MemberHoverCard from '../common/MemberHoverCard';
 import ConfirmDialog from '../common/ConfirmDialog';
 import Modal from '../common/Modal';
 import ContextMenu from '../common/ContextMenu';
@@ -195,7 +193,6 @@ function Sidebar({
 }) {
   const navigate = useNavigate();
   const toast = useToast();
-  const { presenceMap } = useSocket();
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showNewMessage, setShowNewMessage] = useState(false);
@@ -223,8 +220,6 @@ function Sidebar({
   const [showSettings, setShowSettings] = useState(false);
   // Member profile
   const [showProfileUserId, setShowProfileUserId] = useState(null);
-  const [showAllMembers, setShowAllMembers] = useState(false);
-  const [blockedIds, setBlockedIds] = useState(new Set());
   // Context menu for channels/sections (admin only)
   const [contextMenu, setContextMenu] = useState(null); // { type: 'channel' | 'section', id, name, x, y }
   const [renameModal, setRenameModal] = useState(null); // { type: 'channel' | 'section', id, name }
@@ -243,11 +238,6 @@ function Sidebar({
     localStorage.setItem(`collapsedSections:${workspace.id}`, JSON.stringify(collapsedSections));
   }, [collapsedSections, workspace.id]);
 
-  useEffect(() => {
-    api.getBlockedUsers().then(blocks => {
-      setBlockedIds(new Set(blocks.map(b => b.blockedUserId)));
-    }).catch(() => {});
-  }, []);
 
   // Fetch next upcoming gig
   useEffect(() => {
@@ -363,13 +353,6 @@ function Sidebar({
   }, [channels, starredChannels, unreadChannels]);
 
   const isAdmin = useIsAdmin(workspace);
-
-  // Filter blocked users from sidebar members list
-  const visibleMembers = useMemo(() => {
-    if (!workspace?.members) return [];
-    if (blockedIds.size === 0) return workspace.members;
-    return workspace.members.filter(m => !blockedIds.has(m.user?.id));
-  }, [workspace?.members, blockedIds]);
 
   // Drag and drop setup for channels and groups (admin only)
   const [activeChannel, setActiveChannel] = useState(null);
@@ -1092,84 +1075,6 @@ function Sidebar({
           </div>
         )}
 
-        {/* Members Section */}
-        <div className="mt-6 px-4 mb-2 flex items-center justify-between">
-          <button
-            onClick={() => toggleSectionCollapse('members')}
-            className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors"
-            aria-expanded={!collapsedSections.members}
-          >
-            <span className={`transform transition-transform text-xs ${collapsedSections.members ? '' : 'rotate-90'}`}>
-              ▶
-            </span>
-            <span className="text-sm font-bold uppercase tracking-wide">
-              MEMBERS ({visibleMembers.length})
-            </span>
-          </button>
-          {!collapsedSections.members && workspace.members?.find(m => m.user.id === user?.id)?.role === 'ADMIN' && (
-            <button
-              onClick={onShowInvite}
-              className="text-gray-400 hover:text-white transition-colors text-lg px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
-              title="Invite people"
-              aria-label="Invite people"
-            >
-              +
-            </button>
-          )}
-        </div>
-
-        {!collapsedSections.members && (
-          <div className="space-y-0.5 ml-2">
-            {(showAllMembers ? visibleMembers : visibleMembers.slice(0, 10)).map((member) => (
-              <MemberHoverCard
-                key={member.user.id}
-                userId={member.user.id}
-                workspaceId={workspace.id}
-                onClick={() => setShowProfileUserId(member.user.id)}
-              >
-                <button
-                  className="flex items-center gap-2 px-4 py-2.5 sm:py-1 text-gray-300 w-full text-left min-h-[44px] sm:min-h-0 hover:bg-slack-hover cursor-pointer"
-                  aria-label={`View ${member.user.displayName}'s profile`}
-                >
-                  <div className="relative flex-shrink-0">
-                    {member.user.avatarUrl ? (
-                      <img
-                        src={member.user.avatarUrl}
-                        alt=""
-                        className="w-6 h-6 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs">
-                        {member.user.displayName?.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--color-sidebar-bg,#1a1d21)] ${
-                      presenceMap[member.user.id] === 'online' ? 'bg-green-500' :
-                      presenceMap[member.user.id] === 'away' ? 'bg-yellow-500' :
-                      presenceMap[member.user.id] === 'busy' ? 'bg-red-500' :
-                      'bg-gray-500'
-                    }`} />
-                  </div>
-                  <span className="truncate flex-1">
-                    {member.user.displayName}
-                    {member.user.id === user?.id && ' (you)'}
-                  </span>
-                  {member.role === 'ADMIN' && (
-                    <span className="text-xs text-gray-500">admin</span>
-                  )}
-                </button>
-              </MemberHoverCard>
-            ))}
-            {visibleMembers.length > 10 && (
-              <button
-                onClick={() => setShowAllMembers(prev => !prev)}
-                className="px-4 py-1 text-gray-500 hover:text-gray-300 text-sm"
-              >
-                {showAllMembers ? 'Show less' : `+${visibleMembers.length - 10} more`}
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
       {/* User Section */}

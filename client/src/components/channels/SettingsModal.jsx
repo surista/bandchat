@@ -19,6 +19,10 @@ import ConfirmDialog from '../common/ConfirmDialog';
 import SlackImportWizard from '../workspaces/SlackImportWizard';
 import WebsiteTab from './WebsiteTab';
 
+// Note: FREE_THEME_IDS is also defined in server/src/lib/planLimits.js.
+// If these values change, update both locations.
+const FREE_THEME_IDS = ['default', 'midnight', 'ocean'];
+
 function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWorkspace }) {
   const navigate = useNavigate();
   const { updateUser } = useAuth();
@@ -672,11 +676,14 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                         <span className="text-sm font-medium text-[var(--color-text-primary)]">Custom theme for {workspace.name}</span>
                         <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
                           {getWorkspaceTheme(workspace.id)
-                            ? 'This band has its own theme'
-                            : 'Uses your default theme'}
+                            ? `Using ${themes[getWorkspaceTheme(workspace.id)]?.name || 'custom'} for this band`
+                            : `Uses your default theme (${themes[globalTheme]?.name || 'Default'})`}
                         </p>
                       </div>
                       <button
+                        role="switch"
+                        aria-checked={!!getWorkspaceTheme(workspace.id)}
+                        aria-label={`Custom theme for ${workspace.name}`}
                         onClick={() => {
                           if (getWorkspaceTheme(workspace.id)) {
                             setWorkspaceTheme(workspace.id, null);
@@ -684,11 +691,11 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                             setWorkspaceTheme(workspace.id, currentTheme);
                           }
                         }}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 ${
                           getWorkspaceTheme(workspace.id) ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-bg-tertiary)]'
                         }`}
                       >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
                           getWorkspaceTheme(workspace.id) ? 'translate-x-6' : 'translate-x-1'
                         }`} />
                       </button>
@@ -700,16 +707,16 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                       ? `Choose a theme for ${workspace.name}`
                       : 'Choose your default theme'}
                   </p>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3" role="radiogroup" aria-label="Theme selection">
                     {Object.entries(themes).map(([id, theme]) => {
-                      // Note: FREE_THEME_IDS is also defined in server/src/lib/planLimits.js.
-                      // If these values change, update both locations.
-                      const FREE_THEME_IDS = ['default', 'midnight', 'ocean'];
                       const isLocked = workspace?.effectivePlan !== 'PRO' && !FREE_THEME_IDS.includes(id);
                       const isActive = currentTheme === id;
                       return (
                       <button
                         key={id}
+                        role="radio"
+                        aria-checked={isActive}
+                        aria-disabled={isLocked || undefined}
                         onClick={() => {
                           if (isLocked) return;
                           if (workspace && getWorkspaceTheme(workspace.id)) {
@@ -859,9 +866,17 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                       ) : (
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded bg-[var(--color-accent)] flex items-center justify-center text-white font-medium">
-                              {member.user.displayName?.charAt(0).toUpperCase()}
-                            </div>
+                            {member.user.avatarUrl ? (
+                              <img
+                                src={member.user.avatarUrl}
+                                alt=""
+                                className="w-8 h-8 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-[var(--color-accent)] flex items-center justify-center text-white font-medium">
+                                {member.user.displayName?.charAt(0).toUpperCase()}
+                              </div>
+                            )}
                             <div>
                               <div className="font-medium text-[var(--color-text-primary)]">
                                 {member.user.displayName}
