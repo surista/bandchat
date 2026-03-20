@@ -171,7 +171,15 @@ export default function SetlistListScreen({ navigation, route }) {
     if (!selectedSetlist) return;
     try {
       const items = selectedSetlist.songs || [];
-      const html = buildSetlistHTML(selectedSetlist.name, items);
+      let venueLogoUrl = null;
+      if (selectedSetlist.venue) {
+        try {
+          const venues = await api.getVenues(workspaceId);
+          const match = venues.find(v => v.name === selectedSetlist.venue);
+          if (match?.imageUrl) venueLogoUrl = match.imageUrl;
+        } catch {}
+      }
+      const html = buildSetlistHTML(selectedSetlist.name, items, { venueLogoUrl });
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Export Setlist' });
     } catch (err) {

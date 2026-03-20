@@ -479,11 +479,21 @@ function SetlistList({ workspaceId, workspaceName }) {
   }, []);
 
   // Print/PDF export function for any setlist
-  const handlePrintSetlist = (setlist) => {
+  const handlePrintSetlist = async (setlist) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       toast.warning('Please allow popups for this site to print the setlist');
       return;
+    }
+
+    // Look up venue logo if setlist has a venue name
+    let venueLogoUrl = null;
+    if (setlist.venue && workspaceId) {
+      try {
+        const venues = await api.getVenues(workspaceId);
+        const match = venues.find(v => v.name === setlist.venue);
+        if (match?.imageUrl) venueLogoUrl = match.imageUrl;
+      } catch {}
     }
 
     const dateStr = setlist.performedAt
@@ -630,6 +640,13 @@ function SetlistList({ workspaceId, workspaceName }) {
             padding-bottom: 16px;
             border-bottom: 3px solid #222;
           }
+          .venue-logo {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            margin: 0 auto 8px;
+            border-radius: 8px;
+          }
           .band-name {
             font-size: 36px;
             font-weight: 800;
@@ -719,6 +736,7 @@ function SetlistList({ workspaceId, workspaceName }) {
       </head>
       <body>
         <div class="header">
+          ${venueLogoUrl ? `<img src="${escapeHtml(venueLogoUrl)}" class="venue-logo" alt="" />` : ''}
           ${bandName ? `<div class="band-name">${escapeHtml(bandName)}</div>` : ''}
           ${bandName && (setlist.venue || setlist.name) ? '<div class="header-divider"></div>' : ''}
           ${setlist.venue ? `<div class="venue">${escapeHtml(setlist.venue)}</div>` : ''}

@@ -747,11 +747,21 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
   };
 
   // Print/PDF export function
-  const handlePrint = () => {
+  const handlePrint = async () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       toast.warning('Please allow popups for this site to print the setlist');
       return;
+    }
+
+    // Look up venue logo if setlist has a venue name
+    let venueLogoUrl = null;
+    if (setlist.venue && setlist.workspaceId) {
+      try {
+        const venues = await api.getVenues(setlist.workspaceId);
+        const match = venues.find(v => v.name === setlist.venue);
+        if (match?.imageUrl) venueLogoUrl = match.imageUrl;
+      } catch {}
     }
 
     // Format date if available
@@ -815,6 +825,13 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
             margin-bottom: 20px;
             padding-bottom: 16px;
             border-bottom: 3px solid #222;
+          }
+          .venue-logo {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            margin: 0 auto 8px;
+            border-radius: 8px;
           }
           .band-name {
             font-size: 36px;
@@ -905,6 +922,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
       </head>
       <body>
         <div class="header">
+          ${venueLogoUrl ? `<img src="${escapeHtml(venueLogoUrl)}" class="venue-logo" alt="" />` : ''}
           ${bandName ? `<div class="band-name">${escapeHtml(bandName)}</div>` : ''}
           ${bandName && (setlist.venue || setlist.name) ? '<div class="header-divider"></div>' : ''}
           ${setlist.venue ? `<div class="venue">${escapeHtml(setlist.venue)}</div>` : ''}

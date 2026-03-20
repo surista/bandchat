@@ -7,10 +7,12 @@ import { formatDuration } from './formatDuration';
  * @param {Array} items - The setlist items array
  * @param {Object} options - Optional configuration
  * @param {string} options.date - Date string for the header
+ * @param {string} options.venueLogoUrl - URL for venue logo image
  * @returns {string} HTML string
  */
 export function buildSetlistHTML(setlistName, items, options = {}) {
   const date = options.date || format(new Date(), 'EEEE, dd-MMM-yyyy');
+  const venueLogoUrl = options.venueLogoUrl || null;
 
   const songItems = items.filter(i => i.type === 'SONG' || (!i.type && i.song));
   const totalSongs = songItems.length;
@@ -70,6 +72,13 @@ export function buildSetlistHTML(setlistName, items, options = {}) {
       margin-bottom: 20px;
       padding-bottom: 14px;
       border-bottom: 2px solid #222;
+    }
+    .venue-logo {
+      width: 70px;
+      height: 70px;
+      object-fit: contain;
+      margin: 0 auto 8px;
+      border-radius: 8px;
     }
     .header h1 {
       font-size: 24px;
@@ -132,6 +141,7 @@ export function buildSetlistHTML(setlistName, items, options = {}) {
 </head>
 <body>
   <div class="header">
+    ${venueLogoUrl ? `<img src="${escapeHtml(venueLogoUrl)}" class="venue-logo" alt="" />` : ''}
     <h1>${escapeHtml(setlistName)}</h1>
     <div class="date">${escapeHtml(date)}</div>
   </div>

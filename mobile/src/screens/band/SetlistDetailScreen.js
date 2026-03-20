@@ -94,7 +94,15 @@ export default function SetlistDetailScreen({ navigation, route }) {
   // Export PDF
   const handleExportPDF = useCallback(async () => {
     try {
-      const html = buildSetlistHTML(setlist?.name || 'Setlist', setlist?.songs || []);
+      let venueLogoUrl = null;
+      if (setlist?.venue) {
+        try {
+          const venues = await api.getVenues(workspaceId);
+          const match = venues.find(v => v.name === setlist.venue);
+          if (match?.imageUrl) venueLogoUrl = match.imageUrl;
+        } catch {}
+      }
+      const html = buildSetlistHTML(setlist?.name || 'Setlist', setlist?.songs || [], { venueLogoUrl });
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Export Setlist' });
     } catch (err) {
