@@ -3,7 +3,7 @@
  * Handles message rendering, editing, reactions, and thread navigation.
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { format, isToday, isYesterday } from 'date-fns';
 import ReactionDisplay from './ReactionDisplay';
 import ReactionPicker from './ReactionPicker';
@@ -404,6 +404,7 @@ function MessageList({
   const toast = useToast();
   const [editingId, setEditingId] = useState(null);
   const [editContent, setEditContent] = useState('');
+  const editTextareaRef = useRef(null);
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState(null);
   const [deleteMessageId, setDeleteMessageId] = useState(null); // For delete confirmation dialog
   const [reportMessageId, setReportMessageId] = useState(null); // For report dialog
@@ -527,6 +528,33 @@ function MessageList({
     setEditingId(null);
     setEditContent('');
   };
+
+  const wrapEditSelection = useCallback((before, after) => {
+    const ta = editTextareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = editContent.slice(start, end);
+    const newContent = editContent.slice(0, start) + before + selected + (after || before) + editContent.slice(end);
+    setEditContent(newContent);
+    const cursorPos = selected ? start + before.length + selected.length + (after || before).length : start + before.length;
+    setTimeout(() => {
+      ta.focus();
+      ta.setSelectionRange(
+        selected ? start : cursorPos,
+        selected ? start + before.length + selected.length + (after || before).length : cursorPos
+      );
+    }, 0);
+  }, [editContent]);
+
+  const insertEditLinePrefix = useCallback((prefix) => {
+    const ta = editTextareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const lineStart = editContent.lastIndexOf('\n', start - 1) + 1;
+    setEditContent(editContent.slice(0, lineStart) + prefix + editContent.slice(lineStart));
+    setTimeout(() => { ta.focus(); ta.setSelectionRange(start + prefix.length, start + prefix.length); }, 0);
+  }, [editContent]);
 
   const handleToggleReaction = (messageId, emoji, hasReacted) => {
     hapticLight();
@@ -690,6 +718,7 @@ function MessageList({
                 <div className="mt-1">
                   <textarea
                     ref={(el) => {
+                      editTextareaRef.current = el;
                       if (el) {
                         el.style.height = 'auto';
                         el.style.height = el.scrollHeight + 'px';
@@ -701,7 +730,7 @@ function MessageList({
                       e.target.style.height = 'auto';
                       e.target.style.height = e.target.scrollHeight + 'px';
                     }}
-                    className="w-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded p-2 resize-vertical min-h-[2.5rem]"
+                    className="w-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-t p-2 resize-vertical min-h-[2.5rem]"
                     rows={1}
                     autoFocus
                     onKeyDown={(e) => {
@@ -712,21 +741,54 @@ function MessageList({
                       if (e.key === 'Escape') {
                         handleCancelEdit();
                       }
+                      if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+                        if (e.key === 'b') { e.preventDefault(); wrapEditSelection('**'); }
+                        if (e.key === 'i') { e.preventDefault(); wrapEditSelection('*'); }
+                        if (e.key === 'e') { e.preventDefault(); wrapEditSelection('`'); }
+                      }
+                      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'X') {
+                        e.preventDefault(); wrapEditSelection('~~');
+                      }
                     }}
                   />
-                  <div className="flex gap-2 mt-1 text-xs">
-                    <button
-                      onClick={handleCancelEdit}
-                      className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSaveEdit}
-                      className="text-slack-blue hover:underline"
-                    >
-                      Save
-                    </button>
+                  <div className="flex items-center justify-between bg-[var(--color-bg-tertiary)] rounded-b px-2 py-1 border-t border-[var(--color-border)]">
+                    <div className="hidden md:flex items-center gap-0.5">
+                      <button type="button" onClick={() => wrapEditSelection('**')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Bold (Ctrl+B)">
+                        <span className="font-bold text-xs w-5 h-5 flex items-center justify-center">B</span>
+                      </button>
+                      <button type="button" onClick={() => wrapEditSelection('*')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Italic (Ctrl+I)">
+                        <span className="italic text-xs w-5 h-5 flex items-center justify-center">I</span>
+                      </button>
+                      <button type="button" onClick={() => wrapEditSelection('~~')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Strikethrough (Ctrl+Shift+X)">
+                        <span className="line-through text-xs w-5 h-5 flex items-center justify-center">S</span>
+                      </button>
+                      <button type="button" onClick={() => wrapEditSelection('`')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Code (Ctrl+E)">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+                      </button>
+                      <button type="button" onClick={() => wrapEditSelection('```\n', '\n```')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Code block">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M4 12h16M4 17h10" /></svg>
+                      </button>
+                      <button type="button" onClick={() => insertEditLinePrefix('> ')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Quote">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                      </button>
+                      <button type="button" onClick={() => insertEditLinePrefix('- ')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Bullet list">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /><circle cx="2" cy="6" r="1" fill="currentColor" /><circle cx="2" cy="12" r="1" fill="currentColor" /><circle cx="2" cy="18" r="1" fill="currentColor" /></svg>
+                      </button>
+                    </div>
+                    <div className="flex gap-2 text-xs ml-auto">
+                      <button
+                        onClick={handleCancelEdit}
+                        className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSaveEdit}
+                        className="text-slack-blue hover:underline"
+                      >
+                        Save
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
