@@ -76,7 +76,7 @@ function VenueList({ workspace, isAdmin }) {
         toast.success('Venue updated');
       } else {
         const created = await api.createVenue(workspaceId, data);
-        setVenues(prev => [...prev, created]);
+        setVenues(prev => prev.some(v => v.id === created.id) ? prev : [...prev, created]);
         toast.success('Venue added');
       }
       setShowForm(false);
