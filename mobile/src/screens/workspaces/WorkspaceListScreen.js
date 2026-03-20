@@ -89,7 +89,10 @@ export default function WorkspaceListScreen({ navigation, route }) {
     return (
     <TouchableOpacity
       style={[styles.workspaceItem, { backgroundColor: colors.bgSecondary }]}
-      onPress={() => navigation.navigate('Workspace', { id: item.id, name: item.name })}
+      onPress={() => {
+        setWorkspaces(prev => prev.map(w => w.id === item.id ? { ...w, unreadCount: 0 } : w));
+        navigation.navigate('Workspace', { id: item.id, name: item.name });
+      }}
       activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityLabel={`Open ${item.name} workspace, ${item._count?.members || 0} members${item.unreadCount > 0 ? `, ${item.unreadCount} unread` : ''}`}
