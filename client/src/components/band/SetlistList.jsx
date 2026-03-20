@@ -620,18 +620,18 @@ function SetlistList({ workspaceId, workspaceName }) {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             padding: 20px;
             margin: 0 auto;
-            min-height: 100vh;
+            height: 100vh;
             display: flex;
             flex-direction: column;
           }
           .header {
             text-align: center;
-            margin-bottom: 16px;
-            padding-bottom: 14px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
             border-bottom: 3px solid #222;
           }
           .band-name {
-            font-size: 32px;
+            font-size: 36px;
             font-weight: 800;
             letter-spacing: 2px;
             text-transform: uppercase;
@@ -645,12 +645,12 @@ function SetlistList({ workspaceId, workspaceName }) {
             border-radius: 2px;
           }
           .venue {
-            font-size: 22px;
+            font-size: 24px;
             font-weight: 600;
             margin-bottom: 2px;
           }
           .setlist-name {
-            font-size: 15px;
+            font-size: 16px;
             color: #666;
           }
           .header-details {
@@ -658,41 +658,50 @@ function SetlistList({ workspaceId, workspaceName }) {
             justify-content: center;
             gap: 18px;
             margin-top: 6px;
-            font-size: 14px;
+            font-size: 15px;
             color: #555;
           }
           .header-details span { white-space: nowrap; }
           .time-range { color: #0891b2; font-weight: 500; }
-          .content { flex: 1; display: flex; align-items: flex-start; }
-          .columns { display: flex; gap: 12px; width: 100%; }
-          .columns-1 { max-width: 500px; margin: 0 auto; }
-          .set-column { flex: 1; min-width: 0; }
+          .content { flex: 1; display: flex; align-items: stretch; }
+          .columns { display: flex; gap: 16px; width: 100%; height: 100%; }
+          .columns-1 { max-width: 500px; margin: 0 auto; text-align: center; }
+          .set-column { flex: 1; min-width: 0; display: flex; flex-direction: column; }
           .set-header {
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin: 0 0 10px 0;
-            padding: 6px 0;
+            margin: 0 0 12px 0;
+            padding: 8px 0;
             border-bottom: 2px solid #333;
           }
           .set-time {
-            font-size: 13px;
+            font-size: 14px;
             font-weight: normal;
             color: #0891b2;
             margin-left: 8px;
             text-transform: none;
             letter-spacing: 0;
           }
-          .song-list { list-style: none; padding: 0; }
+          .song-list { list-style: none; padding: 0; flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; }
+          .columns-1 .song-item {
+            padding: 4px 0;
+            font-size: 24px;
+          }
+          .columns-1 .mc-item {
+            padding: 4px 0;
+            font-style: italic;
+            font-size: 24px;
+          }
           .song-item {
-            padding: 5px 0;
-            font-size: 18px;
+            padding: 4px 0;
+            font-size: 20px;
           }
           .mc-item {
-            padding: 5px 0;
+            padding: 4px 0;
             font-style: italic;
-            font-size: 18px;
+            font-size: 20px;
           }
           .footer {
             margin-top: 14px;
