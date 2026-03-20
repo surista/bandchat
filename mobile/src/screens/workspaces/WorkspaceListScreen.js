@@ -15,14 +15,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
+import { useTheme, themes } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import Constants from 'expo-constants';
 import api from '../../services/api';
 
 export default function WorkspaceListScreen({ navigation, route }) {
   const { user, logout } = useAuth();
-  const { colors } = useTheme();
+  const { colors, getWorkspaceTheme, globalTheme } = useTheme();
   const toast = useToast();
   const [workspaces, setWorkspaces] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -83,15 +83,18 @@ export default function WorkspaceListScreen({ navigation, route }) {
     }
   };
 
-  const renderWorkspace = ({ item }) => (
+  const renderWorkspace = ({ item }) => {
+    const wsThemeId = getWorkspaceTheme(item.id) || globalTheme;
+    const wsTheme = themes[wsThemeId] || themes.default;
+    return (
     <TouchableOpacity
       style={[styles.workspaceItem, { backgroundColor: colors.bgSecondary }]}
       onPress={() => navigation.navigate('Workspace', { id: item.id, name: item.name })}
       activeOpacity={0.7}
       accessibilityRole="button"
-      accessibilityLabel={`Open ${item.name} workspace, ${item._count?.members || 0} members`}
+      accessibilityLabel={`Open ${item.name} workspace, ${item._count?.members || 0} members${item.unreadCount > 0 ? `, ${item.unreadCount} unread` : ''}`}
     >
-      <View style={[styles.workspaceAvatar, { backgroundColor: colors.primary }]}>
+      <View style={[styles.workspaceAvatar, { backgroundColor: wsTheme.primary }]}>
         <Text style={styles.workspaceAvatarText}>
           {item.name.charAt(0).toUpperCase()}
         </Text>
@@ -101,12 +104,22 @@ export default function WorkspaceListScreen({ navigation, route }) {
           {item.name}
         </Text>
         <Text style={[styles.workspaceMeta, { color: colors.textSecondary }]}>
-          {item._count?.members || 0} members
+          {item._count?.members || 0} member{(item._count?.members || 0) !== 1 ? 's' : ''}
         </Text>
       </View>
-      <Text style={[styles.chevron, { color: colors.textSecondary }]}>{'\u203a'}</Text>
+      <View style={styles.workspaceRight}>
+        {item.unreadCount > 0 && (
+          <View style={[styles.unreadBadge, { backgroundColor: wsTheme.primary }]}>
+            <Text style={styles.unreadBadgeText}>
+              {item.unreadCount > 99 ? '99+' : item.unreadCount}
+            </Text>
+          </View>
+        )}
+        <Text style={[styles.chevron, { color: colors.textSecondary }]}>{'\u203a'}</Text>
+      </View>
     </TouchableOpacity>
-  );
+    );
+  };
 
   const renderEmpty = () => (
     <View style={[styles.emptyContainer, { backgroundColor: colors.bgSecondary }]}>
@@ -337,10 +350,28 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 2,
   },
+  workspaceRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginLeft: 8,
+  },
+  unreadBadge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    paddingHorizontal: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  unreadBadgeText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
   chevron: {
     fontSize: 24,
     fontWeight: '300',
-    marginLeft: 8,
   },
   emptyContainer: {
     borderRadius: 12,

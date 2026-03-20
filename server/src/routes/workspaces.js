@@ -136,15 +136,40 @@ router.get('/', authenticate, async (req, res) => {
     });
 
     // Filter out soft-deleted workspaces (Prisma middleware doesn't filter nested includes)
-    res.json(workspaces
-      .filter(wm => wm.workspace && !wm.workspace.deletedAt)
-      .map(wm => ({
-        ...wm.workspace,
-        effectivePlan: getEffectivePlan(wm.workspace),
-        planLimits: serializePlanLimits(getPlanLimits(wm.workspace)),
-        role: wm.role,
-        joinedAt: wm.joinedAt
-      })));
+    const validWorkspaces = workspaces.filter(wm => wm.workspace && !wm.workspace.deletedAt);
+
+    // Fetch unread counts per workspace in parallel
+    const unreadCounts = await Promise.all(
+      validWorkspaces.map(async (wm) => {
+        try {
+          const channels = await prisma.channelMember.findMany({
+            where: { userId: req.user.id, channel: { workspaceId: wm.workspace.id } },
+            select: { channelId: true, lastRead: true, muted: true },
+          });
+          if (channels.length === 0) return 0;
+          const unmutedChannels = channels.filter(c => !c.muted);
+          if (unmutedChannels.length === 0) return 0;
+          const count = await prisma.message.count({
+            where: {
+              OR: unmutedChannels.map(c => ({
+                channelId: c.channelId,
+                createdAt: { gt: c.lastRead },
+              })),
+            },
+          });
+          return count;
+        } catch { return 0; }
+      })
+    );
+
+    res.json(validWorkspaces.map((wm, i) => ({
+      ...wm.workspace,
+      effectivePlan: getEffectivePlan(wm.workspace),
+      planLimits: serializePlanLimits(getPlanLimits(wm.workspace)),
+      role: wm.role,
+      joinedAt: wm.joinedAt,
+      unreadCount: unreadCounts[i],
+    })));
   } catch (error) {
     res.status(500).json({ error: 'Failed to get workspaces' });
   }

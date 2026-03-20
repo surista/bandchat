@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme, themes } from '../../context/ThemeContext';
 import api from '../../services/api';
 import Footer from '../common/Footer';
 import Modal from '../common/Modal';
@@ -10,6 +11,7 @@ import WorkspaceImportWizard from './WorkspaceImportWizard';
 
 function WorkspaceList() {
   const { user, logout } = useAuth();
+  const { getWorkspaceTheme, globalTheme } = useTheme();
   const navigate = useNavigate();
   const [workspaces, setWorkspaces] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -126,23 +128,38 @@ function WorkspaceList() {
           </div>
         ) : (
           <div className="space-y-3">
-            {workspaces.map((workspace) => (
+            {workspaces.map((workspace) => {
+              const wsThemeId = getWorkspaceTheme(workspace.id) || globalTheme;
+              const wsTheme = themes[wsThemeId] || themes.default;
+              return (
               <button
                 key={workspace.id}
                 onClick={() => navigate(`/workspace/${workspace.id}`)}
-                className="w-full bg-[var(--color-bg-secondary)] rounded-lg p-4 flex items-center justify-between hover:bg-[var(--color-bg-tertiary)] transition-colors text-left border border-[var(--color-border)]"
+                className="w-full bg-[var(--color-bg-secondary)] rounded-lg p-4 flex items-center justify-between hover:bg-[var(--color-bg-tertiary)] transition-colors text-left"
+                style={{ borderLeft: `4px solid ${wsTheme.primary}`, borderTop: 'none', borderRight: 'none', borderBottom: 'none' }}
               >
                 <div>
                   <h3 className="font-semibold text-lg text-[var(--color-text-primary)]">
                     {workspace.name}
                   </h3>
                   <p className="text-[var(--color-text-muted)] text-sm">
-                    {workspace._count?.members || 0} members · {workspace._count?.channels || 0} channels
+                    {workspace._count?.members || 0} member{workspace._count?.members !== 1 ? 's' : ''} · {workspace._count?.channels || 0} channel{workspace._count?.channels !== 1 ? 's' : ''}
                   </p>
                 </div>
-                <span className="text-[var(--color-text-muted)]">→</span>
+                <div className="flex items-center gap-3">
+                  {workspace.unreadCount > 0 && (
+                    <span
+                      className="text-xs font-bold text-white px-2 py-0.5 rounded-full min-w-[20px] text-center"
+                      style={{ backgroundColor: wsTheme.primary }}
+                    >
+                      {workspace.unreadCount > 99 ? '99+' : workspace.unreadCount}
+                    </span>
+                  )}
+                  <span className="text-[var(--color-text-muted)]">→</span>
+                </div>
               </button>
-            ))}
+              );
+            })}
           </div>
         )}
 
