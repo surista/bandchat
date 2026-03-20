@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
+  AppState,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useHeaderHeight } from '@react-navigation/elements';
@@ -291,7 +292,10 @@ export default function ChannelScreen({ navigation, route }) {
       });
 
       if (message.author?.id !== userIdRef.current) {
-        api.markChannelRead(channelIdRef.current).catch(() => {});
+        const chId = channelIdRef.current;
+        api.markChannelRead(chId).catch(() => {
+          setTimeout(() => api.markChannelRead(chId).catch(() => {}), 2000);
+        });
       }
     };
 
@@ -366,6 +370,11 @@ export default function ChannelScreen({ navigation, route }) {
           setNextCursor(data.nextCursor);
         }
       }).catch(() => {});
+      // Mark channel as read after reconnect (was missing — caused stale unread badges)
+      api.markChannelRead(chId).catch(() => {
+        // Retry once after 2s if first attempt fails
+        setTimeout(() => api.markChannelRead(chId).catch(() => {}), 2000);
+      });
 
       // Flush offline queue
       try {
@@ -423,6 +432,16 @@ export default function ChannelScreen({ navigation, route }) {
       Object.values(typingTimers).forEach(clearTimeout);
     };
   }, [socket, joinChannel]);
+
+  // Re-mark channel as read when app returns from background
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && channelIdRef.current) {
+        api.markChannelRead(channelIdRef.current).catch(() => {});
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   const lastOwnMsgId = useMemo(() => {
     if (!messages.length || !user?.id) return null;
