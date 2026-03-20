@@ -849,9 +849,9 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
           }
           .header-details span { white-space: nowrap; }
           .time-range { color: #0891b2; font-weight: 500; }
-          .content { flex: 1; display: flex; align-items: stretch; }
-          .columns { display: flex; gap: 16px; width: 100%; height: 100%; }
-          .columns-1 { max-width: 500px; margin: 0 auto; }
+          .content { flex: 1; display: flex; align-items: center; }
+          .columns { display: flex; gap: 16px; width: 100%; }
+          .columns-1 { max-width: 500px; margin: 0 auto; text-align: center; }
           .set-column { flex: 1; min-width: 0; display: flex; flex-direction: column; }
           .set-header {
             font-size: 20px;
@@ -870,7 +870,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
             text-transform: none;
             letter-spacing: 0;
           }
-          .song-list { list-style: none; padding: 0; flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; }
+          .song-list { list-style: none; padding: 0; flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
           .song-item {
             padding: 4px 0;
             font-size: 20px;
