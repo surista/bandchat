@@ -476,8 +476,13 @@ export default function ChannelScreen({ navigation, route }) {
   }, [hasMore, nextCursor, channel.id]);
 
   // Send message with optimistic update + optional attachment
-  const handleSend = useCallback(async (content, attachment) => {
-    const attType = attachment ? (attachment.isVideo ? 'VIDEO' : attachment.isAudio ? 'AUDIO' : 'IMAGE') : null;
+  const handleSend = useCallback(async (content, attachmentOrArray) => {
+    // Normalize to array
+    const fileList = !attachmentOrArray ? [] :
+      Array.isArray(attachmentOrArray) ? attachmentOrArray :
+      [attachmentOrArray];
+    const hasFiles = fileList.length > 0;
+
     const tempId = `temp-${Date.now()}`;
     const optimisticMessage = {
       id: tempId,
@@ -486,42 +491,47 @@ export default function ChannelScreen({ navigation, route }) {
       channelId: channel.id,
       createdAt: new Date().toISOString(),
       reactions: [],
-      attachments: attachment ? [{ id: `temp-att-${Date.now()}`, type: attType, url: attachment.uri, pending: true }] : [],
+      attachments: fileList.map((att, i) => ({
+        id: `temp-att-${Date.now()}-${i}`,
+        type: att.isVideo ? 'VIDEO' : att.isAudio ? 'AUDIO' : 'IMAGE',
+        url: att.uri,
+        pending: true,
+      })),
       _count: { replies: 0 },
       pending: true,
     };
 
     setMessages(prev => [...prev, optimisticMessage]);
-
-    // Write optimistic message to SQLite immediately
     upsertLocalMessage(optimisticMessage).catch(() => {});
 
     try {
       let uploadedAttachments = null;
-      if (attachment) {
+      if (hasFiles) {
         setUploadProgress(0);
-        const uploaded = await api.uploadFileWithProgress(
-          attachment.uri, attachment.filename, attachment.mimeType,
-          (progress) => setUploadProgress(progress),
-          workspaceId
-        );
+        const uploads = [];
+        for (let i = 0; i < fileList.length; i++) {
+          const att = fileList[i];
+          const uploaded = await api.uploadFileWithProgress(
+            att.uri, att.filename, att.mimeType,
+            (progress) => setUploadProgress(((i / fileList.length) + (progress / fileList.length)) * 100 / 100),
+            workspaceId
+          );
+          uploads.push(uploaded);
+        }
         setUploadProgress(null);
-        uploadedAttachments = [uploaded];
+        uploadedAttachments = uploads;
       }
       const savedMessage = await api.sendMessage(channel.id, content || '', null, uploadedAttachments);
       setMessages(prev => prev.map(m =>
         m.id === optimisticMessage.id ? savedMessage : m
       ));
-      // Update SQLite with server version
       upsertLocalMessage(savedMessage).catch(() => {});
     } catch (err) {
       setUploadProgress(null);
-      // Queue text-only messages for retry when offline
-      if (!attachment && content) {
+      if (!hasFiles && content) {
         setMessages(prev => prev.map(m =>
           m.id === tempId ? { ...m, queued: true, pending: false } : m
         ));
-        // Write to both legacy queue and new sync queue
         addToOfflineQueue({ tempId, channelId: channel.id, content, createdAt: optimisticMessage.createdAt });
         enqueueSync('create', 'message', tempId, { channelId: channel.id, content }, workspaceId).catch(() => {});
       } else {

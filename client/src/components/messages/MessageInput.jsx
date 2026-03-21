@@ -493,7 +493,14 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
     }
 
     if (validFiles.length > 0) {
-      setSelectedFiles(prev => [...prev, ...validFiles]);
+      setSelectedFiles(prev => {
+        const combined = [...prev, ...validFiles];
+        if (combined.length > 5) {
+          setError('Maximum 5 files per message');
+          return combined.slice(0, 5);
+        }
+        return combined;
+      });
 
       validFiles.forEach(file => {
         if (isImageFile(file)) {

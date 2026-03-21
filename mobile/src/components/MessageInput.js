@@ -11,7 +11,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
   const { colors } = useTheme();
   const [text, setText] = useState('');
   const [inputHeight, setInputHeight] = useState(40);
-  const [attachment, setAttachment] = useState(null);
+  const [attachments, setAttachments] = useState([]);
   const [mentionFilter, setMentionFilter] = useState('');
   const [mentionStart, setMentionStart] = useState(-1);
   const [showMentions, setShowMentions] = useState(false);
@@ -179,17 +179,18 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
 
   const handleSend = useCallback(() => {
     const trimmed = text.trim();
-    if (!trimmed && !attachment) return;
+    if (!trimmed && attachments.length === 0) return;
 
     if (editingMessage) {
       if (trimmed && onSendEdit) onSendEdit(editingMessage.id, trimmed);
     } else {
-      onSend(trimmed, attachment);
+      // Send with first attachment for backward compat, or all attachments
+      onSend(trimmed, attachments.length === 1 ? attachments[0] : attachments.length > 0 ? attachments : null);
     }
 
     setText('');
     setInputHeight(40);
-    setAttachment(null);
+    setAttachments([]);
 
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
@@ -204,26 +205,35 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
   }, []);
 
   const pickMedia = useCallback(async () => {
+    const remaining = 5 - attachments.length;
+    if (remaining <= 0) {
+      Alert.alert('Limit reached', 'Maximum 5 files per message');
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images', 'videos'],
       quality: 0.8,
-      allowsMultipleSelection: false,
+      allowsMultipleSelection: true,
+      selectionLimit: remaining,
       videoMaxDuration: 300,
     });
 
-    if (!result.canceled && result.assets?.[0]) {
-      const asset = result.assets[0];
-      const isVideo = asset.type === 'video';
-      setAttachment({
-        uri: asset.uri,
-        filename: asset.fileName || (isVideo ? `video-${Date.now()}.mp4` : `image-${Date.now()}.jpg`),
-        mimeType: asset.mimeType || (isVideo ? 'video/mp4' : 'image/jpeg'),
-        width: asset.width,
-        height: asset.height,
-        isVideo,
+    if (!result.canceled && result.assets?.length > 0) {
+      const newAttachments = result.assets.slice(0, remaining).map(asset => {
+        const isVideo = asset.type === 'video';
+        return {
+          uri: asset.uri,
+          filename: asset.fileName || (isVideo ? `video-${Date.now()}.mp4` : `image-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.jpg`),
+          mimeType: asset.mimeType || (isVideo ? 'video/mp4' : 'image/jpeg'),
+          width: asset.width,
+          height: asset.height,
+          isVideo,
+        };
       });
+      setAttachments(prev => [...prev, ...newAttachments].slice(0, 5));
     }
-  }, []);
+  }, [attachments.length]);
 
   const takePhoto = useCallback(async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -240,14 +250,14 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
 
     if (!result.canceled && result.assets?.[0]) {
       const asset = result.assets[0];
-      setAttachment({
+      setAttachments(prev => [...prev, {
         uri: asset.uri,
         filename: asset.fileName || `photo-${Date.now()}.jpg`,
         mimeType: asset.mimeType || 'image/jpeg',
         width: asset.width,
         height: asset.height,
         isVideo: false,
-      });
+      }].slice(0, 5));
     }
   }, []);
 
@@ -259,13 +269,13 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
     ]);
   }, [takePhoto, pickMedia]);
 
-  const removeAttachment = useCallback(() => {
-    setAttachment(null);
+  const removeAttachment = useCallback((index) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
   }, []);
 
   const handleCancelEdit = useCallback(() => {
     setText('');
-    setAttachment(null);
+    setAttachments([]);
     if (onCancelEdit) onCancelEdit();
   }, [onCancelEdit]);
 
@@ -325,12 +335,12 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
       } else if (uri) {
         // Fallback: send as attachment through normal onSend
         const filename = `voice-${Date.now()}.m4a`;
-        onSend('', {
+        onSend('', [{
           uri,
           filename,
           mimeType: 'audio/m4a',
           isAudio: true,
-        });
+        }]);
       }
     } catch (err) {
       setIsRecording(false);
@@ -365,7 +375,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
 
   const formatDuration = (seconds) => formatRecordingDuration(seconds) || '0:00';
 
-  const canSend = text.trim().length > 0 || attachment;
+  const canSend = text.trim().length > 0 || attachments.length > 0;
   const showMic = !editingMessage && !canSend;
 
   return (
@@ -406,18 +416,22 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
         </Animated.View>
       )}
 
-      {/* Attachment preview */}
-      {attachment && !isRecording && (
-        <View style={styles.attachmentPreview}>
-          <Image source={{ uri: attachment.uri }} style={styles.attachmentThumb} accessibilityLabel="Attachment preview" />
-          {attachment.isVideo && (
-            <View style={styles.videoIndicator}>
-              <Text style={styles.videoIndicatorText}>{'\u25B6'}</Text>
+      {/* Attachment previews */}
+      {attachments.length > 0 && !isRecording && (
+        <View style={styles.attachmentPreviewRow}>
+          {attachments.map((att, i) => (
+            <View key={i} style={styles.attachmentPreviewItem}>
+              <Image source={{ uri: att.uri }} style={styles.attachmentThumb} accessibilityLabel={`Attachment ${i + 1}`} />
+              {att.isVideo && (
+                <View style={styles.videoIndicator}>
+                  <Text style={styles.videoIndicatorText}>{'\u25B6'}</Text>
+                </View>
+              )}
+              <TouchableOpacity style={styles.removeAttachment} onPress={() => removeAttachment(i)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel={`Remove attachment ${i + 1}`}>
+                <Text style={styles.removeAttachmentText}>{'\u2715'}</Text>
+              </TouchableOpacity>
             </View>
-          )}
-          <TouchableOpacity style={styles.removeAttachment} onPress={removeAttachment} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Remove attachment">
-            <Text style={styles.removeAttachmentText}>{'\u2715'}</Text>
-          </TouchableOpacity>
+          ))}
         </View>
       )}
 
@@ -605,19 +619,24 @@ const styles = StyleSheet.create({
   slideToCancel: {
     fontSize: 14,
   },
-  attachmentPreview: {
+  attachmentPreviewRow: {
+    flexDirection: 'row',
     paddingHorizontal: 12,
     paddingTop: 8,
+    gap: 8,
+  },
+  attachmentPreviewItem: {
+    position: 'relative',
   },
   attachmentThumb: {
-    width: 80,
-    height: 80,
+    width: 64,
+    height: 64,
     borderRadius: 8,
   },
   videoIndicator: {
     position: 'absolute',
-    top: 32,
-    left: 28,
+    top: 22,
+    left: 22,
     width: 24,
     height: 24,
     borderRadius: 12,
@@ -631,8 +650,8 @@ const styles = StyleSheet.create({
   },
   removeAttachment: {
     position: 'absolute',
-    top: 4,
-    left: 76,
+    top: -4,
+    right: -4,
     width: 22,
     height: 22,
     borderRadius: 11,
