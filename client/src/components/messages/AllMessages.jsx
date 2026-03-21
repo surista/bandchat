@@ -90,7 +90,7 @@ function AllMessages({ workspaceId, onSelectChannel }) {
   }
 
   return (
-    <div className="p-4 space-y-1">
+    <div className="h-full overflow-y-auto bg-[var(--color-bg-primary)] p-4 space-y-1">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">All Messages</h2>
         <button
