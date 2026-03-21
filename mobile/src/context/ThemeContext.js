@@ -201,6 +201,12 @@ const structuralColors = {
     textPrimary: '#ffffff',
     textSecondary: '#9ca3af',
     border: '#374151',
+    badgeKey: '#c084fc',      // purple — key badges
+    badgeKeyBg: 'rgba(192,132,252,0.15)',
+    badgeBpm: '#60a5fa',      // blue — BPM badges
+    badgeBpmBg: 'rgba(96,165,250,0.15)',
+    badgeDuration: '#9ca3af', // gray — duration badges
+    badgeDurationBg: 'rgba(156,163,175,0.15)',
   },
   light: {
     bgPrimary: '#ffffff',
@@ -209,6 +215,12 @@ const structuralColors = {
     textPrimary: '#111827',
     textSecondary: '#6b7280',
     border: '#d1d5db',
+    badgeKey: '#7c3aed',      // darker purple for light bg contrast
+    badgeKeyBg: 'rgba(124,58,237,0.1)',
+    badgeBpm: '#2563eb',      // darker blue for light bg contrast
+    badgeBpmBg: 'rgba(37,99,235,0.1)',
+    badgeDuration: '#6b7280', // gray-500
+    badgeDurationBg: 'rgba(107,114,128,0.1)',
   },
 };
 

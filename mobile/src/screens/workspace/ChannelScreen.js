@@ -793,8 +793,8 @@ export default function ChannelScreen({ navigation, route }) {
                           ) : ss.song ? (
                             <View style={styles.setlistSongInfo}>
                               <Text style={[styles.setlistSongTitle, { color: colors.textPrimary }]} numberOfLines={1}>{ss.song.shortName || ss.song.title}</Text>
-                              {ss.song.key ? <Text style={styles.setlistKeyText}>{ss.song.key}</Text> : null}
-                              {ss.song.bpm ? <Text style={styles.setlistBpmText}>{ss.song.bpm}</Text> : null}
+                              {ss.song.key ? <Text style={[styles.setlistKeyText, { color: colors.badgeKey }]}>{ss.song.key}</Text> : null}
+                              {ss.song.bpm ? <Text style={[styles.setlistBpmText, { color: colors.badgeBpm }]}>{ss.song.bpm}</Text> : null}
                             </View>
                           ) : (
                             <Text style={[styles.setlistUnknown, { color: colors.textSecondary }]}>{ss.label || 'Unknown'}</Text>
@@ -1191,11 +1191,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   setlistKeyText: {
-    color: '#c084fc',
     fontSize: 11,
   },
   setlistBpmText: {
-    color: '#60a5fa',
     fontSize: 11,
   },
   setlistUnknown: {

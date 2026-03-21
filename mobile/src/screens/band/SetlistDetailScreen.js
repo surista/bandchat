@@ -398,7 +398,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
             ) : null}
           </View>
           {item.song?.key ? (
-            <Badge label={item.song.key} color="#c084fc" bgColor="rgba(192,132,252,0.15)" />
+            <Badge label={item.song.key} color={colors.badgeKey} bgColor={colors.badgeKeyBg} />
           ) : null}
           {item.song?.duration ? (
             <Text style={[styles.itemDuration, { color: colors.textSecondary }]}>
@@ -443,12 +443,12 @@ export default function SetlistDetailScreen({ navigation, route }) {
     <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
       {/* Stats header */}
       <View style={styles.statsRow}>
-        <Badge label={`${songItems.length} songs`} color="#60a5fa" bgColor="rgba(96,165,250,0.15)" />
+        <Badge label={`${songItems.length} songs`} color={colors.badgeBpm} bgColor={colors.badgeBpmBg} />
         {effectiveBreaks > 0 && (
-          <Badge label={`${effectiveBreaks + 1} sets`} color="#c084fc" bgColor="rgba(192,132,252,0.15)" />
+          <Badge label={`${effectiveBreaks + 1} sets`} color={colors.badgeKey} bgColor={colors.badgeKeyBg} />
         )}
         {totalDuration > 0 && (
-          <Badge label={formatDuration(totalDuration)} color="#9ca3af" bgColor="rgba(156,163,175,0.15)" />
+          <Badge label={formatDuration(totalDuration)} color={colors.badgeDuration} bgColor={colors.badgeDurationBg} />
         )}
         {setlist?.venue && (
           <Badge label={setlist.venue} color="#fbbf24" bgColor="rgba(251,191,36,0.15)" />
@@ -608,7 +608,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
                     ) : null}
                   </View>
                   {item.key ? (
-                    <Badge label={item.key} color="#c084fc" bgColor="rgba(192,132,252,0.15)" />
+                    <Badge label={item.key} color={colors.badgeKey} bgColor={colors.badgeKeyBg} />
                   ) : null}
                   {item.duration ? (
                     <Text style={[styles.pickerDuration, { color: colors.textSecondary }]}>

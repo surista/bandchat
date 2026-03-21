@@ -68,12 +68,12 @@ const SongCard = memo(function SongCard({ song, onEdit, onDelete, onContextMenu,
 
       <div className="flex flex-wrap gap-2 text-xs">
         {song.key && (
-          <span className="px-2 py-1 bg-purple-900/50 text-purple-300 rounded">
+          <span className="px-2 py-1 rounded" style={{ color: 'var(--color-badge-key)', backgroundColor: 'color-mix(in srgb, var(--color-badge-key) 15%, transparent)' }}>
             Key: {song.key}
           </span>
         )}
         {song.bpm && (
-          <span className="px-2 py-1 bg-blue-900/50 text-blue-300 rounded">
+          <span className="px-2 py-1 rounded" style={{ color: 'var(--color-badge-bpm)', backgroundColor: 'color-mix(in srgb, var(--color-badge-bpm) 15%, transparent)' }}>
             {song.bpm} BPM
           </span>
         )}
@@ -439,8 +439,13 @@ function SongList({ workspaceId, workspaceName, onSelectSong }) {
 </body>
 </html>`;
 
-    printWindow.document.write(html);
-    printWindow.document.close();
+    try {
+      printWindow.document.write(html);
+      printWindow.document.close();
+    } catch (err) {
+      printWindow.close();
+      toast.warning('Could not generate print preview');
+    }
   };
 
   // Memoized callbacks for SongCard to prevent unnecessary re-renders
@@ -675,7 +680,7 @@ function SongList({ workspaceId, workspaceName, onSelectSong }) {
                       {song.duration ? `${Math.floor(song.duration / 60)}:${String(song.duration % 60).padStart(2, '0')}` : ''}
                     </td>
                     <td className="py-2 px-2">
-                      <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                      <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity">
                         <button
                           onClick={() => handleEditSong(song)}
                           className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"

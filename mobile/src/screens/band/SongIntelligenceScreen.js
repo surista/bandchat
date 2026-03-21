@@ -199,8 +199,8 @@ function MashupsTab({ workspaceId, colors }) {
           <Text style={[styles.sourceLabel, { color: colors.textSecondary }]}>Source Song</Text>
           <Text style={[styles.sourceTitle, { color: colors.textPrimary }]}>{selectedSong.title}</Text>
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
-            {selectedSong.key && <Text style={[styles.sourceMeta, { color: '#c084fc' }]}>Key: {selectedSong.key}</Text>}
-            {selectedSong.bpm && <Text style={[styles.sourceMeta, { color: '#60a5fa' }]}>{selectedSong.bpm} BPM</Text>}
+            {selectedSong.key && <Text style={[styles.sourceMeta, { color: colors.badgeKey }]}>Key: {selectedSong.key}</Text>}
+            {selectedSong.bpm && <Text style={[styles.sourceMeta, { color: colors.badgeBpm }]}>{selectedSong.bpm} BPM</Text>}
           </View>
         </View>
       )}
@@ -215,8 +215,8 @@ function MashupsTab({ workspaceId, colors }) {
               <Text style={[styles.mashupTitle, { color: colors.textPrimary }]} numberOfLines={1}>{s.song.title}</Text>
               {s.song.artist && <Text style={[styles.mashupArtist, { color: colors.textSecondary }]}>{s.song.artist}</Text>}
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
-                {s.song.key && <Text style={{ color: '#c084fc', fontSize: 12 }}>Key: {s.song.key}</Text>}
-                {s.song.bpm && <Text style={{ color: '#60a5fa', fontSize: 12 }}>{s.song.bpm} BPM</Text>}
+                {s.song.key && <Text style={{ color: colors.badgeKey, fontSize: 12 }}>Key: {s.song.key}</Text>}
+                {s.song.bpm && <Text style={{ color: colors.badgeBpm, fontSize: 12 }}>{s.song.bpm} BPM</Text>}
               </View>
             </View>
           </View>
@@ -259,8 +259,8 @@ function MashupsTab({ workspaceId, colors }) {
                     {item.artist && <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{item.artist}</Text>}
                   </View>
                   <View style={{ flexDirection: 'row', gap: 6 }}>
-                    {item.key && <Text style={{ color: '#c084fc', fontSize: 12 }}>{item.key}</Text>}
-                    {item.bpm && <Text style={{ color: '#60a5fa', fontSize: 12 }}>{item.bpm}</Text>}
+                    {item.key && <Text style={{ color: colors.badgeKey, fontSize: 12 }}>{item.key}</Text>}
+                    {item.bpm && <Text style={{ color: colors.badgeBpm, fontSize: 12 }}>{item.bpm}</Text>}
                   </View>
                 </TouchableOpacity>
               )}
@@ -397,8 +397,8 @@ function OptimizerTab({ workspaceId, colors }) {
                 {song.artist && <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{song.artist}</Text>}
               </View>
               <View style={{ flexDirection: 'row', gap: 6 }}>
-                {song.key && <Text style={{ color: '#c084fc', fontSize: 12 }}>{song.key}</Text>}
-                {song.bpm && <Text style={{ color: '#60a5fa', fontSize: 12 }}>{song.bpm}</Text>}
+                {song.key && <Text style={{ color: colors.badgeKey, fontSize: 12 }}>{song.key}</Text>}
+                {song.bpm && <Text style={{ color: colors.badgeBpm, fontSize: 12 }}>{song.bpm}</Text>}
               </View>
             </View>
           ))}
@@ -430,8 +430,8 @@ function OptimizerTab({ workspaceId, colors }) {
                   {song.artist && <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{song.artist}</Text>}
                 </View>
                 <View style={{ flexDirection: 'row', gap: 6 }}>
-                  {song.key && <Text style={{ color: '#c084fc', fontSize: 12 }}>{song.key}</Text>}
-                  {song.bpm && <Text style={{ color: '#60a5fa', fontSize: 12 }}>{song.bpm}</Text>}
+                  {song.key && <Text style={{ color: colors.badgeKey, fontSize: 12 }}>{song.key}</Text>}
+                  {song.bpm && <Text style={{ color: colors.badgeBpm, fontSize: 12 }}>{song.bpm}</Text>}
                 </View>
               </TouchableOpacity>
             );

@@ -230,8 +230,12 @@ function WorkspaceView() {
   useEffect(() => {
     setActiveWorkspaceId(workspaceId);
     loadWorkspace();
-    return () => setActiveWorkspaceId(null);
   }, [workspaceId]);
+
+  // Clear workspace theme when leaving workspace view entirely
+  useEffect(() => {
+    return () => setActiveWorkspaceId(null);
+  }, []);
 
   // Update pendingChannelId when workspaceId changes
   useEffect(() => {

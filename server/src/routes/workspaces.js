@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { Resend } from 'resend';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
 import { exportLimiter } from '../middleware/rateLimit.js';
+import { Prisma } from '@prisma/client';
 import prisma, { USER_SELECT_BRIEF } from '../lib/prisma.js';
 import { forceLeaveWorkspace } from '../socket/handlers.js';
 import { getEffectivePlan, getPlanLimits, serializePlanLimits } from '../lib/planLimits.js';
@@ -138,37 +139,37 @@ router.get('/', authenticate, async (req, res) => {
     // Filter out soft-deleted workspaces (Prisma middleware doesn't filter nested includes)
     const validWorkspaces = workspaces.filter(wm => wm.workspace && !wm.workspace.deletedAt);
 
-    // Fetch unread counts per workspace in parallel
-    const unreadCounts = await Promise.all(
-      validWorkspaces.map(async (wm) => {
-        try {
-          const channels = await prisma.channelMember.findMany({
-            where: { userId: req.user.id, channel: { workspaceId: wm.workspace.id } },
-            select: { channelId: true, lastRead: true, muted: true },
-          });
-          if (channels.length === 0) return 0;
-          const unmutedChannels = channels.filter(c => !c.muted);
-          if (unmutedChannels.length === 0) return 0;
-          const count = await prisma.message.count({
-            where: {
-              OR: unmutedChannels.map(c => ({
-                channelId: c.channelId,
-                createdAt: { gt: c.lastRead },
-              })),
-            },
-          });
-          return count;
-        } catch { return 0; }
-      })
-    );
+    // Fetch unread counts per workspace with a single efficient query
+    let unreadMap = {};
+    try {
+      const wsIds = validWorkspaces.map(wm => wm.workspace.id);
+      if (wsIds.length > 0) {
+        const rows = await prisma.$queryRaw`
+          SELECT c."workspaceId", COUNT(m.id)::int AS count
+          FROM "ChannelMember" cm
+          JOIN "Channel" c ON c.id = cm."channelId"
+          JOIN "Message" m ON m."channelId" = cm."channelId"
+            AND m."createdAt" > cm."lastRead"
+            AND m."authorId" != cm."userId"
+            AND m."parentId" IS NULL
+          WHERE cm."userId" = ${req.user.id}
+            AND cm.muted = false
+            AND c."workspaceId" IN (${Prisma.join(wsIds)})
+          GROUP BY c."workspaceId"
+        `;
+        for (const row of rows) {
+          unreadMap[row.workspaceId] = row.count;
+        }
+      }
+    } catch {}
 
-    res.json(validWorkspaces.map((wm, i) => ({
+    res.json(validWorkspaces.map((wm) => ({
       ...wm.workspace,
       effectivePlan: getEffectivePlan(wm.workspace),
       planLimits: serializePlanLimits(getPlanLimits(wm.workspace)),
       role: wm.role,
       joinedAt: wm.joinedAt,
-      unreadCount: unreadCounts[i],
+      unreadCount: unreadMap[wm.workspace.id] || 0,
     })));
   } catch (error) {
     res.status(500).json({ error: 'Failed to get workspaces' });

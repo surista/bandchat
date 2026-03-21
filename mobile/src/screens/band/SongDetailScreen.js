@@ -507,9 +507,9 @@ export default function SongDetailScreen({ navigation, route }) {
       ) : null}
 
       <View style={styles.badgeRow}>
-        {song?.key ? <Badge label={`Key: ${song.key}`} color="#c084fc" bgColor="rgba(192,132,252,0.15)" /> : null}
-        {song?.bpm ? <Badge label={`${song.bpm} BPM`} color="#60a5fa" bgColor="rgba(96,165,250,0.15)" /> : null}
-        {song?.duration ? <Badge label={formatDuration(song.duration)} color="#9ca3af" bgColor="rgba(156,163,175,0.15)" /> : null}
+        {song?.key ? <Badge label={`Key: ${song.key}`} color={colors.badgeKey} bgColor={colors.badgeKeyBg} /> : null}
+        {song?.bpm ? <Badge label={`${song.bpm} BPM`} color={colors.badgeBpm} bgColor={colors.badgeBpmBg} /> : null}
+        {song?.duration ? <Badge label={formatDuration(song.duration)} color={colors.badgeDuration} bgColor={colors.badgeDurationBg} /> : null}
       </View>
 
       {/* Links */}

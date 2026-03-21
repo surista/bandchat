@@ -12,11 +12,12 @@ import {
   RefreshControl,
   Platform,
   StyleSheet,
+  LayoutAnimation,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { SkeletonList } from '../../components/SkeletonLoader';
-import { successNotification } from '../../utils/haptics';
+import { successNotification, selectionFeedback, mediumImpact } from '../../utils/haptics';
 import api from '../../services/api';
 import { getLocalSongs, upsertSongs, deleteLocalSong } from '../../services/database';
 import { Ionicons } from '@expo/vector-icons';
@@ -100,7 +101,7 @@ export default function SongListScreen({ navigation, route }) {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
           <TouchableOpacity
             onPress={() => setShowMoreMenu(true)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             accessibilityRole="button"
             accessibilityLabel="More options"
           >
@@ -241,6 +242,7 @@ export default function SongListScreen({ navigation, route }) {
   }, [filteredSongs, workspaceName, debouncedSearch]);
 
   const handleLongPress = useCallback((song) => {
+    mediumImpact();
     setSelectedSong(song);
     setShowActions(true);
   }, []);
@@ -293,8 +295,8 @@ export default function SongListScreen({ navigation, route }) {
             ) : null}
           </View>
           <View style={styles.compactMeta}>
-            {item.key ? <Text style={[styles.compactMetaText, { color: '#c084fc' }]}>{item.key}</Text> : null}
-            {item.bpm ? <Text style={[styles.compactMetaText, { color: '#60a5fa' }]}>{item.bpm}</Text> : null}
+            {item.key ? <Text style={[styles.compactMetaText, { color: colors.badgeKey }]}>{item.key}</Text> : null}
+            {item.bpm ? <Text style={[styles.compactMetaText, { color: colors.badgeBpm }]}>{item.bpm}</Text> : null}
             {item.duration ? <Text style={[styles.compactMetaText, { color: colors.textSecondary }]}>{formatDuration(item.duration)}</Text> : null}
           </View>
           <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} style={{ opacity: 0.4, marginLeft: 4 }} />
@@ -310,8 +312,8 @@ export default function SongListScreen({ navigation, route }) {
         delayLongPress={400}
         activeOpacity={0.7}
         accessibilityRole="button"
-        accessibilityLabel={`${item.title}${item.artist ? ` by ${item.artist}` : ''}. Long press for options`}
-        accessibilityHint="View song details"
+        accessibilityLabel={`${item.title}${item.artist ? ` by ${item.artist}` : ''}`}
+        accessibilityHint="Tap for details, long press for options"
       >
         <Text style={[styles.songTitle, { color: colors.textPrimary }]} numberOfLines={1}>
           {item.title}
@@ -327,9 +329,9 @@ export default function SongListScreen({ navigation, route }) {
           </Text>
         ) : null}
         <View style={styles.badgeRow}>
-          {item.key ? <Badge label={`Key: ${item.key}`} color="#c084fc" bgColor="rgba(192,132,252,0.15)" /> : null}
-          {item.bpm ? <Badge label={`${item.bpm} BPM`} color="#60a5fa" bgColor="rgba(96,165,250,0.15)" /> : null}
-          {item.duration ? <Badge label={formatDuration(item.duration)} color="#9ca3af" bgColor="rgba(156,163,175,0.15)" /> : null}
+          {item.key ? <Badge label={`Key: ${item.key}`} color={colors.badgeKey} bgColor={colors.badgeKeyBg} /> : null}
+          {item.bpm ? <Badge label={`${item.bpm} BPM`} color={colors.badgeBpm} bgColor={colors.badgeBpmBg} /> : null}
+          {item.duration ? <Badge label={formatDuration(item.duration)} color={colors.badgeDuration} bgColor={colors.badgeDurationBg} /> : null}
         </View>
         {item._count?.setlistSongs > 0 ? (
           <Text style={[styles.setlistCount, { color: colors.textSecondary }]}>
@@ -397,12 +399,18 @@ export default function SongListScreen({ navigation, route }) {
             {SORT_OPTIONS.find(o => o.key === sortBy)?.label}
           </Text>
         </TouchableOpacity>
-        <View style={[styles.segmentedControl, { backgroundColor: colors.bgTertiary }]}>
+        <View style={[styles.segmentedControl, { backgroundColor: colors.bgTertiary }]} accessibilityRole="tabbar">
           <TouchableOpacity
             style={[styles.segmentButton, viewMode === 'cards' && { backgroundColor: colors.primary }]}
-            onPress={() => setViewMode('cards')}
+            onPress={() => {
+              if (viewMode !== 'cards') {
+                selectionFeedback();
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setViewMode('cards');
+              }
+            }}
             activeOpacity={0.7}
-            accessibilityRole="button"
+            accessibilityRole="tab"
             accessibilityLabel="Card view"
             accessibilityState={{ selected: viewMode === 'cards' }}
           >
@@ -410,9 +418,15 @@ export default function SongListScreen({ navigation, route }) {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.segmentButton, viewMode === 'compact' && { backgroundColor: colors.primary }]}
-            onPress={() => setViewMode('compact')}
+            onPress={() => {
+              if (viewMode !== 'compact') {
+                selectionFeedback();
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setViewMode('compact');
+              }
+            }}
             activeOpacity={0.7}
-            accessibilityRole="button"
+            accessibilityRole="tab"
             accessibilityLabel="List view"
             accessibilityState={{ selected: viewMode === 'compact' }}
           >
@@ -475,9 +489,10 @@ export default function SongListScreen({ navigation, route }) {
               <TouchableOpacity
                 key={opt.key}
                 style={[styles.sortOption, sortBy === opt.key && { backgroundColor: colors.bgTertiary }]}
-                onPress={() => { setSortBy(opt.key); setShowSortModal(false); }}
-                accessibilityRole="button"
-                accessibilityLabel={`Sort by ${opt.label}${sortBy === opt.key ? ', selected' : ''}`}
+                onPress={() => { selectionFeedback(); setSortBy(opt.key); setShowSortModal(false); }}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: sortBy === opt.key }}
+                accessibilityLabel={`Sort by ${opt.label}`}
               >
                 <Text style={[styles.sortOptionText, { color: colors.textPrimary }]}>{opt.label}</Text>
                 {sortBy === opt.key && <Ionicons name="checkmark" size={20} color={colors.primary} />}
@@ -572,7 +587,7 @@ export default function SongListScreen({ navigation, route }) {
                   </Text>
                 )}
                 {importResult.metadataMatches > 0 && (
-                  <Text style={[styles.bulkResultLine, { color: '#60a5fa' }]}>
+                  <Text style={[styles.bulkResultLine, { color: colors.badgeBpm }]}>
                     Metadata found: {importResult.metadataMatches}
                   </Text>
                 )}
@@ -699,12 +714,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 15,
+    minHeight: 44,
   },
   sortButton: {
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     justifyContent: 'center',
+    minHeight: 44,
   },
   sortButtonText: { fontSize: 14, fontWeight: '600' },
   listContent: { paddingHorizontal: 12, paddingBottom: 20 },
@@ -730,7 +747,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  compactNum: { width: 28, fontSize: 13, textAlign: 'center' },
+  compactNum: { minWidth: 28, fontSize: 13, textAlign: 'center' },
   compactInfo: { flex: 1, marginHorizontal: 8 },
   compactTitle: { fontSize: 15, fontWeight: '600' },
   compactArtist: { fontSize: 13, marginTop: 1 },
@@ -743,10 +760,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   segmentButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    minWidth: 38,
-    minHeight: 36,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minWidth: 44,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },

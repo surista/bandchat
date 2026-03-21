@@ -203,8 +203,12 @@ export default function ChannelListScreen({ navigation, route }) {
   // Set active workspace for per-band theme
   useEffect(() => {
     setActiveWorkspaceId(workspaceId);
-    return () => setActiveWorkspaceId(null);
   }, [workspaceId, setActiveWorkspaceId]);
+
+  // Clear when leaving workspace entirely
+  useEffect(() => {
+    return () => setActiveWorkspaceId(null);
+  }, [setActiveWorkspaceId]);
 
   const loadData = useCallback(async () => {
     try {

@@ -368,14 +368,14 @@ export default function MedleyDetailScreen({ navigation, route }) {
       <View style={styles.badgeRow}>
         <Badge
           label={`${songList.length} song${songList.length !== 1 ? 's' : ''}`}
-          color="#60a5fa"
-          bgColor="rgba(96,165,250,0.15)"
+          color={colors.badgeBpm}
+          bgColor={colors.badgeBpmBg}
         />
         {totalDuration > 0 && (
           <Badge
             label={formatDuration(totalDuration)}
-            color="#9ca3af"
-            bgColor="rgba(156,163,175,0.15)"
+            color={colors.badgeDuration}
+            bgColor={colors.badgeDurationBg}
           />
         )}
       </View>
@@ -392,7 +392,7 @@ export default function MedleyDetailScreen({ navigation, route }) {
               ) : null}
             </View>
             {song.key ? (
-              <Badge label={song.key} color="#c084fc" bgColor="rgba(192,132,252,0.15)" />
+              <Badge label={song.key} color={colors.badgeKey} bgColor={colors.badgeKeyBg} />
             ) : null}
             {song.duration ? (
               <Text style={[styles.viewSongDuration, { color: colors.textSecondary }]}>

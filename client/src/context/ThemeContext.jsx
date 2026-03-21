@@ -167,6 +167,9 @@ const structuralColors = {
     textPrimary: '#ffffff',
     textSecondary: '#9ca3af', // gray-400
     border: '#374151',       // gray-700
+    badgeKey: '#c084fc',
+    badgeBpm: '#60a5fa',
+    badgeDuration: '#9ca3af',
   },
   light: {
     bgPrimary: '#ffffff',
@@ -175,6 +178,9 @@ const structuralColors = {
     textPrimary: '#111827',  // gray-900
     textSecondary: '#6b7280', // gray-500
     border: '#d1d5db',       // gray-300
+    badgeKey: '#7c3aed',
+    badgeBpm: '#2563eb',
+    badgeDuration: '#6b7280',
   },
 };
 
@@ -202,6 +208,7 @@ export function ThemeProvider({ children }) {
     if (saved) return saved;
     return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
   });
+  const [isFollowingSystem, setIsFollowingSystem] = useState(() => !localStorage.getItem('bandchat-mode'));
 
   // Resolve which theme to actually use
   const currentTheme = (activeWorkspaceId && workspaceThemes[activeWorkspaceId]) || globalTheme;
@@ -238,6 +245,9 @@ export function ThemeProvider({ children }) {
     root.style.setProperty('--color-text-primary', colors.textPrimary);
     root.style.setProperty('--color-text-secondary', colors.textSecondary);
     root.style.setProperty('--color-border', colors.border);
+    root.style.setProperty('--color-badge-key', colors.badgeKey);
+    root.style.setProperty('--color-badge-bpm', colors.badgeBpm);
+    root.style.setProperty('--color-badge-duration', colors.badgeDuration);
 
     // Set data attribute for CSS selectors
     root.dataset.mode = mode;
@@ -289,22 +299,24 @@ export function ThemeProvider({ children }) {
 
   const toggleMode = () => {
     setMode(prev => prev === 'dark' ? 'light' : 'dark');
+    setIsFollowingSystem(false);
   };
 
   const followSystem = () => {
     localStorage.removeItem('bandchat-mode');
     const isLight = window.matchMedia('(prefers-color-scheme: light)').matches;
     setMode(isLight ? 'light' : 'dark');
+    setIsFollowingSystem(true);
   };
 
   const contextValue = useMemo(() => ({
     currentTheme, setTheme, themes, mode, toggleMode, followSystem,
-    isFollowingSystem: !localStorage.getItem('bandchat-mode'),
+    isFollowingSystem,
     globalTheme,
     setGlobalTheme: (themeId) => { if (themes[themeId]) setGlobalTheme(themeId); },
     activeWorkspaceId, setActiveWorkspaceId,
     setWorkspaceTheme, getWorkspaceTheme,
-  }), [currentTheme, globalTheme, mode, activeWorkspaceId, setTheme, setWorkspaceTheme, getWorkspaceTheme]);
+  }), [currentTheme, globalTheme, mode, isFollowingSystem, activeWorkspaceId, setTheme, setWorkspaceTheme, getWorkspaceTheme]);
 
   return (
     <ThemeContext.Provider value={contextValue}>

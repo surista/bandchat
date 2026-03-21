@@ -226,9 +226,9 @@ export default function SetlistListScreen({ navigation, route }) {
           </Text>
         )}
         <View style={styles.badgeRow}>
-          {songCount > 0 && <Badge label={`${songCount} songs`} color="#60a5fa" bgColor="rgba(96,165,250,0.15)" />}
-          {effectiveBreaks > 0 && <Badge label={`${setCount} sets`} color="#c084fc" bgColor="rgba(192,132,252,0.15)" />}
-          {totalDuration > 0 && <Badge label={formatDuration(totalDuration)} color="#9ca3af" bgColor="rgba(156,163,175,0.15)" />}
+          {songCount > 0 && <Badge label={`${songCount} songs`} color={colors.badgeBpm} bgColor={colors.badgeBpmBg} />}
+          {effectiveBreaks > 0 && <Badge label={`${setCount} sets`} color={colors.badgeKey} bgColor={colors.badgeKeyBg} />}
+          {totalDuration > 0 && <Badge label={formatDuration(totalDuration)} color={colors.badgeDuration} bgColor={colors.badgeDurationBg} />}
         </View>
         {preview.length > 0 && (
           <View style={styles.previewList}>

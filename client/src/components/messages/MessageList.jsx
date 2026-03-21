@@ -403,8 +403,10 @@ function MessageList({
 }) {
   const toast = useToast();
   const [editingId, setEditingId] = useState(null);
-  const [editContent, setEditContent] = useState('');
+  const [editContent, setEditContentState] = useState('');
   const editTextareaRef = useRef(null);
+  const editContentRef = useRef('');
+  const setEditContent = (val) => { editContentRef.current = val; setEditContentState(val); };
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState(null);
   const [deleteMessageId, setDeleteMessageId] = useState(null); // For delete confirmation dialog
   const [reportMessageId, setReportMessageId] = useState(null); // For report dialog
@@ -532,10 +534,11 @@ function MessageList({
   const wrapEditSelection = useCallback((before, after) => {
     const ta = editTextareaRef.current;
     if (!ta) return;
+    const content = editContentRef.current;
     const start = ta.selectionStart;
     const end = ta.selectionEnd;
-    const selected = editContent.slice(start, end);
-    const newContent = editContent.slice(0, start) + before + selected + (after || before) + editContent.slice(end);
+    const selected = content.slice(start, end);
+    const newContent = content.slice(0, start) + before + selected + (after || before) + content.slice(end);
     setEditContent(newContent);
     const cursorPos = selected ? start + before.length + selected.length + (after || before).length : start + before.length;
     setTimeout(() => {
@@ -545,14 +548,15 @@ function MessageList({
         selected ? start + before.length + selected.length + (after || before).length : cursorPos
       );
     }, 0);
-  }, [editContent]);
+  }, []);
 
   const insertEditLinePrefix = useCallback((prefix) => {
     const ta = editTextareaRef.current;
     if (!ta) return;
+    const content = editContentRef.current;
     const start = ta.selectionStart;
-    const lineStart = editContent.lastIndexOf('\n', start - 1) + 1;
-    setEditContent(editContent.slice(0, lineStart) + prefix + editContent.slice(lineStart));
+    const lineStart = content.lastIndexOf('\n', start - 1) + 1;
+    setEditContent(content.slice(0, lineStart) + prefix + content.slice(lineStart));
     setTimeout(() => { ta.focus(); ta.setSelectionRange(start + prefix.length, start + prefix.length); }, 0);
   }, [editContent]);
 
