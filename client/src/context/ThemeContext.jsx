@@ -182,7 +182,8 @@ const ThemeContext = createContext();
 
 function getWorkspaceThemes() {
   try {
-    return JSON.parse(localStorage.getItem('bandchat-workspace-themes') || '{}');
+    const parsed = JSON.parse(localStorage.getItem('bandchat-workspace-themes') || '{}');
+    return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
   } catch { return {}; }
 }
 
@@ -243,7 +244,7 @@ export function ThemeProvider({ children }) {
 
     localStorage.setItem('bandchat-theme', globalTheme);
     localStorage.setItem('bandchat-mode', mode);
-  }, [currentTheme, globalTheme, mode]);
+  }, [currentTheme, mode, globalTheme]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
@@ -259,26 +260,28 @@ export function ThemeProvider({ children }) {
   const setTheme = useCallback((themeId) => {
     if (!themes[themeId]) return;
     if (activeWorkspaceId && workspaceThemes[activeWorkspaceId]) {
-      // If this workspace has a custom theme, update the workspace theme
-      const updated = { ...workspaceThemes, [activeWorkspaceId]: themeId };
-      setWorkspaceThemes(updated);
-      saveWorkspaceThemes(updated);
+      setWorkspaceThemes(prev => {
+        const updated = { ...prev, [activeWorkspaceId]: themeId };
+        saveWorkspaceThemes(updated);
+        return updated;
+      });
     } else {
-      // Otherwise update the global theme
       setGlobalTheme(themeId);
     }
   }, [activeWorkspaceId, workspaceThemes]);
 
   const setWorkspaceTheme = useCallback((workspaceId, themeId) => {
-    const updated = { ...workspaceThemes };
-    if (themeId) {
-      updated[workspaceId] = themeId;
-    } else {
-      delete updated[workspaceId];
-    }
-    setWorkspaceThemes(updated);
-    saveWorkspaceThemes(updated);
-  }, [workspaceThemes]);
+    setWorkspaceThemes(prev => {
+      const updated = { ...prev };
+      if (themeId) {
+        updated[workspaceId] = themeId;
+      } else {
+        delete updated[workspaceId];
+      }
+      saveWorkspaceThemes(updated);
+      return updated;
+    });
+  }, []);
 
   const getWorkspaceTheme = useCallback((workspaceId) => {
     return workspaceThemes[workspaceId] || null;

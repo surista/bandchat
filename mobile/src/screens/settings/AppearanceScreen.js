@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -5,22 +6,42 @@ import {
   TouchableOpacity,
   Switch,
   StyleSheet,
+  LayoutAnimation,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme, themes } from '../../context/ThemeContext';
 import { useLayout } from '../../hooks/useLayout';
 import { selectionFeedback } from '../../utils/haptics';
+import { Ionicons } from '@expo/vector-icons';
+import api from '../../services/api';
 
 const themeKeys = Object.keys(themes);
 
+// Note: FREE_THEME_IDS is also defined in server/src/lib/planLimits.js
+const FREE_THEME_IDS = ['default', 'midnight', 'ocean'];
+
 export default function AppearanceScreen({ route }) {
   const workspaceId = route?.params?.workspaceId;
-  const { currentTheme, setTheme, mode, toggleMode, colors, globalTheme, setGlobalTheme, setWorkspaceTheme, getWorkspaceTheme } = useTheme();
+  const { currentTheme, mode, toggleMode, colors, globalTheme, setGlobalTheme, setWorkspaceTheme, getWorkspaceTheme } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
+
+  const [workspaceName, setWorkspaceName] = useState(null);
+  const [effectivePlan, setEffectivePlan] = useState(null);
+
+  useEffect(() => {
+    if (workspaceId) {
+      api.getWorkspace(workspaceId).then(ws => {
+        setWorkspaceName(ws.name);
+        setEffectivePlan(ws.effectivePlan);
+      }).catch(() => {});
+    }
+  }, [workspaceId]);
 
   const hasCustomTheme = workspaceId ? !!getWorkspaceTheme(workspaceId) : false;
 
   const handleThemeSelect = (key) => {
+    const isLocked = effectivePlan !== 'PRO' && !FREE_THEME_IDS.includes(key);
+    if (isLocked) return;
     selectionFeedback();
     if (workspaceId && hasCustomTheme) {
       setWorkspaceTheme(workspaceId, key);
@@ -31,6 +52,7 @@ export default function AppearanceScreen({ route }) {
 
   const handleToggleCustomTheme = () => {
     selectionFeedback();
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     if (hasCustomTheme) {
       setWorkspaceTheme(workspaceId, null);
     } else {
@@ -44,14 +66,14 @@ export default function AppearanceScreen({ route }) {
         {/* Mode Toggle */}
         <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>MODE</Text>
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
-          <View style={styles.modeRow} accessibilityRole="switch" accessibilityLabel={`Dark Mode, ${mode === 'dark' ? 'on' : 'off'}`}>
+          <View style={styles.modeRow}>
             <Text style={[styles.modeLabel, { color: colors.textPrimary }]}>Dark Mode</Text>
             <Switch
               value={mode === 'dark'}
-              onValueChange={toggleMode}
-              trackColor={{ false: '#767577', true: colors.primary }}
+              onValueChange={() => { selectionFeedback(); toggleMode(); }}
+              trackColor={{ false: colors.bgTertiary, true: colors.primary }}
               thumbColor="#ffffff"
-              accessibilityLabel="Toggle dark mode"
+              accessibilityLabel={`Dark Mode, ${mode === 'dark' ? 'on' : 'off'}`}
             />
           </View>
         </View>
@@ -63,17 +85,21 @@ export default function AppearanceScreen({ route }) {
             <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
               <View style={styles.modeRow}>
                 <View style={{ flex: 1, marginRight: 12 }}>
-                  <Text style={[styles.modeLabel, { color: colors.textPrimary }]}>Custom theme for this band</Text>
+                  <Text style={[styles.modeLabel, { color: colors.textPrimary }]}>
+                    Custom theme for {workspaceName || 'this band'}
+                  </Text>
                   <Text style={[styles.hint, { color: colors.textSecondary }]}>
-                    {hasCustomTheme ? 'This band has its own look' : 'Uses your default theme'}
+                    {hasCustomTheme
+                      ? `Using ${themes[getWorkspaceTheme(workspaceId)]?.name || 'custom'}`
+                      : `Uses your default (${themes[globalTheme]?.name || 'Default'})`}
                   </Text>
                 </View>
                 <Switch
                   value={hasCustomTheme}
                   onValueChange={handleToggleCustomTheme}
-                  trackColor={{ false: '#767577', true: colors.primary }}
+                  trackColor={{ false: colors.bgTertiary, true: colors.primary }}
                   thumbColor="#ffffff"
-                  accessibilityLabel="Custom theme for this band"
+                  accessibilityLabel={`Custom theme for ${workspaceName || 'this band'}, ${hasCustomTheme ? 'on' : 'off'}`}
                 />
               </View>
             </View>
@@ -82,12 +108,13 @@ export default function AppearanceScreen({ route }) {
 
         {/* Theme Grid */}
         <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>
-          {workspaceId && hasCustomTheme ? 'BAND THEME' : 'THEME'}
+          {workspaceId && hasCustomTheme ? 'CHOOSE THEME' : 'THEME'}
         </Text>
-        <View style={styles.grid}>
+        <View style={styles.grid} accessibilityRole="radiogroup" accessibilityLabel="Theme selector">
           {themeKeys.map(key => {
             const theme = themes[key];
             const isActive = key === currentTheme;
+            const isLocked = effectivePlan !== null && effectivePlan !== 'PRO' && !FREE_THEME_IDS.includes(key);
             return (
               <TouchableOpacity
                 key={key}
@@ -95,16 +122,19 @@ export default function AppearanceScreen({ route }) {
                   styles.themeItem,
                   { backgroundColor: colors.bgSecondary },
                   isActive && { borderColor: colors.primary, borderWidth: 2 },
+                  isLocked && { opacity: 0.5 },
                 ]}
                 onPress={() => handleThemeSelect(key)}
+                disabled={isLocked}
                 activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel={`${theme.name} theme${isActive ? ', selected' : ''}`}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: isActive, disabled: isLocked }}
+                accessibilityLabel={`${theme.name} theme${isLocked ? ', locked, upgrade to PRO' : ''}`}
               >
                 <View style={[styles.swatch, { backgroundColor: theme.sidebar }]}>
                   <View style={[styles.swatchInner, { backgroundColor: theme.primary }]} />
                   {isActive && (
-                    <View style={styles.checkContainer}>
+                    <View style={[styles.checkContainer, { backgroundColor: colors.primary }]}>
                       <Text style={styles.checkmark}>{'\u2713'}</Text>
                     </View>
                   )}
@@ -113,7 +143,7 @@ export default function AppearanceScreen({ route }) {
                   style={[styles.themeName, { color: isActive ? colors.primary : colors.textSecondary }]}
                   numberOfLines={1}
                 >
-                  {theme.name}
+                  {isLocked ? <><Ionicons name="lock-closed" size={10} color={colors.textSecondary} />{' '}</> : null}{theme.name}
                 </Text>
               </TouchableOpacity>
             );
@@ -130,9 +160,9 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 40 },
   sectionHeader: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
     letterSpacing: 0.5,
-    marginTop: 24,
+    marginTop: 20,
     marginBottom: 8,
     marginLeft: 4,
   },
@@ -183,7 +213,6 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#22c55e',
     justifyContent: 'center',
     alignItems: 'center',
   },

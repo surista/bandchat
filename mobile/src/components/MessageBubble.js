@@ -230,7 +230,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
           ) : null}
           <YouTubeThumbnail content={message.content} colors={colors} />
           {message.content && !message.hidePreview && !YT_REGEX.test(message.content) ? <LinkPreview content={message.content} isOwn={isOwn} onDismiss={onTogglePreview ? () => onTogglePreview(message.id) : undefined} blockedDomains={blockedDomains} onLongPress={onLinkLongPress} /> : null}
-          {renderAttachments(message.attachments, onImagePress, attachmentWidth, attachmentHeight)}
+          {renderAttachments(message.attachments, onImagePress, attachmentWidth, attachmentHeight, handleLongPress)}
           {renderReactions(message.reactions, colors, message.id, onReactionPress)}
         </View>
       </Pressable>
@@ -294,7 +294,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
         ) : null}
         <YouTubeThumbnail content={message.content} colors={colors} />
         {message.content && !message.hidePreview && !YT_REGEX.test(message.content) ? <LinkPreview content={message.content} isOwn={isOwn} onDismiss={onTogglePreview ? () => onTogglePreview(message.id) : undefined} blockedDomains={blockedDomains} onLongPress={onLinkLongPress} /> : null}
-        {renderAttachments(message.attachments, onImagePress, attachmentWidth, attachmentHeight)}
+        {renderAttachments(message.attachments, onImagePress, attachmentWidth, attachmentHeight, handleLongPress)}
         {renderReactions(message.reactions, colors, message.id, onReactionPress)}
         {message._count?.replies > 0 && (
           <TouchableOpacity onPress={() => onReplyPress?.(message)} activeOpacity={0.6} accessibilityRole="button" accessibilityLabel={`${message._count.replies} ${message._count.replies === 1 ? 'reply' : 'replies'}, view thread`}>
@@ -374,7 +374,7 @@ const ytStyles = StyleSheet.create({
   },
 });
 
-function renderAttachments(attachments, onImagePress, imgWidth, imgHeight) {
+function renderAttachments(attachments, onImagePress, imgWidth, imgHeight, onLongPressImage) {
   if (!attachments || attachments.length === 0) return null;
   return (
     <View>
@@ -384,7 +384,7 @@ function renderAttachments(attachments, onImagePress, imgWidth, imgHeight) {
             <TouchableOpacity
               key={att.id}
               onPress={() => onImagePress?.(att.url)}
-              onLongPress={handleLongPress}
+              onLongPress={onLongPressImage}
               delayLongPress={400}
               activeOpacity={0.8}
               accessibilityRole="button"

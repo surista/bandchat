@@ -1,7 +1,12 @@
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useEffect, useRef } from 'react';
-import { AppState, Linking, Text, TextInput } from 'react-native';
+import { AppState, Linking, Text, TextInput, Platform, UIManager } from 'react-native';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 // Limit Dynamic Type scaling to prevent layout breakage at large accessibility sizes
 if (Text.defaultProps == null) Text.defaultProps = {};

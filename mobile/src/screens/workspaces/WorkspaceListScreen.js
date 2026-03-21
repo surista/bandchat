@@ -164,7 +164,7 @@ export default function WorkspaceListScreen({ navigation, route }) {
               { text: 'Sign Out', style: 'destructive', onPress: logout },
             ]);
           }}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           accessibilityRole="button"
           accessibilityLabel="Sign out"
         >
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#ffffff', // Always white — header bg is always dark (colors.sidebar)
   },
   headerSubtitle: {
     fontSize: 13,

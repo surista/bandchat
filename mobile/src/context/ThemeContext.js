@@ -277,7 +277,12 @@ export function ThemeProvider({ children }) {
           setMessageDensityState(savedDensity);
         }
         if (savedWsThemes) {
-          try { setWorkspaceThemesState(JSON.parse(savedWsThemes)); } catch {}
+          try {
+            const parsed = JSON.parse(savedWsThemes);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+              setWorkspaceThemesState(parsed);
+            }
+          } catch {}
         }
       } catch {
         // Use defaults
@@ -306,22 +311,23 @@ export function ThemeProvider({ children }) {
   const setTheme = useCallback((themeId) => {
     if (!themes[themeId]) return;
     if (activeWorkspaceId && workspaceThemes[activeWorkspaceId]) {
-      const updated = { ...workspaceThemes, [activeWorkspaceId]: themeId };
-      setWorkspaceThemesState(updated);
+      setWorkspaceThemesState(prev => ({ ...prev, [activeWorkspaceId]: themeId }));
     } else {
       setGlobalTheme(themeId);
     }
   }, [activeWorkspaceId, workspaceThemes]);
 
   const setWorkspaceTheme = useCallback((workspaceId, themeId) => {
-    const updated = { ...workspaceThemes };
-    if (themeId) {
-      updated[workspaceId] = themeId;
-    } else {
-      delete updated[workspaceId];
-    }
-    setWorkspaceThemesState(updated);
-  }, [workspaceThemes]);
+    setWorkspaceThemesState(prev => {
+      const updated = { ...prev };
+      if (themeId) {
+        updated[workspaceId] = themeId;
+      } else {
+        delete updated[workspaceId];
+      }
+      return updated;
+    });
+  }, []);
 
   const getWorkspaceTheme = useCallback((workspaceId) => {
     return workspaceThemes[workspaceId] || null;
