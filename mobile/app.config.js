@@ -3,7 +3,7 @@ export default {
     name: 'BandChat',
     slug: 'bandchat',
     scheme: 'bandchat',
-    version: '1.05.59',
+    version: '1.05.60',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'dark',
@@ -16,7 +16,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.bandchat.mobile',
-      buildNumber: '10559',
+      buildNumber: '10560',
       associatedDomains: ['applinks:bandchat.vercel.app'],
       infoPlist: {
         NSCameraUsageDescription: 'BandChat needs camera access to take photos for your profile and messages.',
@@ -39,7 +39,7 @@ export default {
     },
     android: {
       package: 'com.bandchat.mobile',
-      versionCode: 10559,
+      versionCode: 10560,
       adaptiveIcon: {
         backgroundColor: '#1f2937',
         foregroundImage: './assets/android-icon-foreground.png',

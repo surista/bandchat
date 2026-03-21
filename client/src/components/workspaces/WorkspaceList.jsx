@@ -136,6 +136,7 @@ function WorkspaceList() {
                 key={workspace.id}
                 onClick={() => {
                   setWorkspaces(prev => prev.map(w => w.id === workspace.id ? { ...w, unreadCount: 0 } : w));
+                  api.markWorkspaceRead(workspace.id).catch(() => {});
                   navigate(`/workspace/${workspace.id}`);
                 }}
                 className="w-full bg-[var(--color-bg-secondary)] rounded-lg p-4 flex items-center justify-between hover:bg-[var(--color-bg-tertiary)] transition-colors text-left"

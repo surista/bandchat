@@ -91,6 +91,7 @@ export default function WorkspaceListScreen({ navigation, route }) {
       style={[styles.workspaceItem, { backgroundColor: colors.bgSecondary }]}
       onPress={() => {
         setWorkspaces(prev => prev.map(w => w.id === item.id ? { ...w, unreadCount: 0 } : w));
+        api.markWorkspaceRead(item.id).catch(() => {});
         navigation.navigate('Workspace', { id: item.id, name: item.name });
       }}
       activeOpacity={0.7}

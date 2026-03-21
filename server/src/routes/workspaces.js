@@ -175,6 +175,22 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
+// Mark all channels in a workspace as read
+router.post('/:workspaceId/read', authenticate, isWorkspaceMember, async (req, res) => {
+  try {
+    await prisma.channelMember.updateMany({
+      where: {
+        userId: req.user.id,
+        channel: { workspaceId: req.params.workspaceId },
+      },
+      data: { lastRead: new Date() },
+    });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to mark workspace as read' });
+  }
+});
+
 // Create a new workspace
 router.post('/', authenticate, async (req, res) => {
   try {

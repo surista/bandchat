@@ -692,6 +692,12 @@ class ApiService {
     });
   }
 
+  async markWorkspaceRead(workspaceId) {
+    return this.request(`/workspaces/${workspaceId}/read`, {
+      method: 'POST',
+    });
+  }
+
   // Direct Messages
   async getDMs(workspaceId) {
     return this.request(`/channels/workspace/${workspaceId}/dms`);
