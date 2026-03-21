@@ -384,6 +384,8 @@ function renderAttachments(attachments, onImagePress, imgWidth, imgHeight) {
             <TouchableOpacity
               key={att.id}
               onPress={() => onImagePress?.(att.url)}
+              onLongPress={handleLongPress}
+              delayLongPress={400}
               activeOpacity={0.8}
               accessibilityRole="button"
               accessibilityLabel="View attached image"

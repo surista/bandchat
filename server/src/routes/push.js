@@ -348,6 +348,28 @@ export const sendPushToUser = async (userId, payload, options = {}) => {
       where: { userId }
     });
 
+    // Calculate total unread count for badge
+    let badgeCount = 1;
+    try {
+      const channels = await prisma.channelMember.findMany({
+        where: { userId, muted: false },
+        select: { channelId: true, lastRead: true },
+      });
+      if (channels.length > 0) {
+        badgeCount = await prisma.message.count({
+          where: {
+            OR: channels.map(c => ({
+              channelId: c.channelId,
+              createdAt: { gt: c.lastRead },
+              authorId: { not: userId },
+            })),
+            parentId: null,
+          },
+        });
+        if (badgeCount < 1) badgeCount = 1;
+      }
+    } catch {}
+
     const expoMessages = expoTokens
       .filter(t => Expo.isExpoPushToken(t.token))
       .map(t => ({
@@ -355,7 +377,7 @@ export const sendPushToUser = async (userId, payload, options = {}) => {
         sound: 'default',
         title: payload.title,
         body: payload.body,
-        badge: 1,
+        badge: badgeCount,
         ...(payload.threadId && { threadId: payload.threadId }),
         data: {
           url: payload.url,
