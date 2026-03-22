@@ -174,8 +174,12 @@ export default function ThreadScreen({ navigation, route }) {
     };
   }, [socket]);
 
-  const handleSend = useCallback(async (content, attachment) => {
-    const attType = attachment ? (attachment.isVideo ? 'VIDEO' : attachment.isAudio ? 'AUDIO' : 'IMAGE') : null;
+  const handleSend = useCallback(async (content, attachmentOrArray) => {
+    const fileList = !attachmentOrArray ? [] :
+      Array.isArray(attachmentOrArray) ? attachmentOrArray :
+      [attachmentOrArray];
+    const hasFiles = fileList.length > 0;
+
     const optimisticReply = {
       id: `temp-${Date.now()}`,
       content: content || '',
@@ -184,7 +188,12 @@ export default function ThreadScreen({ navigation, route }) {
       parentId: parentMessage.id,
       createdAt: new Date().toISOString(),
       reactions: [],
-      attachments: attachment ? [{ id: `temp-att-${Date.now()}`, type: attType, url: attachment.uri, pending: true }] : [],
+      attachments: fileList.map((att, i) => ({
+        id: `temp-att-${Date.now()}-${i}`,
+        type: att.isVideo ? 'VIDEO' : att.isAudio ? 'AUDIO' : 'IMAGE',
+        url: att.uri,
+        pending: true,
+      })),
       pending: true,
     };
 
@@ -192,9 +201,13 @@ export default function ThreadScreen({ navigation, route }) {
 
     try {
       let uploadedAttachments = null;
-      if (attachment) {
-        const uploaded = await api.uploadFile(attachment.uri, attachment.filename, attachment.mimeType, workspaceId);
-        uploadedAttachments = [uploaded];
+      if (hasFiles) {
+        const uploads = [];
+        for (const att of fileList) {
+          const uploaded = await api.uploadFile(att.uri, att.filename, att.mimeType, workspaceId);
+          uploads.push(uploaded);
+        }
+        uploadedAttachments = uploads;
       }
       const saved = await api.sendMessage(channelId, content || '', parentMessage.id, uploadedAttachments);
       setReplies(prev => prev.map(r =>
