@@ -589,6 +589,9 @@ export default function SetlistDetailScreen({ navigation, route }) {
             <FlatList
               data={filteredPickerSongs}
               keyExtractor={(item) => item.id}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              contentContainerStyle={{ paddingBottom: 120 }}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.pickerItem, { borderBottomColor: colors.border }]}
