@@ -197,7 +197,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
       typingTimeoutRef.current = null;
     }
     if (onTyping) onTyping(false);
-  }, [text, attachment, onSend, onTyping, editingMessage, onSendEdit]);
+  }, [text, attachments, onSend, onTyping, editingMessage, onSendEdit]);
 
   const handleContentSizeChange = useCallback((e) => {
     const height = e.nativeEvent.contentSize.height;
