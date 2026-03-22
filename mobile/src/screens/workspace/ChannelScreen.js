@@ -819,6 +819,12 @@ export default function ChannelScreen({ navigation, route }) {
           )}
         </View>
       )}
+      {!loading && messages.length === 0 ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+          <Ionicons name="chatbubble-outline" size={40} color={colors.textSecondary} style={{ marginBottom: 8 }} />
+          <Text style={{ color: colors.textSecondary, fontSize: 16, textAlign: 'center' }}>No messages yet. Say something!</Text>
+        </View>
+      ) : (
       <FlatList
         ref={flatListRef}
         data={invertedMessages}
@@ -830,13 +836,7 @@ export default function ChannelScreen({ navigation, route }) {
         onScroll={(e) => { scrollOffsetRef.current = e.nativeEvent.contentOffset.y; }}
         scrollEventThrottle={100}
         ListFooterComponent={renderFooter}
-        ListEmptyComponent={!loading ? (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, transform: [{ rotate: '180deg' }] }}>
-            <Ionicons name="chatbubble-outline" size={40} color={colors.textSecondary} style={{ marginBottom: 8 }} />
-            <Text style={{ color: colors.textSecondary, fontSize: 16, textAlign: 'center' }}>No messages yet. Say something!</Text>
-          </View>
-        ) : null}
-        contentContainerStyle={[styles.messageList, messages.length === 0 && !loading && { flex: 1 }]}
+        contentContainerStyle={styles.messageList}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         // Performance optimizations
@@ -847,6 +847,7 @@ export default function ChannelScreen({ navigation, route }) {
         initialNumToRender={15}
         getItemLayout={undefined} // Can't use with variable height items
       />
+      )}
       {uploadProgress !== null && (
         <View style={[styles.uploadBar, { backgroundColor: colors.bgSecondary }]}>
           <View style={[styles.uploadProgress, { backgroundColor: colors.primary, width: `${Math.round(uploadProgress * 100)}%` }]} />
