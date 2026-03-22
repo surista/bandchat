@@ -2,30 +2,39 @@
 
 All notable changes to BandChat are documented here.
 
-## [1.05.60] - 2026-03-21
+## [1.05.64] - 2026-03-22
 
 ### Added
-- **Per-band themes** — Users can set a custom theme for each workspace. Toggle in Settings > Appearance enables per-workspace override stored client-side. Theme auto-switches when navigating between bands. Web and mobile parity.
-- **Unread badges on workspace list** — Workspace selector shows unread message count per band, colored with the band's theme. Server calculates from unmuted channel `lastRead` timestamps. Badges clear when entering a workspace (marks all channels read).
-- **Compact song list view** — Toggle between card grid and compact table view on both web and mobile. iOS-style segmented control, disclosure chevrons, full VoiceOver labels.
-- **Song list PDF export** — Print/export song list as a formatted PDF. Web uses print dialog; mobile uses expo-print + share sheet. Professional layout with band name header, numbered table, page-break rules.
-- **Venue logos on printed setlists** — If a setlist's venue matches a workspace venue with an uploaded logo, the logo appears centered at the top of the printed/PDF setlist. All four print paths (web + mobile).
-- **Formatting toolbar in message edit** — Edit textarea now has the same formatting toolbar as compose: bold, italic, strikethrough, code, code block, quote, bullet list. Keyboard shortcuts work in edit mode.
-- **Mark workspace read endpoint** — `POST /workspaces/:id/read` marks all channel memberships as read for the user.
+- **Multi-photo upload** — Users can select up to 5 photos/videos per message on mobile (was single-file only). Preview row shows all selected thumbnails with individual remove buttons. Web enforces same 5-file cap.
+- **Per-band themes** — Custom theme per workspace. Toggle in Settings > Appearance, auto-switches when navigating between bands. Web and mobile parity.
+- **Unread badges on workspace list** — Unread message count per band, colored with the band's theme. Server calculates from unmuted channel `lastRead` timestamps. Marks all channels read on workspace entry.
+- **Venue logos on printed setlists** — If a setlist's venue has an uploaded logo, it appears centered at the top of the printed/PDF setlist. All four print paths (web + mobile).
+- **Formatting toolbar in message edit** — Edit textarea now has the same formatting toolbar as compose: bold, italic, strikethrough, code, code block, quote, bullet list. Keyboard shortcuts in edit mode.
+- **Compact song list view** — Toggle between card grid and compact table view on both web and mobile. iOS segmented control, disclosure chevrons, full VoiceOver labels.
+- **Song list PDF export** — Print/export song list as formatted PDF. Web uses print dialog; mobile uses expo-print + share sheet.
+- **Admin dashboard: workspace admin email** — Workspaces tab shows admin name and email.
 
 ### Fixed
+- **Image upload limit** — Increased from 10MB to 15MB (server + client).
 - **Stale unread badges on mobile** — Added `markChannelRead` on socket reconnect, AppState listener on app foreground, and retry logic for failed mark-read calls.
 - **iOS app badge always (1)** — Server now calculates actual unread count for push notification badge instead of hardcoding `badge: 1`.
-- **Long-press on image-only messages** — Image attachment `TouchableOpacity` now supports `onLongPress` so users can react/reply to image-only messages.
-- **White background on All Messages scroll** — Added missing background color and overflow handling to the All Messages container.
-- **Duplicate venue on create** — Added dedup check to prevent socket event and API response from both adding the same venue.
-- **Setlist print layout** — Unified both print paths (Print + Export PDF) to produce identical output. Single set: centered text, 24px font, space-evenly. Multi-set: evenly distributed columns.
+- **Long-press on image-only messages** — Image attachment `TouchableOpacity` now supports `onLongPress` so users can react/reply to image-only messages. Fixed `handleLongPress` reference error (was out of scope in `renderAttachments`).
+- **White background on All Messages scroll** — Added missing background color and overflow handling.
+- **Duplicate venue on create** — Dedup check prevents socket event and API response from both adding the same venue.
+- **Setlist print layout** — Unified both print paths. Single set: centered, 24px font, space-evenly. Multi-set: evenly distributed columns.
 - **Message edit textarea** — Auto-sizes to fit content, grows as you type, allows manual resize.
+- **LayoutAnimation on Android** — Added `UIManager.setLayoutAnimationEnabledExperimental(true)` in App.js.
+- **Nested setState in setTheme** — Fixed anti-pattern of calling setState inside another setState updater (both platforms).
+- **Edit toolbar cursor race** — `wrapEditSelection` uses ref for latest content, stable callback identity.
+- **`isFollowingSystem` reactivity** — Now tracked as explicit state instead of reading stale localStorage.
 
 ### Changed
+- **Theme-aware badge colors** — Added semantic badge colors (`badgeKey`, `badgeBpm`, `badgeDuration`) to theme system with WCAG AA contrast in both light and dark modes. Replaced 56 hardcoded hex values across 13 mobile files + web SongList.
+- **Optimized unread queries** — Single raw SQL JOIN query instead of N parallel OR-clause queries per workspace. Push badge count also optimized.
 - **Removed sidebar MEMBERS section** — Redundant with Settings > Members. Cleaned up unused imports, state, and blocked-users API call.
-- **Avatars in Settings > Members** — Now shows profile photos instead of just initial letters.
-- **Theme-colored workspace cards** — Workspace list uses per-band theme colors (left border accent on web, colored avatar on mobile).
+- **Avatars in Settings > Members** — Shows profile photos instead of just initial letters.
+- **Theme-colored workspace cards** — Per-band theme colors on workspace list (left border accent on web, colored avatar on mobile).
+- **Accessibility improvements** — Ionicons lock icon (was emoji), radiogroup label, tab roles on segmented control, dark mode toggle haptic, sign-out hitSlop 44pt.
 
 ## [1.05.46] - 2026-03-20
 
