@@ -741,7 +741,7 @@ export default function ChannelScreen({ navigation, route }) {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
       <View style={[styles.chatContainer, isTablet && { maxWidth: contentMaxWidth }]}>
@@ -831,7 +831,7 @@ export default function ChannelScreen({ navigation, route }) {
         scrollEventThrottle={100}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={!loading ? (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, transform: [{ scaleY: -1 }] }}>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, transform: [{ rotate: '180deg' }] }}>
             <Ionicons name="chatbubble-outline" size={40} color={colors.textSecondary} style={{ marginBottom: 8 }} />
             <Text style={{ color: colors.textSecondary, fontSize: 16, textAlign: 'center' }}>No messages yet. Say something!</Text>
           </View>
