@@ -1,12 +1,16 @@
 {
   "name": "mobile",
-  "version": "1.05.69",
+  "version": "1.05.70",
   "main": "index.js",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "lint": "eslint src/ --quiet",
+    "lint:critical": "eslint src/ --rule '{\"no-undef\": \"error\"}' --quiet",
+    "test": "eslint src/ --quiet",
+    "precommit": "npm run lint:critical",
     "bump:patch": "node ../client/scripts/bump-version.js patch",
     "bump:minor": "node ../client/scripts/bump-version.js minor",
     "bump:major": "node ../client/scripts/bump-version.js major"
@@ -63,6 +67,15 @@
   "devDependencies": {
     "@types/react": "^19.2.14",
     "@types/react-native": "^0.72.8",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "jest": "^30.3.0",
+    "jest-expo": "^55.0.11",
     "typescript": "^5.9.3"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {}
   }
 }
