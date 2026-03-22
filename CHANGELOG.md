@@ -2,7 +2,7 @@
 
 All notable changes to BandChat are documented here.
 
-## [1.05.64] - 2026-03-22
+## [1.05.65] - 2026-03-22
 
 ### Added
 - **Multi-photo upload** — Users can select up to 5 photos/videos per message on mobile (was single-file only). Preview row shows all selected thumbnails with individual remove buttons. Web enforces same 5-file cap.
@@ -27,6 +27,8 @@ All notable changes to BandChat are documented here.
 - **Nested setState in setTheme** — Fixed anti-pattern of calling setState inside another setState updater (both platforms).
 - **Edit toolbar cursor race** — `wrapEditSelection` uses ref for latest content, stable callback identity.
 - **`isFollowingSystem` reactivity** — Now tracked as explicit state instead of reading stale localStorage.
+- **Android empty state upside down** — Inverted FlatList empty component used `scaleY: -1` which rendered backwards on Android. Changed to `rotate: 180deg`.
+- **Android keyboard covers input** — Added `softwareKeyboardLayoutMode: resize` to Android config and KAV `behavior: height` so keyboard doesn't obscure the message input.
 
 ### Changed
 - **Theme-aware badge colors** — Added semantic badge colors (`badgeKey`, `badgeBpm`, `badgeDuration`) to theme system with WCAG AA contrast in both light and dark modes. Replaced 56 hardcoded hex values across 13 mobile files + web SongList.
