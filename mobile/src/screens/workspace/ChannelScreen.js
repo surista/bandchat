@@ -536,6 +536,7 @@ export default function ChannelScreen({ navigation, route }) {
         enqueueSync('create', 'message', tempId, { channelId: channel.id, content }, workspaceId).catch(() => {});
       } else {
         setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
+        toast.error(err.message || 'Failed to send message');
       }
     }
   }, [user, channel.id, workspaceId]);
