@@ -31,6 +31,37 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
   const [profileUserId, setProfileUserId] = useState(null);
   const repliesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const replyTextareaRef = useRef(null);
+  const contentRef = useRef('');
+
+  const wrapReplySelection = useCallback((before, after) => {
+    const ta = replyTextareaRef.current;
+    if (!ta) return;
+    const val = contentRef.current;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = val.slice(start, end);
+    const newContent = val.slice(0, start) + before + selected + (after || before) + val.slice(end);
+    setContent(newContent);
+    contentRef.current = newContent;
+    const cursorPos = selected ? start + before.length + selected.length + (after || before).length : start + before.length;
+    setTimeout(() => {
+      ta.focus();
+      ta.setSelectionRange(selected ? start : cursorPos, selected ? start + before.length + selected.length + (after || before).length : cursorPos);
+    }, 0);
+  }, []);
+
+  const insertReplyLinePrefix = useCallback((prefix) => {
+    const ta = replyTextareaRef.current;
+    if (!ta) return;
+    const val = contentRef.current;
+    const start = ta.selectionStart;
+    const lineStart = val.lastIndexOf('\n', start - 1) + 1;
+    const newContent = val.slice(0, lineStart) + prefix + val.slice(lineStart);
+    setContent(newContent);
+    contentRef.current = newContent;
+    setTimeout(() => { ta.focus(); ta.setSelectionRange(start + prefix.length, start + prefix.length); }, 0);
+  }, []);
   const swipeRef = useSwipeGesture({
     onSwipeRight: onClose,
   });
@@ -561,12 +592,21 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
 
         <div className="bg-[var(--color-bg-tertiary)] rounded-lg">
           <textarea
+            ref={replyTextareaRef}
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={(e) => { setContent(e.target.value); contentRef.current = e.target.value; }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 handleSend(e);
+              }
+              if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+                if (e.key === 'b') { e.preventDefault(); wrapReplySelection('**'); }
+                if (e.key === 'i') { e.preventDefault(); wrapReplySelection('*'); }
+                if (e.key === 'e') { e.preventDefault(); wrapReplySelection('`'); }
+              }
+              if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'X') {
+                e.preventDefault(); wrapReplySelection('~~');
               }
             }}
             placeholder="Reply..."
@@ -575,7 +615,25 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
             disabled={sending}
           />
           <div className="flex items-center justify-between px-3 py-2">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              {/* Formatting toolbar */}
+              <div className="hidden md:flex items-center gap-0.5 pr-2 mr-1 border-r border-[var(--color-border)]">
+                <button type="button" onClick={() => wrapReplySelection('**')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Bold (Ctrl+B)" disabled={sending}>
+                  <span className="font-bold text-xs w-4 h-4 flex items-center justify-center">B</span>
+                </button>
+                <button type="button" onClick={() => wrapReplySelection('*')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Italic (Ctrl+I)" disabled={sending}>
+                  <span className="italic text-xs w-4 h-4 flex items-center justify-center">I</span>
+                </button>
+                <button type="button" onClick={() => wrapReplySelection('~~')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Strikethrough" disabled={sending}>
+                  <span className="line-through text-xs w-4 h-4 flex items-center justify-center">S</span>
+                </button>
+                <button type="button" onClick={() => wrapReplySelection('`')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Code (Ctrl+E)" disabled={sending}>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+                </button>
+                <button type="button" onClick={() => insertReplyLinePrefix('> ')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Quote" disabled={sending}>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                </button>
+              </div>
               <input
                 ref={fileInputRef}
                 type="file"
