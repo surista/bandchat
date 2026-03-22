@@ -451,7 +451,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
           <Badge label={formatDuration(totalDuration)} color={colors.badgeDuration} bgColor={colors.badgeDurationBg} />
         )}
         {setlist?.venue && (
-          <Badge label={setlist.venue} color="#fbbf24" bgColor="rgba(251,191,36,0.15)" />
+          <Badge label={setlist.venue} color={colors.badgeVenue} bgColor="rgba(251,191,36,0.15)" />
         )}
         {editing && (
           <TouchableOpacity onPress={openEditDetails} accessibilityRole="button" accessibilityLabel="Edit setlist details">

@@ -351,17 +351,16 @@ export const sendPushToUser = async (userId, payload, options = {}) => {
     // Calculate total unread count for badge (single efficient query)
     let badgeCount = 1;
     try {
-      const result = await prisma.$queryRawUnsafe(
-        `SELECT COUNT(m.id)::int AS count
-         FROM "ChannelMember" cm
-         JOIN "Message" m ON m."channelId" = cm."channelId"
-           AND m."createdAt" > cm."lastRead"
-           AND m."authorId" != cm."userId"
-           AND m."parentId" IS NULL
-         WHERE cm."userId" = $1
-           AND cm.muted = false`,
-        userId
-      );
+      const result = await prisma.$queryRaw`
+        SELECT COUNT(m.id)::int AS count
+        FROM "ChannelMember" cm
+        JOIN "Message" m ON m."channelId" = cm."channelId"
+          AND m."createdAt" > cm."lastRead"
+          AND m."authorId" != cm."userId"
+          AND m."parentId" IS NULL
+        WHERE cm."userId" = ${userId}
+          AND cm.muted = false
+      `;
       const count = result[0]?.count || 0;
       if (count > 0) badgeCount = count;
     } catch {}

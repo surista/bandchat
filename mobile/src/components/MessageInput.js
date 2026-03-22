@@ -338,7 +338,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
         onSend('', [{
           uri,
           filename,
-          mimeType: 'audio/m4a',
+          mimeType: 'audio/mp4',
           isAudio: true,
         }]);
       }

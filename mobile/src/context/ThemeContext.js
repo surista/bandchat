@@ -207,6 +207,9 @@ const structuralColors = {
     badgeBpmBg: 'rgba(96,165,250,0.15)',
     badgeDuration: '#9ca3af', // gray — duration badges
     badgeDurationBg: 'rgba(156,163,175,0.15)',
+    badgeSet: '#4ade80',      // green — set labels
+    badgeMc: '#facc15',       // amber — MC labels
+    badgeVenue: '#fbbf24',    // amber — venue badges
   },
   light: {
     bgPrimary: '#ffffff',
@@ -221,6 +224,9 @@ const structuralColors = {
     badgeBpmBg: 'rgba(37,99,235,0.1)',
     badgeDuration: '#6b7280', // gray-500
     badgeDurationBg: 'rgba(107,114,128,0.1)',
+    badgeSet: '#16a34a',      // darker green for light bg contrast
+    badgeMc: '#ca8a04',       // darker amber for light bg contrast
+    badgeVenue: '#b45309',    // darker amber for light bg contrast
   },
 };
 

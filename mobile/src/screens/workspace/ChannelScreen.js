@@ -513,7 +513,7 @@ export default function ChannelScreen({ navigation, route }) {
           const att = fileList[i];
           const uploaded = await api.uploadFileWithProgress(
             att.uri, att.filename, att.mimeType,
-            (progress) => setUploadProgress(((i / fileList.length) + (progress / fileList.length)) * 100 / 100),
+            (progress) => setUploadProgress((i + progress) / fileList.length),
             workspaceId
           );
           uploads.push(uploaded);
@@ -793,13 +793,13 @@ export default function ChannelScreen({ navigation, route }) {
                       <View key={ss.id}>
                         {showSetHeader && (
                           <View style={styles.setlistSetHeader}>
-                            <Text style={styles.setlistSetLabel}>Set {setNumber}</Text>
+                            <Text style={[styles.setlistSetLabel, { color: colors.badgeSet }]}>Set {setNumber}</Text>
                           </View>
                         )}
                         <View style={styles.setlistSongRow}>
                           <Text style={[styles.setlistSongIndex, { color: colors.textSecondary }]}>{songIndex}</Text>
                           {ss.type === 'MC' ? (
-                            <Text style={styles.setlistMcText}>{ss.label || 'MC Break'}</Text>
+                            <Text style={[styles.setlistMcText, { color: colors.badgeMc }]}>{ss.label || 'MC Break'}</Text>
                           ) : ss.song ? (
                             <View style={styles.setlistSongInfo}>
                               <Text style={[styles.setlistSongTitle, { color: colors.textPrimary }]} numberOfLines={1}>{ss.song.shortName || ss.song.title}</Text>
@@ -1169,7 +1169,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   setlistSetLabel: {
-    color: '#4ade80',
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1,
@@ -1187,7 +1186,6 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   setlistMcText: {
-    color: '#facc15',
     fontStyle: 'italic',
     fontSize: 13,
   },
