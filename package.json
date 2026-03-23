@@ -1,6 +1,19 @@
 {
   "devDependencies": {
     "docx": "^9.6.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "mammoth": "^1.11.0"
+  },
+  "scripts": {
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "mobile/src/**/*.js": [
+      "eslint --quiet --config mobile/.eslintrc.json"
+    ],
+    "client/src/**/*.{js,jsx}": [
+      "eslint --no-eslintrc --rule '{\"no-undef\": \"error\"}' --parser-options=ecmaVersion:latest,sourceType:module,ecmaFeatures:{jsx:true} --quiet"
+    ]
   }
 }
