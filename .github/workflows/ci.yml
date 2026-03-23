@@ -17,7 +17,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: mobile/package-lock.json
-      - run: cd mobile && npm ci --legacy-peer-deps
+      - run: cd mobile && npm install --legacy-peer-deps
       - run: cd mobile && npm run lint
 
   web-build:
