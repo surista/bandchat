@@ -23,3 +23,4 @@ export function errorNotification() {
 export function selectionFeedback() {
   Haptics.selectionAsync().catch(() => {});
 }
+

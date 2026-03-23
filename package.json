@@ -1,6 +1,9 @@
 {
   "devDependencies": {
     "docx": "^9.6.0",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "mammoth": "^1.11.0"
