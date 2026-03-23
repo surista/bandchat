@@ -2,6 +2,8 @@ import express from 'express';
 import { authenticate, isWorkspaceMember } from '../middleware/auth.js';
 import { syncLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
+import { deleteFile, isR2Url } from '../lib/storage.js';
+import { safeDecrementStorage } from './uploads.js';
 
 const router = express.Router();
 
@@ -202,7 +204,7 @@ router.post('/:workspaceId/push', authenticate, isWorkspaceMember, async (req, r
             continue;
           }
           const msg = await prisma.message.findUnique({ where: { id: entityId } });
-          if (msg && msg.authorId === req.user.id) {
+          if (msg) {
             // Verify user is a member of the channel this message belongs to
             const delMembership = await prisma.channelMember.findFirst({
               where: { channelId: msg.channelId, userId: req.user.id },
@@ -210,6 +212,30 @@ router.post('/:workspaceId/push', authenticate, isWorkspaceMember, async (req, r
             if (!delMembership) {
               results.push({ tempId: entityId, status: 'error', error: 'Not a channel member' });
               continue;
+            }
+            // Check if user is author or workspace admin
+            const wsMembership = await prisma.workspaceMember.findUnique({
+              where: { userId_workspaceId: { userId: req.user.id, workspaceId: req.params.workspaceId } },
+            });
+            if (msg.authorId !== req.user.id && wsMembership?.role !== 'ADMIN') {
+              results.push({ tempId: entityId, status: 'error', error: 'Cannot delete this message' });
+              continue;
+            }
+            // Clean up R2 files and track storage before cascade delete
+            const attachments = await prisma.attachment.findMany({
+              where: { messageId: entityId },
+              select: { url: true, size: true },
+            });
+            let freedBytes = 0;
+            for (const att of attachments) {
+              if (isR2Url(att.url)) {
+                try { await deleteFile(att.url); } catch { /* best effort */ }
+              }
+              freedBytes += att.size || 0;
+            }
+            if (freedBytes > 0) {
+              const channel = await prisma.channel.findUnique({ where: { id: msg.channelId }, select: { workspaceId: true } });
+              if (channel) await safeDecrementStorage(channel.workspaceId, freedBytes).catch(() => {});
             }
             await prisma.message.delete({ where: { id: entityId } });
             const io = req.app.get('io');

@@ -14,6 +14,10 @@ const URL_REGEX = /(https?:\/\/[^\s]+)/g;
 const cache = new Map();
 const MAX_CACHE = 100;
 
+export function clearLinkPreviewCache() {
+  cache.clear();
+}
+
 function getHostname(url) {
   try {
     return new URL(url).hostname.replace(/^www\./, '');

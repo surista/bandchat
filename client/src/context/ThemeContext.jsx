@@ -253,8 +253,10 @@ export function ThemeProvider({ children }) {
     root.dataset.mode = mode;
 
     localStorage.setItem('bandchat-theme', globalTheme);
-    localStorage.setItem('bandchat-mode', mode);
-  }, [currentTheme, mode, globalTheme]);
+    if (!isFollowingSystem) {
+      localStorage.setItem('bandchat-mode', mode);
+    }
+  }, [currentTheme, mode, globalTheme, isFollowingSystem]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');

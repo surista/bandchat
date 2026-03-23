@@ -176,8 +176,10 @@ router.post('/webhooks/revenuecat', async (req, res) => {
   }
   const expectedAuth = `Bearer ${secret}`;
   const actualAuth = req.headers.authorization || '';
-  const isValid = expectedAuth.length === actualAuth.length &&
-    crypto.timingSafeEqual(Buffer.from(expectedAuth), Buffer.from(actualAuth));
+  const expectedBuf = Buffer.from(expectedAuth, 'utf-8');
+  const actualBuf = Buffer.from(actualAuth, 'utf-8');
+  const isValid = expectedBuf.length === actualBuf.length &&
+    crypto.timingSafeEqual(expectedBuf, actualBuf);
   if (!isValid) {
     console.warn('[Subscriptions] RevenueCat webhook: invalid authorization header');
     return res.status(401).json({ error: 'Unauthorized' });

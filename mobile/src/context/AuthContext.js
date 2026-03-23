@@ -6,6 +6,7 @@ import Constants from 'expo-constants';
 import Purchases from 'react-native-purchases';
 import api from '../services/api';
 import { notificationService } from '../services/notifications';
+import { clearLinkPreviewCache } from '../components/LinkPreview';
 
 const AuthContext = createContext(null);
 
@@ -242,6 +243,7 @@ export function AuthProvider({ children }) {
     } finally {
       setUser(null);
       setIsLocked(false);
+      clearLinkPreviewCache();
     }
   }, []);
 

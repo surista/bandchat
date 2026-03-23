@@ -16,7 +16,7 @@
       "eslint --quiet --config mobile/.eslintrc.json"
     ],
     "client/src/**/*.{js,jsx}": [
-      "eslint --no-eslintrc --rule '{\"no-undef\": \"error\"}' --parser-options=ecmaVersion:latest,sourceType:module,ecmaFeatures:{jsx:true} --quiet"
+      "eslint --no-eslintrc --env browser,es2021 --rule '{\"no-undef\": \"error\"}' --parser-options=ecmaVersion:latest,sourceType:module,ecmaFeatures:{jsx:true} --quiet"
     ]
   }
 }

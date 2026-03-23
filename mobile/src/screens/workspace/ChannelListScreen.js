@@ -415,7 +415,7 @@ export default function ChannelListScreen({ navigation, route }) {
       setNewChannelPrivate(false);
       handleChannelPress(channel, false);
     } catch (err) {
-      // silently fail
+      Alert.alert('Error', err.message || 'Failed to create channel');
     } finally {
       setCreating(false);
     }
@@ -429,7 +429,7 @@ export default function ChannelListScreen({ navigation, route }) {
       const ws = await api.getWorkspace(workspaceId);
       setMembers((ws.members || []).filter(m => m.userId !== user?.id));
     } catch (err) {
-      // silently fail
+      Alert.alert('Error', err.message || 'Failed to load members');
     }
   }, [workspaceId, user?.id]);
 
@@ -442,7 +442,7 @@ export default function ChannelListScreen({ navigation, route }) {
       setSelectedMemberIds([]);
       handleChannelPress(dm, true);
     } catch (err) {
-      // silently fail
+      Alert.alert('Error', err.message || 'Failed to create conversation');
     } finally {
       setCreating(false);
     }

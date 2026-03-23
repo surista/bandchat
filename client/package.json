@@ -1,8 +1,8 @@
 {
   "name": "bandchat-client",
   "private": true,
-  "version": "1.05.75",
-  "displayVersion": "1.05.75",
+  "version": "1.05.76",
+  "displayVersion": "1.05.76",
   "type": "module",
   "engines": {
     "node": ">=18"
@@ -16,7 +16,10 @@
     "bump:major": "node scripts/bump-version.js major",
     "cap:sync": "npx vite build && npx cap sync",
     "cap:open:ios": "npx cap open ios",
-    "cap:run:ios": "npx cap run ios"
+    "cap:run:ios": "npx cap run ios",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@capacitor/app": "^8.0.1",
@@ -37,13 +40,18 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.1.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",
     "autoprefixer": "^10.4.20",
+    "jsdom": "^29.0.1",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.15",
     "typescript": "^5.9.3",
-    "vite": "^6.0.1"
+    "vite": "^6.0.1",
+    "vitest": "^4.1.0"
   }
 }

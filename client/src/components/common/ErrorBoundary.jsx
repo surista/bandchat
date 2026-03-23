@@ -14,6 +14,10 @@ class ErrorBoundary extends Component {
     console.error('ErrorBoundary caught:', error, errorInfo);
   }
 
+  handleRetry = () => {
+    this.setState({ hasError: false, error: null });
+  };
+
   handleReload = () => {
     window.location.reload();
   };
@@ -44,20 +48,36 @@ class ErrorBoundary extends Component {
             <p style={{ marginBottom: '1.5rem', color: mutedColor }}>
               An unexpected error occurred. Please reload the page.
             </p>
-            <button
-              onClick={this.handleReload}
-              style={{
-                backgroundColor: accentColor,
-                color: 'white',
-                border: 'none',
-                padding: '10px 24px',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '0.9rem'
-              }}
-            >
-              Reload Page
-            </button>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={this.handleRetry}
+                style={{
+                  backgroundColor: accentColor,
+                  color: 'white',
+                  border: 'none',
+                  padding: '10px 24px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem'
+                }}
+              >
+                Try Again
+              </button>
+              <button
+                onClick={this.handleReload}
+                style={{
+                  backgroundColor: 'transparent',
+                  color: mutedColor,
+                  border: `1px solid ${mutedColor}`,
+                  padding: '10px 24px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem'
+                }}
+              >
+                Reload Page
+              </button>
+            </div>
           </div>
         </div>
       );

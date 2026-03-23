@@ -53,20 +53,12 @@ export default function LinkPreviewCard({ url, onAddToLibrary, isOwn, onDismiss 
           }
           setPreview(data);
         } else {
-          previewCache.set(url, { error: true });
-          if (previewCache.size > 200) {
-            const firstKey = previewCache.keys().next().value;
-            previewCache.delete(firstKey);
-          }
+          // Don't cache errors — allow retry on next mount
           setError(true);
         }
       } catch {
         if (!mountedRef.current) return;
-        previewCache.set(url, { error: true });
-        if (previewCache.size > 200) {
-          const firstKey = previewCache.keys().next().value;
-          previewCache.delete(firstKey);
-        }
+        // Don't cache errors — allow retry on next mount
         setError(true);
       } finally {
         if (mountedRef.current) setLoading(false);

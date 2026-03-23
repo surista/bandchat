@@ -797,7 +797,7 @@ router.post('/users/:userId/restore', async (req, res) => {
       data: { deletedAt: null },
     });
 
-    logAudit('admin.user.restored', { actorId: req.user.id, targetId: req.params.id, metadata: { displayName: user.displayName } });
+    logAudit('admin.user.restored', { actorId: req.user.id, targetId: req.params.userId, metadata: { displayName: user.displayName } });
     res.json({ message: `User "${user.displayName}" restored successfully` });
   } catch (error) {
     console.error('Admin user restore error:', error);
@@ -844,7 +844,7 @@ router.post('/workspaces/:workspaceId/restore', async (req, res) => {
       data: { deletedAt: null },
     });
 
-    logAudit('admin.workspace.restored', { actorId: req.user.id, targetId: req.params.id, metadata: { name: workspace.name } });
+    logAudit('admin.workspace.restored', { actorId: req.user.id, targetId: req.params.workspaceId, metadata: { name: workspace.name } });
     res.json({ message: `Workspace "${workspace.name}" restored successfully` });
   } catch (error) {
     console.error('Admin workspace restore error:', error);
@@ -882,6 +882,7 @@ router.delete('/users/:userId/purge', async (req, res) => {
       prisma.timelineEvent.updateMany({ where: { createdById: userId }, data: { removedCreatorName: displayName, createdById: null } }),
       prisma.recording.updateMany({ where: { createdById: userId }, data: { removedCreatorName: displayName, createdById: null } }),
       prisma.kittyTransaction.updateMany({ where: { createdById: userId }, data: { removedCreatorName: displayName, createdById: null } }),
+      prisma.stagePlot.updateMany({ where: { createdById: userId }, data: { removedCreatorName: displayName, createdById: null } }),
       prisma.pinnedMessage.updateMany({ where: { pinnedById: userId }, data: { pinnedById: null } }),
       prisma.user.delete({ where: { id: userId } }),
     ]);

@@ -440,7 +440,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
         const file = item.getAsFile();
         if (file) {
           if (file.size > MAX_IMAGE_SIZE) {
-            setError(`Pasted image exceeds 10MB limit`);
+            setError(`Pasted image exceeds ${MAX_IMAGE_SIZE / (1024 * 1024)}MB limit`);
             continue;
           }
           imageFiles.push(file);

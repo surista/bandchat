@@ -40,6 +40,18 @@ router.post('/', authenticate, apiLimiter, async (req, res) => {
       return res.status(404).json({ error: 'Message not found' });
     }
 
+    // Verify reporter is a member of the message's workspace
+    const reporterMembership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: message.channel.workspace.id } },
+    });
+    if (!reporterMembership) {
+      return res.status(403).json({ error: 'Not a member of this workspace' });
+    }
+
+    if (reason.length > 2000) {
+      return res.status(400).json({ error: 'Reason is too long' });
+    }
+
     // Can't report your own messages
     if (message.authorId === req.user.id) {
       return res.status(400).json({ error: 'You cannot report your own messages' });

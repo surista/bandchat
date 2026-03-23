@@ -1,6 +1,6 @@
 {
   "name": "bandchat-server",
-  "version": "1.05.75",
+  "version": "1.05.76",
   "description": "BandChat backend API",
   "main": "src/index.js",
   "type": "module",
@@ -16,7 +16,8 @@
     "bump:major": "node ../client/scripts/bump-version.js major",
     "test": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:verbose": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js --verbose",
-    "test:file": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js"
+    "test:file": "cross-env NODE_ENV=test node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.unit.config.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1000.0",

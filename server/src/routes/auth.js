@@ -13,6 +13,7 @@ const router = express.Router();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const googleClient = process.env.GOOGLE_CLIENT_ID ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID) : null;
 
+const CLIENT_BASE_URL = (process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0].trim();
 const APPLE_BUNDLE_ID = process.env.APPLE_BUNDLE_ID || 'com.bandchat.mobile';
 const APPLE_ISSUER = 'https://appleid.apple.com';
 const APPLE_JWKS_URL = 'https://appleid.apple.com/auth/keys';
@@ -163,7 +164,7 @@ const sendVerificationEmail = async (email, token) => {
     return;
   }
 
-  const verifyUrl = `${process.env.CLIENT_URL}/verify-email?token=${token}`;
+  const verifyUrl = `${CLIENT_BASE_URL}/verify-email?token=${token}`;
 
   await resend.emails.send({
     from: 'BandChat <noreply@' + (process.env.RESEND_DOMAIN || 'resend.dev') + '>',
@@ -997,7 +998,7 @@ router.post('/change-email', authenticate, authLimiter, async (req, res) => {
 
     // Send unhashed token to NEW email
     if (resend) {
-      const verifyUrl = `${process.env.CLIENT_URL}/verify-email-change?token=${verificationToken}&email=${encodeURIComponent(newEmail.toLowerCase())}`;
+      const verifyUrl = `${CLIENT_BASE_URL}/verify-email-change?token=${verificationToken}&email=${encodeURIComponent(newEmail.toLowerCase())}`;
 
       await resend.emails.send({
         from: 'BandChat <noreply@' + (process.env.RESEND_DOMAIN || 'resend.dev') + '>',
@@ -1136,7 +1137,7 @@ const sendPasswordResetEmail = async (email, token) => {
     return;
   }
 
-  const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+  const resetUrl = `${CLIENT_BASE_URL}/reset-password?token=${token}`;
 
   await resend.emails.send({
     from: 'BandChat <noreply@' + (process.env.RESEND_DOMAIN || 'resend.dev') + '>',
