@@ -34,6 +34,11 @@ router.get('/channel/:channelId', authenticate, isChannelMember, async (req, res
     const { cursor, limit = 50 } = req.query;
     const take = Math.min(parseInt(limit) || 50, 100);
 
+    // Validate cursor format (must be a CUID if provided)
+    if (cursor && (typeof cursor !== 'string' || cursor.length < 20 || cursor.length > 30)) {
+      return res.status(400).json({ error: 'Invalid cursor' });
+    }
+
     // Check message retention limit based on plan (use channel from middleware to avoid null dereference)
     const channelWorkspaceId = req.channel?.workspaceId;
     if (!channelWorkspaceId) {
@@ -416,9 +421,12 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
       }
 
       // 3. Individual @name mentions (skip users already notified via group mention)
+      // Uses word boundary matching to prevent false positives (e.g., "@al" matching "@alice")
       const mentionedUsers = workspaceMembers.filter(m => {
         const name = m.user.displayName?.toLowerCase();
-        return name && contentLower.includes(`@${name}`);
+        if (!name || name.length < 2) return false; // Skip very short names to prevent noise
+        const pattern = new RegExp(`@${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\b|$|\\s|[,;!?.])`, 'i');
+        return pattern.test(contentLower);
       });
 
       mentionedUsers

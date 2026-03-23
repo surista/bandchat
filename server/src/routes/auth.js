@@ -240,6 +240,8 @@ router.post('/signup', authLimiter, async (req, res) => {
     });
 
     if (existingUser) {
+      // Intentional: revealing email existence is an acceptable UX tradeoff for a band app.
+      // Users need to know if they should sign in instead of signing up.
       return res.status(400).json({ error: 'Email already registered' });
     }
 

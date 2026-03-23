@@ -3,6 +3,8 @@ import api from '../../services/api';
 import '../../../styles/stagePlot.css';
 
 // ─── SVG icon templates ───
+// SAFETY: These are hardcoded developer-controlled constants, NOT user input.
+// dangerouslySetInnerHTML is safe here because the templates never contain user data.
 // Colors brightened for dark mode visibility while keeping realistic silhouette feel
 const SVG_TEMPLATES = {
   vocals: `<svg viewBox="0 0 64 64" width="48" height="48"><rect x="28" y="8" width="8" height="20" rx="4" fill="#e74c3c"/><path d="M22 18v6a10 10 0 0 0 20 0v-6" fill="none" stroke="#e74c3c" stroke-width="2.5"/><line x1="32" y1="34" x2="32" y2="46" stroke="#e74c3c" stroke-width="2.5"/><line x1="24" y1="46" x2="40" y2="46" stroke="#e74c3c" stroke-width="2.5"/><line x1="32" y1="46" x2="32" y2="56" stroke="#aaa" stroke-width="2"/><circle cx="32" cy="58" r="3" fill="#aaa"/></svg>`,

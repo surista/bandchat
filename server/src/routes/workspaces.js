@@ -161,7 +161,9 @@ router.get('/', authenticate, async (req, res) => {
           unreadMap[row.workspaceId] = row.count;
         }
       }
-    } catch {}
+    } catch (err) {
+      console.error('Unread count query failed:', err.message);
+    }
 
     res.json(validWorkspaces.map((wm) => ({
       ...wm.workspace,

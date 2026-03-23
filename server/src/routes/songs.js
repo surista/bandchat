@@ -16,7 +16,9 @@ import spotifyService from '../services/spotify.js';
 const router = express.Router();
 
 // Per-workspace lock to prevent concurrent enrichment/bulk-import-with-metadata
-const enrichmentLocks = new Set();
+// Uses Map with timestamps for TTL-based auto-expiry (10 min) to prevent permanent lockout
+const enrichmentLocks = new Map();
+const ENRICHMENT_LOCK_TTL = 10 * 60 * 1000; // 10 minutes
 
 /**
  * Enrich a single song with metadata from external services.
@@ -219,11 +221,12 @@ router.post('/workspace/:workspaceId/enrich', authenticate, isWorkspaceMember, a
   try {
     const workspaceId = req.params.workspaceId;
 
-    // Prevent concurrent enrichment for the same workspace
-    if (enrichmentLocks.has(workspaceId)) {
+    // Prevent concurrent enrichment for the same workspace (with TTL to prevent permanent lockout)
+    const lockTime = enrichmentLocks.get(workspaceId);
+    if (lockTime && Date.now() - lockTime < ENRICHMENT_LOCK_TTL) {
       return res.status(409).json({ error: 'Enrichment is already running for this workspace. Please wait for it to complete.' });
     }
-    enrichmentLocks.add(workspaceId);
+    enrichmentLocks.set(workspaceId, Date.now());
 
     try {
     const { songIds } = req.body; // Optional: specific song IDs to enrich
@@ -430,9 +433,10 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
       }
     }
 
-    // Prevent concurrent metadata fetching for the same workspace
+    // Prevent concurrent metadata fetching for the same workspace (with TTL)
     if (fetchMetadata) {
-      if (enrichmentLocks.has(workspaceId)) {
+      const lockTime = enrichmentLocks.get(workspaceId);
+      if (lockTime && Date.now() - lockTime < ENRICHMENT_LOCK_TTL) {
         return res.status(409).json({ error: 'Enrichment is already running for this workspace. Please wait for it to complete.' });
       }
     }
@@ -498,11 +502,12 @@ router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asy
 
     // Step 3: Enrich metadata in the background (non-blocking)
     if (fetchMetadata && results.created.length > 0) {
-      if (enrichmentLocks.has(workspaceId)) {
+      const bgLockTime = enrichmentLocks.get(workspaceId);
+      if (bgLockTime && Date.now() - bgLockTime < ENRICHMENT_LOCK_TTL) {
         // Another enrichment started between check and here, skip metadata
         return;
       }
-      enrichmentLocks.add(workspaceId);
+      enrichmentLocks.set(workspaceId, Date.now());
 
       const emitProgress = (current, total, detail) => {
         io.to(`user:${userId}`).emit('songs:import-progress', {

@@ -6,34 +6,62 @@ import { authenticate } from '../middleware/auth.js';
 const router = express.Router();
 
 /**
- * SSRF protection: validate URL scheme, resolve hostname, and block private IPs.
+ * Check if an IP address is private/reserved (IPv4 and IPv6).
  */
-async function validateUrl(urlString) {
+function isPrivateIP(ip) {
+  if (/^127\./.test(ip)) return true;
+  if (/^10\./.test(ip)) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(ip)) return true;
+  if (/^192\.168\./.test(ip)) return true;
+  if (/^169\.254\./.test(ip)) return true;
+  if (ip === '0.0.0.0') return true;
+  if (ip === '::1') return true;
+  if (/^fc00/i.test(ip) || /^fd/i.test(ip)) return true;
+  return false;
+}
+
+/**
+ * SSRF protection: validate URL and resolve DNS, returning the pinned IP.
+ * Returns { blocked, resolvedIP, parsed } to prevent DNS rebinding (TOCTOU).
+ */
+async function validateAndResolveUrl(urlString) {
   try {
     const parsed = new URL(urlString);
     if (!['http:', 'https:'].includes(parsed.protocol)) {
       return { blocked: true };
     }
-    // Resolve hostname to IP addresses
-    const { address } = await dns.lookup(parsed.hostname);
-    // Block private, loopback, and link-local ranges
-    if (
-      address.startsWith('127.') ||
-      address.startsWith('10.') ||
-      address.startsWith('192.168.') ||
-      address.startsWith('169.254.') ||
-      address === '0.0.0.0' ||
-      address === '::1' ||
-      address.startsWith('172.') && (() => {
-        const second = parseInt(address.split('.')[1], 10);
-        return second >= 16 && second <= 31;
-      })()
-    ) {
+    const hostname = parsed.hostname;
+    // Block known private hostnames before DNS lookup
+    if (hostname === 'localhost' || hostname === '0.0.0.0' || hostname === '::1' || hostname.endsWith('.local')) {
       return { blocked: true };
     }
-    return { blocked: false };
+    // Quick check for IP-literal hostnames
+    if (/^10\./.test(hostname) || /^172\.(1[6-9]|2\d|3[01])\./.test(hostname) ||
+        /^192\.168\./.test(hostname) || /^169\.254\./.test(hostname) || /^127\./.test(hostname)) {
+      return { blocked: true };
+    }
+    const { address } = await dns.lookup(hostname);
+    if (isPrivateIP(address)) {
+      return { blocked: true };
+    }
+    return { blocked: false, resolvedIP: address, parsed };
   } catch {
     return { blocked: true };
+  }
+}
+
+/**
+ * Re-resolve DNS and verify the IP hasn't changed (anti-rebinding check).
+ * Returns true if the resolved IP is still safe, false if rebinding detected.
+ */
+async function verifyDnsNotRebound(hostname, originalIP) {
+  try {
+    const { address } = await dns.lookup(hostname);
+    if (isPrivateIP(address)) return false;
+    if (address !== originalIP) return false; // IP changed — possible rebinding
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -50,61 +78,6 @@ const linkPreviewLimiter = rateLimit({
   keyGenerator: (req) => req.user?.id || req.ip,
   message: { error: 'Too many link preview requests, please try again later' },
 });
-
-// Check if an IP address is private/reserved
-function isPrivateIP(ip) {
-  // IPv4 private ranges
-  if (/^127\./.test(ip)) return true;
-  if (/^10\./.test(ip)) return true;
-  if (/^172\.(1[6-9]|2\d|3[01])\./.test(ip)) return true;
-  if (/^192\.168\./.test(ip)) return true;
-  if (/^169\.254\./.test(ip)) return true;
-  if (ip === '0.0.0.0') return true;
-  // IPv6 private ranges
-  if (ip === '::1') return true;
-  if (/^fc00/i.test(ip) || /^fd/i.test(ip)) return true; // fc00::/7
-  return false;
-}
-
-// SSRF protection: block private/reserved IP ranges (with DNS resolution)
-async function isPrivateUrl(urlString) {
-  try {
-    const url = new URL(urlString);
-    const hostname = url.hostname;
-    // Block common private hostnames
-    if (
-      hostname === 'localhost' ||
-      hostname === '127.0.0.1' ||
-      hostname === '::1' ||
-      hostname === '0.0.0.0' ||
-      hostname.endsWith('.local')
-    ) {
-      return true;
-    }
-    // Quick regex check for IP-format hostnames
-    if (
-      /^10\./.test(hostname) ||
-      /^172\.(1[6-9]|2\d|3[01])\./.test(hostname) ||
-      /^192\.168\./.test(hostname) ||
-      /^169\.254\./.test(hostname)
-    ) {
-      return true;
-    }
-    // DNS resolution step: resolve hostname and check resolved IP
-    try {
-      const { address } = await dns.lookup(hostname);
-      if (isPrivateIP(address)) {
-        return true;
-      }
-    } catch {
-      // DNS resolution failed - block the request
-      return true;
-    }
-    return false;
-  } catch {
-    return true;
-  }
-}
 
 function extractOgTag(html, property) {
   // Match both property="og:..." and name="og:..."
@@ -146,8 +119,8 @@ router.get('/', authenticate, linkPreviewLimiter, async (req, res) => {
     return res.status(400).json({ error: 'URL parameter required' });
   }
 
-  // SSRF protection: validate URL and get resolved IP
-  const urlValidation = await validateUrl(url);
+  // SSRF protection: validate URL and pin resolved IP to prevent DNS rebinding
+  const urlValidation = await validateAndResolveUrl(url);
   if (urlValidation.blocked) {
     return res.status(400).json({ error: 'Invalid URL' });
   }
@@ -164,6 +137,7 @@ router.get('/', authenticate, linkPreviewLimiter, async (req, res) => {
 
     // Follow redirects manually to validate each redirect target
     let currentUrl = url;
+    let currentResolvedIP = urlValidation.resolvedIP;
     let response;
     const MAX_REDIRECTS = 3;
 
@@ -177,6 +151,13 @@ router.get('/', authenticate, linkPreviewLimiter, async (req, res) => {
         redirect: 'manual',
       });
 
+      // Post-fetch DNS rebinding check: verify the IP hasn't changed to a private address
+      const currentHostname = new URL(currentUrl).hostname;
+      if (!await verifyDnsNotRebound(currentHostname, currentResolvedIP)) {
+        clearTimeout(timeout);
+        return res.status(400).json({ error: 'Invalid URL' });
+      }
+
       // Check if it's a redirect (3xx status)
       if (response.status >= 300 && response.status < 400) {
         const location = response.headers.get('location');
@@ -188,8 +169,9 @@ router.get('/', authenticate, linkPreviewLimiter, async (req, res) => {
         // Resolve relative redirect URLs
         const redirectUrl = new URL(location, currentUrl).href;
 
-        // Validate redirect target against SSRF
-        if (await isPrivateUrl(redirectUrl)) {
+        // Validate redirect target against SSRF (also gets pinned IP for next fetch)
+        const redirectValidation = await validateAndResolveUrl(redirectUrl);
+        if (redirectValidation.blocked) {
           clearTimeout(timeout);
           return res.status(400).json({ error: 'Invalid redirect URL' });
         }
@@ -200,6 +182,7 @@ router.get('/', authenticate, linkPreviewLimiter, async (req, res) => {
         }
 
         currentUrl = redirectUrl;
+        currentResolvedIP = redirectValidation.resolvedIP;
         continue;
       }
 
