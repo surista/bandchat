@@ -9,6 +9,7 @@ import { Prisma } from '@prisma/client';
 import prisma, { USER_SELECT_BRIEF } from '../lib/prisma.js';
 import { forceLeaveWorkspace } from '../socket/handlers.js';
 import { getEffectivePlan, getPlanLimits, serializePlanLimits } from '../lib/planLimits.js';
+import { logAudit } from '../lib/audit.js';
 
 const router = express.Router();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -251,7 +252,7 @@ router.post('/', authenticate, async (req, res) => {
     workspace.planLimits = serializePlanLimits(getPlanLimits(workspace));
 
     // Audit log
-    import('../lib/audit.js').then(({ logAudit }) => logAudit('workspace.created', { actorId: req.user.id, targetId: workspace.id, metadata: { name: workspace.name } })).catch(() => {});
+    logAudit('workspace.created', { actorId: req.user.id, targetId: workspace.id, metadata: { name: workspace.name } });
 
     res.status(201).json(workspace);
   } catch (error) {
@@ -372,6 +373,8 @@ router.put('/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => 
       }
     });
 
+    logAudit('workspace.settings_updated', { actorId: req.user.id, targetId: req.params.workspaceId });
+
     res.json(workspace);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update workspace' });
@@ -394,6 +397,8 @@ router.delete('/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) 
     if (io) {
       io.to(`workspace:${workspaceId}`).emit('workspace:deleted', { workspaceId });
     }
+
+    logAudit('workspace.deleted', { actorId: req.user.id, targetId: workspaceId });
 
     res.json({ message: 'Workspace scheduled for deletion. An admin can restore it within 30 days.' });
   } catch (error) {
@@ -464,6 +469,8 @@ router.post('/:workspaceId/leave', authenticate, isWorkspaceMember, async (req, 
         reason: 'Previous admin left the workspace'
       });
     }
+
+    logAudit('workspace.member_left', { actorId: req.user.id, targetId: workspaceId });
 
     res.json({
       message: 'Left workspace',
@@ -580,6 +587,8 @@ router.post('/join/:inviteCode', inviteJoinLimiter, authenticate, async (req, re
       user: req.user
     });
 
+    logAudit('workspace.member_joined', { actorId: req.user.id, targetId: workspace.id });
+
     res.json(updatedWorkspace);
   } catch (error) {
     console.error('Join workspace error:', error);
@@ -604,6 +613,8 @@ router.post('/:workspaceId/invite-code', authenticate, isWorkspaceAdmin, async (
         inviteUsedCount: 0 // Reset used count when regenerating
       }
     });
+
+    logAudit('workspace.invite_generated', { actorId: req.user.id, targetId: req.params.workspaceId });
 
     res.json({
       inviteCode: workspace.inviteCode,
@@ -705,6 +716,8 @@ router.post('/:workspaceId/invite-email', authenticate, isWorkspaceAdmin, async 
       `
     });
 
+    logAudit('workspace.invite_emailed', { actorId: req.user.id, metadata: { email: email.trim() } });
+
     res.json({ message: 'Invite email sent' });
   } catch (error) {
     console.error('Send invite email error:', error);
@@ -752,6 +765,8 @@ router.put('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, asyn
         },
         data: { role }
       });
+
+      logAudit('workspace.member_role_changed', { actorId: req.user.id, targetId: userId, metadata: { role, workspaceId } });
     }
 
     // Handle profile updates (displayName, email)
@@ -992,6 +1007,8 @@ router.delete('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, a
         reason: 'Previous admin was removed from the workspace'
       });
     }
+
+    logAudit('workspace.member_removed', { actorId: req.user.id, targetId: userId, metadata: { workspaceId } });
 
     res.json({
       message: 'Member removed successfully',

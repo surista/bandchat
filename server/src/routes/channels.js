@@ -2,6 +2,7 @@ import express from 'express';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin, isChannelMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 import { forceLeaveRoom } from '../socket/handlers.js';
+import { logAudit } from '../lib/audit.js';
 
 const router = express.Router();
 
@@ -272,6 +273,8 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
     const io = req.app.get('io');
     io.to(`workspace:${req.params.workspaceId}`).emit('channel:created', channel);
 
+    logAudit('channel.created', { actorId: req.user.id, targetId: channel.id, metadata: { name: channel.name, workspaceId: req.params.workspaceId } });
+
     res.status(201).json(channel);
   } catch (error) {
     console.error('Create channel error:', error);
@@ -429,6 +432,8 @@ router.delete('/:channelId', authenticate, async (req, res) => {
       channelId: req.params.channelId
     });
 
+    logAudit('channel.deleted', { actorId: req.user.id, targetId: req.params.channelId, metadata: { name: channel.name } });
+
     res.json({ message: 'Channel deleted' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete channel' });
@@ -524,6 +529,8 @@ router.delete('/:channelId/members/:userId', authenticate, isChannelMember, asyn
       channelId,
       userId
     });
+
+    logAudit('channel.member_removed', { actorId: req.user.id, targetId: userId, metadata: { channelId } });
 
     res.json({ message: 'Member removed' });
   } catch (error) {

@@ -8,6 +8,7 @@ import { authenticate } from '../middleware/auth.js';
 import { apiLimiter, authLimiter, tokenLimiter, refreshLimiter, exportLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
+import { logAudit } from '../lib/audit.js';
 
 const router = express.Router();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -272,7 +273,7 @@ router.post('/signup', authLimiter, async (req, res) => {
     sendVerificationEmail(email.toLowerCase(), verificationToken).catch(console.error);
 
     // Audit log
-    import('../lib/audit.js').then(({ logAudit }) => logAudit('user.created', { targetId: user.id, metadata: { email: email.toLowerCase(), provider: 'local' } })).catch(() => {});
+    logAudit('user.created', { targetId: user.id, metadata: { email: email.toLowerCase(), provider: 'local' } });
 
     const tokens = await generateTokens(user.id);
 
@@ -391,6 +392,8 @@ router.post('/login', authLimiter, async (req, res) => {
     // Set refresh token as httpOnly cookie for web clients
     setRefreshTokenCookie(res, tokens.refreshToken);
 
+    logAudit('user.login', { actorId: user.id, targetId: user.id, metadata: { provider: 'local' } });
+
     res.json({
       user: {
         id: user.id,
@@ -437,6 +440,7 @@ router.post('/google', authLimiter, async (req, res) => {
       const tokens = await generateTokens(user.id);
       // Set refresh token as httpOnly cookie for web clients
       setRefreshTokenCookie(res, tokens.refreshToken);
+      logAudit('user.login', { actorId: user.id, targetId: user.id, metadata: { provider: 'google' } });
       return res.json({
         user: {
           id: user.id,
@@ -490,6 +494,8 @@ router.post('/google', authLimiter, async (req, res) => {
 
     // Set refresh token as httpOnly cookie for web clients
     setRefreshTokenCookie(res, tokens.refreshToken);
+
+    logAudit('user.login', { actorId: user.id, targetId: user.id, metadata: { provider: 'google' } });
 
     res.status(201).json({
       user,
@@ -570,6 +576,8 @@ router.post('/link-google', authenticate, async (req, res) => {
       }
     });
 
+    logAudit('user.google_linked', { actorId: req.user.id, targetId: req.user.id });
+
     res.json({
       user: updatedUser,
       message: 'Google account linked successfully'
@@ -604,6 +612,7 @@ router.post('/apple', authLimiter, async (req, res) => {
     if (user) {
       const tokens = await generateTokens(user.id);
       setRefreshTokenCookie(res, tokens.refreshToken);
+      logAudit('user.login', { actorId: user.id, targetId: user.id, metadata: { provider: 'apple' } });
       return res.json({
         user: {
           id: user.id,
@@ -659,6 +668,8 @@ router.post('/apple', authLimiter, async (req, res) => {
 
     const tokens = await generateTokens(user.id);
     setRefreshTokenCookie(res, tokens.refreshToken);
+
+    logAudit('user.login', { actorId: user.id, targetId: user.id, metadata: { provider: 'apple' } });
 
     res.status(201).json({
       user,
@@ -727,6 +738,8 @@ router.post('/link-apple', authenticate, async (req, res) => {
         appleId: true,
       }
     });
+
+    logAudit('user.apple_linked', { actorId: req.user.id, targetId: req.user.id });
 
     res.json({
       user: updatedUser,
@@ -945,6 +958,8 @@ router.put('/password', authenticate, authLimiter, async (req, res) => {
       await prisma.refreshToken.deleteMany({ where: { userId: req.user.id } });
     }
 
+    logAudit('user.password_changed', { actorId: req.user.id, targetId: req.user.id });
+
     res.json({ message: 'Password updated successfully. Other sessions have been logged out.' });
   } catch (error) {
     console.error('Password change error:', error);
@@ -1029,6 +1044,8 @@ router.post('/change-email', authenticate, authLimiter, async (req, res) => {
       }
     }
 
+    logAudit('user.email_change_requested', { actorId: req.user.id, targetId: req.user.id, metadata: { newEmail: newEmail.toLowerCase() } });
+
     res.json({ message: 'Verification email sent to ' + newEmail });
   } catch (error) {
     console.error('Email change request error:', error);
@@ -1090,6 +1107,8 @@ router.post('/verify-email-change', tokenLimiter, async (req, res) => {
       }
     });
 
+    logAudit('user.email_changed', { targetId: user.id });
+
     res.json({ message: 'Email updated successfully', user: updatedUser });
   } catch (error) {
     if (error.code === 'P2002') {
@@ -1106,13 +1125,19 @@ router.post('/logout', async (req, res) => {
     // Check cookie first (web clients), then fall back to body (mobile clients)
     const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
 
+    let logoutUserId = null;
     if (refreshToken) {
+      try { logoutUserId = jwt.decode(refreshToken)?.userId; } catch (e) { /* ignore */ }
       // Hash the token to find it in database
       const hashedToken = hashRefreshToken(refreshToken);
       // Delete the refresh token from database
       await prisma.refreshToken.deleteMany({
         where: { token: hashedToken }
       });
+    }
+
+    if (logoutUserId) {
+      logAudit('user.logout', { actorId: logoutUserId });
     }
 
     // Clear the httpOnly cookie for web clients
@@ -1375,6 +1400,8 @@ router.delete('/account', authenticate, authLimiter, async (req, res) => {
 
     // Clear the httpOnly cookie for web clients
     clearRefreshTokenCookie(res);
+
+    logAudit('user.account_deleted', { actorId: req.user.id, targetId: req.user.id });
 
     res.json({ message: 'Account scheduled for deletion. You have 30 days to contact support to restore it.' });
   } catch (error) {

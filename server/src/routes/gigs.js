@@ -10,6 +10,7 @@ import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 import { getPlanLimits } from '../lib/planLimits.js';
 import { triggerWebsiteSync } from '../services/websiteDeployment.js';
 import { sendPushToUser } from './push.js';
+import { logAudit } from '../lib/audit.js';
 
 const router = express.Router();
 
@@ -755,6 +756,8 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       }, { category: 'gig', workspaceId: req.params.workspaceId });
     });
 
+    logAudit('gig.created', { actorId: req.user.id, targetId: gig.id, metadata: { title } });
+
     res.status(201).json(gig);
     triggerWebsiteSync(req.params.workspaceId);
   } catch (error) {
@@ -1243,6 +1246,8 @@ router.delete('/:gigId', authenticate, async (req, res) => {
 
     const io = req.app.get('io');
     io.to(`workspace:${gig.workspaceId}`).emit('gig:deleted', { gigId: req.params.gigId });
+
+    logAudit('gig.deleted', { actorId: req.user.id, targetId: req.params.gigId, metadata: { title: gig.title } });
 
     res.json({ message: 'Gig deleted' });
     triggerWebsiteSync(gig.workspaceId);

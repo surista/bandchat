@@ -847,303 +847,301 @@ function SetlistList({ workspaceId, workspaceName }) {
       </div>
 
       {/* Create Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">New Setlist</h3>
-            <form onSubmit={handleCreateSetlist}>
+      <Modal isOpen={showCreateModal} onClose={() => {
+        setShowCreateModal(false);
+        setNewSetlistName('');
+        setNewSetlistDesc('');
+        setNewSetlistDate('');
+        setNewSetlistVenue('');
+        setNewSetlistStartTime('');
+      }} title="New Setlist">
+        <form onSubmit={handleCreateSetlist} className="p-6 pt-0">
+          <div className="mb-4">
+            <label className="block text-[var(--color-text-secondary)] font-medium mb-1">
+              Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={newSetlistName}
+              onChange={(e) => setNewSetlistName(e.target.value)}
+              className="modal-input"
+              placeholder="e.g., Friday Night Set"
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-[var(--color-text-secondary)] font-medium mb-1">Description</label>
+            <input
+              type="text"
+              value={newSetlistDesc}
+              onChange={(e) => setNewSetlistDesc(e.target.value)}
+              className="modal-input"
+              placeholder="Optional description"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-[var(--color-text-secondary)] font-medium mb-1">Date Performed</label>
+              <input
+                type="date"
+                value={newSetlistDate}
+                onChange={(e) => setNewSetlistDate(e.target.value)}
+                className="modal-input"
+              />
+            </div>
+            <div>
+              <label className="block text-[var(--color-text-secondary)] font-medium mb-1">Venue</label>
+              <input
+                type="text"
+                value={newSetlistVenue}
+                onChange={(e) => setNewSetlistVenue(e.target.value)}
+                className="modal-input"
+                placeholder="e.g., The Blue Note"
+              />
+            </div>
+          </div>
+          <div className="mb-4">
+            <label className="block text-[var(--color-text-secondary)] font-medium mb-1">Start Time</label>
+            <input
+              type="time"
+              value={newSetlistStartTime}
+              onChange={(e) => setNewSetlistStartTime(e.target.value)}
+              className="modal-input"
+            />
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                setShowCreateModal(false);
+                setNewSetlistName('');
+                setNewSetlistDesc('');
+                setNewSetlistDate('');
+                setNewSetlistVenue('');
+                setNewSetlistStartTime('');
+              }}
+              className="btn btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={createLoading}
+              className="btn bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-300 disabled:text-gray-500"
+            >
+              {createLoading ? 'Creating...' : 'Create'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Import Modal */}
+      <Modal isOpen={showImportModal} onClose={() => {
+        setShowImportModal(false);
+        setImportName('');
+        setImportText('');
+        setImportDate('');
+        setImportVenue('');
+        setImportStartTime('');
+        setImportResults(null);
+      }} title="Import Setlist" maxWidth="max-w-lg">
+        <div className="p-6 pt-0 max-h-modal overflow-y-auto">
+          {!importResults ? (
+            <form onSubmit={handleImportSetlist}>
               <div className="mb-4">
-                <label className="block text-gray-700 font-medium mb-1">
-                  Name <span className="text-red-500">*</span>
+                <label className="block text-[var(--color-text-secondary)] font-medium mb-1">
+                  Setlist Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
-                  value={newSetlistName}
-                  onChange={(e) => setNewSetlistName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
-                  placeholder="e.g., Friday Night Set"
+                  value={importName}
+                  onChange={(e) => setImportName(e.target.value)}
+                  className="modal-input"
+                  placeholder="e.g., Saturday Night Set"
                   required
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-gray-700 font-medium mb-1">Description</label>
-                <input
-                  type="text"
-                  value={newSetlistDesc}
-                  onChange={(e) => setNewSetlistDesc(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
-                  placeholder="Optional description"
+                <label className="block text-[var(--color-text-secondary)] font-medium mb-1">
+                  Songs (one per line)
+                </label>
+                <textarea
+                  value={importText}
+                  onChange={(e) => setImportText(e.target.value)}
+                  placeholder={"Set 1\nSong Title - Artist\nAnother Song\n\nSet 2\nMore Songs...\n\n(Or just songs without set markers)"}
+                  className="w-full h-48 modal-input font-mono text-sm"
+                  required
                 />
+                <p className="text-[var(--color-text-muted)] text-xs mt-1">
+                  Use "Set 1", "Set 2" markers for multi-set gigs. Songs matched to your library.
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-gray-700 font-medium mb-1">Date Performed</label>
+                  <label className="block text-[var(--color-text-secondary)] font-medium mb-1">Date Performed</label>
                   <input
                     type="date"
-                    value={newSetlistDate}
-                    onChange={(e) => setNewSetlistDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                    value={importDate}
+                    onChange={(e) => setImportDate(e.target.value)}
+                    className="modal-input"
                   />
                 </div>
                 <div>
-                  <label className="block text-gray-700 font-medium mb-1">Venue</label>
+                  <label className="block text-[var(--color-text-secondary)] font-medium mb-1">Venue</label>
                   <input
                     type="text"
-                    value={newSetlistVenue}
-                    onChange={(e) => setNewSetlistVenue(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                    value={importVenue}
+                    onChange={(e) => setImportVenue(e.target.value)}
+                    className="modal-input"
                     placeholder="e.g., The Blue Note"
                   />
                 </div>
               </div>
               <div className="mb-4">
-                <label className="block text-gray-700 font-medium mb-1">Start Time</label>
+                <label className="block text-[var(--color-text-secondary)] font-medium mb-1">Start Time</label>
                 <input
                   type="time"
-                  value={newSetlistStartTime}
-                  onChange={(e) => setNewSetlistStartTime(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                  value={importStartTime}
+                  onChange={(e) => setImportStartTime(e.target.value)}
+                  className="modal-input"
                 />
               </div>
               <div className="flex gap-2 justify-end">
                 <button
                   type="button"
                   onClick={() => {
-                    setShowCreateModal(false);
-                    setNewSetlistName('');
-                    setNewSetlistDesc('');
-                    setNewSetlistDate('');
-                    setNewSetlistVenue('');
-                    setNewSetlistStartTime('');
+                    setShowImportModal(false);
+                    setImportName('');
+                    setImportText('');
+                    setImportDate('');
+                    setImportVenue('');
+                    setImportStartTime('');
                   }}
                   className="btn btn-secondary"
+                  disabled={importLoading}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={createLoading}
+                  disabled={importLoading || !importName.trim() || !importText.trim()}
                   className="btn bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-300 disabled:text-gray-500"
                 >
-                  {createLoading ? 'Creating...' : 'Create'}
+                  {importLoading ? 'Importing...' : 'Import'}
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+          ) : (
+            <div>
+              <div className="mb-4">
+                {importResults.isMultiSet ? (
+                  <>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
+                      <h4 className="font-medium text-green-800 mb-2">
+                        Setlist created with {importResults.sets?.length || 0} sets • {importResults.totalMatched} songs matched
+                      </h4>
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {importResults.sets?.map((setResult, i) => (
+                          <div key={i} className="text-sm">
+                            <span className="font-medium text-green-700">Set {setResult.setNumber}:</span>
+                            <span className="text-green-600 ml-2">{setResult.matched.length} songs</span>
+                            {setResult.notFound.length > 0 && (
+                              <span className="text-yellow-600 ml-2">({setResult.notFound.length} not found)</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
 
-      {/* Import Modal */}
-      {showImportModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-modal overflow-y-auto">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Import Setlist</h3>
-
-            {!importResults ? (
-              <form onSubmit={handleImportSetlist}>
-                <div className="mb-4">
-                  <label className="block text-gray-700 font-medium mb-1">
-                    Setlist Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={importName}
-                    onChange={(e) => setImportName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
-                    placeholder="e.g., Saturday Night Set"
-                    required
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 font-medium mb-1">
-                    Songs (one per line)
-                  </label>
-                  <textarea
-                    value={importText}
-                    onChange={(e) => setImportText(e.target.value)}
-                    placeholder={"Set 1\nSong Title - Artist\nAnother Song\n\nSet 2\nMore Songs...\n\n(Or just songs without set markers)"}
-                    className="w-full h-48 px-3 py-2 border border-gray-300 rounded text-gray-900 font-mono text-sm"
-                    required
-                  />
-                  <p className="text-gray-500 text-xs mt-1">
-                    Use "Set 1", "Set 2" markers for multi-set gigs. Songs matched to your library.
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-1">Date Performed</label>
-                    <input
-                      type="date"
-                      value={importDate}
-                      onChange={(e) => setImportDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-1">Venue</label>
-                    <input
-                      type="text"
-                      value={importVenue}
-                      onChange={(e) => setImportVenue(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
-                      placeholder="e.g., The Blue Note"
-                    />
-                  </div>
-                </div>
-                <div className="mb-4">
-                  <label className="block text-gray-700 font-medium mb-1">Start Time</label>
-                  <input
-                    type="time"
-                    value={importStartTime}
-                    onChange={(e) => setImportStartTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
-                  />
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowImportModal(false);
-                      setImportName('');
-                      setImportText('');
-                      setImportDate('');
-                      setImportVenue('');
-                      setImportStartTime('');
-                    }}
-                    className="btn btn-secondary"
-                    disabled={importLoading}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={importLoading || !importName.trim() || !importText.trim()}
-                    className="btn bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-300 disabled:text-gray-500"
-                  >
-                    {importLoading ? 'Importing...' : 'Import'}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div>
-                <div className="mb-4">
-                  {importResults.isMultiSet ? (
-                    // Multi-set results
-                    <>
+                    {importResults.totalNotFound > 0 && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                        <h4 className="font-medium text-yellow-800 mb-2">
+                          {importResults.totalNotFound} songs not found
+                        </h4>
+                        <p className="text-sm text-yellow-700">
+                          Add missing songs to your library first.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {importResults.matched?.length > 0 && (
                       <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
                         <h4 className="font-medium text-green-800 mb-2">
-                          Setlist created with {importResults.sets?.length || 0} sets • {importResults.totalMatched} songs matched
+                          {importResults.matched.length} songs matched
                         </h4>
-                        <div className="space-y-2 max-h-40 overflow-y-auto">
-                          {importResults.sets?.map((setResult, i) => (
-                            <div key={i} className="text-sm">
-                              <span className="font-medium text-green-700">Set {setResult.setNumber}:</span>
-                              <span className="text-green-600 ml-2">{setResult.matched.length} songs</span>
-                              {setResult.notFound.length > 0 && (
-                                <span className="text-yellow-600 ml-2">({setResult.notFound.length} not found)</span>
-                              )}
-                            </div>
+                        <ul className="text-sm text-green-700 max-h-32 overflow-y-auto">
+                          {importResults.matched.map((m, i) => (
+                            <li key={i}>{m.song.title}{m.song.artist && ` - ${m.song.artist}`}</li>
                           ))}
-                        </div>
+                        </ul>
                       </div>
+                    )}
 
-                      {importResults.totalNotFound > 0 && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                          <h4 className="font-medium text-yellow-800 mb-2">
-                            {importResults.totalNotFound} songs not found
-                          </h4>
-                          <p className="text-sm text-yellow-700">
-                            Add missing songs to your library first.
-                          </p>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    // Single set results
-                    <>
-                      {importResults.matched?.length > 0 && (
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
-                          <h4 className="font-medium text-green-800 mb-2">
-                            {importResults.matched.length} songs matched
-                          </h4>
-                          <ul className="text-sm text-green-700 max-h-32 overflow-y-auto">
-                            {importResults.matched.map((m, i) => (
-                              <li key={i}>{m.song.title}{m.song.artist && ` - ${m.song.artist}`}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {importResults.notFound?.length > 0 && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                          <h4 className="font-medium text-yellow-800 mb-2">
-                            {importResults.notFound.length} songs not found
-                          </h4>
-                          <p className="text-sm text-yellow-700 mb-2">
-                            These songs are not in your library.
-                          </p>
-                          <ul className="text-sm text-yellow-700 max-h-32 overflow-y-auto">
-                            {importResults.notFound.map((s, i) => (
-                              <li key={i}>{s.title}{s.artist && ` - ${s.artist}`}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                <div className="flex gap-2 justify-end">
-                  <button
-                    onClick={() => {
-                      setShowImportModal(false);
-                      setImportName('');
-                      setImportText('');
-                      setImportDate('');
-                      setImportVenue('');
-                      setImportStartTime('');
-                      setImportResults(null);
-                    }}
-                    className="btn btn-secondary"
-                  >
-                    Close
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowImportModal(false);
-                      setImportName('');
-                      setImportText('');
-                      setImportDate('');
-                      setImportVenue('');
-                      setImportStartTime('');
-                      setImportResults(null);
-                      const newSetlist = setlists[0];
-                      if (newSetlist) {
-                        setEditingSetlist(newSetlist);
-                        setShowBuilder(true);
-                      }
-                    }}
-                    className="btn bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    Edit Setlist
-                  </button>
-                </div>
+                    {importResults.notFound?.length > 0 && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                        <h4 className="font-medium text-yellow-800 mb-2">
+                          {importResults.notFound.length} songs not found
+                        </h4>
+                        <p className="text-sm text-yellow-700 mb-2">
+                          These songs are not in your library.
+                        </p>
+                        <ul className="text-sm text-yellow-700 max-h-32 overflow-y-auto">
+                          {importResults.notFound.map((s, i) => (
+                            <li key={i}>{s.title}{s.artist && ` - ${s.artist}`}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-            )}
-          </div>
+
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => {
+                    setShowImportModal(false);
+                    setImportName('');
+                    setImportText('');
+                    setImportDate('');
+                    setImportVenue('');
+                    setImportStartTime('');
+                    setImportResults(null);
+                  }}
+                  className="btn btn-secondary"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    setShowImportModal(false);
+                    setImportName('');
+                    setImportText('');
+                    setImportDate('');
+                    setImportVenue('');
+                    setImportStartTime('');
+                    setImportResults(null);
+                    const newSetlist = setlists[0];
+                    if (newSetlist) {
+                      setEditingSetlist(newSetlist);
+                      setShowBuilder(true);
+                    }
+                  }}
+                  className="btn bg-green-600 hover:bg-green-700 text-white"
+                >
+                  Edit Setlist
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </Modal>
 
       {/* View Setlist Modal */}
-      {viewingSetlist && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-          onClick={() => setViewingSetlist(null)}
-        >
-          <div
-            className="bg-[var(--color-bg-secondary)] rounded-xl w-full max-w-2xl max-h-modal overflow-hidden border border-[var(--color-border)] shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
+      <Modal isOpen={!!viewingSetlist} onClose={() => setViewingSetlist(null)} maxWidth="max-w-2xl">
+        {viewingSetlist && (
+          <>
             <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-bold text-[var(--color-text-primary)]">{viewingSetlist.name}</h3>
@@ -1198,6 +1196,7 @@ function SetlistList({ workspaceId, workspaceName }) {
                 <button
                   onClick={() => setViewingSetlist(null)}
                   className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl leading-none"
+                  aria-label="Close"
                 >
                   &times;
                 </button>
@@ -1234,7 +1233,7 @@ function SetlistList({ workspaceId, workspaceName }) {
                   let songNum = 0;
                   return viewingSetlist.songs?.map((item) => {
                     if (item.type === 'SET_BREAK') {
-                      songNum = 0; // Reset numbering for each set
+                      songNum = 0;
                       return (
                         <div key={item.id} className="py-2 mt-3 first:mt-0 border-b border-blue-500/30">
                           <span className="text-blue-400 font-bold">📋 {item.label || 'Set Break'}</span>
@@ -1280,78 +1279,73 @@ function SetlistList({ workspaceId, workspaceName }) {
                 })()}
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
 
       {/* Edit Details Modal */}
-      {editingDetails && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Edit Setlist Details</h3>
-            <form onSubmit={handleSaveDetails}>
-              <div className="mb-4">
-                <label className="block text-gray-700 font-medium mb-1">
-                  Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-gray-700 font-medium mb-1">Date Performed</label>
-                  <input
-                    type="date"
-                    value={editDate}
-                    onChange={(e) => setEditDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-700 font-medium mb-1">Venue</label>
-                  <input
-                    type="text"
-                    value={editVenue}
-                    onChange={(e) => setEditVenue(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
-                    placeholder="e.g., The Blue Note"
-                  />
-                </div>
-              </div>
-              <div className="mb-4">
-                <label className="block text-gray-700 font-medium mb-1">Start Time</label>
-                <input
-                  type="time"
-                  value={editStartTime}
-                  onChange={(e) => setEditStartTime(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
-                />
-              </div>
-              <div className="flex gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setEditingDetails(null)}
-                  className="btn btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={editLoading || !editName.trim()}
-                  className="btn bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-300 disabled:text-gray-500"
-                >
-                  {editLoading ? 'Saving...' : 'Save'}
-                </button>
-              </div>
-            </form>
+      <Modal isOpen={!!editingDetails} onClose={() => setEditingDetails(null)} title="Edit Setlist Details">
+        <form onSubmit={handleSaveDetails} className="p-6 pt-0">
+          <div className="mb-4">
+            <label className="block text-[var(--color-text-secondary)] font-medium mb-1">
+              Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className="modal-input"
+              required
+            />
           </div>
-        </div>
-      )}
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-[var(--color-text-secondary)] font-medium mb-1">Date Performed</label>
+              <input
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+                className="modal-input"
+              />
+            </div>
+            <div>
+              <label className="block text-[var(--color-text-secondary)] font-medium mb-1">Venue</label>
+              <input
+                type="text"
+                value={editVenue}
+                onChange={(e) => setEditVenue(e.target.value)}
+                className="modal-input"
+                placeholder="e.g., The Blue Note"
+              />
+            </div>
+          </div>
+          <div className="mb-4">
+            <label className="block text-[var(--color-text-secondary)] font-medium mb-1">Start Time</label>
+            <input
+              type="time"
+              value={editStartTime}
+              onChange={(e) => setEditStartTime(e.target.value)}
+              className="modal-input"
+            />
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button
+              type="button"
+              onClick={() => setEditingDetails(null)}
+              className="btn btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={editLoading || !editName.trim()}
+              className="btn bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-300 disabled:text-gray-500"
+            >
+              {editLoading ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        </form>
+      </Modal>
       <ConfirmDialog
         isOpen={deleteSetlistId !== null}
         title="Delete Setlist"

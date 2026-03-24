@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect, memo } from 'react';
 import {
   View,
   Text,
@@ -39,6 +39,76 @@ import { useLayout } from '../../hooks/useLayout';
 import useMessageActions from '../../hooks/useMessageActions';
 
 const GROUP_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+
+// Memoized row component so MessageBubble's React.memo actually prevents re-renders.
+// Each prop is a primitive or stable callback — no inline objects/arrays that break shallow comparison.
+const MessageRow = memo(function MessageRow({
+  item,
+  isGrouped,
+  showDate,
+  dateLabel,
+  showUnreadDivider,
+  seenByText,
+  isOwn,
+  onLongPress,
+  onReplyPress,
+  onImagePress,
+  onReactionPress,
+  onSwipeReply,
+  onSwipeReact,
+  onAvatarPress,
+  members,
+  onTogglePreview,
+  blockedDomains,
+  onLinkLongPress,
+  channels,
+  onChannelPress,
+  colors,
+}) {
+  return (
+    <View>
+      {seenByText ? (
+        <Text style={[styles.seenByText, { color: colors.textSecondary }]}>
+          {seenByText}
+        </Text>
+      ) : null}
+      {showUnreadDivider ? (
+        <View style={styles.unreadDivider}>
+          <View style={styles.unreadLine} />
+          <Text style={styles.unreadText}>New messages</Text>
+          <View style={styles.unreadLine} />
+        </View>
+      ) : null}
+      {showDate ? (
+        <View style={styles.dateSeparator}>
+          <View style={[styles.dateLine, { backgroundColor: colors.border }]} />
+          <Text style={[styles.dateText, { color: colors.textSecondary, backgroundColor: colors.bgPrimary }]}>
+            {dateLabel}
+          </Text>
+          <View style={[styles.dateLine, { backgroundColor: colors.border }]} />
+        </View>
+      ) : null}
+      <MessageBubble
+        message={item}
+        isGrouped={isGrouped}
+        onLongPress={onLongPress}
+        onReplyPress={onReplyPress}
+        onImagePress={onImagePress}
+        onReactionPress={onReactionPress}
+        onSwipeReply={onSwipeReply}
+        onSwipeReact={onSwipeReact}
+        onAvatarPress={onAvatarPress}
+        members={members}
+        isOwn={isOwn}
+        onTogglePreview={onTogglePreview}
+        blockedDomains={blockedDomains}
+        onLinkLongPress={onLinkLongPress}
+        channels={channels}
+        onChannelPress={onChannelPress}
+      />
+    </View>
+  );
+});
 
 export default function ChannelScreen({ navigation, route }) {
   const { channel, workspaceId } = route.params;
@@ -636,7 +706,7 @@ export default function ChannelScreen({ navigation, route }) {
     return msg?.id || null;
   }, [messages, lastReadAt, user?.id]);
 
-  // Prepare data for inverted FlatList with precomputed grouping
+  // Prepare data for inverted FlatList with precomputed grouping, date labels, and decorators
   const invertedMessages = useMemo(() => {
     const reversed = [...messages].reverse();
     return reversed.map((msg, i) => {
@@ -649,61 +719,40 @@ export default function ChannelScreen({ navigation, route }) {
         grouped = sameAuthor && sameDay && timeDiff < GROUP_THRESHOLD_MS;
       }
       const showDate = !olderMsg || !isSameDay(new Date(msg.createdAt), new Date(olderMsg.createdAt));
-      return { ...msg, _grouped: grouped, _showDate: showDate };
+      const dateLabel = showDate ? format(new Date(msg.createdAt), 'EEEE, MMMM d') : null;
+      const isOwn = msg.author?.id === user?.id;
+      const isLastOwn = msg.id === lastOwnMessageId;
+      const seenByText = isLastOwn && seenByCount > 0 ? `Seen by ${seenByCount}` : null;
+      const showUnreadDivider = msg.id === firstUnreadId;
+      return { ...msg, _grouped: grouped, _showDate: showDate, _dateLabel: dateLabel, _isOwn: isOwn, _seenByText: seenByText, _showUnreadDivider: showUnreadDivider };
     });
-  }, [messages]);
+  }, [messages, user?.id, lastOwnMessageId, seenByCount, firstUnreadId]);
 
-  const renderItem = useCallback(({ item }) => {
-    const grouped = item._grouped;
-    const showDate = item._showDate;
-    const isLastOwn = item.id === lastOwnMessageId;
-    const isFirstUnread = item.id === firstUnreadId;
-
-    return (
-      <View>
-        {isLastOwn && seenByCount > 0 && (
-          <Text style={[styles.seenByText, { color: colors.textSecondary }]}>
-            Seen by {seenByCount}
-          </Text>
-        )}
-        {/* Unread divider — shown below the message in inverted list (visually above) */}
-        {isFirstUnread && (
-          <View style={styles.unreadDivider}>
-            <View style={styles.unreadLine} />
-            <Text style={styles.unreadText}>New messages</Text>
-            <View style={styles.unreadLine} />
-          </View>
-        )}
-        {showDate && (
-          <View style={styles.dateSeparator}>
-            <View style={[styles.dateLine, { backgroundColor: colors.border }]} />
-            <Text style={[styles.dateText, { color: colors.textSecondary, backgroundColor: colors.bgPrimary }]}>
-              {format(new Date(item.createdAt), 'EEEE, MMMM d')}
-            </Text>
-            <View style={[styles.dateLine, { backgroundColor: colors.border }]} />
-          </View>
-        )}
-        <MessageBubble
-          message={item}
-          isGrouped={grouped}
-          onLongPress={handleLongPress}
-          onReplyPress={handleReplyPress}
-          onImagePress={handleImagePress}
-          onReactionPress={handleReactionPress}
-          onSwipeReply={handleReplyPress}
-          onSwipeReact={handleReactionPress}
-          onAvatarPress={handleAvatarPress}
-          members={workspaceMembers}
-          isOwn={item.author?.id === user?.id}
-          onTogglePreview={handleTogglePreview}
-          blockedDomains={blockedDomains}
-          onLinkLongPress={handleLinkLongPress}
-          channels={workspaceChannels}
-          onChannelPress={handleChannelRefPress}
-        />
-      </View>
-    );
-  }, [colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, handleAvatarPress, handleTogglePreview, lastOwnMessageId, seenByCount, workspaceMembers, firstUnreadId, user?.id, blockedDomains, handleLinkLongPress, workspaceChannels, handleChannelRefPress]);
+  const renderItem = useCallback(({ item }) => (
+    <MessageRow
+      item={item}
+      isGrouped={item._grouped}
+      showDate={item._showDate}
+      dateLabel={item._dateLabel}
+      showUnreadDivider={item._showUnreadDivider}
+      seenByText={item._seenByText}
+      isOwn={item._isOwn}
+      onLongPress={handleLongPress}
+      onReplyPress={handleReplyPress}
+      onImagePress={handleImagePress}
+      onReactionPress={handleReactionPress}
+      onSwipeReply={handleReplyPress}
+      onSwipeReact={handleReactionPress}
+      onAvatarPress={handleAvatarPress}
+      members={workspaceMembers}
+      onTogglePreview={handleTogglePreview}
+      blockedDomains={blockedDomains}
+      onLinkLongPress={handleLinkLongPress}
+      channels={workspaceChannels}
+      onChannelPress={handleChannelRefPress}
+      colors={colors}
+    />
+  ), [colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, handleAvatarPress, handleTogglePreview, workspaceMembers, blockedDomains, handleLinkLongPress, workspaceChannels, handleChannelRefPress]);
 
   const renderFooter = useCallback(() => {
     if (!loadingMore) return null;

@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import ConfirmDialog from '../common/ConfirmDialog';
+import Modal from '../common/Modal';
 
 const THEMES = [
   { id: 'rock', label: 'Rock', bg: '#0a0a0a', accent: '#e81c2e', accent2: '#ff5722', desc: 'Bold & high energy' },
@@ -422,10 +423,9 @@ export default function WebsiteTab({ workspace }) {
   );
 
   function renderDeploySuccessModal() {
-    if (!deploySuccessUrl) return null;
     return (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" onClick={() => setDeploySuccessUrl(null)}>
-        <div className="bg-[var(--color-modal-bg)] rounded-xl p-8 max-w-md w-full mx-4 text-center shadow-2xl" onClick={e => e.stopPropagation()}>
+      <Modal isOpen={!!deploySuccessUrl} onClose={() => setDeploySuccessUrl(null)} maxWidth="max-w-md">
+        <div className="p-8 text-center">
           <div className="text-5xl mb-4">🎉</div>
           <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">Website Deployed!</h3>
           <p className="text-[var(--color-text-muted)] mb-4">
@@ -449,7 +449,7 @@ export default function WebsiteTab({ workspace }) {
             Got it
           </button>
         </div>
-      </div>
+      </Modal>
     );
   }
 

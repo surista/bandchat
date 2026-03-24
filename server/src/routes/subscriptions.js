@@ -4,6 +4,7 @@ import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware
 import prisma from '../lib/prisma.js';
 import { getEffectivePlan, getPlanLimits, serializePlanLimits } from '../lib/planLimits.js';
 import { getSubscriber, isEntitlementActive, getEntitlementStore } from '../lib/revenuecat.js';
+import { logAudit } from '../lib/audit.js';
 
 const router = express.Router();
 
@@ -142,6 +143,8 @@ router.post('/:workspaceId/activate', authenticate, isWorkspaceAdmin, async (req
 
     // Notify all workspace members in real time
     emitPlanUpdated(req, workspaceId, updatedWorkspace);
+
+    logAudit('subscription.activated', { actorId: req.user.id, targetId: workspaceId, metadata: { plan: 'PRO' } });
 
     const effectivePlan = getEffectivePlan(updatedWorkspace);
     const planLimits = serializePlanLimits(getPlanLimits(updatedWorkspace));

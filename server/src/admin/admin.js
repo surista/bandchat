@@ -130,6 +130,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (tab.dataset.tab === 'storage') loadStorageStats();
     if (tab.dataset.tab === 'backups') { loadBackups(); loadWorkspaceSelector(); }
     if (tab.dataset.tab === 'deleted') loadDeleted();
+    if (tab.dataset.tab === 'audit') { loadAuditStats(); loadAuditLog(); }
   });
 });
 
@@ -989,6 +990,106 @@ document.getElementById('deletedWorkspacesTable').addEventListener('click', asyn
     } catch (err) { alert('Purge failed: ' + err.message); }
   }
 });
+
+// --- Audit Log ---
+
+let auditCursor = null;
+let auditFilterTimer = null;
+let auditKnownActions = new Set();
+
+async function loadAuditStats() {
+  const grid = document.getElementById('auditStatsGrid');
+  try {
+    const s = await api('/admin/audit/stats');
+    grid.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-label">Total Events</div>
+        <div class="stat-value">${fmt(s.total)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Last 24 Hours</div>
+        <div class="stat-value">${fmt(s.last24h)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Last 7 Days</div>
+        <div class="stat-value">${fmt(s.last7d)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Top Action (7d)</div>
+        <div class="stat-value" style="font-size:14px">${s.topActions?.[0] ? esc(s.topActions[0].action) + ' (' + s.topActions[0].count + ')' : 'None'}</div>
+      </div>
+    `;
+    // Populate action filter dropdown
+    const select = document.getElementById('auditActionFilter');
+    const currentVal = select.value;
+    s.topActions?.forEach(a => auditKnownActions.add(a.action));
+    select.innerHTML = '<option value="">All actions</option>' +
+      [...auditKnownActions].sort().map(a => `<option value="${esc(a)}" ${a === currentVal ? 'selected' : ''}>${esc(a)}</option>`).join('');
+  } catch (err) {
+    grid.innerHTML = `<div class="stat-card"><div class="stat-label">Error</div><div class="stat-value" style="font-size:14px">${esc(err.message)}</div></div>`;
+  }
+}
+
+async function loadAuditLog(append = false) {
+  const table = document.getElementById('auditTable');
+  const loadMoreBtn = document.getElementById('auditLoadMore');
+  if (!append) {
+    auditCursor = null;
+    table.innerHTML = '<tr><td colspan="5" class="empty-state">Loading...</td></tr>';
+  }
+
+  const params = new URLSearchParams();
+  const actionFilter = document.getElementById('auditActionFilter').value;
+  if (actionFilter) params.set('action', actionFilter);
+  if (auditCursor) params.set('cursor', auditCursor);
+  params.set('limit', '50');
+
+  try {
+    const data = await api(`/admin/audit?${params}`);
+    if (!append) table.innerHTML = '';
+
+    if (data.entries.length === 0 && !append) {
+      table.innerHTML = '<tr><td colspan="5" class="empty-state">No audit events found</td></tr>';
+      loadMoreBtn.style.display = 'none';
+      return;
+    }
+
+    data.entries.forEach(entry => {
+      auditKnownActions.add(entry.action);
+      const tr = document.createElement('tr');
+      const meta = entry.metadata ? JSON.stringify(entry.metadata, null, 2) : '';
+      tr.innerHTML = `
+        <td style="white-space:nowrap">${new Date(entry.createdAt).toLocaleString()}</td>
+        <td><span class="badge ${getAuditBadgeClass(entry.action)}">${esc(entry.action)}</span></td>
+        <td>${entry.actor ? esc(entry.actor.displayName || entry.actor.email) : '<span style="color:var(--text-secondary)">system</span>'}</td>
+        <td style="font-family:monospace;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis">${esc(entry.targetId || '')}</td>
+        <td>${meta ? `<details><summary style="cursor:pointer;font-size:12px;color:var(--text-secondary)">details</summary><pre style="font-size:11px;margin:4px 0;white-space:pre-wrap;max-width:300px">${esc(meta)}</pre></details>` : ''}</td>
+      `;
+      table.appendChild(tr);
+    });
+
+    auditCursor = data.nextCursor;
+    loadMoreBtn.style.display = data.hasMore ? 'inline-block' : 'none';
+  } catch (err) {
+    if (!append) table.innerHTML = `<tr><td colspan="5" class="empty-state">Failed to load: ${esc(err.message)}</td></tr>`;
+    loadMoreBtn.style.display = 'none';
+  }
+}
+
+function getAuditBadgeClass(action) {
+  if (action.startsWith('admin.')) return 'badge-admin';
+  if (action.includes('deleted') || action.includes('purged') || action.includes('removed')) return 'badge-admin';
+  if (action.includes('created') || action.includes('joined') || action.includes('activated')) return 'badge-verified';
+  return '';
+}
+
+// Audit filter handlers
+document.getElementById('auditActionFilter').addEventListener('change', () => loadAuditLog());
+document.getElementById('auditActorFilter').addEventListener('input', () => {
+  clearTimeout(auditFilterTimer);
+  auditFilterTimer = setTimeout(() => loadAuditLog(), 300);
+});
+document.getElementById('auditLoadMore').addEventListener('click', () => loadAuditLog(true));
 
 // Logout button handler
 document.getElementById('logoutBtn').addEventListener('click', handleLogout);

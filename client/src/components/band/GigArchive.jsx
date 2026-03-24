@@ -5,6 +5,7 @@ import api from '../../services/api';
 import { getCurrencySymbol } from '../../utils/currencies';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ImageLightbox from '../common/ImageLightbox';
+import Modal from '../common/Modal';
 import { formatDuration, formatTotalDuration } from '../../utils/formatDuration';
 import getInitial from '../../utils/getInitial';
 import ErrorMessage from '../common/ErrorMessage';
@@ -870,20 +871,15 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
       </div>
 
       {/* Gig Detail Modal */}
-      {selectedEntry && (
-        <div
-          className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50"
-          onClick={() => setSelectedEntry(null)}
-        >
-          <div
-            className="bg-[var(--color-bg-primary)] rounded-xl w-full max-w-3xl max-h-modal overflow-hidden border border-[var(--color-border)] shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
+      <Modal isOpen={!!selectedEntry} onClose={() => setSelectedEntry(null)} maxWidth="max-w-3xl">
+        {selectedEntry && (
+          <>
             {/* Header */}
-            <div className="relative bg-gradient-to-r from-purple-900/50 to-blue-900/50 p-6">
+            <div className="relative bg-gradient-to-r from-purple-900/50 to-blue-900/50 p-6 rounded-t-lg">
               <button
                 onClick={() => setSelectedEntry(null)}
                 className="absolute top-4 right-4 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl"
+                aria-label="Close"
               >
                 &times;
               </button>
@@ -1216,404 +1212,350 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
 
       {/* Add Gig Modal */}
-      {showAddGig && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-[var(--color-bg-secondary)] rounded-lg w-full max-w-md border border-[var(--color-border)]">
-            <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
-              <h3 className="text-lg font-medium text-[var(--color-text-primary)]">Add Past Gig</h3>
-              <button
-                onClick={() => {
-                  setShowAddGig(false);
-                  setNewGigTitle('');
-                  setNewGigDate('');
-                  setNewGigVenue('');
-                }}
-                className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl"
-              >
-                &times;
-              </button>
-            </div>
-            <form onSubmit={handleCreateGig} className="p-4 space-y-4">
-              <div>
-                <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
-                  Gig Title <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={newGigTitle}
-                  onChange={(e) => setNewGigTitle(e.target.value)}
-                  placeholder="e.g., Ruby Room Show"
-                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)]"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
-                  Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={newGigDate}
-                  onChange={(e) => setNewGigDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)]"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
-                  Venue
-                </label>
-                <input
-                  type="text"
-                  value={newGigVenue}
-                  onChange={(e) => setNewGigVenue(e.target.value)}
-                  placeholder="e.g., The Den"
-                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)]"
-                />
-              </div>
-              <div className="flex gap-2 justify-end pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddGig(false);
-                    setNewGigTitle('');
-                    setNewGigDate('');
-                    setNewGigVenue('');
-                  }}
-                  className="btn btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={uploading || !newGigTitle || !newGigDate}
-                  className="btn btn-primary"
-                >
-                  {uploading ? 'Adding...' : 'Add Gig'}
-                </button>
-              </div>
-            </form>
+      <Modal isOpen={showAddGig} onClose={() => {
+        setShowAddGig(false);
+        setNewGigTitle('');
+        setNewGigDate('');
+        setNewGigVenue('');
+      }} title="Add Past Gig">
+        <form onSubmit={handleCreateGig} className="p-6 pt-0 space-y-4">
+          <div>
+            <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
+              Gig Title <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={newGigTitle}
+              onChange={(e) => setNewGigTitle(e.target.value)}
+              placeholder="e.g., Ruby Room Show"
+              className="modal-input"
+              required
+            />
           </div>
-        </div>
-      )}
+          <div>
+            <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
+              Date <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              value={newGigDate}
+              onChange={(e) => setNewGigDate(e.target.value)}
+              className="modal-input"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
+              Venue
+            </label>
+            <input
+              type="text"
+              value={newGigVenue}
+              onChange={(e) => setNewGigVenue(e.target.value)}
+              placeholder="e.g., The Den"
+              className="modal-input"
+            />
+          </div>
+          <div className="flex gap-2 justify-end pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                setShowAddGig(false);
+                setNewGigTitle('');
+                setNewGigDate('');
+                setNewGigVenue('');
+              }}
+              className="btn btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={uploading || !newGigTitle || !newGigDate}
+              className="btn btn-primary"
+            >
+              {uploading ? 'Adding...' : 'Add Gig'}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Add Media Modal */}
-      {showAddMedia && selectedGig && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]">
-          <div className="bg-[var(--color-bg-secondary)] rounded-lg w-full max-w-md border border-[var(--color-border)]">
-            <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
-              <h3 className="text-lg font-medium text-[var(--color-text-primary)]">Add Media</h3>
-              <button
-                onClick={() => {
-                  setShowAddMedia(false);
-                  setMediaUrl('');
-                  setMediaCaption('');
-                }}
-                className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl"
-              >
-                &times;
-              </button>
+      <Modal isOpen={showAddMedia && !!selectedGig} onClose={() => {
+        setShowAddMedia(false);
+        setMediaUrl('');
+        setMediaCaption('');
+      }} title="Add Media">
+        <div className="p-6 pt-0 space-y-4">
+          {/* Upload Files with Drag & Drop */}
+          <div>
+            <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
+              Upload Images or Videos
+            </label>
+            <label
+              className={`block border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                dragActive
+                  ? 'border-blue-500 bg-blue-500/10'
+                  : 'border-[var(--color-border)] hover:border-[var(--color-text-muted)]'
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <div className="text-3xl mb-2">{dragActive ? '\uD83D\uDCE5' : '\uD83D\uDCF7'}</div>
+              <span className="text-[var(--color-text-secondary)] text-sm">
+                {uploadProgress || (uploading ? 'Uploading...' : dragActive ? 'Drop files here' : 'Drag & drop files here, or click to browse')}
+              </span>
+              <input
+                type="file"
+                accept="image/*,video/*"
+                multiple
+                onChange={handleFileUpload}
+                disabled={uploading}
+                className="hidden"
+              />
+            </label>
+            <p className="text-[var(--color-text-muted)] text-xs mt-1">Max 50MB per file. Select multiple files at once.</p>
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[var(--color-border)]"></div>
             </div>
-            <div className="p-4 space-y-4">
-              {/* Upload Files with Drag & Drop */}
-              <div>
-                <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
-                  Upload Images or Videos
-                </label>
-                <label
-                  className={`block border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-                    dragActive
-                      ? 'border-blue-500 bg-blue-500/10'
-                      : 'border-[var(--color-border)] hover:border-[var(--color-text-muted)]'
-                  }`}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                >
-                  <div className="text-3xl mb-2">{dragActive ? '\uD83D\uDCE5' : '\uD83D\uDCF7'}</div>
-                  <span className="text-[var(--color-text-secondary)] text-sm">
-                    {uploadProgress || (uploading ? 'Uploading...' : dragActive ? 'Drop files here' : 'Drag & drop files here, or click to browse')}
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/*,video/*"
-                    multiple
-                    onChange={handleFileUpload}
-                    disabled={uploading}
-                    className="hidden"
-                  />
-                </label>
-                <p className="text-[var(--color-text-muted)] text-xs mt-1">Max 50MB per file. Select multiple files at once.</p>
-              </div>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-[var(--color-border)]"></div>
-                </div>
-                <div className="relative flex justify-center">
-                  <span className="bg-[var(--color-bg-secondary)] px-2 text-[var(--color-text-muted)] text-sm">or add a link</span>
-                </div>
-              </div>
-
-              {/* Add URL */}
-              <form onSubmit={handleAddUrl}>
-                <div className="mb-3">
-                  <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
-                    URL (YouTube, image link, etc.)
-                  </label>
-                  <input
-                    type="url"
-                    value={mediaUrl}
-                    onChange={(e) => setMediaUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)]"
-                  />
-                </div>
-                <div className="mb-3">
-                  <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
-                    Caption (optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={mediaCaption}
-                    onChange={(e) => setMediaCaption(e.target.value)}
-                    placeholder="Add a caption..."
-                    className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)]"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={!mediaUrl || uploading}
-                  className="btn bg-green-600 hover:bg-green-700 text-white w-full"
-                >
-                  {uploading ? 'Adding...' : 'Add Link'}
-                </button>
-              </form>
+            <div className="relative flex justify-center">
+              <span className="bg-[var(--color-modal-bg)] px-2 text-[var(--color-text-muted)] text-sm">or add a link</span>
             </div>
           </div>
+
+          {/* Add URL */}
+          <form onSubmit={handleAddUrl}>
+            <div className="mb-3">
+              <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
+                URL (YouTube, image link, etc.)
+              </label>
+              <input
+                type="url"
+                value={mediaUrl}
+                onChange={(e) => setMediaUrl(e.target.value)}
+                placeholder="https://..."
+                className="modal-input"
+              />
+            </div>
+            <div className="mb-3">
+              <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
+                Caption (optional)
+              </label>
+              <input
+                type="text"
+                value={mediaCaption}
+                onChange={(e) => setMediaCaption(e.target.value)}
+                placeholder="Add a caption..."
+                className="modal-input"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={!mediaUrl || uploading}
+              className="btn bg-green-600 hover:bg-green-700 text-white w-full"
+            >
+              {uploading ? 'Adding...' : 'Add Link'}
+            </button>
+          </form>
         </div>
-      )}
+      </Modal>
 
       {/* Edit Performers Modal */}
-      {showEditPerformers && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]">
-          <div className="bg-[var(--color-bg-secondary)] rounded-lg w-full max-w-md border border-[var(--color-border)]">
-            <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
-              <h3 className="text-lg font-medium text-[var(--color-text-primary)]">Who Played This Gig?</h3>
-              <button
-                onClick={() => setShowEditPerformers(false)}
-                className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl"
-              >
-                &times;
-              </button>
+      <Modal isOpen={showEditPerformers} onClose={() => setShowEditPerformers(false)} title="Who Played This Gig?">
+        <div className="p-6 pt-0">
+          {bandMembers.length === 0 ? (
+            <div className="text-center py-6 text-[var(--color-text-muted)]">
+              <p className="mb-2">No band members found.</p>
+              <p className="text-sm">Add band members in Settings first.</p>
             </div>
-            <div className="p-4">
-              {bandMembers.length === 0 ? (
-                <div className="text-center py-6 text-[var(--color-text-muted)]">
-                  <p className="mb-2">No band members found.</p>
-                  <p className="text-sm">Add band members in Settings first.</p>
-                </div>
-              ) : (
-                <>
-                {/* Quick-add current members button */}
-                {(() => {
-                  const currentMemberIds = bandMembers
-                    .filter(m => !m.isGuest && m.stints?.some(s => !s.endDate))
-                    .map(m => m.id);
-                  const allCurrentSelected = currentMemberIds.every(id => selectedPerformerIds.includes(id));
-                  return currentMemberIds.length > 0 && !allCurrentSelected ? (
-                    <button
-                      onClick={() => {
-                        setSelectedPerformerIds(prev => {
-                          const newIds = new Set([...prev, ...currentMemberIds]);
-                          return [...newIds];
-                        });
-                      }}
-                      className="w-full mb-3 py-2 px-3 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/50 rounded-lg text-purple-300 text-sm transition-colors"
-                    >
-                      + Add all current members ({currentMemberIds.length})
-                    </button>
-                  ) : null;
-                })()}
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {[...bandMembers]
-                    .sort((a, b) => {
-                      // Current members first (non-guest with stint without endDate)
-                      const aIsCurrent = !a.isGuest && (a.stints?.some(s => !s.endDate) || false);
-                      const bIsCurrent = !b.isGuest && (b.stints?.some(s => !s.endDate) || false);
-                      if (aIsCurrent && !bIsCurrent) return -1;
-                      if (!aIsCurrent && bIsCurrent) return 1;
-                      // Then sort by name
-                      return a.name.localeCompare(b.name);
-                    })
-                    .map(member => {
-                    const instruments = [...new Set(member.stints?.flatMap(s => s.instruments || (s.instrument ? [s.instrument] : [])) || [])];
-                    const isFormer = member.stints?.length > 0 && member.stints.every(s => s.endDate);
-                    return (
-                    <label
-                      key={member.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedPerformerIds.includes(member.id)
-                          ? 'bg-purple-600/20 border border-purple-500'
-                          : 'bg-[var(--color-bg-primary)] border border-[var(--color-border)] hover:border-[var(--color-text-muted)]'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedPerformerIds.includes(member.id)}
-                        onChange={() => togglePerformer(member.id)}
-                        className="w-5 h-5 rounded border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-purple-500 focus:ring-purple-500"
-                      />
-                      {member.imageUrl ? (
-                        <img
-                          src={member.imageUrl}
-                          alt={member.name}
-                          className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center text-[var(--color-text-primary)] font-medium flex-shrink-0">
-                          {getInitial(member.name)}
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[var(--color-text-primary)] font-medium">{member.name}</span>
-                          {member.isGuest && (
-                            <span className="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-300 rounded">Guest</span>
-                          )}
-                        </div>
-                        <div className="text-[var(--color-text-muted)] text-sm">
-                          {instruments.length > 0 ? instruments.join(', ') : (member.isGuest ? 'Guest musician' : 'Unknown')}
-                        </div>
-                      </div>
-                      {isFormer && (
-                        <span className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-tertiary)] px-2 py-0.5 rounded">Former</span>
-                      )}
-                    </label>
-                    );
-                  })}
-                </div>
-                </>
-              )}
-              <div className="flex gap-2 justify-end mt-4 pt-4 border-t border-[var(--color-border)]">
+          ) : (
+            <>
+            {/* Quick-add current members button */}
+            {(() => {
+              const currentMemberIds = bandMembers
+                .filter(m => !m.isGuest && m.stints?.some(s => !s.endDate))
+                .map(m => m.id);
+              const allCurrentSelected = currentMemberIds.every(id => selectedPerformerIds.includes(id));
+              return currentMemberIds.length > 0 && !allCurrentSelected ? (
                 <button
-                  type="button"
-                  onClick={() => setShowEditPerformers(false)}
-                  className="btn btn-secondary"
+                  onClick={() => {
+                    setSelectedPerformerIds(prev => {
+                      const newIds = new Set([...prev, ...currentMemberIds]);
+                      return [...newIds];
+                    });
+                  }}
+                  className="w-full mb-3 py-2 px-3 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/50 rounded-lg text-purple-300 text-sm transition-colors"
                 >
-                  Cancel
+                  + Add all current members ({currentMemberIds.length})
                 </button>
-                <button
-                  onClick={handleSavePerformers}
-                  disabled={uploading}
-                  className="btn bg-purple-600 hover:bg-purple-700 text-white"
+              ) : null;
+            })()}
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {[...bandMembers]
+                .sort((a, b) => {
+                  const aIsCurrent = !a.isGuest && (a.stints?.some(s => !s.endDate) || false);
+                  const bIsCurrent = !b.isGuest && (b.stints?.some(s => !s.endDate) || false);
+                  if (aIsCurrent && !bIsCurrent) return -1;
+                  if (!aIsCurrent && bIsCurrent) return 1;
+                  return a.name.localeCompare(b.name);
+                })
+                .map(member => {
+                const instruments = [...new Set(member.stints?.flatMap(s => s.instruments || (s.instrument ? [s.instrument] : [])) || [])];
+                const isFormer = member.stints?.length > 0 && member.stints.every(s => s.endDate);
+                return (
+                <label
+                  key={member.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                    selectedPerformerIds.includes(member.id)
+                      ? 'bg-purple-600/20 border border-purple-500'
+                      : 'bg-[var(--color-bg-primary)] border border-[var(--color-border)] hover:border-[var(--color-text-muted)]'
+                  }`}
                 >
-                  {uploading ? 'Saving...' : 'Save'}
-                </button>
-              </div>
+                  <input
+                    type="checkbox"
+                    checked={selectedPerformerIds.includes(member.id)}
+                    onChange={() => togglePerformer(member.id)}
+                    className="w-5 h-5 rounded border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-purple-500 focus:ring-purple-500"
+                  />
+                  {member.imageUrl ? (
+                    <img
+                      src={member.imageUrl}
+                      alt={member.name}
+                      className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center text-[var(--color-text-primary)] font-medium flex-shrink-0">
+                      {getInitial(member.name)}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[var(--color-text-primary)] font-medium">{member.name}</span>
+                      {member.isGuest && (
+                        <span className="px-1.5 py-0.5 text-xs bg-purple-600/30 text-purple-300 rounded">Guest</span>
+                      )}
+                    </div>
+                    <div className="text-[var(--color-text-muted)] text-sm">
+                      {instruments.length > 0 ? instruments.join(', ') : (member.isGuest ? 'Guest musician' : 'Unknown')}
+                    </div>
+                  </div>
+                  {isFormer && (
+                    <span className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-tertiary)] px-2 py-0.5 rounded">Former</span>
+                  )}
+                </label>
+                );
+              })}
             </div>
+            </>
+          )}
+          <div className="flex gap-2 justify-end mt-4 pt-4 border-t border-[var(--color-border)]">
+            <button
+              type="button"
+              onClick={() => setShowEditPerformers(false)}
+              className="btn btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSavePerformers}
+              disabled={uploading}
+              className="btn bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              {uploading ? 'Saving...' : 'Save'}
+            </button>
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* Edit Details Modal */}
-      {showEditDetails && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]">
-          <div className="bg-[var(--color-bg-secondary)] rounded-lg w-full max-w-md border border-[var(--color-border)]">
-            <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
-              <h3 className="text-lg font-medium text-[var(--color-text-primary)]">Edit Gig Details</h3>
+      <Modal isOpen={showEditDetails} onClose={() => setShowEditDetails(false)} title="Edit Gig Details">
+        <div className="p-6 pt-0 space-y-4">
+          <div>
+            <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
+              Name
+            </label>
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              placeholder="Gig name"
+              className="modal-input"
+            />
+          </div>
+          <div>
+            <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
+              Date
+            </label>
+            <input
+              type="date"
+              value={editDate}
+              onChange={(e) => setEditDate(e.target.value)}
+              className="modal-input"
+            />
+          </div>
+          <div>
+            <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
+              Fee ({getCurrencySymbol(workspace?.currency)})
+            </label>
+            <input
+              type="number"
+              value={editFee}
+              onChange={(e) => setEditFee(e.target.value)}
+              placeholder="0.00"
+              step="0.01"
+              min="0"
+              className="modal-input"
+            />
+          </div>
+          <div>
+            <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
+              Notes
+            </label>
+            <textarea
+              value={editNotes}
+              onChange={(e) => setEditNotes(e.target.value)}
+              placeholder="Add notes about the gig..."
+              rows={4}
+              className="modal-input resize-none"
+            />
+          </div>
+          <div className="flex gap-2 justify-between pt-2">
+            <button
+              type="button"
+              onClick={() => setShowDeleteGigConfirm(true)}
+              disabled={uploading}
+              className="btn bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete Gig
+            </button>
+            <div className="flex gap-2">
               <button
+                type="button"
                 onClick={() => setShowEditDetails(false)}
-                className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl"
+                className="btn btn-secondary"
               >
-                &times;
+                Cancel
               </button>
-            </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
-                  Name
-                </label>
-                <input
-                  type="text"
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  placeholder="Gig name"
-                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)]"
-                />
-              </div>
-              <div>
-                <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
-                  Date
-                </label>
-                <input
-                  type="date"
-                  value={editDate}
-                  onChange={(e) => setEditDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)]"
-                />
-              </div>
-              <div>
-                <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
-                  Fee ({getCurrencySymbol(workspace?.currency)})
-                </label>
-                <input
-                  type="number"
-                  value={editFee}
-                  onChange={(e) => setEditFee(e.target.value)}
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0"
-                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)]"
-                />
-              </div>
-              <div>
-                <label className="block text-[var(--color-text-secondary)] text-sm font-medium mb-2">
-                  Notes
-                </label>
-                <textarea
-                  value={editNotes}
-                  onChange={(e) => setEditNotes(e.target.value)}
-                  placeholder="Add notes about the gig..."
-                  rows={4}
-                  className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] resize-none"
-                />
-              </div>
-              <div className="flex gap-2 justify-between pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteGigConfirm(true)}
-                  disabled={uploading}
-                  className="btn bg-red-600 hover:bg-red-700 text-white"
-                >
-                  Delete Gig
-                </button>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowEditDetails(false)}
-                    className="btn btn-secondary"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveDetails}
-                    disabled={uploading}
-                    className="btn bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    {uploading ? 'Saving...' : 'Save'}
-                  </button>
-                </div>
-              </div>
+              <button
+                onClick={handleSaveDetails}
+                disabled={uploading}
+                className="btn bg-green-600 hover:bg-green-700 text-white"
+              >
+                {uploading ? 'Saving...' : 'Save'}
+              </button>
             </div>
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* Image Lightbox */}
       {lightboxImage && (

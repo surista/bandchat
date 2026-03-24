@@ -3,6 +3,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMont
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
+import Modal from '../common/Modal';
 
 const STATUS_COLORS = {
   AVAILABLE: 'bg-green-500',
@@ -342,18 +343,9 @@ function AvailabilityCalendar({ workspaceId, workspace }) {
       </div>
 
       {/* Set Status Modal */}
-      {selectedDate && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
-          onClick={() => setSelectedDate(null)}
-        >
-          <div
-            className="bg-[var(--color-bg-secondary)] rounded-lg p-6 w-full max-w-sm border border-[var(--color-border)]"
-            onClick={e => e.stopPropagation()}
-          >
-            <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">
-              Set Availability
-            </h3>
+      <Modal isOpen={!!selectedDate} onClose={() => setSelectedDate(null)} title="Set Availability" maxWidth="max-w-sm">
+        {selectedDate && (
+          <div className="p-6 pt-0">
             <p className="text-gray-400 mb-4">
               {format(selectedDate, 'EEEE, MMMM d, yyyy')}
             </p>
@@ -402,8 +394,8 @@ function AvailabilityCalendar({ workspaceId, workspace }) {
               Cancel
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }

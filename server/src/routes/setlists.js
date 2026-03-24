@@ -4,6 +4,7 @@ import { isWorkspaceMember } from '../middleware/auth.js';
 import prisma, { USER_SELECT_BRIEF } from '../lib/prisma.js';
 import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
 import { triggerWebsiteSync } from '../services/websiteDeployment.js';
+import { logAudit } from '../lib/audit.js';
 
 const router = express.Router();
 
@@ -268,6 +269,8 @@ router.delete('/:setlistId', authenticate, async (req, res) => {
 
     const io = req.app.get('io');
     io.to(`workspace:${setlist.workspaceId}`).emit('setlist:deleted', { setlistId: req.params.setlistId });
+
+    logAudit('setlist.deleted', { actorId: req.user.id, targetId: req.params.setlistId, metadata: { name: setlist.name } });
 
     res.json({ message: 'Setlist deleted' });
     triggerWebsiteSync(setlist.workspaceId);

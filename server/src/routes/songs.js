@@ -12,6 +12,7 @@ import deezerService from '../services/deezer.js';
 import itunesService from '../services/itunes.js';
 import youtubeService from '../services/youtube.js';
 import spotifyService from '../services/spotify.js';
+import { logAudit } from '../lib/audit.js';
 
 const router = express.Router();
 
@@ -617,6 +618,8 @@ router.delete('/:songId', authenticate, async (req, res) => {
     // Broadcast deletion
     const io = req.app.get('io');
     io.to(`workspace:${song.workspaceId}`).emit('song:deleted', { songId: req.params.songId });
+
+    logAudit('song.deleted', { actorId: req.user.id, targetId: req.params.songId, metadata: { title: song.title } });
 
     res.json({ message: 'Song deleted' });
     triggerWebsiteSync(song.workspaceId);

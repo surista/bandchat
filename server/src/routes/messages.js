@@ -7,6 +7,7 @@ import { deleteFile, isR2Url } from '../lib/storage.js';
 import { safeDecrementStorage } from './uploads.js';
 import { sendPushToUser } from './push.js';
 import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
+import { logAudit } from '../lib/audit.js';
 
 // L7: Allowed attachment types and size limits for validation
 const ALLOWED_ATTACHMENT_TYPES = ['IMAGE', 'AUDIO', 'VIDEO', 'DOCUMENT'];
@@ -684,6 +685,8 @@ router.delete('/:messageId', authenticate, async (req, res) => {
       parentId: message.parentId
     });
 
+    logAudit('message.deleted', { actorId: req.user.id, targetId: req.params.messageId });
+
     res.json({ message: 'Message deleted' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete message' });
@@ -1089,6 +1092,8 @@ router.post('/:messageId/pin', authenticate, async (req, res) => {
     const io = req.app.get('io');
     io.to(`channel:${message.channelId}`).emit('message:pinned', pinnedMessage);
 
+    logAudit('message.pinned', { actorId: req.user.id, targetId: req.params.messageId, metadata: { channelId: message.channelId } });
+
     res.status(201).json(pinnedMessage);
   } catch (error) {
     console.error('Pin message error:', error);
@@ -1145,6 +1150,8 @@ router.delete('/:messageId/pin', authenticate, async (req, res) => {
       messageId: req.params.messageId,
       channelId: message.channelId
     });
+
+    logAudit('message.unpinned', { actorId: req.user.id, targetId: req.params.messageId });
 
     res.json({ message: 'Message unpinned' });
   } catch (error) {
