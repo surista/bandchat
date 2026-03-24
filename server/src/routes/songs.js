@@ -115,14 +115,23 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
           select: USER_SELECT_BRIEF
         },
         _count: {
-          select: { setlistSongs: true, gigSongs: true }
+          select: { setlistSongs: true, gigSongs: true, attachments: true }
+        },
+        attachments: {
+          where: { type: { startsWith: 'audio' } },
+          select: { id: true },
+          take: 1,
         }
       },
       orderBy: { title: 'asc' },
       take: 500
     });
 
-    res.json(songs);
+    const result = songs.map(({ attachments: audioCheck, ...song }) => ({
+      ...song,
+      hasAudio: audioCheck?.length > 0,
+    }));
+    res.json(result);
   } catch (error) {
     console.error('Get songs error:', error);
     res.status(500).json({ error: 'Failed to get songs' });

@@ -285,9 +285,12 @@ export default function SongListScreen({ navigation, route }) {
         >
           <Text style={[styles.compactNum, { color: colors.textSecondary }]}>{index + 1}</Text>
           <View style={styles.compactInfo}>
-            <Text style={[styles.compactTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-              {item.title}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={[styles.compactTitle, { color: colors.textPrimary, flex: 1 }]} numberOfLines={1}>
+                {item.title}
+              </Text>
+              {item.hasAudio ? <Ionicons name="musical-notes-outline" size={14} color={colors.textSecondary} /> : null}
+            </View>
             {item.artist ? (
               <Text style={[styles.compactArtist, { color: colors.textSecondary }]} numberOfLines={1}>
                 {item.artist}
@@ -332,6 +335,12 @@ export default function SongListScreen({ navigation, route }) {
           {item.key ? <Badge label={`Key: ${item.key}`} color={colors.badgeKey} bgColor={colors.badgeKeyBg} /> : null}
           {item.bpm ? <Badge label={`${item.bpm} BPM`} color={colors.badgeBpm} bgColor={colors.badgeBpmBg} /> : null}
           {item.duration ? <Badge label={formatDuration(item.duration)} color={colors.badgeDuration} bgColor={colors.badgeDurationBg} /> : null}
+          {item.hasAudio ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+              <Ionicons name="musical-notes-outline" size={12} color={colors.textSecondary} />
+              <Text style={{ fontSize: 11, color: colors.textSecondary }}>Audio</Text>
+            </View>
+          ) : null}
         </View>
         {item._count?.setlistSongs > 0 ? (
           <Text style={[styles.setlistCount, { color: colors.textSecondary }]}>

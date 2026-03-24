@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useLayoutEffect } from 'react';
+import { useState, useEffect, useCallback, useLayoutEffect, useRef } from 'react';
 import { isSafeUrl } from '../../utils/urlSafety';
 import {
   View,
@@ -31,41 +31,74 @@ const KEY_SUFFIXES = ['major', 'minor'];
 
 function SongAudioPlayer({ url, filename, colors }) {
   const [playing, setPlaying] = useState(false);
-  const [sound, setSound] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const soundRef = useRef(null);
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
+  const progressBarRef = useRef(null);
 
   useEffect(() => {
-    return () => { sound?.unloadAsync(); };
-  }, [sound]);
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync().catch(() => {});
+        soundRef.current = null;
+      }
+    };
+  }, []);
 
   const togglePlay = async () => {
-    if (playing && sound) {
-      await sound.pauseAsync();
-      setPlaying(false);
-      return;
-    }
-    if (sound) {
-      await sound.playAsync();
-      setPlaying(true);
-      return;
-    }
-    const { sound: newSound } = await Audio.Sound.createAsync(
-      { uri: url },
-      { shouldPlay: true },
-      (status) => {
-        if (status.isLoaded) {
-          setDuration(status.durationMillis || 0);
-          setPosition(status.positionMillis || 0);
-          if (status.didJustFinish) {
-            setPlaying(false);
-            setPosition(0);
+    try {
+      if (playing && soundRef.current) {
+        await soundRef.current.pauseAsync();
+        setPlaying(false);
+        return;
+      }
+      if (soundRef.current) {
+        await soundRef.current.playAsync();
+        setPlaying(true);
+        return;
+      }
+      // Set audio mode so sound plays through speakers (not earpiece)
+      setLoading(true);
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+      });
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: url },
+        { shouldPlay: true, progressUpdateIntervalMillis: 250 },
+        (status) => {
+          if (status.isLoaded) {
+            setDuration(status.durationMillis || 0);
+            setPosition(status.positionMillis || 0);
+            if (status.didJustFinish) {
+              setPlaying(false);
+              setPosition(0);
+            }
           }
         }
-      }
-    );
-    setSound(newSound);
-    setPlaying(true);
+      );
+      soundRef.current = newSound;
+      setPlaying(true);
+    } catch (err) {
+      Alert.alert('Playback Error', err.message || 'Could not play audio');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleScrub = async (evt) => {
+    if (!soundRef.current || duration <= 0) return;
+    progressBarRef.current?.measure((_x, _y, width) => {
+      if (!width) return;
+      const touchX = evt.nativeEvent.locationX;
+      const ratio = Math.max(0, Math.min(1, touchX / width));
+      const newPos = Math.floor(ratio * duration);
+      soundRef.current.setPositionAsync(newPos).catch(() => {});
+      setPosition(newPos);
+    });
   };
 
   const fmt = (ms) => {
@@ -76,33 +109,60 @@ function SongAudioPlayer({ url, filename, colors }) {
   const progress = duration > 0 ? position / duration : 0;
 
   return (
-    <TouchableOpacity
-      style={[songAudioStyles.container, { backgroundColor: colors.bgTertiary }]}
-      onPress={togglePlay}
-      activeOpacity={0.7}
-      accessibilityRole="button"
-      accessibilityLabel={`${playing ? 'Pause' : 'Play'} ${filename}`}
-    >
-      <Ionicons name={playing ? 'pause-circle' : 'play-circle'} size={32} color={colors.primary} />
+    <View style={[songAudioStyles.container, { backgroundColor: colors.bgTertiary }]}>
+      <TouchableOpacity
+        onPress={togglePlay}
+        activeOpacity={0.7}
+        disabled={loading}
+        accessibilityRole="button"
+        accessibilityLabel={`${playing ? 'Pause' : 'Play'} ${filename}`}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color={colors.primary} style={{ width: 32, height: 32 }} />
+        ) : (
+          <Ionicons name={playing ? 'pause-circle' : 'play-circle'} size={32} color={colors.primary} />
+        )}
+      </TouchableOpacity>
       <View style={songAudioStyles.info}>
         <Text style={[songAudioStyles.filename, { color: colors.textPrimary }]} numberOfLines={1}>{filename}</Text>
-        <View style={[songAudioStyles.progressBg, { backgroundColor: colors.border }]}>
-          <View style={[songAudioStyles.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.primary }]} />
+        <TouchableOpacity
+          ref={progressBarRef}
+          onPress={handleScrub}
+          activeOpacity={0.8}
+          style={[songAudioStyles.progressTouchArea]}
+          accessibilityRole="adjustable"
+          accessibilityLabel={`Playback position ${fmt(position)} of ${fmt(duration)}`}
+        >
+          <View style={[songAudioStyles.progressBg, { backgroundColor: colors.border }]}>
+            <View style={[songAudioStyles.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.primary }]} />
+            {duration > 0 && (
+              <View style={[songAudioStyles.scrubHandle, { left: `${progress * 100}%`, backgroundColor: colors.primary }]} />
+            )}
+          </View>
+        </TouchableOpacity>
+        <View style={songAudioStyles.timeRow}>
+          <Text style={[songAudioStyles.time, { color: colors.textSecondary }]}>
+            {fmt(position)}
+          </Text>
+          <Text style={[songAudioStyles.time, { color: colors.textSecondary }]}>
+            {duration > 0 ? fmt(duration) : '--:--'}
+          </Text>
         </View>
-        <Text style={[songAudioStyles.time, { color: colors.textSecondary }]}>
-          {playing ? fmt(position) : fmt(duration)} {duration > 0 ? `/ ${fmt(duration)}` : ''}
-        </Text>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 }
 
 const songAudioStyles = StyleSheet.create({
   container: { flexDirection: 'row', alignItems: 'center', padding: 10, borderRadius: 8, gap: 10 },
   info: { flex: 1 },
-  filename: { fontSize: 13, fontWeight: '600', marginBottom: 4 },
-  progressBg: { height: 3, borderRadius: 1.5, overflow: 'hidden', marginBottom: 2 },
-  progressFill: { height: 3, borderRadius: 1.5 },
+  filename: { fontSize: 13, fontWeight: '600', marginBottom: 6 },
+  progressTouchArea: { paddingVertical: 8 },
+  progressBg: { height: 4, borderRadius: 2, overflow: 'visible', position: 'relative' },
+  progressFill: { height: 4, borderRadius: 2 },
+  scrubHandle: { position: 'absolute', top: -4, width: 12, height: 12, borderRadius: 6, marginLeft: -6 },
+  timeRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
   time: { fontSize: 11, fontVariant: ['tabular-nums'] },
 });
 

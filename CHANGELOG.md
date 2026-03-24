@@ -2,6 +2,15 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.05.84] - 2026-03-25
+
+### Added
+- **Audio indicator on song lists** — Songs with audio attachments show a musical note icon in both card and compact views on web and mobile. Server now returns `hasAudio` flag in song list response.
+- **Scrubbable audio player (mobile)** — Tap anywhere on the progress bar to seek. Visual scrub handle shows current position.
+
+### Fixed
+- **Mobile audio playback** — Song audio attachments now play through speakers instead of earpiece. Added `Audio.setAudioModeAsync` with `playsInSilentModeIOS: true` before loading sound. Added loading spinner and error handling.
+
 ## [1.05.83] - 2026-03-24
 
 ### Fixed
