@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pop Theme — Band Website Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #faf8ff;
+    --card: #ffffff;
+    --text: #1a1a2e;
+    --text-dim: #6b6b8d;
+    --pink: #f637e3;
+    --purple: #7c3aed;
+    --blue: #3b82f6;
+    --gradient: linear-gradient(135deg, #f637e3, #7c3aed, #3b82f6);
+  }
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2.5rem;
+    position: sticky;
+    top: 0;
+    background: rgba(250, 248, 255, 0.9);
+    backdrop-filter: blur(20px);
+    z-index: 10;
+    border-bottom: 1px solid rgba(124, 58, 237, 0.1);
+  }
+  .nav-brand {
+    font-weight: 800;
+    font-size: 1.5rem;
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .nav-links { display: flex; gap: 2rem; list-style: none; }
+  .nav-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover, .nav-links a.active { color: var(--purple); }
+
+  .hero {
+    min-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 4rem 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(246, 55, 227, 0.15) 0%, transparent 70%);
+    top: -100px;
+    right: -100px;
+    animation: float 8s ease-in-out infinite;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 70%);
+    bottom: -150px;
+    left: -100px;
+    animation: float 10s ease-in-out infinite reverse;
+  }
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(30px, -20px); }
+  }
+  .hero h1 {
+    font-size: clamp(3.5rem, 10vw, 7rem);
+    font-weight: 800;
+    line-height: 1;
+    position: relative;
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero .tagline {
+    font-size: 1.2rem;
+    color: var(--text-dim);
+    margin-top: 1rem;
+    font-weight: 400;
+    position: relative;
+  }
+  .hero .cta-row {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2.5rem;
+    position: relative;
+  }
+  .btn-pop {
+    display: inline-block;
+    padding: 0.85rem 2.2rem;
+    background: var(--gradient);
+    color: #fff;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-decoration: none;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 20px rgba(124, 58, 237, 0.3);
+  }
+  .btn-pop:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(124, 58, 237, 0.4); }
+  .btn-light {
+    display: inline-block;
+    padding: 0.85rem 2.2rem;
+    background: var(--card);
+    color: var(--purple);
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-decoration: none;
+    border: 2px solid rgba(124, 58, 237, 0.2);
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-light:hover { border-color: var(--purple); background: rgba(124, 58, 237, 0.05); }
+
+  .next-show {
+    max-width: 600px;
+    margin: -2rem auto 4rem;
+    background: var(--card);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 8px 40px rgba(124, 58, 237, 0.08);
+    border: 1px solid rgba(124, 58, 237, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    position: relative;
+  }
+  .next-show .badge {
+    background: var(--gradient);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 20px;
+    position: absolute;
+    top: -10px;
+    left: 24px;
+  }
+  .next-show h3 { font-size: 1.3rem; font-weight: 700; }
+  .next-show .date { color: var(--text-dim); font-size: 0.9rem; margin-top: 0.2rem; }
+
+  .about {
+    max-width: 600px;
+    margin: 0 auto 5rem;
+    padding: 0 2rem;
+    text-align: center;
+  }
+  .about h2 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .about p {
+    line-height: 1.8;
+    color: var(--text-dim);
+    font-size: 1.05rem;
+  }
+
+  footer {
+    border-top: 1px solid rgba(124, 58, 237, 0.1);
+    padding: 2.5rem;
+    text-align: center;
+    background: var(--card);
+  }
+  .social-links { display: flex; justify-content: center; gap: 2rem; margin-bottom: 1rem; }
+  .social-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: color 0.2s;
+  }
+  .social-links a:hover { color: var(--purple); }
+  footer small { color: var(--text-dim); font-size: 0.8rem; }
+
+  @media (max-width: 640px) {
+    .hero .cta-row { flex-direction: column; }
+    .next-show { flex-direction: column; align-items: flex-start; margin: -1rem 1rem 3rem; }
+  }
+</style>
+</head>
+<body>
+  <nav>
+    <div class="nav-brand">Prism</div>
+    <ul class="nav-links">
+      <li><a href="#" class="active">Home</a></li>
+      <li><a href="#">Shows</a></li>
+      <li><a href="#">Songs</a></li>
+      <li><a href="#">About</a></li>
+      <li><a href="#">Contact</a></li>
+    </ul>
+  </nav>
+
+  <section class="hero">
+    <h1>Prism</h1>
+    <p class="tagline">Feel-good music for unforgettable nights</p>
+    <div class="cta-row">
+      <a href="#" class="btn-pop">See Our Shows</a>
+      <a href="#" class="btn-light">Meet The Band</a>
+    </div>
+  </section>
+
+  <div class="next-show">
+    <span class="badge">Next Show</span>
+    <div>
+      <h3>Ageha Lounge</h3>
+      <p class="date">Saturday, April 19 &middot; 8PM &middot; Shin-Kiba</p>
+    </div>
+    <a href="#" class="btn-pop">Details</a>
+  </div>
+
+  <section class="about">
+    <h2>About Us</h2>
+    <p>We're Prism &mdash; four friends who believe music should make you move, smile, and sing along. Blending infectious pop hooks with live energy, every show is a party. From intimate venues to festival stages, we bring the colour.</p>
+  </section>
+
+  <footer>
+    <div class="social-links">
+      <a href="#">Instagram</a>
+      <a href="#">TikTok</a>
+      <a href="#">Spotify</a>
+      <a href="#">YouTube</a>
+    </div>
+    <small>Powered by BandChat</small>
+  </footer>
+</body>
+</html>

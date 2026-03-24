@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 import { sendPushToUser } from './push.js';
 
@@ -73,7 +74,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 });
 
 // Create a poll
-router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
+router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMember, async (req, res) => {
   try {
     const { question, description, options, allowMultiple, isAnonymous, channelId, expiresAt } = req.body;
 

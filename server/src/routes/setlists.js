@@ -1,6 +1,6 @@
 import express from 'express';
-import { authenticate } from '../middleware/auth.js';
-import { isWorkspaceMember } from '../middleware/auth.js';
+import { authenticate, isWorkspaceMember } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma, { USER_SELECT_BRIEF } from '../lib/prisma.js';
 import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
 import { triggerWebsiteSync } from '../services/websiteDeployment.js';
@@ -55,7 +55,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 });
 
 // Create a setlist
-router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
+router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMember, async (req, res) => {
   try {
     const { name, description, useShortNames, performedAt, venue, startTime } = req.body;
 

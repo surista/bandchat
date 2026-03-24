@@ -62,6 +62,7 @@ model User {
   stagePlots         StagePlot[]
   venues             Venue[]
   AuditLog           AuditLog[]
+  mentions           Mention[]
 
   @@index([isSystemAdmin])
   @@index([authProvider])
@@ -244,6 +245,7 @@ model Message {
   pinnedMessages PinnedMessage[]
   savedMessages  SavedMessage[]
   reports        Report[]
+  mentions       Mention[]
 
   @@index([channelId, createdAt])
   @@index([parentId])
@@ -1043,4 +1045,17 @@ model AuditLog {
   @@index([action])
   @@index([actorId])
   @@index([createdAt])
+}
+
+model Mention {
+  id        String   @id @default(uuid())
+  userId    String
+  messageId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, messageId])
+  @@index([userId, createdAt])
 }

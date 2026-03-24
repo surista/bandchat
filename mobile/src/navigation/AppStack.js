@@ -49,6 +49,7 @@ import SavedMessagesScreen from '../screens/workspace/SavedMessagesScreen';
 import SearchScreen from '../screens/workspace/SearchScreen';
 import ChannelSettingsScreen from '../screens/workspace/ChannelSettingsScreen';
 import MessagesTimelineScreen from '../screens/workspace/TimelineScreen';
+import ActivityScreen from '../screens/workspace/ActivityScreen';
 import ShareReceiveScreen from '../screens/share/ShareReceiveScreen';
 import { useTheme } from '../context/ThemeContext';
 
@@ -161,6 +162,7 @@ export default function AppStack() {
       <Stack.Screen name="PinnedMessages" component={PinnedMessagesScreen} options={{ title: 'Pinned Messages' }} />
       <Stack.Screen name="SavedMessages" component={SavedMessagesScreen} options={{ title: 'Saved Messages' }} />
       <Stack.Screen name="MessagesTimeline" component={MessagesTimelineScreen} options={{ title: 'All Messages' }} />
+      <Stack.Screen name="Activity" component={ActivityScreen} options={{ title: 'Activity' }} />
       <Stack.Screen name="ChannelSettings" component={ChannelSettingsScreen} options={{ title: 'Channel Settings' }} />
 
       {/* Share Extension */}

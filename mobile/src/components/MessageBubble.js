@@ -574,11 +574,12 @@ function renderReactions(reactions, colors, messageId, onReactionPress) {
 }
 
 function LeftAction({ drag }) {
+  const { colors } = useTheme();
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: interpolate(drag.value, [0, 60], [-60, 0], 'clamp') }],
   }));
   return (
-    <Reanimated.View style={[swipeStyles.leftAction, animatedStyle]}>
+    <Reanimated.View style={[swipeStyles.leftAction, { backgroundColor: colors.primary }, animatedStyle]}>
       <Text style={swipeStyles.actionIcon}>{'\uD83D\uDCAC'}</Text>
       <Text style={swipeStyles.actionLabel}>Reply</Text>
     </Reanimated.View>
@@ -602,7 +603,6 @@ const swipeStyles = StyleSheet.create({
     width: 60,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#3b82f6',
     borderTopLeftRadius: 8,
     borderBottomLeftRadius: 8,
   },

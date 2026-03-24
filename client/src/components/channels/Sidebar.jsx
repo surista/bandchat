@@ -1,3 +1,4 @@
+/* global __APP_VERSION__ */
 /**
  * @fileoverview Sidebar navigation component.
  * Contains channels, direct messages, band features, members list, and settings.
@@ -715,6 +716,15 @@ function Sidebar({
             >
               <span className="text-gray-400">💬</span>
               <span className="flex-1 truncate">All Messages</span>
+            </button>
+
+            {/* Activity shortcut */}
+            <button
+              onClick={() => onSelectBandView?.('activity')}
+              className={`channel-item w-full mx-2 mb-1 ${activeBandView === 'activity' ? 'active' : ''}`}
+            >
+              <span className="text-gray-400">🔔</span>
+              <span className="flex-1 truncate">Activity</span>
             </button>
 
             {/* Saved Messages shortcut */}

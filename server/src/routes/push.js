@@ -3,6 +3,7 @@ import webpush from 'web-push';
 import { Expo } from 'expo-server-sdk';
 import prisma from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimit.js';
 
 const expo = new Expo();
 
@@ -26,7 +27,7 @@ router.get('/vapid-key', (req, res) => {
 });
 
 // Subscribe to push notifications
-router.post('/subscribe', authenticate, async (req, res) => {
+router.post('/subscribe', authenticate, apiLimiter, async (req, res) => {
   try {
     const { endpoint, keys } = req.body;
 

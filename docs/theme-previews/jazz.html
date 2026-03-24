@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jazz Theme — Band Website Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Josefin+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0b1021;
+    --bg-card: #111730;
+    --text: #d4cfc4;
+    --text-dim: #6b7394;
+    --gold: #c9a84c;
+    --gold-dim: #8b7533;
+    --cream: #f0e8d4;
+  }
+  body {
+    font-family: 'Josefin Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 80%, rgba(201, 168, 76, 0.04) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(201, 168, 76, 0.03) 0%, transparent 50%);
+  }
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.2rem 3rem;
+    position: sticky;
+    top: 0;
+    background: rgba(11, 16, 33, 0.95);
+    backdrop-filter: blur(12px);
+    z-index: 10;
+    border-bottom: 1px solid rgba(201, 168, 76, 0.15);
+  }
+  .nav-brand {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: var(--gold);
+    letter-spacing: 3px;
+  }
+  .nav-links { display: flex; gap: 2.2rem; list-style: none; }
+  .nav-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-weight: 300;
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: color 0.3s;
+  }
+  .nav-links a:hover, .nav-links a.active { color: var(--gold); }
+
+  .hero {
+    min-height: 82vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 4rem 2rem;
+    position: relative;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px;
+    height: 300px;
+    border: 1px solid rgba(201, 168, 76, 0.1);
+    border-radius: 50%;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 450px;
+    height: 450px;
+    border: 1px solid rgba(201, 168, 76, 0.05);
+    border-radius: 50%;
+  }
+  .hero .kicker {
+    font-size: 0.8rem;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+  .hero h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(4rem, 11vw, 8rem);
+    font-weight: 700;
+    letter-spacing: 6px;
+    line-height: 0.95;
+    color: var(--cream);
+    position: relative;
+  }
+  .hero .tagline {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 1.3rem;
+    color: var(--gold);
+    margin-top: 1.5rem;
+    position: relative;
+  }
+  .divider {
+    width: 60px;
+    height: 1px;
+    background: var(--gold);
+    margin: 2rem auto;
+    position: relative;
+  }
+  .divider::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 7px;
+    height: 7px;
+    background: var(--gold);
+    border-radius: 50%;
+  }
+
+  .next-show {
+    max-width: 620px;
+    margin: 0 auto 5rem;
+    background: var(--bg-card);
+    border: 1px solid rgba(201, 168, 76, 0.15);
+    border-radius: 2px;
+    padding: 2.5rem;
+    text-align: center;
+    position: relative;
+  }
+  .next-show .label {
+    font-size: 0.7rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1rem;
+    display: block;
+  }
+  .next-show h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--cream);
+    letter-spacing: 2px;
+  }
+  .next-show .date {
+    color: var(--text-dim);
+    margin-top: 0.5rem;
+    font-weight: 300;
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+  }
+  .btn-gold {
+    display: inline-block;
+    margin-top: 1.5rem;
+    padding: 0.7rem 2.5rem;
+    background: transparent;
+    color: var(--gold);
+    font-family: 'Josefin Sans', sans-serif;
+    font-weight: 400;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    text-decoration: none;
+    border: 1px solid var(--gold);
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  .btn-gold:hover { background: var(--gold); color: var(--bg); }
+
+  .about {
+    max-width: 600px;
+    margin: 0 auto 5rem;
+    padding: 0 2rem;
+    text-align: center;
+  }
+  .about h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.2rem;
+    font-weight: 600;
+    color: var(--cream);
+    letter-spacing: 3px;
+    margin-bottom: 0.5rem;
+  }
+  .about p {
+    font-family: 'Cormorant Garamond', serif;
+    line-height: 2;
+    color: var(--text-dim);
+    font-size: 1.1rem;
+    font-weight: 400;
+  }
+
+  footer {
+    border-top: 1px solid rgba(201, 168, 76, 0.12);
+    padding: 3rem;
+    text-align: center;
+  }
+  .social-links { display: flex; justify-content: center; gap: 2.5rem; margin-bottom: 1.5rem; }
+  .social-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-weight: 300;
+    font-size: 0.8rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    transition: color 0.3s;
+  }
+  .social-links a:hover { color: var(--gold); }
+  footer small { color: var(--text-dim); font-size: 0.75rem; letter-spacing: 1px; }
+
+  @media (max-width: 640px) {
+    nav { padding: 1rem 1.5rem; }
+    .nav-links { gap: 1.2rem; }
+    .nav-links a { font-size: 0.75rem; letter-spacing: 1px; }
+    .next-show { margin: 0 1rem 4rem; padding: 2rem; }
+  }
+</style>
+</head>
+<body>
+  <nav>
+    <div class="nav-brand">Velvet Hour</div>
+    <ul class="nav-links">
+      <li><a href="#" class="active">Home</a></li>
+      <li><a href="#">Shows</a></li>
+      <li><a href="#">Songs</a></li>
+      <li><a href="#">About</a></li>
+      <li><a href="#">Contact</a></li>
+    </ul>
+  </nav>
+
+  <section class="hero">
+    <p class="kicker">Live Jazz in Tokyo</p>
+    <h1>Velvet<br>Hour</h1>
+    <p class="tagline">Where the night finds its voice</p>
+  </section>
+
+  <div class="divider"></div>
+
+  <div class="next-show">
+    <span class="label">Next Performance</span>
+    <h3>Blue Note Tokyo</h3>
+    <p class="date">Thursday, April 17 &middot; First Set 7:30 PM</p>
+    <a href="#" class="btn-gold">Reserve</a>
+  </div>
+
+  <section class="about">
+    <h2>About</h2>
+    <div class="divider"></div>
+    <p>A quintet drawn together by a shared love of the standards and a restless need to push them somewhere new. Velvet Hour has been a fixture of Tokyo's jazz scene since 2021 &mdash; from intimate club dates at Cotton Club to late-night sessions at JBS Shimokitazawa, we play for the room and the moment.</p>
+  </section>
+
+  <footer>
+    <div class="social-links">
+      <a href="#">Instagram</a>
+      <a href="#">YouTube</a>
+      <a href="#">Spotify</a>
+    </div>
+    <small>Powered by BandChat</small>
+  </footer>
+</body>
+</html>

@@ -112,7 +112,7 @@ function AllMessages({ workspaceId, onSelectChannel }) {
       {messages.map(msg => (
         <button
           key={msg.id}
-          onClick={() => onSelectChannel?.(msg.channel?.id)}
+          onClick={() => onSelectChannel?.(msg.channel?.id, msg.parentId ? { threadId: msg.parentId } : undefined)}
           className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-[var(--color-bg-tertiary)] transition-colors group"
         >
           <div className="flex items-start gap-3">
@@ -132,19 +132,32 @@ function AllMessages({ workspaceId, onSelectChannel }) {
                 <span className="font-medium text-sm text-[var(--color-text-primary)]">
                   {msg.author?.displayName || msg.removedUserName || 'Unknown'}
                 </span>
-                <span className="text-xs text-[var(--color-text-muted)]">
-                  {msg.channel?.isDirect
-                    ? `DM with ${getDmDisplayName(msg.channel, user?.id)}`
-                    : `in #${msg.channel?.name || 'unknown'}`}
-                </span>
+                {msg.parentId && msg.parent ? (
+                  <span className="text-xs text-[var(--color-text-muted)]">
+                    replied to {msg.parent.author?.displayName || 'someone'} in {msg.channel?.isDirect
+                      ? `DM with ${getDmDisplayName(msg.channel, user?.id)}`
+                      : `#${msg.channel?.name || 'unknown'}`}
+                  </span>
+                ) : (
+                  <span className="text-xs text-[var(--color-text-muted)]">
+                    {msg.channel?.isDirect
+                      ? `DM with ${getDmDisplayName(msg.channel, user?.id)}`
+                      : `in #${msg.channel?.name || 'unknown'}`}
+                  </span>
+                )}
                 <span className="text-xs text-[var(--color-text-muted)] ml-auto">
                   {formatDate(msg.createdAt)}
                 </span>
               </div>
+              {msg.parentId && msg.parent?.content && (
+                <p className="text-xs text-[var(--color-text-muted)] line-clamp-1 mb-0.5 pl-2 border-l-2 border-[var(--color-border)]">
+                  {msg.parent.content}
+                </p>
+              )}
               <p className="text-sm text-[var(--color-text-secondary)] line-clamp-2">
-                {msg.content || (msg._count?.attachments > 0 ? `📎 ${msg._count.attachments} attachment${msg._count.attachments > 1 ? 's' : ''}` : '')}
+                {msg.content || (msg.attachments?.length > 0 ? `📎 ${msg.attachments.length} attachment${msg.attachments.length > 1 ? 's' : ''}` : '')}
               </p>
-              {msg._count?.replies > 0 && (
+              {!msg.parentId && msg._count?.replies > 0 && (
                 <span className="text-xs text-[var(--color-primary)] mt-0.5 inline-block">
                   {msg._count.replies} {msg._count.replies === 1 ? 'reply' : 'replies'}
                 </span>

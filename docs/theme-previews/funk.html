@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Funk/Soul Theme — Band Website Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Righteous&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #1a0e08;
+    --bg-card: #241610;
+    --text: #f0dcc8;
+    --text-dim: #8a7160;
+    --orange: #e86a17;
+    --gold: #daa520;
+    --brown: #6b3a1f;
+    --cream: #faebd7;
+  }
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    background-image: radial-gradient(ellipse at 50% 0%, rgba(232, 106, 23, 0.06) 0%, transparent 50%);
+  }
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2.5rem;
+    position: sticky;
+    top: 0;
+    background: rgba(26, 14, 8, 0.95);
+    backdrop-filter: blur(10px);
+    z-index: 10;
+    border-bottom: 3px solid var(--orange);
+  }
+  .nav-brand {
+    font-family: 'Righteous', cursive;
+    font-size: 1.6rem;
+    color: var(--orange);
+    letter-spacing: 1px;
+  }
+  .nav-links { display: flex; gap: 2rem; list-style: none; }
+  .nav-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.9rem;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover, .nav-links a.active { color: var(--orange); }
+
+  .hero {
+    min-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 4rem 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    width: 700px;
+    height: 700px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(232, 106, 23, 0.08) 0%, transparent 60%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .hero .disc {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 3px solid var(--orange);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 2rem;
+    position: relative;
+    animation: spin 8s linear infinite;
+  }
+  .hero .disc::after {
+    content: '';
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--orange);
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hero h1 {
+    font-family: 'Righteous', cursive;
+    font-size: clamp(3.5rem, 11vw, 8rem);
+    line-height: 1;
+    color: var(--cream);
+    position: relative;
+  }
+  .hero .tagline {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--orange);
+    margin-top: 1rem;
+    letter-spacing: 2px;
+    position: relative;
+  }
+  .hero .cta-row { display: flex; gap: 1rem; margin-top: 2.5rem; position: relative; }
+  .btn-funk {
+    display: inline-block;
+    padding: 0.85rem 2.2rem;
+    background: var(--orange);
+    color: var(--bg);
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 0.9rem;
+    text-decoration: none;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 20px rgba(232, 106, 23, 0.3);
+  }
+  .btn-funk:hover { transform: scale(1.05); box-shadow: 0 6px 25px rgba(232, 106, 23, 0.4); }
+  .btn-outline-funk {
+    display: inline-block;
+    padding: 0.85rem 2.2rem;
+    background: transparent;
+    color: var(--orange);
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 0.9rem;
+    text-decoration: none;
+    border: 2px solid var(--orange);
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-outline-funk:hover { background: rgba(232, 106, 23, 0.1); }
+
+  .next-show {
+    max-width: 650px;
+    margin: -2rem auto 5rem;
+    background: var(--bg-card);
+    border-radius: 16px;
+    border: 2px solid var(--brown);
+    padding: 2rem 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .next-show::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--orange), var(--gold), var(--orange));
+  }
+  .next-show .badge {
+    background: var(--orange);
+    color: var(--bg);
+    font-weight: 800;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 0.4rem;
+    display: inline-block;
+  }
+  .next-show h3 {
+    font-family: 'Righteous', cursive;
+    font-size: 1.4rem;
+    color: var(--cream);
+  }
+  .next-show .date { color: var(--text-dim); font-size: 0.9rem; margin-top: 0.2rem; }
+
+  .about {
+    max-width: 600px;
+    margin: 0 auto 5rem;
+    padding: 0 2rem;
+    text-align: center;
+  }
+  .about h2 {
+    font-family: 'Righteous', cursive;
+    font-size: 2.2rem;
+    color: var(--cream);
+    margin-bottom: 1rem;
+  }
+  .about p {
+    line-height: 1.9;
+    color: var(--text-dim);
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+
+  footer {
+    border-top: 3px solid var(--brown);
+    padding: 2.5rem;
+    text-align: center;
+  }
+  .social-links { display: flex; justify-content: center; gap: 2rem; margin-bottom: 1rem; }
+  .social-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.85rem;
+    transition: color 0.2s;
+  }
+  .social-links a:hover { color: var(--orange); }
+  footer small { color: var(--brown); font-size: 0.8rem; }
+
+  @media (max-width: 640px) {
+    .hero .cta-row { flex-direction: column; }
+    .hero .disc { width: 80px; height: 80px; }
+    .next-show { flex-direction: column; align-items: flex-start; margin: -1rem 1rem 4rem; }
+  }
+</style>
+</head>
+<body>
+  <nav>
+    <div class="nav-brand">Superbad</div>
+    <ul class="nav-links">
+      <li><a href="#" class="active">Home</a></li>
+      <li><a href="#">Shows</a></li>
+      <li><a href="#">Songs</a></li>
+      <li><a href="#">About</a></li>
+      <li><a href="#">Contact</a></li>
+    </ul>
+  </nav>
+
+  <section class="hero">
+    <div class="disc"></div>
+    <h1>Superbad</h1>
+    <p class="tagline">Get up. Get down. Get funky.</p>
+    <div class="cta-row">
+      <a href="#" class="btn-funk">See Us Live</a>
+      <a href="#" class="btn-outline-funk">Meet The Band</a>
+    </div>
+  </section>
+
+  <div class="next-show">
+    <div>
+      <span class="badge">Next Show</span>
+      <h3>Billboard Live</h3>
+      <p class="date">Friday, April 25 &middot; 9PM &middot; Roppongi</p>
+    </div>
+    <a href="#" class="btn-funk">Details</a>
+  </div>
+
+  <section class="about">
+    <h2>About</h2>
+    <p>Seven musicians. One unstoppable groove. Superbad brings the heat with a wall of horns, slap bass, and vocals that'll make you forget you ever had a bad day. We've been laying it down in Tokyo since 2021 &mdash; James Brown to Stevie Wonder, Chic to Earth, Wind & Fire.</p>
+  </section>
+
+  <footer>
+    <div class="social-links">
+      <a href="#">Instagram</a>
+      <a href="#">YouTube</a>
+      <a href="#">Spotify</a>
+    </div>
+    <small>Powered by BandChat</small>
+  </footer>
+</body>
+</html>

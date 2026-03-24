@@ -117,9 +117,13 @@ export default function TimelineScreen({ navigation, route }) {
   }, [navigation, workspaceId]);
 
   const renderItem = useCallback(({ item: msg }) => {
-    const channelLabel = msg.channel?.isDirect
+    const channelName = msg.channel?.isDirect
       ? `DM with ${msg.author?.displayName || 'User'}`
       : `#${msg.channel?.name || 'unknown'}`;
+    const isThreadReply = !!msg.parentId;
+    const channelLabel = isThreadReply && msg.parent
+      ? `replied to ${msg.parent.author?.displayName || 'someone'} in ${channelName}`
+      : channelName;
 
     return (
       <TouchableOpacity
@@ -127,7 +131,7 @@ export default function TimelineScreen({ navigation, route }) {
         onPress={() => navigateToChannel(msg)}
         activeOpacity={0.7}
         accessibilityRole="button"
-        accessibilityLabel={`Message from ${msg.author?.displayName || 'Unknown'} in ${channelLabel}`}
+        accessibilityLabel={`Message from ${msg.author?.displayName || 'Unknown'} in ${channelName}`}
       >
         <View style={styles.header}>
           <View style={styles.authorRow}>
@@ -153,6 +157,13 @@ export default function TimelineScreen({ navigation, route }) {
             </Text>
           </View>
         </View>
+        {isThreadReply && msg.parent?.content ? (
+          <View style={[styles.threadParent, { borderLeftColor: colors.border }]}>
+            <Text style={[styles.threadParentText, { color: colors.textSecondary }]} numberOfLines={1}>
+              {msg.parent.content}
+            </Text>
+          </View>
+        ) : null}
         {msg.content ? (
           <Text style={[styles.content, { color: colors.textPrimary }]} numberOfLines={3}>
             {msg.content}
@@ -181,7 +192,7 @@ export default function TimelineScreen({ navigation, route }) {
             )}
           </View>
         )}
-        {msg._count?.replies > 0 && (
+        {!isThreadReply && msg._count?.replies > 0 && (
           <Text style={[styles.replyCount, { color: colors.primary }]}>
             {msg._count.replies} {msg._count.replies === 1 ? 'reply' : 'replies'}
           </Text>
@@ -356,6 +367,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     marginTop: 8,
+  },
+  threadParent: {
+    borderLeftWidth: 2,
+    paddingLeft: 8,
+    marginBottom: 4,
+    marginTop: 2,
+  },
+  threadParentText: {
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   footer: {
     paddingVertical: 16,

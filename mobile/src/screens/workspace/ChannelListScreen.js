@@ -903,6 +903,17 @@ export default function ChannelListScreen({ navigation, route }) {
               <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]}>All Messages</Text>
               <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.calendarShortcut}
+              onPress={() => navigation.navigate('Activity', { workspaceId })}
+              activeOpacity={0.6}
+              accessibilityRole="button"
+              accessibilityLabel="Activity"
+            >
+              <Ionicons name="notifications-outline" size={16} color={colors.channelListTextBold} />
+              <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]}>Activity</Text>
+              <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
+            </TouchableOpacity>
           </>
         )}
       </View>

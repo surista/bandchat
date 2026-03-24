@@ -612,6 +612,10 @@ class ApiService {
     return this.request(`/messages/timeline/${workspaceId}${params}`);
   }
 
+  async getActivity(workspaceId) {
+    return this.request(`/messages/activity/${workspaceId}`);
+  }
+
   async searchMessages(workspaceId, query, channelId = null, authorId = null) {
     const params = new URLSearchParams({ q: query });
     if (channelId) params.append('channelId', channelId);

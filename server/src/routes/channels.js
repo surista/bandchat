@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin, isChannelMember } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 import { forceLeaveRoom } from '../socket/handlers.js';
 import { logAudit } from '../lib/audit.js';
@@ -180,7 +181,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 });
 
 // Create channel
-router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
+router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMember, async (req, res) => {
   try {
     const { name, description, isPrivate, memberIds, groupId } = req.body;
 
@@ -785,7 +786,7 @@ router.get('/workspace/:workspaceId/dms', authenticate, isWorkspaceMember, async
 });
 
 // Create or get existing DM
-router.post('/workspace/:workspaceId/dm', authenticate, isWorkspaceMember, async (req, res) => {
+router.post('/workspace/:workspaceId/dm', authenticate, apiLimiter, isWorkspaceMember, async (req, res) => {
   try {
     const { userIds } = req.body;
 

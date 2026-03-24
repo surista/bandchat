@@ -186,13 +186,13 @@ const generateTokens = async (userId) => {
   const accessToken = jwt.sign(
     { userId },
     process.env.JWT_SECRET,
-    { expiresIn: '15m' }
+    { expiresIn: '15m', algorithm: 'HS256' }
   );
 
   const refreshToken = jwt.sign(
     { userId, type: 'refresh', jti: crypto.randomUUID() },
     process.env.JWT_REFRESH_SECRET,
-    { expiresIn: '14d' } // Reduced from 30d to 14d for better security
+    { expiresIn: '14d', algorithm: 'HS256' }
   );
 
   // Hash refresh token before storing (prevents token theft if DB is breached)
@@ -237,7 +237,8 @@ router.post('/signup', authLimiter, async (req, res) => {
     }
 
     const existingUser = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() }
+      where: { email: email.toLowerCase() },
+      select: { id: true }
     });
 
     if (existingUser) {
@@ -303,7 +304,8 @@ router.post('/verify-email', tokenLimiter, async (req, res) => {
     // Hash the incoming token to compare against stored hash
     const hashedToken = hashRefreshToken(token);
     const user = await prisma.user.findUnique({
-      where: { verificationToken: hashedToken }
+      where: { verificationToken: hashedToken },
+      select: { id: true, verificationExpires: true }
     });
 
     if (!user) {
@@ -334,7 +336,8 @@ router.post('/verify-email', tokenLimiter, async (req, res) => {
 router.post('/resend-verification', authLimiter, authenticate, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
-      where: { id: req.user.id }
+      where: { id: req.user.id },
+      select: { id: true, email: true, emailVerified: true }
     });
 
     if (user.emailVerified) {
@@ -370,7 +373,8 @@ router.post('/login', authLimiter, async (req, res) => {
     }
 
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() }
+      where: { email: email.toLowerCase() },
+      select: { id: true, email: true, displayName: true, avatarUrl: true, password: true }
     });
 
     if (!user) {
@@ -432,7 +436,8 @@ router.post('/google', authLimiter, async (req, res) => {
 
     // Check if user exists by googleId
     let user = await prisma.user.findUnique({
-      where: { googleId }
+      where: { googleId },
+      select: { id: true, email: true, displayName: true, avatarUrl: true }
     });
 
     if (user) {
@@ -455,7 +460,8 @@ router.post('/google', authLimiter, async (req, res) => {
 
     // Check if email already exists (registered with password)
     const existingUserByEmail = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() }
+      where: { email: email.toLowerCase() },
+      select: { id: true }
     });
 
     if (existingUserByEmail) {
@@ -537,7 +543,8 @@ router.post('/link-google', authenticate, async (req, res) => {
 
     // Verify the Google email matches the logged-in user's email
     const currentUser = await prisma.user.findUnique({
-      where: { id: req.user.id }
+      where: { id: req.user.id },
+      select: { id: true, email: true, appleId: true, password: true }
     });
 
     if (currentUser.email.toLowerCase() !== email.toLowerCase()) {
@@ -548,7 +555,8 @@ router.post('/link-google', authenticate, async (req, res) => {
 
     // Check if this googleId is already linked to another account
     const existingGoogleUser = await prisma.user.findUnique({
-      where: { googleId }
+      where: { googleId },
+      select: { id: true }
     });
 
     if (existingGoogleUser && existingGoogleUser.id !== req.user.id) {
@@ -606,7 +614,8 @@ router.post('/apple', authLimiter, async (req, res) => {
     const { sub: appleId, email, email_verified } = payload;
 
     let user = await prisma.user.findUnique({
-      where: { appleId }
+      where: { appleId },
+      select: { id: true, email: true, displayName: true, avatarUrl: true }
     });
 
     if (user) {
@@ -626,7 +635,8 @@ router.post('/apple', authLimiter, async (req, res) => {
     }
 
     const existingUserByEmail = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() }
+      where: { email: email.toLowerCase() },
+      select: { id: true }
     });
 
     if (existingUserByEmail) {
@@ -704,7 +714,8 @@ router.post('/link-apple', authenticate, async (req, res) => {
     const { sub: appleId } = payload;
 
     const currentUser = await prisma.user.findUnique({
-      where: { id: req.user.id }
+      where: { id: req.user.id },
+      select: { id: true, appleId: true, googleId: true, password: true }
     });
 
     if (currentUser.appleId) {
@@ -712,7 +723,8 @@ router.post('/link-apple', authenticate, async (req, res) => {
     }
 
     const existingAppleUser = await prisma.user.findUnique({
-      where: { appleId }
+      where: { appleId },
+      select: { id: true }
     });
 
     if (existingAppleUser && existingAppleUser.id !== req.user.id) {
@@ -924,7 +936,8 @@ router.put('/password', authenticate, authLimiter, async (req, res) => {
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: req.user.id }
+      where: { id: req.user.id },
+      select: { id: true, password: true, googleId: true, appleId: true }
     });
 
     // If user has a password, verify current password
@@ -982,7 +995,8 @@ router.post('/change-email', authenticate, authLimiter, async (req, res) => {
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: req.user.id }
+      where: { id: req.user.id },
+      select: { id: true, email: true, password: true }
     });
 
     // Require password verification for email changes
@@ -999,7 +1013,8 @@ router.post('/change-email', authenticate, authLimiter, async (req, res) => {
 
     // Check if new email is already in use
     const existingUser = await prisma.user.findUnique({
-      where: { email: newEmail.toLowerCase() }
+      where: { email: newEmail.toLowerCase() },
+      select: { id: true }
     });
 
     if (existingUser) {
@@ -1065,7 +1080,8 @@ router.post('/verify-email-change', tokenLimiter, async (req, res) => {
     // Hash the incoming token to compare against stored hash
     const hashedToken = hashRefreshToken(token);
     const user = await prisma.user.findUnique({
-      where: { verificationToken: hashedToken }
+      where: { verificationToken: hashedToken },
+      select: { id: true, verificationExpires: true, pendingEmail: true }
     });
 
     if (!user) {
@@ -1082,7 +1098,8 @@ router.post('/verify-email-change', tokenLimiter, async (req, res) => {
 
     // Check if email is still available
     const existingUser = await prisma.user.findUnique({
-      where: { email: user.pendingEmail }
+      where: { email: user.pendingEmail },
+      select: { id: true }
     });
 
     if (existingUser) {
@@ -1202,7 +1219,8 @@ router.post('/forgot-password', authLimiter, async (req, res) => {
     }
 
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() }
+      where: { email: email.toLowerCase() },
+      select: { id: true, email: true }
     });
 
     // Always return success to prevent email enumeration
@@ -1253,7 +1271,8 @@ router.post('/reset-password', authLimiter, async (req, res) => {
       where: {
         passwordResetToken: hashedToken,
         passwordResetExpires: { gt: new Date() }
-      }
+      },
+      select: { id: true, authProvider: true }
     });
 
     if (!user) {
@@ -1304,7 +1323,8 @@ router.get('/verify-reset-token', tokenLimiter, async (req, res) => {
       where: {
         passwordResetToken: hashedVerifyToken,
         passwordResetExpires: { gt: new Date() }
-      }
+      },
+      select: { id: true }
     });
 
     if (!user) {
@@ -1323,8 +1343,10 @@ router.delete('/account', authenticate, authLimiter, async (req, res) => {
     const { password } = req.body;
     const userId = req.user.id;
 
-    // Load full user
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, password: true, googleId: true, appleId: true, email: true, displayName: true }
+    });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     // Require password confirmation for users who have a password set

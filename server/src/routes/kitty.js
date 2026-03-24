@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
 
@@ -93,7 +94,7 @@ router.put('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, requireKit
 });
 
 // Create transaction
-router.post('/workspace/:workspaceId/transactions', authenticate, isWorkspaceMember, requireKittyFeature, async (req, res) => {
+router.post('/workspace/:workspaceId/transactions', authenticate, apiLimiter, isWorkspaceMember, requireKittyFeature, async (req, res) => {
   try {
     const { type, category, amount, description, date, gigId } = req.body;
 

@@ -13,6 +13,7 @@ export const CURRENCIES = [
   { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar' },
   { code: 'HKD', symbol: 'HK$', name: 'Hong Kong Dollar' },
   { code: 'NOK', symbol: 'kr', name: 'Norwegian Krone' },
+  { code: 'DKK', symbol: 'kr', name: 'Danish Krone' },
   { code: 'KRW', symbol: '₩', name: 'South Korean Won' },
   { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
   { code: 'BRL', symbol: 'R$', name: 'Brazilian Real' },

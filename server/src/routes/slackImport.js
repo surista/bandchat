@@ -7,6 +7,7 @@ import os from 'os';
 import AdmZip from 'adm-zip';
 import prisma from '../lib/prisma.js';
 import { authenticate, isWorkspaceAdmin } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimit.js';
 import { getPlanLimits } from '../lib/planLimits.js';
 import { convertSlackText } from '../services/slackTextConverter.js';
 import slackEmojiMap from '../services/slackEmojiMap.js';
@@ -105,7 +106,7 @@ const SYSTEM_SUBTYPES = new Set([
 /**
  * Parse a Slack export ZIP and return metadata for the wizard.
  */
-router.post('/workspace/:workspaceId/parse', authenticate, isWorkspaceAdmin, requireSlackImportFeature,
+router.post('/workspace/:workspaceId/parse', authenticate, apiLimiter, isWorkspaceAdmin, requireSlackImportFeature,
   zipUpload.single('file'),
   async (req, res) => {
     try {

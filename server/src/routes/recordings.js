@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 import { deleteFile, isR2Url } from '../lib/storage.js';
@@ -124,7 +125,7 @@ router.get('/:recordingId', authenticate, async (req, res) => {
 });
 
 // Create a recording
-router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
+router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMember, async (req, res) => {
   try {
     const { title, description, url, type, duration, songId } = req.body;
 

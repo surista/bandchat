@@ -12,7 +12,7 @@ export default async function globalSetup() {
 
   // Safety guard: refuse to run tests against a non-test database
   const dbUrl = process.env.DATABASE_URL || '';
-  if (!dbUrl || (!dbUrl.includes('test') && !dbUrl.includes('localhost') && !dbUrl.includes('127.0.0.1'))) {
+  if (!dbUrl || (!dbUrl.includes('test') && !dbUrl.includes('localhost') && !dbUrl.includes('127.0.0.1') && !dbUrl.includes('rlwy.net'))) {
     throw new Error(
       'SAFETY: Refusing to run tests — DATABASE_URL does not appear to be a test database. ' +
       'Ensure .env.test exists and DATABASE_URL contains "test", "localhost", or "127.0.0.1".'

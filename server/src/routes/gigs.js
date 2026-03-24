@@ -2,6 +2,7 @@ import express from 'express';
 import crypto from 'crypto';
 import rateLimit from 'express-rate-limit';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma, { USER_SELECT_BRIEF } from '../lib/prisma.js';
 import { deleteFile, isR2Url } from '../lib/storage.js';
 import { safeDecrementStorage } from './uploads.js';
@@ -13,6 +14,9 @@ import { sendPushToUser } from './push.js';
 import { logAudit } from '../lib/audit.js';
 
 const router = express.Router();
+
+const VALID_GIG_TYPES = ['GIG', 'REHEARSAL', 'RECORDING', 'OTHER'];
+const VALID_GIG_STATUSES = ['SCHEDULED', 'COMPLETED', 'CANCELLED'];
 
 const calendarLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, skip: process.env.NODE_ENV === 'test' ? () => true : undefined, message: { error: 'Too many requests' } });
 
@@ -29,8 +33,6 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
     }
 
     // Validate enum query params against allowed values
-    const VALID_GIG_TYPES = ['GIG', 'REHEARSAL', 'RECORDING', 'OTHER'];
-    const VALID_GIG_STATUSES = ['SCHEDULED', 'COMPLETED', 'CANCELLED'];
     const validType = type && VALID_GIG_TYPES.includes(type) ? type : undefined;
     const validStatus = status && VALID_GIG_STATUSES.includes(status) ? status : undefined;
 
@@ -179,8 +181,6 @@ router.get('/all-workspaces', authenticate, async (req, res) => {
     }
 
     // Validate enum query params against allowed values (same as single-workspace endpoint)
-    const VALID_GIG_TYPES = ['GIG', 'REHEARSAL', 'RECORDING', 'OTHER'];
-    const VALID_GIG_STATUSES = ['SCHEDULED', 'COMPLETED', 'CANCELLED'];
     const validType = type && VALID_GIG_TYPES.includes(type) ? type : undefined;
     const validStatus = status && VALID_GIG_STATUSES.includes(status) ? status : undefined;
 
@@ -597,7 +597,7 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
 });
 
 // Create a gig
-router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
+router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMember, async (req, res) => {
   try {
     const { title, type, date, endDate, soundCheckTime, eventStartTime, performanceStartTime, venue, address, notes, pay, setlistId, setlistIds, isLocked, isPersonal, bandMemberIds, venueId } = req.body;
 
@@ -610,6 +610,11 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
     if (venue && venue.length > 200) return res.status(400).json({ error: 'Venue must be 200 characters or less' });
     if (address && address.length > 500) return res.status(400).json({ error: 'Address must be 500 characters or less' });
     if (notes && notes.length > 5000) return res.status(400).json({ error: 'Notes must be 5,000 characters or less' });
+
+    // Validate enum values
+    if (type && !VALID_GIG_TYPES.includes(type)) {
+      return res.status(400).json({ error: 'Invalid gig type' });
+    }
 
     // Only admins can create locked events
     const canLock = req.workspaceMembership?.role === 'ADMIN';
@@ -854,6 +859,14 @@ router.put('/:gigId', authenticate, async (req, res) => {
 
     if (!existingGig) {
       return res.status(404).json({ error: 'Gig not found' });
+    }
+
+    // Validate enum values
+    if (type && !VALID_GIG_TYPES.includes(type)) {
+      return res.status(400).json({ error: 'Invalid gig type' });
+    }
+    if (status && !VALID_GIG_STATUSES.includes(status)) {
+      return res.status(400).json({ error: 'Invalid gig status' });
     }
 
     // Input length validation
@@ -1408,12 +1421,17 @@ router.get('/:gigId/media', authenticate, async (req, res) => {
 });
 
 // Add media to a gig
-router.post('/:gigId/media', authenticate, async (req, res) => {
+router.post('/:gigId/media', authenticate, apiLimiter, async (req, res) => {
   try {
     const { type, url, caption } = req.body;
 
     if (!type || !url) {
       return res.status(400).json({ error: 'Type and URL are required' });
+    }
+
+    const VALID_MEDIA_TYPES = ['image', 'video', 'youtube', 'link', 'audio'];
+    if (!VALID_MEDIA_TYPES.includes(type)) {
+      return res.status(400).json({ error: 'Invalid media type' });
     }
 
     // Verify gig exists and user has access

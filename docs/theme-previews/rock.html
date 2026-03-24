@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rock Theme — Band Website Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0a0a0a;
+    --bg-card: #111111;
+    --text: #e8e8e8;
+    --text-dim: #666;
+    --red: #e81c2e;
+    --orange: #ff5722;
+    --chrome: #aaa;
+  }
+  body {
+    font-family: 'Barlow Condensed', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2.5rem;
+    border-bottom: 3px solid var(--red);
+    position: sticky;
+    top: 0;
+    background: rgba(10, 10, 10, 0.97);
+    backdrop-filter: blur(10px);
+    z-index: 10;
+  }
+  .nav-brand {
+    font-family: 'Anton', sans-serif;
+    font-size: 1.6rem;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    background: linear-gradient(135deg, var(--red), var(--orange));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .nav-links { display: flex; gap: 2rem; list-style: none; }
+  .nav-links a {
+    color: var(--chrome);
+    text-decoration: none;
+    text-transform: uppercase;
+    font-weight: 600;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover, .nav-links a.active { color: var(--red); }
+
+  .hero {
+    min-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 4rem 2rem;
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 50% 120%, rgba(232, 28, 46, 0.12) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(255, 87, 34, 0.06) 0%, transparent 40%);
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, var(--red), var(--orange), var(--red), transparent);
+  }
+  .hero h1 {
+    font-family: 'Anton', sans-serif;
+    font-size: clamp(5rem, 14vw, 11rem);
+    text-transform: uppercase;
+    letter-spacing: 6px;
+    line-height: 0.85;
+    background: linear-gradient(180deg, #fff 0%, var(--chrome) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(0 4px 20px rgba(232, 28, 46, 0.3));
+  }
+  .hero .tagline {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--red);
+    margin-top: 1.5rem;
+    letter-spacing: 10px;
+    text-transform: uppercase;
+  }
+  .hero .cta-row {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 3rem;
+  }
+  .btn-primary {
+    display: inline-block;
+    padding: 0.9rem 2.5rem;
+    background: linear-gradient(135deg, var(--red), var(--orange));
+    color: #fff;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-size: 0.95rem;
+    text-decoration: none;
+    border: none;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 100%, 10px 100%);
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .btn-primary:hover { transform: scale(1.05); }
+  .btn-outline {
+    display: inline-block;
+    padding: 0.9rem 2.5rem;
+    background: transparent;
+    color: var(--chrome);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-size: 0.95rem;
+    text-decoration: none;
+    border: 2px solid var(--chrome);
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 100%, 10px 100%);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-outline:hover { border-color: var(--red); color: var(--red); }
+
+  .next-show {
+    max-width: 750px;
+    margin: -2rem auto 5rem;
+    background: var(--bg-card);
+    border: 1px solid #222;
+    border-left: 5px solid var(--red);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2rem 2.5rem;
+    position: relative;
+  }
+  .next-show .label {
+    position: absolute;
+    top: -1px;
+    right: 20px;
+    background: var(--red);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 4px 14px;
+  }
+  .next-show h3 {
+    font-family: 'Anton', sans-serif;
+    font-size: 1.6rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  .next-show .date {
+    color: var(--text-dim);
+    margin-top: 0.3rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .about {
+    max-width: 750px;
+    margin: 0 auto 5rem;
+    padding: 0 2rem;
+    display: flex;
+    gap: 3rem;
+    align-items: flex-start;
+  }
+  .about h2 {
+    font-family: 'Anton', sans-serif;
+    font-size: 3rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    writing-mode: vertical-lr;
+    transform: rotate(180deg);
+    background: linear-gradient(180deg, var(--red), var(--orange));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    white-space: nowrap;
+  }
+  .about p {
+    line-height: 1.8;
+    color: var(--text-dim);
+    font-size: 1.05rem;
+    font-weight: 400;
+    border-left: 3px solid #222;
+    padding-left: 2rem;
+  }
+
+  footer {
+    border-top: 1px solid #222;
+    padding: 2.5rem;
+    text-align: center;
+  }
+  .social-links { display: flex; justify-content: center; gap: 2.5rem; margin-bottom: 1rem; }
+  .social-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    text-transform: uppercase;
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 3px;
+    transition: color 0.2s;
+  }
+  .social-links a:hover { color: var(--red); }
+  footer small { color: #333; font-size: 0.8rem; }
+
+  @media (max-width: 640px) {
+    .hero .cta-row { flex-direction: column; gap: 1rem; }
+    .next-show { flex-direction: column; gap: 1rem; align-items: flex-start; margin: -1rem 1rem 3rem; }
+    .about { flex-direction: column; gap: 1rem; }
+    .about h2 { writing-mode: horizontal-tb; transform: none; }
+  }
+</style>
+</head>
+<body>
+  <nav>
+    <div class="nav-brand">Ironjaw</div>
+    <ul class="nav-links">
+      <li><a href="#" class="active">Home</a></li>
+      <li><a href="#">Shows</a></li>
+      <li><a href="#">Songs</a></li>
+      <li><a href="#">About</a></li>
+      <li><a href="#">Contact</a></li>
+    </ul>
+  </nav>
+
+  <section class="hero">
+    <h1>Ironjaw</h1>
+    <p class="tagline">Turn It Up</p>
+    <div class="cta-row">
+      <a href="#" class="btn-primary">See Upcoming Shows</a>
+      <a href="#" class="btn-outline">Meet The Band</a>
+    </div>
+  </section>
+
+  <div class="next-show">
+    <span class="label">Next Show</span>
+    <div>
+      <h3>Club Quattro</h3>
+      <p class="date">Friday, April 25 &mdash; Doors 7PM / Shibuya</p>
+    </div>
+    <a href="#" class="btn-primary">Details &rarr;</a>
+  </div>
+
+  <section class="about">
+    <h2>About</h2>
+    <p>Five years of relentless touring, three albums, and a reputation for shows that leave ringing in your ears for days. Ironjaw doesn't do subtle. We do volume. From the dive bars of Shinjuku to the main stages of Summer Sonic, we bring the same thing every time: everything we've got.</p>
+  </section>
+
+  <footer>
+    <div class="social-links">
+      <a href="#">Instagram</a>
+      <a href="#">YouTube</a>
+      <a href="#">Spotify</a>
+    </div>
+    <small>Powered by BandChat</small>
+  </footer>
+</body>
+</html>

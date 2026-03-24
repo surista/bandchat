@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Electronic Theme — Band Website Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #080810;
+    --bg-card: #0e0e1a;
+    --text: #d0d0e0;
+    --text-dim: #4a4a6a;
+    --cyan: #00ffc8;
+    --green: #39ff14;
+    --purple: #6a00ff;
+    --grid: rgba(0, 255, 200, 0.04);
+  }
+  body {
+    font-family: 'Space Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2.5rem;
+    position: sticky;
+    top: 0;
+    background: rgba(8, 8, 16, 0.95);
+    backdrop-filter: blur(15px);
+    z-index: 10;
+    border-bottom: 1px solid rgba(0, 255, 200, 0.15);
+  }
+  .nav-brand {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+    font-size: 1.2rem;
+    letter-spacing: 3px;
+    color: var(--cyan);
+    text-shadow: 0 0 12px rgba(0, 255, 200, 0.4);
+  }
+  .nav-links { display: flex; gap: 2rem; list-style: none; }
+  .nav-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+  .nav-links a:hover, .nav-links a.active {
+    color: var(--cyan);
+    text-shadow: 0 0 8px rgba(0, 255, 200, 0.3);
+  }
+
+  .hero {
+    min-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 4rem 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    border: 1px solid rgba(0, 255, 200, 0.06);
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: spin 30s linear infinite;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    border: 1px solid rgba(106, 0, 255, 0.08);
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: spin 20s linear infinite reverse;
+  }
+  @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+  .hero .kicker {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+  .hero h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(3rem, 10vw, 7rem);
+    font-weight: 900;
+    letter-spacing: 8px;
+    line-height: 1;
+    color: var(--text);
+    position: relative;
+    text-shadow: 0 0 40px rgba(0, 255, 200, 0.15);
+  }
+  .hero h1 span {
+    color: var(--cyan);
+    text-shadow: 0 0 30px rgba(0, 255, 200, 0.5);
+  }
+  .hero .tagline {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin-top: 1.5rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    position: relative;
+  }
+  .hero .cta-row { display: flex; gap: 1rem; margin-top: 3rem; position: relative; }
+  .btn-cyber {
+    display: inline-block;
+    padding: 0.8rem 2rem;
+    background: transparent;
+    color: var(--cyan);
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: 1px solid var(--cyan);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .btn-cyber:hover {
+    background: rgba(0, 255, 200, 0.1);
+    box-shadow: 0 0 20px rgba(0, 255, 200, 0.2), inset 0 0 20px rgba(0, 255, 200, 0.05);
+  }
+  .btn-cyber.filled {
+    background: rgba(0, 255, 200, 0.1);
+    box-shadow: 0 0 15px rgba(0, 255, 200, 0.15);
+  }
+
+  .next-show {
+    max-width: 650px;
+    margin: -2rem auto 5rem;
+    background: var(--bg-card);
+    border: 1px solid rgba(0, 255, 200, 0.1);
+    padding: 2rem 2.5rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+  }
+  .next-show::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  }
+  .next-show .label {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 500;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+  .next-show h3 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+  .next-show .date { color: var(--text-dim); font-size: 0.85rem; margin-top: 0.3rem; }
+
+  .about {
+    max-width: 600px;
+    margin: 0 auto 5rem;
+    padding: 0 2rem;
+    text-align: center;
+  }
+  .about h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 4px;
+    margin-bottom: 1.2rem;
+    color: var(--text);
+  }
+  .about p {
+    line-height: 1.9;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+  }
+
+  footer {
+    border-top: 1px solid rgba(0, 255, 200, 0.1);
+    padding: 2.5rem;
+    text-align: center;
+  }
+  .social-links { display: flex; justify-content: center; gap: 2rem; margin-bottom: 1rem; }
+  .social-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+  .social-links a:hover { color: var(--cyan); text-shadow: 0 0 8px rgba(0, 255, 200, 0.3); }
+  footer small { color: #1a1a2a; font-size: 0.75rem; }
+
+  @media (max-width: 640px) {
+    .hero .cta-row { flex-direction: column; }
+    .next-show { flex-direction: column; align-items: flex-start; margin: -1rem 1rem 4rem; }
+  }
+</style>
+</head>
+<body>
+  <nav>
+    <div class="nav-brand">SYNKRO</div>
+    <ul class="nav-links">
+      <li><a href="#" class="active">Home</a></li>
+      <li><a href="#">Shows</a></li>
+      <li><a href="#">Tracks</a></li>
+      <li><a href="#">About</a></li>
+      <li><a href="#">Contact</a></li>
+    </ul>
+  </nav>
+
+  <section class="hero">
+    <p class="kicker">// Live Electronic Music</p>
+    <h1>SYN<span>KRO</span></h1>
+    <p class="tagline">Frequency &middot; Resonance &middot; Movement</p>
+    <div class="cta-row">
+      <a href="#" class="btn-cyber filled">Upcoming Events</a>
+      <a href="#" class="btn-cyber">Listen</a>
+    </div>
+  </section>
+
+  <div class="next-show">
+    <div>
+      <span class="label">Next Event</span>
+      <h3>WOMB Tokyo</h3>
+      <p class="date">Sat, April 19 &middot; 11PM &middot; Shibuya</p>
+    </div>
+    <a href="#" class="btn-cyber">Info</a>
+  </div>
+
+  <section class="about">
+    <h2>About</h2>
+    <p>SYNKRO fuses analog synthesis with digital precision across live sets that blur the line between performance and installation. Founded in 2022, we've held residencies at Contact, WOMB, and Vent &mdash; building soundscapes that move bodies and minds in equal measure.</p>
+  </section>
+
+  <footer>
+    <div class="social-links">
+      <a href="#">SoundCloud</a>
+      <a href="#">Instagram</a>
+      <a href="#">Bandcamp</a>
+    </div>
+    <small>Powered by BandChat</small>
+  </footer>
+</body>
+</html>

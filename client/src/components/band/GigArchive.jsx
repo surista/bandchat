@@ -265,7 +265,7 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
         setUploadProgress(`Uploading ${i + 1} of ${files.length}...`);
         const result = await api.uploadFile(file, workspaceId);
         const newMedia = await api.addGigMedia(selectedGig.id, {
-          type: file.type.startsWith('video') ? 'video' : 'image',
+          type: file.type.startsWith('video') ? 'video' : file.type.startsWith('audio') ? 'audio' : 'image',
           url: result.url,
           caption: file.name
         });
@@ -851,6 +851,10 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
                             <div className="w-full h-full flex items-center justify-center bg-[var(--color-bg-tertiary)]">
                               <span className="text-blue-400 text-xs">▶</span>
                             </div>
+                          ) : item.type === 'audio' ? (
+                            <div className="w-full h-full flex items-center justify-center bg-[var(--color-bg-tertiary)]">
+                              <span className="text-[var(--color-text-muted)] text-sm">♫</span>
+                            </div>
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-[var(--color-text-muted)]">🔗</div>
                           )}
@@ -1169,6 +1173,13 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
                                 className="w-full h-full object-cover"
                                 controls
                               />
+                            ) : item.type === 'audio' ? (
+                              <div className="flex flex-col items-center justify-center w-full h-full bg-[var(--color-bg-secondary)] p-3">
+                                <svg className="w-8 h-8 text-[var(--color-text-muted)] mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                                </svg>
+                                <audio src={item.url} controls preload="metadata" className="w-full" style={{ height: 32 }} />
+                              </div>
                             ) : (
                               <a
                                 href={isSafeUrl(item.url) ? item.url : "#"}
@@ -1194,7 +1205,7 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
                           {/* Caption below thumbnail */}
                           <div className="mt-2 px-1">
                             <p className="text-[var(--color-text-secondary)] text-sm truncate">
-                              {item.caption || (item.type === 'youtube' ? 'YouTube Video' : item.type === 'video' ? 'Video' : item.type === 'link' ? 'Link' : '')}
+                              {item.caption || (item.type === 'youtube' ? 'YouTube Video' : item.type === 'video' ? 'Video' : item.type === 'audio' ? 'Audio' : item.type === 'link' ? 'Link' : '')}
                             </p>
                           </div>
                         </div>
@@ -1313,7 +1324,7 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
               </span>
               <input
                 type="file"
-                accept="image/*,video/*"
+                accept="image/*,video/*,audio/*"
                 multiple
                 onChange={handleFileUpload}
                 disabled={uploading}

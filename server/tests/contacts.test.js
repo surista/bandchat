@@ -31,7 +31,7 @@ describe('Contacts API', () => {
           name: 'John Sound Guy',
           email: 'john@venue.com',
           phone: '+1234567890',
-          category: 'VENUE',
+          category: 'venue',
           notes: 'Sound engineer at The Venue',
         });
 
@@ -57,7 +57,7 @@ describe('Contacts API', () => {
       const res = await request(app)
         .get(`/api/contacts/workspace/${workspaceId}`)
         .set('Authorization', `Bearer ${admin.token}`)
-        .query({ category: 'VENUE' });
+        .query({ category: 'venue' });
 
       expect(res.status).toBe(200);
       expect(res.body.length).toBe(1);

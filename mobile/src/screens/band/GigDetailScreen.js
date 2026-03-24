@@ -16,6 +16,8 @@ import {
   FlatList,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import { Audio } from 'expo-av';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Calendar from 'expo-calendar';
 import { format, parseISO } from 'date-fns';
@@ -362,6 +364,31 @@ export default function GigDetailScreen({ navigation, route }) {
       setUploadingMedia(false);
     }
   }, [gigId]);
+
+  const handleAddAudio = useCallback(async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['audio/*'],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled) return;
+      const file = result.assets[0];
+      if (file.size > 50 * 1024 * 1024) {
+        Alert.alert('Too Large', 'Audio file must be under 50MB');
+        return;
+      }
+      setUploadingMedia(true);
+      const uploaded = await api.uploadFile(file.uri, file.name, file.mimeType || 'audio/mpeg', workspaceId);
+      await api.addGigMedia(gigId, { type: 'audio', url: uploaded.url, caption: file.name });
+      const updatedMedia = await api.getGigMedia(gigId).catch(() => []);
+      setGigMedia(updatedMedia);
+      successNotification();
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to upload audio');
+    } finally {
+      setUploadingMedia(false);
+    }
+  }, [gigId, workspaceId]);
 
   const loadGig = useCallback(async () => {
     setLoadError(null);
@@ -948,6 +975,10 @@ export default function GigDetailScreen({ navigation, route }) {
                       <Text style={styles.videoOverlayIcon}>{'\u25B6'}</Text>
                     </View>
                   </View>
+                ) : item.type === 'audio' ? (
+                  <View style={[styles.mediaThumbnailImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bgTertiary }]}>
+                    <Ionicons name="musical-notes-outline" size={22} color={colors.primary} />
+                  </View>
                 ) : (
                   <View style={[styles.mediaThumbnailImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bgTertiary }]}>
                     <Ionicons name="link-outline" size={20} color={colors.textSecondary} />
@@ -969,6 +1000,20 @@ export default function GigDetailScreen({ navigation, route }) {
             <ActivityIndicator size="small" color={colors.primary} />
           ) : (
             <Text style={[styles.addPhotosText, { color: colors.primary }]}>+ Add Photos</Text>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.addPhotosButton, { backgroundColor: colors.bgSecondary, borderColor: colors.border, marginTop: 8 }]}
+          onPress={handleAddAudio}
+          disabled={uploadingMedia}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Add audio recording"
+        >
+          {uploadingMedia ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Text style={[styles.addPhotosText, { color: colors.primary }]}>+ Add Audio</Text>
           )}
         </TouchableOpacity>
       </View>

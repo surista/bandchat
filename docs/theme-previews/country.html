@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Country Theme — Band Website Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Cabin:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #1c1712;
+    --bg-card: #24201a;
+    --text: #d4c8b0;
+    --text-dim: #8a7d6b;
+    --amber: #c8873a;
+    --rust: #a0522d;
+    --cream: #f0e6d2;
+  }
+  body {
+    font-family: 'Cabin', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    background-image:
+      url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h60v60H0z' fill='none'/%3E%3Cpath d='M30 0v60M0 30h60' stroke='%23ffffff' stroke-width='0.3' opacity='0.03'/%3E%3C/svg%3E");
+  }
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.2rem 2.5rem;
+    position: sticky;
+    top: 0;
+    background: rgba(28, 23, 18, 0.96);
+    backdrop-filter: blur(10px);
+    z-index: 10;
+    border-bottom: 1px solid var(--rust);
+  }
+  .nav-brand {
+    font-family: 'Libre Baskerville', serif;
+    font-weight: 700;
+    font-size: 1.3rem;
+    color: var(--amber);
+    letter-spacing: 1px;
+  }
+  .nav-links { display: flex; gap: 2rem; list-style: none; }
+  .nav-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: color 0.3s;
+  }
+  .nav-links a:hover, .nav-links a.active { color: var(--amber); }
+
+  .hero {
+    min-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 4rem 2rem;
+    position: relative;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 80%, rgba(200, 135, 58, 0.06) 0%, transparent 60%);
+  }
+  .hero .star {
+    font-size: 1.5rem;
+    color: var(--amber);
+    margin-bottom: 1.5rem;
+    letter-spacing: 12px;
+    position: relative;
+  }
+  .hero h1 {
+    font-family: 'Libre Baskerville', serif;
+    font-size: clamp(3.5rem, 10vw, 7.5rem);
+    font-weight: 700;
+    line-height: 0.95;
+    color: var(--cream);
+    position: relative;
+  }
+  .hero .tagline {
+    font-family: 'Libre Baskerville', serif;
+    font-style: italic;
+    font-size: 1.15rem;
+    color: var(--amber);
+    margin-top: 1.2rem;
+    position: relative;
+  }
+  .hero .line {
+    width: 80px;
+    height: 1px;
+    background: var(--rust);
+    margin: 2rem auto 0;
+    position: relative;
+  }
+
+  .next-show {
+    max-width: 620px;
+    margin: 0 auto 5rem;
+    background: var(--bg-card);
+    border: 1px solid rgba(160, 82, 45, 0.3);
+    border-radius: 4px;
+    padding: 2.5rem;
+    text-align: center;
+    position: relative;
+  }
+  .next-show::before, .next-show::after {
+    content: '';
+    position: absolute;
+    top: 12px;
+    width: 30px;
+    height: 1px;
+    background: var(--rust);
+  }
+  .next-show::before { left: 12px; }
+  .next-show::after { right: 12px; }
+  .next-show .label {
+    font-size: 0.7rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 1rem;
+  }
+  .next-show h3 {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 1.8rem;
+    color: var(--cream);
+  }
+  .next-show .date { color: var(--text-dim); margin-top: 0.5rem; font-size: 0.95rem; }
+  .btn-amber {
+    display: inline-block;
+    margin-top: 1.5rem;
+    padding: 0.7rem 2.2rem;
+    background: var(--amber);
+    color: var(--bg);
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  .btn-amber:hover { background: #d99544; }
+
+  .about {
+    max-width: 600px;
+    margin: 0 auto 5rem;
+    padding: 0 2rem;
+    text-align: center;
+  }
+  .about h2 {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 2rem;
+    color: var(--cream);
+    margin-bottom: 1rem;
+  }
+  .about p {
+    font-family: 'Libre Baskerville', serif;
+    line-height: 2;
+    color: var(--text-dim);
+    font-size: 1rem;
+  }
+
+  footer {
+    border-top: 1px solid rgba(160, 82, 45, 0.2);
+    padding: 2.5rem;
+    text-align: center;
+  }
+  .social-links { display: flex; justify-content: center; gap: 2.5rem; margin-bottom: 1rem; }
+  .social-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: color 0.3s;
+  }
+  .social-links a:hover { color: var(--amber); }
+  footer small { color: var(--text-dim); font-size: 0.75rem; }
+
+  @media (max-width: 640px) {
+    .next-show { margin: 0 1rem 4rem; padding: 2rem; }
+  }
+</style>
+</head>
+<body>
+  <nav>
+    <div class="nav-brand">Dusty Trail</div>
+    <ul class="nav-links">
+      <li><a href="#" class="active">Home</a></li>
+      <li><a href="#">Shows</a></li>
+      <li><a href="#">Songs</a></li>
+      <li><a href="#">About</a></li>
+      <li><a href="#">Contact</a></li>
+    </ul>
+  </nav>
+
+  <section class="hero">
+    <p class="star">&#9733; &#9733; &#9733;</p>
+    <h1>Dusty Trail</h1>
+    <p class="tagline">Honest songs from the heart of the road</p>
+    <div class="line"></div>
+  </section>
+
+  <div class="next-show">
+    <p class="label">Next Show</p>
+    <h3>The Broken Spoke</h3>
+    <p class="date">Saturday, April 26 &middot; Doors 7PM &middot; Daikanyama</p>
+    <a href="#" class="btn-amber">Details &rarr;</a>
+  </div>
+
+  <section class="about">
+    <h2>About</h2>
+    <p>We're Dusty Trail &mdash; four pickers and a singer telling stories the old-fashioned way. Pedal steel, fiddle, and harmonies that hit you right in the chest. We've been playing honky-tonks and festivals across Japan since 2020, and we're just getting started.</p>
+  </section>
+
+  <footer>
+    <div class="social-links">
+      <a href="#">Instagram</a>
+      <a href="#">YouTube</a>
+      <a href="#">Spotify</a>
+    </div>
+    <small>Powered by BandChat</small>
+  </footer>
+</body>
+</html>

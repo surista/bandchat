@@ -1,6 +1,6 @@
 import express from 'express';
-import { authenticate } from '../middleware/auth.js';
-import { isWorkspaceMember } from '../middleware/auth.js';
+import { authenticate, isWorkspaceMember } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma, { USER_SELECT_BRIEF } from '../lib/prisma.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 import { deleteFile, isR2Url } from '../lib/storage.js';
@@ -130,7 +130,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 });
 
 // Create a song
-router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
+router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMember, async (req, res) => {
   try {
     const { title, shortName, artist, duration, key, bpm, notes, lyrics, arrangement, youtubeUrl, spotifyUrl } = req.body;
 
@@ -409,7 +409,7 @@ router.put('/:songId', authenticate, async (req, res) => {
 });
 
 // Bulk import songs
-router.post('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, async (req, res) => {
+router.post('/workspace/:workspaceId/bulk', authenticate, apiLimiter, isWorkspaceMember, async (req, res) => {
   try {
     const { songs, fetchMetadata = true } = req.body;
     const workspaceId = req.params.workspaceId;

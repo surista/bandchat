@@ -12,6 +12,13 @@
   "settings": {
     "react": { "version": "detect" }
   },
+  "overrides": [
+    {
+      "files": ["**/__tests__/**/*.js", "**/*.test.js"],
+      "env": { "jest": true },
+      "globals": { "Buffer": "readonly" }
+    }
+  ],
   "rules": {
     "no-undef": "error",
     "no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_|^React$" }],

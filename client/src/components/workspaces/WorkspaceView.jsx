@@ -85,6 +85,7 @@ const AudioAnalyzer = lazyRetry(() => import('../band/AudioAnalyzer'));
 const PracticeDashboard = lazyRetry(() => import('../band/PracticeDashboard'));
 const SavedMessages = lazyRetry(() => import('../messages/SavedMessages'));
 const AllMessages = lazyRetry(() => import('../messages/AllMessages'));
+const ActivityFeed = lazyRetry(() => import('../messages/ActivityFeed'));
 const StagePlotCreator = lazyRetry(() => import('../band/StagePlotCreator'));
 const VenueList = lazyRetry(() => import('../band/VenueList'));
 
@@ -145,6 +146,7 @@ const BAND_VIEW_COMPONENTS = {
   practice: PracticeDashboard,
   saved: SavedMessages,
   'all-messages': AllMessages,
+  activity: ActivityFeed,
   'stage-plots': StagePlotCreator,
   venues: VenueList,
 };
@@ -171,6 +173,7 @@ const BAND_VIEW_EXTRA_PROPS = {
   timeline: (ctx) => ({ isAdmin: ctx.isAdmin }),
   kitty: (ctx) => ({ isAdmin: ctx.isAdmin }),
   'all-messages': (ctx) => ({ onSelectChannel: ctx.onSelectChannel }),
+  activity: (ctx) => ({ onSelectChannel: ctx.onSelectChannel }),
   venues: (ctx) => ({ workspace: ctx.workspace, isAdmin: ctx.isAdmin }),
 };
 

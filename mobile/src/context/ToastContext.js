@@ -65,10 +65,18 @@ function Toast({ toast: t, onRemove }) {
         styles.toast,
         { backgroundColor: colors.bg, borderLeftColor: colors.border, transform: [{ translateY }], opacity },
       ]}
+      accessibilityRole="alert"
+      accessibilityLiveRegion="polite"
+      accessibilityLabel={`${t.type}: ${t.message}`}
     >
-      <Text style={styles.toastIcon}>{TOAST_ICONS[t.type] || TOAST_ICONS.info}</Text>
+      <Text style={styles.toastIcon} accessibilityElementsHidden>{TOAST_ICONS[t.type] || TOAST_ICONS.info}</Text>
       <Text style={styles.toastMessage} numberOfLines={3}>{t.message}</Text>
-      <TouchableOpacity onPress={() => onRemove(t.id)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+      <TouchableOpacity
+        onPress={() => onRemove(t.id)}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        accessibilityRole="button"
+        accessibilityLabel="Dismiss notification"
+      >
         <Text style={styles.toastClose}>\u00d7</Text>
       </TouchableOpacity>
     </Animated.View>

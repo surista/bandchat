@@ -17,6 +17,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Audio } from 'expo-av';
+import * as DocumentPicker from 'expo-document-picker';
 import { useTheme } from '../../context/ThemeContext';
 import Badge from '../../components/Badge';
 import api from '../../services/api';
@@ -26,6 +28,83 @@ import ErrorState from '../../components/ErrorState';
 
 const KEY_ROOTS = ['C', 'C#/Db', 'D', 'D#/Eb', 'E', 'F', 'F#/Gb', 'G', 'G#/Ab', 'A', 'A#/Bb', 'B'];
 const KEY_SUFFIXES = ['major', 'minor'];
+
+function SongAudioPlayer({ url, filename, colors }) {
+  const [playing, setPlaying] = useState(false);
+  const [sound, setSound] = useState(null);
+  const [duration, setDuration] = useState(0);
+  const [position, setPosition] = useState(0);
+
+  useEffect(() => {
+    return () => { sound?.unloadAsync(); };
+  }, [sound]);
+
+  const togglePlay = async () => {
+    if (playing && sound) {
+      await sound.pauseAsync();
+      setPlaying(false);
+      return;
+    }
+    if (sound) {
+      await sound.playAsync();
+      setPlaying(true);
+      return;
+    }
+    const { sound: newSound } = await Audio.Sound.createAsync(
+      { uri: url },
+      { shouldPlay: true },
+      (status) => {
+        if (status.isLoaded) {
+          setDuration(status.durationMillis || 0);
+          setPosition(status.positionMillis || 0);
+          if (status.didJustFinish) {
+            setPlaying(false);
+            setPosition(0);
+          }
+        }
+      }
+    );
+    setSound(newSound);
+    setPlaying(true);
+  };
+
+  const fmt = (ms) => {
+    const s = Math.floor(ms / 1000);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  };
+
+  const progress = duration > 0 ? position / duration : 0;
+
+  return (
+    <TouchableOpacity
+      style={[songAudioStyles.container, { backgroundColor: colors.bgTertiary }]}
+      onPress={togglePlay}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`${playing ? 'Pause' : 'Play'} ${filename}`}
+    >
+      <Ionicons name={playing ? 'pause-circle' : 'play-circle'} size={32} color={colors.primary} />
+      <View style={songAudioStyles.info}>
+        <Text style={[songAudioStyles.filename, { color: colors.textPrimary }]} numberOfLines={1}>{filename}</Text>
+        <View style={[songAudioStyles.progressBg, { backgroundColor: colors.border }]}>
+          <View style={[songAudioStyles.progressFill, { width: `${progress * 100}%`, backgroundColor: colors.primary }]} />
+        </View>
+        <Text style={[songAudioStyles.time, { color: colors.textSecondary }]}>
+          {playing ? fmt(position) : fmt(duration)} {duration > 0 ? `/ ${fmt(duration)}` : ''}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const songAudioStyles = StyleSheet.create({
+  container: { flexDirection: 'row', alignItems: 'center', padding: 10, borderRadius: 8, gap: 10 },
+  info: { flex: 1 },
+  filename: { fontSize: 13, fontWeight: '600', marginBottom: 4 },
+  progressBg: { height: 3, borderRadius: 1.5, overflow: 'hidden', marginBottom: 2 },
+  progressFill: { height: 3, borderRadius: 1.5 },
+  time: { fontSize: 11, fontVariant: ['tabular-nums'] },
+});
 
 function parseDuration(str) {
   if (!str) return null;
@@ -66,6 +145,10 @@ export default function SongDetailScreen({ navigation, route }) {
   const [fieldErrors, setFieldErrors] = useState({});
   const [loadError, setLoadError] = useState(null);
 
+  // Attachments
+  const [attachments, setAttachments] = useState([]);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+
   // Practice logging
   const [showPracticeModal, setShowPracticeModal] = useState(false);
   const [practiceDuration, setPracticeDuration] = useState('30');
@@ -76,8 +159,12 @@ export default function SongDetailScreen({ navigation, route }) {
     if (isNew) return;
     (async () => {
       try {
-        const data = await api.getSong(songId);
+        const [data, atts] = await Promise.all([
+          api.getSong(songId),
+          api.getSongAttachments(songId).catch(() => []),
+        ]);
         setSong(data);
+        setAttachments(atts);
         populateForm(data);
       } catch (err) {
         setLoadError(err.message || 'Failed to load song');
@@ -227,6 +314,51 @@ export default function SongDetailScreen({ navigation, route }) {
       setLoggingPractice(false);
     }
   }, [workspaceId, songId, song, practiceDuration, practiceNotes]);
+
+  const handleAddAttachment = useCallback(async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['audio/*', 'image/*', 'application/pdf'],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled) return;
+      const file = result.assets[0];
+      if (file.size > 10 * 1024 * 1024) {
+        Alert.alert('Too Large', 'File must be under 10MB');
+        return;
+      }
+      setUploadingAttachment(true);
+      const uploaded = await api.uploadFile(file.uri, file.name, file.mimeType, workspaceId);
+      const attachment = await api.addSongAttachment(songId, {
+        filename: file.name,
+        url: uploaded.url,
+        type: file.mimeType || 'file',
+        size: file.size,
+      });
+      setAttachments(prev => [attachment, ...prev]);
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to upload attachment');
+    } finally {
+      setUploadingAttachment(false);
+    }
+  }, [workspaceId, songId]);
+
+  const handleDeleteAttachment = useCallback((att) => {
+    Alert.alert('Delete Attachment', `Delete "${att.filename}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.deleteSongAttachment(songId, att.id);
+            setAttachments(prev => prev.filter(a => a.id !== att.id));
+          } catch (err) {
+            Alert.alert('Error', 'Failed to delete attachment');
+          }
+        },
+      },
+    ]);
+  }, [songId]);
 
   const loadSong = useCallback(async () => {
     setLoadError(null);
@@ -563,6 +695,81 @@ export default function SongDetailScreen({ navigation, route }) {
           <Text style={[styles.sectionText, { color: colors.textPrimary }]}>{song.arrangement}</Text>
         </View>
       ) : null}
+
+      {/* Attachments */}
+      {!isNew && !editing && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary, marginBottom: 0 }]} accessibilityRole="header">
+              Attachments{attachments.length > 0 ? ` (${attachments.length})` : ''}
+            </Text>
+            <TouchableOpacity
+              onPress={handleAddAttachment}
+              disabled={uploadingAttachment}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Add attachment"
+            >
+              {uploadingAttachment ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+          </View>
+          {attachments.length === 0 ? (
+            <Text style={{ color: colors.textSecondary, fontSize: 13, fontStyle: 'italic' }}>
+              No attachments. Add chord charts, audio files, or PDFs.
+            </Text>
+          ) : (
+            <View style={{ gap: 8 }}>
+              {attachments.map(att => (
+                att.type?.startsWith('audio') ? (
+                  <View key={att.id}>
+                    <SongAudioPlayer url={att.url} filename={att.filename} colors={colors} />
+                    <TouchableOpacity
+                      onPress={() => handleDeleteAttachment(att)}
+                      style={{ position: 'absolute', top: 4, right: 4 }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Delete ${att.filename}`}
+                    >
+                      <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View key={att.id} style={[songAudioStyles.container, { backgroundColor: colors.bgTertiary }]}>
+                    <Ionicons
+                      name={att.type?.startsWith('image') ? 'image-outline' : 'document-outline'}
+                      size={22}
+                      color={colors.textSecondary}
+                    />
+                    <TouchableOpacity
+                      style={{ flex: 1 }}
+                      onPress={() => Linking.openURL(att.url)}
+                      accessibilityRole="link"
+                      accessibilityLabel={`Open ${att.filename}`}
+                    >
+                      <Text style={[songAudioStyles.filename, { color: colors.primary }]} numberOfLines={1}>{att.filename}</Text>
+                      {att.size > 0 && (
+                        <Text style={[songAudioStyles.time, { color: colors.textSecondary }]}>{(att.size / 1024).toFixed(0)} KB</Text>
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleDeleteAttachment(att)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Delete ${att.filename}`}
+                    >
+                      <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                )
+              ))}
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Desktop Feature Hint */}
       <View style={[styles.desktopHint, { backgroundColor: colors.bgTertiary }]}>

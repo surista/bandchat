@@ -805,6 +805,10 @@ class ApiService {
     return this.request(`/messages/timeline/${workspaceId}?${params}`);
   }
 
+  async getActivity(workspaceId) {
+    return this.request(`/messages/activity/${workspaceId}`);
+  }
+
   // Reactions
   async addReaction(messageId, emoji) {
     return this.request(`/messages/${messageId}/reactions`, {

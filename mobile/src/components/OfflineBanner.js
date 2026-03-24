@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import NetInfo from '@react-native-community/netinfo';
 
 export default function OfflineBanner() {
   const [isOffline, setIsOffline] = useState(false);
-  const [slideAnim] = useState(() => new Animated.Value(-40));
+  const [slideAnim] = useState(() => new Animated.Value(-120));
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
@@ -16,7 +18,7 @@ export default function OfflineBanner() {
 
   useEffect(() => {
     Animated.timing(slideAnim, {
-      toValue: isOffline ? 0 : -40,
+      toValue: isOffline ? 0 : -120,
       duration: 300,
       useNativeDriver: true,
     }).start();
@@ -25,7 +27,12 @@ export default function OfflineBanner() {
   if (!isOffline) return null;
 
   return (
-    <Animated.View style={[styles.banner, { transform: [{ translateY: slideAnim }] }]}>
+    <Animated.View
+      style={[styles.banner, { paddingTop: insets.top + 8, transform: [{ translateY: slideAnim }] }]}
+      accessibilityRole="alert"
+      accessibilityLiveRegion="assertive"
+      accessibilityLabel="No internet connection"
+    >
       <Text style={styles.text}>No internet connection</Text>
     </Animated.View>
   );
@@ -36,7 +43,7 @@ export default function OfflineBanner() {
 const styles = StyleSheet.create({
   banner: {
     backgroundColor: '#ef4444',
-    paddingVertical: 8,
+    paddingBottom: 8,
     paddingHorizontal: 16,
     alignItems: 'center',
   },

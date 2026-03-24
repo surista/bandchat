@@ -88,13 +88,13 @@ function LinkPreview({ content, isOwn, onDismiss, onLongPress, blockedDomains })
     <View style={styles.wrapper}>
       {isOwn && onDismiss && (
         <TouchableOpacity
-          style={styles.dismissButton}
+          style={[styles.dismissButton, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
           onPress={onDismiss}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
           accessibilityRole="button"
           accessibilityLabel="Remove link preview"
         >
-          <Text style={styles.dismissText}>{'\u00D7'}</Text>
+          <Text style={[styles.dismissText, { color: colors.textSecondary }]}>{'\u00D7'}</Text>
         </TouchableOpacity>
       )}
       <TouchableOpacity
@@ -103,6 +103,8 @@ function LinkPreview({ content, isOwn, onDismiss, onLongPress, blockedDomains })
         onLongPress={() => onLongPress?.(url)}
         delayLongPress={400}
         activeOpacity={0.7}
+        accessibilityRole="link"
+        accessibilityLabel={`Link preview: ${preview.title || getHostname(url)}`}
       >
         <View style={styles.textContent}>
           <Text style={[styles.domain, { color: colors.textSecondary }]} numberOfLines={1}>
@@ -145,15 +147,12 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#374151',
     borderWidth: 1,
-    borderColor: '#6b7280',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
   },
   dismissText: {
-    color: '#d1d5db',
     fontSize: 14,
     fontWeight: '700',
     lineHeight: 16,

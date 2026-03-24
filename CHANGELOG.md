@@ -2,6 +2,37 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.05.81] - 2026-03-24
+
+### Added
+- **Test database integration** — Server tests now run against a dedicated Railway PostgreSQL instance (Postgres-sxl9), keeping production data safe. Safety guard in `globalSetup.js` accepts `rlwy.net` hosts.
+
+### Fixed
+- **Contacts test category mismatch** — Test was sending uppercase `'VENUE'` but server validates lowercase categories since v1.05.80. Updated to `'venue'`.
+
+## [1.05.80] - 2026-03-24
+
+### Security
+- **JWT algorithm pinning** — Explicit `algorithm: 'HS256'` on all `jwt.sign` calls to prevent algorithm confusion attacks.
+- **Prisma select clauses** — 16 User queries in auth routes now fetch only required fields instead of full objects (excludes password hashes, tokens, etc. from memory).
+- **Enum validation** — Gig type, gig status, and gig media type validated against whitelists on create/update. Contact category validated on update (was only on GET/create).
+- **Privilege escalation fix** — Workspace admins can no longer reset system admin passwords.
+- **Rate limiting expansion** — Added `apiLimiter` to mutation endpoints across 11 route files: channels, songs, gigs, setlists, announcements, polls, kitty, recordings, subscriptions, slackImport, push subscribe.
+- **Contact category whitelist** — Corrected to match actual client values (`sound_engineer` not `sound`). Single module-level constant shared by all endpoints.
+
+### Fixed
+- **Android keyboard covers message input** — Changed `KeyboardAvoidingView` behavior to `undefined` on Android and `keyboardDismissMode` to `on-drag` (was `interactive`, Android-only).
+- **OfflineBanner safe area** — Banner now respects safe area insets on notched devices. Slide animation offset increased to `-120` for large notches.
+- **LinkPreview theme colors** — Dismiss button uses theme colors instead of hardcoded grays. Larger 14pt hit slop for easier tapping.
+- **Currency null safety** — `getCurrencySymbol()` falls back to USD when code is null/undefined.
+- **Reply swipe color** — Swipe-to-reply action uses `colors.primary` from theme instead of hardcoded blue.
+
+### Added
+- **Danish Krone (DKK)** — Added to currency list on both web and mobile.
+- **Toast accessibility** — `accessibilityRole="alert"`, `accessibilityLiveRegion="polite"`, and dismiss button labeling on all toast notifications.
+- **OfflineBanner accessibility** — `accessibilityRole="alert"` and `accessibilityLiveRegion="assertive"` for screen reader announcements.
+- **LinkPreview accessibility** — `accessibilityRole="link"` and descriptive label on link preview cards.
+
 ## [1.05.65] - 2026-03-22
 
 ### Added

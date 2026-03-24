@@ -1,6 +1,7 @@
 import express from 'express';
 import crypto from 'crypto';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 import { getEffectivePlan, getPlanLimits, serializePlanLimits } from '../lib/planLimits.js';
 import { getSubscriber, isEntitlementActive, getEntitlementStore } from '../lib/revenuecat.js';
@@ -96,7 +97,7 @@ router.get('/:workspaceId/plan', authenticate, isWorkspaceMember, async (req, re
 // ---------------------------------------------------------------------------
 // POST /:workspaceId/activate — Verify active RevenueCat entitlement and activate Pro
 // ---------------------------------------------------------------------------
-router.post('/:workspaceId/activate', authenticate, isWorkspaceAdmin, async (req, res) => {
+router.post('/:workspaceId/activate', authenticate, apiLimiter, isWorkspaceAdmin, async (req, res) => {
   try {
     const { workspaceId } = req.params;
 

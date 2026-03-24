@@ -848,7 +848,8 @@ router.post('/:workspaceId/members/:userId/reset-password', authenticate, isWork
 
     // Verify admin's password before allowing reset
     const admin = await prisma.user.findUnique({
-      where: { id: req.user.id }
+      where: { id: req.user.id },
+      select: { id: true, password: true }
     });
 
     if (!admin.password) {
@@ -869,6 +870,15 @@ router.post('/:workspaceId/members/:userId/reset-password', authenticate, isWork
 
     if (!membership) {
       return res.status(404).json({ error: 'User is not a member of this workspace' });
+    }
+
+    // Prevent workspace admins from resetting system admin passwords
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { isSystemAdmin: true }
+    });
+    if (targetUser?.isSystemAdmin) {
+      return res.status(403).json({ error: 'Cannot reset password for system admins' });
     }
 
     // Hash and update password, and revoke all refresh tokens for the user

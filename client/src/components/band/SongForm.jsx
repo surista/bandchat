@@ -456,23 +456,28 @@ Example:
                       key={attachment.id}
                       className="flex items-center justify-between bg-[var(--color-bg-tertiary)] rounded-lg p-3"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="text-xl">{getFileIcon(attachment.type)}</span>
-                        <div className="min-w-0">
-                          <a
-                            href={isSafeUrl(attachment.url) ? attachment.url : "#"}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-400 hover:text-blue-300 truncate block"
-                          >
-                            {attachment.filename}
-                          </a>
-                          {attachment.size && (
-                            <span className="text-xs text-gray-500">
-                              {(attachment.size / 1024).toFixed(1)} KB
-                            </span>
-                          )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">{getFileIcon(attachment.type)}</span>
+                          <div className="min-w-0">
+                            <a
+                              href={isSafeUrl(attachment.url) ? attachment.url : "#"}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-400 hover:text-blue-300 truncate block"
+                            >
+                              {attachment.filename}
+                            </a>
+                            {attachment.size && (
+                              <span className="text-xs text-gray-500">
+                                {(attachment.size / 1024).toFixed(1)} KB
+                              </span>
+                            )}
+                          </div>
                         </div>
+                        {attachment.type?.startsWith('audio') && isSafeUrl(attachment.url) && (
+                          <audio src={attachment.url} controls preload="metadata" className="w-full mt-2" style={{ height: 32 }} />
+                        )}
                       </div>
                       <button
                         type="button"

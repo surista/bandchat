@@ -3,11 +3,16 @@ import { authenticate, isWorkspaceMember } from '../middleware/auth.js';
 import prisma from '../lib/prisma.js';
 
 const router = express.Router();
+const VALID_CATEGORIES = ['venue', 'sound_engineer', 'photographer', 'agent', 'other'];
 
 // Get all contacts for a workspace
 router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
     const { category } = req.query;
+
+    if (category && !VALID_CATEGORIES.includes(category)) {
+      return res.status(400).json({ error: 'Invalid category' });
+    }
 
     const contacts = await prisma.contact.findMany({
       where: {
@@ -41,7 +46,6 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       return res.status(400).json({ error: 'Name is required' });
     }
 
-    const VALID_CATEGORIES = ['venue', 'agent', 'sound', 'lighting', 'manager', 'photographer', 'promoter', 'other'];
     if (category && !VALID_CATEGORIES.includes(category)) return res.status(400).json({ error: 'Invalid category' });
 
     if (name.length > 200) return res.status(400).json({ error: 'Name must be 200 characters or less' });
@@ -144,6 +148,10 @@ router.put('/:contactId', authenticate, async (req, res) => {
     if (notes && notes.length > 2000) return res.status(400).json({ error: 'Notes must be 2,000 characters or less' });
     if (website && website.length > 500) return res.status(400).json({ error: 'Website must be 500 characters or less' });
     if (address && address.length > 500) return res.status(400).json({ error: 'Address must be 500 characters or less' });
+
+    if (category !== undefined && !VALID_CATEGORIES.includes(category)) {
+      return res.status(400).json({ error: 'Invalid category' });
+    }
 
     const contact = await prisma.contact.update({
       where: { id: req.params.contactId },

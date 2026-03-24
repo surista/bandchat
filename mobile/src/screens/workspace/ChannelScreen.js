@@ -791,7 +791,7 @@ export default function ChannelScreen({ navigation, route }) {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
       <View style={[styles.chatContainer, isTablet && { maxWidth: contentMaxWidth }]}>
@@ -887,7 +887,7 @@ export default function ChannelScreen({ navigation, route }) {
         scrollEventThrottle={100}
         ListFooterComponent={renderFooter}
         contentContainerStyle={styles.messageList}
-        keyboardDismissMode="interactive"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         keyboardShouldPersistTaps="handled"
         // Performance optimizations
         maxToRenderPerBatch={10}

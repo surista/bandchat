@@ -1,29 +1,33 @@
-import { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback, useMemo } from 'react';
 import {
   View,
-  Modal,
   TouchableOpacity,
   Text,
   StyleSheet,
-  useWindowDimensions,
   ActivityIndicator,
-  Image,
   Alert,
 } from 'react-native';
+import ImageView from 'react-native-image-viewing';
 import * as MediaLibrary from 'expo-media-library';
 import { File, Directory, Paths } from 'expo-file-system/next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-function ImageViewer({ visible, imageUrl, onClose }) {
-  const [loading, setLoading] = useState(true);
+function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
   const [saving, setSaving] = useState(false);
-  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
-  const handleClose = useCallback(() => {
-    setLoading(true);
-    onClose();
-  }, [onClose]);
+  // Support both single image and gallery mode
+  const imageList = useMemo(() => {
+    if (images && images.length > 0) {
+      return images.map(img => ({ uri: typeof img === 'string' ? img : img.url || img.uri }));
+    }
+    if (imageUrl) {
+      return [{ uri: imageUrl }];
+    }
+    return [];
+  }, [images, imageUrl]);
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(async (currentIndex) => {
     try {
       setSaving(true);
       const { status } = await MediaLibrary.requestPermissionsAsync();
@@ -31,13 +35,14 @@ function ImageViewer({ visible, imageUrl, onClose }) {
         Alert.alert('Permission needed', 'Allow BandChat to save photos to your library.');
         return;
       }
-      // Extract and sanitize filename
-      let filename = imageUrl.split('/').pop()?.split('?')[0] || '';
+      const url = imageList[currentIndex]?.uri;
+      if (!url) return;
+      let filename = url.split('/').pop()?.split('?')[0] || '';
       filename = filename.replace(/[^a-zA-Z0-9._-]/g, '');
       if (!filename || !filename.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
         filename = `image-${Date.now()}.jpg`;
       }
-      const file = await File.downloadFileAsync(imageUrl, new Directory(Paths.cache), { idempotent: true });
+      const file = await File.downloadFileAsync(url, new Directory(Paths.cache), { idempotent: true });
       await MediaLibrary.saveToLibraryAsync(file.uri);
       Alert.alert('Saved', 'Image saved to your photo library.');
     } catch (err) {
@@ -45,52 +50,71 @@ function ImageViewer({ visible, imageUrl, onClose }) {
     } finally {
       setSaving(false);
     }
-  }, [imageUrl]);
+  }, [imageList]);
 
-  if (!imageUrl) return null;
+  const [currentIdx, setCurrentIdx] = useState(initialIndex);
+
+  const HeaderComponent = useCallback(({ imageIndex }) => (
+    <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+      <TouchableOpacity
+        style={styles.headerButton}
+        onPress={() => handleSave(imageIndex)}
+        disabled={saving}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Save image to photo library"
+      >
+        {saving ? (
+          <ActivityIndicator size="small" color="#ffffff" />
+        ) : (
+          <Text style={styles.headerButtonText}>{'\u2B07'}</Text>
+        )}
+      </TouchableOpacity>
+      {imageList.length > 1 && (
+        <Text style={styles.counter}>{imageIndex + 1} / {imageList.length}</Text>
+      )}
+      <TouchableOpacity
+        style={styles.headerButton}
+        onPress={onClose}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Close image viewer"
+      >
+        <Text style={styles.headerButtonText}>{'\u2715'}</Text>
+      </TouchableOpacity>
+    </View>
+  ), [insets.top, saving, imageList.length, handleSave, onClose]);
+
+  if (imageList.length === 0) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <View style={styles.container}>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Save image to photo library">
-          {saving ? (
-            <ActivityIndicator size="small" color="#ffffff" />
-          ) : (
-            <Text style={styles.saveText}>{'\u2B07'}</Text>
-          )}
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.closeButton} onPress={handleClose} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Close image viewer">
-          <Text style={styles.closeText}>{'\u2715'}</Text>
-        </TouchableOpacity>
-        {loading && (
-          <ActivityIndicator style={styles.loader} size="large" color="#ffffff" />
-        )}
-        <Image
-          source={{ uri: imageUrl }}
-          style={{ width: screenWidth, height: screenHeight * 0.75 }}
-          resizeMode="contain"
-          onLoadEnd={() => setLoading(false)}
-          accessibilityLabel="Full size image"
-        />
-      </View>
-    </Modal>
+    <ImageView
+      images={imageList}
+      imageIndex={initialIndex}
+      visible={visible}
+      onRequestClose={onClose}
+      onImageIndexChange={setCurrentIdx}
+      swipeToCloseEnabled
+      doubleTapToZoomEnabled
+      presentationStyle="overFullScreen"
+      HeaderComponent={HeaderComponent}
+      backgroundColor="rgba(0,0,0,0.95)"
+    />
   );
 }
 
 export default memo(ImageViewer);
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.95)',
-    justifyContent: 'center',
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    width: '100%',
   },
-  closeButton: {
-    position: 'absolute',
-    top: 60,
-    right: 20,
-    zIndex: 10,
+  headerButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -98,29 +122,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  closeText: {
+  headerButtonText: {
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '600',
   },
-  saveButton: {
-    position: 'absolute',
-    top: 60,
-    left: 20,
-    zIndex: 10,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  saveText: {
+  counter: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '600',
-  },
-  loader: {
-    position: 'absolute',
   },
 });

@@ -23,7 +23,7 @@ const CURRENCIES = [
 ];
 
 export default function getCurrencySymbol(code) {
-  return CURRENCIES.find(c => c.code === code)?.symbol || '$';
+  return CURRENCIES.find(c => c.code === (code || 'USD'))?.symbol || '$';
 }
 
 export { CURRENCIES };

@@ -430,6 +430,17 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
         return pattern.test(contentLower);
       });
 
+      // Store mentions for activity feed
+      const mentionUserIds = mentionedUsers
+        .filter(m => m.userId !== req.user.id)
+        .map(m => m.userId);
+      if (mentionUserIds.length > 0) {
+        prisma.mention.createMany({
+          data: mentionUserIds.map(userId => ({ userId, messageId: message.id })),
+          skipDuplicates: true,
+        }).catch(() => {}); // Non-critical, don't block message send
+      }
+
       mentionedUsers
         .filter(m => m.userId !== req.user.id && !notifiedUserIds.has(m.userId))
         .forEach(m => {
@@ -826,11 +837,10 @@ router.get('/timeline/:workspaceId', authenticate, searchLimiter, async (req, re
     });
     const blockedIds = blockedUsers.map(b => b.blockedUserId);
 
-    // Fetch timeline messages
+    // Fetch timeline messages (top-level + thread replies)
     const messages = await prisma.message.findMany({
       where: {
         channelId: { in: accessibleChannels.map(c => c.id) },
-        parentId: null, // Only top-level messages
         ...(blockedIds.length > 0 && { authorId: { notIn: blockedIds } })
       },
       take: take + 1,
@@ -851,7 +861,14 @@ router.get('/timeline/:workspaceId', authenticate, searchLimiter, async (req, re
         },
         attachments: true,
         ...reactionsInclude,
-        _count: { select: { replies: true } }
+        _count: { select: { replies: true } },
+        parent: {
+          select: {
+            id: true,
+            content: true,
+            author: { select: { id: true, displayName: true } }
+          }
+        }
       }
     });
 
@@ -866,6 +883,140 @@ router.get('/timeline/:workspaceId', authenticate, searchLimiter, async (req, re
   } catch (error) {
     console.error('Get timeline error:', error);
     res.status(500).json({ error: 'Failed to get timeline' });
+  }
+});
+
+// Get activity feed (reactions to your messages, mentions, thread replies)
+router.get('/activity/:workspaceId', authenticate, searchLimiter, async (req, res) => {
+  try {
+    const { cursor, limit = 50 } = req.query;
+    const take = Math.min(parseInt(limit) || 50, 100);
+    const userId = req.user.id;
+
+    // Verify membership
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId, workspaceId: req.params.workspaceId } }
+    });
+    if (!membership) return res.status(403).json({ error: 'Not a member' });
+
+    // Get accessible channels
+    const accessibleChannels = await prisma.channel.findMany({
+      where: {
+        workspaceId: req.params.workspaceId,
+        OR: [{ isPrivate: false }, { members: { some: { userId } } }]
+      },
+      select: { id: true }
+    });
+    const channelIds = accessibleChannels.map(c => c.id);
+    if (channelIds.length === 0) return res.json({ items: [], nextCursor: null, hasMore: false });
+
+    // Cutoff: only last 30 days of activity
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    // Fetch 3 activity types in parallel
+    const [reactions, mentions, threadReplies] = await Promise.all([
+      // 1. Reactions to your messages
+      prisma.reaction.findMany({
+        where: {
+          userId: { not: userId },
+          message: { authorId: userId, channelId: { in: channelIds } },
+          createdAt: { gt: since },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: take,
+        include: {
+          user: { select: { id: true, displayName: true, avatarUrl: true } },
+          message: {
+            select: {
+              id: true, content: true, channelId: true,
+              channel: { select: { id: true, name: true, isDirect: true } }
+            }
+          }
+        }
+      }),
+      // 2. Mentions of you
+      prisma.mention.findMany({
+        where: {
+          userId,
+          createdAt: { gt: since },
+          message: { channelId: { in: channelIds }, authorId: { not: userId } }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: take,
+        include: {
+          message: {
+            select: {
+              id: true, content: true, channelId: true, createdAt: true,
+              author: { select: { id: true, displayName: true, avatarUrl: true } },
+              channel: { select: { id: true, name: true, isDirect: true } }
+            }
+          }
+        }
+      }),
+      // 3. Thread replies to threads you participated in
+      prisma.message.findMany({
+        where: {
+          channelId: { in: channelIds },
+          authorId: { not: userId },
+          createdAt: { gt: since },
+          parentId: { not: null },
+          parent: {
+            OR: [
+              { authorId: userId },
+              { replies: { some: { authorId: userId } } }
+            ]
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: take,
+        select: {
+          id: true, content: true, channelId: true, parentId: true, createdAt: true,
+          author: { select: { id: true, displayName: true, avatarUrl: true } },
+          channel: { select: { id: true, name: true, isDirect: true } },
+          parent: { select: { id: true, content: true } }
+        }
+      })
+    ]);
+
+    // Merge and sort chronologically
+    const items = [
+      ...reactions.map(r => ({
+        type: 'reaction',
+        id: `r-${r.id}`,
+        createdAt: r.createdAt,
+        actor: r.user,
+        emoji: r.emoji,
+        message: r.message,
+        channelId: r.message.channelId,
+        channelName: r.message.channel?.name,
+      })),
+      ...mentions.map(m => ({
+        type: 'mention',
+        id: `m-${m.id}`,
+        createdAt: m.message.createdAt,
+        actor: m.message.author,
+        message: { id: m.message.id, content: m.message.content },
+        channelId: m.message.channelId,
+        channelName: m.message.channel?.name,
+      })),
+      ...threadReplies.map(t => ({
+        type: 'thread_reply',
+        id: `t-${t.id}`,
+        createdAt: t.createdAt,
+        actor: t.author,
+        message: { id: t.id, content: t.content },
+        parentContent: t.parent?.content,
+        parentId: t.parentId,
+        channelId: t.channelId,
+        channelName: t.channel?.name,
+      })),
+    ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+     .slice(0, take);
+
+    res.json({ items, hasMore: items.length >= take });
+  } catch (error) {
+    console.error('Get activity error:', error);
+    res.status(500).json({ error: 'Failed to get activity' });
   }
 });
 

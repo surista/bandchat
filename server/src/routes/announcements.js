@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 import { sendPushToUser } from './push.js';
 
@@ -65,7 +66,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 });
 
 // Create an announcement (admin only)
-router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => {
+router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceAdmin, async (req, res) => {
   try {
     const { title, content, priority, isPinned, expiresAt } = req.body;
 
