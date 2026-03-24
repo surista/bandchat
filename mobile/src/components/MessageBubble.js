@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from 'react';
-import { View, Text, Image, TouchableOpacity, Pressable, Animated, Linking, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, Pressable, Animated, Linking, StyleSheet, Platform } from 'react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Reanimated, { useAnimatedStyle, interpolate } from 'react-native-reanimated';
 import { Audio, Video, ResizeMode } from 'expo-av';
@@ -127,7 +127,48 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
   };
 
   /**
-   * Render message content with clickable URLs and @mentions.
+   * Apply inline markdown formatting to text fragments.
+   * Handles: **bold**, *italic*, ~~strikethrough~~, `code`
+   */
+  const renderMarkdown = (fragments, keyPrefix) => {
+    // Combined regex: code must come first (to avoid nested parsing inside code spans)
+    const mdRegex = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|~~[^~]+~~)/;
+    const result = [];
+    let keyIdx = 0;
+
+    for (const fragment of fragments) {
+      if (typeof fragment !== 'string') {
+        result.push(fragment);
+        continue;
+      }
+
+      const mdParts = fragment.split(mdRegex);
+      for (const mdPart of mdParts) {
+        if (!mdPart) continue;
+        const k = `${keyPrefix}-md${keyIdx++}`;
+
+        if (mdPart.startsWith('`') && mdPart.endsWith('`') && mdPart.length > 2) {
+          result.push(
+            <Text key={k} style={{ fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 14, backgroundColor: 'rgba(128,128,128,0.15)', borderRadius: 3 }}>
+              {mdPart.slice(1, -1)}
+            </Text>
+          );
+        } else if (mdPart.startsWith('**') && mdPart.endsWith('**') && mdPart.length > 4) {
+          result.push(<Text key={k} style={{ fontWeight: '700' }}>{mdPart.slice(2, -2)}</Text>);
+        } else if (mdPart.startsWith('*') && mdPart.endsWith('*') && mdPart.length > 2) {
+          result.push(<Text key={k} style={{ fontStyle: 'italic' }}>{mdPart.slice(1, -1)}</Text>);
+        } else if (mdPart.startsWith('~~') && mdPart.endsWith('~~') && mdPart.length > 4) {
+          result.push(<Text key={k} style={{ textDecorationLine: 'line-through', opacity: 0.7 }}>{mdPart.slice(2, -2)}</Text>);
+        } else {
+          result.push(mdPart);
+        }
+      }
+    }
+    return result;
+  };
+
+  /**
+   * Render message content with clickable URLs, @mentions, #channels, and markdown.
    */
   const renderContent = (text) => {
     if (!text) return null;
@@ -159,11 +200,12 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
           result.push(part);
         }
       } else {
-        // Not a URL, apply mention highlighting then channel references
+        // Not a URL, apply mention highlighting, then channel references, then markdown
         const mentionResult = renderMentions(part, `p${i}`);
         const mentionFragments = Array.isArray(mentionResult) ? mentionResult : mentionResult ? [mentionResult] : [];
         const withChannels = renderChannelRefs(mentionFragments, `p${i}`);
-        result.push(...withChannels);
+        const withMarkdown = renderMarkdown(withChannels, `p${i}`);
+        result.push(...withMarkdown);
       }
     });
 

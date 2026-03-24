@@ -2,6 +2,12 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.05.82] - 2026-03-24
+
+### Added
+- **Mobile formatting toolbar** — Scrollable toolbar beneath the message input with: attach, photo library, bold, italic, strikethrough, inline code, @mention, and emoji buttons. Uses Ionicons, keeps keyboard open on tap.
+- **Mobile markdown rendering** — MessageBubble now renders `**bold**`, `*italic*`, `~~strikethrough~~`, and `` `code` `` inline formatting. Code spans use monospace font with subtle background.
+
 ## [1.05.81] - 2026-03-24
 
 ### Added

@@ -1,9 +1,11 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { View, TextInput, TouchableOpacity, Text, Image, StyleSheet, Platform, Animated, PanResponder, Alert, FlatList } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, Image, StyleSheet, Platform, Animated, PanResponder, Alert, FlatList, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
 import { useTheme } from '../context/ThemeContext';
 import { formatDuration as formatRecordingDuration } from '../utils/formatDuration';
+import EmojiPicker from './EmojiPicker';
 
 const MAX_HEIGHT = 120;
 
@@ -21,6 +23,9 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
   const typingTimeoutRef = useRef(null);
   const inputRef = useRef(null);
   const selectionRef = useRef({ start: 0, end: 0 });
+
+  // Toolbar state
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -176,6 +181,53 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
   const handleSelectionChange = useCallback((e) => {
     selectionRef.current = e.nativeEvent.selection;
   }, []);
+
+  // Wrap selected text (or insert at cursor) with markdown markers
+  const wrapSelection = useCallback((before, after) => {
+    const sel = selectionRef.current;
+    const start = sel?.start ?? text.length;
+    const end = sel?.end ?? text.length;
+    const selected = text.slice(start, end);
+    const suffix = after || before;
+    const newText = text.slice(0, start) + before + selected + suffix + text.slice(end);
+    setText(newText);
+    // Move cursor after inserted markers
+    const newPos = selected
+      ? start + before.length + selected.length + suffix.length
+      : start + before.length;
+    setTimeout(() => {
+      inputRef.current?.setNativeProps({
+        selection: { start: newPos, end: newPos },
+      });
+      selectionRef.current = { start: newPos, end: newPos };
+    }, 50);
+  }, [text]);
+
+  const insertEmoji = useCallback((emoji) => {
+    const pos = selectionRef.current?.start ?? text.length;
+    const newText = text.slice(0, pos) + emoji + text.slice(pos);
+    setText(newText);
+    setShowEmojiPicker(false);
+    const newPos = pos + emoji.length;
+    setTimeout(() => {
+      inputRef.current?.focus();
+      selectionRef.current = { start: newPos, end: newPos };
+    }, 50);
+  }, [text]);
+
+  const triggerMention = useCallback(() => {
+    const pos = selectionRef.current?.start ?? text.length;
+    const needsSpace = pos > 0 && text[pos - 1] !== ' ' && text[pos - 1] !== '\n';
+    const insert = (needsSpace ? ' ' : '') + '@';
+    const newText = text.slice(0, pos) + insert + text.slice(pos);
+    setText(newText);
+    const newPos = pos + insert.length;
+    selectionRef.current = { start: newPos, end: newPos };
+    setShowMentions(true);
+    setMentionStart(newPos - 1);
+    setMentionFilter('');
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, [text]);
 
   const handleSend = useCallback(() => {
     const trimmed = text.trim();
@@ -486,73 +538,153 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
       )}
 
       {!isRecording && (
-        <View style={styles.inputRow}>
-          {/* Attachment button */}
-          {!editingMessage && (
-            <TouchableOpacity style={styles.attachButton} onPress={showAttachOptions} activeOpacity={0.6} hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }} accessibilityRole="button" accessibilityLabel="Attach media">
-              <Text style={[styles.attachIcon, { color: colors.textSecondary }]}>+</Text>
-            </TouchableOpacity>
-          )}
-
-          <TextInput
-            ref={inputRef}
-            style={[
-              styles.input,
-              {
-                backgroundColor: colors.bgTertiary,
-                color: colors.textPrimary,
-                height: inputHeight,
-              },
-            ]}
-            placeholder={editingMessage ? 'Edit message...' : 'Message...'}
-            placeholderTextColor={colors.textSecondary}
-            value={text}
-            onChangeText={handleChangeText}
-            onSelectionChange={handleSelectionChange}
-            onContentSizeChange={handleContentSizeChange}
-            multiline
-            autoCorrect={true}
-            autoCapitalize="sentences"
-            spellCheck={true}
-            textAlignVertical="center"
-            returnKeyType={Platform.OS === 'ios' ? 'default' : 'send'}
-            blurOnSubmit={false}
-            accessibilityLabel={editingMessage ? 'Edit message' : 'Type a message'}
-          />
-
-          {showMic ? (
-            <TouchableOpacity
-              style={[styles.sendButton, { backgroundColor: colors.bgTertiary }]}
-              onLongPress={startRecording}
-              delayLongPress={200}
-              onPress={() => {
-                // Short press also starts recording for easier usage
-                startRecording();
-              }}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Record voice message"
-            >
-              <Text style={[styles.micIcon, { color: colors.textSecondary }]}>{'\uD83C\uDF99'}</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
+        <>
+          <View style={styles.inputRow}>
+            <TextInput
+              ref={inputRef}
               style={[
-                styles.sendButton,
-                { backgroundColor: canSend ? colors.primary : colors.bgTertiary },
+                styles.input,
+                {
+                  backgroundColor: colors.bgTertiary,
+                  color: colors.textPrimary,
+                  height: inputHeight,
+                },
               ]}
-              onPress={handleSend}
-              disabled={!canSend}
-              activeOpacity={0.7}
+              placeholder={editingMessage ? 'Edit message...' : 'Message...'}
+              placeholderTextColor={colors.textSecondary}
+              value={text}
+              onChangeText={handleChangeText}
+              onSelectionChange={handleSelectionChange}
+              onContentSizeChange={handleContentSizeChange}
+              multiline
+              autoCorrect={true}
+              autoCapitalize="sentences"
+              spellCheck={true}
+              textAlignVertical="center"
+              returnKeyType={Platform.OS === 'ios' ? 'default' : 'send'}
+              blurOnSubmit={false}
+              accessibilityLabel={editingMessage ? 'Edit message' : 'Type a message'}
+            />
+
+            {showMic ? (
+              <TouchableOpacity
+                style={[styles.sendButton, { backgroundColor: colors.bgTertiary }]}
+                onLongPress={startRecording}
+                delayLongPress={200}
+                onPress={() => startRecording()}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Record voice message"
+              >
+                <Text style={[styles.micIcon, { color: colors.textSecondary }]}>{'\uD83C\uDF99'}</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.sendButton,
+                  { backgroundColor: canSend ? colors.primary : colors.bgTertiary },
+                ]}
+                onPress={handleSend}
+                disabled={!canSend}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={editingMessage ? 'Save edit' : 'Send message'}
+              >
+                <Text style={[styles.sendIcon, { color: canSend ? '#ffffff' : colors.textSecondary }]}>
+                  {editingMessage ? '\u2713' : '\u2191'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Formatting toolbar */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="always"
+            contentContainerStyle={styles.toolbar}
+            style={styles.toolbarContainer}
+          >
+            {!editingMessage && (
+              <TouchableOpacity
+                style={styles.toolbarButton}
+                onPress={showAttachOptions}
+                activeOpacity={0.6}
+                accessibilityRole="button"
+                accessibilityLabel="Attach photo or file"
+              >
+                <Ionicons name="add-circle-outline" size={22} color={colors.textSecondary} />
+              </TouchableOpacity>
+            )}
+            {!editingMessage && (
+              <TouchableOpacity
+                style={styles.toolbarButton}
+                onPress={pickMedia}
+                activeOpacity={0.6}
+                accessibilityRole="button"
+                accessibilityLabel="Choose from photo library"
+              >
+                <Ionicons name="image-outline" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            )}
+            <View style={[styles.toolbarDivider, { backgroundColor: colors.border }]} />
+            <TouchableOpacity
+              style={styles.toolbarButton}
+              onPress={() => wrapSelection('**')}
+              activeOpacity={0.6}
               accessibilityRole="button"
-              accessibilityLabel={editingMessage ? 'Save edit' : 'Send message'}
+              accessibilityLabel="Bold"
             >
-              <Text style={[styles.sendIcon, { color: canSend ? '#ffffff' : colors.textSecondary }]}>
-                {editingMessage ? '\u2713' : '\u2191'}
-              </Text>
+              <Text style={[styles.toolbarTextBold, { color: colors.textSecondary }]}>B</Text>
             </TouchableOpacity>
-          )}
-        </View>
+            <TouchableOpacity
+              style={styles.toolbarButton}
+              onPress={() => wrapSelection('*')}
+              activeOpacity={0.6}
+              accessibilityRole="button"
+              accessibilityLabel="Italic"
+            >
+              <Text style={[styles.toolbarTextItalic, { color: colors.textSecondary }]}>I</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.toolbarButton}
+              onPress={() => wrapSelection('~~')}
+              activeOpacity={0.6}
+              accessibilityRole="button"
+              accessibilityLabel="Strikethrough"
+            >
+              <Text style={[styles.toolbarTextStrike, { color: colors.textSecondary }]}>S</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.toolbarButton}
+              onPress={() => wrapSelection('`')}
+              activeOpacity={0.6}
+              accessibilityRole="button"
+              accessibilityLabel="Inline code"
+            >
+              <Ionicons name="code-slash" size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+            <View style={[styles.toolbarDivider, { backgroundColor: colors.border }]} />
+            <TouchableOpacity
+              style={styles.toolbarButton}
+              onPress={triggerMention}
+              activeOpacity={0.6}
+              accessibilityRole="button"
+              accessibilityLabel="Mention someone"
+            >
+              <Ionicons name="at-outline" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.toolbarButton}
+              onPress={() => setShowEmojiPicker(true)}
+              activeOpacity={0.6}
+              accessibilityRole="button"
+              accessibilityLabel="Insert emoji"
+            >
+              <Ionicons name="happy-outline" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </ScrollView>
+        </>
       )}
 
       {/* Recording input row: stop button */}
@@ -570,6 +702,13 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Emoji picker modal */}
+      <EmojiPicker
+        visible={showEmojiPicker}
+        onClose={() => setShowEmojiPicker(false)}
+        onSelect={(emoji) => insertEmoji(emoji)}
+      />
     </View>
   );
 }
@@ -691,6 +830,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 10 : 8,
     paddingBottom: Platform.OS === 'ios' ? 10 : 8,
     fontSize: 16,
+    marginLeft: 4,
     marginRight: 8,
   },
   sendButton: {
@@ -748,5 +888,41 @@ const styles = StyleSheet.create({
     width: 28,
     textAlign: 'center',
     marginRight: 10,
+  },
+  toolbarContainer: {
+    maxHeight: 36,
+    paddingBottom: Platform.OS === 'ios' ? 2 : 4,
+  },
+  toolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    gap: 2,
+  },
+  toolbarButton: {
+    width: 36,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 6,
+  },
+  toolbarDivider: {
+    width: 1,
+    height: 18,
+    marginHorizontal: 4,
+  },
+  toolbarTextBold: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  toolbarTextItalic: {
+    fontSize: 16,
+    fontWeight: '600',
+    fontStyle: 'italic',
+  },
+  toolbarTextStrike: {
+    fontSize: 16,
+    fontWeight: '600',
+    textDecorationLine: 'line-through',
   },
 });
