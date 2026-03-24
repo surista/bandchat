@@ -2,6 +2,15 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.05.83] - 2026-03-24
+
+### Fixed
+- **Song attachment upload (web)** — Fixed broken upload that called non-existent API method. Now uses correct two-step flow: upload file to R2, then register as song attachment.
+- **Song attachment file size** — Increased max from 10MB to 25MB on both web and mobile (server already allowed 30MB for audio).
+
+### Added
+- **Guitar Pro file support** — Web file picker now accepts `.gp`, `.gp3`–`.gp7`, `.gpx` files for song attachments.
+
 ## [1.05.82] - 2026-03-24
 
 ### Added

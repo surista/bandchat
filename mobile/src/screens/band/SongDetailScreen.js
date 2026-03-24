@@ -318,13 +318,13 @@ export default function SongDetailScreen({ navigation, route }) {
   const handleAddAttachment = useCallback(async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['audio/*', 'image/*', 'application/pdf'],
+        type: ['audio/*', 'image/*', 'application/pdf', 'application/octet-stream'],
         copyToCacheDirectory: true,
       });
       if (result.canceled) return;
       const file = result.assets[0];
-      if (file.size > 10 * 1024 * 1024) {
-        Alert.alert('Too Large', 'File must be under 10MB');
+      if (file.size > 25 * 1024 * 1024) {
+        Alert.alert('Too Large', 'File must be under 25MB');
         return;
       }
       setUploadingAttachment(true);

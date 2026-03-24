@@ -80,9 +80,8 @@ function SongForm({ song, workspaceId, onSave, onClose }) {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Check file size (10MB limit)
-    if (file.size > 10 * 1024 * 1024) {
-      setError('File size must be less than 10MB');
+    if (file.size > 25 * 1024 * 1024) {
+      setError('File size must be less than 25MB');
       return;
     }
 
@@ -90,7 +89,14 @@ function SongForm({ song, workspaceId, onSave, onClose }) {
     setError('');
 
     try {
-      const attachment = await api.uploadSongAttachment(song.id, file);
+      // Two-step: upload file to R2, then register as song attachment
+      const uploaded = await api.uploadFile(file, workspaceId);
+      const attachment = await api.addSongAttachment(song.id, {
+        filename: file.name,
+        url: uploaded.url,
+        type: file.type || 'file',
+        size: file.size,
+      });
       setAttachments(prev => [...prev, attachment]);
     } catch (err) {
       setError(err.message || 'Failed to upload file');
@@ -432,7 +438,7 @@ Example:
                   type="file"
                   onChange={handleFileUpload}
                   className="hidden"
-                  accept="image/*,audio/*,.pdf,.doc,.docx"
+                  accept="image/*,audio/*,.pdf,.doc,.docx,.gp,.gp3,.gp4,.gp5,.gp6,.gp7,.gpx"
                 />
                 <button
                   type="button"
@@ -494,7 +500,7 @@ Example:
                 </div>
               )}
               <p className="text-xs text-gray-500 mt-3">
-                Max file size: 10MB. Supported: images, audio, PDFs, documents
+                Max file size: 25MB. Supported: images, audio, PDFs, documents, Guitar Pro
               </p>
             </div>
             )}
