@@ -85,9 +85,9 @@ const SongCard = memo(function SongCard({ song, onEdit, onDelete, onContextMenu,
       </div>
 
       {song.hasAudio && (
-        <div className="flex items-center gap-1.5 mt-2 text-xs text-[var(--color-text-muted)]">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" /></svg>
-          Audio attached
+        <div className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full bg-purple-500/15 text-purple-400 text-sm font-medium">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" /></svg>
+          Audio
         </div>
       )}
 
@@ -680,7 +680,7 @@ function SongList({ workspaceId, workspaceName, onSelectSong }) {
                         <span className="text-[var(--color-text-muted)] text-xs italic ml-1.5">({song.shortName})</span>
                       )}
                       {song.hasAudio && (
-                        <svg className="w-3.5 h-3.5 inline-block ml-1.5 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Audio attached"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" /></svg>
+                        <svg className="w-4 h-4 inline-block ml-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Audio attached"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" /></svg>
                       )}
                     </td>
                     <td className="py-2 px-2 text-[var(--color-text-secondary)]">{song.artist || ''}</td>
