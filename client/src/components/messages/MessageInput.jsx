@@ -565,7 +565,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
     <form onSubmit={handleSubmit} className="p-4 border-t border-[var(--color-border)] safe-area-bottom">
       {/* Error message */}
       {error && (
-        <div className="mb-2 text-red-400 text-sm bg-red-900/20 px-3 py-2 rounded">
+        <div role="alert" className="mb-2 text-red-400 text-sm bg-red-900/20 px-3 py-2 rounded">
           {error}
         </div>
       )}

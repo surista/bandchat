@@ -83,11 +83,11 @@ function MedleyList({ workspaceId }) {
   return (
     <div className="flex-1 flex flex-col bg-gray-900 min-h-0">
       {/* Header */}
-      <div className="p-4 border-b border-gray-700">
+      <div className="p-4 border-b border-[var(--color-border)]">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-white">Medleys</h2>
-            <p className="text-sm text-gray-400 mt-1">
+            <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Medleys</h2>
+            <p className="text-sm text-[var(--color-text-muted)] mt-1">
               Group songs to play seamlessly together
             </p>
           </div>
@@ -202,19 +202,19 @@ function MedleyCard({ medley, onEdit, onDelete, onReorder }) {
   };
 
   return (
-    <div className="bg-gray-800 rounded-lg overflow-hidden">
+    <div className="bg-[var(--color-bg-secondary)] rounded-lg overflow-hidden">
       {/* Header */}
       <div
-        className="p-4 cursor-pointer hover:bg-gray-750"
+        className="p-4 cursor-pointer hover:bg-[var(--color-bg-tertiary)]"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-2xl">🎵</span>
             <div>
-              <h4 className="font-medium text-white">{medley.name}</h4>
+              <h4 className="font-medium text-[var(--color-text-primary)]">{medley.name}</h4>
               {medley.description && (
-                <p className="text-sm text-gray-400">{medley.description}</p>
+                <p className="text-sm text-[var(--color-text-muted)]">{medley.description}</p>
               )}
             </div>
           </div>
@@ -228,7 +228,7 @@ function MedleyCard({ medley, onEdit, onDelete, onReorder }) {
             <div className="flex gap-1">
               <button
                 onClick={(e) => { e.stopPropagation(); onEdit(); }}
-                className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded"
+                className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] rounded"
                 title="Edit"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -237,7 +237,7 @@ function MedleyCard({ medley, onEdit, onDelete, onReorder }) {
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded"
+                className="p-1.5 text-[var(--color-text-muted)] hover:text-red-400 hover:bg-[var(--color-bg-tertiary)] rounded"
                 title="Delete"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -429,7 +429,7 @@ function MedleyForm({ medley, songs, onSave, onClose }) {
                           type="button"
                           onClick={() => handleMoveSong(index, -1)}
                           disabled={index === 0}
-                          className="p-1 text-gray-400 hover:text-white disabled:opacity-30"
+                          className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] disabled:opacity-30"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -439,7 +439,7 @@ function MedleyForm({ medley, songs, onSave, onClose }) {
                           type="button"
                           onClick={() => handleMoveSong(index, 1)}
                           disabled={index === selectedSongs.length - 1}
-                          className="p-1 text-gray-400 hover:text-white disabled:opacity-30"
+                          className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] disabled:opacity-30"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />

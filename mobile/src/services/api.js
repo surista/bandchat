@@ -1496,6 +1496,10 @@ class ApiService {
     return this.request(`/recordings/workspace/${workspaceId}${query ? `?${query}` : ''}`);
   }
 
+  async getRecording(recordingId) {
+    return this.request(`/recordings/${recordingId}`);
+  }
+
   async createRecording(workspaceId, data) {
     return this.request(`/recordings/workspace/${workspaceId}`, {
       method: 'POST',

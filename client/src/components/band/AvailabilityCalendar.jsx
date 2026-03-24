@@ -156,9 +156,9 @@ function AvailabilityCalendar({ workspaceId, workspace }) {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex-shrink-0 p-4 border-b border-gray-700">
+      <div className="flex-shrink-0 p-4 border-b border-[var(--color-border)]">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-white">Availability</h2>
+          <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Availability</h2>
           <div className="flex items-center gap-3">
             <div className="flex bg-gray-700 rounded overflow-hidden">
               <button
@@ -180,16 +180,16 @@ function AvailabilityCalendar({ workspaceId, workspace }) {
         <div className="flex items-center justify-between">
           <button
             onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-            className="p-2 text-gray-400 hover:text-white"
+            className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
           >
             ← Prev
           </button>
-          <h3 className="text-lg font-medium text-white">
+          <h3 className="text-lg font-medium text-[var(--color-text-primary)]">
             {format(currentMonth, 'MMMM yyyy')}
           </h3>
           <button
             onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-            className="p-2 text-gray-400 hover:text-white"
+            className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
           >
             Next →
           </button>
@@ -318,11 +318,11 @@ function AvailabilityCalendar({ workspaceId, workspace }) {
 
         {/* Team Detail View */}
         {view === 'team' && !loading && (
-          <div className="mt-4 bg-gray-800 rounded-lg p-4">
-            <h3 className="text-lg font-medium text-white mb-3">Team Members</h3>
+          <div className="mt-4 bg-[var(--color-bg-secondary)] rounded-lg p-4">
+            <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-3">Team Members</h3>
             <div className="space-y-2">
               {members.map(member => (
-                <div key={member.id} className="flex items-center gap-3 p-2 bg-gray-900 rounded">
+                <div key={member.id} className="flex items-center gap-3 p-2 bg-[var(--color-bg-primary)] rounded">
                   {member.avatarUrl ? (
                     <img src={member.avatarUrl} alt="" className="w-8 h-8 rounded-full" />
                   ) : (
@@ -330,7 +330,7 @@ function AvailabilityCalendar({ workspaceId, workspace }) {
                       {member.displayName?.charAt(0).toUpperCase()}
                     </div>
                   )}
-                  <span className="text-white flex-1">{member.displayName}</span>
+                  <span className="text-[var(--color-text-primary)] flex-1">{member.displayName}</span>
                   <span className="text-gray-400 text-sm">
                     {member.id === user?.id && '(You)'}
                   </span>
@@ -348,10 +348,10 @@ function AvailabilityCalendar({ workspaceId, workspace }) {
           onClick={() => setSelectedDate(null)}
         >
           <div
-            className="bg-gray-800 rounded-lg p-6 w-full max-w-sm border border-gray-700"
+            className="bg-[var(--color-bg-secondary)] rounded-lg p-6 w-full max-w-sm border border-[var(--color-border)]"
             onClick={e => e.stopPropagation()}
           >
-            <h3 className="text-xl font-bold text-white mb-2">
+            <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">
               Set Availability
             </h3>
             <p className="text-gray-400 mb-4">
@@ -397,7 +397,7 @@ function AvailabilityCalendar({ workspaceId, workspace }) {
 
             <button
               onClick={() => setSelectedDate(null)}
-              className="w-full mt-4 p-2 text-gray-400 hover:text-white"
+              className="w-full mt-4 p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
             >
               Cancel
             </button>

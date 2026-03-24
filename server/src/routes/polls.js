@@ -99,6 +99,16 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       }
     }
 
+    // Validate channelId belongs to this workspace (prevent cross-workspace IDOR)
+    if (channelId) {
+      const channel = await prisma.channel.findFirst({
+        where: { id: channelId, workspaceId: req.params.workspaceId }
+      });
+      if (!channel) {
+        return res.status(400).json({ error: 'Channel not found in this workspace' });
+      }
+    }
+
     const poll = await prisma.poll.create({
       data: {
         question,

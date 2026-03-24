@@ -121,7 +121,7 @@ function ResetPassword() {
             ) : (
               <form onSubmit={handleSubmit}>
                 {error && (
-                  <div className="bg-red-950 border border-red-800 text-red-300 px-4 py-3 rounded-lg mb-4 text-sm">
+                  <div role="alert" className="bg-red-950 border border-red-800 text-red-300 px-4 py-3 rounded-lg mb-4 text-sm">
                     {error}
                   </div>
                 )}

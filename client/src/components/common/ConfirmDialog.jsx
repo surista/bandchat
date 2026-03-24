@@ -46,9 +46,10 @@ function ConfirmDialog({
     : 'btn bg-green-600 hover:bg-green-700 text-white';
 
   return (
-    <Modal isOpen={isOpen} onClose={onCancel} maxWidth="max-w-sm">
+    <Modal isOpen={isOpen} onClose={onCancel} maxWidth="max-w-sm" ariaLabelledBy="confirm-dialog-title">
       <div className="p-6">
         <h3
+          id="confirm-dialog-title"
           className="text-lg font-bold text-[var(--color-text-primary)] mb-2"
         >
           {title}

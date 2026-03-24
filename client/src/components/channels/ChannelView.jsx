@@ -300,7 +300,14 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
         // New message from someone else (or no matching optimistic)
         return [...prev, message];
       });
-      scrollToBottom();
+
+      // Only auto-scroll if user is near bottom (within 100px) or sent the message themselves
+      const container = messagesContainerRef.current;
+      const isNearBottom = container &&
+        (container.scrollHeight - container.scrollTop - container.clientHeight < 100);
+      if (isNearBottom || message.author?.id === userIdRef.current) {
+        scrollToBottom();
+      }
 
       // Mark as read if it's not our message
       if (message.author?.id !== userIdRef.current) {

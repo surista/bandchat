@@ -72,7 +72,7 @@ export default function LiveModeScreen({ navigation, route }) {
   }, [autoAdvance, currentIndex, items]);
 
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
-    if (viewableItems.length > 0) {
+    if (viewableItems.length > 0 && viewableItems[0].index != null) {
       setCurrentIndex(viewableItems[0].index);
     }
   }).current;

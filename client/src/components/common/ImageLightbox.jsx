@@ -22,6 +22,7 @@ export default function ImageLightbox({ images: imagesProp, initialIndex = 0, sr
   const panStartRef = useRef({ x: 0, y: 0 });
   const currentTranslateRef = useRef({ x: 0, y: 0 });
   const imageRef = useRef(null);
+  const containerRef = useRef(null);
   const isGestureActiveRef = useRef(false);
   const gestureTypeRef = useRef(null); // 'pinch' | 'swipe-x' | 'swipe-y' | 'pan'
 
@@ -60,11 +61,35 @@ export default function ImageLightbox({ images: imagesProp, initialIndex = 0, sr
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
     document.body.style.overflow = 'hidden';
+    // Focus the container on mount for keyboard access
+    if (containerRef.current) containerRef.current.focus();
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
     };
   }, [handleKeyDown]);
+
+  // Focus trap: cycle Tab between interactive elements inside the lightbox
+  useEffect(() => {
+    const handleTab = (e) => {
+      if (e.key !== 'Tab' || !containerRef.current) return;
+      const focusable = containerRef.current.querySelectorAll(
+        'button, [href], [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', handleTab);
+    return () => document.removeEventListener('keydown', handleTab);
+  }, []);
 
   // Compute distance between two touch points
   const getTouchDistance = (t1, t2) => {
@@ -225,7 +250,9 @@ export default function ImageLightbox({ images: imagesProp, initialIndex = 0, sr
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9000] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      ref={containerRef}
+      tabIndex={-1}
+      className="fixed inset-0 z-[9000] flex items-center justify-center bg-black/80 backdrop-blur-sm outline-none"
       role="dialog"
       aria-modal="true"
       aria-label="Image preview"

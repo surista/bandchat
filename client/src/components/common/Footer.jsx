@@ -1,3 +1,4 @@
+/* global __APP_VERSION__ */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Modal from './Modal';
@@ -19,7 +20,7 @@ function Footer({ theme = 'dark' }) {
               <span className="hidden sm:inline">·</span>
               <span className="hidden sm:inline">© {new Date().getFullYear()}</span>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap justify-center items-center gap-4">
               <button
                 onClick={() => setShowAbout(true)}
                 className={`${hoverColor} transition-colors`}
@@ -81,7 +82,7 @@ function Footer({ theme = 'dark' }) {
                   alt="BandChat"
                   className="w-20 h-20 mx-auto mb-3 rounded-xl shadow-lg"
                 />
-                <h3 className="text-xl font-bold text-white">BandChat</h3>
+                <h3 className="text-xl font-bold text-[var(--color-text-primary)]">BandChat</h3>
                 <p className="text-gray-400">v{__APP_VERSION__}</p>
               </div>
 
@@ -93,7 +94,7 @@ function Footer({ theme = 'dark' }) {
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-medium text-white">Features</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)]">Features</h4>
                 <ul className="text-sm text-gray-300 space-y-2">
                   <li className="flex items-center gap-2">
                     <span className="text-[var(--color-primary)]">✓</span>
@@ -119,7 +120,7 @@ function Footer({ theme = 'dark' }) {
               </div>
 
               <div className="border-t border-[var(--color-modal-border)] pt-4">
-                <h4 className="font-medium text-white mb-2">Credits</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)] mb-2">Credits</h4>
                 <p className="text-sm text-gray-400">
                   Song metadata (BPM, key) provided by{' '}
                   <a
@@ -147,7 +148,7 @@ function Footer({ theme = 'dark' }) {
                   <span className="text-xs bg-green-600/20 text-green-400 px-2 py-0.5 rounded">NEW</span>
                   <span className="text-sm text-gray-500">v1.05.07</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">All Messages, Pin Setlists & Stage Plot Upgrades</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)] mb-1">All Messages, Pin Setlists & Stage Plot Upgrades</h4>
                 <p className="text-sm text-gray-400">
                   All Messages feed across all channels. Pin setlists to channels with expandable song list (key, BPM, MC breaks). Calendar splits into Upcoming/Past. Stage plot resize, flip, rotate with real instrument images. Poll push notifications. Gig notes on Quick Links hover. Blue flame icons everywhere. Mobile pin setlist UI.
                 </p>
@@ -156,7 +157,7 @@ function Footer({ theme = 'dark' }) {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.05.01</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">Code Review & Security Fixes</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Code Review & Security Fixes</h4>
                 <p className="text-sm text-gray-400">
                   Comprehensive code review with 40+ fixes: HTML injection prevention in emails, push notification toggle fix, graceful shutdown improvements, creator-or-admin authorization checks, input validation on songs/gigs/medleys, fetch timeouts on external APIs, and dark theme UI for auth pages and landing page.
                 </p>
@@ -165,7 +166,7 @@ function Footer({ theme = 'dark' }) {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.05.00</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">App Links, Play Store & New Icon</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)] mb-1">App Links, Play Store & New Icon</h4>
                 <p className="text-sm text-gray-400">
                   Android App Links and iOS Universal Links for direct app opening. New blue flame app icon. Google Play Store setup with RevenueCat subscriptions. Invite link fixes and deep link improvements.
                 </p>
@@ -174,7 +175,7 @@ function Footer({ theme = 'dark' }) {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.04.95</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">Stage Plots, Link Preview Dismiss & iPad</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Stage Plots, Link Preview Dismiss & iPad</h4>
                 <p className="text-sm text-gray-400">
                   SVG stage plot editor with 20+ equipment icons and PDF export. Dismiss link previews from your messages. Swipe to react on mobile. Workspace backup/restore. iPad optimization across all 41 screens. Code review with security hardening.
                 </p>
@@ -183,7 +184,7 @@ function Footer({ theme = 'dark' }) {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.04.40</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">Security Hardening</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Security Hardening</h4>
                 <p className="text-sm text-gray-400">
                   Comprehensive security audit with 43 fixes: authorization checks on all delete/update operations, URL injection prevention, Socket.IO hardening, password complexity requirements, refresh token rotation, input length limits, and sanitized error messages.
                 </p>
@@ -192,7 +193,7 @@ function Footer({ theme = 'dark' }) {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.04.39</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">Performance & Bookmarks</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Performance & Bookmarks</h4>
                 <p className="text-sm text-gray-400">
                   Message bookmarks — save messages privately and find them in "Saved Messages". Image thumbnails for faster loading. API response caching, lazy-loaded routes, and message virtualization for smoother performance. Mobile: swipe right to reply, left to quick-react, plus app icon quick actions.
                 </p>
@@ -201,7 +202,7 @@ function Footer({ theme = 'dark' }) {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.04.39</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">Upcoming Event Banner & Calendar Shortcut</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Upcoming Event Banner & Calendar Shortcut</h4>
                 <p className="text-sm text-gray-400">
                   Your next gig or rehearsal is now always visible at the top of the sidebar. Color-coded banner with quick access to the Calendar on both web and mobile.
                 </p>
@@ -210,7 +211,7 @@ function Footer({ theme = 'dark' }) {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.04.37</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">Calendar Improvements</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Calendar Improvements</h4>
                 <p className="text-sm text-gray-400">
                   Sort calendar events newest-first by default with a toggle to switch order. Tap band members to view profiles, badges, and stats on mobile.
                 </p>
@@ -219,7 +220,7 @@ function Footer({ theme = 'dark' }) {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.04.33</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">Security & Admin Fixes</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Security & Admin Fixes</h4>
                 <p className="text-sm text-gray-400">
                   CSP hardening, input validation, currency precision with Decimal types, admin auto-elevation, and mobile admin feature parity (gig locking, channel sections, workspace defaults).
                 </p>
@@ -228,7 +229,7 @@ function Footer({ theme = 'dark' }) {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.04.27</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">Quality & Polish</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Quality & Polish</h4>
                 <p className="text-sm text-gray-400">
                   Per-workspace currency support, typing indicator timeouts, admin role guards, message density settings, and dozens of bug fixes across web and mobile.
                 </p>
@@ -237,7 +238,7 @@ function Footer({ theme = 'dark' }) {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.04.11</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">App Store Launch</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)] mb-1">App Store Launch</h4>
                 <p className="text-sm text-gray-400">
                   BandChat is now on iOS! Content moderation, account deletion, terms agreement, and App Store compliance.
                 </p>
@@ -246,7 +247,7 @@ function Footer({ theme = 'dark' }) {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.04.05</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">Backups & Admin Tools</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Backups & Admin Tools</h4>
                 <p className="text-sm text-gray-400">
                   Automated R2 backups with alerting, admin database restore, workspace import, and band kitty enhancements.
                 </p>
@@ -255,7 +256,7 @@ function Footer({ theme = 'dark' }) {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.04.00</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">Session & Stability</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Session & Stability</h4>
                 <p className="text-sm text-gray-400">
                   Fixed session expiry with secure cookie auth, resilient token refresh, gig archive linking, and empty state improvements.
                 </p>
@@ -264,7 +265,7 @@ function Footer({ theme = 'dark' }) {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.03.81</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">Practice Dashboard</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Practice Dashboard</h4>
                 <p className="text-sm text-gray-400">
                   Track your practice streaks and history on the web, push notification deep-linking, and improved empty states across all list views.
                 </p>
@@ -273,7 +274,7 @@ function Footer({ theme = 'dark' }) {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.03.52</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">Mobile App & Security</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Mobile App & Security</h4>
                 <p className="text-sm text-gray-400">
                   Content reporting and user blocking on mobile, new app icon, and security hardening with rate-limited verification endpoints.
                 </p>
@@ -282,7 +283,7 @@ function Footer({ theme = 'dark' }) {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.03.48</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">Onboarding & Slack Import</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Onboarding & Slack Import</h4>
                 <p className="text-sm text-gray-400">
                   5-step workspace setup wizard with channel suggestions and email invites. Import your entire Slack workspace — channels, messages, and history.
                 </p>
@@ -291,7 +292,7 @@ function Footer({ theme = 'dark' }) {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.03.40</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">Account Management</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Account Management</h4>
                 <p className="text-sm text-gray-400">
                   Delete your account, export your personal data, and export full workspace data as JSON.
                 </p>
@@ -300,7 +301,7 @@ function Footer({ theme = 'dark' }) {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.02</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">Band Kitty</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Band Kitty</h4>
                 <p className="text-sm text-gray-400">
                   Track shared band finances with expenses, contributions, and balance tracking for each member.
                 </p>
@@ -309,7 +310,7 @@ function Footer({ theme = 'dark' }) {
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-sm text-gray-500">v1.01</span>
                 </div>
-                <h4 className="font-medium text-white mb-1">Bulk Song Import & Band Features</h4>
+                <h4 className="font-medium text-[var(--color-text-primary)] mb-1">Bulk Song Import & Band Features</h4>
                 <p className="text-sm text-gray-400">
                   Import multiple songs with automatic metadata, 20+ themes, MC sections in setlists, and full band management tools.
                 </p>

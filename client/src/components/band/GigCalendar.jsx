@@ -14,7 +14,7 @@ import ErrorMessage from '../common/ErrorMessage';
 import { getCurrencySymbol } from '../../utils/currencies';
 
 // Compact single-line row for list view
-function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, onDelete, onContextMenu }) {
+function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, onDelete, onContextMenu, workspace }) {
   const canEdit = !gig.isExternal && (!gig.isLocked || isAdmin);
   const longPress = useLongPress({
     onLongPress: (pos) => onContextMenu(pos),
@@ -29,17 +29,17 @@ function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, on
       {...longPress}
     >
       {/* Date */}
-      <div className="w-24 flex-shrink-0 text-sm">
+      <div className="shrink-0 min-w-[5rem] text-sm">
         <span className="text-[var(--color-text-primary)] font-medium">
           {format(new Date(gig.date), 'dd-MMM')}
         </span>
-        <span className="text-[var(--color-text-muted)] ml-1">
+        <span className="text-[var(--color-text-muted)] ml-1 hidden sm:inline">
           {format(new Date(gig.date), 'EEE')}
         </span>
       </div>
 
       {/* Time */}
-      <div className="w-24 flex-shrink-0 text-sm text-[var(--color-text-secondary)]">
+      <div className="shrink-0 min-w-[4.5rem] text-sm text-[var(--color-text-secondary)] hidden sm:block">
         {formatTimeRange(gig.date, gig.endDate)}
       </div>
 
@@ -58,12 +58,12 @@ function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, on
       </div>
 
       {/* Venue */}
-      <div className="w-32 flex-shrink-0 text-sm text-[var(--color-text-muted)] truncate hidden md:block">
+      <div className="shrink-0 max-w-[8rem] text-sm text-[var(--color-text-muted)] truncate hidden md:block">
         {gig.venue || '—'}
       </div>
 
       {/* Type badge */}
-      <div className="w-24 flex-shrink-0 text-right">
+      <div className="shrink-0 text-right">
         <span className={`text-xs px-2 py-0.5 rounded ${getTypeColor(gig.type, gig.isExternal, gig.workspaceId)} text-white`}>
           {gig.type}
         </span>
@@ -217,6 +217,7 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
 
           {Number(gig.pay) > 0 && (
             <p className="text-green-400 text-sm mt-1">
+              {/* eslint-disable-next-line no-undef */}
               💰 {getCurrencySymbol(workspace?.currency)}{Number(gig.pay).toLocaleString()}
             </p>
           )}
@@ -1245,11 +1246,11 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                   {listMode === 'compact' ? (
                     <>
                       <div className="flex items-center gap-3 px-3 py-2 text-xs text-[var(--color-text-muted)] font-medium border-b border-[var(--color-border)]">
-                        <div className="w-24">Date</div>
-                        <div className="w-24">Time</div>
+                        <div className="shrink-0 min-w-[5rem]">Date</div>
+                        <div className="shrink-0 min-w-[4.5rem] hidden sm:block">Time</div>
                         <div className="flex-1">Event</div>
-                        <div className="w-32 hidden md:block">Venue</div>
-                        <div className="w-24 text-right">Type</div>
+                        <div className="shrink-0 max-w-[8rem] hidden md:block">Venue</div>
+                        <div className="shrink-0 text-right">Type</div>
                         <div className="w-16"></div>
                       </div>
                       {upcomingGigs.map(gig => (
@@ -1262,6 +1263,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                           onEdit={() => { setEditingGig(gig); setShowForm(true); }}
                           onDelete={() => setDeleteGigId(gig.id)}
                           onContextMenu={(pos) => setGigContextMenu({ gigId: gig.id, ...pos })}
+                          workspace={workspace}
                         />
                       ))}
                     </>
@@ -1295,11 +1297,11 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                   {listMode === 'compact' ? (
                     <>
                       <div className="flex items-center gap-3 px-3 py-2 text-xs text-[var(--color-text-muted)] font-medium border-b border-[var(--color-border)]">
-                        <div className="w-24">Date</div>
-                        <div className="w-24">Time</div>
+                        <div className="shrink-0 min-w-[5rem]">Date</div>
+                        <div className="shrink-0 min-w-[4.5rem] hidden sm:block">Time</div>
                         <div className="flex-1">Event</div>
-                        <div className="w-32 hidden md:block">Venue</div>
-                        <div className="w-24 text-right">Type</div>
+                        <div className="shrink-0 max-w-[8rem] hidden md:block">Venue</div>
+                        <div className="shrink-0 text-right">Type</div>
                         <div className="w-16"></div>
                       </div>
                       {pastGigs.map(gig => (
@@ -1312,6 +1314,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                           onEdit={() => { setEditingGig(gig); setShowForm(true); }}
                           onDelete={() => setDeleteGigId(gig.id)}
                           onContextMenu={(pos) => setGigContextMenu({ gigId: gig.id, ...pos })}
+                          workspace={workspace}
                         />
                       ))}
                     </>

@@ -99,6 +99,30 @@ router.get('/song/:songId', authenticate, async (req, res) => {
   }
 });
 
+// Get a single recording
+router.get('/:recordingId', authenticate, async (req, res) => {
+  try {
+    const { recordingId } = req.params;
+    const recording = await prisma.recording.findFirst({
+      where: {
+        id: recordingId,
+        workspace: { members: { some: { userId: req.user.id } } }
+      },
+      include: {
+        song: { select: { id: true, title: true, artist: true } },
+        createdBy: { select: { id: true, displayName: true, avatarUrl: true } }
+      }
+    });
+    if (!recording) {
+      return res.status(404).json({ error: 'Recording not found' });
+    }
+    res.json(recording);
+  } catch (error) {
+    console.error('Get recording error:', error);
+    res.status(500).json({ error: 'Failed to get recording' });
+  }
+});
+
 // Create a recording
 router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
@@ -107,6 +131,9 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
     if (!title || !url || !type) {
       return res.status(400).json({ error: 'Title, URL, and type are required' });
     }
+
+    if (title.length > 200) return res.status(400).json({ error: 'Title must be 200 characters or less' });
+    if (description && description.length > 5000) return res.status(400).json({ error: 'Description must be 5,000 characters or less' });
 
     if (!['audio', 'video'].includes(type)) {
       return res.status(400).json({ error: 'Type must be audio or video' });
@@ -208,6 +235,9 @@ router.put('/:recordingId', authenticate, async (req, res) => {
     }
 
     const { title, description, songId } = req.body;
+
+    if (title && title.length > 200) return res.status(400).json({ error: 'Title must be 200 characters or less' });
+    if (description && description.length > 5000) return res.status(400).json({ error: 'Description must be 5,000 characters or less' });
 
     // Verify song belongs to workspace if provided
     if (songId) {

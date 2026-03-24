@@ -27,6 +27,7 @@ export default function LyricsScreen({ navigation, route }) {
   const scrollIntervalRef = useRef(null);
   const contentHeightRef = useRef(0);
   const scrollViewHeightRef = useRef(0);
+  const currentScrollOffsetRef = useRef(0);
 
   // Keep awake during auto-scroll
   useKeepAwake();
@@ -54,7 +55,7 @@ export default function LyricsScreen({ navigation, route }) {
     const intervalMs = 50;
     const pixelsPerInterval = pixelsPerSecond * (intervalMs / 1000);
 
-    let currentOffset = 0;
+    let currentOffset = currentScrollOffsetRef.current;
 
     scrollIntervalRef.current = setInterval(() => {
       currentOffset += pixelsPerInterval;
@@ -155,6 +156,7 @@ export default function LyricsScreen({ navigation, route }) {
         contentContainerStyle={styles.scrollContent}
         onContentSizeChange={(_, h) => { contentHeightRef.current = h; }}
         onLayout={(e) => { scrollViewHeightRef.current = e.nativeEvent.layout.height; }}
+        onScroll={(e) => { currentScrollOffsetRef.current = e.nativeEvent.contentOffset.y; }}
         onScrollBeginDrag={() => setUserTouching(true)}
         onScrollEndDrag={() => setUserTouching(false)}
         onMomentumScrollEnd={() => setUserTouching(false)}

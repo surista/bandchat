@@ -124,7 +124,7 @@ function GigStats({ workspaceId }) {
           >
             <div className="flex items-center gap-2 mb-2">
               <span className="text-2xl">🔥</span>
-              <h3 className="font-medium text-white">Busiest Stretch</h3>
+              <h3 className="font-medium text-[var(--color-text-primary)]">Busiest Stretch</h3>
             </div>
             {stats.busiestStretch ? (
               <div>
@@ -147,7 +147,7 @@ function GigStats({ workspaceId }) {
           >
             <div className="flex items-center gap-2 mb-2">
               <span className="text-2xl">📋</span>
-              <h3 className="font-medium text-white">Longest Setlist</h3>
+              <h3 className="font-medium text-[var(--color-text-primary)]">Longest Setlist</h3>
             </div>
             {stats.longestSetlist ? (
               <div>
@@ -167,7 +167,7 @@ function GigStats({ workspaceId }) {
           <div className="bg-gradient-to-br from-orange-900/50 to-red-900/50 rounded-lg p-4 border border-orange-700/50">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-2xl">📅</span>
-              <h3 className="font-medium text-white">Career Span</h3>
+              <h3 className="font-medium text-[var(--color-text-primary)]">Career Span</h3>
             </div>
             {stats.firstGig ? (
               <div>

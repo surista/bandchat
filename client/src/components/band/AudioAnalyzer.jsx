@@ -140,8 +140,8 @@ export default function AudioAnalyzer({ workspaceId }) {
   return (
     <div className="flex-1 flex flex-col min-h-0">
       {/* Header */}
-      <div className="h-14 border-b border-gray-700 px-4 flex items-center">
-        <h2 className="text-white font-semibold">Audio Analyzer</h2>
+      <div className="h-14 border-b border-[var(--color-border)] px-4 flex items-center">
+        <h2 className="text-[var(--color-text-primary)] font-semibold">Audio Analyzer</h2>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
@@ -193,7 +193,7 @@ export default function AudioAnalyzer({ workspaceId }) {
             {analyzing && (
               <div className="text-center py-4">
                 <div className="animate-spin w-8 h-8 border-2 border-gray-500 border-t-white rounded-full mx-auto mb-3" />
-                <p className="text-gray-400">Analyzing <span className="text-white">{file?.name}</span>...</p>
+                <p className="text-gray-400">Analyzing <span className="text-[var(--color-text-primary)]">{file?.name}</span>...</p>
               </div>
             )}
 
@@ -209,23 +209,23 @@ export default function AudioAnalyzer({ workspaceId }) {
               <div className="space-y-4">
                 <div className="bg-gray-700/50 rounded-lg p-4">
                   <p className="text-gray-400 text-sm mb-3">
-                    Results for <span className="text-white">{results.filename}</span>
+                    Results for <span className="text-[var(--color-text-primary)]">{results.filename}</span>
                   </p>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="bg-gray-800 rounded-lg p-4 text-center">
                       <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">BPM</p>
-                      <p className="text-3xl font-bold text-white">{results.bpm}</p>
+                      <p className="text-3xl font-bold text-[var(--color-text-primary)]">{results.bpm}</p>
                     </div>
                     <div className="bg-gray-800 rounded-lg p-4 text-center">
                       <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Key</p>
-                      <p className="text-3xl font-bold text-white">{results.key}</p>
+                      <p className="text-3xl font-bold text-[var(--color-text-primary)]">{results.key}</p>
                       <p className="text-xs text-gray-500 mt-1">
                         {Math.round(results.keyStrength * 100)}% confidence
                       </p>
                     </div>
                     <div className="bg-gray-800 rounded-lg p-4 text-center">
                       <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">Duration</p>
-                      <p className="text-3xl font-bold text-white">{results.durationFormatted}</p>
+                      <p className="text-3xl font-bold text-[var(--color-text-primary)]">{results.durationFormatted}</p>
                     </div>
                   </div>
                 </div>
@@ -237,7 +237,7 @@ export default function AudioAnalyzer({ workspaceId }) {
                     <select
                       value={selectedSongId}
                       onChange={(e) => setSelectedSongId(e.target.value)}
-                      className="flex-1 bg-gray-800 text-white rounded px-3 py-2 border border-gray-600 text-sm"
+                      className="flex-1 bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] rounded px-3 py-2 border border-[var(--color-border)] text-sm"
                     >
                       <option value="">Select a song...</option>
                       {songs

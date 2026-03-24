@@ -208,7 +208,7 @@ router.get('/workspace/:workspaceId/transitions', authenticate, isWorkspaceMembe
           score += (bpmScore / 100) * 50;
         }
 
-        if (score >= parseInt(minScore)) {
+        if (score >= (parseInt(minScore, 10) || 50)) {
           transitions.push({
             from: { id: song1.id, title: song1.title, artist: song1.artist, key: song1.key, bpm: song1.bpm },
             to: { id: song2.id, title: song2.title, artist: song2.artist, key: song2.key, bpm: song2.bpm },
@@ -390,7 +390,7 @@ router.get('/workspace/:workspaceId/recommendations', authenticate, isWorkspaceM
         averageBpm: avgBpm,
         tempoDistribution: bpmRanges
       },
-      recommendations: recommendations.slice(0, parseInt(limit))
+      recommendations: recommendations.slice(0, parseInt(limit, 10) || 10)
     });
   } catch (error) {
     console.error('Error getting recommendations:', error);

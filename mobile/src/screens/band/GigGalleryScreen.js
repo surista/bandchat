@@ -16,6 +16,7 @@ import ImageViewer from '../../components/ImageViewer';
 import api from '../../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useLayout } from '../../hooks/useLayout';
+import ErrorState from '../../components/ErrorState';
 
 const GAP = 2;
 const TABLET_BREAKPOINT = 768;
@@ -28,6 +29,7 @@ export default function GigGalleryScreen({ route }) {
 
   const [media, setMedia] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerImage, setViewerImage] = useState(null);
 
@@ -36,10 +38,11 @@ export default function GigGalleryScreen({ route }) {
 
   const loadMedia = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await api.getGigMedia(gigId);
       setMedia(data);
     } catch (err) {
-      // silently fail
+      setLoadError('Failed to load media');
     } finally {
       setLoading(false);
     }
@@ -109,6 +112,14 @@ export default function GigGalleryScreen({ route }) {
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
+        <ErrorState message={loadError} onRetry={loadMedia} iconName="images-outline" />
       </SafeAreaView>
     );
   }

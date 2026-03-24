@@ -39,7 +39,7 @@ const SUGGESTED_CHANNELS = [
 
 export default function OnboardingWizardScreen({ navigation }) {
   const { colors } = useTheme();
-  const { showToast } = useToast();
+  const toast = useToast();
   const { isTablet, contentMaxWidth } = useLayout();
 
   const [step, setStep] = useState('name');

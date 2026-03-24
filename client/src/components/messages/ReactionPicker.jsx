@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 
 // Pre-compiled regex for emoji detection (avoid creating on every render)
 const EMOJI_REGEX = /\p{Emoji}/u;
@@ -94,13 +94,33 @@ export default function ReactionPicker({ onSelect, onClose }) {
     setExpandedCategory(expandedCategory === category ? null : category);
   };
 
+  // Arrow key navigation within the picker
+  const handlePickerKeyDown = useCallback((e) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    const container = pickerRef.current;
+    if (!container) return;
+    const buttons = Array.from(container.querySelectorAll('button[data-emoji]'));
+    if (buttons.length === 0) return;
+    const currentIdx = buttons.indexOf(document.activeElement);
+    let nextIdx;
+    if (e.key === 'ArrowRight') {
+      nextIdx = currentIdx < buttons.length - 1 ? currentIdx + 1 : 0;
+    } else {
+      nextIdx = currentIdx > 0 ? currentIdx - 1 : buttons.length - 1;
+    }
+    buttons[nextIdx].focus();
+  }, []);
+
   const renderEmojiButton = (emoji, isText = false) => {
     const custom = CUSTOM_EMOJI[emoji];
     return (
       <button
         key={emoji}
+        data-emoji={emoji}
         onClick={() => handleSelect(emoji)}
-        className={`${isText ? 'px-2 min-w-[40px]' : 'w-10'} h-10 sm:h-8 flex items-center justify-center hover:bg-gray-700 active:bg-gray-600 rounded transition-colors touch-manipulation ${isText ? 'text-xs font-medium text-gray-200' : 'text-lg'}`}
+        onKeyDown={handlePickerKeyDown}
+        className={`${isText ? 'px-2 min-w-[40px]' : 'w-10'} h-10 sm:h-8 flex items-center justify-center hover:bg-[var(--color-bg-tertiary)] active:bg-[var(--color-bg-primary)] rounded transition-colors touch-manipulation ${isText ? 'text-xs font-medium text-[var(--color-text-secondary)]' : 'text-lg'}`}
         title={`React with ${custom?.alt || emoji}`}
         aria-label={`React with ${custom?.alt || emoji}`}
       >
@@ -116,14 +136,14 @@ export default function ReactionPicker({ onSelect, onClose }) {
 
   return (
     <div ref={pickerRef} className="relative">
-      <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-600 overflow-hidden" style={{ minWidth: '280px', maxWidth: '320px' }}>
+      <div className="bg-[var(--color-bg-secondary)] rounded-lg shadow-lg border border-[var(--color-border)] overflow-hidden" style={{ minWidth: '280px', maxWidth: '320px' }}>
         {/* Quick reactions row */}
-        <div className="flex items-center gap-0.5 p-1.5 border-b border-gray-700">
+        <div className="flex items-center gap-0.5 p-1.5 border-b border-[var(--color-border)]">
           {quickReactions.map(emoji => renderEmojiButton(emoji, !EMOJI_REGEX.test(emoji)))}
           <div className="flex-1" />
           <button
             onClick={() => setExpandedCategory(expandedCategory ? null : 'reactions')}
-            className="w-8 h-8 flex items-center justify-center hover:bg-gray-700 rounded text-gray-400 text-sm"
+            className="w-8 h-8 flex items-center justify-center hover:bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-muted)] text-sm"
             title="More emojis"
           >
             {expandedCategory ? '▲' : '▼'}
@@ -134,13 +154,13 @@ export default function ReactionPicker({ onSelect, onClose }) {
         {expandedCategory !== null && (
           <div className="max-h-64 overflow-y-auto">
             {Object.entries(EMOJI_CATEGORIES).map(([category, emojis]) => (
-              <div key={category} className="border-b border-gray-700 last:border-b-0">
+              <div key={category} className="border-b border-[var(--color-border)] last:border-b-0">
                 <button
                   onClick={() => toggleCategory(category)}
-                  className="w-full px-2 py-1.5 text-left text-xs font-medium text-gray-400 hover:bg-gray-750 flex items-center justify-between"
+                  className="w-full px-2 py-1.5 text-left text-xs font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-bg-tertiary)] flex items-center justify-between"
                 >
                   <span>{CATEGORY_LABELS[category]}</span>
-                  <span className="text-gray-500">{expandedCategory === category ? '−' : '+'}</span>
+                  <span className="text-[var(--color-text-muted)]">{expandedCategory === category ? '−' : '+'}</span>
                 </button>
                 {expandedCategory === category && (
                   <div className="flex flex-wrap gap-0.5 p-1.5 pt-0">

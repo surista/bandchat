@@ -41,6 +41,9 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
       return res.status(400).json({ error: 'Name is required' });
     }
 
+    const VALID_CATEGORIES = ['venue', 'agent', 'sound', 'lighting', 'manager', 'photographer', 'promoter', 'other'];
+    if (category && !VALID_CATEGORIES.includes(category)) return res.status(400).json({ error: 'Invalid category' });
+
     if (name.length > 200) return res.status(400).json({ error: 'Name must be 200 characters or less' });
     if (phone && phone.length > 50) return res.status(400).json({ error: 'Phone must be 50 characters or less' });
     if (email && email.length > 255) return res.status(400).json({ error: 'Email must be 255 characters or less' });

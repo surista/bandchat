@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import ErrorMessage from '../common/ErrorMessage';
+import Skeleton from '../common/Skeleton';
 
 function SavedMessages({ workspaceId }) {
   const [savedMessages, setSavedMessages] = useState([]);
@@ -41,8 +42,10 @@ function SavedMessages({ workspaceId }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500" />
+      <div className="p-4 space-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton.Card key={i} />
+        ))}
       </div>
     );
   }

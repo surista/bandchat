@@ -74,6 +74,19 @@ function AudioPlayer({ url, colors }) {
     }
   }, [sound, playing, url]);
 
+  // Unload sound when URL changes or component unmounts
+  useEffect(() => {
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+        setSound(null);
+        setPlaying(false);
+        setPosition(0);
+        setDuration(0);
+      }
+    };
+  }, [url]);
+
   useEffect(() => {
     return () => {
       if (sound) sound.unloadAsync();
@@ -145,8 +158,7 @@ export default function RecordingDetailScreen({ navigation, route }) {
     }
     (async () => {
       try {
-        const data = await api.getRecordings(workspaceId);
-        const rec = data.find(r => r.id === recordingId);
+        const rec = await api.getRecording(recordingId);
         if (rec) {
           setRecording(rec);
           populateForm(rec);

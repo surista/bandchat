@@ -21,7 +21,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 
 import { createApp } from './app.js';
-import { setupSocketHandlers } from './socket/handlers.js';
+import { setupSocketHandlers, cleanupInterval as socketCleanupInterval } from './socket/handlers.js';
 import prisma from './lib/prisma.js';
 import { createBackupWithVerification, cleanupOldBackups, sendBackupAlert } from './services/backup.js';
 import { isConfigured as isR2Configured, deleteFile } from './lib/storage.js';
@@ -80,7 +80,7 @@ httpServer.listen(PORT, async () => {
   await setupDatabase();
 
   // Track interval handles for graceful shutdown
-  const intervalHandles = [];
+  const intervalHandles = [socketCleanupInterval];
 
   // Clean up expired refresh tokens every hour
   intervalHandles.push(setInterval(async () => {

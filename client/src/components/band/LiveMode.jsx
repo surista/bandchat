@@ -94,6 +94,9 @@ export function LiveMode({ setlistItems, setlistName, onClose }) {
   return (
     <div
       ref={containerRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Live Mode: ${setlistName}`}
       style={{
         position: 'fixed',
         inset: 0,
@@ -119,6 +122,7 @@ export function LiveMode({ setlistItems, setlistName, onClose }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
             onClick={() => setAutoAdvance(prev => !prev)}
+            aria-pressed={autoAdvance}
             style={{
               background: autoAdvance ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.15)',
               border: 'none',
@@ -136,6 +140,7 @@ export function LiveMode({ setlistItems, setlistName, onClose }) {
           </button>
           <button
             onClick={onClose}
+            aria-label="Close live mode"
             style={{
               background: 'rgba(255,255,255,0.15)',
               border: 'none',

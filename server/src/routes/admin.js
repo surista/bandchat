@@ -91,6 +91,7 @@ router.get('/stats', async (req, res) => {
 router.get('/users', async (req, res) => {
   try {
     const { search } = req.query;
+    if (search && search.length > 200) return res.status(400).json({ error: 'Search query too long' });
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 50), 200);
 
@@ -173,6 +174,7 @@ router.get('/users/:userId', async (req, res) => {
 router.get('/workspaces', async (req, res) => {
   try {
     const { search } = req.query;
+    if (search && search.length > 200) return res.status(400).json({ error: 'Search query too long' });
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 50), 200);
 

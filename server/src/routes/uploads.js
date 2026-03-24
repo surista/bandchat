@@ -7,6 +7,7 @@ import { authenticate } from '../middleware/auth.js';
 import { uploadFile } from '../lib/storage.js';
 import prisma from '../lib/prisma.js';
 import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
+import { isValidUUID } from '../lib/validators.js';
 
 const THUMBNAIL_MAX_WIDTH = 400;
 const THUMBNAIL_QUALITY = 80;
@@ -248,6 +249,9 @@ router.post('/', authenticate, uploadLimiter, upload.single('file'), async (req,
     // Check workspace storage quota if workspaceId provided
     const workspaceId = req.body.workspaceId || req.query.workspaceId;
     if (workspaceId) {
+      if (!isValidUUID(workspaceId)) {
+        return res.status(400).json({ error: 'Invalid workspace ID' });
+      }
       const membership = await prisma.workspaceMember.findUnique({
         where: { userId_workspaceId: { userId: req.user.id, workspaceId } }
       });
@@ -333,6 +337,9 @@ router.post('/multiple', authenticate, uploadLimiter, upload.array('files', 5), 
     // Check workspace storage quota if workspaceId provided
     const workspaceId = req.body.workspaceId || req.query.workspaceId;
     if (workspaceId) {
+      if (!isValidUUID(workspaceId)) {
+        return res.status(400).json({ error: 'Invalid workspace ID' });
+      }
       const membership = await prisma.workspaceMember.findUnique({
         where: { userId_workspaceId: { userId: req.user.id, workspaceId } }
       });

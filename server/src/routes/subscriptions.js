@@ -105,7 +105,7 @@ router.post('/:workspaceId/activate', authenticate, isWorkspaceAdmin, async (req
       subscriber = await getSubscriber(req.user.id);
     } catch (err) {
       console.error('[Subscriptions] RevenueCat fetch error:', err.message);
-      return res.status(502).json({ error: `RevenueCat error: ${err.message}` });
+      return res.status(502).json({ error: 'Failed to verify subscription. Please try again later.' });
     }
 
     // Check the 'BandChat Pro' entitlement is active

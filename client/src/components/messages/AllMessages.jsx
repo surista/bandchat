@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import ErrorMessage from '../common/ErrorMessage';
+import Skeleton from '../common/Skeleton';
+import { useToast } from '../../context/ToastContext';
 
 function getDmDisplayName(channel, currentUserId) {
   if (!channel?.isDirect || !channel.members) return null;
@@ -14,6 +16,7 @@ function getDmDisplayName(channel, currentUserId) {
 
 function AllMessages({ workspaceId, onSelectChannel }) {
   const { user } = useAuth();
+  const toast = useToast();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -48,7 +51,9 @@ function AllMessages({ workspaceId, onSelectChannel }) {
       setMessages(prev => [...prev, ...data.messages]);
       setHasMore(data.hasMore);
       setNextCursor(data.nextCursor);
-    } catch {}
+    } catch (err) {
+      toast.error('Failed to load more messages');
+    }
     setLoadingMore(false);
   };
 
@@ -65,8 +70,11 @@ function AllMessages({ workspaceId, onSelectChannel }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500" />
+      <div className="p-4 space-y-1">
+        <div className="h-6 w-32 mb-4"><Skeleton className="h-6 w-32" /></div>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Skeleton.Message key={i} />
+        ))}
       </div>
     );
   }

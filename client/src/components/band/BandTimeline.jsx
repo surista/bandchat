@@ -162,18 +162,18 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-900">
+    <div className="h-full flex flex-col bg-[var(--color-bg-primary)]">
       <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-white">Band Timeline</h2>
+            <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">Band Timeline</h2>
             <div className="flex items-center gap-3">
               {isAdmin && (
                 <>
                   <button
                     onClick={() => setShowRegenConfirm(true)}
                     disabled={regenerating || generating}
-                    className="text-sm text-gray-400 hover:text-white disabled:opacity-50"
+                    className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] disabled:opacity-50"
                     title="Delete auto-generated events and recreate from current data"
                   >
                     {regenerating ? 'Regenerating...' : 'Regenerate'}
@@ -181,7 +181,7 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
                   <button
                     onClick={handleGenerate}
                     disabled={generating || regenerating}
-                    className="text-sm text-gray-400 hover:text-white disabled:opacity-50"
+                    className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] disabled:opacity-50"
                     title="Add new events without removing existing ones"
                   >
                     {generating ? 'Generating...' : 'Auto-Generate'}
@@ -199,18 +199,18 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
 
       {/* Add/Edit Form */}
       {showForm && (
-        <div className="mb-8 bg-gray-800 p-4 rounded-lg">
-          <h3 className="text-lg font-semibold text-white mb-4">
+        <div className="mb-8 bg-[var(--color-bg-secondary)] p-4 rounded-lg">
+          <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
             {editingEvent ? 'Edit Event' : 'Add Timeline Event'}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Event Type</label>
+                <label className="block text-sm text-[var(--color-text-muted)] mb-1">Event Type</label>
                 <select
                   value={formData.eventType}
                   onChange={e => setFormData({ ...formData, eventType: e.target.value })}
-                  className="w-full bg-gray-700 text-white rounded px-3 py-2"
+                  className="w-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded px-3 py-2"
                 >
                   {EVENT_TYPES.map(type => (
                     <option key={type.value} value={type.value}>
@@ -220,44 +220,44 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
                 </select>
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Date</label>
+                <label className="block text-sm text-[var(--color-text-muted)] mb-1">Date</label>
                 <input
                   type="date"
                   value={formData.eventDate}
                   onChange={e => setFormData({ ...formData, eventDate: e.target.value })}
-                  className="w-full bg-gray-700 text-white rounded px-3 py-2"
+                  className="w-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded px-3 py-2"
                   required
                 />
               </div>
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Title</label>
+              <label className="block text-sm text-[var(--color-text-muted)] mb-1">Title</label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={e => setFormData({ ...formData, title: e.target.value })}
-                className="w-full bg-gray-700 text-white rounded px-3 py-2"
+                className="w-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded px-3 py-2"
                 placeholder="Event title"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Description</label>
+              <label className="block text-sm text-[var(--color-text-muted)] mb-1">Description</label>
               <textarea
                 value={formData.description}
                 onChange={e => setFormData({ ...formData, description: e.target.value })}
-                className="w-full bg-gray-700 text-white rounded px-3 py-2"
+                className="w-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded px-3 py-2"
                 placeholder="Tell the story..."
                 rows={3}
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Image URL (optional)</label>
+              <label className="block text-sm text-[var(--color-text-muted)] mb-1">Image URL (optional)</label>
               <input
                 type="url"
                 value={formData.imageUrl}
                 onChange={e => setFormData({ ...formData, imageUrl: e.target.value })}
-                className="w-full bg-gray-700 text-white rounded px-3 py-2"
+                className="w-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded px-3 py-2"
                 placeholder="https://..."
               />
             </div>
@@ -295,7 +295,7 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
       ) : (
         <div className="relative">
           {/* Timeline line */}
-          <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-700" />
+          <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-[var(--color-border)]" />
 
           {years.map(year => (
             <div key={year} className="mb-8">
@@ -308,34 +308,34 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
               {eventsByYear[year].map((event, idx) => (
                 <div key={event.id} className="relative pl-20 pb-8">
                   {/* Event dot */}
-                  <div className="absolute left-6 top-2 w-4 h-4 bg-gray-600 rounded-full border-2 border-gray-800" />
+                  <div className="absolute left-6 top-2 w-4 h-4 bg-[var(--color-bg-tertiary)] rounded-full border-2 border-[var(--color-bg-secondary)]" />
 
-                  <div className="bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition">
+                  <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4 hover:bg-[var(--color-bg-tertiary)] transition">
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-2">
                         <span className="text-2xl">{getEventIcon(event.eventType)}</span>
                         <div>
-                          <h4 className="text-white font-semibold">{event.title}</h4>
-                          <p className="text-sm text-gray-400">{formatDate(event.eventDate)}</p>
+                          <h4 className="text-[var(--color-text-primary)] font-semibold">{event.title}</h4>
+                          <p className="text-sm text-[var(--color-text-muted)]">{formatDate(event.eventDate)}</p>
                         </div>
                       </div>
                       <div className="flex gap-2">
                         <button
                           onClick={() => startEdit(event)}
-                          className="text-gray-400 hover:text-white"
+                          className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => setDeleteEventId(event.id)}
-                          className="text-gray-400 hover:text-red-400"
+                          className="text-[var(--color-text-muted)] hover:text-red-400"
                         >
                           Delete
                         </button>
                       </div>
                     </div>
                     {event.description && (
-                      <p className="mt-2 text-gray-300">{event.description}</p>
+                      <p className="mt-2 text-[var(--color-text-secondary)]">{event.description}</p>
                     )}
                     {event.imageUrl && (
                       <img

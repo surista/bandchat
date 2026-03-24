@@ -20,6 +20,7 @@ import { successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useLayout } from '../../hooks/useLayout';
+import ErrorState from '../../components/ErrorState';
 
 function StatBox({ label, value, colors }) {
   return (
@@ -58,6 +59,7 @@ export default function MemberProfileScreen({ route, navigation }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(null);
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
 
@@ -69,13 +71,14 @@ export default function MemberProfileScreen({ route, navigation }) {
 
   const loadProfile = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await api.getMemberProfile(workspaceId, userId);
       setProfile(data);
       if (data.user?.displayName) {
         navigation.setOptions({ title: data.user.displayName });
       }
     } catch (err) {
-      // silently fail
+      setLoadError('Failed to load profile');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -144,12 +147,10 @@ export default function MemberProfileScreen({ route, navigation }) {
     );
   }
 
-  if (!profile) {
+  if (loadError || !profile) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-        <View style={styles.centered}>
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Profile not found</Text>
-        </View>
+        <ErrorState message={loadError || 'Profile not found'} onRetry={loadProfile} iconName="person-outline" />
       </SafeAreaView>
     );
   }

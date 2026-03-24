@@ -206,11 +206,11 @@ export default function RecordingsList({ workspaceId }) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-900">
+    <div className="h-full flex flex-col bg-[var(--color-bg-primary)]">
       <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-5xl mx-auto">
           <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-white">Quick Recordings</h2>
+        <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">Quick Recordings</h2>
         <button
           onClick={() => setShowRecorder(true)}
           className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-2"
@@ -323,7 +323,7 @@ export default function RecordingsList({ workspaceId }) {
                       type="text"
                       value={formData.title}
                       onChange={e => setFormData({ ...formData, title: e.target.value })}
-                      className="w-full bg-gray-700 text-white rounded px-3 py-2"
+                      className="w-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded px-3 py-2"
                       placeholder="e.g., Guitar riff idea, New chorus demo"
                     />
                   </div>
@@ -332,7 +332,7 @@ export default function RecordingsList({ workspaceId }) {
                     <select
                       value={formData.songId}
                       onChange={e => setFormData({ ...formData, songId: e.target.value })}
-                      className="w-full bg-gray-700 text-white rounded px-3 py-2"
+                      className="w-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded px-3 py-2"
                     >
                       <option value="">No linked song</option>
                       {songs.map(song => (
@@ -347,7 +347,7 @@ export default function RecordingsList({ workspaceId }) {
                     <textarea
                       value={formData.description}
                       onChange={e => setFormData({ ...formData, description: e.target.value })}
-                      className="w-full bg-gray-700 text-white rounded px-3 py-2"
+                      className="w-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded px-3 py-2"
                       placeholder="Any notes about this recording..."
                       rows={2}
                     />
@@ -390,7 +390,7 @@ export default function RecordingsList({ workspaceId }) {
         <select
           value={filter.type}
           onChange={e => setFilter({ ...filter, type: e.target.value })}
-          className="bg-gray-800 text-white rounded px-3 py-2"
+          className="bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] rounded px-3 py-2"
         >
           <option value="">All Types</option>
           <option value="audio">Audio</option>
@@ -399,7 +399,7 @@ export default function RecordingsList({ workspaceId }) {
         <select
           value={filter.songId}
           onChange={e => setFilter({ ...filter, songId: e.target.value })}
-          className="bg-gray-800 text-white rounded px-3 py-2"
+          className="bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] rounded px-3 py-2"
         >
           <option value="">All Songs</option>
           {songs.map(song => (
@@ -439,7 +439,7 @@ export default function RecordingsList({ workspaceId }) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {recordings.map(recording => (
-            <div key={recording.id} className="bg-gray-800 rounded-lg overflow-hidden">
+            <div key={recording.id} className="bg-[var(--color-bg-secondary)] rounded-lg overflow-hidden">
               {recording.type === 'video' ? (
                 <video
                   src={recording.url}
@@ -455,7 +455,7 @@ export default function RecordingsList({ workspaceId }) {
               <div className="p-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-semibold text-white">{recording.title}</h3>
+                    <h3 className="font-semibold text-[var(--color-text-primary)]">{recording.title}</h3>
                     {recording.song && (
                       <p className="text-sm text-blue-400">
                         Linked to: {recording.song.title}

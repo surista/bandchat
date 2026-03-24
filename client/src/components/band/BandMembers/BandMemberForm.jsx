@@ -253,7 +253,7 @@ function BandMemberForm({ member, onSave, onCancel, loading, workspaceMembers = 
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Member name"
-            className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white"
+            className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)]"
             required
           />
         </div>
@@ -267,7 +267,7 @@ function BandMemberForm({ member, onSave, onCancel, loading, workspaceMembers = 
             <select
               value={linkedUserId}
               onChange={(e) => setLinkedUserId(e.target.value)}
-              className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white"
+              className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)]"
             >
               <option value="">No linked account</option>
               {workspaceMembers.map(m => (
@@ -429,7 +429,7 @@ function BandMemberForm({ member, onSave, onCancel, loading, workspaceMembers = 
                             type="date"
                             value={stint.startDate}
                             onChange={(e) => handleStintChange(index, 'startDate', e.target.value)}
-                            className="w-full px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm"
+                            className="w-full px-2 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] text-sm"
                             required
                           />
                         </div>
@@ -439,7 +439,7 @@ function BandMemberForm({ member, onSave, onCancel, loading, workspaceMembers = 
                             type="date"
                             value={stint.endDate}
                             onChange={(e) => handleStintChange(index, 'endDate', e.target.value)}
-                            className="w-full px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm"
+                            className="w-full px-2 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] text-sm"
                           />
                         </div>
                       </div>
@@ -501,10 +501,10 @@ function BandMemberForm({ member, onSave, onCancel, loading, workspaceMembers = 
         <div className="fixed inset-0 bg-black/80 flex flex-col z-[100]">
           {/* Header */}
           <div className="flex items-center justify-between p-4 bg-gray-900 border-b border-gray-700">
-            <h3 className="text-white font-medium">Adjust Photo</h3>
+            <h3 className="text-[var(--color-text-primary)] font-medium">Adjust Photo</h3>
             <button
               onClick={handleCancelCrop}
-              className="text-gray-400 hover:text-white text-2xl"
+              className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl"
             >
               &times;
             </button>

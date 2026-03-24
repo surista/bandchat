@@ -22,11 +22,14 @@ const SPRING_CONFIG = { damping: 20, stiffness: 200 };
 export default function DraggableList({ items, renderItem, keyExtractor, onReorder, itemHeight = ITEM_HEIGHT }) {
   const { colors } = useTheme();
   const [draggingIndex, setDraggingIndex] = useState(-1);
+  const itemsKeyRef = useRef(null);
   const positionsRef = useRef(items.map((_, i) => i));
 
-  // Update positions when items change externally
-  if (positionsRef.current.length !== items.length) {
+  // Update positions when items change externally (length OR identity)
+  const currentKey = items.map(item => keyExtractor(item)).join(',');
+  if (itemsKeyRef.current !== currentKey) {
     positionsRef.current = items.map((_, i) => i);
+    itemsKeyRef.current = currentKey;
   }
 
   const handleDragStart = useCallback((index) => {

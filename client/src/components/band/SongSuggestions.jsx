@@ -105,34 +105,34 @@ export default function SongSuggestions({ workspaceId }) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-900">
+    <div className="h-full flex flex-col bg-[var(--color-bg-primary)]">
       <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl font-bold text-white mb-6">Song Intelligence</h2>
+          <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-6">Song Intelligence</h2>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-gray-700 overflow-x-auto">
+      <div className="flex gap-2 mb-6 border-b border-[var(--color-border)] overflow-x-auto">
         <button
           onClick={() => setActiveTab('recommendations')}
-          className={`px-4 py-2 -mb-px whitespace-nowrap ${activeTab === 'recommendations' ? 'border-b-2 border-blue-500 text-white' : 'text-gray-400'}`}
+          className={`px-4 py-2 -mb-px whitespace-nowrap ${activeTab === 'recommendations' ? 'border-b-2 border-blue-500 text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}`}
         >
           Recommendations
         </button>
         <button
           onClick={() => setActiveTab('mashups')}
-          className={`px-4 py-2 -mb-px whitespace-nowrap ${activeTab === 'mashups' ? 'border-b-2 border-blue-500 text-white' : 'text-gray-400'}`}
+          className={`px-4 py-2 -mb-px whitespace-nowrap ${activeTab === 'mashups' ? 'border-b-2 border-blue-500 text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}`}
         >
           Mashup Builder
         </button>
         <button
           onClick={() => { setActiveTab('transitions'); loadTransitions(); }}
-          className={`px-4 py-2 -mb-px whitespace-nowrap ${activeTab === 'transitions' ? 'border-b-2 border-blue-500 text-white' : 'text-gray-400'}`}
+          className={`px-4 py-2 -mb-px whitespace-nowrap ${activeTab === 'transitions' ? 'border-b-2 border-blue-500 text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}`}
         >
           All Transitions
         </button>
         <button
           onClick={() => setActiveTab('optimizer')}
-          className={`px-4 py-2 -mb-px whitespace-nowrap ${activeTab === 'optimizer' ? 'border-b-2 border-blue-500 text-white' : 'text-gray-400'}`}
+          className={`px-4 py-2 -mb-px whitespace-nowrap ${activeTab === 'optimizer' ? 'border-b-2 border-blue-500 text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}`}
         >
           Setlist Optimizer
         </button>
@@ -142,23 +142,23 @@ export default function SongSuggestions({ workspaceId }) {
       {activeTab === 'recommendations' && recommendations && (
         <div className="space-y-6">
           {/* Analysis Summary */}
-          <div className="bg-gray-800 rounded-lg p-4">
-            <h3 className="text-lg font-semibold text-white mb-4">Your Repertoire Analysis</h3>
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4">
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Your Repertoire Analysis</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               <div className="text-center">
-                <p className="text-2xl font-bold text-white">{recommendations.analysis.totalSongs}</p>
+                <p className="text-2xl font-bold text-[var(--color-text-primary)]">{recommendations.analysis.totalSongs}</p>
                 <p className="text-sm text-gray-400">Songs</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-white">{recommendations.analysis.uniqueArtists}</p>
+                <p className="text-2xl font-bold text-[var(--color-text-primary)]">{recommendations.analysis.uniqueArtists}</p>
                 <p className="text-sm text-gray-400">Artists</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-white">{recommendations.analysis.averageBpm || '-'}</p>
+                <p className="text-2xl font-bold text-[var(--color-text-primary)]">{recommendations.analysis.averageBpm || '-'}</p>
                 <p className="text-sm text-gray-400">Avg BPM</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-white">
+                <p className="text-2xl font-bold text-[var(--color-text-primary)]">
                   {recommendations.analysis.topKeys[0]?.[0] || '-'}
                 </p>
                 <p className="text-sm text-gray-400">Top Key</p>
@@ -196,7 +196,7 @@ export default function SongSuggestions({ workspaceId }) {
                 <p className="text-sm text-gray-400 mb-2">Top Artists</p>
                 <div className="flex flex-wrap gap-2">
                   {recommendations.analysis.topArtists.map(([artist, count]) => (
-                    <span key={artist} className="px-2 py-1 bg-gray-700 rounded text-sm text-white">
+                    <span key={artist} className="px-2 py-1 bg-[var(--color-bg-tertiary)] rounded text-sm text-[var(--color-text-primary)]">
                       {artist} ({count})
                     </span>
                   ))}
@@ -207,13 +207,13 @@ export default function SongSuggestions({ workspaceId }) {
 
           {/* Recommendations */}
           <div>
-            <h3 className="text-lg font-semibold text-white mb-4">Suggestions</h3>
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Suggestions</h3>
             {recommendations.recommendations.length === 0 ? (
               <p className="text-gray-400">Add more songs to get personalized recommendations!</p>
             ) : (
               <div className="space-y-3">
                 {recommendations.recommendations.map((rec, idx) => (
-                  <div key={idx} className="bg-gray-800 rounded-lg p-4 flex items-start gap-4">
+                  <div key={idx} className="bg-[var(--color-bg-secondary)] rounded-lg p-4 flex items-start gap-4">
                     <div className={`px-2 py-1 rounded text-xs uppercase ${
                       rec.priority === 'high' ? 'bg-red-600' :
                       rec.priority === 'medium' ? 'bg-yellow-600' : 'bg-gray-600'
@@ -221,7 +221,7 @@ export default function SongSuggestions({ workspaceId }) {
                       {rec.type}
                     </div>
                     <div className="flex-1">
-                      <p className="text-white font-medium">{rec.suggestion}</p>
+                      <p className="text-[var(--color-text-primary)] font-medium">{rec.suggestion}</p>
                       <p className="text-sm text-gray-400 mt-1">{rec.reason}</p>
                     </div>
                     <a
@@ -243,12 +243,12 @@ export default function SongSuggestions({ workspaceId }) {
       {/* Mashups Tab */}
       {activeTab === 'mashups' && (
         <div className="space-y-6">
-          <div className="bg-gray-800 rounded-lg p-4">
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4">
             <label className="block text-sm text-gray-400 mb-2">Select a song to find compatible matches</label>
             <select
               value={selectedSong?.id || ''}
               onChange={e => loadMashups(e.target.value)}
-              className="w-full bg-gray-700 text-white rounded px-3 py-2"
+              className="w-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded px-3 py-2"
             >
               <option value="">Choose a song...</option>
               {songs.filter(s => s.key || s.bpm).map(song => (
@@ -266,7 +266,7 @@ export default function SongSuggestions({ workspaceId }) {
           {mashups && !loadingMashups && (
             <div>
               <div className="mb-4 p-4 bg-blue-900/30 rounded-lg">
-                <h4 className="text-white font-semibold">
+                <h4 className="text-[var(--color-text-primary)] font-semibold">
                   {mashups.sourceSong.title}
                   {mashups.sourceSong.artist && ` - ${mashups.sourceSong.artist}`}
                 </h4>
@@ -280,7 +280,7 @@ export default function SongSuggestions({ workspaceId }) {
               ) : (
                 <div className="space-y-2">
                   {mashups.suggestions.map(item => (
-                    <div key={item.song.id} className="bg-gray-800 rounded-lg p-4 flex items-center gap-4">
+                    <div key={item.song.id} className="bg-[var(--color-bg-secondary)] rounded-lg p-4 flex items-center gap-4">
                       <div className="w-16 text-center">
                         <div className={`text-2xl font-bold ${getScoreColor(item.score)}`}>
                           {item.score}
@@ -288,7 +288,7 @@ export default function SongSuggestions({ workspaceId }) {
                         <div className="text-xs text-gray-500">score</div>
                       </div>
                       <div className="flex-1">
-                        <p className="text-white font-medium">
+                        <p className="text-[var(--color-text-primary)] font-medium">
                           {item.song.title}
                           {item.song.artist && ` - ${item.song.artist}`}
                         </p>
@@ -341,20 +341,20 @@ export default function SongSuggestions({ workspaceId }) {
           </p>
           <div className="space-y-2">
             {transitions.transitions.map((t, idx) => (
-              <div key={idx} className="bg-gray-800 rounded-lg p-3 flex items-center gap-4">
+              <div key={idx} className="bg-[var(--color-bg-secondary)] rounded-lg p-3 flex items-center gap-4">
                 <div className={`text-xl font-bold ${getScoreColor(t.score)}`}>
                   {t.score}
                 </div>
                 <div className="flex-1 flex items-center gap-2">
                   <div className="flex-1">
-                    <p className="text-white text-sm">{t.from.title}</p>
+                    <p className="text-[var(--color-text-primary)] text-sm">{t.from.title}</p>
                     <p className="text-xs text-gray-500">
                       {t.from.key && `${t.from.key} `}{t.from.bpm && `${t.from.bpm} BPM`}
                     </p>
                   </div>
                   <span className="text-gray-500">→</span>
                   <div className="flex-1">
-                    <p className="text-white text-sm">{t.to.title}</p>
+                    <p className="text-[var(--color-text-primary)] text-sm">{t.to.title}</p>
                     <p className="text-xs text-gray-500">
                       {t.to.key && `${t.to.key} `}{t.to.bpm && `${t.to.bpm} BPM`}
                     </p>
@@ -373,9 +373,9 @@ export default function SongSuggestions({ workspaceId }) {
       {/* Optimizer Tab */}
       {activeTab === 'optimizer' && (
         <div className="space-y-6">
-          <div className="bg-gray-800 rounded-lg p-4">
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
                 Select songs to optimize ({selectedSongIds.length} selected)
               </h3>
               <button
@@ -400,7 +400,7 @@ export default function SongSuggestions({ workspaceId }) {
                     onChange={() => toggleSongSelection(song.id)}
                     className="rounded"
                   />
-                  <span className="text-white flex-1">
+                  <span className="text-[var(--color-text-primary)] flex-1">
                     {song.title} {song.artist && `- ${song.artist}`}
                   </span>
                   <span className="text-sm text-gray-400">
@@ -417,9 +417,9 @@ export default function SongSuggestions({ workspaceId }) {
           </div>
 
           {optimizedSetlist && (
-            <div className="bg-gray-800 rounded-lg p-4">
+            <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-white">Optimized Order</h3>
+                <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Optimized Order</h3>
                 <div className="flex items-center gap-2">
                   <span className={`text-2xl font-bold ${getScoreColor(optimizedSetlist.flowScore)}`}>
                     {optimizedSetlist.flowScore}
@@ -434,7 +434,7 @@ export default function SongSuggestions({ workspaceId }) {
                     <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-sm flex items-center justify-center">
                       {idx + 1}
                     </span>
-                    <span className="text-white flex-1">
+                    <span className="text-[var(--color-text-primary)] flex-1">
                       {song.title} {song.artist && `- ${song.artist}`}
                     </span>
                     <span className="text-sm text-gray-400">

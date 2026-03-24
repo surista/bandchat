@@ -325,14 +325,14 @@ function SetColumnItem({
       <div className="flex flex-col gap-0.5">
         <button
           onClick={() => onMoveGlobal(globalIndex, -1)}
-          className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-white hover:bg-gray-700 disabled:opacity-30 rounded text-xs touch-manipulation"
+          className="w-6 h-6 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] disabled:opacity-30 rounded text-xs touch-manipulation"
           aria-label="Move up"
         >
           ▲
         </button>
         <button
           onClick={() => onMoveGlobal(globalIndex, 1)}
-          className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-white hover:bg-gray-700 disabled:opacity-30 rounded text-xs touch-manipulation"
+          className="w-6 h-6 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] disabled:opacity-30 rounded text-xs touch-manipulation"
           aria-label="Move down"
         >
           ▼
@@ -681,8 +681,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
     }
 
     return timings;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startTime, sets]);
+  }, [startTime, sets]); // eslint-disable-line
 
   const endTime = useMemo(() => {
     if (setTimings && setTimings.length > 0) {

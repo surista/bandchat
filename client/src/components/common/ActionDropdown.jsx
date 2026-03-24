@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 /**
  * Reusable mobile action dropdown (three-dot menu).
@@ -9,22 +9,43 @@ import { useState } from 'react';
 function ActionDropdown({ actions }) {
   const [open, setOpen] = useState(false);
 
+  const handleClose = useCallback(() => setOpen(false), []);
+
+  // Escape key to close
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        handleClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, handleClose]);
+
   return (
     <div className="relative sm:hidden ml-2">
       <button
         onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
         className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-lg"
         aria-label="More actions"
+        aria-haspopup="menu"
+        aria-expanded={open}
       >
         ...
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
-          <div className="absolute right-0 top-full mt-1 bg-[var(--color-bg-secondary)] rounded-lg shadow-xl border border-[var(--color-border)] py-1 z-50 min-w-[140px]">
+          <div
+            role="menu"
+            className="absolute right-0 top-full mt-1 bg-[var(--color-bg-secondary)] rounded-lg shadow-xl border border-[var(--color-border)] py-1 z-50 min-w-[140px]"
+          >
             {actions.map((action, i) => (
               <button
                 key={i}
+                role="menuitem"
                 onClick={(e) => { e.stopPropagation(); setOpen(false); action.onClick(); }}
                 className={`w-full px-4 py-2 text-left text-sm hover:bg-[var(--color-bg-tertiary)] ${
                   action.danger

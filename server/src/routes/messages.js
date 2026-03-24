@@ -742,11 +742,16 @@ router.get('/search/:workspaceId', authenticate, searchLimiter, async (req, res)
     if (authorId) authorFilter.push({ authorId });
     if (blockedIds.length > 0) authorFilter.push({ authorId: { notIn: blockedIds } });
 
+    // Validate channelId is in accessible channels (prevent private channel bypass)
+    const accessibleIds = accessibleChannels.map(c => c.id);
+    const channelFilter = channelId && accessibleIds.includes(channelId)
+      ? { channelId }
+      : { channelId: { in: accessibleIds } };
+
     const messages = await prisma.message.findMany({
       where: {
-        channelId: { in: accessibleChannels.map(c => c.id) },
+        ...channelFilter,
         content: { contains: q.trim(), mode: 'insensitive' },
-        ...(channelId && { channelId }),
         ...(authorFilter.length > 0 && { AND: authorFilter })
       },
       take: limit,

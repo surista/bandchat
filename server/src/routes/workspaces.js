@@ -438,6 +438,11 @@ router.post('/:workspaceId/leave', authenticate, isWorkspaceMember, async (req, 
       }
     }
 
+    // Clean up ChannelMember records before removing workspace membership
+    await prisma.channelMember.deleteMany({
+      where: { userId, channel: { workspaceId } }
+    });
+
     await prisma.workspaceMember.delete({
       where: { userId_workspaceId: { userId, workspaceId } }
     });
@@ -486,7 +491,7 @@ router.post('/join/:inviteCode', inviteJoinLimiter, authenticate, async (req, re
       return res.status(400).json({ error: 'Invite code has expired' });
     }
 
-    // Check if invite has reached max uses
+    // Check if invite has reached max uses (preliminary check; atomic check below)
     if (workspace.inviteMaxUses !== null && workspace.inviteUsedCount >= workspace.inviteMaxUses) {
       return res.status(400).json({ error: 'Invite link has reached its usage limit' });
     }
@@ -514,6 +519,15 @@ router.post('/join/:inviteCode', inviteJoinLimiter, authenticate, async (req, re
       }
     }
 
+    // Atomic increment of invite used count (prevents TOCTOU race with concurrent joins)
+    const updated = await prisma.$executeRawUnsafe(
+      `UPDATE "Workspace" SET "inviteUsedCount" = "inviteUsedCount" + 1 WHERE "id" = $1 AND ("inviteMaxUses" IS NULL OR "inviteUsedCount" < "inviteMaxUses")`,
+      workspace.id
+    );
+    if (updated === 0) {
+      return res.status(400).json({ error: 'Invite link has reached its usage limit' });
+    }
+
     // Add user to workspace and all public channels
     const publicChannels = await prisma.channel.findMany({
       where: {
@@ -528,11 +542,6 @@ router.post('/join/:inviteCode', inviteJoinLimiter, authenticate, async (req, re
           userId: req.user.id,
           workspaceId: workspace.id
         }
-      }),
-      // Increment the invite used count
-      prisma.workspace.update({
-        where: { id: workspace.id },
-        data: { inviteUsedCount: { increment: 1 } }
       }),
       ...publicChannels.map(channel =>
         prisma.channelMember.create({
@@ -955,6 +964,11 @@ router.delete('/:workspaceId/members/:userId', authenticate, isWorkspaceAdmin, a
     // 'keep' - do nothing with posts
 
     // Remove from workspace
+    // Clean up ChannelMember records before removing workspace membership
+    await prisma.channelMember.deleteMany({
+      where: { userId, channel: { workspaceId } }
+    });
+
     await prisma.workspaceMember.delete({
       where: { userId_workspaceId: { userId, workspaceId } }
     });

@@ -60,8 +60,27 @@ function WorkspaceList() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slack-purple flex items-center justify-center">
-        <div className="text-white text-xl">Loading workspaces...</div>
+      <div className="min-h-screen bg-slack-purple flex flex-col">
+        <header className="bg-slack-purple-dark p-4 flex justify-between items-center safe-area-top">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded bg-white/10 animate-pulse" />
+            <div className="h-6 w-28 rounded bg-white/10 animate-pulse" />
+          </div>
+        </header>
+        <main className="flex-1 max-w-2xl mx-auto p-8 w-full">
+          <div className="h-8 w-48 rounded bg-white/10 animate-pulse mb-8" />
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-white/5 rounded-lg p-4 flex items-center justify-between" aria-hidden="true">
+                <div className="space-y-2 flex-1">
+                  <div className="h-5 w-40 rounded bg-white/10 animate-pulse" />
+                  <div className="h-4 w-56 rounded bg-white/10 animate-pulse" />
+                </div>
+                <div className="h-4 w-4 rounded bg-white/10 animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </main>
       </div>
     );
   }

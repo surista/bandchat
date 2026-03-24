@@ -46,6 +46,7 @@ function MobileNav({ activeTab, onTabChange, unreadCount = 0 }) {
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
+            aria-current={activeTab === tab.id ? 'page' : undefined}
             className={`flex flex-col items-center justify-center flex-1 h-full relative transition-colors ${
               activeTab === tab.id
                 ? 'text-white'

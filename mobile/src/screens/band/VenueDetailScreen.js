@@ -30,7 +30,7 @@ export default function VenueDetailScreen({ navigation, route }) {
   const { venueId, workspaceId, isNew } = route.params;
   const { user } = useAuth();
   const { colors } = useTheme();
-  const { showToast } = useToast();
+  const toast = useToast();
   const { isTablet, contentMaxWidth } = useLayout();
 
   const [venue, setVenue] = useState(null);
@@ -152,21 +152,21 @@ export default function VenueDetailScreen({ navigation, route }) {
         setEditing(false);
         navigation.setParams({ venueId: created.id, isNew: false });
         successNotification();
-        showToast('Venue created');
+        toast.success('Venue created');
       } else {
         const updated = await api.updateVenue(venueId, data);
         setVenue(updated);
         populateForm(updated);
         setEditing(false);
         successNotification();
-        showToast('Venue updated');
+        toast.success('Venue updated');
       }
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to save venue');
     } finally {
       setSaving(false);
     }
-  }, [name, address, city, phone, email, website, capacity, notes, imageUrl, isNew, workspaceId, venueId, navigation, populateForm, showToast]);
+  }, [name, address, city, phone, email, website, capacity, notes, imageUrl, isNew, workspaceId, venueId, navigation, populateForm, toast]);
 
   const handleCancel = useCallback(() => {
     if (isNew) {
@@ -210,7 +210,7 @@ export default function VenueDetailScreen({ navigation, route }) {
           try {
             await api.deleteVenue(venueId);
             successNotification();
-            showToast('Venue deleted');
+            toast.success('Venue deleted');
             navigation.goBack();
           } catch (err) {
             Alert.alert('Error', 'Failed to delete venue');
@@ -218,7 +218,7 @@ export default function VenueDetailScreen({ navigation, route }) {
         },
       },
     ]);
-  }, [venue, venueId, navigation, showToast]);
+  }, [venue, venueId, navigation, toast]);
 
   const openMaps = useCallback(() => {
     const query = encodeURIComponent([venue?.name, venue?.address, venue?.city].filter(Boolean).join(', '));

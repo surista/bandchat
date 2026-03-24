@@ -556,7 +556,7 @@ router.post('/link-google', authenticate, async (req, res) => {
       where: { id: req.user.id },
       data: {
         googleId,
-        authProvider: 'both',
+        authProvider: (currentUser.appleId || currentUser.password) ? 'both' : 'google',
         emailVerified: true
       },
       select: {
@@ -714,7 +714,7 @@ router.post('/link-apple', authenticate, async (req, res) => {
       where: { id: req.user.id },
       data: {
         appleId,
-        authProvider: 'both',
+        authProvider: (currentUser.googleId || currentUser.password) ? 'both' : 'apple',
         emailVerified: true
       },
       select: {
@@ -935,9 +935,17 @@ router.put('/password', authenticate, authLimiter, async (req, res) => {
       }
     });
 
-    await prisma.refreshToken.deleteMany({ where: { userId: req.user.id } });
+    // Revoke all other sessions (keep current session active to avoid unexpected logout)
+    const currentTokenHash = req.refreshTokenHash; // set by auth middleware if available
+    if (currentTokenHash) {
+      await prisma.refreshToken.deleteMany({
+        where: { userId: req.user.id, tokenHash: { not: currentTokenHash } }
+      });
+    } else {
+      await prisma.refreshToken.deleteMany({ where: { userId: req.user.id } });
+    }
 
-    res.json({ message: 'Password updated successfully' });
+    res.json({ message: 'Password updated successfully. Other sessions have been logged out.' });
   } catch (error) {
     console.error('Password change error:', error);
     res.status(500).json({ error: 'Failed to change password' });
@@ -1084,6 +1092,9 @@ router.post('/verify-email-change', tokenLimiter, async (req, res) => {
 
     res.json({ message: 'Email updated successfully', user: updatedUser });
   } catch (error) {
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'Email is already in use' });
+    }
     console.error('Email change verification error:', error);
     res.status(500).json({ error: 'Failed to verify email change' });
   }

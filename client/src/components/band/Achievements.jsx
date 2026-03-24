@@ -96,7 +96,7 @@ export default function Achievements({ workspaceId }) {
 
   if (loading) {
     return (
-      <div className="h-full flex flex-col bg-gray-900">
+      <div className="h-full flex flex-col bg-[var(--color-bg-primary)]">
         <div className="space-y-4 p-4">
           {Array.from({length: 3}).map((_, i) => <Skeleton.Card key={i} />)}
         </div>
@@ -105,7 +105,7 @@ export default function Achievements({ workspaceId }) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-900">
+    <div className="h-full flex flex-col bg-[var(--color-bg-primary)]">
       <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-5xl mx-auto">
       {/* Error State */}
@@ -125,18 +125,18 @@ export default function Achievements({ workspaceId }) {
           </h3>
           <div className="flex flex-wrap gap-3">
             {newAchievements.map(a => (
-              <div key={a.id} className="bg-gray-800 rounded-lg p-3 flex items-center gap-2">
+              <div key={a.id} className="bg-[var(--color-bg-secondary)] rounded-lg p-3 flex items-center gap-2">
                 <span className="text-3xl">{a.achievement.icon}</span>
                 <div>
-                  <p className="font-semibold text-white">{a.achievement.name}</p>
-                  <p className="text-sm text-gray-400">{a.achievement.description}</p>
+                  <p className="font-semibold text-[var(--color-text-primary)]">{a.achievement.name}</p>
+                  <p className="text-sm text-[var(--color-text-muted)]">{a.achievement.description}</p>
                 </div>
               </div>
             ))}
           </div>
           <button
             onClick={() => setNewAchievements([])}
-            className="mt-3 text-sm text-gray-400 hover:text-white"
+            className="mt-3 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
           >
             Dismiss
           </button>
@@ -155,7 +155,7 @@ export default function Achievements({ workspaceId }) {
       )}
 
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-white">Achievements</h2>
+        <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">Achievements</h2>
         <button
           onClick={checkAchievements}
           disabled={checking}
@@ -175,50 +175,50 @@ export default function Achievements({ workspaceId }) {
       {/* Stats Summary */}
       {stats && (
         <div className="mb-6 grid grid-cols-3 md:grid-cols-6 gap-3">
-          <div className="bg-gray-800 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-white">{stats.gigs}</p>
-            <p className="text-sm text-gray-400">Gigs</p>
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold text-[var(--color-text-primary)]">{stats.gigs}</p>
+            <p className="text-sm text-[var(--color-text-muted)]">Gigs</p>
           </div>
-          <div className="bg-gray-800 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-white">{stats.hoursGigged || 0}h</p>
-            <p className="text-sm text-gray-400">Stage Time</p>
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold text-[var(--color-text-primary)]">{stats.hoursGigged || 0}h</p>
+            <p className="text-sm text-[var(--color-text-muted)]">Stage Time</p>
           </div>
-          <div className="bg-gray-800 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-white">{stats.rehearsals}</p>
-            <p className="text-sm text-gray-400">Rehearsals</p>
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold text-[var(--color-text-primary)]">{stats.rehearsals}</p>
+            <p className="text-sm text-[var(--color-text-muted)]">Rehearsals</p>
           </div>
-          <div className="bg-gray-800 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-white">{stats.hoursRehearsed || 0}h</p>
-            <p className="text-sm text-gray-400">Practice Hours</p>
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold text-[var(--color-text-primary)]">{stats.hoursRehearsed || 0}h</p>
+            <p className="text-sm text-[var(--color-text-muted)]">Practice Hours</p>
           </div>
-          <div className="bg-gray-800 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-white">{stats.songs}</p>
-            <p className="text-sm text-gray-400">Songs</p>
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold text-[var(--color-text-primary)]">{stats.songs}</p>
+            <p className="text-sm text-[var(--color-text-muted)]">Songs</p>
           </div>
-          <div className="bg-gray-800 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-white">${stats.revenue?.toLocaleString() || 0}</p>
-            <p className="text-sm text-gray-400">Revenue</p>
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-3 text-center">
+            <p className="text-2xl font-bold text-[var(--color-text-primary)]">${stats.revenue?.toLocaleString() || 0}</p>
+            <p className="text-sm text-[var(--color-text-muted)]">Revenue</p>
           </div>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-gray-700">
+      <div className="flex gap-2 mb-6 border-b border-[var(--color-border)]">
         <button
           onClick={() => setActiveTab('band')}
-          className={`px-4 py-2 -mb-px ${activeTab === 'band' ? 'border-b-2 border-blue-500 text-white' : 'text-gray-400'}`}
+          className={`px-4 py-2 -mb-px ${activeTab === 'band' ? 'border-b-2 border-blue-500 text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}`}
         >
           Band ({bandAchievements.length}/{bandDefs.length})
         </button>
         <button
           onClick={() => setActiveTab('mine')}
-          className={`px-4 py-2 -mb-px ${activeTab === 'mine' ? 'border-b-2 border-blue-500 text-white' : 'text-gray-400'}`}
+          className={`px-4 py-2 -mb-px ${activeTab === 'mine' ? 'border-b-2 border-blue-500 text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}`}
         >
           My Badges ({myAchievements.length}/{memberDefs.length})
         </button>
         <button
           onClick={() => setActiveTab('leaderboard')}
-          className={`px-4 py-2 -mb-px ${activeTab === 'leaderboard' ? 'border-b-2 border-blue-500 text-white' : 'text-gray-400'}`}
+          className={`px-4 py-2 -mb-px ${activeTab === 'leaderboard' ? 'border-b-2 border-blue-500 text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}`}
         >
           Leaderboard
         </button>
@@ -229,7 +229,7 @@ export default function Achievements({ workspaceId }) {
         <div className="space-y-6">
           {Object.entries(groupByCategory(bandDefs)).map(([category, achievements]) => (
             <div key={category}>
-              <h3 className="text-lg font-semibold text-gray-300 mb-3 capitalize">{category}</h3>
+              <h3 className="text-lg font-semibold text-[var(--color-text-secondary)] mb-3 capitalize">{category}</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {achievements.map(achievement => {
                   const earned = earnedBandIds.has(achievement.id);
@@ -239,15 +239,15 @@ export default function Achievements({ workspaceId }) {
                       key={achievement.id}
                       className={`p-4 rounded-lg border transition ${
                         earned
-                          ? 'bg-gray-800 border-yellow-500/50'
-                          : 'bg-gray-800/50 border-gray-700 opacity-50'
+                          ? 'bg-[var(--color-bg-secondary)] border-yellow-500/50'
+                          : 'bg-[var(--color-bg-secondary)] border-[var(--color-border)] opacity-50'
                       }`}
                     >
                       <div className="text-center">
                         <span className={`text-4xl ${earned ? '' : 'grayscale'}`}>
                           {achievement.icon}
                         </span>
-                        <h4 className="font-semibold text-white mt-2">{achievement.name}</h4>
+                        <h4 className="font-semibold text-[var(--color-text-primary)] mt-2">{achievement.name}</h4>
                         <p className="text-sm text-gray-400 mt-1">{achievement.description}</p>
                         {earned && earnedData && (
                           <p className="text-xs text-yellow-500 mt-2">
@@ -274,7 +274,7 @@ export default function Achievements({ workspaceId }) {
         <div className="space-y-6">
           {Object.entries(groupByCategory(memberDefs)).map(([category, achievements]) => (
             <div key={category}>
-              <h3 className="text-lg font-semibold text-gray-300 mb-3 capitalize">{category}</h3>
+              <h3 className="text-lg font-semibold text-[var(--color-text-secondary)] mb-3 capitalize">{category}</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {achievements.map(achievement => {
                   const earned = earnedMemberIds.has(achievement.id);
@@ -284,15 +284,15 @@ export default function Achievements({ workspaceId }) {
                       key={achievement.id}
                       className={`p-4 rounded-lg border transition ${
                         earned
-                          ? 'bg-gray-800 border-green-500/50'
-                          : 'bg-gray-800/50 border-gray-700 opacity-50'
+                          ? 'bg-[var(--color-bg-secondary)] border-green-500/50'
+                          : 'bg-[var(--color-bg-secondary)] border-[var(--color-border)] opacity-50'
                       }`}
                     >
                       <div className="text-center">
                         <span className={`text-4xl ${earned ? '' : 'grayscale'}`}>
                           {achievement.icon}
                         </span>
-                        <h4 className="font-semibold text-white mt-2">{achievement.name}</h4>
+                        <h4 className="font-semibold text-[var(--color-text-primary)] mt-2">{achievement.name}</h4>
                         <p className="text-sm text-gray-400 mt-1">{achievement.description}</p>
                         {earned && earnedData && (
                           <p className="text-xs text-green-500 mt-2">
@@ -316,19 +316,19 @@ export default function Achievements({ workspaceId }) {
 
       {/* Leaderboard */}
       {activeTab === 'leaderboard' && (
-        <div className="bg-gray-800 rounded-lg overflow-hidden">
+        <div className="bg-[var(--color-bg-secondary)] rounded-lg overflow-hidden">
           <table className="w-full">
-            <thead className="bg-gray-700">
+            <thead className="bg-[var(--color-bg-tertiary)]">
               <tr>
-                <th className="px-4 py-3 text-left text-gray-300">Rank</th>
-                <th className="px-4 py-3 text-left text-gray-300">Member</th>
-                <th className="px-4 py-3 text-center text-gray-300">Badges</th>
-                <th className="px-4 py-3 text-left text-gray-300">Recent</th>
+                <th className="px-4 py-3 text-left text-[var(--color-text-secondary)]">Rank</th>
+                <th className="px-4 py-3 text-left text-[var(--color-text-secondary)]">Member</th>
+                <th className="px-4 py-3 text-center text-[var(--color-text-secondary)]">Badges</th>
+                <th className="px-4 py-3 text-left text-[var(--color-text-secondary)]">Recent</th>
               </tr>
             </thead>
             <tbody>
               {leaderboard.map((entry, idx) => (
-                <tr key={entry.user.id} className="border-t border-gray-700 hover:bg-gray-750">
+                <tr key={entry.user.id} className="border-t border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)]">
                   <td className="px-4 py-3">
                     <span className={`text-xl ${
                       idx === 0 ? 'text-yellow-400' :
@@ -347,15 +347,15 @@ export default function Achievements({ workspaceId }) {
                           className="w-8 h-8 rounded-full"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white">
+                        <div className="w-8 h-8 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center text-[var(--color-text-primary)]">
                           {entry.user.displayName[0]}
                         </div>
                       )}
-                      <span className="text-white">{entry.user.displayName}</span>
+                      <span className="text-[var(--color-text-primary)]">{entry.user.displayName}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <span className="text-2xl font-bold text-white">{entry.achievementCount}</span>
+                    <span className="text-2xl font-bold text-[var(--color-text-primary)]">{entry.achievementCount}</span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1">

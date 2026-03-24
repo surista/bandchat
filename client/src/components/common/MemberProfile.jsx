@@ -3,11 +3,13 @@ import { format } from 'date-fns';
 import api from '../../services/api';
 import { formatDate } from '../../utils/formatDate';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import Modal from './Modal';
 import ErrorMessage from './ErrorMessage';
 
 export default function MemberProfile({ userId, workspaceId, onClose, onStartDM }) {
   const { user: currentUser } = useAuth();
+  const { showToast } = useToast();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -115,15 +117,17 @@ export default function MemberProfile({ userId, workspaceId, onClose, onStartDM 
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h2 className="text-xl font-bold text-white">{profile.user.displayName}</h2>
-                <p
-                  className="text-gray-400 text-sm select-all cursor-pointer hover:text-gray-300"
+                <button
+                  type="button"
+                  className="text-gray-400 text-sm select-all cursor-pointer hover:text-gray-300 bg-transparent border-none p-0 text-left"
                   title="Click to copy email"
                   onClick={() => {
                     navigator.clipboard.writeText(profile.user.email);
+                    showToast('Email copied to clipboard', 'success');
                   }}
                 >
                   {profile.user.email}
-                </p>
+                </button>
               </div>
               <span className={`px-2 py-1 rounded text-xs ${
                 profile.role === 'ADMIN' ? 'bg-yellow-600 text-yellow-100' : 'bg-gray-600 text-gray-200'

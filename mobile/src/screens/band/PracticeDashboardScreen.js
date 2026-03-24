@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
+import ErrorState from '../../components/ErrorState';
 
 function formatMinutes(totalMinutes) {
   if (!totalMinutes) return '0 min';
@@ -66,12 +67,14 @@ export default function PracticeDashboardScreen({ route }) {
   const [sessions, setSessions] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [nextCursor, setNextCursor] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
+      setLoadError(null);
       const [practiceData, summaryData] = await Promise.all([
         api.getMyPractice(workspaceId),
         api.getPracticeSummary(workspaceId),
@@ -80,7 +83,7 @@ export default function PracticeDashboardScreen({ route }) {
       setNextCursor(practiceData.nextCursor);
       setSummary(summaryData);
     } catch (err) {
-      // silently fail
+      setLoadError('Failed to load practice data');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -196,6 +199,14 @@ export default function PracticeDashboardScreen({ route }) {
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
+        <ErrorState message={loadError} onRetry={loadData} iconName="fitness-outline" />
       </SafeAreaView>
     );
   }

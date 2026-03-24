@@ -89,13 +89,13 @@ export default function MemberHoverCard({ userId, workspaceId, children, onClick
 
   const card = isHovered && createPortal(
     <div
-      className="fixed z-[100] bg-gray-800 rounded-lg shadow-xl border border-gray-700 p-3 min-w-[200px] max-w-[280px]"
+      className="fixed z-[100] bg-[var(--color-bg-secondary)] rounded-lg shadow-xl border border-[var(--color-border)] p-3 min-w-[200px] max-w-[280px]"
       style={{ top: position.top, left: position.left }}
       onMouseEnter={handleCardMouseEnter}
       onMouseLeave={handleCardMouseLeave}
     >
       {loading ? (
-        <div className="text-gray-400 text-sm">Loading...</div>
+        <div className="text-[var(--color-text-muted)] text-sm">Loading...</div>
       ) : profile ? (
         <div>
           {/* Mini profile header */}
@@ -112,21 +112,21 @@ export default function MemberHoverCard({ userId, workspaceId, children, onClick
               </div>
             )}
             <div>
-              <div className="font-medium text-white text-sm">{profile.user.displayName}</div>
-              <div className="text-xs text-gray-400">{profile.role}</div>
+              <div className="font-medium text-[var(--color-text-primary)] text-sm">{profile.user.displayName}</div>
+              <div className="text-xs text-[var(--color-text-muted)]">{profile.role}</div>
             </div>
           </div>
 
           {/* Quick stats */}
-          <div className="flex gap-3 text-xs text-gray-400 mb-2 border-t border-gray-700 pt-2">
+          <div className="flex gap-3 text-xs text-[var(--color-text-muted)] mb-2 border-t border-[var(--color-border)] pt-2">
             <span>{profile.stats.gigsAttended || 0} gigs</span>
             <span>{profile.stats.rehearsalsAttended || 0} rehearsals</span>
           </div>
 
           {/* Badges */}
           {profile.achievements.length > 0 ? (
-            <div className="border-t border-gray-700 pt-2">
-              <div className="text-xs text-gray-500 mb-1">Badges</div>
+            <div className="border-t border-[var(--color-border)] pt-2">
+              <div className="text-xs text-[var(--color-text-muted)] mb-1">Badges</div>
               <div className="flex flex-wrap gap-1">
                 {profile.achievements.slice(0, 8).map(a => (
                   <span
@@ -138,19 +138,19 @@ export default function MemberHoverCard({ userId, workspaceId, children, onClick
                   </span>
                 ))}
                 {profile.achievements.length > 8 && (
-                  <span className="text-xs text-gray-500 self-center">
+                  <span className="text-xs text-[var(--color-text-muted)] self-center">
                     +{profile.achievements.length - 8}
                   </span>
                 )}
               </div>
             </div>
           ) : (
-            <div className="border-t border-gray-700 pt-2 text-xs text-gray-500">
+            <div className="border-t border-[var(--color-border)] pt-2 text-xs text-[var(--color-text-muted)]">
               No badges yet
             </div>
           )}
 
-          <div className="text-xs text-gray-500 mt-2 text-center">
+          <div className="text-xs text-[var(--color-text-muted)] mt-2 text-center">
             Click for full profile
           </div>
         </div>
@@ -159,12 +159,24 @@ export default function MemberHoverCard({ userId, workspaceId, children, onClick
     document.body
   );
 
+  function handleFocus() {
+    handleMouseEnter();
+  }
+
+  function handleBlur() {
+    handleMouseLeave();
+  }
+
   return (
     <div
       ref={triggerRef}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
       onClick={onClick}
+      tabIndex={0}
+      role="button"
       className="block w-full"
     >
       {children}
