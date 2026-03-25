@@ -140,6 +140,8 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
   const [customVenue, setCustomVenue] = useState(!gig?.venueId && !!(gig?.venue));
   const [media, setMedia] = useState(gig?.media || []);
   const [uploading, setUploading] = useState(false);
+  const [uploadFileName, setUploadFileName] = useState('');
+  const [uploadSuccess, setUploadSuccess] = useState('');
   const [showAddUrl, setShowAddUrl] = useState(false);
   const [urlInput, setUrlInput] = useState('');
 
@@ -148,23 +150,33 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     if (onMediaChange && gig) onMediaChange(gig.id, newMedia);
   };
 
+  const showSuccess = (msg) => {
+    setUploadSuccess(msg);
+    setTimeout(() => setUploadSuccess(''), 3000);
+  };
+
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (!files.length || !gig) return;
     setUploading(true);
+    setUploadSuccess('');
     try {
       let updated = [...media];
-      for (const file of files) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setUploadFileName(`${file.name}${files.length > 1 ? ` (${i + 1}/${files.length})` : ''}`);
         const result = await api.uploadFile(file, workspaceId);
         const type = file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image';
         const newItem = await api.addGigMedia(gig.id, { type, url: result.url, caption: file.name });
         updated = [newItem, ...updated];
       }
       updateMedia(updated);
+      showSuccess(`${files.length} file${files.length > 1 ? 's' : ''} uploaded`);
     } catch (err) {
       setError(err.message || 'Upload failed');
     } finally {
       setUploading(false);
+      setUploadFileName('');
       e.target.value = '';
     }
   };
@@ -180,6 +192,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
       updateMedia([newItem, ...media]);
       setUrlInput('');
       setShowAddUrl(false);
+      showSuccess('Link added');
     } catch (err) {
       setError(err.message || 'Failed to add link');
     }
@@ -1117,7 +1130,20 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                       )}
 
                       {uploading && (
-                        <p className="text-sm text-[var(--color-text-muted)] animate-pulse">Uploading...</p>
+                        <div className="flex items-center gap-3 bg-blue-900/30 border border-blue-500/30 rounded-lg px-4 py-3">
+                          <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                          <div>
+                            <p className="text-sm text-blue-300 font-medium">Uploading...</p>
+                            {uploadFileName && <p className="text-xs text-blue-400/70 truncate">{uploadFileName}</p>}
+                          </div>
+                        </div>
+                      )}
+
+                      {uploadSuccess && (
+                        <div className="flex items-center gap-2 bg-green-900/30 border border-green-500/30 rounded-lg px-4 py-3">
+                          <span className="text-green-400 text-lg">✓</span>
+                          <p className="text-sm text-green-300 font-medium">{uploadSuccess}</p>
+                        </div>
                       )}
                     </div>
                   )}
