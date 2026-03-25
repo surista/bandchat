@@ -57,11 +57,15 @@ function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, on
         )}
       </div>
 
-      {/* Media indicator */}
+      {/* Media indicators */}
       {gig.media?.length > 0 && (
-        <span className="shrink-0 text-sm text-[var(--color-text-muted)]" role="img" aria-label={`${gig.media.length} attachment${gig.media.length > 1 ? 's' : ''}`} title={`${gig.media.length} attachment${gig.media.length > 1 ? 's' : ''}`}>
-          📎{gig.media.length > 1 && <span className="text-xs ml-0.5" aria-hidden="true">{gig.media.length}</span>}
-        </span>
+        <div className="shrink-0 flex items-center gap-1" role="img" aria-label={`${gig.media.length} attachment${gig.media.length > 1 ? 's' : ''}`}>
+          {gig.media.some(m => m.type === 'image') && <span className="text-sm" title="Photos">📷</span>}
+          {gig.media.some(m => m.type === 'audio') && <span className="text-sm text-purple-400" title="Audio">♫</span>}
+          {gig.media.some(m => m.type === 'youtube') && <span className="text-sm text-red-400" title="YouTube">▶</span>}
+          {gig.media.some(m => m.type === 'video') && <span className="text-sm" title="Video">🎬</span>}
+          {gig.media.some(m => m.type === 'link') && <span className="text-sm text-cyan-400" title="Link">🔗</span>}
+        </div>
       )}
 
       {/* Venue */}
@@ -1215,8 +1219,12 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                             {gig.title}
                           </span>
                           {gig.media?.length > 0 && (
-                            <span className="flex-shrink-0 text-[11px] opacity-90" role="img" aria-label={`${gig.media.length} attachment${gig.media.length > 1 ? 's' : ''}`} title={`${gig.media.length} attachment${gig.media.length > 1 ? 's' : ''}`}>
-                              📎
+                            <span className="flex-shrink-0 flex gap-0.5 text-[11px] opacity-90" role="img" aria-label={`${gig.media.length} attachment${gig.media.length > 1 ? 's' : ''}`}>
+                              {gig.media.some(m => m.type === 'image') && <span title="Photos">📷</span>}
+                              {gig.media.some(m => m.type === 'audio') && <span className="text-purple-200" title="Audio">♫</span>}
+                              {gig.media.some(m => m.type === 'youtube') && <span className="text-red-200" title="YouTube">▶</span>}
+                              {gig.media.some(m => m.type === 'video') && <span title="Video">🎬</span>}
+                              {gig.media.some(m => m.type === 'link') && <span title="Link">🔗</span>}
                             </span>
                           )}
                         </div>
