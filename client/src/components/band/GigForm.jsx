@@ -54,7 +54,7 @@ const MEDIA_TYPE_META = {
   link: { icon: '🔗', label: 'Link', color: 'text-cyan-400' },
 };
 
-function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmin, workspaceId, workspace, workspaceMembers = [], previousEvents = [] }) {
+function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmin, workspaceId, workspace, workspaceMembers = [], previousEvents = [], onMediaChange }) {
   // Read-only mode: locked events can be viewed but not edited by non-admins
   const readOnly = gig?.isLocked && !isAdmin;
 
@@ -143,17 +143,24 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
   const [showAddUrl, setShowAddUrl] = useState(false);
   const [urlInput, setUrlInput] = useState('');
 
+  const updateMedia = (newMedia) => {
+    setMedia(newMedia);
+    if (onMediaChange && gig) onMediaChange(gig.id, newMedia);
+  };
+
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (!files.length || !gig) return;
     setUploading(true);
     try {
+      let updated = [...media];
       for (const file of files) {
         const result = await api.uploadFile(file, workspaceId);
         const type = file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image';
-        const newMedia = await api.addGigMedia(gig.id, { type, url: result.url, caption: file.name });
-        setMedia(prev => [newMedia, ...prev]);
+        const newItem = await api.addGigMedia(gig.id, { type, url: result.url, caption: file.name });
+        updated = [newItem, ...updated];
       }
+      updateMedia(updated);
     } catch (err) {
       setError(err.message || 'Upload failed');
     } finally {
@@ -169,8 +176,8 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     if (/youtube\.com|youtu\.be/i.test(url)) type = 'youtube';
     else if (/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url)) type = 'image';
     try {
-      const newMedia = await api.addGigMedia(gig.id, { type, url });
-      setMedia(prev => [newMedia, ...prev]);
+      const newItem = await api.addGigMedia(gig.id, { type, url });
+      updateMedia([newItem, ...media]);
       setUrlInput('');
       setShowAddUrl(false);
     } catch (err) {
@@ -181,7 +188,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
   const handleDeleteMedia = async (mediaId) => {
     try {
       await api.deleteGigMedia(gig.id, mediaId);
-      setMedia(prev => prev.filter(m => m.id !== mediaId));
+      updateMedia(media.filter(m => m.id !== mediaId));
     } catch (err) {
       setError(err.message || 'Failed to delete');
     }

@@ -1395,6 +1395,9 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
           workspace={workspace}
           workspaceMembers={workspace?.members || []}
           previousEvents={gigs}
+          onMediaChange={(gigId, newMedia) => {
+            setGigs(prev => prev.map(g => g.id === gigId ? { ...g, media: newMedia } : g));
+          }}
         />
       )}
 
