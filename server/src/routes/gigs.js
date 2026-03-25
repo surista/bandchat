@@ -1445,6 +1445,8 @@ router.post('/:gigId/media', authenticate, apiLimiter, async (req, res) => {
     if (!type || !url) {
       return res.status(400).json({ error: 'Type and URL are required' });
     }
+    if (url.length > 2048) return res.status(400).json({ error: 'URL must be 2,048 characters or less' });
+    if (caption && caption.length > 500) return res.status(400).json({ error: 'Caption must be 500 characters or less' });
 
     const VALID_MEDIA_TYPES = ['image', 'video', 'youtube', 'link', 'audio'];
     if (!VALID_MEDIA_TYPES.includes(type)) {
@@ -1466,9 +1468,22 @@ router.post('/:gigId/media', authenticate, apiLimiter, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
-    const urlCheck = isAllowedUploadUrl(url);
-    if (!urlCheck.valid) {
-      return res.status(400).json({ error: urlCheck.error || 'Invalid URL' });
+    // Uploaded files (image, audio, video) must come from allowed storage providers
+    // External references (youtube, link) just need valid HTTPS URLs
+    if (type === 'youtube' || type === 'link') {
+      try {
+        const parsed = new URL(url);
+        if (!['http:', 'https:'].includes(parsed.protocol)) {
+          return res.status(400).json({ error: 'URL must use HTTP or HTTPS' });
+        }
+      } catch {
+        return res.status(400).json({ error: 'Invalid URL' });
+      }
+    } else {
+      const urlCheck = isAllowedUploadUrl(url);
+      if (!urlCheck.valid) {
+        return res.status(400).json({ error: urlCheck.error || 'Invalid URL' });
+      }
     }
 
     const media = await prisma.gigMedia.create({
