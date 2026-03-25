@@ -59,12 +59,12 @@ function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, on
 
       {/* Media indicators */}
       {gig.media?.length > 0 && (
-        <div className="shrink-0 flex items-center gap-1" role="img" aria-label={`${gig.media.length} attachment${gig.media.length > 1 ? 's' : ''}`}>
-          {gig.media.some(m => m.type === 'image') && <span className="text-sm" title="Photos">📷</span>}
-          {gig.media.some(m => m.type === 'audio') && <span className="text-sm text-purple-400" title="Audio">♫</span>}
-          {gig.media.some(m => m.type === 'youtube') && <span className="text-sm text-red-400" title="YouTube">▶</span>}
-          {gig.media.some(m => m.type === 'video') && <span className="text-sm" title="Video">🎬</span>}
-          {gig.media.some(m => m.type === 'link') && <span className="text-sm text-cyan-400" title="Link">🔗</span>}
+        <div className="shrink-0 flex items-center gap-1.5" role="img" aria-label={`${gig.media.length} attachment${gig.media.length > 1 ? 's' : ''}`}>
+          {gig.media.some(m => m.type === 'image') && <span className="text-lg leading-none" title="Photos">📷</span>}
+          {gig.media.some(m => m.type === 'audio') && <span className="text-base leading-none px-1 py-0.5 bg-purple-500/15 text-purple-400 rounded" title="Audio">♫</span>}
+          {gig.media.some(m => m.type === 'youtube') && <span className="text-base leading-none px-1 py-0.5 bg-red-500/15 text-red-400 rounded" title="YouTube">▶</span>}
+          {gig.media.some(m => m.type === 'video') && <span className="text-lg leading-none" title="Video">🎬</span>}
+          {gig.media.some(m => m.type === 'link') && <span className="text-lg leading-none" title="Link">🔗</span>}
         </div>
       )}
 
@@ -1219,7 +1219,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                             {gig.title}
                           </span>
                           {gig.media?.length > 0 && (
-                            <span className="flex-shrink-0 flex gap-0.5 text-[11px] opacity-90" role="img" aria-label={`${gig.media.length} attachment${gig.media.length > 1 ? 's' : ''}`}>
+                            <span className="flex-shrink-0 flex gap-0.5 text-xs" role="img" aria-label={`${gig.media.length} attachment${gig.media.length > 1 ? 's' : ''}`}>
                               {gig.media.some(m => m.type === 'image') && <span title="Photos">📷</span>}
                               {gig.media.some(m => m.type === 'audio') && <span className="text-purple-200" title="Audio">♫</span>}
                               {gig.media.some(m => m.type === 'youtube') && <span className="text-red-200" title="YouTube">▶</span>}
