@@ -1,6 +1,6 @@
 {
   "name": "bandchat-server",
-  "version": "1.05.88",
+  "version": "1.05.89",
   "description": "BandChat backend API",
   "main": "src/index.js",
   "type": "module",

@@ -999,35 +999,62 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
 
                   {/* Existing media */}
                   {media.length > 0 && (
-                    <div className="space-y-2 mb-3">
+                    <div className="grid grid-cols-2 gap-2 mb-3">
                       {media.map(item => {
                         const meta = MEDIA_TYPE_META[item.type] || MEDIA_TYPE_META.link;
-                        const thumb = item.type === 'image' ? item.url :
-                                      item.type === 'youtube' ? getYouTubeThumbnail(item.url) : null;
                         return (
-                          <div key={item.id} className="flex items-center gap-3 bg-[var(--color-bg-tertiary)] rounded-lg p-2 group/media">
-                            {thumb ? (
-                              <img src={thumb} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0" />
-                            ) : (
-                              <div className="w-10 h-10 rounded bg-[var(--color-bg-secondary)] flex items-center justify-center flex-shrink-0">
-                                <span className={`text-lg ${meta.color}`}>{meta.icon}</span>
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-[var(--color-text-primary)] truncate">
-                                {item.caption || item.url.split('/').pop()}
-                              </p>
-                              <p className={`text-xs ${meta.color}`}>{meta.label}</p>
-                            </div>
+                          <div key={item.id} className="relative bg-[var(--color-bg-tertiary)] rounded-lg overflow-hidden group/media">
+                            {/* Delete button */}
                             {!readOnly && (
                               <button
                                 type="button"
                                 onClick={() => handleDeleteMedia(item.id)}
-                                className="text-[var(--color-text-muted)] hover:text-red-400 opacity-0 group-hover/media:opacity-100 transition-opacity p-1"
+                                className="absolute top-1 right-1 z-10 w-6 h-6 bg-black/60 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm opacity-0 group-hover/media:opacity-100 transition-opacity"
                                 aria-label="Remove attachment"
                               >
                                 ×
                               </button>
+                            )}
+
+                            {item.type === 'image' ? (
+                              <a href={item.url} target="_blank" rel="noopener noreferrer">
+                                <img src={item.url} alt={item.caption || ''} className="w-full aspect-video object-cover" />
+                              </a>
+                            ) : item.type === 'youtube' ? (
+                              <a href={item.url} target="_blank" rel="noopener noreferrer" className="block relative">
+                                <img src={getYouTubeThumbnail(item.url)} alt={item.caption || 'YouTube'} className="w-full aspect-video object-cover" />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="w-10 h-7 bg-red-600 rounded-lg flex items-center justify-center shadow-lg">
+                                    <span className="text-white text-sm ml-0.5">▶</span>
+                                  </div>
+                                </div>
+                              </a>
+                            ) : item.type === 'video' ? (
+                              <video src={item.url} controls className="w-full aspect-video" preload="metadata" />
+                            ) : item.type === 'audio' ? (
+                              <div className="p-3 flex flex-col gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-purple-400 text-lg">♫</span>
+                                  <span className="text-sm text-[var(--color-text-primary)] truncate flex-1">
+                                    {item.caption || 'Audio'}
+                                  </span>
+                                </div>
+                                <audio src={item.url} controls className="w-full h-8" preload="metadata" />
+                              </div>
+                            ) : (
+                              <a href={item.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 hover:bg-[var(--color-bg-secondary)] transition-colors">
+                                <span className="text-cyan-400 text-lg">🔗</span>
+                                <span className="text-sm text-[var(--color-text-primary)] truncate flex-1">
+                                  {item.caption || item.url}
+                                </span>
+                              </a>
+                            )}
+
+                            {/* Caption for visual types */}
+                            {item.caption && (item.type === 'image' || item.type === 'youtube' || item.type === 'video') && (
+                              <div className="px-2 py-1">
+                                <p className="text-xs text-[var(--color-text-muted)] truncate">{item.caption}</p>
+                              </div>
                             )}
                           </div>
                         );
