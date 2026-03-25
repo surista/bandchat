@@ -305,7 +305,9 @@ export default function ChannelScreen({ navigation, route }) {
           setMessages(cached);
           setLoading(false);
         }
-      } catch {}
+      } catch (e) {
+        console.error('Failed to load cached messages from SQLite:', e);
+      }
 
       try {
         const data = await api.getMessages(channel.id);
@@ -455,9 +457,13 @@ export default function ChannelScreen({ navigation, route }) {
             await api.sendMessage(queued.channelId, queued.content);
             await removeFromOfflineQueue(queued.tempId);
             setMessages(prev => prev.filter(m => m.id !== queued.tempId));
-          } catch {}
+          } catch (e) {
+            console.error('Failed to send queued offline message:', e);
+          }
         }
-      } catch {}
+      } catch (e) {
+        console.error('Failed to process offline message queue:', e);
+      }
     };
 
     const handleMessagePinned = (data) => {
@@ -805,7 +811,9 @@ export default function ChannelScreen({ navigation, route }) {
                 try {
                   const data = await api.getSetlist(pinnedSetlist.id);
                   setSetlistSongs(data.songs || []);
-                } catch {}
+                } catch (e) {
+                  console.error('Failed to load pinned setlist songs:', e);
+                }
               }
               setSetlistExpanded(prev => !prev);
             }}
@@ -973,7 +981,9 @@ export default function ChannelScreen({ navigation, route }) {
                 const data = await api.getSetlists(workspaceId);
                 setSetlistPickerList(data);
                 setShowSetlistPicker(true);
-              } catch {}
+              } catch (e) {
+                console.error('Failed to load setlists for picker:', e);
+              }
             },
           },
           ...(pinnedSetlist ? [{

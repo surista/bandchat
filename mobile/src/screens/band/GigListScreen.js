@@ -58,12 +58,16 @@ function formatTimeRange(date, endDate) {
     try {
       const time = format(parseISO(date), 'HH:mm');
       if (time !== '00:00') parts.push(time); // Skip midnight (no time set)
-    } catch {}
+    } catch {
+      // Expected: date parsing may fail for invalid gig date
+    }
   }
   if (endDate) {
     try {
       parts.push(format(parseISO(endDate), 'HH:mm'));
-    } catch {}
+    } catch {
+      // Expected: date parsing may fail for invalid gig end date
+    }
   }
   return parts.join(' \u2013 ');
 }

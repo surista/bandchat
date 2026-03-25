@@ -829,7 +829,9 @@ export default function GigDetailScreen({ navigation, route }) {
                 const end = gig.endDate ? format(parseISO(gig.endDate), 'HH:mm') : null;
                 return ` · ${t}${end ? ` \u2013 ${end}` : ''}`;
               }
-            } catch {}
+            } catch {
+              // Expected: date parsing may fail for invalid gig date
+            }
             return '';
           })()}
         </Text>

@@ -769,7 +769,9 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
                   try {
                     const data = await api.getSetlists(workspace.id);
                     setSetlistPickerList(data);
-                  } catch {}
+                  } catch (e) {
+                    console.error('Failed to load setlists for picker:', e);
+                  }
                   setShowSetlistPicker(true);
                 }}
                 className={`p-2.5 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors ${showSetlistPicker ? 'text-[var(--color-text-primary)] bg-[var(--color-bg-tertiary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
@@ -791,7 +793,9 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
                         onClick={async () => {
                           try {
                             await api.pinSetlist(channel.id, s.id);
-                          } catch {}
+                          } catch (e) {
+                            console.error('Failed to pin setlist:', e);
+                          }
                           setShowSetlistPicker(false);
                         }}
                         className="w-full text-left px-3 py-2 text-sm hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] flex items-center justify-between"
@@ -842,7 +846,9 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
                   try {
                     const data = await api.getSetlist(channel.pinnedSetlist.id);
                     setSetlistSongs(data.songs || []);
-                  } catch {}
+                  } catch (e) {
+                    console.error('Failed to load pinned setlist songs:', e);
+                  }
                 }
                 setSetlistExpanded(prev => !prev);
               }}
@@ -861,7 +867,9 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
                     await api.unpinSetlist(channel.id);
                     setSetlistExpanded(false);
                     setSetlistSongs(null);
-                  } catch {}
+                  } catch (e) {
+                    console.error('Failed to unpin setlist:', e);
+                  }
                 }}
                 className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] ml-2"
                 title="Unpin setlist"

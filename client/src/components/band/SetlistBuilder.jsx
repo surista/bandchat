@@ -760,7 +760,9 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
         const venues = await api.getVenues(setlist.workspaceId);
         const match = venues.find(v => v.name === setlist.venue);
         if (match?.imageUrl) venueLogoUrl = match.imageUrl;
-      } catch {}
+      } catch (e) {
+        console.error('Failed to fetch venue logo for setlist print:', e);
+      }
     }
 
     // Format date if available

@@ -92,7 +92,9 @@ export async function addToOfflineQueue(message) {
     const queue = await getOfflineQueue();
     queue.push(message);
     await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
-  } catch {}
+  } catch (e) {
+    console.error('Failed to add message to offline queue:', e);
+  }
 }
 
 export async function removeFromOfflineQueue(tempId) {
@@ -100,5 +102,7 @@ export async function removeFromOfflineQueue(tempId) {
     const queue = await getOfflineQueue();
     const filtered = queue.filter(m => m.tempId !== tempId);
     await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(filtered));
-  } catch {}
+  } catch (e) {
+    console.error('Failed to remove message from offline queue:', e);
+  }
 }

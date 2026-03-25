@@ -177,7 +177,9 @@ export default function SetlistListScreen({ navigation, route }) {
           const venues = await api.getVenues(workspaceId);
           const match = venues.find(v => v.name === selectedSetlist.venue);
           if (match?.imageUrl) venueLogoUrl = match.imageUrl;
-        } catch {}
+        } catch (e) {
+          console.error('Failed to fetch venue logo for setlist print:', e);
+        }
       }
       const html = buildSetlistHTML(selectedSetlist.name, items, { venueLogoUrl });
       const { uri } = await Print.printToFileAsync({ html });

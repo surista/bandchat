@@ -116,7 +116,9 @@ function renderUrlPart(part, i, message, onOpenLightbox, onAddToLibrary, isOwn, 
   try {
     const parsedUrl = new URL(part);
     isGoogleDoc = parsedUrl.hostname === 'docs.google.com' || parsedUrl.hostname === 'sheets.google.com';
-  } catch {}
+  } catch {
+    // Expected: URL parsing may fail for invalid input
+  }
   if (isGoogleDoc) {
     return (
       <div key={i} className="my-2">

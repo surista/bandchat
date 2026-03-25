@@ -53,7 +53,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
     if (capacity !== undefined && capacity !== null && (typeof capacity !== 'number' || capacity < 1)) {
       return res.status(400).json({ error: 'Capacity must be a positive number' });
     }
-    if (imageUrl && !isAllowedUploadUrl(imageUrl)) {
+    if (imageUrl && !isAllowedUploadUrl(imageUrl).valid) {
       return res.status(400).json({ error: 'Invalid image URL' });
     }
 
@@ -148,7 +148,7 @@ router.put('/:venueId', authenticate, async (req, res) => {
     if (capacity !== undefined && capacity !== null && (typeof capacity !== 'number' || capacity < 1)) {
       return res.status(400).json({ error: 'Capacity must be a positive number' });
     }
-    if (imageUrl && !isAllowedUploadUrl(imageUrl)) {
+    if (imageUrl && !isAllowedUploadUrl(imageUrl).valid) {
       return res.status(400).json({ error: 'Invalid image URL' });
     }
 

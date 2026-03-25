@@ -114,7 +114,9 @@ export default function ChannelListScreen({ navigation, route }) {
         if (savedDMs) setCollapsedDMs(JSON.parse(savedDMs));
         if (savedQuickLinks) setCollapsedQuickLinks(JSON.parse(savedQuickLinks));
         if (savedStarred) setCollapsedStarred(JSON.parse(savedStarred));
-      } catch {}
+      } catch (e) {
+        console.error('Failed to load collapsed section state:', e);
+      }
     };
     load();
   }, [workspaceId]);

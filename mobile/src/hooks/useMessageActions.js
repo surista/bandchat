@@ -34,7 +34,9 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
   useEffect(() => {
     AsyncStorage.getItem('bandchat_blocked_preview_domains').then(val => {
       if (val) {
-        try { setBlockedDomains(new Set(JSON.parse(val))); } catch {}
+        try { setBlockedDomains(new Set(JSON.parse(val))); } catch (e) {
+          console.error('Failed to parse blocked preview domains:', e);
+        }
       }
     });
   }, []);

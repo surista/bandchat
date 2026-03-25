@@ -46,29 +46,6 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
     loadData();
   }, [workspaceId]);
 
-  // Close modal on ESC key
-  useEffect(() => {
-    const handleEsc = (e) => {
-      if (e.key === 'Escape') {
-        if (lightboxImage) {
-          setLightboxImage(null);
-        } else if (showSetlistPicker) {
-          setShowSetlistPicker(false);
-        } else if (showEditDetails) {
-          setShowEditDetails(false);
-        } else if (showEditPerformers) {
-          setShowEditPerformers(false);
-        } else if (showAddMedia) {
-          setShowAddMedia(false);
-        } else if (selectedEntry) {
-          setSelectedEntry(null);
-        }
-      }
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [lightboxImage, showSetlistPicker, showEditDetails, showEditPerformers, showAddMedia, selectedEntry]);
-
   const loadData = async () => {
     setError(null);
     try {

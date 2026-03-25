@@ -44,7 +44,9 @@ function LinkPreview({ content, isOwn, onDismiss, onLongPress, blockedDomains })
     try {
       const domain = new URL(firstUrl).hostname;
       if (blockedDomains?.has(domain)) return;
-    } catch {}
+    } catch {
+      // Expected: URL parsing may fail for invalid input
+    }
 
     if (cache.has(firstUrl)) {
       const cached = cache.get(firstUrl);
@@ -78,7 +80,9 @@ function LinkPreview({ content, isOwn, onDismiss, onLongPress, blockedDomains })
   // Hide if domain is blocked (checked at render time for reactivity)
   try {
     if (blockedDomains?.has(new URL(url).hostname)) return null;
-  } catch {}
+  } catch {
+    // Expected: URL parsing may fail for invalid input
+  }
 
   const handlePress = () => {
     Linking.openURL(url).catch(() => {});
@@ -144,9 +148,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -8,
     right: -4,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',

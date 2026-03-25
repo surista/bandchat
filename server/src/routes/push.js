@@ -364,7 +364,9 @@ export const sendPushToUser = async (userId, payload, options = {}) => {
       `;
       const count = result[0]?.count || 0;
       if (count > 0) badgeCount = count;
-    } catch {}
+    } catch (e) {
+      console.error('Failed to calculate badge count:', e);
+    }
 
     const expoMessages = expoTokens
       .filter(t => Expo.isExpoPushToken(t.token))

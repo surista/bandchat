@@ -61,6 +61,7 @@ function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
         onPress={() => handleSave(imageIndex)}
         disabled={saving}
         activeOpacity={0.7}
+        hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
         accessibilityRole="button"
         accessibilityLabel="Save image to photo library"
       >
@@ -77,6 +78,7 @@ function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
         style={styles.headerButton}
         onPress={onClose}
         activeOpacity={0.7}
+        hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
         accessibilityRole="button"
         accessibilityLabel="Close image viewer"
       >

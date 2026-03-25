@@ -167,23 +167,6 @@ function SetlistList({ workspaceId, workspaceName }) {
     setEditingSetlist(null);
   }, [workspaceId]);
 
-  // ESC key to close modals
-  useEffect(() => {
-    const handleEsc = (e) => {
-      if (e.key === 'Escape') {
-        if (editingDetails) setEditingDetails(null);
-        else if (viewingSetlist) setViewingSetlist(null);
-        else if (showImportModal) {
-          setShowImportModal(false);
-          setImportResults(null);
-        }
-        else if (showCreateModal) setShowCreateModal(false);
-      }
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [editingDetails, viewingSetlist, showImportModal, showCreateModal]);
-
   const loadData = async () => {
     try {
       setLoading(true);
@@ -493,7 +476,9 @@ function SetlistList({ workspaceId, workspaceName }) {
         const venues = await api.getVenues(workspaceId);
         const match = venues.find(v => v.name === setlist.venue);
         if (match?.imageUrl) venueLogoUrl = match.imageUrl;
-      } catch {}
+      } catch (e) {
+        console.error('Failed to fetch venue logo for setlist print:', e);
+      }
     }
 
     const dateStr = setlist.performedAt

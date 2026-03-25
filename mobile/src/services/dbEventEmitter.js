@@ -27,7 +27,9 @@ const dbEvents = {
     const cbs = listeners.get(event);
     if (cbs) {
       for (const cb of cbs) {
-        try { cb(data); } catch {}
+        try { cb(data); } catch (e) {
+          console.error('Event listener error:', e);
+        }
       }
     }
   },

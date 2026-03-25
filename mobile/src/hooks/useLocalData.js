@@ -38,7 +38,9 @@ export function useLocalChannels(workspaceId) {
       setChannels(chans);
       setDirectMessages(dms);
       dbEvents.emit(`channels:${workspaceId}`);
-    } catch {}
+    } catch (e) {
+      console.error('Failed to refresh channels from API:', e);
+    }
   }, [workspaceId]);
 
   // Load from DB first (instant), then refresh from API
@@ -98,7 +100,9 @@ export function useLocalMessages(channelId, limit = 50) {
       setMessages(prev => [...data.messages, ...prev]);
       setHasMore(data.hasMore);
       setNextCursor(data.nextCursor);
-    } catch {} finally {
+    } catch (e) {
+      console.error('Failed to load more messages:', e);
+    } finally {
       loadingMoreRef.current = false;
     }
   }, [hasMore, nextCursor, channelId]);

@@ -300,7 +300,9 @@ export function ThemeProvider({ children }) {
             if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
               setWorkspaceThemesState(parsed);
             }
-          } catch {}
+          } catch (e) {
+            // Expected: JSON.parse may fail for corrupted workspace themes data
+          }
         }
       } catch {
         // Use defaults
