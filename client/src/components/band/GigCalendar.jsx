@@ -1197,18 +1197,20 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                             }
                           }}
                           title={gig.isExternal ? `${gig.workspace?.name || 'Other workspace'}` : gig.isLocked ? `${gig.title} (Locked)` : gig.title}
-                          className={`text-xs p-1 rounded text-white truncate ${gig.isExternal || (gig.isLocked && !isAdmin) ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} ${getTypeColor(gig.type, gig.isExternal, gig.workspaceId)} ${
+                          className={`text-xs p-1 rounded text-white flex items-center gap-1 ${gig.isExternal || (gig.isLocked && !isAdmin) ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} ${getTypeColor(gig.type, gig.isExternal, gig.workspaceId)} ${
                             gig.status === 'CANCELLED' ? 'opacity-50 line-through' : ''
                           } ${draggingGig?.id === gig.id ? 'opacity-50' : ''} ${gig.isPersonal ? 'border border-dashed border-[var(--color-border)]' : ''}`}
                         >
-                          {gig.isLocked && <span className="mr-1">🔒</span>}
-                          {gig.isPersonal && <span className="mr-1">👤</span>}
-                          <span className="font-medium">{formatTimeRange(gig.date, gig.endDate)} </span>
-                          {gig.title}
+                          <span className="truncate">
+                            {gig.isLocked && <span className="mr-1">🔒</span>}
+                            {gig.isPersonal && <span className="mr-1">👤</span>}
+                            <span className="font-medium">{formatTimeRange(gig.date, gig.endDate)} </span>
+                            {gig.title}
+                          </span>
                           {gig.media?.length > 0 && (
-                            <span className="ml-1 opacity-75">
+                            <span className="flex-shrink-0 flex gap-0.5 opacity-80 text-[10px]">
                               {gig.media.some(m => m.type === 'image') && '📷'}
-                              {gig.media.some(m => m.type === 'youtube') && '▶'}
+                              {gig.media.some(m => m.type === 'youtube') && <span className="text-red-200">▶</span>}
                               {gig.media.some(m => m.type === 'audio') && '♫'}
                               {gig.media.some(m => m.type === 'link') && '🔗'}
                             </span>
