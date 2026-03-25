@@ -57,6 +57,13 @@ function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, on
         )}
       </div>
 
+      {/* Media indicator */}
+      {gig.media?.length > 0 && (
+        <span className="shrink-0 text-sm text-[var(--color-text-muted)]" role="img" aria-label={`${gig.media.length} attachment${gig.media.length > 1 ? 's' : ''}`} title={`${gig.media.length} attachment${gig.media.length > 1 ? 's' : ''}`}>
+          📎{gig.media.length > 1 && <span className="text-xs ml-0.5" aria-hidden="true">{gig.media.length}</span>}
+        </span>
+      )}
+
       {/* Venue */}
       <div className="shrink-0 max-w-[8rem] text-sm text-[var(--color-text-muted)] truncate hidden md:block">
         {gig.venue || '—'}
@@ -448,7 +455,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
     try {
       if (editingGig) {
         const updated = await api.updateGig(editingGig.id, gigData);
-        setGigs(prev => prev.map(g => g.id === updated.id ? updated : g));
+        setGigs(prev => prev.map(g => g.id === updated.id ? { ...g, ...updated, media: updated.media ?? g.media } : g));
       } else {
         const created = await api.createGig(workspaceId, gigData);
         setGigs(prev => [...prev, created]);
@@ -1208,11 +1215,8 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                             {gig.title}
                           </span>
                           {gig.media?.length > 0 && (
-                            <span className="flex-shrink-0 flex gap-0.5 opacity-80 text-[10px]">
-                              {gig.media.some(m => m.type === 'image') && '📷'}
-                              {gig.media.some(m => m.type === 'youtube') && <span className="text-red-200">▶</span>}
-                              {gig.media.some(m => m.type === 'audio') && '♫'}
-                              {gig.media.some(m => m.type === 'link') && '🔗'}
+                            <span className="flex-shrink-0 text-[11px] opacity-90" role="img" aria-label={`${gig.media.length} attachment${gig.media.length > 1 ? 's' : ''}`} title={`${gig.media.length} attachment${gig.media.length > 1 ? 's' : ''}`}>
+                              📎
                             </span>
                           )}
                         </div>

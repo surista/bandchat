@@ -119,7 +119,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
         },
         attachments: {
           where: { type: { startsWith: 'audio' } },
-          select: { id: true },
+          select: { id: true, url: true, filename: true },
           take: 1,
         }
       },
@@ -130,6 +130,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
     const result = songs.map(({ attachments: audioCheck, ...song }) => ({
       ...song,
       hasAudio: audioCheck?.length > 0,
+      audioUrl: audioCheck?.[0]?.url || null,
     }));
     res.json(result);
   } catch (error) {
@@ -341,7 +342,9 @@ router.get('/:songId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
-    res.json(song);
+    // Add derived audio fields for consistency with list endpoint
+    const audioAttachment = song.attachments?.find(a => a.type?.startsWith('audio'));
+    res.json({ ...song, hasAudio: !!audioAttachment, audioUrl: audioAttachment?.url || null });
   } catch (error) {
     console.error('Get song error:', error);
     res.status(500).json({ error: 'Failed to get song' });

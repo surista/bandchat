@@ -6,7 +6,7 @@ import ConfirmDialog from '../common/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
 import LyricsModal from './LyricsModal';
 
-function SongForm({ song, workspaceId, onSave, onClose }) {
+function SongForm({ song, workspaceId, onSave, onClose, initialTab }) {
   // Parse existing key into root and mode
   const parseKey = (key) => {
     if (!key) return { root: '', isMinor: false };
@@ -52,7 +52,7 @@ function SongForm({ song, workspaceId, onSave, onClose }) {
     youtubeUrl: song?.youtubeUrl || '',
     spotifyUrl: song?.spotifyUrl || ''
   });
-  const [activeTab, setActiveTab] = useState('details');
+  const [activeTab, setActiveTab] = useState(initialTab || 'details');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [attachments, setAttachments] = useState([]);

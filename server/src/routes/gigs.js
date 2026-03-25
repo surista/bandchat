@@ -234,6 +234,9 @@ router.get('/all-workspaces', authenticate, async (req, res) => {
           },
           orderBy: { setNumber: 'asc' }
         },
+        media: {
+          orderBy: { createdAt: 'desc' }
+        },
         _count: {
           select: { songsPlayed: true }
         }
@@ -736,6 +739,9 @@ router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMemb
               select: { id: true, name: true, imageUrl: true }
             }
           }
+        },
+        media: {
+          orderBy: { createdAt: 'desc' }
         }
       }
     });
@@ -815,6 +821,9 @@ router.get('/:gigId', authenticate, async (req, res) => {
               select: { id: true, name: true, imageUrl: true }
             }
           }
+        },
+        media: {
+          orderBy: { createdAt: 'desc' }
         }
       }
     });
@@ -1019,6 +1028,9 @@ router.put('/:gigId', authenticate, async (req, res) => {
               select: { id: true, name: true, imageUrl: true }
             }
           }
+        },
+        media: {
+          orderBy: { createdAt: 'desc' }
         }
       }
     });
@@ -1121,6 +1133,9 @@ router.put('/:gigId/complete', authenticate, async (req, res) => {
         },
         songsPlayed: {
           include: { song: true }
+        },
+        media: {
+          orderBy: { createdAt: 'desc' }
         }
       }
     });
@@ -1369,7 +1384,9 @@ router.post('/:gigId/duplicate', authenticate, async (req, res) => {
           },
           orderBy: { setNumber: 'asc' }
         },
-        media: true,
+        media: {
+          orderBy: { createdAt: 'desc' }
+        },
         _count: {
           select: { songsPlayed: true }
         }

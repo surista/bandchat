@@ -1,5 +1,5 @@
 import { isSafeUrl } from '../../utils/urlSafety';
-import { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import SongForm from './SongForm';
@@ -22,14 +22,15 @@ function PracticeIndicator({ songId, practiceSummary }) {
   );
 }
 
-const SongCard = memo(function SongCard({ song, onEdit, onDelete, onContextMenu, practiceSummary }) {
+const SongCard = memo(function SongCard({ song, onEdit, onDelete, onContextMenu, onTap, practiceSummary, isPlaying, onTogglePlay }) {
   const longPress = useLongPress({
     onLongPress: (pos) => onContextMenu(pos),
+    onTap: () => onTap(),
   });
 
   return (
     <div
-      className="bg-[var(--color-bg-secondary)] rounded-lg p-4 hover:bg-[var(--color-bg-tertiary)] transition-colors border border-[var(--color-border)] group"
+      className="bg-[var(--color-bg-secondary)] rounded-lg p-4 hover:bg-[var(--color-bg-tertiary)] transition-colors border border-[var(--color-border)] group cursor-pointer"
       {...longPress}
     >
       <div className="flex items-start justify-between mb-2">
@@ -85,9 +86,21 @@ const SongCard = memo(function SongCard({ song, onEdit, onDelete, onContextMenu,
       </div>
 
       {song.hasAudio && (
-        <div className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full bg-purple-500/15 text-purple-400 text-sm font-medium">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" /></svg>
-          Audio
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onTogglePlay(); }}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 text-sm font-medium transition-colors cursor-pointer"
+            title={isPlaying ? 'Hide player' : 'Play audio'}
+            aria-expanded={isPlaying}
+            aria-label={isPlaying ? 'Hide audio player' : `Play audio for ${song.title}`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" /></svg>
+            {isPlaying ? 'Hide Audio' : '▶ Audio'}
+          </button>
+          {isPlaying && song.audioUrl && isSafeUrl(song.audioUrl) && (
+            <audio src={song.audioUrl} controls preload="metadata" className="w-full mt-2" style={{ height: 36 }} aria-label={`Audio player for ${song.title}`} />
+          )}
         </div>
       )}
 
@@ -128,6 +141,7 @@ function SongList({ workspaceId, workspaceName, onSelectSong }) {
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingSong, setEditingSong] = useState(null);
+  const [formInitialTab, setFormInitialTab] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('title');
   const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'compact'
@@ -143,6 +157,7 @@ function SongList({ workspaceId, workspaceName, onSelectSong }) {
   const [contextMenu, setContextMenu] = useState(null); // { songId, x, y }
   const [showEnrichConfirm, setShowEnrichConfirm] = useState(null); // count of songs needing data
   const [practiceSummary, setPracticeSummary] = useState(null);
+  const [playingSongId, setPlayingSongId] = useState(null); // single active audio player across all views
 
   useEffect(() => {
     loadSongs();
@@ -165,10 +180,10 @@ function SongList({ workspaceId, workspaceName, onSelectSong }) {
     try {
       if (editingSong) {
         const updated = await api.updateSong(editingSong.id, songData);
-        setSongs(prev => prev.map(s => s.id === updated.id ? updated : s));
+        setSongs(prev => prev.map(s => s.id === updated.id ? { ...s, ...updated } : s));
       } else {
         const created = await api.createSong(workspaceId, songData);
-        setSongs(prev => [...prev, created]);
+        setSongs(prev => [...prev, { ...created, hasAudio: false, audioUrl: null }]);
       }
       setShowForm(false);
       setEditingSong(null);
@@ -457,6 +472,13 @@ function SongList({ workspaceId, workspaceName, onSelectSong }) {
 
   // Memoized callbacks for SongCard to prevent unnecessary re-renders
   const handleEditSong = useCallback((song) => {
+    setFormInitialTab('details');
+    setEditingSong(song);
+    setShowForm(true);
+  }, []);
+
+  const handleViewSong = useCallback((song) => {
+    setFormInitialTab(song.hasAudio ? 'attachments' : 'details');
     setEditingSong(song);
     setShowForm(true);
   }, []);
@@ -526,6 +548,7 @@ function SongList({ workspaceId, workspaceName, onSelectSong }) {
             <button
               onClick={() => {
                 setEditingSong(null);
+                setFormInitialTab(null);
                 setShowForm(true);
               }}
               className="btn bg-green-600 hover:bg-green-700 text-white"
@@ -627,7 +650,7 @@ function SongList({ workspaceId, workspaceName, onSelectSong }) {
             {!searchQuery && (
               <div className="flex gap-2">
                 <button
-                  onClick={() => { setEditingSong(null); setShowForm(true); }}
+                  onClick={() => { setEditingSong(null); setFormInitialTab(null); setShowForm(true); }}
                   className="btn bg-green-600 hover:bg-green-700 text-white"
                 >
                   + Add Song
@@ -669,9 +692,10 @@ function SongList({ workspaceId, workspaceName, onSelectSong }) {
               </thead>
               <tbody>
                 {filteredSongs.map((song, i) => (
+                  <React.Fragment key={song.id}>
                   <tr
-                    key={song.id}
-                    className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)] transition-colors group cursor-default"
+                    className="border-b border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)] transition-colors group cursor-pointer"
+                    onClick={() => handleViewSong(song)}
                   >
                     <td className="py-2 px-2 text-[var(--color-text-muted)]">{i + 1}</td>
                     <td className="py-2 px-2">
@@ -679,8 +703,16 @@ function SongList({ workspaceId, workspaceName, onSelectSong }) {
                       {song.shortName && (
                         <span className="text-[var(--color-text-muted)] text-xs italic ml-1.5">({song.shortName})</span>
                       )}
-                      {song.hasAudio && (
-                        <svg className="w-4 h-4 inline-block ml-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Audio attached"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" /></svg>
+                      {song.hasAudio && song.audioUrl && isSafeUrl(song.audioUrl) && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setPlayingSongId(prev => prev === song.id ? null : song.id); }}
+                          className="inline-flex items-center justify-center ml-2 p-2 -m-1 text-purple-400 hover:text-purple-300 transition-colors"
+                          title={playingSongId === song.id ? 'Close audio player' : 'Play audio'}
+                          aria-label={playingSongId === song.id ? 'Close audio player' : `Play audio for ${song.title}`}
+                          aria-expanded={playingSongId === song.id}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" /></svg>
+                        </button>
                       )}
                     </td>
                     <td className="py-2 px-2 text-[var(--color-text-secondary)]">{song.artist || ''}</td>
@@ -710,6 +742,18 @@ function SongList({ workspaceId, workspaceName, onSelectSong }) {
                       </div>
                     </td>
                   </tr>
+                  {playingSongId === song.id && song.audioUrl && isSafeUrl(song.audioUrl) && (
+                    <tr>
+                      <td colSpan={7} className="py-2 px-2 bg-purple-500/5">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3" aria-live="polite">
+                          <span className="text-xs text-purple-400 font-medium truncate max-w-[200px]">Now playing: {song.title}</span>
+                          <audio src={song.audioUrl} controls preload="metadata" className="flex-1 min-w-[150px]" style={{ height: 32 }} aria-label={`Audio player for ${song.title}`} />
+                          <button onClick={() => setPlayingSongId(null)} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-sm p-2 -m-1" title="Close player" aria-label="Close audio player">✕</button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
@@ -728,6 +772,9 @@ function SongList({ workspaceId, workspaceName, onSelectSong }) {
                 key={song.id}
                 song={song}
                 practiceSummary={practiceSummary}
+                isPlaying={playingSongId === song.id}
+                onTogglePlay={() => setPlayingSongId(prev => prev === song.id ? null : song.id)}
+                onTap={() => handleViewSong(song)}
                 onEdit={() => handleEditSong(song)}
                 onDelete={() => confirmDeleteSong(song.id)}
                 onContextMenu={(pos) => handleContextMenu(song.id, pos)}
@@ -742,10 +789,12 @@ function SongList({ workspaceId, workspaceName, onSelectSong }) {
         <SongForm
           song={editingSong}
           workspaceId={workspaceId}
+          initialTab={formInitialTab}
           onSave={handleSaveSong}
           onClose={() => {
             setShowForm(false);
             setEditingSong(null);
+            setFormInitialTab(null);
           }}
         />
       )}
@@ -931,10 +980,7 @@ Hotel California - Eagles"
             icon: '✏️',
             onClick: () => {
               const song = songs.find(s => s.id === contextMenu?.songId);
-              if (song) {
-                setEditingSong(song);
-                setShowForm(true);
-              }
+              if (song) handleEditSong(song);
             }
           },
           {
