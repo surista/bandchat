@@ -226,6 +226,26 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
             <p className="text-[var(--color-text-muted)] text-sm mt-2 italic">{gig.notes}</p>
           )}
 
+          {gig.media?.length > 0 && (
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              {(() => {
+                const types = {};
+                gig.media.forEach(m => { types[m.type] = (types[m.type] || 0) + 1; });
+                const icons = [];
+                if (types.image) icons.push({ icon: '📷', label: `${types.image} photo${types.image > 1 ? 's' : ''}`, color: 'text-blue-400' });
+                if (types.youtube) icons.push({ icon: '▶', label: `${types.youtube} video${types.youtube > 1 ? 's' : ''}`, color: 'text-red-400', bg: 'bg-red-500/10' });
+                if (types.video) icons.push({ icon: '🎬', label: `${types.video} video${types.video > 1 ? 's' : ''}`, color: 'text-blue-400' });
+                if (types.audio) icons.push({ icon: '♫', label: `${types.audio} audio`, color: 'text-purple-400' });
+                if (types.link) icons.push({ icon: '🔗', label: `${types.link} link${types.link > 1 ? 's' : ''}`, color: 'text-cyan-400' });
+                return icons.map(({ icon, label, color, bg }) => (
+                  <span key={label} className={`inline-flex items-center gap-1 text-xs ${color} ${bg || 'bg-[var(--color-bg-tertiary)]'} px-2 py-0.5 rounded-full`} title={label}>
+                    {icon} {label}
+                  </span>
+                ));
+              })()}
+            </div>
+          )}
+
           {/* Action buttons - hidden on mobile, visible on hover on desktop */}
           <div className="hidden sm:flex gap-2 mt-3 flex-wrap opacity-0 group-hover:opacity-100 transition-opacity">
             <a
@@ -1185,6 +1205,14 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                           {gig.isPersonal && <span className="mr-1">👤</span>}
                           <span className="font-medium">{formatTimeRange(gig.date, gig.endDate)} </span>
                           {gig.title}
+                          {gig.media?.length > 0 && (
+                            <span className="ml-1 opacity-75">
+                              {gig.media.some(m => m.type === 'image') && '📷'}
+                              {gig.media.some(m => m.type === 'youtube') && '▶'}
+                              {gig.media.some(m => m.type === 'audio') && '♫'}
+                              {gig.media.some(m => m.type === 'link') && '🔗'}
+                            </span>
+                          )}
                         </div>
                       );})}
                       {filteredDayGigs.length > 3 && (

@@ -458,6 +458,27 @@ export default function GigListScreen({ navigation, route }) {
               <Ionicons name="musical-notes-outline" size={13} color={colors.textSecondary} /> {setlistNames.join(' \u2192 ')}
             </Text>
           ) : null}
+
+          {item.media?.length > 0 ? (
+            <View style={styles.mediaIndicators}>
+              {(() => {
+                const types = {};
+                item.media.forEach(m => { types[m.type] = (types[m.type] || 0) + 1; });
+                const indicators = [];
+                if (types.image) indicators.push({ icon: 'camera-outline', color: '#60a5fa', label: `${types.image} photo${types.image > 1 ? 's' : ''}` });
+                if (types.youtube) indicators.push({ icon: 'logo-youtube', color: '#f87171', label: `${types.youtube} video${types.youtube > 1 ? 's' : ''}` });
+                if (types.video) indicators.push({ icon: 'videocam-outline', color: '#60a5fa', label: `${types.video} video${types.video > 1 ? 's' : ''}` });
+                if (types.audio) indicators.push({ icon: 'musical-note-outline', color: '#c084fc', label: `${types.audio} audio` });
+                if (types.link) indicators.push({ icon: 'link-outline', color: '#22d3ee', label: `${types.link} link${types.link > 1 ? 's' : ''}` });
+                return indicators.map(({ icon, color, label }) => (
+                  <View key={label} style={[styles.mediaChip, { backgroundColor: color + '15' }]}>
+                    <Ionicons name={icon} size={12} color={color} />
+                    <Text style={[styles.mediaChipText, { color }]}>{label}</Text>
+                  </View>
+                ));
+              })()}
+            </View>
+          ) : null}
         </View>
       </TouchableOpacity>
     );
@@ -810,6 +831,9 @@ const styles = StyleSheet.create({
   gigVenue: { fontSize: 13, marginBottom: 2 },
   gigPay: { color: '#22c55e', fontSize: 14, fontWeight: '600', marginBottom: 2 },
   gigSetlists: { fontSize: 13, marginTop: 2 },
+  mediaIndicators: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
+  mediaChip: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10 },
+  mediaChipText: { fontSize: 11, fontWeight: '500' },
   emptyIcon: { fontSize: 40, marginBottom: 12 },
   emptyText: { fontSize: 15 },
   emptyHint: { fontSize: 13, marginTop: 6, textAlign: 'center', opacity: 0.7 },
