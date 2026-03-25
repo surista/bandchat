@@ -936,10 +936,10 @@ export default function GigDetailScreen({ navigation, route }) {
         </View>
       ) : null}
 
-      {/* Photos & Videos */}
+      {/* Attachments */}
       <View style={styles.viewSection}>
         <View style={styles.mediaSectionHeader}>
-          <Text style={[styles.viewLabel, { color: colors.textSecondary }]}>Photos & Videos</Text>
+          <Text style={[styles.viewLabel, { color: colors.textSecondary }]}>Attachments</Text>
           {gigMedia.length > 6 && (
             <TouchableOpacity
               onPress={() => navigation.navigate('GigGallery', { gigId, gigTitle: gig?.title })}

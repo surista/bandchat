@@ -36,6 +36,24 @@ const getGoogleCalendarUrl = (gig) => {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 };
 
+function getYouTubeThumbnail(url) {
+  try {
+    const u = new URL(url);
+    let id;
+    if (u.hostname.includes('youtu.be')) id = u.pathname.slice(1);
+    else id = u.searchParams.get('v');
+    return id ? `https://img.youtube.com/vi/${id}/mqdefault.jpg` : null;
+  } catch { return null; }
+}
+
+const MEDIA_TYPE_META = {
+  image: { icon: '📷', label: 'Photo', color: 'text-blue-400' },
+  youtube: { icon: '▶', label: 'YouTube', color: 'text-red-400' },
+  video: { icon: '🎬', label: 'Video', color: 'text-blue-400' },
+  audio: { icon: '♫', label: 'Audio', color: 'text-purple-400' },
+  link: { icon: '🔗', label: 'Link', color: 'text-cyan-400' },
+};
+
 function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmin, workspaceId, workspace, workspaceMembers = [], previousEvents = [] }) {
   // Read-only mode: locked events can be viewed but not edited by non-admins
   const readOnly = gig?.isLocked && !isAdmin;
@@ -120,6 +138,54 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
   const [venues, setVenues] = useState([]);
   const [selectedVenueId, setSelectedVenueId] = useState(gig?.venueId || null);
   const [customVenue, setCustomVenue] = useState(!gig?.venueId && !!(gig?.venue));
+  const [media, setMedia] = useState(gig?.media || []);
+  const [uploading, setUploading] = useState(false);
+  const [showAddUrl, setShowAddUrl] = useState(false);
+  const [urlInput, setUrlInput] = useState('');
+
+  const handleFileUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length || !gig) return;
+    setUploading(true);
+    try {
+      for (const file of files) {
+        const result = await api.uploadFile(file, workspaceId);
+        const type = file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image';
+        const newMedia = await api.addGigMedia(gig.id, { type, url: result.url, caption: file.name });
+        setMedia(prev => [newMedia, ...prev]);
+      }
+    } catch (err) {
+      setError(err.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleAddUrl = async () => {
+    if (!urlInput.trim() || !gig) return;
+    const url = urlInput.trim();
+    let type = 'link';
+    if (/youtube\.com|youtu\.be/i.test(url)) type = 'youtube';
+    else if (/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url)) type = 'image';
+    try {
+      const newMedia = await api.addGigMedia(gig.id, { type, url });
+      setMedia(prev => [newMedia, ...prev]);
+      setUrlInput('');
+      setShowAddUrl(false);
+    } catch (err) {
+      setError(err.message || 'Failed to add link');
+    }
+  };
+
+  const handleDeleteMedia = async (mediaId) => {
+    try {
+      await api.deleteGigMedia(gig.id, mediaId);
+      setMedia(prev => prev.filter(m => m.id !== mediaId));
+    } catch (err) {
+      setError(err.message || 'Failed to delete');
+    }
+  };
 
   // Fetch saved venues
   useEffect(() => {
@@ -925,6 +991,108 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                   placeholder="Additional details..."
                 />
               </div>
+
+              {/* Attachments - only for existing gigs */}
+              {gig && (
+                <div>
+                  <label className="modal-label">Attachments</label>
+
+                  {/* Existing media */}
+                  {media.length > 0 && (
+                    <div className="space-y-2 mb-3">
+                      {media.map(item => {
+                        const meta = MEDIA_TYPE_META[item.type] || MEDIA_TYPE_META.link;
+                        const thumb = item.type === 'image' ? item.url :
+                                      item.type === 'youtube' ? getYouTubeThumbnail(item.url) : null;
+                        return (
+                          <div key={item.id} className="flex items-center gap-3 bg-[var(--color-bg-tertiary)] rounded-lg p-2 group/media">
+                            {thumb ? (
+                              <img src={thumb} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0" />
+                            ) : (
+                              <div className="w-10 h-10 rounded bg-[var(--color-bg-secondary)] flex items-center justify-center flex-shrink-0">
+                                <span className={`text-lg ${meta.color}`}>{meta.icon}</span>
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-[var(--color-text-primary)] truncate">
+                                {item.caption || item.url.split('/').pop()}
+                              </p>
+                              <p className={`text-xs ${meta.color}`}>{meta.label}</p>
+                            </div>
+                            {!readOnly && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteMedia(item.id)}
+                                className="text-[var(--color-text-muted)] hover:text-red-400 opacity-0 group-hover/media:opacity-100 transition-opacity p-1"
+                                aria-label="Remove attachment"
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Add buttons */}
+                  {!readOnly && (
+                    <div className="space-y-2">
+                      <div className="flex gap-2 flex-wrap">
+                        <label className="btn bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-sm cursor-pointer">
+                          📷 Photos
+                          <input type="file" accept="image/*" multiple onChange={handleFileUpload} className="hidden" />
+                        </label>
+                        <label className="btn bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-sm cursor-pointer">
+                          ♫ Audio
+                          <input type="file" accept="audio/*" multiple onChange={handleFileUpload} className="hidden" />
+                        </label>
+                        <label className="btn bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-sm cursor-pointer">
+                          📎 Files
+                          <input type="file" accept="image/*,audio/*,video/*,.pdf" multiple onChange={handleFileUpload} className="hidden" />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddUrl(!showAddUrl)}
+                          className="btn bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-sm"
+                        >
+                          🔗 Link / YouTube
+                        </button>
+                      </div>
+
+                      {showAddUrl && (
+                        <div className="flex gap-2">
+                          <input
+                            type="url"
+                            value={urlInput}
+                            onChange={(e) => setUrlInput(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddUrl())}
+                            className="modal-input flex-1"
+                            placeholder="Paste URL (YouTube, image, or any link)..."
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddUrl}
+                            disabled={!urlInput.trim()}
+                            className="btn bg-green-600 hover:bg-green-700 text-white text-sm disabled:opacity-50"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      )}
+
+                      {uploading && (
+                        <p className="text-sm text-[var(--color-text-muted)] animate-pulse">Uploading...</p>
+                      )}
+                    </div>
+                  )}
+
+                  {media.length === 0 && readOnly && (
+                    <p className="text-sm text-[var(--color-text-muted)]">No attachments</p>
+                  )}
+                </div>
+              )}
 
               {/* Visibility options */}
               <div className="space-y-3 pt-2 border-t border-[var(--color-border)]">
