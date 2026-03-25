@@ -75,6 +75,8 @@ export default function GigDetailScreen({ navigation, route }) {
   // Media
   const [gigMedia, setGigMedia] = useState([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [showAddLink, setShowAddLink] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
 
   // Pickers
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -389,6 +391,23 @@ export default function GigDetailScreen({ navigation, route }) {
       setUploadingMedia(false);
     }
   }, [gigId, workspaceId]);
+
+  const handleAddLink = useCallback(async () => {
+    const url = linkUrl.trim();
+    if (!url) return;
+    try {
+      let type = 'link';
+      if (/youtube\.com|youtu\.be/i.test(url)) type = 'youtube';
+      else if (/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url)) type = 'image';
+      const newMedia = await api.addGigMedia(gigId, { type, url });
+      setGigMedia(prev => [newMedia, ...prev]);
+      setLinkUrl('');
+      setShowAddLink(false);
+      successNotification();
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to add link');
+    }
+  }, [gigId, linkUrl]);
 
   const loadGig = useCallback(async () => {
     setLoadError(null);
@@ -1018,6 +1037,40 @@ export default function GigDetailScreen({ navigation, route }) {
             <Text style={[styles.addPhotosText, { color: colors.primary }]}>+ Add Audio</Text>
           )}
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.addPhotosButton, { backgroundColor: colors.bgSecondary, borderColor: colors.border, marginTop: 8 }]}
+          onPress={() => setShowAddLink(!showAddLink)}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Add YouTube link or URL"
+        >
+          <Text style={[styles.addPhotosText, { color: colors.primary }]}>+ Add Link / YouTube</Text>
+        </TouchableOpacity>
+        {showAddLink && (
+          <View style={[styles.addLinkRow, { borderColor: colors.border }]}>
+            <TextInput
+              style={[styles.addLinkInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+              value={linkUrl}
+              onChangeText={setLinkUrl}
+              placeholder="Paste YouTube or any URL..."
+              placeholderTextColor={colors.textSecondary}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              returnKeyType="done"
+              onSubmitEditing={handleAddLink}
+              autoFocus
+            />
+            <TouchableOpacity
+              style={[styles.addLinkButton, { backgroundColor: linkUrl.trim() ? '#16a34a' : colors.bgTertiary }]}
+              onPress={handleAddLink}
+              disabled={!linkUrl.trim()}
+              activeOpacity={0.7}
+            >
+              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>Add</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* Add to Calendar */}
@@ -1094,6 +1147,9 @@ const styles = StyleSheet.create({
   videoOverlayIcon: { color: '#ffffff', fontSize: 14, marginLeft: 2 },
   addPhotosButton: { paddingVertical: 10, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderStyle: 'dashed' },
   addPhotosText: { fontSize: 14, fontWeight: '600' },
+  addLinkRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  addLinkInput: { flex: 1, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 },
+  addLinkButton: { borderRadius: 8, paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center' },
   calendarButton: { paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 8, borderWidth: 1 },
   calendarButtonText: { fontSize: 16, fontWeight: '600' },
   completeButton: { paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 8, marginBottom: 20 },
