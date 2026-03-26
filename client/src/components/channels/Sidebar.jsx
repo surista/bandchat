@@ -115,6 +115,7 @@ function ChannelItem({ channel, isSelected, onSelect, onLongPress, onContextMenu
 
   return (
     <button
+      role="listitem"
       className={`channel-item w-full ${isSelected ? 'active' : ''} ${channel.muted ? 'opacity-60' : ''}`}
       {...longPress}
       onContextMenu={onContextMenu}
@@ -596,8 +597,10 @@ function Sidebar({
   };
 
   return (
-    <div
+    <nav
       data-sidebar
+      role="navigation"
+      aria-label="Channels"
       className={`
         h-full bg-slack-sidebar flex flex-col text-gray-300
         fixed md:relative inset-y-0 left-0 z-50
@@ -863,7 +866,7 @@ function Sidebar({
                           </button>
                         </div>
                         {!collapsedGroups[group.id] && (
-                          <div className="space-y-0.5 ml-2">
+                          <div className="space-y-0.5 ml-2" role="list">
                             {groupedChannels[group.id]?.map(renderChannel)}
                           </div>
                         )}
@@ -877,7 +880,7 @@ function Sidebar({
             {/* Ungrouped Channels */}
             <DroppableSection groupId={null}>
               {ungroupedChannels.length > 0 && (
-                <div className="space-y-0.5 ml-2">
+                <div className="space-y-0.5 ml-2" role="list">
                   {channelGroups.length > 0 && (
                     <div className="px-4 py-1 text-xs text-gray-500 uppercase tracking-wide">
                       Other Channels
@@ -1459,7 +1462,7 @@ function Sidebar({
         loading={deleteLoading}
       />
 
-    </div>
+    </nav>
   );
 }
 

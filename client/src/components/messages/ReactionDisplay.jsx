@@ -42,7 +42,7 @@ export default function ReactionDisplay({ reactions, currentUserId, onToggleReac
           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm transition-colors ${
             hasReacted
               ? 'bg-blue-500/30 border border-blue-500 text-blue-300'
-              : 'bg-gray-700 border border-gray-600 text-gray-300 hover:bg-gray-600'
+              : 'bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]'
           }`}
           title={users.map(u => u.displayName).join(', ')}
         >

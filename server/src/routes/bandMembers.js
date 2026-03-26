@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 import { triggerWebsiteSync } from '../services/websiteDeployment.js';
@@ -55,7 +56,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 });
 
 // Create a band member (admin only)
-router.post('/workspace/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => {
+router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceAdmin, async (req, res) => {
   try {
     const { name, imageUrl, notes, isGuest, stints, linkedUserId } = req.body;
 
@@ -185,7 +186,7 @@ router.get('/:memberId', authenticate, async (req, res) => {
 });
 
 // Update a band member (admin only)
-router.put('/:memberId', authenticate, async (req, res) => {
+router.put('/:memberId', authenticate, apiLimiter, async (req, res) => {
   try {
     const { name, imageUrl, notes, isGuest, stints, linkedUserId } = req.body;
 
@@ -336,7 +337,7 @@ router.put('/:memberId', authenticate, async (req, res) => {
 });
 
 // Delete a band member (admin only)
-router.delete('/:memberId', authenticate, async (req, res) => {
+router.delete('/:memberId', authenticate, apiLimiter, async (req, res) => {
   try {
     const member = await prisma.bandMember.findUnique({
       where: { id: req.params.memberId }

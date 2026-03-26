@@ -161,17 +161,17 @@ function AppContent() {
       {
         id: 'next_gig',
         title: 'Next Gig',
-        icon: 'symbol:calendar',
+        icon: Platform.OS === 'ios' ? 'symbol:calendar' : 'shortcut_next_gig',
       },
       {
         id: 'new_message',
         title: 'New Message',
-        icon: 'symbol:message',
+        icon: Platform.OS === 'ios' ? 'symbol:message' : 'shortcut_new_message',
       },
       {
         id: 'calendar',
         title: 'Calendar',
-        icon: 'symbol:calendar.badge.clock',
+        icon: Platform.OS === 'ios' ? 'symbol:calendar.badge.clock' : 'shortcut_calendar',
       },
     ]).catch(() => {});
 

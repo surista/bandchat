@@ -339,7 +339,7 @@ router.put('/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => 
       return res.status(400).json({ error: 'Workspace name must be 100 characters or less' });
     }
 
-    const validCurrencies = ['USD','EUR','GBP','JPY','AUD','CAD','CHF','CNY','SEK','NZD','MXN','SGD','HKD','NOK','KRW','INR','BRL','ZAR','PHP','THB'];
+    const validCurrencies = ['USD','EUR','GBP','JPY','AUD','CAD','CHF','CNY','SEK','NZD','MXN','SGD','HKD','NOK','DKK','KRW','INR','BRL','ZAR','PHP','THB','PLN','ILS','TWD','TRY','CZK','HUF','RON'];
     if (currency && !validCurrencies.includes(currency)) {
       return res.status(400).json({ error: 'Invalid currency code' });
     }

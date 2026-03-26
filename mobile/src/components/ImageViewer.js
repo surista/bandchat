@@ -61,7 +61,7 @@ function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
         onPress={() => handleSave(imageIndex)}
         disabled={saving}
         activeOpacity={0.7}
-        hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         accessibilityRole="button"
         accessibilityLabel="Save image to photo library"
       >
@@ -78,7 +78,7 @@ function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
         style={styles.headerButton}
         onPress={onClose}
         activeOpacity={0.7}
-        hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         accessibilityRole="button"
         accessibilityLabel="Close image viewer"
       >
@@ -117,9 +117,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   headerButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',

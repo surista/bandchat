@@ -2,6 +2,82 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.05.98] - 2026-03-26
+
+### Fixed
+- **DKK currency rejected by server** — `validCurrencies` array was missing DKK, PLN, ILS, TWD, TRY, CZK, HUF, RON. Client offered these currencies but server returned 400.
+- **EmbedCard cached null instead of data** — `embedCache.set(cacheKey, data)` stored stale React state (null) instead of the constructed embed object, defeating the cache entirely.
+- **Personal event privacy leak** — `GET /api/gigs/:gigId` returned other users' personal calendar events. Now returns 404 if `isPersonal && createdById !== req.user.id`.
+- **Cross-workspace setlist IDOR** — Gig create/update accepted setlist IDs without verifying they belong to the same workspace. Now validates workspace ownership.
+- **Gig complete ignores lock status** — Locked gigs could be marked complete by non-admins. Now requires admin role for locked gigs.
+- **Hardcoded dark-mode colors across 20 web components** — 157 `bg-gray-*`, `text-white`, `border-gray-*` classes migrated to CSS variable equivalents (`var(--color-bg-*)`, `var(--color-text-*)`, `var(--color-border)`). Fixes broken visuals in light themes for MemberProfile, PinnedMessagesPanel, ReactionDisplay, LinkPreviewCard, MobileNav, ChannelMembersPanel, AvailabilityCalendar, MedleyList, RecordingsList, GigCalendar, GigStats, SetlistBuilder, SongList, ContactsList, Achievements, BandTimeline, SongSuggestions, and more.
+- **Auth screen title invisible in light mode** — Hardcoded `color: '#ffffff'` on LoginScreen, SignupScreen, ForgotPasswordScreen titles changed to `colors.textPrimary`.
+- **ContactsList form error swallowed** — Save handler threw error that was never caught/displayed. Errors now propagate to ContactForm's catch block.
+- **GigCalendar hid time and venue on mobile** — `hidden sm:block` removed critical info on narrow screens. Time now shown inline with date, venue as truncated secondary line.
+- **GigArchive called autoLinkSetlists on every mount** — Now uses sessionStorage to run once per session.
+
+### Security
+- **Workspace import session ownership** — Verified existing check at `workspaceImport.js:168` (already had it).
+- **Rate limiters on 8 route files** — Added `apiLimiter` to 30+ mutation endpoints on stagePlots, bandMembers, timeline, availability, medleys, channelGroups, practice, blocks.
+- **JSON size validation** — Stage plot data capped at 100KB, website config at 50KB.
+- **Input length validation** — Practice notes (2000 chars), push subscription endpoint/keys (2000/500 chars).
+- **Unbounded gig queries** — Added `take: 500` to workspace and all-workspaces gig list endpoints.
+
+### Accessibility
+- ARIA `role="navigation"` + `aria-label` on Sidebar and MobileNav
+- `role="list"` / `role="listitem"` on channel lists in Sidebar
+- `aria-label` on ChannelView header buttons (search, pinned, members)
+- `role="listbox"` / `role="option"` on ReactionPicker
+- `aria-selected` on active ContextMenu item
+- `role="tooltip"` + `aria-describedby` on MemberHoverCard
+- `aria-current="page"` on active MobileNav tab
+- `accessibilityRole="header"` on ChannelListScreen section headers (mobile)
+- `accessibilityLabel="Starred channel"` on ChannelItem star icon (mobile)
+- Error haptics (`errorNotification()`) on destructive actions: message delete, channel group delete, account delete, workspace leave/delete, gig delete (mobile)
+
+### Added
+- **Android notification channels** — Separate channels for Messages, Mentions, Events & Reminders, Announcements & Polls (users can independently control each in Android settings).
+- **Error states** on SongSuggestions, ChannelMembersPanel, WorkspaceListScreen (mobile) with retry buttons.
+- **GigStats loading skeleton** — Replaced plain text "Loading stats..." with Skeleton components.
+- **Platform-specific quick action icons** — iOS uses SF Symbols, Android uses resource names.
+
+### Improved
+- Touch targets increased to 44px+ on SongList/GigCalendar action buttons (web), ImageViewer save/close (44dp), MessageInput toolbar (44dp), LinkPreview dismiss (32dp+hitSlop), DraggableList drag handle (44dp) (mobile).
+- `keyboardDismissMode` added to EditProfileScreen, GigDetailScreen, SongDetailScreen ScrollViews (mobile).
+- BiometricLockScreen uses SafeAreaView (mobile).
+- Modal close button hover uses theme variable instead of hardcoded white (web).
+
+### Removed
+- Legacy `WRITE_EXTERNAL_STORAGE` Android permission (deprecated on API 33+, replaced by scoped `READ_MEDIA_*`).
+
+## [1.05.97] - 2026-03-26
+
+### Fixed
+- **Gig media upload rejected YouTube/link URLs** — `addGigMedia` endpoint applied `isAllowedUploadUrl()` to all media types, but that only allows R2/Cloudinary domains. YouTube and external link URLs were silently rejected. Now only uploaded file types (image, audio, video) require storage provider URLs; youtube/link types just need valid HTTPS.
+- **Multiple audio players could play simultaneously** — Each SongCard managed its own audio state independently. Now `playingSongId` is lifted to the parent SongList, enforcing single-player across both card and compact views.
+- **`autoPlay` silently failed on mobile** — Toggling state to render `<audio autoPlay>` doesn't count as a user gesture on iOS/Android browsers. Removed `autoPlay`; users tap the native play control.
+- **Media merge used `||` instead of `??`** — `updated.media || g.media` in GigCalendar treated empty array `[]` as falsy, so deleting all media from a gig showed stale data. Changed to nullish coalescing.
+- **Song update/create wiped derived fields** — Server response for song update/create lacked `hasAudio`/`audioUrl`. Client now uses merge (`{ ...s, ...updated }`) instead of full replacement.
+- **GET `/:gigId` missing media include** — Single gig endpoint did not include media in its response, inconsistent with list endpoints.
+- **Duplicate gig endpoint used unordered `media: true`** — Now uses `media: { orderBy: { createdAt: 'desc' } }` consistently.
+
+### Added
+- **Clickable songs** — Tapping a song card or clicking a compact table row opens SongForm. If the song has audio, it opens directly to the Attachments tab for immediate playback.
+- **Type-specific calendar media icons** — Calendar list and month views show colored per-type icons instead of generic paperclip: 📷 photos, ♫ audio (purple pill), ▶ YouTube (red pill), 🎬 video, 🔗 links. Icons are large and prominent.
+- **Single song endpoint returns `hasAudio`/`audioUrl`** — GET `/:songId` now computes and returns these derived fields for consistency with the list endpoint.
+- **Gig media input validation** — URL length (2048 chars) and caption length (500 chars) limits on `addGigMedia`.
+
+### Accessibility
+- `aria-expanded` on audio toggle buttons (card and compact views)
+- `aria-live="polite"` on compact audio player row for screen reader announcements
+- `aria-label` on `<audio>` elements with song title context
+- `aria-label="Close audio player"` on close button (was missing)
+- Dynamic `aria-label` on play buttons reflecting toggle state and song title
+- `role="img"` + `aria-label` with attachment count on emoji media indicators
+- Compact audio button touch target increased to 44px+ (was 16px)
+- Close button touch target increased with padding
+- Compact player row uses `flex-wrap` and truncatable label for narrow screens
+
 ## [1.05.84] - 2026-03-25
 
 ### Added

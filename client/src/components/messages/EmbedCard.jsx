@@ -23,42 +23,44 @@ export default function EmbedCard({ type, id, workspaceId, onClick }) {
     const load = async () => {
       try {
         let item;
+        let embed;
         if (type === 'song') {
           item = await api.getSong(id);
-          setData({
+          embed = {
             title: item.title,
             subtitle: item.artist || '',
             image: item.artworkUrl,
             meta: [item.key, item.bpm ? `${item.bpm} BPM` : null].filter(Boolean).join(' · '),
             icon: '🎵',
-          });
+          };
         } else if (type === 'setlist') {
           item = await api.getSetlist(id);
-          setData({
+          embed = {
             title: item.name,
             subtitle: `${item.songs?.length || 0} songs`,
             meta: item.description || '',
             icon: '📋',
-          });
+          };
         } else if (type === 'gig') {
           item = await api.getGig(id);
-          setData({
+          embed = {
             title: item.title,
             subtitle: new Date(item.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
             meta: item.venue || '',
             icon: '🎤',
-          });
+          };
         } else if (type === 'poll') {
           item = await api.getPoll(id);
-          setData({
+          embed = {
             title: item.question,
             subtitle: `${item.options?.length || 0} options`,
             meta: item.closed ? 'Closed' : 'Active',
             icon: '📊',
-          });
+          };
         }
-        if (item) {
-          embedCache.set(cacheKey, data);
+        if (embed) {
+          setData(embed);
+          embedCache.set(cacheKey, embed);
           // Cap cache size
           if (embedCache.size > 100) {
             embedCache.delete(embedCache.keys().next().value);
@@ -76,8 +78,8 @@ export default function EmbedCard({ type, id, workspaceId, onClick }) {
   if (loading) {
     return (
       <div className="my-2 max-w-sm rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] p-3 animate-pulse">
-        <div className="h-4 bg-gray-600 rounded w-3/4 mb-2" />
-        <div className="h-3 bg-gray-600 rounded w-1/2" />
+        <div className="h-4 bg-[var(--color-bg-secondary)] rounded w-3/4 mb-2" />
+        <div className="h-3 bg-[var(--color-bg-secondary)] rounded w-1/2" />
       </div>
     );
   }

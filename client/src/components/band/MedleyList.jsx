@@ -81,7 +81,7 @@ function MedleyList({ workspaceId }) {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-900 min-h-0">
+    <div className="flex-1 flex flex-col bg-[var(--color-bg-primary)] min-h-0">
       {/* Header */}
       <div className="p-4 border-b border-[var(--color-border)]">
         <div className="flex items-center justify-between">
@@ -220,9 +220,9 @@ function MedleyCard({ medley, onEdit, onDelete, onReorder }) {
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right text-sm">
-              <div className="text-gray-300">{medley.songs?.length || 0} songs</div>
+              <div className="text-[var(--color-text-secondary)]">{medley.songs?.length || 0} songs</div>
               {totalDuration > 0 && (
-                <div className="text-gray-500">{formatDuration(totalDuration)}</div>
+                <div className="text-[var(--color-text-muted)]">{formatDuration(totalDuration)}</div>
               )}
             </div>
             <div className="flex gap-1">
@@ -246,7 +246,7 @@ function MedleyCard({ medley, onEdit, onDelete, onReorder }) {
               </button>
             </div>
             <svg
-              className={`w-5 h-5 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
+              className={`w-5 h-5 text-[var(--color-text-muted)] transition-transform ${expanded ? 'rotate-180' : ''}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -259,9 +259,9 @@ function MedleyCard({ medley, onEdit, onDelete, onReorder }) {
 
       {/* Song List (expanded) */}
       {expanded && (
-        <div className="border-t border-gray-700 p-4">
+        <div className="border-t border-[var(--color-border)] p-4">
           {medley.songs?.length === 0 ? (
-            <p className="text-gray-500 text-sm text-center py-2">No songs in this medley</p>
+            <p className="text-[var(--color-text-muted)] text-sm text-center py-2">No songs in this medley</p>
           ) : (
             <div className="space-y-1">
               {(localSongs || medley.songs)?.map((medleySong, index) => (
@@ -271,31 +271,31 @@ function MedleyCard({ medley, onEdit, onDelete, onReorder }) {
                   onDragStart={(e) => handleDragStart(e, index)}
                   onDragOver={(e) => handleDragOver(e, index)}
                   onDragEnd={handleDragEnd}
-                  className={`flex items-center gap-3 p-2 rounded cursor-move hover:bg-gray-700 ${
-                    draggedIndex === index ? 'opacity-50 bg-gray-700' : ''
+                  className={`flex items-center gap-3 p-2 rounded cursor-move hover:bg-[var(--color-bg-hover)] ${
+                    draggedIndex === index ? 'opacity-50 bg-[var(--color-bg-tertiary)]' : ''
                   }`}
                 >
-                  <span className="text-gray-500 w-6 text-center">{index + 1}</span>
+                  <span className="text-[var(--color-text-muted)] w-6 text-center">{index + 1}</span>
                   <div className="flex-1">
-                    <span className="text-gray-200">{medleySong.song?.title}</span>
+                    <span className="text-[var(--color-text-secondary)]">{medleySong.song?.title}</span>
                     {medleySong.song?.artist && (
-                      <span className="text-gray-500 ml-2">- {medleySong.song.artist}</span>
+                      <span className="text-[var(--color-text-muted)] ml-2">- {medleySong.song.artist}</span>
                     )}
                   </div>
                   {medleySong.song?.key && (
                     <span className="text-sm text-purple-400">{medleySong.song.key}</span>
                   )}
                   {medleySong.song?.duration && (
-                    <span className="text-sm text-gray-500">{formatDuration(medleySong.song.duration)}</span>
+                    <span className="text-sm text-[var(--color-text-muted)]">{formatDuration(medleySong.song.duration)}</span>
                   )}
-                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
                   </svg>
                 </div>
               ))}
             </div>
           )}
-          <p className="text-xs text-gray-500 mt-3">Drag to reorder songs</p>
+          <p className="text-xs text-[var(--color-text-muted)] mt-3">Drag to reorder songs</p>
         </div>
       )}
     </div>
@@ -399,7 +399,7 @@ function MedleyForm({ medley, songs, onSave, onClose }) {
                 )}
               </label>
               {selectedSongs.length === 0 ? (
-                <div className="text-gray-500 text-sm py-4 text-center border border-dashed border-gray-600 rounded-lg">
+                <div className="text-[var(--color-text-muted)] text-sm py-4 text-center border border-dashed border-[var(--color-border)] rounded-lg">
                   No songs selected. Add songs from the list below.
                 </div>
               ) : (
@@ -407,13 +407,13 @@ function MedleyForm({ medley, songs, onSave, onClose }) {
                   {selectedSongs.map((song, index) => (
                     <div
                       key={song.id}
-                      className="flex items-center gap-2 bg-gray-700 rounded p-2"
+                      className="flex items-center gap-2 bg-[var(--color-bg-tertiary)] rounded p-2"
                     >
-                      <span className="text-gray-400 w-6 text-center text-sm">{index + 1}</span>
+                      <span className="text-[var(--color-text-muted)] w-6 text-center text-sm">{index + 1}</span>
                       <div className="flex-1 min-w-0">
-                        <span className="text-gray-200 truncate">{song.title}</span>
+                        <span className="text-[var(--color-text-secondary)] truncate">{song.title}</span>
                         {song.artist && (
-                          <span className="text-gray-500 ml-2 text-sm">- {song.artist}</span>
+                          <span className="text-[var(--color-text-muted)] ml-2 text-sm">- {song.artist}</span>
                         )}
                       </div>
                       {song.key && (
@@ -422,7 +422,7 @@ function MedleyForm({ medley, songs, onSave, onClose }) {
                         </span>
                       )}
                       {song.duration && (
-                        <span className="text-xs text-gray-500">{formatDuration(song.duration)}</span>
+                        <span className="text-xs text-[var(--color-text-muted)]">{formatDuration(song.duration)}</span>
                       )}
                       <div className="flex gap-1">
                         <button
@@ -448,7 +448,7 @@ function MedleyForm({ medley, songs, onSave, onClose }) {
                         <button
                           type="button"
                           onClick={() => handleRemoveSong(song.id)}
-                          className="p-1 text-gray-400 hover:text-red-400"
+                          className="p-1 text-[var(--color-text-muted)] hover:text-red-400"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -465,25 +465,25 @@ function MedleyForm({ medley, songs, onSave, onClose }) {
             <div>
               <label className="modal-label">Available Songs ({availableSongs.length})</label>
               {availableSongs.length === 0 ? (
-                <div className="text-gray-500 text-sm py-4 text-center">
+                <div className="text-[var(--color-text-muted)] text-sm py-4 text-center">
                   All songs have been added to this medley
                 </div>
               ) : (
-                <div className="max-h-48 overflow-y-auto border border-gray-700 rounded-lg">
+                <div className="max-h-48 overflow-y-auto border border-[var(--color-border)] rounded-lg">
                   {availableSongs.map(song => (
                     <button
                       key={song.id}
                       type="button"
                       onClick={() => handleAddSong(song.id)}
-                      className="w-full flex items-center gap-2 p-2 hover:bg-gray-700 text-left border-b border-gray-700 last:border-b-0"
+                      className="w-full flex items-center gap-2 p-2 hover:bg-[var(--color-bg-hover)] text-left border-b border-[var(--color-border)] last:border-b-0"
                     >
                       <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
                       <div className="flex-1 min-w-0">
-                        <span className="text-gray-200">{song.title}</span>
+                        <span className="text-[var(--color-text-secondary)]">{song.title}</span>
                         {song.artist && (
-                          <span className="text-gray-500 ml-2 text-sm">- {song.artist}</span>
+                          <span className="text-[var(--color-text-muted)] ml-2 text-sm">- {song.artist}</span>
                         )}
                       </div>
                       {song.key && (
@@ -495,7 +495,7 @@ function MedleyForm({ medley, songs, onSave, onClose }) {
               )}
             </div>
 
-            <div className="flex gap-2 justify-end pt-4 border-t border-gray-700">
+            <div className="flex gap-2 justify-end pt-4 border-t border-[var(--color-border)]">
               <button type="button" onClick={onClose} className="btn btn-secondary">
                 Cancel
               </button>

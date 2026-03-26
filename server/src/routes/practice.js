@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
 
@@ -22,7 +23,7 @@ const requirePracticeFeature = async (req, res, next) => {
 };
 
 // Log a practice session
-router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, requirePracticeFeature, async (req, res) => {
+router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMember, requirePracticeFeature, async (req, res) => {
   try {
     const { songId, duration, notes, practicedAt } = req.body;
 
@@ -33,6 +34,10 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, requireP
     const dur = parseInt(duration);
     if (isNaN(dur) || dur < 1 || dur > 480) {
       return res.status(400).json({ error: 'Duration must be between 1 and 480 minutes' });
+    }
+
+    if (notes && notes.length > 2000) {
+      return res.status(400).json({ error: 'Notes must be 2,000 characters or less' });
     }
 
     // Verify song belongs to workspace
@@ -198,7 +203,7 @@ router.get('/workspace/:workspaceId/summary', authenticate, isWorkspaceMember, r
 });
 
 // Delete a practice session
-router.delete('/:sessionId', authenticate, async (req, res) => {
+router.delete('/:sessionId', authenticate, apiLimiter, async (req, res) => {
   try {
     const session = await prisma.practiceSession.findUnique({
       where: { id: req.params.sessionId }

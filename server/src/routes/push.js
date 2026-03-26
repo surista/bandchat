@@ -35,6 +35,10 @@ router.post('/subscribe', authenticate, apiLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Invalid subscription data' });
     }
 
+    if (endpoint.length > 2000 || keys.p256dh.length > 500 || keys.auth.length > 500) {
+      return res.status(400).json({ error: 'Invalid subscription data' });
+    }
+
     // Upsert subscription (update if exists, create if not)
     await prisma.pushSubscription.upsert({
       where: { endpoint },

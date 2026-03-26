@@ -68,12 +68,39 @@ class NotificationService {
         // Server may not have this endpoint yet
       }
 
-      // Android notification channel
+      // Android notification channels
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
           name: 'BandChat',
           importance: Notifications.AndroidImportance.HIGH,
           vibrationPattern: [0, 250, 250, 250],
+          sound: 'default',
+        });
+        await Notifications.setNotificationChannelAsync('messages', {
+          name: 'Messages',
+          description: 'New messages in channels and DMs',
+          importance: Notifications.AndroidImportance.HIGH,
+          vibrationPattern: [0, 250, 250, 250],
+          sound: 'default',
+        });
+        await Notifications.setNotificationChannelAsync('mentions', {
+          name: 'Mentions',
+          description: 'When someone @mentions you',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          sound: 'default',
+        });
+        await Notifications.setNotificationChannelAsync('events', {
+          name: 'Events & Reminders',
+          description: 'Gig reminders and calendar updates',
+          importance: Notifications.AndroidImportance.DEFAULT,
+          sound: 'default',
+        });
+        await Notifications.setNotificationChannelAsync('announcements', {
+          name: 'Announcements & Polls',
+          description: 'Band announcements and poll notifications',
+          importance: Notifications.AndroidImportance.DEFAULT,
+          sound: 'default',
         });
       }
 

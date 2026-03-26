@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 import { getPlanLimits } from '../lib/planLimits.js';
@@ -33,7 +34,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 });
 
 // Create a timeline event
-router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
+router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMember, async (req, res) => {
   try {
     const { title, description, eventType, eventDate, imageUrl } = req.body;
 
@@ -85,7 +86,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
 });
 
 // Update a timeline event
-router.put('/:eventId', authenticate, async (req, res) => {
+router.put('/:eventId', authenticate, apiLimiter, async (req, res) => {
   try {
     const event = await prisma.timelineEvent.findUnique({
       where: { id: req.params.eventId }
@@ -158,7 +159,7 @@ router.put('/:eventId', authenticate, async (req, res) => {
 });
 
 // Delete a timeline event
-router.delete('/:eventId', authenticate, async (req, res) => {
+router.delete('/:eventId', authenticate, apiLimiter, async (req, res) => {
   try {
     const event = await prisma.timelineEvent.findUnique({
       where: { id: req.params.eventId }
@@ -404,7 +405,7 @@ async function generateTimelineEvents(workspaceId, createdById, { checkExisting 
 }
 
 // Auto-generate timeline from actual band data
-router.post('/workspace/:workspaceId/generate', authenticate, isWorkspaceMember, async (req, res) => {
+router.post('/workspace/:workspaceId/generate', authenticate, apiLimiter, isWorkspaceMember, async (req, res) => {
   try {
     const workspaceId = req.params.workspaceId;
 
@@ -429,7 +430,7 @@ router.post('/workspace/:workspaceId/generate', authenticate, isWorkspaceMember,
 });
 
 // Regenerate timeline - clears auto-generated events and recreates from current data
-router.post('/workspace/:workspaceId/regenerate', authenticate, isWorkspaceAdmin, async (req, res) => {
+router.post('/workspace/:workspaceId/regenerate', authenticate, apiLimiter, isWorkspaceAdmin, async (req, res) => {
   try {
     const workspaceId = req.params.workspaceId;
 

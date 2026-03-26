@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 
 const router = express.Router();
@@ -70,7 +71,7 @@ router.get('/workspace/:workspaceId/me', authenticate, isWorkspaceMember, async 
 });
 
 // Set availability for a specific date (create or update)
-router.put('/workspace/:workspaceId/date/:date', authenticate, isWorkspaceMember, async (req, res) => {
+router.put('/workspace/:workspaceId/date/:date', authenticate, apiLimiter, isWorkspaceMember, async (req, res) => {
   try {
     const { status, note } = req.body;
     const date = new Date(req.params.date);
@@ -119,7 +120,7 @@ router.put('/workspace/:workspaceId/date/:date', authenticate, isWorkspaceMember
 });
 
 // Bulk set availability for multiple dates
-router.put('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, async (req, res) => {
+router.put('/workspace/:workspaceId/bulk', authenticate, apiLimiter, isWorkspaceMember, async (req, res) => {
   try {
     const { dates, status, note } = req.body;
 
@@ -178,7 +179,7 @@ router.put('/workspace/:workspaceId/bulk', authenticate, isWorkspaceMember, asyn
 });
 
 // Clear availability for a specific date
-router.delete('/workspace/:workspaceId/date/:date', authenticate, isWorkspaceMember, async (req, res) => {
+router.delete('/workspace/:workspaceId/date/:date', authenticate, apiLimiter, isWorkspaceMember, async (req, res) => {
   try {
     const date = new Date(req.params.date);
 

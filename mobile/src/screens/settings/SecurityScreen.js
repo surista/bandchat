@@ -24,6 +24,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
+import { errorNotification } from '../../utils/haptics';
 import { useLayout } from '../../hooks/useLayout';
 
 export default function SecurityScreen() {
@@ -415,7 +416,7 @@ export default function SecurityScreen() {
           </Text>
           <TouchableOpacity
             style={[styles.dangerButton]}
-            onPress={() => setShowDeleteModal(true)}
+            onPress={() => { errorNotification(); setShowDeleteModal(true); }}
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel="Delete my account"

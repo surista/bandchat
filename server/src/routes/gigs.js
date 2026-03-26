@@ -97,7 +97,8 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
           select: { songsPlayed: true }
         }
       },
-      orderBy: { date: 'asc' }
+      orderBy: { date: 'asc' },
+      take: 500
     });
 
     res.json(gigs);
@@ -241,7 +242,8 @@ router.get('/all-workspaces', authenticate, async (req, res) => {
           select: { songsPlayed: true }
         }
       },
-      orderBy: { date: 'asc' }
+      orderBy: { date: 'asc' },
+      take: 500
     });
 
     res.json(gigs);
@@ -664,6 +666,24 @@ router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMemb
       }
     }
 
+    // Verify setlists belong to this workspace
+    if (setlistIds && setlistIds.length > 0) {
+      const validSetlists = await prisma.setlist.count({
+        where: { id: { in: setlistIds }, workspaceId: req.params.workspaceId }
+      });
+      if (validSetlists !== setlistIds.length) {
+        return res.status(400).json({ error: 'One or more setlists not found in this workspace' });
+      }
+    }
+    if (setlistId) {
+      const validSetlist = await prisma.setlist.findFirst({
+        where: { id: setlistId, workspaceId: req.params.workspaceId }
+      });
+      if (!validSetlist) {
+        return res.status(400).json({ error: 'Setlist not found in this workspace' });
+      }
+    }
+
     // If venueId provided, verify it belongs to this workspace and auto-populate name/address
     let resolvedVenue = venue;
     let resolvedAddress = address;
@@ -840,6 +860,11 @@ router.get('/:gigId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
+    // Filter out personal events from other users
+    if (gig.isPersonal && gig.createdById !== req.user.id) {
+      return res.status(404).json({ error: 'Gig not found' });
+    }
+
     res.json(gig);
   } catch (error) {
     console.error('Get gig error:', error);
@@ -928,6 +953,24 @@ router.put('/:gigId', authenticate, async (req, res) => {
         await prisma.setlist.deleteMany({
           where: { id: { in: autoSetlistIds } }
         });
+      }
+    }
+
+    // Verify setlists belong to this workspace
+    if (setlistIds && setlistIds.length > 0) {
+      const validSetlists = await prisma.setlist.count({
+        where: { id: { in: setlistIds }, workspaceId: existingGig.workspaceId }
+      });
+      if (validSetlists !== setlistIds.length) {
+        return res.status(400).json({ error: 'One or more setlists not found in this workspace' });
+      }
+    }
+    if (setlistId) {
+      const validSetlist = await prisma.setlist.findFirst({
+        where: { id: setlistId, workspaceId: existingGig.workspaceId }
+      });
+      if (!validSetlist) {
+        return res.status(400).json({ error: 'Setlist not found in this workspace' });
       }
     }
 
@@ -1098,6 +1141,11 @@ router.put('/:gigId/complete', authenticate, async (req, res) => {
     });
     if (!membership) {
       return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    // Only admins can complete locked gigs
+    if (existingGig.isLocked && membership.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only admins can modify locked gigs' });
     }
 
     // If no songIds provided but gig has a setlist, use setlist songs

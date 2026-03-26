@@ -241,7 +241,7 @@ function SetColumn({
             items={set.items.map(item => item.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="divide-y divide-gray-700">
+            <div className="divide-y divide-[var(--color-border)]">
               {set.items.map((item, localIndex) => {
                 const globalIndex = globalStartIndex + localIndex + (set.breakItem ? 1 : 0);
                 return (
@@ -372,7 +372,7 @@ function SetColumnItem({
               {getSongDisplayName(item.song)}
             </div>
             {!useShortNames && item.song?.artist && (
-              <div className="text-gray-400 text-xs truncate">{item.song.artist}</div>
+              <div className="text-[var(--color-text-muted)] text-xs truncate">{item.song.artist}</div>
             )}
           </div>
           <div className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">

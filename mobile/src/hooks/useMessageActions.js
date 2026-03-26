@@ -6,7 +6,7 @@ import { File, Directory, Paths } from 'expo-file-system/next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { mediumImpact, successNotification } from '../utils/haptics';
+import { mediumImpact, successNotification, errorNotification } from '../utils/haptics';
 import api from '../services/api';
 import { APP_BASE_URL } from '../utils/constants';
 
@@ -106,6 +106,7 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
         })();
         break;
       case 'delete':
+        errorNotification();
         Alert.alert(
           'Delete Message',
           'Are you sure you want to delete this message?',

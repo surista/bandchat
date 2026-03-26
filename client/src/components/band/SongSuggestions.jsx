@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import Skeleton from '../common/Skeleton';
+import ErrorMessage from '../common/ErrorMessage';
 
 export default function SongSuggestions({ workspaceId }) {
   const toast = useToast();
@@ -14,6 +15,7 @@ export default function SongSuggestions({ workspaceId }) {
   const [optimizedSetlist, setOptimizedSetlist] = useState(null);
   const [selectedSongIds, setSelectedSongIds] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [loadingMashups, setLoadingMashups] = useState(false);
   const [loadingTransitions, setLoadingTransitions] = useState(false);
 
@@ -23,14 +25,16 @@ export default function SongSuggestions({ workspaceId }) {
 
   async function loadData() {
     try {
+      setError(null);
       const [songList, recs] = await Promise.all([
         api.getSongs(workspaceId),
         api.getSongRecommendations(workspaceId)
       ]);
       setSongs(songList);
       setRecommendations(recs);
-    } catch (error) {
-      console.error('Failed to load data:', error);
+    } catch (err) {
+      console.error('Failed to load data:', err);
+      setError(err.message || 'Failed to load song suggestions');
     } finally {
       setLoading(false);
     }
@@ -104,6 +108,18 @@ export default function SongSuggestions({ workspaceId }) {
     );
   }
 
+  if (error) {
+    return (
+      <div className="h-full flex flex-col bg-[var(--color-bg-primary)]">
+        <ErrorMessage
+          message={error}
+          onRetry={loadData}
+          className="py-16"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col bg-[var(--color-bg-primary)]">
       <div className="flex-1 overflow-y-auto p-4">
@@ -147,27 +163,27 @@ export default function SongSuggestions({ workspaceId }) {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               <div className="text-center">
                 <p className="text-2xl font-bold text-[var(--color-text-primary)]">{recommendations.analysis.totalSongs}</p>
-                <p className="text-sm text-gray-400">Songs</p>
+                <p className="text-sm text-[var(--color-text-muted)]">Songs</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-[var(--color-text-primary)]">{recommendations.analysis.uniqueArtists}</p>
-                <p className="text-sm text-gray-400">Artists</p>
+                <p className="text-sm text-[var(--color-text-muted)]">Artists</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-[var(--color-text-primary)]">{recommendations.analysis.averageBpm || '-'}</p>
-                <p className="text-sm text-gray-400">Avg BPM</p>
+                <p className="text-sm text-[var(--color-text-muted)]">Avg BPM</p>
               </div>
               <div className="text-center">
                 <p className="text-2xl font-bold text-[var(--color-text-primary)]">
                   {recommendations.analysis.topKeys[0]?.[0] || '-'}
                 </p>
-                <p className="text-sm text-gray-400">Top Key</p>
+                <p className="text-sm text-[var(--color-text-muted)]">Top Key</p>
               </div>
             </div>
 
             {/* Tempo Distribution */}
             <div className="mt-4">
-              <p className="text-sm text-gray-400 mb-2">Tempo Distribution</p>
+              <p className="text-sm text-[var(--color-text-muted)] mb-2">Tempo Distribution</p>
               <div className="flex gap-1 h-6">
                 {Object.entries(recommendations.analysis.tempoDistribution).map(([tempo, count]) => (
                   <div
@@ -181,7 +197,7 @@ export default function SongSuggestions({ workspaceId }) {
                   />
                 ))}
               </div>
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <div className="flex justify-between text-xs text-[var(--color-text-muted)] mt-1">
                 <span>Very Slow</span>
                 <span>Slow</span>
                 <span>Medium</span>
@@ -193,7 +209,7 @@ export default function SongSuggestions({ workspaceId }) {
             {/* Top Artists */}
             {recommendations.analysis.topArtists.length > 0 && (
               <div className="mt-4">
-                <p className="text-sm text-gray-400 mb-2">Top Artists</p>
+                <p className="text-sm text-[var(--color-text-muted)] mb-2">Top Artists</p>
                 <div className="flex flex-wrap gap-2">
                   {recommendations.analysis.topArtists.map(([artist, count]) => (
                     <span key={artist} className="px-2 py-1 bg-[var(--color-bg-tertiary)] rounded text-sm text-[var(--color-text-primary)]">
@@ -209,20 +225,20 @@ export default function SongSuggestions({ workspaceId }) {
           <div>
             <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Suggestions</h3>
             {recommendations.recommendations.length === 0 ? (
-              <p className="text-gray-400">Add more songs to get personalized recommendations!</p>
+              <p className="text-[var(--color-text-muted)]">Add more songs to get personalized recommendations!</p>
             ) : (
               <div className="space-y-3">
                 {recommendations.recommendations.map((rec, idx) => (
                   <div key={idx} className="bg-[var(--color-bg-secondary)] rounded-lg p-4 flex items-start gap-4">
                     <div className={`px-2 py-1 rounded text-xs uppercase ${
                       rec.priority === 'high' ? 'bg-red-600' :
-                      rec.priority === 'medium' ? 'bg-yellow-600' : 'bg-gray-600'
+                      rec.priority === 'medium' ? 'bg-yellow-600' : 'bg-[var(--color-bg-tertiary)]'
                     } text-white`}>
                       {rec.type}
                     </div>
                     <div className="flex-1">
                       <p className="text-[var(--color-text-primary)] font-medium">{rec.suggestion}</p>
-                      <p className="text-sm text-gray-400 mt-1">{rec.reason}</p>
+                      <p className="text-sm text-[var(--color-text-muted)] mt-1">{rec.reason}</p>
                     </div>
                     <a
                       href={`https://www.google.com/search?q=${encodeURIComponent(rec.searchTerm + ' cover songs')}`}
@@ -244,7 +260,7 @@ export default function SongSuggestions({ workspaceId }) {
       {activeTab === 'mashups' && (
         <div className="space-y-6">
           <div className="bg-[var(--color-bg-secondary)] rounded-lg p-4">
-            <label className="block text-sm text-gray-400 mb-2">Select a song to find compatible matches</label>
+            <label className="block text-sm text-[var(--color-text-muted)] mb-2">Select a song to find compatible matches</label>
             <select
               value={selectedSong?.id || ''}
               onChange={e => loadMashups(e.target.value)}
@@ -261,7 +277,7 @@ export default function SongSuggestions({ workspaceId }) {
             </select>
           </div>
 
-          {loadingMashups && <p className="text-gray-400">Finding compatible songs...</p>}
+          {loadingMashups && <p className="text-[var(--color-text-muted)]">Finding compatible songs...</p>}
 
           {mashups && !loadingMashups && (
             <div>
@@ -270,13 +286,13 @@ export default function SongSuggestions({ workspaceId }) {
                   {mashups.sourceSong.title}
                   {mashups.sourceSong.artist && ` - ${mashups.sourceSong.artist}`}
                 </h4>
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-[var(--color-text-muted)]">
                   Key: {mashups.sourceSong.key || 'Unknown'} | BPM: {mashups.sourceSong.bpm || 'Unknown'}
                 </p>
               </div>
 
               {mashups.suggestions.length === 0 ? (
-                <p className="text-gray-400">No compatible songs found. Try adding key/BPM data to more songs.</p>
+                <p className="text-[var(--color-text-muted)]">No compatible songs found. Try adding key/BPM data to more songs.</p>
               ) : (
                 <div className="space-y-2">
                   {mashups.suggestions.map(item => (
@@ -285,14 +301,14 @@ export default function SongSuggestions({ workspaceId }) {
                         <div className={`text-2xl font-bold ${getScoreColor(item.score)}`}>
                           {item.score}
                         </div>
-                        <div className="text-xs text-gray-500">score</div>
+                        <div className="text-xs text-[var(--color-text-muted)]">score</div>
                       </div>
                       <div className="flex-1">
                         <p className="text-[var(--color-text-primary)] font-medium">
                           {item.song.title}
                           {item.song.artist && ` - ${item.song.artist}`}
                         </p>
-                        <div className="flex gap-4 mt-1 text-sm text-gray-400">
+                        <div className="flex gap-4 mt-1 text-sm text-[var(--color-text-muted)]">
                           <span>Key: {item.song.key || '?'}</span>
                           <span>BPM: {item.song.bpm || '?'}</span>
                         </div>
@@ -303,7 +319,7 @@ export default function SongSuggestions({ workspaceId }) {
                               className={`px-2 py-0.5 rounded text-xs ${
                                 factor.score >= 30 ? 'bg-green-900 text-green-300' :
                                 factor.score >= 15 ? 'bg-yellow-900 text-yellow-300' :
-                                'bg-gray-700 text-gray-400'
+                                'bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]'
                               }`}
                             >
                               {factor.reason}
@@ -312,7 +328,7 @@ export default function SongSuggestions({ workspaceId }) {
                         </div>
                       </div>
                       <div className="w-24">
-                        <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                        <div className="h-2 bg-[var(--color-bg-tertiary)] rounded-full overflow-hidden">
                           <div
                             className={`h-full ${getScoreBg(item.score)}`}
                             style={{ width: `${item.score}%` }}
@@ -336,7 +352,7 @@ export default function SongSuggestions({ workspaceId }) {
       )}
       {activeTab === 'transitions' && !loadingTransitions && transitions && (
         <div>
-          <p className="text-gray-400 mb-4">
+          <p className="text-[var(--color-text-muted)] mb-4">
             Found {transitions.count} compatible transitions. Showing top matches:
           </p>
           <div className="space-y-2">
@@ -348,19 +364,19 @@ export default function SongSuggestions({ workspaceId }) {
                 <div className="flex-1 flex items-center gap-2">
                   <div className="flex-1">
                     <p className="text-[var(--color-text-primary)] text-sm">{t.from.title}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-[var(--color-text-muted)]">
                       {t.from.key && `${t.from.key} `}{t.from.bpm && `${t.from.bpm} BPM`}
                     </p>
                   </div>
-                  <span className="text-gray-500">→</span>
+                  <span className="text-[var(--color-text-muted)]">→</span>
                   <div className="flex-1">
                     <p className="text-[var(--color-text-primary)] text-sm">{t.to.title}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-[var(--color-text-muted)]">
                       {t.to.key && `${t.to.key} `}{t.to.bpm && `${t.to.bpm} BPM`}
                     </p>
                   </div>
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-[var(--color-text-muted)]">
                   {t.keyDistance !== null && <span>Key: {t.keyDistance} steps</span>}
                   {t.bpmDiff !== null && <span className="ml-2">BPM: ±{t.bpmDiff}</span>}
                 </div>
@@ -391,7 +407,7 @@ export default function SongSuggestions({ workspaceId }) {
                 <label
                   key={song.id}
                   className={`flex items-center gap-3 p-2 rounded cursor-pointer ${
-                    selectedSongIds.includes(song.id) ? 'bg-blue-900/30' : 'hover:bg-gray-700'
+                    selectedSongIds.includes(song.id) ? 'bg-blue-900/30' : 'hover:bg-[var(--color-bg-hover)]'
                   }`}
                 >
                   <input
@@ -403,14 +419,14 @@ export default function SongSuggestions({ workspaceId }) {
                   <span className="text-[var(--color-text-primary)] flex-1">
                     {song.title} {song.artist && `- ${song.artist}`}
                   </span>
-                  <span className="text-sm text-gray-400">
+                  <span className="text-sm text-[var(--color-text-muted)]">
                     {song.key} {song.bpm && `${song.bpm} BPM`}
                   </span>
                 </label>
               ))}
             </div>
             {songs.filter(s => !s.key && !s.bpm).length > 0 && (
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-[var(--color-text-muted)] mt-2">
                 {songs.filter(s => !s.key && !s.bpm).length} songs hidden (no key/BPM data)
               </p>
             )}
@@ -424,20 +440,20 @@ export default function SongSuggestions({ workspaceId }) {
                   <span className={`text-2xl font-bold ${getScoreColor(optimizedSetlist.flowScore)}`}>
                     {optimizedSetlist.flowScore}
                   </span>
-                  <span className="text-sm text-gray-400">/ 100 flow score</span>
+                  <span className="text-sm text-[var(--color-text-muted)]">/ 100 flow score</span>
                 </div>
               </div>
-              <p className="text-gray-400 text-sm mb-4">{optimizedSetlist.tip}</p>
+              <p className="text-[var(--color-text-muted)] text-sm mb-4">{optimizedSetlist.tip}</p>
               <div className="space-y-2">
                 {optimizedSetlist.optimizedOrder.map((song, idx) => (
-                  <div key={song.id} className="flex items-center gap-3 p-2 bg-gray-700 rounded">
+                  <div key={song.id} className="flex items-center gap-3 p-2 bg-[var(--color-bg-tertiary)] rounded">
                     <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-sm flex items-center justify-center">
                       {idx + 1}
                     </span>
                     <span className="text-[var(--color-text-primary)] flex-1">
                       {song.title} {song.artist && `- ${song.artist}`}
                     </span>
-                    <span className="text-sm text-gray-400">
+                    <span className="text-sm text-[var(--color-text-muted)]">
                       {song.key} {song.bpm && `${song.bpm} BPM`}
                     </span>
                   </div>

@@ -19,6 +19,7 @@ import { useTheme, themes } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import Constants from 'expo-constants';
 import api from '../../services/api';
+import ErrorState from '../../components/ErrorState';
 
 export default function WorkspaceListScreen({ navigation, route }) {
   const { user, logout } = useAuth();
@@ -30,9 +31,11 @@ export default function WorkspaceListScreen({ navigation, route }) {
   const [showJoin, setShowJoin] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   const loadWorkspaces = useCallback(async () => {
     try {
+      setError(null);
       const data = await api.getWorkspaces();
       setWorkspaces(data);
       // Auto-navigate if exactly one workspace, no invite code, and not explicitly returning here
@@ -40,6 +43,7 @@ export default function WorkspaceListScreen({ navigation, route }) {
         navigation.replace('Workspace', { id: data[0].id, name: data[0].name });
       }
     } catch (err) {
+      setError(err.message || 'Failed to load workspaces');
       toast.error(err.message);
     } finally {
       setLoading(false);
@@ -142,6 +146,18 @@ export default function WorkspaceListScreen({ navigation, route }) {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error && workspaces.length === 0) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+        <ErrorState
+          message={error}
+          onRetry={loadWorkspaces}
+          iconName="cloud-offline-outline"
+        />
       </SafeAreaView>
     );
   }

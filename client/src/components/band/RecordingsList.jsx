@@ -237,7 +237,7 @@ export default function RecordingsList({ workspaceId }) {
                     className={`flex-1 py-3 rounded-lg flex flex-col items-center gap-2 transition ${
                       recordingType === 'audio'
                         ? 'bg-blue-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]'
                     }`}
                   >
                     <span className="text-3xl">🎤</span>
@@ -248,7 +248,7 @@ export default function RecordingsList({ workspaceId }) {
                     className={`flex-1 py-3 rounded-lg flex flex-col items-center gap-2 transition ${
                       recordingType === 'video'
                         ? 'bg-blue-600 text-white'
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]'
                     }`}
                   >
                     <span className="text-3xl">🎬</span>
@@ -267,7 +267,7 @@ export default function RecordingsList({ workspaceId }) {
                 )}
 
                 {recordingType === 'audio' && isRecording && (
-                  <div className="w-full h-24 bg-gray-700 rounded-lg mb-4 flex items-center justify-center">
+                  <div className="w-full h-24 bg-[var(--color-bg-tertiary)] rounded-lg mb-4 flex items-center justify-center">
                     <div className="flex items-center gap-2">
                       <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
                       <span className="text-white">Recording...</span>
@@ -294,7 +294,7 @@ export default function RecordingsList({ workspaceId }) {
                   )}
                 </div>
 
-                <p className="text-center text-gray-400 text-sm mb-4">
+                <p className="text-center text-[var(--color-text-muted)] text-sm mb-4">
                   {isRecording ? 'Tap to stop' : 'Tap to record'}
                 </p>
               </>
@@ -318,7 +318,7 @@ export default function RecordingsList({ workspaceId }) {
                 {/* Save Form */}
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Title *</label>
+                    <label className="block text-sm text-[var(--color-text-muted)] mb-1">Title *</label>
                     <input
                       type="text"
                       value={formData.title}
@@ -328,7 +328,7 @@ export default function RecordingsList({ workspaceId }) {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Link to Song (optional)</label>
+                    <label className="block text-sm text-[var(--color-text-muted)] mb-1">Link to Song (optional)</label>
                     <select
                       value={formData.songId}
                       onChange={e => setFormData({ ...formData, songId: e.target.value })}
@@ -343,7 +343,7 @@ export default function RecordingsList({ workspaceId }) {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Notes</label>
+                    <label className="block text-sm text-[var(--color-text-muted)] mb-1">Notes</label>
                     <textarea
                       value={formData.description}
                       onChange={e => setFormData({ ...formData, description: e.target.value })}
@@ -370,7 +370,7 @@ export default function RecordingsList({ workspaceId }) {
                   </button>
                   <button
                     onClick={() => setRecordedBlob(null)}
-                    className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded"
+                    className="px-4 py-2 bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-hover)] text-[var(--color-text-primary)] rounded"
                   >
                     Re-record
                   </button>
@@ -378,7 +378,7 @@ export default function RecordingsList({ workspaceId }) {
               )}
               <button
                 onClick={resetRecorder}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded"
+                className="px-4 py-2 bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-hover)] text-[var(--color-text-primary)] rounded"
               >
                 Cancel
               </button>
@@ -469,20 +469,20 @@ export default function RecordingsList({ workspaceId }) {
                   </span>
                 </div>
                 {recording.description && (
-                  <p className="text-sm text-gray-400 mt-2">{recording.description}</p>
+                  <p className="text-sm text-[var(--color-text-muted)] mt-2">{recording.description}</p>
                 )}
                 {recording.type === 'audio' && (
                   <audio src={recording.url} className="w-full mt-3" controls preload="metadata" />
                 )}
-                <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-700">
-                  <div className="text-xs text-gray-500">
+                <div className="flex justify-between items-center mt-3 pt-3 border-t border-[var(--color-border)]">
+                  <div className="text-xs text-[var(--color-text-muted)]">
                     <span>{recording.createdBy?.displayName || recording.removedCreatorName || 'Deleted User'}</span>
                     <span className="mx-2">·</span>
                     <span>{formatDate(recording.createdAt)}</span>
                   </div>
                   <button
                     onClick={() => setDeleteRecordingId(recording.id)}
-                    className="text-gray-400 hover:text-red-400 text-sm"
+                    className="text-[var(--color-text-muted)] hover:text-red-400 text-sm"
                   >
                     Delete
                   </button>

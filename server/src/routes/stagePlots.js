@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { isWorkspaceMember } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 
 const router = express.Router();
@@ -68,12 +69,16 @@ router.get('/:id', authenticate, async (req, res) => {
 });
 
 // Create a stage plot
-router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
+router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMember, async (req, res) => {
   try {
     const { title, data, gigId } = req.body;
 
     if (!title || !title.trim()) {
       return res.status(400).json({ error: 'Title is required' });
+    }
+
+    if (data && JSON.stringify(data).length > 100000) {
+      return res.status(400).json({ error: 'Stage plot data too large (max 100KB)' });
     }
 
     const stagePlot = await prisma.stagePlot.create({
@@ -108,7 +113,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
 });
 
 // Update a stage plot
-router.put('/:id', authenticate, async (req, res) => {
+router.put('/:id', authenticate, apiLimiter, async (req, res) => {
   try {
     const existing = await prisma.stagePlot.findUnique({
       where: { id: req.params.id }
@@ -135,6 +140,10 @@ router.put('/:id', authenticate, async (req, res) => {
     }
 
     const { title, data, gigId } = req.body;
+
+    if (data && JSON.stringify(data).length > 100000) {
+      return res.status(400).json({ error: 'Stage plot data too large (max 100KB)' });
+    }
 
     const updateData = {};
     if (title !== undefined) updateData.title = title.trim();
@@ -167,7 +176,7 @@ router.put('/:id', authenticate, async (req, res) => {
 });
 
 // Delete a stage plot
-router.delete('/:id', authenticate, async (req, res) => {
+router.delete('/:id', authenticate, apiLimiter, async (req, res) => {
   try {
     const existing = await prisma.stagePlot.findUnique({
       where: { id: req.params.id }
@@ -210,7 +219,7 @@ router.delete('/:id', authenticate, async (req, res) => {
 });
 
 // Duplicate a stage plot
-router.post('/:id/duplicate', authenticate, async (req, res) => {
+router.post('/:id/duplicate', authenticate, apiLimiter, async (req, res) => {
   try {
     const existing = await prisma.stagePlot.findUnique({
       where: { id: req.params.id }

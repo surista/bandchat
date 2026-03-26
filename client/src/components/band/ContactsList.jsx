@@ -42,19 +42,15 @@ function ContactsList({ workspaceId }) {
   };
 
   const handleSave = async (data) => {
-    try {
-      if (editingContact) {
-        const updated = await api.updateContact(editingContact.id, data);
-        setContacts(prev => prev.map(c => c.id === updated.id ? updated : c));
-      } else {
-        const created = await api.createContact(workspaceId, data);
-        setContacts(prev => [...prev, created]);
-      }
-      setShowForm(false);
-      setEditingContact(null);
-    } catch (err) {
-      throw new Error(err.message || 'Failed to save contact');
+    if (editingContact) {
+      const updated = await api.updateContact(editingContact.id, data);
+      setContacts(prev => prev.map(c => c.id === updated.id ? updated : c));
+    } else {
+      const created = await api.createContact(workspaceId, data);
+      setContacts(prev => [...prev, created]);
     }
+    setShowForm(false);
+    setEditingContact(null);
   };
 
   const handleDelete = async (contactId) => {
@@ -165,7 +161,7 @@ function ContactsList({ workspaceId }) {
                   <h3 className="text-sm font-medium text-[var(--color-text-muted)] mb-2 flex items-center gap-2">
                     <span>{cat.icon}</span>
                     <span>{cat.label}</span>
-                    <span className="text-gray-600">({catContacts.length})</span>
+                    <span className="text-[var(--color-text-muted)]">({catContacts.length})</span>
                   </h3>
                   <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                     {catContacts.map(contact => (

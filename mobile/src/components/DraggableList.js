@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dragHandle: {
-    width: 36,
+    width: 44,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,

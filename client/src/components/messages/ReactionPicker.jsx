@@ -117,6 +117,7 @@ export default function ReactionPicker({ onSelect, onClose }) {
     return (
       <button
         key={emoji}
+        role="option"
         data-emoji={emoji}
         onClick={() => handleSelect(emoji)}
         onKeyDown={handlePickerKeyDown}
@@ -136,7 +137,7 @@ export default function ReactionPicker({ onSelect, onClose }) {
 
   return (
     <div ref={pickerRef} className="relative">
-      <div className="bg-[var(--color-bg-secondary)] rounded-lg shadow-lg border border-[var(--color-border)] overflow-hidden" style={{ minWidth: '280px', maxWidth: '320px' }}>
+      <div className="bg-[var(--color-bg-secondary)] rounded-lg shadow-lg border border-[var(--color-border)] overflow-hidden" style={{ minWidth: '280px', maxWidth: '320px' }} role="listbox" aria-label="Emoji reactions">
         {/* Quick reactions row */}
         <div className="flex items-center gap-0.5 p-1.5 border-b border-[var(--color-border)]">
           {quickReactions.map(emoji => renderEmojiButton(emoji, !EMOJI_REGEX.test(emoji)))}

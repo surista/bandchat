@@ -12,13 +12,13 @@ function PinnedMessagesPanel({ pinnedMessages, onUnpin, onClose }) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-800 border-l border-gray-700">
+    <div className="flex flex-col h-full bg-[var(--color-bg-secondary)] border-l border-[var(--color-border)]">
       {/* Header */}
-      <div className="h-14 border-b border-gray-700 px-4 flex items-center justify-between shrink-0">
-        <h3 className="text-white font-semibold">Pinned Messages</h3>
+      <div className="h-14 border-b border-[var(--color-border)] px-4 flex items-center justify-between shrink-0">
+        <h3 className="text-[var(--color-text-primary)] font-semibold">Pinned Messages</h3>
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-white p-2 -mr-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
+          className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-2 -mr-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label="Close pinned messages"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -29,19 +29,19 @@ function PinnedMessagesPanel({ pinnedMessages, onUnpin, onClose }) {
 
       <div className="flex-1 overflow-y-auto">
         {pinnedMessages.length === 0 ? (
-          <div className="p-4 text-gray-400 text-sm text-center mt-8">
-            <svg className="w-12 h-12 mx-auto mb-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="p-4 text-[var(--color-text-muted)] text-sm text-center mt-8">
+            <svg className="w-12 h-12 mx-auto mb-3 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
             </svg>
             <p>No pinned messages yet</p>
-            <p className="text-xs text-gray-500 mt-1">Pin important messages so they are easy to find</p>
+            <p className="text-xs text-[var(--color-text-muted)] mt-1">Pin important messages so they are easy to find</p>
           </div>
         ) : (
           <div className="p-2 space-y-2">
             {pinnedMessages.map((pin) => (
               <div
                 key={pin.id}
-                className="bg-gray-750 border border-gray-700 rounded-lg p-3 hover:bg-gray-700/50"
+                className="bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-lg p-3 hover:bg-[var(--color-bg-hover)]"
               >
                 {/* Author and time */}
                 <div className="flex items-center gap-2 mb-1">
@@ -56,23 +56,23 @@ function PinnedMessagesPanel({ pinnedMessages, onUnpin, onClose }) {
                       (pin.message.author?.displayName || pin.message.removedUserName || 'Deleted User').charAt(0).toUpperCase()
                     )}
                   </div>
-                  <span className="text-white text-sm font-medium">
+                  <span className="text-[var(--color-text-primary)] text-sm font-medium">
                     {pin.message.author?.displayName || pin.message.removedUserName || 'Deleted User'}
                   </span>
-                  <span className="text-gray-500 text-xs">
+                  <span className="text-[var(--color-text-muted)] text-xs">
                     {formatTime(pin.message.createdAt)}
                   </span>
                 </div>
 
                 {/* Message content preview */}
-                <div className="text-gray-300 text-sm break-words whitespace-pre-wrap pl-8">
+                <div className="text-[var(--color-text-secondary)] text-sm break-words whitespace-pre-wrap pl-8">
                   {renderPreview(pin.message.content)}
                 </div>
 
                 {/* Attachments indicator */}
                 {pin.message.attachments?.length > 0 && (
                   <div className="pl-8 mt-1">
-                    <span className="text-gray-500 text-xs">
+                    <span className="text-[var(--color-text-muted)] text-xs">
                       {pin.message.attachments.length} attachment{pin.message.attachments.length !== 1 ? 's' : ''}
                     </span>
                   </div>
@@ -80,12 +80,12 @@ function PinnedMessagesPanel({ pinnedMessages, onUnpin, onClose }) {
 
                 {/* Footer: pinned by + unpin button */}
                 <div className="flex items-center justify-between mt-2 pl-8">
-                  <span className="text-gray-500 text-xs">
+                  <span className="text-[var(--color-text-muted)] text-xs">
                     Pinned by {pin.pinnedBy?.displayName || 'Deleted User'}
                   </span>
                   <button
                     onClick={() => onUnpin(pin.messageId)}
-                    className="text-gray-500 hover:text-red-400 text-xs px-2 py-1 rounded hover:bg-gray-600/50 transition-colors"
+                    className="text-[var(--color-text-muted)] hover:text-red-400 text-xs px-2 py-1 rounded hover:bg-[var(--color-bg-hover)] transition-colors"
                   >
                     Unpin
                   </button>

@@ -19,7 +19,7 @@ import * as Sharing from 'expo-sharing';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { successNotification } from '../../utils/haptics';
+import { successNotification, errorNotification } from '../../utils/haptics';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import getInitial from '../../utils/getInitial';
@@ -124,6 +124,7 @@ export default function SettingsScreen({ navigation, route }) {
   }, [logout]);
 
   const handleLeaveWorkspace = useCallback(() => {
+    errorNotification();
     Alert.alert(
       'Leave Workspace',
       `Are you sure you want to leave "${workspaceName}"? You will lose access to all channels and messages.`,
@@ -146,6 +147,7 @@ export default function SettingsScreen({ navigation, route }) {
   }, [workspaceId, workspaceName, navigation]);
 
   const handleDeleteWorkspace = useCallback(async () => {
+    errorNotification();
     if (deleteConfirmText.trim() !== workspaceName) {
       Alert.alert('Error', 'Workspace name does not match');
       return;

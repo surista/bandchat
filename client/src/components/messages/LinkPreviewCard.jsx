@@ -82,7 +82,7 @@ export default function LinkPreviewCard({ url, onAddToLibrary, isOwn, onDismiss 
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDismiss(); }}
-          className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gray-700 border border-gray-500 text-gray-300 hover:text-white hover:bg-gray-600 flex items-center justify-center text-xs z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] flex items-center justify-center text-xs z-10 opacity-0 group-hover:opacity-100 transition-opacity"
           title="Remove preview"
         >
           &times;
@@ -92,7 +92,7 @@ export default function LinkPreviewCard({ url, onAddToLibrary, isOwn, onDismiss 
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className={`block rounded-lg border border-gray-600 bg-gray-750 hover:bg-gray-700 transition-colors overflow-hidden no-underline ${showAddToLibrary ? 'rounded-b-none' : ''}`}
+        className={`block rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-hover)] transition-colors overflow-hidden no-underline ${showAddToLibrary ? 'rounded-b-none' : ''}`}
       >
         <div className="flex">
           <div className="flex-1 p-3 min-w-0">
@@ -105,7 +105,7 @@ export default function LinkPreviewCard({ url, onAddToLibrary, isOwn, onDismiss 
                   onError={(e) => { e.target.style.display = 'none'; }}
                 />
               )}
-              <span className="text-xs text-gray-400 truncate">
+              <span className="text-xs text-[var(--color-text-muted)] truncate">
                 {getHostname(url)}
               </span>
             </div>
@@ -115,7 +115,7 @@ export default function LinkPreviewCard({ url, onAddToLibrary, isOwn, onDismiss 
               </div>
             )}
             {preview.description && (
-              <div className="text-xs text-gray-400 line-clamp-2">
+              <div className="text-xs text-[var(--color-text-muted)] line-clamp-2">
                 {preview.description}
               </div>
             )}
@@ -139,7 +139,7 @@ export default function LinkPreviewCard({ url, onAddToLibrary, isOwn, onDismiss 
             e.stopPropagation();
             onAddToLibrary(url, preview.title);
           }}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-green-600/20 border border-t-0 border-gray-600 rounded-b-lg text-green-400 hover:bg-green-600/30 transition-colors text-sm"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-green-600/20 border border-t-0 border-[var(--color-border)] rounded-b-lg text-green-400 hover:bg-green-600/30 transition-colors text-sm"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />

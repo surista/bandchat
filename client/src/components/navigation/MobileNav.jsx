@@ -40,17 +40,18 @@ function MobileNav({ activeTab, onTabChange, unreadCount = 0 }) {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 z-[60] safe-area-bottom">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[var(--color-bg-primary)] border-t border-[var(--color-border)] z-[60] safe-area-bottom" aria-label="Main navigation">
       <div className="flex items-center justify-around h-16">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
             aria-current={activeTab === tab.id ? 'page' : undefined}
+            aria-label={tab.label}
             className={`flex flex-col items-center justify-center flex-1 h-full relative transition-colors ${
               activeTab === tab.id
-                ? 'text-white'
-                : 'text-gray-500 hover:text-gray-300'
+                ? 'text-[var(--color-text-primary)]'
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
             }`}
           >
             <div className="relative">

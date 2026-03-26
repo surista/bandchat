@@ -49,7 +49,7 @@ export default function ForgotPasswordScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <Text style={styles.title} accessibilityRole="header">BandChat</Text>
+            <Text style={[styles.title, { color: colors.textPrimary }]} accessibilityRole="header">BandChat</Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
               Reset your password
             </Text>
@@ -152,7 +152,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 36,
     fontWeight: '700',
-    color: '#ffffff',
     marginBottom: 8,
   },
   subtitle: { fontSize: 16 },

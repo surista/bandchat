@@ -58,7 +58,7 @@ function ChannelItem({ channel, isDM, dmMembers, onPress, onLongPress, unreadCou
         {displayName}
       </Text>
       {!isDM && channel.starred && (
-        <Ionicons name="star" size={12} color="#facc15" style={{ marginLeft: 4 }} />
+        <Ionicons name="star" size={12} color="#facc15" style={{ marginLeft: 4 }} accessibilityLabel="Starred channel" />
       )}
       {!isDM && channel.pinnedSetlistId && (
         <Ionicons name="musical-notes" size={12} color="#4ade80" style={{ marginLeft: 4 }} />

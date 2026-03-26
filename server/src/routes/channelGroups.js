@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 
 const router = express.Router();
@@ -41,7 +42,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 });
 
 // Create a channel group (admin only)
-router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
+router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMember, async (req, res) => {
   try {
     // Verify user is admin
     const membership = await prisma.workspaceMember.findUnique({
@@ -95,7 +96,7 @@ router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (r
 });
 
 // Reorder channel groups (admin only)
-router.put('/workspace/:workspaceId/reorder', authenticate, isWorkspaceMember, async (req, res) => {
+router.put('/workspace/:workspaceId/reorder', authenticate, apiLimiter, isWorkspaceMember, async (req, res) => {
   try {
     const { groupIds } = req.body;
 
@@ -166,7 +167,7 @@ router.put('/workspace/:workspaceId/reorder', authenticate, isWorkspaceMember, a
 });
 
 // Update a channel group
-router.put('/:groupId', authenticate, async (req, res) => {
+router.put('/:groupId', authenticate, apiLimiter, async (req, res) => {
   try {
     const { name, position, isCollapsed } = req.body;
 
@@ -231,7 +232,7 @@ router.put('/:groupId', authenticate, async (req, res) => {
 });
 
 // Delete a channel group
-router.delete('/:groupId', authenticate, async (req, res) => {
+router.delete('/:groupId', authenticate, apiLimiter, async (req, res) => {
   try {
     const group = await prisma.channelGroup.findUnique({
       where: { id: req.params.groupId }
@@ -279,7 +280,7 @@ router.delete('/:groupId', authenticate, async (req, res) => {
 });
 
 // Move channel to a group
-router.put('/:groupId/channels/:channelId', authenticate, async (req, res) => {
+router.put('/:groupId/channels/:channelId', authenticate, apiLimiter, async (req, res) => {
   try {
     const { groupId, channelId } = req.params;
     const { position } = req.body;
@@ -338,7 +339,7 @@ router.put('/:groupId/channels/:channelId', authenticate, async (req, res) => {
 });
 
 // Remove channel from group (move to ungrouped)
-router.delete('/channels/:channelId', authenticate, async (req, res) => {
+router.delete('/channels/:channelId', authenticate, apiLimiter, async (req, res) => {
   try {
     const { channelId } = req.params;
 

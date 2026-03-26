@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { mediumImpact, successNotification } from '../../utils/haptics';
+import { mediumImpact, successNotification, errorNotification } from '../../utils/haptics';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import api from '../../services/api';
 import { getLocalGigs, upsertGigs, deleteLocalGig } from '../../services/database';
@@ -283,6 +283,7 @@ export default function GigListScreen({ navigation, route }) {
 
   const handleDelete = useCallback(() => {
     if (!selectedGig) return;
+    errorNotification();
     Alert.alert('Delete Event', `Delete "${selectedGig.title}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {

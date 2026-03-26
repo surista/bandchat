@@ -46,7 +46,7 @@ const SongCard = memo(function SongCard({ song, onEdit, onDelete, onContextMenu,
         <div className="hidden sm:flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+            className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
             title="Edit"
             aria-label="Edit song"
           >
@@ -54,7 +54,7 @@ const SongCard = memo(function SongCard({ song, onEdit, onDelete, onContextMenu,
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="p-1 text-[var(--color-text-muted)] hover:text-red-400"
+            className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-400"
             title="Delete"
             aria-label="Delete song"
           >
@@ -120,7 +120,7 @@ const SongCard = memo(function SongCard({ song, onEdit, onDelete, onContextMenu,
       )}
 
       {song._count && song._count.setlistSongs > 0 && (
-        <div className="mt-3 pt-3 border-t border-[var(--color-border)] text-xs text-gray-500">
+        <div className="mt-3 pt-3 border-t border-[var(--color-border)] text-xs text-[var(--color-text-muted)]">
           In {song._count.setlistSongs} setlist{song._count.setlistSongs !== 1 ? 's' : ''}
         </div>
       )}
@@ -869,7 +869,7 @@ Hotel California - Eagles"
                     <button
                       onClick={handleBulkImport}
                       disabled={bulkImporting || !bulkText.trim()}
-                      className="btn bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-300 disabled:text-gray-500"
+                      className="btn bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
                     >
                       {bulkImporting ? 'Importing...' : 'Import Songs'}
                     </button>

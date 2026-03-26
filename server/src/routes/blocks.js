@@ -104,7 +104,7 @@ router.post('/', authenticate, apiLimiter, async (req, res) => {
 });
 
 // Unblock a user
-router.delete('/:blockedUserId', authenticate, async (req, res) => {
+router.delete('/:blockedUserId', authenticate, apiLimiter, async (req, res) => {
   try {
     const { blockedUserId } = req.params;
 

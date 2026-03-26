@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate, isWorkspaceMember } from '../middleware/auth.js';
+import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 
 const router = express.Router();
@@ -47,7 +48,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 });
 
 // Create a medley
-router.post('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
+router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMember, async (req, res) => {
   try {
     const { name, description, songIds } = req.body;
 
@@ -158,7 +159,7 @@ router.get('/:medleyId', authenticate, async (req, res) => {
 });
 
 // Update a medley
-router.put('/:medleyId', authenticate, async (req, res) => {
+router.put('/:medleyId', authenticate, apiLimiter, async (req, res) => {
   try {
     const { name, description, songIds } = req.body;
 
@@ -250,7 +251,7 @@ router.put('/:medleyId', authenticate, async (req, res) => {
 });
 
 // Reorder songs in a medley
-router.put('/:medleyId/reorder', authenticate, async (req, res) => {
+router.put('/:medleyId/reorder', authenticate, apiLimiter, async (req, res) => {
   try {
     const { songIds } = req.body;
 
@@ -322,7 +323,7 @@ router.put('/:medleyId/reorder', authenticate, async (req, res) => {
 });
 
 // Delete a medley
-router.delete('/:medleyId', authenticate, async (req, res) => {
+router.delete('/:medleyId', authenticate, apiLimiter, async (req, res) => {
   try {
     const medley = await prisma.medley.findUnique({
       where: { id: req.params.medleyId }

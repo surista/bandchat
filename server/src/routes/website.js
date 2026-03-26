@@ -52,6 +52,11 @@ router.get('/:workspaceId', authenticate, isWorkspaceMember, async (req, res) =>
 router.put('/:workspaceId/config', authenticate, isWorkspaceAdmin, async (req, res) => {
   try {
     const body = req.body;
+
+    if (JSON.stringify(body).length > 50000) {
+      return res.status(400).json({ error: 'Config too large (max 50KB)' });
+    }
+
     const bandName = body.bandName || body.band?.name;
 
     if (!bandName || typeof bandName !== 'string' || bandName.length > MAX_STRING) {

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import api from '../../services/api';
 
 export default function MemberHoverCard({ userId, workspaceId, children, onClick }) {
+  const hovercardId = `hovercard-${userId}`;
   const [isHovered, setIsHovered] = useState(false);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -89,6 +90,8 @@ export default function MemberHoverCard({ userId, workspaceId, children, onClick
 
   const card = isHovered && createPortal(
     <div
+      id={hovercardId}
+      role="tooltip"
       className="fixed z-[100] bg-[var(--color-bg-secondary)] rounded-lg shadow-xl border border-[var(--color-border)] p-3 min-w-[200px] max-w-[280px]"
       style={{ top: position.top, left: position.left }}
       onMouseEnter={handleCardMouseEnter}
@@ -177,6 +180,7 @@ export default function MemberHoverCard({ userId, workspaceId, children, onClick
       onClick={onClick}
       tabIndex={0}
       role="button"
+      aria-describedby={isHovered ? hovercardId : undefined}
       className="block w-full"
     >
       {children}

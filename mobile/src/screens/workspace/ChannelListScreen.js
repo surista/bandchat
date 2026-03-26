@@ -13,7 +13,7 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-import { mediumImpact, successNotification } from '../../utils/haptics';
+import { mediumImpact, successNotification, errorNotification } from '../../utils/haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -494,6 +494,7 @@ export default function ChannelListScreen({ navigation, route }) {
 
   const handleDeleteGroup = useCallback(async () => {
     if (!selectedGroup) return;
+    errorNotification();
     Alert.alert(
       'Delete Section',
       `Delete "${selectedGroup.name}"? Channels in this section will become ungrouped.`,
@@ -752,7 +753,7 @@ export default function ChannelListScreen({ navigation, route }) {
               {isCollapsed ? '\u25B6' : '\u25BC'}
             </Text>
           )}
-          <Text style={[styles.sectionTitle, { color: colors.channelListText }]}>
+          <Text style={[styles.sectionTitle, { color: colors.channelListText }]} accessibilityRole="header">
             {section.title}
           </Text>
         </TouchableOpacity>

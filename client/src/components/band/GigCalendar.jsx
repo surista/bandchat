@@ -28,7 +28,7 @@ function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, on
       }`}
       {...longPress}
     >
-      {/* Date */}
+      {/* Date + time (inline on mobile) */}
       <div className="shrink-0 min-w-[5rem] text-sm">
         <span className="text-[var(--color-text-primary)] font-medium">
           {format(new Date(gig.date), 'dd-MMM')}
@@ -36,15 +36,20 @@ function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, on
         <span className="text-[var(--color-text-muted)] ml-1 hidden sm:inline">
           {format(new Date(gig.date), 'EEE')}
         </span>
+        {formatTimeRange(gig.date, gig.endDate) && (
+          <span className="text-[var(--color-text-muted)] ml-1 text-xs sm:hidden">
+            {formatTimeRange(gig.date, gig.endDate)}
+          </span>
+        )}
       </div>
 
-      {/* Time */}
+      {/* Time (desktop) */}
       <div className="shrink-0 min-w-[4.5rem] text-sm text-[var(--color-text-secondary)] hidden sm:block">
         {formatTimeRange(gig.date, gig.endDate)}
       </div>
 
-      {/* Title + Icons */}
-      <div className="flex-1 min-w-0 flex items-center gap-2">
+      {/* Title + venue on mobile + Icons */}
+      <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-0 sm:gap-2">
         {gig.isLocked && <span className="text-xs">🔒</span>}
         {gig.isPersonal && <span className="text-xs">👤</span>}
         <span className={`text-sm truncate ${gig.status === 'CANCELLED' ? 'line-through' : ''} text-[var(--color-text-primary)]`}>
@@ -53,6 +58,11 @@ function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, on
         {gig.isExternal && (
           <span className="text-xs text-[var(--color-text-muted)]">
             ({gig.workspace?.name || 'Other'})
+          </span>
+        )}
+        {gig.venue && (
+          <span className="text-xs text-[var(--color-text-muted)] truncate sm:hidden md:hidden">
+            {gig.venue}
           </span>
         )}
       </div>
@@ -86,15 +96,17 @@ function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, on
           <>
             <button
               onClick={(e) => { e.stopPropagation(); onEdit(); }}
-              className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] px-1"
+              className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-2 min-h-[44px] min-w-[44px] flex items-center justify-center"
               title="Edit"
+              aria-label="Edit gig"
             >
               ✏️
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(); }}
-              className="text-xs text-[var(--color-text-muted)] hover:text-red-400 px-1"
+              className="text-xs text-[var(--color-text-muted)] hover:text-red-400 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center"
               title="Delete"
+              aria-label="Delete gig"
             >
               🗑️
             </button>

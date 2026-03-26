@@ -9,6 +9,7 @@ function ChannelMembersPanel({ channel, workspace, onClose }) {
   const { socket } = useSocket();
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [removeMemberId, setRemoveMemberId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddMenu, setShowAddMenu] = useState(false);
@@ -56,10 +57,12 @@ function ChannelMembersPanel({ channel, workspace, onClose }) {
 
   const loadMembers = async () => {
     try {
+      setError(null);
       const data = await api.getChannel(channel.id);
       setMembers(data.members || []);
     } catch (err) {
       console.error('Failed to load channel members:', err);
+      setError(err.message || 'Failed to load members');
     } finally {
       setLoading(false);
     }
@@ -99,13 +102,13 @@ function ChannelMembersPanel({ channel, workspace, onClose }) {
     : nonMembers;
 
   return (
-    <div className="flex flex-col h-full bg-gray-800 border-l border-gray-700">
+    <div className="flex flex-col h-full bg-[var(--color-bg-secondary)] border-l border-[var(--color-border)]">
       {/* Header */}
-      <div className="h-14 border-b border-gray-700 px-4 flex items-center justify-between shrink-0">
-        <h3 className="text-white font-semibold">Members</h3>
+      <div className="h-14 border-b border-[var(--color-border)] px-4 flex items-center justify-between shrink-0">
+        <h3 className="text-[var(--color-text-primary)] font-semibold">Members</h3>
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-white p-2 -mr-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
+          className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-2 -mr-1 min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label="Close members panel"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,7 +120,7 @@ function ChannelMembersPanel({ channel, workspace, onClose }) {
       <div className="flex-1 overflow-y-auto">
         {/* Add Members Section */}
         {!channel.isDirect && (
-          <div className="p-3 border-b border-gray-700">
+          <div className="p-3 border-b border-[var(--color-border)]">
             {showAddMenu ? (
               <div>
                 <input
@@ -126,11 +129,11 @@ function ChannelMembersPanel({ channel, workspace, onClose }) {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search by name or email..."
-                  className="w-full bg-gray-900 text-white px-3 py-2 rounded-lg text-sm outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] px-3 py-2 rounded-lg text-sm outline-none focus:ring-1 focus:ring-blue-500"
                 />
                 <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
                   {filteredNonMembers.length === 0 ? (
-                    <p className="text-gray-500 text-sm px-2 py-1">
+                    <p className="text-[var(--color-text-muted)] text-sm px-2 py-1">
                       {nonMembers.length === 0
                         ? 'All workspace members are in this channel'
                         : 'No matching members found'}
@@ -141,9 +144,9 @@ function ChannelMembersPanel({ channel, workspace, onClose }) {
                         key={m.user.id}
                         onClick={() => handleAddMember(m.user.id)}
                         disabled={addLoading === m.user.id}
-                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-700 text-left disabled:opacity-50"
+                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-bg-hover)] text-left disabled:opacity-50"
                       >
-                        <div className="w-7 h-7 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs font-medium shrink-0">
+                        <div className="w-7 h-7 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center text-[var(--color-text-primary)] text-xs font-medium shrink-0">
                           {m.user.avatarUrl ? (
                             <img src={m.user.avatarUrl} className="w-7 h-7 rounded-full object-cover" alt="" />
                           ) : (
@@ -151,12 +154,12 @@ function ChannelMembersPanel({ channel, workspace, onClose }) {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-white text-sm truncate">{m.user.displayName}</div>
+                          <div className="text-[var(--color-text-primary)] text-sm truncate">{m.user.displayName}</div>
                         </div>
                         {addLoading === m.user.id ? (
-                          <span className="text-gray-400 text-xs">Adding...</span>
+                          <span className="text-[var(--color-text-muted)] text-xs">Adding...</span>
                         ) : (
-                          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                           </svg>
                         )}
@@ -166,7 +169,7 @@ function ChannelMembersPanel({ channel, workspace, onClose }) {
                 </div>
                 <button
                   onClick={() => { setShowAddMenu(false); setSearchQuery(''); }}
-                  className="mt-2 text-gray-400 hover:text-white text-sm"
+                  className="mt-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-sm"
                 >
                   Cancel
                 </button>
@@ -174,7 +177,7 @@ function ChannelMembersPanel({ channel, workspace, onClose }) {
             ) : (
               <button
                 onClick={() => setShowAddMenu(true)}
-                className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-700 text-blue-400 hover:text-blue-300 text-sm"
+                className="w-full flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-[var(--color-bg-hover)] text-blue-400 hover:text-blue-300 text-sm"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -187,7 +190,17 @@ function ChannelMembersPanel({ channel, workspace, onClose }) {
 
         {/* Members List */}
         {loading ? (
-          <div className="p-4 text-gray-400 text-sm">Loading members...</div>
+          <div className="p-4 text-[var(--color-text-muted)] text-sm">Loading members...</div>
+        ) : error ? (
+          <div className="p-4 text-center">
+            <p className="text-red-400 text-sm mb-2">{error}</p>
+            <button
+              onClick={loadMembers}
+              className="text-sm text-blue-400 hover:text-blue-300"
+            >
+              Retry
+            </button>
+          </div>
         ) : (
           <div className="p-2 space-y-0.5">
             {members.map((member) => {
@@ -198,9 +211,9 @@ function ChannelMembersPanel({ channel, workspace, onClose }) {
               return (
                 <div
                   key={memberUser.id}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-700 group"
+                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--color-bg-hover)] group"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white text-sm font-medium shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center text-[var(--color-text-primary)] text-sm font-medium shrink-0">
                     {memberUser.avatarUrl ? (
                       <img src={memberUser.avatarUrl} className="w-8 h-8 rounded-full object-cover" alt="" />
                     ) : (
@@ -208,16 +221,16 @@ function ChannelMembersPanel({ channel, workspace, onClose }) {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-white text-sm truncate block">
+                    <span className="text-[var(--color-text-primary)] text-sm truncate block">
                       {memberUser.displayName}
-                      {isCurrentUser && <span className="text-gray-500 ml-1">(you)</span>}
+                      {isCurrentUser && <span className="text-[var(--color-text-muted)] ml-1">(you)</span>}
                     </span>
                   </div>
                   {/* Remove button - shown for admins, but not for self or in DMs */}
                   {isAdmin && !isCurrentUser && !channel.isDirect && (
                     <button
                       onClick={() => setRemoveMemberId(memberUser.id)}
-                      className="hidden group-hover:block text-gray-500 hover:text-red-400 p-1"
+                      className="hidden group-hover:block text-[var(--color-text-muted)] hover:text-red-400 p-1"
                       title="Remove from channel"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

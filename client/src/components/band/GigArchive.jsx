@@ -50,11 +50,15 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
     setError(null);
     try {
       setLoading(true);
-      // Auto-link any unlinked gigs to matching setlists (runs silently)
-      try {
-        await api.autoLinkSetlists(workspaceId);
-      } catch (e) {
-        // Ignore errors - this is just a data fix
+      // Auto-link any unlinked gigs to matching setlists (runs silently, once per session)
+      const sessionKey = `autoLinked:${workspaceId}`;
+      if (!sessionStorage.getItem(sessionKey)) {
+        try {
+          await api.autoLinkSetlists(workspaceId);
+          sessionStorage.setItem(sessionKey, '1');
+        } catch (e) {
+          // Ignore errors - this is just a data fix
+        }
       }
       const [setlistsData, gigsData, membersData] = await Promise.all([
         api.getSetlists(workspaceId),

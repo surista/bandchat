@@ -248,14 +248,14 @@ export default function Achievements({ workspaceId }) {
                           {achievement.icon}
                         </span>
                         <h4 className="font-semibold text-[var(--color-text-primary)] mt-2">{achievement.name}</h4>
-                        <p className="text-sm text-gray-400 mt-1">{achievement.description}</p>
+                        <p className="text-sm text-[var(--color-text-muted)] mt-1">{achievement.description}</p>
                         {earned && earnedData && (
                           <p className="text-xs text-yellow-500 mt-2">
                             Earned {formatDate(earnedData.earnedAt)}
                           </p>
                         )}
                         {!earned && achievement.threshold && (
-                          <p className="text-xs text-gray-500 mt-2">
+                          <p className="text-xs text-[var(--color-text-muted)] mt-2">
                             Goal: {achievement.threshold}
                           </p>
                         )}
@@ -293,14 +293,14 @@ export default function Achievements({ workspaceId }) {
                           {achievement.icon}
                         </span>
                         <h4 className="font-semibold text-[var(--color-text-primary)] mt-2">{achievement.name}</h4>
-                        <p className="text-sm text-gray-400 mt-1">{achievement.description}</p>
+                        <p className="text-sm text-[var(--color-text-muted)] mt-1">{achievement.description}</p>
                         {earned && earnedData && (
                           <p className="text-xs text-green-500 mt-2">
                             Earned {formatDate(earnedData.earnedAt)}
                           </p>
                         )}
                         {!earned && achievement.threshold && (
-                          <p className="text-xs text-gray-500 mt-2">
+                          <p className="text-xs text-[var(--color-text-muted)] mt-2">
                             Goal: {achievement.threshold}
                           </p>
                         )}
@@ -365,7 +365,7 @@ export default function Achievements({ workspaceId }) {
                         </span>
                       ))}
                       {entry.achievements.length > 5 && (
-                        <span className="text-gray-400 text-sm">
+                        <span className="text-[var(--color-text-muted)] text-sm">
                           +{entry.achievements.length - 5}
                         </span>
                       )}
@@ -375,7 +375,7 @@ export default function Achievements({ workspaceId }) {
               ))}
               {leaderboard.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={4} className="px-4 py-8 text-center text-[var(--color-text-muted)]">
                     No achievements earned yet. Keep playing!
                   </td>
                 </tr>

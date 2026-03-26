@@ -271,7 +271,7 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded"
+                className="px-4 py-2 bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-hover)] text-[var(--color-text-primary)] rounded"
               >
                 Cancel
               </button>
@@ -288,9 +288,9 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
           className="py-16"
         />
       ) : events.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
-          <p className="text-lg mb-4">Your band's story starts here!</p>
-          <p className="text-sm">Add events to build your timeline, or click "Auto-Generate" to create events from your gig history.</p>
+        <div className="text-center py-12">
+          <p className="text-lg text-[var(--color-text-muted)] mb-4">Your band's story starts here!</p>
+          <p className="text-sm text-[var(--color-text-muted)]">Add events to build your timeline, or click "Auto-Generate" to create events from your gig history.</p>
         </div>
       ) : (
         <div className="relative">
@@ -344,7 +344,7 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
                         className="mt-3 rounded-lg max-h-48 object-cover"
                       />
                     )}
-                    <p className="mt-2 text-xs text-gray-500">
+                    <p className="mt-2 text-xs text-[var(--color-text-muted)]">
                       Added by {event.createdBy?.displayName || event.removedCreatorName || 'Deleted User'}
                     </p>
                   </div>
