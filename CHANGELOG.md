@@ -2,6 +2,26 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.05.99] - 2026-03-26
+
+### Added
+- **ZIP file uploads** — Users can now upload ZIP files (max 10MB) in messages and gig media. Server validates magic bytes, stores in R2 `documents/` folder. Web shows document icon preview; mobile uses DocumentPicker with "File (PDF, ZIP)" attach option. Document attachments render as clickable download links on both platforms.
+
+### Fixed
+- **`--color-bg-hover` missing in dark mode** — CSS variable was only defined in light mode, causing invisible hover states across 10 components.
+- **`Skeleton.Text` runtime crash** — GigStats used `Skeleton.Text` which doesn't exist. Replaced with base `Skeleton` component.
+- **Toolbar buttons clipped** — `toolbarContainer.maxHeight: 36` clipped `minHeight: 44` toolbar buttons (mobile). Increased to 48.
+- **Tailwind opacity on CSS variables** — `bg-[var(...)]/70` doesn't work with CSS vars. Replaced with `opacity-70` class in AvailabilityCalendar.
+- **GigCalendar venue gap** — Venue was invisible between `sm` and `md` breakpoints. Changed `sm:hidden md:hidden` to `md:hidden`.
+- **ContextMenu invalid ARIA** — `aria-selected` is not valid on `role="menuitem"`. Changed to `aria-current`.
+- **Error haptic on cancel** — Destructive haptic fired before delete confirmation. Moved inside confirmed `onPress`.
+- **Personal event leak on duplicate** — `POST /:gigId/duplicate` didn't check `isPersonal`, allowing duplication of others' personal events.
+- **Cross-workspace setlist on gig setlist add** — `POST /:gigId/setlists` accepted setlists from any workspace. Now validates workspace ownership.
+- **Locked gig setlist modification** — Gig setlist add/remove/reorder endpoints didn't check `isLocked`. Non-admins could modify setlists on locked gigs.
+
+### Improved
+- Star status included in ChannelItem parent `accessibilityLabel` (mobile VoiceOver).
+
 ## [1.05.98] - 2026-03-26
 
 ### Fixed

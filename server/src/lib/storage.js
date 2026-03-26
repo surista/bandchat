@@ -29,6 +29,7 @@ const MIME_TO_EXT = {
   'video/x-matroska': '.mkv',
   // Documents
   'application/pdf': '.pdf',
+  'application/zip': '.zip',
   'application/x-guitar-pro': '.gp',
 };
 

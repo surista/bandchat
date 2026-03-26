@@ -7,7 +7,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { hapticLight } from '../../services/haptic';
 import { formatFileSize } from '../../utils/format';
-import { MAX_IMAGE_SIZE, MAX_AUDIO_SIZE, MAX_VIDEO_SIZE, ALLOWED_IMAGE_TYPES, ALLOWED_AUDIO_TYPES, ALLOWED_VIDEO_TYPES, isImageFile, isAudioFile, isVideoFile } from '../../utils/fileValidation';
+import { MAX_IMAGE_SIZE, MAX_AUDIO_SIZE, MAX_VIDEO_SIZE, MAX_DOCUMENT_SIZE, ALLOWED_IMAGE_TYPES, ALLOWED_AUDIO_TYPES, ALLOWED_VIDEO_TYPES, isImageFile, isAudioFile, isVideoFile, isDocumentFile } from '../../utils/fileValidation';
 
 
 /**
@@ -476,13 +476,14 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
       const isImage = isImageFile(file);
       const isAudio = isAudioFile(file);
       const isVideo = isVideoFile(file);
+      const isDocument = isDocumentFile(file);
 
-      if (!isImage && !isAudio && !isVideo) {
-        setError(`File "${file.name}" is not a supported type (images, audio, or video only)`);
+      if (!isImage && !isAudio && !isVideo && !isDocument) {
+        setError(`File "${file.name}" is not a supported type (images, audio, video, PDF, or ZIP only)`);
         continue;
       }
 
-      const maxSize = isVideo ? MAX_VIDEO_SIZE : isAudio ? MAX_AUDIO_SIZE : MAX_IMAGE_SIZE;
+      const maxSize = isVideo ? MAX_VIDEO_SIZE : isAudio ? MAX_AUDIO_SIZE : isDocument ? MAX_DOCUMENT_SIZE : MAX_IMAGE_SIZE;
       const limitMB = maxSize / (1024 * 1024);
       if (file.size > maxSize) {
         setError(`File "${file.name}" exceeds ${limitMB}MB limit`);
@@ -523,6 +524,14 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
             url: videoUrl,
             size: file.size,
             type: 'video'
+          }]);
+        } else if (isDocumentFile(file)) {
+          // Document files (PDF, ZIP) get a placeholder preview
+          setPreviews(prev => [...prev, {
+            name: file.name,
+            url: null,
+            size: file.size,
+            type: 'document'
           }]);
         } else {
           // Audio files get a placeholder preview (no image)
@@ -621,6 +630,12 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
                       <path d="M8 5v14l11-7z" />
                     </svg>
                   </div>
+                </div>
+              ) : preview.type === 'document' ? (
+                <div className="w-16 h-16 bg-[var(--color-bg-secondary)] rounded flex items-center justify-center">
+                  <svg className="w-8 h-8 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
                 </div>
               ) : (
                 <img
@@ -779,7 +794,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*,audio/*,video/*"
+              accept="image/*,audio/*,video/*,.pdf,.zip"
               multiple
               onChange={handleFileSelect}
               className="hidden"

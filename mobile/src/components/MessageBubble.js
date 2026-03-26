@@ -1,5 +1,6 @@
 import { memo, useState, useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { View, Text, Image, TouchableOpacity, Pressable, Animated, Linking, StyleSheet, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Reanimated, { useAnimatedStyle, interpolate } from 'react-native-reanimated';
 import { Audio, Video, ResizeMode } from 'expo-av';
@@ -447,6 +448,9 @@ function renderAttachments(attachments, onImagePress, imgWidth, imgHeight, onLon
         if (att.type === 'AUDIO') {
           return <AudioAttachment key={att.id} url={att.url} filename={att.filename} />;
         }
+        if (att.type === 'DOCUMENT') {
+          return <DocumentAttachment key={att.id} url={att.url} filename={att.filename} />;
+        }
         return null;
       })}
     </View>
@@ -476,6 +480,21 @@ function generateWaveformBars(count) {
     bars.push(h);
   }
   return bars;
+}
+
+function DocumentAttachment({ url, filename }) {
+  const { colors } = useTheme();
+  return (
+    <TouchableOpacity
+      onPress={() => Linking.openURL(url)}
+      style={{ flexDirection: 'row', alignItems: 'center', padding: 8, marginTop: 4, borderRadius: 8, backgroundColor: colors.bgTertiary }}
+      accessibilityLabel={`Document: ${filename}`}
+      accessibilityRole="link"
+    >
+      <Ionicons name="document-outline" size={20} color={colors.primary} style={{ marginRight: 8 }} />
+      <Text style={{ color: colors.primary, fontSize: 14, flex: 1 }} numberOfLines={1}>{filename}</Text>
+    </TouchableOpacity>
+  );
 }
 
 function AudioAttachment({ url, filename }) {

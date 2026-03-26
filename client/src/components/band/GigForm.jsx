@@ -1096,7 +1096,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                         </label>
                         <label className="btn bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-sm cursor-pointer">
                           📎 Files
-                          <input type="file" accept="image/*,audio/*,video/*,.pdf" multiple onChange={handleFileUpload} className="hidden" />
+                          <input type="file" accept="image/*,audio/*,video/*,.pdf,.zip" multiple onChange={handleFileUpload} className="hidden" />
                         </label>
                         <button
                           type="button"

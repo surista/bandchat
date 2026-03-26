@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { View, TextInput, TouchableOpacity, Text, Image, StyleSheet, Platform, Animated, PanResponder, Alert, FlatList, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { Audio } from 'expo-av';
 import { useTheme } from '../context/ThemeContext';
 import { formatDuration as formatRecordingDuration } from '../utils/formatDuration';
@@ -313,13 +314,52 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
     }
   }, []);
 
+  const pickDocument = useCallback(async () => {
+    try {
+      const remaining = 5 - attachments.length;
+      if (remaining <= 0) {
+        Alert.alert('Limit reached', 'Maximum 5 files per message');
+        return;
+      }
+
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'application/zip', 'application/x-zip-compressed'],
+        multiple: remaining > 1,
+      });
+
+      if (!result.canceled && result.assets?.length > 0) {
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        const newAttachments = [];
+        for (const asset of result.assets.slice(0, remaining)) {
+          if (asset.size > maxSize) {
+            Alert.alert('File too large', `"${asset.name}" exceeds the 10MB limit for documents.`);
+            continue;
+          }
+          const ext = asset.mimeType?.includes('pdf') ? 'pdf' : 'zip';
+          newAttachments.push({
+            uri: asset.uri,
+            filename: asset.name || `file-${Date.now()}.${ext}`,
+            mimeType: asset.mimeType || 'application/octet-stream',
+            isVideo: false,
+          });
+        }
+        if (newAttachments.length > 0) {
+          setAttachments(prev => [...prev, ...newAttachments].slice(0, 5));
+        }
+      }
+    } catch (err) {
+      console.error('Document picker error:', err);
+    }
+  }, [attachments.length]);
+
   const showAttachOptions = useCallback(() => {
     Alert.alert('Attach', null, [
       { text: 'Take Photo', onPress: takePhoto },
       { text: 'Photo Library', onPress: pickMedia },
+      { text: 'File (PDF, ZIP)', onPress: pickDocument },
       { text: 'Cancel', style: 'cancel' },
     ]);
-  }, [takePhoto, pickMedia]);
+  }, [takePhoto, pickMedia, pickDocument]);
 
   const removeAttachment = useCallback((index) => {
     setAttachments(prev => prev.filter((_, i) => i !== index));

@@ -55,7 +55,7 @@ const uploadLimiter = rateLimit({
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const ALLOWED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/aac', 'audio/m4a', 'audio/x-m4a', 'audio/mp4'];
 const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo', 'video/x-matroska'];
-const ALLOWED_DOCUMENT_TYPES = ['application/pdf'];
+const ALLOWED_DOCUMENT_TYPES = ['application/pdf', 'application/zip'];
 // Guitar Pro files use custom detection (not standard MIME types)
 const GUITAR_PRO_MIME = 'application/x-guitar-pro';
 const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_AUDIO_TYPES, ...ALLOWED_VIDEO_TYPES, ...ALLOWED_DOCUMENT_TYPES];
@@ -116,7 +116,13 @@ const fileFilter = (req, file, cb) => {
     return;
   }
 
-  cb(new Error('Only images (JPEG, PNG, GIF, WebP), audio (MP3, WAV, OGG, M4A), video (MP4, MOV, WebM), PDF, and Guitar Pro files are allowed'), false);
+  // Allow .zip files by extension (magic bytes verified later)
+  if (file.originalname.toLowerCase().endsWith('.zip')) {
+    cb(null, true);
+    return;
+  }
+
+  cb(new Error('Only images (JPEG, PNG, GIF, WebP), audio (MP3, WAV, OGG, M4A), video (MP4, MOV, WebM), PDF, ZIP, and Guitar Pro files are allowed'), false);
 };
 
 /**
@@ -233,7 +239,7 @@ router.post('/', authenticate, uploadLimiter, upload.single('file'), async (req,
     const { valid, detectedType, fileCategory } = await validateFileType(req.file.buffer, req.file.originalname);
     if (!valid) {
       return res.status(400).json({
-        error: 'Invalid file type. Only images (JPEG, PNG, GIF, WebP), audio (MP3, WAV, OGG, M4A), video (MP4, MOV, WebM), PDF, and Guitar Pro files are allowed.'
+        error: 'Invalid file type. Only images (JPEG, PNG, GIF, WebP), audio (MP3, WAV, OGG, M4A), video (MP4, MOV, WebM), PDF, ZIP, and Guitar Pro files are allowed.'
       });
     }
 
@@ -317,7 +323,7 @@ router.post('/multiple', authenticate, uploadLimiter, upload.array('files', 5), 
       const { valid, detectedType, fileCategory } = await validateFileType(file.buffer, file.originalname);
       if (!valid) {
         return res.status(400).json({
-          error: `Invalid file type for "${file.originalname}". Only images (JPEG, PNG, GIF, WebP), audio (MP3, WAV, OGG, M4A), video (MP4, MOV, WebM), PDF, and Guitar Pro files are allowed.`
+          error: `Invalid file type for "${file.originalname}". Only images (JPEG, PNG, GIF, WebP), audio (MP3, WAV, OGG, M4A), video (MP4, MOV, WebM), PDF, ZIP, and Guitar Pro files are allowed.`
         });
       }
 
@@ -399,7 +405,7 @@ router.post('/multiple', authenticate, uploadLimiter, upload.array('files', 5), 
 router.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'File size exceeds limit (10MB images/documents, 30MB audio, 50MB video)' });
+      return res.status(400).json({ error: 'File size exceeds limit (15MB images, 10MB documents/ZIP, 30MB audio, 50MB video)' });
     }
     return res.status(400).json({ error: error.message });
   }
