@@ -2,6 +2,11 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.00] - 2026-03-26
+
+### Fixed
+- **Channel unread notifications wiped on workspace entry** — Clicking a workspace called `markWorkspaceRead()` which set ALL channels' `lastRead = now`, clearing per-channel unread counts before the user could see them. Removed the bulk mark-read call; workspace badge now clears client-side only, and individual channels mark as read when actually opened. Fixed on both web and mobile.
+
 ## [1.05.99] - 2026-03-26
 
 ### Added
