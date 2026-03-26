@@ -106,7 +106,6 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
         })();
         break;
       case 'delete':
-        errorNotification();
         Alert.alert(
           'Delete Message',
           'Are you sure you want to delete this message?',
@@ -116,6 +115,7 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
               text: 'Delete',
               style: 'destructive',
               onPress: async () => {
+                errorNotification();
                 try {
                   await api.deleteMessage(actionMessage.id);
                 } catch (err) {

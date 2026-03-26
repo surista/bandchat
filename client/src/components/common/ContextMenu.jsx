@@ -148,7 +148,7 @@ function ContextMenu({ isOpen, position, onClose, items }) {
             <button
               key={`${item.label}-${index}`}
               role="menuitem"
-              aria-selected={index === activeIndex}
+              aria-current={index === activeIndex ? 'true' : undefined}
               className={`context-menu-item ${isDanger ? 'context-menu-item--danger' : ''} ${index === activeIndex ? 'context-menu-item--active' : ''}`}
               onClick={() => {
                 item.onClick();

@@ -248,12 +248,12 @@ function AvailabilityCalendar({ workspaceId, workspace }) {
                     onClick={() => view === 'personal' && setSelectedDate(day)}
                     className={`p-2 min-h-[80px] border-t border-[var(--color-border)] ${
                       view === 'personal' ? 'cursor-pointer hover:bg-[var(--color-bg-hover)]' : ''
-                    } ${!isCurrentMonth ? 'bg-[var(--color-bg-primary)]/70' : ''} ${
+                    } ${!isCurrentMonth ? 'opacity-70 bg-[var(--color-bg-primary)]' : ''} ${
                       isToday(day) ? 'bg-blue-900/20' : ''
                     }`}
                   >
                     <div className={`text-sm mb-1 flex items-center justify-between ${
-                      isToday(day) ? 'text-blue-400 font-bold' : isCurrentMonth ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-text-muted)]/50'
+                      isToday(day) ? 'text-blue-400 font-bold' : isCurrentMonth ? 'text-[var(--color-text-muted)]' : 'opacity-50 text-[var(--color-text-muted)]'
                     }`}>
                       <span>{format(day, 'd')}</span>
                       {view === 'personal' && myStatus !== 'UNKNOWN' && (

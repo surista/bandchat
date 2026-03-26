@@ -52,8 +52,8 @@ function GigStats({ workspaceId }) {
     return (
       <div className="h-full flex flex-col">
         <div className="flex-shrink-0 p-4 border-b border-[var(--color-border)]">
-          <Skeleton.Text width="w-32" height="h-6" />
-          <Skeleton.Text width="w-48" height="h-4" className="mt-1" />
+          <Skeleton className="w-32 h-6" />
+          <Skeleton className="w-48 h-4 mt-1" />
         </div>
         <div className="p-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

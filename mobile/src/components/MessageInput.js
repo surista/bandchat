@@ -890,7 +890,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   toolbarContainer: {
-    maxHeight: 36,
+    maxHeight: 48,
     paddingBottom: Platform.OS === 'ios' ? 2 : 4,
   },
   toolbar: {

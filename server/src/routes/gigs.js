@@ -1360,6 +1360,11 @@ router.post('/:gigId/duplicate', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
+    // Don't allow duplicating another user's personal event
+    if (source.isPersonal && source.createdById !== req.user.id) {
+      return res.status(404).json({ error: 'Gig not found' });
+    }
+
     // Calculate new dates preserving the original time of day
     let newStartDate = source.date;
     let newEndDate = source.endDate;
@@ -1643,6 +1648,22 @@ router.post('/:gigId/setlists', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
+    // Check lock status
+    if (gig.isLocked) {
+      const isAdmin = gig.workspace.members.find(m => m.userId === req.user.id)?.role === 'ADMIN';
+      if (!isAdmin) {
+        return res.status(403).json({ error: 'This event is locked and can only be modified by an admin' });
+      }
+    }
+
+    // Validate setlist belongs to the same workspace
+    const setlistRecord = await prisma.setlist.findFirst({
+      where: { id: setlistId, workspaceId: gig.workspaceId }
+    });
+    if (!setlistRecord) {
+      return res.status(400).json({ error: 'Setlist not found in this workspace' });
+    }
+
     // Determine set number if not provided
     const actualSetNumber = setNumber || (gig.setlists.length + 1);
 
@@ -1701,6 +1722,14 @@ router.delete('/:gigId/setlists/:gigSetlistId', authenticate, async (req, res) =
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
+    // Check lock status
+    if (gigSetlist.gig.isLocked) {
+      const isAdmin = gigSetlist.gig.workspace.members.find(m => m.userId === req.user.id)?.role === 'ADMIN';
+      if (!isAdmin) {
+        return res.status(403).json({ error: 'This event is locked and can only be modified by an admin' });
+      }
+    }
+
     await prisma.gigSetlist.delete({
       where: { id: req.params.gigSetlistId }
     });
@@ -1741,6 +1770,11 @@ router.put('/:gigId/setlists/reorder', authenticate, async (req, res) => {
     });
     if (!membership) {
       return res.status(403).json({ error: 'Not a workspace member' });
+    }
+
+    // Check lock status
+    if (gig.isLocked && membership.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'This event is locked and can only be modified by an admin' });
     }
 
     // Update set numbers in a transaction

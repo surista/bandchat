@@ -61,7 +61,7 @@ function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, on
           </span>
         )}
         {gig.venue && (
-          <span className="text-xs text-[var(--color-text-muted)] truncate sm:hidden md:hidden">
+          <span className="text-xs text-[var(--color-text-muted)] truncate md:hidden">
             {gig.venue}
           </span>
         )}

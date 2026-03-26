@@ -43,7 +43,7 @@ function ChannelItem({ channel, isDM, dmMembers, onPress, onLongPress, unreadCou
       activeOpacity={0.6}
       delayPressIn={80}
       accessibilityRole="button"
-      accessibilityLabel={`${isDM ? 'Direct message with' : 'Channel'} ${displayName}${hasUnread ? `, ${unreadCount} unread` : ''}`}
+      accessibilityLabel={`${isDM ? 'Direct message with' : 'Channel'} ${displayName}${!isDM && channel.starred ? ', starred' : ''}${hasUnread ? `, ${unreadCount} unread` : ''}`}
       accessibilityHint={accessibilityHint || (isDM ? 'Open conversation' : 'Open channel')}
     >
       {renderIcon()}

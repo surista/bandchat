@@ -36,6 +36,7 @@
   --color-text-secondary: #9ca3af;
   --color-text-muted: #6b7280;
   --color-border: #374151;
+  --color-bg-hover: rgba(255, 255, 255, 0.06);
   /* Z-index scale */
   --z-dropdown: 30;
   --z-modal: 50;
