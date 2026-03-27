@@ -42,9 +42,15 @@ const AVAILABILITY_STATUS = {
   UNAVAILABLE: { label: 'Unavailable', color: '#ef4444', iconName: 'close-circle-outline' },
 };
 
-function formatGigDate(dateStr) {
+function formatGigDate(dateStr, endDateStr) {
   try {
     const d = parseISO(dateStr);
+    if (endDateStr) {
+      const e = parseISO(endDateStr);
+      if (format(d, 'yyyy-MM-dd') !== format(e, 'yyyy-MM-dd')) {
+        return `${format(d, 'dd-MMM')} \u2013 ${format(e, 'dd-MMM')}`;
+      }
+    }
     return format(d, 'EEEE, dd-MMM');
   } catch {
     return dateStr;
@@ -52,6 +58,16 @@ function formatGigDate(dateStr) {
 }
 
 function formatTimeRange(date, endDate) {
+  // For multi-day events, don't show time range (dates shown separately)
+  if (date && endDate) {
+    try {
+      if (format(parseISO(date), 'yyyy-MM-dd') !== format(parseISO(endDate), 'yyyy-MM-dd')) {
+        return '';
+      }
+    } catch {
+      // Expected: date parsing may fail
+    }
+  }
   // Extract times from datetime fields (time is embedded in the date)
   const parts = [];
   if (date) {
@@ -384,7 +400,7 @@ export default function GigListScreen({ navigation, route }) {
         delayLongPress={400}
         activeOpacity={isOther ? 1 : 0.7}
         accessibilityRole="button"
-        accessibilityLabel={`${item.title}, ${item.date ? formatGigDate(item.date) : 'No date'}${item.venue ? `, at ${item.venue}` : ''}`}
+        accessibilityLabel={`${item.title}, ${item.date ? formatGigDate(item.date, item.endDate) : 'No date'}${item.venue ? `, at ${item.venue}` : ''}`}
         accessibilityHint="View event details"
       >
         {/* Color stripe */}
@@ -414,7 +430,7 @@ export default function GigListScreen({ navigation, route }) {
 
           <View style={styles.dateRow}>
             <Text style={[styles.gigDate, { color: colors.textSecondary }]}>
-              {item.date ? formatGigDate(item.date) : 'No date'}
+              {item.date ? formatGigDate(item.date, item.endDate) : 'No date'}
               {displayTime ? ` \u00B7 ${displayTime}` : ''}
             </Text>
             {dateKey && (

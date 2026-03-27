@@ -254,6 +254,23 @@ export default function OnboardingWizardScreen({ navigation }) {
         accessibilityLabel="Workspace name"
       />
       <Text style={[styles.charCount, { color: colors.textSecondary }]}>{workspaceName.length} / 50</Text>
+      <TouchableOpacity
+        style={[
+          styles.footerButton,
+          { backgroundColor: colors.primary, opacity: workspaceName.trim().length > 0 && !loading ? 1 : 0.5, marginTop: 24 },
+        ]}
+        onPress={handleCreateWorkspace}
+        disabled={!workspaceName.trim().length || loading}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={loading ? 'Creating...' : 'Create Workspace'}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" size="small" />
+        ) : (
+          <Text style={styles.nextButtonText}>Create Workspace</Text>
+        )}
+      </TouchableOpacity>
     </View>
   );
 
@@ -530,8 +547,8 @@ export default function OnboardingWizardScreen({ navigation }) {
           {renderStep()}
         </ScrollView>
 
-        {/* Footer */}
-        <View style={[styles.footer, { borderTopColor: colors.border }]}>
+        {/* Footer — hidden on name step (button is inline) */}
+        {step !== 'name' && <View style={[styles.footer, { borderTopColor: colors.border }]}>
           {showSkip && (
             <TouchableOpacity
               style={[styles.footerButton, styles.skipButton, { backgroundColor: colors.bgTertiary }]}
@@ -562,7 +579,7 @@ export default function OnboardingWizardScreen({ navigation }) {
               <Text style={styles.nextButtonText}>{nextLabel()}</Text>
             )}
           </TouchableOpacity>
-        </View>
+        </View>}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

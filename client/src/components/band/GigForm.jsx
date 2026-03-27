@@ -90,10 +90,25 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     return [];
   };
 
+  // Detect multi-day: endDate exists and is on a different day than date
+  const isMultiDay = () => {
+    if (!gig?.date || !gig?.endDate) return false;
+    const start = format(new Date(gig.date), 'yyyy-MM-dd');
+    const end = format(new Date(gig.endDate), 'yyyy-MM-dd');
+    return start !== end;
+  };
+
+  const getEndDate = () => {
+    if (gig?.endDate) return format(new Date(gig.endDate), 'yyyy-MM-dd');
+    return '';
+  };
+
   const [formData, setFormData] = useState({
     title: gig?.title || '',
     type: gig?.type || workspace?.defaultEventType || 'REHEARSAL',
     startDate: getDefaultDate(),
+    endDate: getEndDate(),
+    multiDay: isMultiDay(),
     startTime: getTimeFromDate(gig?.date, workspace?.defaultStartTime || '19:00'),
     endTime: getTimeFromDate(gig?.endDate, workspace?.defaultEndTime || '21:00'),
     soundCheckTime: gig?.soundCheckTime || '',
@@ -268,7 +283,8 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     try {
       // Combine date and time fields
       const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
-      const endDateTime = new Date(`${formData.startDate}T${formData.endTime}`);
+      const endDateStr = formData.multiDay && formData.endDate ? formData.endDate : formData.startDate;
+      const endDateTime = new Date(`${endDateStr}T${formData.endTime}`);
 
       const saveData = {
         title: formData.title,
@@ -432,6 +448,50 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                   required
                 />
               </div>
+
+              <div className="flex items-center gap-2 mt-1">
+                <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--color-text-secondary)]">
+                  <input
+                    type="checkbox"
+                    checked={formData.multiDay}
+                    onChange={(e) => {
+                      handleChange('multiDay', e.target.checked);
+                      if (!e.target.checked) handleChange('endDate', '');
+                    }}
+                    className="accent-blue-500"
+                  />
+                  Multi-day event
+                </label>
+              </div>
+
+              {formData.multiDay && (
+                <div className="relative">
+                  <label className="modal-label">
+                    End Date <span className="text-red-400">*</span>
+                  </label>
+                  <div
+                    className="modal-input cursor-pointer flex items-center justify-between"
+                    onClick={() => document.getElementById('gig-end-date-picker').showPicker?.() || document.getElementById('gig-end-date-picker').click()}
+                  >
+                    <span>
+                      {formData.endDate
+                        ? format(new Date(formData.endDate + 'T00:00:00'), 'dd-MMM-yyyy')
+                        : 'Select end date'}
+                    </span>
+                    <span className="text-[var(--color-text-muted)]">📅</span>
+                  </div>
+                  <input
+                    id="gig-end-date-picker"
+                    type="date"
+                    value={formData.endDate}
+                    min={formData.startDate}
+                    onChange={(e) => handleChange('endDate', e.target.value)}
+                    className="absolute opacity-0 pointer-events-none"
+                    style={{ top: 0, left: 0, width: '1px', height: '1px' }}
+                    required
+                  />
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="relative">

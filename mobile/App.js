@@ -1,7 +1,13 @@
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useEffect, useRef } from 'react';
-import { AppState, Linking, Text, TextInput, Platform, UIManager } from 'react-native';
+import { AppState, I18nManager, Linking, Text, TextInput, Platform, UIManager } from 'react-native';
+
+// Force LTR layout — prevents RTL on devices with RTL system language
+if (I18nManager.isRTL) {
+  I18nManager.allowRTL(false);
+  I18nManager.forceRTL(false);
+}
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {

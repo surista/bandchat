@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, subDays, addDays, isToday } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, subDays, addDays, isToday, parseISO } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
@@ -32,10 +32,15 @@ function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, on
       <div className="shrink-0 min-w-[5rem] text-sm">
         <span className="text-[var(--color-text-primary)] font-medium">
           {format(new Date(gig.date), 'dd-MMM')}
+          {gig.endDate && format(new Date(gig.date), 'yyyy-MM-dd') !== format(new Date(gig.endDate), 'yyyy-MM-dd') && (
+            <span className="text-[var(--color-text-muted)]">–{format(new Date(gig.endDate), 'dd-MMM')}</span>
+          )}
         </span>
-        <span className="text-[var(--color-text-muted)] ml-1 hidden sm:inline">
-          {format(new Date(gig.date), 'EEE')}
-        </span>
+        {!(gig.endDate && format(new Date(gig.date), 'yyyy-MM-dd') !== format(new Date(gig.endDate), 'yyyy-MM-dd')) && (
+          <span className="text-[var(--color-text-muted)] ml-1 hidden sm:inline">
+            {format(new Date(gig.date), 'EEE')}
+          </span>
+        )}
         {formatTimeRange(gig.date, gig.endDate) && (
           <span className="text-[var(--color-text-muted)] ml-1 text-xs sm:hidden">
             {formatTimeRange(gig.date, gig.endDate)}
@@ -117,7 +122,7 @@ function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, on
   );
 }
 
-function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRange, onEdit, onDuplicate, onComplete, onDelete, onContextMenu, getGoogleCalendarUrl }) {
+function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRange, formatDateRange, onEdit, onDuplicate, onComplete, onDelete, onContextMenu, getGoogleCalendarUrl }) {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const canEdit = !gig.isExternal && (!gig.isLocked || isAdmin);
   const longPress = useLongPress({
@@ -146,7 +151,7 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
                 )}
               </h3>
               <p className="text-[var(--color-text-muted)] text-sm">
-                {format(new Date(gig.date), 'EEEE, MMMM d, yyyy')} {formatTimeRange(gig.date, gig.endDate)}
+                {formatDateRange(gig)} {formatTimeRange(gig.date, gig.endDate)}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -817,9 +822,23 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
   const gigsByDate = useMemo(() => {
     const map = {};
     allGigs.forEach(gig => {
-      const dateKey = format(new Date(gig.date), 'yyyy-MM-dd');
-      if (!map[dateKey]) map[dateKey] = [];
-      map[dateKey].push(gig);
+      const startDate = new Date(gig.date);
+      const endDate = gig.endDate ? new Date(gig.endDate) : null;
+      const startKey = format(startDate, 'yyyy-MM-dd');
+      const endKey = endDate ? format(endDate, 'yyyy-MM-dd') : null;
+
+      // If multi-day (different start/end dates), place on every day in range
+      if (endKey && endKey !== startKey) {
+        const days = eachDayOfInterval({ start: startDate, end: endDate });
+        days.forEach(day => {
+          const key = format(day, 'yyyy-MM-dd');
+          if (!map[key]) map[key] = [];
+          map[key].push(gig);
+        });
+      } else {
+        if (!map[startKey]) map[startKey] = [];
+        map[startKey].push(gig);
+      }
     });
     return map;
   }, [allGigs]);
@@ -851,14 +870,36 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
     .filter(g => new Date(g.date) < now || g.status === 'CANCELLED')
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  // Format time range helper
+  // Format time range helper — detects multi-day events
   const formatTimeRange = (startDate, endDate) => {
-    const start = format(new Date(startDate), 'HH:mm');
+    const s = new Date(startDate);
+    const start = format(s, 'HH:mm');
     if (endDate) {
-      const end = format(new Date(endDate), 'HH:mm');
-      return `${start}-${end}`;
+      const e = new Date(endDate);
+      const sameDay = format(s, 'yyyy-MM-dd') === format(e, 'yyyy-MM-dd');
+      if (sameDay) {
+        return `${start}-${format(e, 'HH:mm')}`;
+      }
+      // Multi-day: show date range
+      return `${format(s, 'dd MMM')}-${format(e, 'dd MMM')}`;
     }
     return start;
+  };
+
+  // Format date range for list views
+  const formatDateRange = (gig) => {
+    const s = new Date(gig.date);
+    if (gig.endDate) {
+      const e = new Date(gig.endDate);
+      if (format(s, 'yyyy-MM-dd') !== format(e, 'yyyy-MM-dd')) {
+        // Multi-day
+        if (format(s, 'yyyy') === format(e, 'yyyy') && format(s, 'MMMM') === format(e, 'MMMM')) {
+          return `${format(s, 'MMMM d')}-${format(e, 'd, yyyy')}`;
+        }
+        return `${format(s, 'MMM d')}-${format(e, 'MMM d, yyyy')}`;
+      }
+    }
+    return format(s, 'EEEE, MMMM d, yyyy');
   };
 
   // Generate Google Calendar URL
@@ -1227,7 +1268,18 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                           <span className="truncate">
                             {gig.isLocked && <span className="mr-1">🔒</span>}
                             {gig.isPersonal && <span className="mr-1">👤</span>}
-                            <span className="font-medium">{formatTimeRange(gig.date, gig.endDate)} </span>
+                            <span className="font-medium">{(() => {
+                              const s = new Date(gig.date);
+                              const e = gig.endDate ? new Date(gig.endDate) : null;
+                              const isMulti = e && format(s, 'yyyy-MM-dd') !== format(e, 'yyyy-MM-dd');
+                              if (isMulti) {
+                                const dayKey = format(day, 'yyyy-MM-dd');
+                                if (dayKey === format(s, 'yyyy-MM-dd')) return `${format(s, 'HH:mm')}→`;
+                                if (dayKey === format(e, 'yyyy-MM-dd')) return `→${format(e, 'HH:mm')}`;
+                                return '━━';
+                              }
+                              return formatTimeRange(gig.date, gig.endDate);
+                            })()} </span>
                             {gig.title}
                           </span>
                           {gig.media?.length > 0 && (
@@ -1330,6 +1382,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                         getTypeColor={getTypeColor}
                         getStatusBadge={getStatusBadge}
                         formatTimeRange={formatTimeRange}
+                        formatDateRange={formatDateRange}
                         onEdit={() => { setEditingGig(gig); setShowForm(true); }}
                         onDuplicate={() => handleDuplicateGig(gig)}
                         onComplete={() => handleCompleteGig(gig)}
@@ -1381,6 +1434,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                         getTypeColor={getTypeColor}
                         getStatusBadge={getStatusBadge}
                         formatTimeRange={formatTimeRange}
+                        formatDateRange={formatDateRange}
                         onEdit={() => { setEditingGig(gig); setShowForm(true); }}
                         onDuplicate={() => handleDuplicateGig(gig)}
                         onComplete={() => handleCompleteGig(gig)}

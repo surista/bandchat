@@ -59,6 +59,8 @@ export default function GigDetailScreen({ navigation, route }) {
   const [type, setType] = useState('GIG');
   const [status, setStatus] = useState('SCHEDULED');
   const [date, setDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(null);
+  const [multiDay, setMultiDay] = useState(false);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [soundCheckTime, setSoundCheckTime] = useState('');
@@ -80,6 +82,7 @@ export default function GigDetailScreen({ navigation, route }) {
 
   // Pickers
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [showVenuePicker, setShowVenuePicker] = useState(false);
@@ -138,11 +141,25 @@ export default function GigDetailScreen({ navigation, route }) {
       try {
         const parsedEndDate = parseISO(data.endDate);
         setEndTime(format(parsedEndDate, 'HH:mm'));
+        // Check if multi-day (different dates)
+        const startKey = data.date ? format(parseISO(data.date), 'yyyy-MM-dd') : '';
+        const endKey = format(parsedEndDate, 'yyyy-MM-dd');
+        if (startKey !== endKey) {
+          setMultiDay(true);
+          setEndDate(parsedEndDate);
+        } else {
+          setMultiDay(false);
+          setEndDate(null);
+        }
       } catch {
         setEndTime('');
+        setMultiDay(false);
+        setEndDate(null);
       }
     } else {
       setEndTime('');
+      setMultiDay(false);
+      setEndDate(null);
     }
     setSoundCheckTime(data.soundCheckTime || '');
     setEventStartTime(data.eventStartTime || '');
@@ -197,6 +214,7 @@ export default function GigDetailScreen({ navigation, route }) {
     setSaving(true);
     // Combine date + time into full ISO datetimes (like web client)
     const dateStr = format(date, 'yyyy-MM-dd');
+    const endDateStr = multiDay && endDate ? format(endDate, 'yyyy-MM-dd') : dateStr;
     const timeRegex = /^\d{1,2}:\d{2}$/;
     const parsedStart = startTime.trim() && timeRegex.test(startTime.trim())
       ? new Date(`${dateStr}T${startTime.trim()}`)
@@ -205,11 +223,11 @@ export default function GigDetailScreen({ navigation, route }) {
       ? parsedStart.toISOString()
       : new Date(`${dateStr}T00:00`).toISOString();
     const parsedEnd = endTime.trim() && timeRegex.test(endTime.trim())
-      ? new Date(`${dateStr}T${endTime.trim()}`)
+      ? new Date(`${endDateStr}T${endTime.trim()}`)
       : null;
     const endDateTime = (parsedEnd && !isNaN(parsedEnd.getTime()))
       ? parsedEnd.toISOString()
-      : null;
+      : (multiDay && endDate ? new Date(`${endDateStr}T00:00`).toISOString() : null);
     const data = {
       title: trimmedTitle,
       type,
@@ -333,6 +351,11 @@ export default function GigDetailScreen({ navigation, route }) {
   const onDateChange = useCallback((event, selectedDate) => {
     setShowDatePicker(false);
     if (selectedDate) setDate(selectedDate);
+  }, []);
+
+  const onEndDateChange = useCallback((event, selectedDate) => {
+    setShowEndDatePicker(false);
+    if (selectedDate) setEndDate(selectedDate);
   }, []);
 
   const handleAddPhotos = useCallback(async () => {
@@ -533,6 +556,56 @@ export default function GigDetailScreen({ navigation, route }) {
               onChange={onDateChange}
               themeVariant={mode === 'dark' ? 'dark' : 'light'}
             />
+          )}
+
+          <TouchableOpacity
+            style={styles.multiDayToggle}
+            onPress={() => {
+              const next = !multiDay;
+              setMultiDay(next);
+              if (!next) setEndDate(null);
+              else if (!endDate) {
+                const tomorrow = new Date(date);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                setEndDate(tomorrow);
+              }
+            }}
+            activeOpacity={0.7}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: multiDay }}
+            accessibilityLabel="Multi-day event"
+          >
+            <View style={[styles.checkbox, { borderColor: colors.border }, multiDay && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+              {multiDay && <Ionicons name="checkmark" size={14} color="#fff" />}
+            </View>
+            <Text style={{ color: colors.textSecondary, fontSize: 14 }}>Multi-day event</Text>
+          </TouchableOpacity>
+
+          {multiDay && (
+            <>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>End Date</Text>
+              <TouchableOpacity
+                style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
+                onPress={() => setShowEndDatePicker(true)}
+                accessibilityRole="button"
+                accessibilityLabel={`End date: ${endDate ? format(endDate, 'EEEE, dd-MMM-yyyy') : 'Not set'}`}
+              >
+                <Text style={{ color: colors.textPrimary, fontSize: 15 }}>
+                  {endDate ? format(endDate, 'EEEE, dd-MMM-yyyy') : 'Select end date'}
+                </Text>
+              </TouchableOpacity>
+
+              {showEndDatePicker && (
+                <DateTimePicker
+                  value={endDate || new Date(date.getTime() + 86400000)}
+                  mode="date"
+                  minimumDate={date}
+                  display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                  onChange={onEndDateChange}
+                  themeVariant={mode === 'dark' ? 'dark' : 'light'}
+                />
+              )}
+            </>
           )}
 
           <View style={styles.row}>
@@ -840,19 +913,25 @@ export default function GigDetailScreen({ navigation, route }) {
       <View style={styles.viewSection}>
         <Text style={[styles.viewLabel, { color: colors.textSecondary }]}>Date & Time</Text>
         <Text style={[styles.viewValue, { color: colors.textPrimary }]}>
-          {gig?.date ? format(parseISO(gig.date), 'EEEE, dd-MMM-yyyy') : 'No date'}
-          {gig?.date && (() => {
+          {gig?.date ? (() => {
             try {
-              const t = format(parseISO(gig.date), 'HH:mm');
-              if (t !== '00:00') {
-                const end = gig.endDate ? format(parseISO(gig.endDate), 'HH:mm') : null;
-                return ` · ${t}${end ? ` \u2013 ${end}` : ''}`;
+              const s = parseISO(gig.date);
+              const e = gig.endDate ? parseISO(gig.endDate) : null;
+              const isMulti = e && format(s, 'yyyy-MM-dd') !== format(e, 'yyyy-MM-dd');
+              if (isMulti) {
+                return `${format(s, 'dd-MMM-yyyy')} \u2013 ${format(e, 'dd-MMM-yyyy')}`;
               }
+              const dateStr = format(s, 'EEEE, dd-MMM-yyyy');
+              const t = format(s, 'HH:mm');
+              if (t !== '00:00') {
+                const endTime = e ? format(e, 'HH:mm') : null;
+                return `${dateStr} · ${t}${endTime ? ` \u2013 ${endTime}` : ''}`;
+              }
+              return dateStr;
             } catch {
-              // Expected: date parsing may fail for invalid gig date
+              return 'No date';
             }
-            return '';
-          })()}
+          })() : 'No date'}
         </Text>
         {/* Show optional gig times if any are set */}
         {(gig?.soundCheckTime || gig?.eventStartTime || gig?.performanceStartTime) && (
@@ -1167,6 +1246,7 @@ const styles = StyleSheet.create({
   pickerInput: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   textArea: { minHeight: 100, paddingTop: 10 },
   typeDot: { width: 10, height: 10, borderRadius: 5 },
+  multiDayToggle: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
   row: { flexDirection: 'row', gap: 8 },
   rowField: { flex: 1 },
   formActions: { flexDirection: 'row', gap: 10, marginTop: 24 },

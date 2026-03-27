@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Audio, Video, ResizeMode } from 'expo-av';
 import * as DocumentPicker from 'expo-document-picker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import formatDate from '../../utils/formatDate';
 import api from '../../services/api';
@@ -131,6 +132,7 @@ export default function RecordingDetailScreen({ navigation, route }) {
   const isNew = !recordingId;
   const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
+  const insets = useSafeAreaInsets();
 
   const [recording, setRecording] = useState(null);
   const [loading, setLoading] = useState(!isNew);
@@ -435,7 +437,7 @@ export default function RecordingDetailScreen({ navigation, route }) {
         {/* Song Picker Modal */}
         <Modal visible={showSongPicker} transparent animationType="fade" onRequestClose={() => setShowSongPicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowSongPicker(false)} accessibilityRole="button" accessibilityLabel="Close song picker">
-            <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
+            <View style={[styles.pickerContent, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 20) + 20 }]}>
               <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Select Song</Text>
               <TouchableOpacity
                 style={[styles.pickerOption, !songId && { backgroundColor: colors.bgTertiary }]}
@@ -448,7 +450,7 @@ export default function RecordingDetailScreen({ navigation, route }) {
               <FlatList
                 data={songs}
                 keyExtractor={(item) => item.id}
-                style={{ maxHeight: 300 }}
+                style={{ maxHeight: 350 }}
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     style={[styles.pickerOption, songId === item.id && { backgroundColor: colors.bgTertiary }]}
@@ -596,7 +598,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     padding: 20,
-    paddingBottom: 40,
   },
   pickerTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
   pickerOption: {
