@@ -101,6 +101,7 @@ model Workspace {
   defaultStartTime String  @default("19:00")
   defaultEndTime   String  @default("21:00")
   defaultVenue     String?
+  avatarUrl        String?
 
   // Subscription
   plan             String    @default("FREE") // "FREE" or "PRO"

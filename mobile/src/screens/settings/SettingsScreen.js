@@ -19,6 +19,7 @@ import * as Sharing from 'expo-sharing';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
+import * as ImagePicker from 'expo-image-picker';
 import { successNotification, errorNotification } from '../../utils/haptics';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -79,6 +80,8 @@ export default function SettingsScreen({ navigation, route }) {
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [renameText, setRenameText] = useState('');
   const [renaming, setRenaming] = useState(false);
+  const [wsAvatarUrl, setWsAvatarUrl] = useState(null);
+  const [uploadingWsAvatar, setUploadingWsAvatar] = useState(false);
 
   // Workspace defaults state
   const [showDefaultsModal, setShowDefaultsModal] = useState(false);
@@ -94,6 +97,7 @@ export default function SettingsScreen({ navigation, route }) {
       try {
         const ws = await api.getWorkspace(workspaceId);
         setWorkspaceName(ws.name || '');
+        setWsAvatarUrl(ws.avatarUrl || null);
         const membership = ws.members?.find(m => m.userId === user?.id);
         setIsAdmin(membership?.role === 'ADMIN');
         // Load workspace defaults
@@ -203,6 +207,41 @@ export default function SettingsScreen({ navigation, route }) {
     }
   }, [workspaceId, wsCurrency, wsEventType, wsStartTime, wsEndTime, wsVenue]);
 
+  const handlePickWsAvatar = useCallback(async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled) return;
+
+    const asset = result.assets[0];
+    setUploadingWsAvatar(true);
+    try {
+      const filename = asset.fileName || 'workspace-avatar.jpg';
+      const mimeType = asset.mimeType || 'image/jpeg';
+      const uploaded = await api.uploadFile(asset.uri, filename, mimeType);
+      await api.updateWorkspace(workspaceId, { avatarUrl: uploaded.url });
+      setWsAvatarUrl(uploaded.url);
+      successNotification();
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to upload workspace avatar');
+    } finally {
+      setUploadingWsAvatar(false);
+    }
+  }, [workspaceId]);
+
+  const handleRemoveWsAvatar = useCallback(async () => {
+    try {
+      await api.updateWorkspace(workspaceId, { avatarUrl: null });
+      setWsAvatarUrl(null);
+      successNotification();
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to remove workspace avatar');
+    }
+  }, [workspaceId]);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
@@ -305,6 +344,45 @@ export default function SettingsScreen({ navigation, route }) {
         <View style={styles.group}>
           {isAdmin && (
             <>
+              <TouchableOpacity
+                style={[styles.row, { backgroundColor: colors.bgSecondary }]}
+                onPress={() => {
+                  if (wsAvatarUrl) {
+                    Alert.alert('Workspace Avatar', '', [
+                      { text: 'Change Photo', onPress: handlePickWsAvatar },
+                      { text: 'Remove Photo', style: 'destructive', onPress: handleRemoveWsAvatar },
+                      { text: 'Cancel', style: 'cancel' },
+                    ]);
+                  } else {
+                    handlePickWsAvatar();
+                  }
+                }}
+                activeOpacity={0.6}
+                accessibilityRole="button"
+                accessibilityLabel="Workspace avatar"
+              >
+                <View style={styles.wsAvatarRow}>
+                  <View style={[styles.wsAvatarThumb, { backgroundColor: colors.bgTertiary }]}>
+                    {uploadingWsAvatar ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : wsAvatarUrl ? (
+                      <Image source={{ uri: wsAvatarUrl }} style={styles.wsAvatarImg} />
+                    ) : (
+                      <Text style={[styles.wsAvatarInitial, { color: colors.textSecondary }]}>
+                        {workspaceName.charAt(0).toUpperCase()}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.rowLabel, { color: colors.textPrimary }]}>Workspace Avatar</Text>
+                    <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]}>
+                      {wsAvatarUrl ? 'Tap to change or remove' : 'Tap to upload a logo'}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                </View>
+              </TouchableOpacity>
+              <View style={[styles.separator, { backgroundColor: colors.border }]} />
               <SettingsRow
                 icon="pencil-outline"
                 label="Rename Workspace"
@@ -682,6 +760,29 @@ const styles = StyleSheet.create({
   rowLabel: { fontSize: 16, marginLeft: 4 },
   rowSubtitle: { fontSize: 13, marginLeft: 4, marginTop: 2 },
   rowArrow: { fontSize: 22, fontWeight: '300' },
+  wsAvatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  wsAvatarThumb: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  wsAvatarImg: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+  },
+  wsAvatarInitial: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
   separator: { height: StyleSheet.hairlineWidth, marginLeft: 50 },
   version: { fontSize: 13, textAlign: 'center', marginTop: 32 },
   // Modal

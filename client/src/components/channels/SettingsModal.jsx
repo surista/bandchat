@@ -1256,35 +1256,89 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
               {settingsTab === 'workspace' && (
                 <div className="space-y-4">
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-5 border border-[var(--color-modal-border)]">
-                    <h4 className="text-lg font-medium text-[var(--color-text-primary)] mb-1">Workspace</h4>
-                    {isAdmin ? (
-                      <div className="flex items-center gap-2 mt-2">
-                        <input
-                          type="text"
-                          defaultValue={workspace.name}
-                          maxLength={100}
-                          className="modal-input flex-1"
-                          onBlur={async (e) => {
-                            const newName = e.target.value.trim();
-                            if (newName && newName !== workspace.name) {
+                    <h4 className="text-lg font-medium text-[var(--color-text-primary)] mb-3">Workspace</h4>
+                    <div className="flex items-start gap-4">
+                      {/* Workspace Avatar */}
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="w-16 h-16 rounded-xl overflow-hidden flex items-center justify-center bg-[var(--color-bg-tertiary)]">
+                          {workspace.avatarUrl ? (
+                            <img src={workspace.avatarUrl} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-2xl font-bold text-[var(--color-text-muted)]">{workspace.name.charAt(0).toUpperCase()}</span>
+                          )}
+                        </div>
+                        {isAdmin && (
+                          <label className="text-xs text-[var(--color-text-link)] hover:underline cursor-pointer">
+                            {workspace.avatarUrl ? 'Change' : 'Upload'}
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png,image/gif,image/webp"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                if (file.size > 10 * 1024 * 1024) {
+                                  setWsActionError('File size must be less than 10MB');
+                                  return;
+                                }
+                                try {
+                                  const result = await api.uploadFile(file, workspace.id);
+                                  await api.updateWorkspace(workspace.id, { avatarUrl: result.url });
+                                  if (onRefreshWorkspace) onRefreshWorkspace();
+                                } catch (err) {
+                                  setWsActionError(err.message || 'Failed to upload avatar');
+                                }
+                                e.target.value = '';
+                              }}
+                            />
+                          </label>
+                        )}
+                        {isAdmin && workspace.avatarUrl && (
+                          <button
+                            className="text-xs text-[var(--color-text-muted)] hover:text-red-400"
+                            onClick={async () => {
                               try {
-                                await api.updateWorkspace(workspace.id, { name: newName });
+                                await api.updateWorkspace(workspace.id, { avatarUrl: null });
                                 if (onRefreshWorkspace) onRefreshWorkspace();
                               } catch (err) {
-                                e.target.value = workspace.name;
                                 setWsActionError(err.message);
                               }
-                            } else {
-                              e.target.value = workspace.name;
-                            }
-                          }}
-                          onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
-                        />
+                            }}
+                          >
+                            Remove
+                          </button>
+                        )}
                       </div>
-                    ) : (
-                      <p className="text-sm text-[var(--color-text-muted)]">{workspace.name}</p>
-                    )}
-                    <p className="text-xs text-[var(--color-text-muted)] mt-2">{workspace.members?.length || 0} members</p>
+                      {/* Workspace Name */}
+                      <div className="flex-1 min-w-0">
+                        {isAdmin ? (
+                          <input
+                            type="text"
+                            defaultValue={workspace.name}
+                            maxLength={100}
+                            className="modal-input w-full"
+                            onBlur={async (e) => {
+                              const newName = e.target.value.trim();
+                              if (newName && newName !== workspace.name) {
+                                try {
+                                  await api.updateWorkspace(workspace.id, { name: newName });
+                                  if (onRefreshWorkspace) onRefreshWorkspace();
+                                } catch (err) {
+                                  e.target.value = workspace.name;
+                                  setWsActionError(err.message);
+                                }
+                              } else {
+                                e.target.value = workspace.name;
+                              }
+                            }}
+                            onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                          />
+                        ) : (
+                          <p className="text-sm text-[var(--color-text-primary)] font-medium">{workspace.name}</p>
+                        )}
+                        <p className="text-xs text-[var(--color-text-muted)] mt-2">{workspace.members?.length || 0} members</p>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Workspace Defaults (Admin only) */}

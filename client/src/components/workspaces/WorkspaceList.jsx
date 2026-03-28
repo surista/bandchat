@@ -157,18 +157,27 @@ function WorkspaceList() {
                   setWorkspaces(prev => prev.map(w => w.id === workspace.id ? { ...w, unreadCount: 0 } : w));
                   navigate(`/workspace/${workspace.id}`);
                 }}
-                className="w-full bg-[var(--color-bg-secondary)] rounded-lg p-4 flex items-center justify-between hover:bg-[var(--color-bg-tertiary)] transition-colors text-left"
-                style={{ borderLeft: `4px solid ${wsTheme.primary}`, borderTop: 'none', borderRight: 'none', borderBottom: 'none' }}
+                className="w-full bg-[var(--color-bg-secondary)] rounded-lg p-4 flex items-center gap-4 hover:bg-[var(--color-bg-tertiary)] transition-colors text-left"
               >
-                <div>
-                  <h3 className="font-semibold text-lg text-[var(--color-text-primary)]">
+                <div
+                  className="w-11 h-11 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden"
+                  style={{ backgroundColor: wsTheme.primary }}
+                >
+                  {workspace.avatarUrl ? (
+                    <img src={workspace.avatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-white font-bold text-lg">{workspace.name.charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-lg text-[var(--color-text-primary)] truncate">
                     {workspace.name}
                   </h3>
                   <p className="text-[var(--color-text-muted)] text-sm">
                     {workspace._count?.members || 0} member{workspace._count?.members !== 1 ? 's' : ''} · {workspace._count?.channels || 0} channel{workspace._count?.channels !== 1 ? 's' : ''}
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-shrink-0">
                   {workspace.unreadCount > 0 && (
                     <span
                       className="text-xs font-bold text-white px-2 py-0.5 rounded-full min-w-[20px] text-center"

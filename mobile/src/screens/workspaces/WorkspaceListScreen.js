@@ -12,6 +12,7 @@ import {
   Platform,
   StyleSheet,
   KeyboardAvoidingView,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -102,9 +103,13 @@ export default function WorkspaceListScreen({ navigation, route }) {
       accessibilityLabel={`Open ${item.name} workspace, ${item._count?.members || 0} members${item.unreadCount > 0 ? `, ${item.unreadCount} unread` : ''}`}
     >
       <View style={[styles.workspaceAvatar, { backgroundColor: wsTheme.primary }]}>
-        <Text style={styles.workspaceAvatarText}>
-          {item.name.charAt(0).toUpperCase()}
-        </Text>
+        {item.avatarUrl ? (
+          <Image source={{ uri: item.avatarUrl }} style={styles.workspaceAvatarImg} />
+        ) : (
+          <Text style={styles.workspaceAvatarText}>
+            {item.name.charAt(0).toUpperCase()}
+          </Text>
+        )}
       </View>
       <View style={styles.workspaceInfo}>
         <Text style={[styles.workspaceName, { color: colors.textPrimary }]}>
@@ -352,6 +357,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
+  },
+  workspaceAvatarImg: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
   },
   workspaceAvatarText: {
     color: '#ffffff',

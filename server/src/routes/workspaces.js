@@ -10,6 +10,7 @@ import prisma, { USER_SELECT_BRIEF } from '../lib/prisma.js';
 import { forceLeaveWorkspace } from '../socket/handlers.js';
 import { getEffectivePlan, getPlanLimits, serializePlanLimits } from '../lib/planLimits.js';
 import { logAudit } from '../lib/audit.js';
+import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 
 const router = express.Router();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -333,7 +334,7 @@ router.get('/:workspaceId', authenticate, isWorkspaceMember, async (req, res) =>
 // Update workspace
 router.put('/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => {
   try {
-    const { name, currency, defaultEventType, defaultStartTime, defaultEndTime, defaultVenue } = req.body;
+    const { name, currency, defaultEventType, defaultStartTime, defaultEndTime, defaultVenue, avatarUrl } = req.body;
 
     if (name && name.trim().length > 100) {
       return res.status(400).json({ error: 'Workspace name must be 100 characters or less' });
@@ -361,6 +362,10 @@ router.put('/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => 
       return res.status(400).json({ error: 'Venue must be 200 characters or less' });
     }
 
+    if (avatarUrl !== undefined && avatarUrl && !isAllowedUploadUrl(avatarUrl)) {
+      return res.status(400).json({ error: 'Invalid avatar URL' });
+    }
+
     const workspace = await prisma.workspace.update({
       where: { id: req.params.workspaceId },
       data: {
@@ -370,6 +375,7 @@ router.put('/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => 
         ...(defaultStartTime && { defaultStartTime }),
         ...(defaultEndTime && { defaultEndTime }),
         ...(defaultVenue !== undefined && { defaultVenue: defaultVenue || null }),
+        ...(avatarUrl !== undefined && { avatarUrl: avatarUrl || null }),
       }
     });
 

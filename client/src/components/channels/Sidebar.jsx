@@ -624,6 +624,13 @@ function Sidebar({
           onClick={() => navigate('/')}
           className="flex items-center gap-2 w-full hover:bg-slack-hover rounded p-1 transition-colors"
         >
+          <div className="w-7 h-7 rounded-md flex-shrink-0 flex items-center justify-center overflow-hidden bg-white/20">
+            {workspace.avatarUrl ? (
+              <img src={workspace.avatarUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-white font-bold text-sm">{workspace.name.charAt(0).toUpperCase()}</span>
+            )}
+          </div>
           <span className="text-white font-bold text-lg truncate">
             {workspace.name}
           </span>
