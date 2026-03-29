@@ -101,7 +101,7 @@ export default function GigListScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [typeFilters, setTypeFilters] = useState(new Set()); // empty = all
   const [sortNewest, setSortNewest] = useState(true);
 
   // Action sheet
@@ -200,7 +200,7 @@ export default function GigListScreen({ navigation, route }) {
 
   const loadGigs = useCallback(async () => {
     try {
-      const filters = typeFilter !== 'all' ? { type: typeFilter } : {};
+      const filters = typeFilters.size > 0 ? { type: [...typeFilters].join(',') } : {};
       const [data, other, myAvail] = await Promise.all([
         api.getGigs(workspaceId, filters),
         showAllBands ? api.getGigsFromAllWorkspaces(workspaceId).catch(() => []) : Promise.resolve([]),
@@ -223,7 +223,7 @@ export default function GigListScreen({ navigation, route }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [workspaceId, typeFilter, showAllBands]);
+  }, [workspaceId, typeFilters, showAllBands]);
 
   useEffect(() => {
     loadGigs();
@@ -533,7 +533,7 @@ export default function GigListScreen({ navigation, route }) {
         style={styles.filterScroll}
       >
         {TYPE_FILTERS.map(f => {
-          const active = typeFilter === f.key;
+          const active = f.key === 'all' ? typeFilters.size === 0 : typeFilters.has(f.key);
           return (
             <TouchableOpacity
               key={f.key}
@@ -541,7 +541,18 @@ export default function GigListScreen({ navigation, route }) {
                 styles.filterChip,
                 { backgroundColor: active ? colors.primary : colors.bgTertiary },
               ]}
-              onPress={() => setTypeFilter(f.key)}
+              onPress={() => {
+                if (f.key === 'all') {
+                  setTypeFilters(new Set());
+                } else {
+                  setTypeFilters(prev => {
+                    const next = new Set(prev);
+                    if (next.has(f.key)) next.delete(f.key);
+                    else next.add(f.key);
+                    return next;
+                  });
+                }
+              }}
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel={`Filter: ${f.label}${active ? ', selected' : ''}`}

@@ -32,8 +32,10 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
       return res.status(400).json({ error: 'Invalid to date' });
     }
 
-    // Validate enum query params against allowed values
-    const validType = type && VALID_GIG_TYPES.includes(type) ? type : undefined;
+    // Validate enum query params against allowed values (supports comma-separated types)
+    const validTypes = type
+      ? type.split(',').filter(t => VALID_GIG_TYPES.includes(t))
+      : [];
     const validStatus = status && VALID_GIG_STATUSES.includes(status) ? status : undefined;
 
     // Filter: show non-personal events OR personal events created by current user
@@ -43,7 +45,8 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
         { isPersonal: false },
         { isPersonal: true, createdById: req.user.id }
       ],
-      ...(validType && { type: validType }),
+      ...(validTypes.length === 1 && { type: validTypes[0] }),
+      ...(validTypes.length > 1 && { type: { in: validTypes } }),
       ...(validStatus && { status: validStatus }),
       ...(from || to) && {
         date: {
@@ -181,8 +184,10 @@ router.get('/all-workspaces', authenticate, async (req, res) => {
       return res.json([]);
     }
 
-    // Validate enum query params against allowed values (same as single-workspace endpoint)
-    const validType = type && VALID_GIG_TYPES.includes(type) ? type : undefined;
+    // Validate enum query params against allowed values (supports comma-separated types)
+    const validTypes = type
+      ? type.split(',').filter(t => VALID_GIG_TYPES.includes(t))
+      : [];
     const validStatus = status && VALID_GIG_STATUSES.includes(status) ? status : undefined;
 
     const where = {
@@ -192,7 +197,8 @@ router.get('/all-workspaces', authenticate, async (req, res) => {
         { isPersonal: false },
         { isPersonal: true, createdById: req.user.id }
       ],
-      ...(validType && { type: validType }),
+      ...(validTypes.length === 1 && { type: validTypes[0] }),
+      ...(validTypes.length > 1 && { type: { in: validTypes } }),
       ...(validStatus && { status: validStatus }),
       ...(from || to) && {
         date: {

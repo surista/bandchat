@@ -340,7 +340,8 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
   // Default to list view on mobile for better usability
   const [view, setView] = useState(() => window.innerWidth < 768 ? 'list' : 'calendar');
   const [listMode, setListMode] = useState('compact'); // 'compact' or 'cards'
-  const [filterType, setFilterType] = useState('');
+  const [filterTypes, setFilterTypes] = useState(new Set()); // empty = all
+  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [sortNewest, setSortNewest] = useState(true);
   const [deleteGigId, setDeleteGigId] = useState(null);
   const [gigContextMenu, setGigContextMenu] = useState(null); // { gigId, x, y }
@@ -857,8 +858,8 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
     return map;
   }, [availability]);
 
-  const filteredGigs = filterType
-    ? allGigs.filter(g => g.type === filterType)
+  const filteredGigs = filterTypes.size > 0
+    ? allGigs.filter(g => filterTypes.has(g.type))
     : allGigs;
 
   const now = new Date();
@@ -1057,17 +1058,67 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
               <span className="hidden sm:inline">Other Bands</span>
               <span className="sm:hidden">Others</span>
             </label>
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="px-3 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] text-sm"
-            >
-              <option value="">All Events</option>
-              <option value="GIG">Gigs</option>
-              <option value="REHEARSAL">Rehearsals</option>
-              <option value="RECORDING">Recording</option>
-              <option value="OTHER">Other</option>
-            </select>
+            <div className="relative">
+              <button
+                onClick={() => setShowTypeDropdown(prev => !prev)}
+                className="px-3 py-2 bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] text-sm flex items-center gap-1.5 min-w-[120px]"
+                aria-haspopup="listbox"
+                aria-expanded={showTypeDropdown}
+              >
+                <span className="truncate">
+                  {filterTypes.size === 0
+                    ? 'All Events'
+                    : filterTypes.size === 1
+                      ? { GIG: 'Gigs', REHEARSAL: 'Rehearsals', RECORDING: 'Recording', OTHER: 'Other' }[[...filterTypes][0]]
+                      : `${filterTypes.size} types`}
+                </span>
+                <svg className="w-3.5 h-3.5 flex-shrink-0 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              {showTypeDropdown && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowTypeDropdown(false)} />
+                  <div className="absolute top-full left-0 mt-1 z-20 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg shadow-lg py-1 min-w-[160px]" role="listbox" aria-multiselectable="true">
+                    <button
+                      onClick={() => { setFilterTypes(new Set()); setShowTypeDropdown(false); }}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-[var(--color-bg-tertiary)] transition-colors ${filterTypes.size === 0 ? 'text-blue-400 font-medium' : 'text-[var(--color-text-primary)]'}`}
+                      role="option"
+                      aria-selected={filterTypes.size === 0}
+                    >
+                      All Events
+                    </button>
+                    {[
+                      { key: 'GIG', label: 'Gigs' },
+                      { key: 'REHEARSAL', label: 'Rehearsals' },
+                      { key: 'RECORDING', label: 'Recording' },
+                      { key: 'OTHER', label: 'Other' },
+                    ].map(({ key, label }) => {
+                      const selected = filterTypes.has(key);
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => {
+                            setFilterTypes(prev => {
+                              const next = new Set(prev);
+                              if (next.has(key)) next.delete(key);
+                              else next.add(key);
+                              return next;
+                            });
+                          }}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-[var(--color-bg-tertiary)] transition-colors flex items-center gap-2 ${selected ? 'text-blue-400 font-medium' : 'text-[var(--color-text-primary)]'}`}
+                          role="option"
+                          aria-selected={selected}
+                        >
+                          <span className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center text-xs ${selected ? 'bg-blue-500 border-blue-500 text-white' : 'border-[var(--color-border)]'}`}>
+                            {selected && '✓'}
+                          </span>
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
             <div className="flex bg-[var(--color-bg-tertiary)] rounded overflow-hidden">
               <button
                 onClick={() => setView('calendar')}
@@ -1190,8 +1241,8 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
               {calendarDays.map(day => {
                 const dateKey = format(day, 'yyyy-MM-dd');
                 const dayGigs = gigsByDate[dateKey] || [];
-                const filteredDayGigs = filterType
-                  ? dayGigs.filter(g => g.type === filterType)
+                const filteredDayGigs = filterTypes.size > 0
+                  ? dayGigs.filter(g => filterTypes.has(g.type))
                   : dayGigs;
                 const isDropTarget = dropTargetDate && isSameDay(day, dropTargetDate);
                 const isCurrentMonth = isSameMonth(day, currentMonth);
