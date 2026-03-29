@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Modal,
   Alert,
+  ActionSheetIOS,
   ActivityIndicator,
   Linking,
   Image,
@@ -20,7 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
-import { successNotification, errorNotification } from '../../utils/haptics';
+import { successNotification, errorNotification, selectionFeedback } from '../../utils/haptics';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import getInitial from '../../utils/getInitial';
@@ -208,6 +209,19 @@ export default function SettingsScreen({ navigation, route }) {
   }, [workspaceId, wsCurrency, wsEventType, wsStartTime, wsEndTime, wsVenue]);
 
   const handlePickWsAvatar = useCallback(async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission Required',
+        'Please allow access to your photo library to upload a workspace avatar.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ]
+      );
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -226,6 +240,7 @@ export default function SettingsScreen({ navigation, route }) {
       setWsAvatarUrl(uploaded.url);
       successNotification();
     } catch (err) {
+      errorNotification();
       Alert.alert('Error', err.message || 'Failed to upload workspace avatar');
     } finally {
       setUploadingWsAvatar(false);
@@ -238,6 +253,7 @@ export default function SettingsScreen({ navigation, route }) {
       setWsAvatarUrl(null);
       successNotification();
     } catch (err) {
+      errorNotification();
       Alert.alert('Error', err.message || 'Failed to remove workspace avatar');
     }
   }, [workspaceId]);
@@ -347,30 +363,54 @@ export default function SettingsScreen({ navigation, route }) {
               <TouchableOpacity
                 style={[styles.row, { backgroundColor: colors.bgSecondary }]}
                 onPress={() => {
+                  selectionFeedback();
                   if (wsAvatarUrl) {
-                    Alert.alert('Workspace Avatar', '', [
-                      { text: 'Change Photo', onPress: handlePickWsAvatar },
-                      { text: 'Remove Photo', style: 'destructive', onPress: handleRemoveWsAvatar },
-                      { text: 'Cancel', style: 'cancel' },
-                    ]);
+                    if (Platform.OS === 'ios') {
+                      ActionSheetIOS.showActionSheetWithOptions(
+                        {
+                          options: ['Change Photo', 'Remove Photo', 'Cancel'],
+                          destructiveButtonIndex: 1,
+                          cancelButtonIndex: 2,
+                          title: 'Workspace Avatar',
+                        },
+                        (index) => {
+                          if (index === 0) handlePickWsAvatar();
+                          else if (index === 1) handleRemoveWsAvatar();
+                        }
+                      );
+                    } else {
+                      Alert.alert('Workspace Avatar', undefined, [
+                        { text: 'Change Photo', onPress: handlePickWsAvatar },
+                        { text: 'Remove Photo', style: 'destructive', onPress: handleRemoveWsAvatar },
+                        { text: 'Cancel', style: 'cancel' },
+                      ]);
+                    }
                   } else {
                     handlePickWsAvatar();
                   }
                 }}
                 activeOpacity={0.6}
+                disabled={uploadingWsAvatar}
                 accessibilityRole="button"
-                accessibilityLabel="Workspace avatar"
+                accessibilityLabel={wsAvatarUrl
+                  ? `Workspace avatar for ${workspaceName}`
+                  : `Add workspace avatar for ${workspaceName}`}
+                accessibilityHint={wsAvatarUrl ? 'Opens options to change or remove the photo' : 'Opens the photo picker'}
+                accessibilityState={{ busy: uploadingWsAvatar }}
               >
                 <View style={styles.wsAvatarRow}>
                   <View style={[styles.wsAvatarThumb, { backgroundColor: colors.bgTertiary }]}>
                     {uploadingWsAvatar ? (
                       <ActivityIndicator size="small" color={colors.primary} />
-                    ) : wsAvatarUrl ? (
-                      <Image source={{ uri: wsAvatarUrl }} style={styles.wsAvatarImg} />
                     ) : (
-                      <Text style={[styles.wsAvatarInitial, { color: colors.textSecondary }]}>
-                        {workspaceName.charAt(0).toUpperCase()}
-                      </Text>
+                      <>
+                        <Text style={[styles.wsAvatarInitial, { color: colors.textSecondary }, wsAvatarUrl && styles.avatarFallback]}>
+                          {workspaceName.charAt(0).toUpperCase()}
+                        </Text>
+                        {wsAvatarUrl && (
+                          <Image source={{ uri: wsAvatarUrl }} style={styles.wsAvatarImg} resizeMode="cover" accessible={false} />
+                        )}
+                      </>
                     )}
                   </View>
                   <View style={{ flex: 1 }}>
@@ -379,7 +419,7 @@ export default function SettingsScreen({ navigation, route }) {
                       {wsAvatarUrl ? 'Tap to change or remove' : 'Tap to upload a logo'}
                     </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                  <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                 </View>
               </TouchableOpacity>
               <View style={[styles.separator, { backgroundColor: colors.border }]} />
@@ -628,6 +668,10 @@ export default function SettingsScreen({ navigation, route }) {
                   style={[styles.chip, { backgroundColor: wsCurrency === cur ? colors.primary : colors.bgTertiary }]}
                   onPress={() => setWsCurrency(cur)}
                   disabled={savingDefaults}
+                  hitSlop={{ top: 6, bottom: 6 }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: wsCurrency === cur }}
+                  accessibilityLabel={`${cur} currency`}
                 >
                   <Text style={[styles.chipText, { color: wsCurrency === cur ? '#ffffff' : colors.textPrimary }]}>{cur}</Text>
                 </TouchableOpacity>
@@ -643,6 +687,10 @@ export default function SettingsScreen({ navigation, route }) {
                   style={[styles.chip, { backgroundColor: wsEventType === et.value ? colors.primary : colors.bgTertiary }]}
                   onPress={() => setWsEventType(et.value)}
                   disabled={savingDefaults}
+                  hitSlop={{ top: 6, bottom: 6 }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: wsEventType === et.value }}
+                  accessibilityLabel={`${et.label} event type`}
                 >
                   <Text style={[styles.chipText, { color: wsEventType === et.value ? '#ffffff' : colors.textPrimary }]}>{et.label}</Text>
                 </TouchableOpacity>
@@ -775,6 +823,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   wsAvatarImg: {
+    ...StyleSheet.absoluteFillObject,
     width: 44,
     height: 44,
     borderRadius: 10,
@@ -782,6 +831,9 @@ const styles = StyleSheet.create({
   wsAvatarInitial: {
     fontSize: 20,
     fontWeight: '700',
+  },
+  avatarFallback: {
+    position: 'absolute',
   },
   separator: { height: StyleSheet.hairlineWidth, marginLeft: 50 },
   version: { fontSize: 13, textAlign: 'center', marginTop: 32 },
@@ -815,6 +867,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     marginRight: 8,
+    minHeight: 36,
+    justifyContent: 'center',
   },
   chipText: { fontSize: 14, fontWeight: '600' },
   // Time row

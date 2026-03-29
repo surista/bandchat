@@ -103,12 +103,16 @@ export default function WorkspaceListScreen({ navigation, route }) {
       accessibilityLabel={`Open ${item.name} workspace, ${item._count?.members || 0} members${item.unreadCount > 0 ? `, ${item.unreadCount} unread` : ''}`}
     >
       <View style={[styles.workspaceAvatar, { backgroundColor: wsTheme.primary }]}>
-        {item.avatarUrl ? (
-          <Image source={{ uri: item.avatarUrl }} style={styles.workspaceAvatarImg} />
-        ) : (
-          <Text style={styles.workspaceAvatarText}>
-            {item.name.charAt(0).toUpperCase()}
-          </Text>
+        <Text style={[styles.workspaceAvatarText, item.avatarUrl && styles.avatarFallback]}>
+          {item.name.charAt(0).toUpperCase()}
+        </Text>
+        {item.avatarUrl && (
+          <Image
+            source={{ uri: item.avatarUrl }}
+            style={styles.workspaceAvatarImg}
+            resizeMode="cover"
+            accessible={false}
+          />
         )}
       </View>
       <View style={styles.workspaceInfo}>
@@ -359,9 +363,13 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
   workspaceAvatarImg: {
+    ...StyleSheet.absoluteFillObject,
     width: 44,
     height: 44,
     borderRadius: 10,
+  },
+  avatarFallback: {
+    position: 'absolute',
   },
   workspaceAvatarText: {
     color: '#ffffff',
