@@ -2,6 +2,16 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.08] - 2026-04-01
+
+### Added
+- **Workspace switcher dropdown** — Clicking the workspace name/icon in the sidebar (web) or header (mobile) now opens a Slack-like dropdown showing all your workspaces. Switch between workspaces with a single click instead of navigating to the workspace list page.
+  - Shows workspace avatar, name, and unread message count for each workspace
+  - Current workspace highlighted with checkmark
+  - "All Workspaces" link for full workspace management
+  - Keyboard navigation support on web (arrow keys, Enter, Escape)
+  - Haptic feedback on mobile
+
 ## [1.06.06] - 2026-03-31
 
 ### Security

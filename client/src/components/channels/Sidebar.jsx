@@ -37,6 +37,7 @@ import useLongPress from '../../hooks/useLongPress';
 import NewMessageModal from './NewMessageModal';
 import SettingsModal from './SettingsModal';
 import Skeleton from '../common/Skeleton';
+import WorkspaceSwitcher from '../workspaces/WorkspaceSwitcher';
 import { hapticMedium } from '../../services/haptic';
 
 /** Draggable channel item wrapper for admin drag-and-drop */
@@ -191,7 +192,8 @@ function Sidebar({
   onReorderGroups,
   onRefreshWorkspace,
   onMuteChannel,
-  onStarChannel
+  onStarChannel,
+  allWorkspaces = []
 }) {
   const navigate = useNavigate();
   const toast = useToast();
@@ -620,21 +622,10 @@ function Sidebar({
       />
       {/* Workspace Header */}
       <div className="p-4 border-b border-white/10 safe-area-top">
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2 w-full hover:bg-slack-hover rounded p-1 transition-colors"
-        >
-          <div className="w-7 h-7 rounded-md flex-shrink-0 flex items-center justify-center overflow-hidden bg-white/20">
-            {workspace.avatarUrl ? (
-              <img src={workspace.avatarUrl} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-white font-bold text-sm">{workspace.name.charAt(0).toUpperCase()}</span>
-            )}
-          </div>
-          <span className="text-white font-bold text-lg truncate">
-            {workspace.name}
-          </span>
-        </button>
+        <WorkspaceSwitcher
+          currentWorkspace={workspace}
+          allWorkspaces={allWorkspaces}
+        />
       </div>
 
       {/* Channels List */}

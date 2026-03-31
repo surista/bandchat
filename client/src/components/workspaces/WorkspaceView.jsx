@@ -208,6 +208,7 @@ function WorkspaceView() {
   const [searchChannelFilter, setSearchChannelFilter] = useState('');
   const [searchAuthorFilter, setSearchAuthorFilter] = useState('');
   const [directMessages, setDirectMessages] = useState([]);
+  const [allWorkspaces, setAllWorkspaces] = useState([]);
   const [activeBandView, setActiveBandView] = useState(() => {
     const saved = localStorage.getItem(`bandView:${workspaceId}`);
     return saved || null;
@@ -235,6 +236,11 @@ function WorkspaceView() {
     setActiveWorkspaceId(workspaceId);
     loadWorkspace();
   }, [workspaceId]);
+
+  // Fetch all workspaces for workspace switcher
+  useEffect(() => {
+    api.getWorkspaces().then(setAllWorkspaces).catch(console.error);
+  }, []);
 
   // Clear workspace theme when leaving workspace view entirely
   useEffect(() => {
@@ -778,6 +784,7 @@ function WorkspaceView() {
             setSelectedChannel(prev => prev ? { ...prev, starred } : prev);
           }
         }}
+        allWorkspaces={allWorkspaces}
       />
 
       {/* Main Content */}

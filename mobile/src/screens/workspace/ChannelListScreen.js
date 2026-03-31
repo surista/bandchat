@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Image,
 } from 'react-native';
 import { mediumImpact, successNotification, errorNotification } from '../../utils/haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,7 +25,9 @@ import api from '../../services/api';
 import { getLocalChannels, upsertChannels, upsertMembers } from '../../services/database';
 import ChannelItem from '../../components/ChannelItem';
 import ErrorState from '../../components/ErrorState';
+import WorkspaceSwitcher from '../../components/WorkspaceSwitcher';
 import { useLayout } from '../../hooks/useLayout';
+import { mediumImpact } from '../../utils/haptics';
 
 const BAND_CATEGORIES = [
   {
@@ -87,6 +90,8 @@ export default function ChannelListScreen({ navigation, route }) {
   const [collapsedQuickLinks, setCollapsedQuickLinks] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [nextGig, setNextGig] = useState(null);
+  const [allWorkspaces, setAllWorkspaces] = useState([]);
+  const [showWorkspaceSwitcher, setShowWorkspaceSwitcher] = useState(false);
 
   // Channel group management (admin)
   const [showGroupActions, setShowGroupActions] = useState(false);
@@ -120,6 +125,11 @@ export default function ChannelListScreen({ navigation, route }) {
     };
     load();
   }, [workspaceId]);
+
+  // Fetch all workspaces for workspace switcher
+  useEffect(() => {
+    api.getWorkspaces().then(setAllWorkspaces).catch(console.error);
+  }, []);
 
   // Persist collapse state on change
   useEffect(() => {
@@ -161,17 +171,41 @@ export default function ChannelListScreen({ navigation, route }) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerLeft: () => (
+      headerTitle: () => (
         <TouchableOpacity
-          onPress={() => navigation.navigate('WorkspaceList', { showList: true })}
+          onPress={() => {
+            mediumImpact();
+            setShowWorkspaceSwitcher(true);
+          }}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={{ marginRight: 8 }}
           accessibilityLabel="Switch workspace"
           accessibilityRole="button"
         >
-          <Ionicons name="home-outline" size={22} color={colors.primary} />
+          <View style={{
+            width: 28,
+            height: 28,
+            borderRadius: 6,
+            backgroundColor: colors.primary,
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+          }}>
+            {workspace?.avatarUrl ? (
+              <Image source={{ uri: workspace.avatarUrl }} style={{ width: '100%', height: '100%' }} />
+            ) : (
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+                {workspaceName?.charAt(0).toUpperCase() || '?'}
+              </Text>
+            )}
+          </View>
+          <Text style={{ color: colors.textPrimary, fontWeight: '600', fontSize: 17 }} numberOfLines={1}>
+            {workspaceName}
+          </Text>
+          <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
         </TouchableOpacity>
       ),
+      headerLeft: () => null,
       headerRight: () => (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
           <TouchableOpacity
@@ -189,7 +223,7 @@ export default function ChannelListScreen({ navigation, route }) {
         </View>
       ),
     });
-  }, [navigation, workspaceId]);
+  }, [navigation, workspaceId, workspaceName, workspace?.avatarUrl, colors]);
 
   // Pre-load channels from SQLite for instant display
   useEffect(() => {
@@ -1151,6 +1185,22 @@ export default function ChannelListScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
+
+      {/* Workspace Switcher */}
+      <WorkspaceSwitcher
+        visible={showWorkspaceSwitcher}
+        currentWorkspace={workspace || { id: workspaceId, name: workspaceName }}
+        workspaces={allWorkspaces}
+        onSelect={(ws) => {
+          setShowWorkspaceSwitcher(false);
+          navigation.navigate('Workspace', { id: ws.id, name: ws.name });
+        }}
+        onManageAll={() => {
+          setShowWorkspaceSwitcher(false);
+          navigation.navigate('WorkspaceList', { showList: true });
+        }}
+        onClose={() => setShowWorkspaceSwitcher(false)}
+      />
 
     </SafeAreaView>
   );
