@@ -1176,6 +1176,55 @@ router.put('/:gigId/complete', authenticate, async (req, res) => {
       });
     }
 
+    // Sync setlists with gig completion data (performedAt, venue, performers)
+    const linkedSetlists = [];
+
+    // Get legacy single setlist (if exists)
+    if (existingGig.setlistId) {
+      linkedSetlists.push(existingGig.setlistId);
+    }
+
+    // Get multi-set setlists via GigSetlist
+    const gigSetlists = await prisma.gigSetlist.findMany({
+      where: { gigId: gig.id },
+      select: { setlistId: true }
+    });
+    gigSetlists.forEach(gs => linkedSetlists.push(gs.setlistId));
+
+    // Update all linked setlists with performedAt and venue
+    if (linkedSetlists.length > 0) {
+      await prisma.setlist.updateMany({
+        where: { id: { in: linkedSetlists } },
+        data: {
+          performedAt: existingGig.date,
+          venue: existingGig.venue
+        }
+      });
+    }
+
+    // Sync performers from attendees (those who attended = those who performed)
+    const attendees = await prisma.gigAttendee.findMany({
+      where: { gigId: gig.id, status: 'ATTENDING' },
+      select: { bandMemberId: true }
+    });
+
+    if (attendees.length > 0 && linkedSetlists.length > 0) {
+      for (const setlistId of linkedSetlists) {
+        // Replace existing performers with attendees
+        await prisma.setlistPerformer.deleteMany({
+          where: { setlistId }
+        });
+
+        await prisma.setlistPerformer.createMany({
+          data: attendees.map(a => ({
+            setlistId,
+            bandMemberId: a.bandMemberId
+          })),
+          skipDuplicates: true
+        });
+      }
+    }
+
     const updatedGig = await prisma.gig.findUnique({
       where: { id: req.params.gigId },
       include: {
