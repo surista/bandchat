@@ -70,6 +70,11 @@ export default function ActivityScreen({ navigation, route }) {
   };
 
   const handlePress = useCallback((item) => {
+    const channel = {
+      id: item.channelId,
+      name: item.channelName,
+      isDM: item.isDirect || false,
+    };
     if (item.type === 'thread_reply' && item.parentId) {
       navigation.navigate('Thread', {
         messageId: item.parentId,
@@ -78,7 +83,7 @@ export default function ActivityScreen({ navigation, route }) {
       });
     } else {
       navigation.navigate('Channel', {
-        channelId: item.channelId,
+        channel,
         workspaceId,
       });
     }

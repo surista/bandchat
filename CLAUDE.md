@@ -165,7 +165,7 @@ bandchat/
 - JWT secret strength validation at startup
 - Socket.IO hardening (maxHttpBufferSize, payload validation, connection limiting, room eviction)
 
-### Database Schema (45 models)
+### Database Schema (47 models)
 
 **Core:** User, RefreshToken, Workspace, WorkspaceMember, Channel, ChannelGroup, ChannelMember
 **Messaging:** Message, Attachment, Reaction, ThreadRead, PinnedMessage, SavedMessage, PushSubscription
@@ -175,6 +175,7 @@ bandchat/
 **Community:** Announcement, AnnouncementAcknowledgment, Poll, PollOption, PollVote, TimelineEvent
 **Achievements:** Achievement, MemberAchievement, BandAchievement
 **Finance:** BandKitty, KittyTransaction
+**Website:** SongRequest, ContactSubmission
 **Other:** Report, PracticeSession
 
 **Enums:** Role, AttachmentType, SetlistItemType, GigType, GigStatus, AttendeeStatus, AvailabilityStatus, KittyTransactionType

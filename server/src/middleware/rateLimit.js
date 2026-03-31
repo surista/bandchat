@@ -97,3 +97,13 @@ export const syncLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false
 });
+
+// Limit for public website form submissions (song requests, contact forms)
+export const publicFormLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 20, // 20 submissions per hour per IP
+  skip: skipInTest,
+  message: { error: 'Too many submissions, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false
+});

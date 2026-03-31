@@ -1,7 +1,15 @@
 import express from 'express';
+import { Resend } from 'resend';
 import { authenticate, isWorkspaceMember, isWorkspaceAdmin } from '../middleware/auth.js';
-import { deployLimiter } from '../middleware/rateLimit.js';
+import { deployLimiter, publicFormLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
+
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
 import {
   forkTemplate,
   writeSiteConfig,
@@ -468,6 +476,217 @@ router.get('/api/:workspaceId/data', async (req, res) => {
   } catch (error) {
     console.error('Website data endpoint error:', error);
     res.status(500).json({ error: 'Failed to fetch data' });
+  }
+});
+
+// POST /api/:workspaceId/song-request — public song request submission
+router.post('/api/:workspaceId/song-request', publicFormLimiter, async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const { songTitle, artist, submitterName, submitterEmail, notes } = req.body;
+
+    // Validation
+    if (!songTitle?.trim()) {
+      return res.status(400).json({ error: 'Song title is required' });
+    }
+    if (!submitterName?.trim()) {
+      return res.status(400).json({ error: 'Your name is required' });
+    }
+    if (songTitle.length > MAX_STRING) {
+      return res.status(400).json({ error: 'Song title too long (max 500 chars)' });
+    }
+    if (artist && artist.length > MAX_STRING) {
+      return res.status(400).json({ error: 'Artist name too long (max 500 chars)' });
+    }
+    if (submitterName.length > MAX_STRING) {
+      return res.status(400).json({ error: 'Name too long (max 500 chars)' });
+    }
+    if (submitterEmail && submitterEmail.length > MAX_STRING) {
+      return res.status(400).json({ error: 'Email too long (max 500 chars)' });
+    }
+    if (notes && notes.length > MAX_LONG_STRING) {
+      return res.status(400).json({ error: 'Notes too long (max 2000 chars)' });
+    }
+
+    // Workspace must exist and not be deleted
+    const workspace = await prisma.workspace.findFirst({
+      where: { id: workspaceId, deletedAt: null },
+      select: { id: true, name: true, websiteConfig: true },
+    });
+
+    if (!workspace) {
+      return res.status(404).json({ error: 'Band not found' });
+    }
+
+    // Check if song requests are enabled
+    const config = workspace.websiteConfig;
+    if (!config?.features?.songRequests) {
+      return res.status(400).json({ error: 'Song requests are not enabled for this band' });
+    }
+
+    // Store the request
+    await prisma.songRequest.create({
+      data: {
+        workspaceId,
+        songTitle: songTitle.trim(),
+        artist: artist?.trim() || null,
+        submitterName: submitterName.trim(),
+        submitterEmail: submitterEmail?.trim() || null,
+        notes: notes?.trim() || null,
+      },
+    });
+
+    // Get workspace admins for email
+    const admins = await prisma.workspaceMember.findMany({
+      where: { workspaceId, role: 'ADMIN' },
+      include: { user: { select: { email: true, displayName: true } } },
+    });
+
+    if (admins.length > 0) {
+      const bandName = config?.bandName || workspace.name;
+      const emailHtml = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #059669;">New Song Request</h2>
+          <p style="color: #6b7280;">Someone submitted a song request via your band website.</p>
+          <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+            <tr><td style="padding: 8px 0; color: #6b7280; width: 120px;">From</td><td style="padding: 8px 0; font-weight: 600;">${escapeHtml(submitterName.trim())}</td></tr>
+            ${submitterEmail ? `<tr><td style="padding: 8px 0; color: #6b7280;">Email</td><td style="padding: 8px 0;"><a href="mailto:${escapeHtml(submitterEmail.trim())}" style="color: #2563eb;">${escapeHtml(submitterEmail.trim())}</a></td></tr>` : ''}
+            <tr><td style="padding: 8px 0; color: #6b7280;">Song</td><td style="padding: 8px 0; font-weight: 600;">${escapeHtml(songTitle.trim())}</td></tr>
+            ${artist ? `<tr><td style="padding: 8px 0; color: #6b7280;">Artist</td><td style="padding: 8px 0;">${escapeHtml(artist.trim())}</td></tr>` : ''}
+          </table>
+          ${notes ? `
+          <div style="background: #f3f4f6; border-radius: 8px; padding: 16px; margin: 16px 0;">
+            <div style="color: #6b7280; font-size: 12px; margin-bottom: 4px;">Notes:</div>
+            <div style="color: #111827;">${escapeHtml(notes.trim())}</div>
+          </div>
+          ` : ''}
+          <p style="color: #9ca3af; font-size: 12px; margin-top: 24px;">This request was submitted through your ${escapeHtml(bandName)} website.</p>
+        </div>
+      `;
+
+      // Send email to each admin
+      for (const admin of admins) {
+        if (resend && admin.user.email) {
+          await resend.emails.send({
+            from: `${bandName} via BandChat <noreply@${process.env.RESEND_DOMAIN || 'resend.dev'}>`,
+            to: admin.user.email,
+            subject: `🎵 Song Request: ${songTitle.trim().slice(0, 50)}`,
+            html: emailHtml,
+          }).catch(err => console.error('Failed to send song request email:', err));
+        } else if (!resend) {
+          console.log('[DEV] Song request email would be sent to:', admin.user.email);
+        }
+      }
+    }
+
+    res.status(201).json({ message: 'Song request submitted successfully' });
+  } catch (error) {
+    console.error('Song request error:', error);
+    res.status(500).json({ error: 'Failed to submit song request' });
+  }
+});
+
+// POST /api/:workspaceId/contact — public contact form submission
+router.post('/api/:workspaceId/contact', publicFormLimiter, async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const { name, email, subject, message } = req.body;
+
+    // Validation
+    if (!name?.trim()) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+    if (!email?.trim()) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+    if (!message?.trim()) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+    if (name.length > MAX_STRING) {
+      return res.status(400).json({ error: 'Name too long (max 500 chars)' });
+    }
+    if (email.length > MAX_STRING) {
+      return res.status(400).json({ error: 'Email too long (max 500 chars)' });
+    }
+    if (subject && subject.length > MAX_STRING) {
+      return res.status(400).json({ error: 'Subject too long (max 500 chars)' });
+    }
+    if (message.length > MAX_LONG_STRING) {
+      return res.status(400).json({ error: 'Message too long (max 2000 chars)' });
+    }
+
+    // Basic email validation
+    if (!email.includes('@') || !email.includes('.')) {
+      return res.status(400).json({ error: 'Please enter a valid email address' });
+    }
+
+    // Workspace must exist and not be deleted
+    const workspace = await prisma.workspace.findFirst({
+      where: { id: workspaceId, deletedAt: null },
+      select: { id: true, name: true, websiteConfig: true },
+    });
+
+    if (!workspace) {
+      return res.status(404).json({ error: 'Band not found' });
+    }
+
+    // Store the submission
+    await prisma.contactSubmission.create({
+      data: {
+        workspaceId,
+        name: name.trim(),
+        email: email.trim(),
+        subject: subject?.trim() || null,
+        message: message.trim(),
+      },
+    });
+
+    // Get workspace admins for email
+    const admins = await prisma.workspaceMember.findMany({
+      where: { workspaceId, role: 'ADMIN' },
+      include: { user: { select: { email: true, displayName: true } } },
+    });
+
+    if (admins.length > 0) {
+      const config = workspace.websiteConfig;
+      const bandName = config?.bandName || workspace.name;
+      const emailHtml = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #2563eb;">New Contact Message</h2>
+          <p style="color: #6b7280;">Someone sent a message via your band website contact form.</p>
+          <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+            <tr><td style="padding: 8px 0; color: #6b7280; width: 120px;">From</td><td style="padding: 8px 0; font-weight: 600;">${escapeHtml(name.trim())}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280;">Email</td><td style="padding: 8px 0;"><a href="mailto:${escapeHtml(email.trim())}" style="color: #2563eb;">${escapeHtml(email.trim())}</a></td></tr>
+            ${subject ? `<tr><td style="padding: 8px 0; color: #6b7280;">Subject</td><td style="padding: 8px 0;">${escapeHtml(subject.trim())}</td></tr>` : ''}
+          </table>
+          <div style="background: #f3f4f6; border-radius: 8px; padding: 16px; margin: 16px 0;">
+            <div style="color: #6b7280; font-size: 12px; margin-bottom: 4px;">Message:</div>
+            <div style="color: #111827; white-space: pre-wrap;">${escapeHtml(message.trim())}</div>
+          </div>
+          <p style="color: #9ca3af; font-size: 12px; margin-top: 24px;">This message was sent through your ${escapeHtml(bandName)} website. Reply directly to the sender at <a href="mailto:${escapeHtml(email.trim())}" style="color: #2563eb;">${escapeHtml(email.trim())}</a></p>
+        </div>
+      `;
+
+      // Send email to each admin
+      for (const admin of admins) {
+        if (resend && admin.user.email) {
+          await resend.emails.send({
+            from: `${bandName} via BandChat <noreply@${process.env.RESEND_DOMAIN || 'resend.dev'}>`,
+            to: admin.user.email,
+            replyTo: email.trim(),
+            subject: subject ? `📬 ${subject.trim().slice(0, 50)}` : `📬 Contact from ${name.trim().slice(0, 30)}`,
+            html: emailHtml,
+          }).catch(err => console.error('Failed to send contact email:', err));
+        } else if (!resend) {
+          console.log('[DEV] Contact email would be sent to:', admin.user.email);
+        }
+      }
+    }
+
+    res.status(201).json({ message: 'Message sent successfully' });
+  } catch (error) {
+    console.error('Contact form error:', error);
+    res.status(500).json({ error: 'Failed to send message' });
   }
 });
 

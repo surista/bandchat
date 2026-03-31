@@ -989,6 +989,7 @@ router.get('/activity/:workspaceId', authenticate, searchLimiter, async (req, re
         message: r.message,
         channelId: r.message.channelId,
         channelName: r.message.channel?.name,
+        isDirect: r.message.channel?.isDirect || false,
       })),
       ...mentions.map(m => ({
         type: 'mention',
@@ -998,6 +999,7 @@ router.get('/activity/:workspaceId', authenticate, searchLimiter, async (req, re
         message: { id: m.message.id, content: m.message.content },
         channelId: m.message.channelId,
         channelName: m.message.channel?.name,
+        isDirect: m.message.channel?.isDirect || false,
       })),
       ...threadReplies.map(t => ({
         type: 'thread_reply',
@@ -1009,6 +1011,7 @@ router.get('/activity/:workspaceId', authenticate, searchLimiter, async (req, re
         parentId: t.parentId,
         channelId: t.channelId,
         channelName: t.channel?.name,
+        isDirect: t.channel?.isDirect || false,
       })),
     ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
      .slice(0, take);

@@ -2,6 +2,20 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.05] - 2026-03-31
+
+### Added
+- **Website song request & contact form endpoints** — Public endpoints for band websites to receive song requests and contact form submissions. Submissions are stored in the database and emailed to all workspace admins via Resend.
+  - `POST /api/website/api/:workspaceId/song-request` — Accepts song title, artist, submitter name/email, notes
+  - `POST /api/website/api/:workspaceId/contact` — Accepts name, email, subject, message
+  - Rate limited to 20 submissions per hour per IP
+  - Song requests only work if `features.songRequests` is enabled in website config
+  - Contact form emails include `replyTo` header for easy responses
+- **Database models** — Added `SongRequest` and `ContactSubmission` models (workspace-scoped, cascade delete)
+
+### Fixed
+- **Activity screen crash on mobile** — Tapping activity items (reactions, mentions, thread replies) crashed with "Cannot read property 'pinnedSetlist' of undefined". ActivityScreen was navigating to ChannelScreen with only `channelId` instead of a full `channel` object. Now constructs proper channel object with `id`, `name`, and `isDM`. Server activity endpoint now includes `isDirect` in response.
+
 ## [1.06.00] - 2026-03-26
 
 ### Fixed

@@ -143,6 +143,8 @@ model Workspace {
   venues             Venue[]
   websiteApiTokens   WebsiteApiToken[]
   auditLogs          AuditLog[]
+  songRequests       SongRequest[]
+  contactSubmissions ContactSubmission[]
 
   @@index([deletedAt])
 }
@@ -1029,6 +1031,36 @@ model WebsiteApiToken {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
+}
+
+// Website form submissions
+model SongRequest {
+  id             String   @id @default(uuid())
+  workspaceId    String
+  songTitle      String
+  artist         String?
+  submitterName  String
+  submitterEmail String?
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+}
+
+model ContactSubmission {
+  id          String   @id @default(uuid())
+  workspaceId String
+  name        String
+  email       String
+  subject     String?
+  message     String
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
 }
 
 model AuditLog {
