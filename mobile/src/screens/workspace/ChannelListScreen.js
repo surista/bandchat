@@ -27,7 +27,6 @@ import ChannelItem from '../../components/ChannelItem';
 import ErrorState from '../../components/ErrorState';
 import WorkspaceSwitcher from '../../components/WorkspaceSwitcher';
 import { useLayout } from '../../hooks/useLayout';
-import { mediumImpact } from '../../utils/haptics';
 
 const BAND_CATEGORIES = [
   {
