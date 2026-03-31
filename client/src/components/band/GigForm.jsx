@@ -78,14 +78,12 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     return defaultTime;
   };
 
-  // Initialize selected sets from existing gig data
+  // Initialize selected sets from existing gig data (using GigSetlist only)
   const getInitialSets = () => {
     if (gig?.setlists && gig.setlists.length > 0) {
       return gig.setlists
         .sort((a, b) => a.setNumber - b.setNumber)
         .map(gs => gs.setlistId || gs.setlist?.id);
-    } else if (gig?.setlistId) {
-      return [gig.setlistId];
     }
     return [];
   };
@@ -119,7 +117,6 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     notes: gig?.notes || '',
     pay: gig?.pay || '',
     status: gig?.status || 'SCHEDULED',
-    setlistId: gig?.setlistId || '',
     isLocked: gig?.isLocked || false,
     isPersonal: gig?.isPersonal || false
   });
@@ -138,7 +135,6 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     timeOptions.push(`${h.toString().padStart(2, '0')}:30`);
   }
   const [selectedSets, setSelectedSets] = useState(getInitialSets());
-  const [useMultiSet, setUseMultiSet] = useState((gig?.setlists?.length || 0) > 1);
   const [selectedAttendees, setSelectedAttendees] = useState(
     gig?.attendees?.map(a => a.bandMemberId || a.bandMember?.id) || []
   );
@@ -304,18 +300,14 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
         isPersonal: formData.isPersonal,
       };
 
-      // Handle setlist assignment
-      // IMPORTANT: Only send setlistIds if actually using multi-set mode
-      // Sending setlistIds: null was causing the server to clear setlistId
-      if (useMultiSet && selectedSets.length > 0) {
-        // Multi-set mode: send setlistIds array, clear legacy setlistId
-        saveData.setlistIds = selectedSets.filter(id => id);
-        saveData.setlistId = null;
-      } else if (formData.setlistId) {
-        // Single setlist mode - only send setlistId
-        saveData.setlistId = formData.setlistId;
+      // Handle setlist assignment (always use setlistIds array)
+      const filteredSets = selectedSets.filter(id => id);
+      if (filteredSets.length > 0) {
+        saveData.setlistIds = filteredSets;
+      } else {
+        // Explicitly send empty array to clear any existing setlists
+        saveData.setlistIds = [];
       }
-      // If neither, don't send any setlist fields - preserve existing value on server
 
       // Include attendees (band member IDs)
       saveData.bandMemberIds = selectedAttendees;
@@ -968,48 +960,49 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
 
               {setlists.length > 0 && formData.type === 'GIG' && (
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="modal-label mb-0">Setlist(s)</label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setUseMultiSet(!useMultiSet);
-                        if (!useMultiSet && formData.setlistId) {
-                          setSelectedSets([formData.setlistId]);
-                        }
-                      }}
-                      className={`text-xs px-2 py-1 rounded transition-colors ${
-                        useMultiSet
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-[var(--color-modal-border)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'
-                      }`}
-                    >
-                      {useMultiSet ? 'Multi-Set Mode' : 'Single Set'}
-                    </button>
-                  </div>
-
-                  {useMultiSet ? (
-                    <div className="space-y-2">
-                      {selectedSets.map((setId, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <span className="w-8 h-8 flex items-center justify-center bg-indigo-600/30 text-indigo-300 rounded-full font-bold text-sm">
-                            {index + 1}
-                          </span>
-                          <select
-                            value={setId}
-                            onChange={(e) => {
-                              const newSets = [...selectedSets];
-                              newSets[index] = e.target.value;
-                              setSelectedSets(newSets);
-                            }}
-                            className="modal-input flex-1"
-                          >
-                            <option value="">Select setlist...</option>
-                            {setlists.map(s => (
-                              <option key={s.id} value={s.id}>{s.name}</option>
-                            ))}
-                          </select>
-                          {selectedSets.length > 1 && (
+                  <label className="modal-label">Setlist(s)</label>
+                  <div className="space-y-2">
+                    {selectedSets.length === 0 ? (
+                      <div className="flex items-center gap-2">
+                        <span className="w-8 h-8 flex items-center justify-center bg-indigo-600/30 text-indigo-300 rounded-full font-bold text-sm">
+                          1
+                        </span>
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setSelectedSets([e.target.value]);
+                            }
+                          }}
+                          className="modal-input flex-1"
+                        >
+                          <option value="">No setlist</option>
+                          {setlists.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <>
+                        {selectedSets.map((setId, index) => (
+                          <div key={index} className="flex items-center gap-2">
+                            <span className="w-8 h-8 flex items-center justify-center bg-indigo-600/30 text-indigo-300 rounded-full font-bold text-sm">
+                              {index + 1}
+                            </span>
+                            <select
+                              value={setId}
+                              onChange={(e) => {
+                                const newSets = [...selectedSets];
+                                newSets[index] = e.target.value;
+                                setSelectedSets(newSets.filter(id => id)); // Remove empty selections
+                              }}
+                              className="modal-input flex-1"
+                            >
+                              <option value="">Select setlist...</option>
+                              {setlists.map(s => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                              ))}
+                            </select>
                             <button
                               type="button"
                               onClick={() => setSelectedSets(selectedSets.filter((_, i) => i !== index))}
@@ -1018,29 +1011,18 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                             >
                               ×
                             </button>
-                          )}
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => setSelectedSets([...selectedSets, ''])}
-                        className="text-indigo-400 hover:text-indigo-300 text-sm font-medium"
-                      >
-                        + Add Another Set
-                      </button>
-                    </div>
-                  ) : (
-                    <select
-                      value={formData.setlistId}
-                      onChange={(e) => handleChange('setlistId', e.target.value)}
-                      className="modal-input"
-                    >
-                      <option value="">No setlist</option>
-                      {setlists.map(s => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                      ))}
-                    </select>
-                  )}
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedSets([...selectedSets, ''])}
+                          className="text-indigo-400 hover:text-indigo-300 text-sm font-medium"
+                        >
+                          + Add Another Set
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
 

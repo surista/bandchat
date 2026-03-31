@@ -31,7 +31,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
           }
         },
         _count: {
-          select: { gigs: true }
+          select: { gigSetlists: true }
         }
       },
       orderBy: [
@@ -41,7 +41,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
       take: 100
     });
 
-    // Transform performers to just the bandMember objects
+    // Transform performers to just the bandMember objects and rename count
     const transformed = setlists.map(s => ({
       ...s,
       performers: s.performers.map(p => p.bandMember)
@@ -135,9 +135,13 @@ router.get('/:setlistId', authenticate, async (req, res) => {
             }
           }
         },
-        gigs: {
-          select: { id: true, title: true, date: true, status: true },
-          orderBy: { date: 'desc' }
+        gigSetlists: {
+          include: {
+            gig: {
+              select: { id: true, title: true, date: true, status: true }
+            }
+          },
+          orderBy: { gig: { date: 'desc' } }
         }
       }
     });
@@ -145,6 +149,13 @@ router.get('/:setlistId', authenticate, async (req, res) => {
     if (!setlist) {
       return res.status(404).json({ error: 'Setlist not found' });
     }
+
+    // Transform gigSetlists to gigs array for backward compatibility
+    const transformedSetlist = {
+      ...setlist,
+      gigs: setlist.gigSetlists.map(gs => gs.gig),
+      gigSetlists: undefined
+    };
 
     const member = await prisma.workspaceMember.findUnique({
       where: {
@@ -159,9 +170,9 @@ router.get('/:setlistId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
-    // Transform performers
+    // Transform performers and return with gigs array
     res.json({
-      ...setlist,
+      ...transformedSetlist,
       performers: setlist.performers.map(p => p.bandMember)
     });
   } catch (error) {
@@ -351,7 +362,7 @@ router.post('/:setlistId/duplicate', authenticate, async (req, res) => {
           orderBy: { position: 'asc' }
         },
         _count: {
-          select: { gigs: true }
+          select: { gigSetlists: true }
         }
       }
     });

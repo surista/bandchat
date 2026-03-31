@@ -65,14 +65,6 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
         venueRecord: {
           select: { id: true, name: true, address: true, city: true, imageUrl: true }
         },
-        setlist: {
-          include: {
-            songs: {
-              include: { song: true },
-              orderBy: { position: 'asc' }
-            }
-          }
-        },
         setlists: {
           include: {
             setlist: {
@@ -219,14 +211,6 @@ router.get('/all-workspaces', authenticate, async (req, res) => {
         },
         venueRecord: {
           select: { id: true, name: true, address: true, city: true, imageUrl: true }
-        },
-        setlist: {
-          include: {
-            songs: {
-              include: { song: true },
-              orderBy: { position: 'asc' }
-            }
-          }
         },
         setlists: {
           include: {
@@ -672,21 +656,20 @@ router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMemb
       }
     }
 
+    // Consolidate all setlist IDs into a single array (setlistIds, setlistId, or autoSetlistId)
+    const setlistIdsToLink = [
+      ...(setlistIds || []),
+      ...(setlistId && !setlistIds?.includes(setlistId) ? [setlistId] : []),
+      ...(autoSetlistId && !setlistIds?.includes(autoSetlistId) && setlistId !== autoSetlistId ? [autoSetlistId] : [])
+    ].filter(Boolean);
+
     // Verify setlists belong to this workspace
-    if (setlistIds && setlistIds.length > 0) {
+    if (setlistIdsToLink.length > 0) {
       const validSetlists = await prisma.setlist.count({
-        where: { id: { in: setlistIds }, workspaceId: req.params.workspaceId }
+        where: { id: { in: setlistIdsToLink }, workspaceId: req.params.workspaceId }
       });
-      if (validSetlists !== setlistIds.length) {
+      if (validSetlists !== setlistIdsToLink.length) {
         return res.status(400).json({ error: 'One or more setlists not found in this workspace' });
-      }
-    }
-    if (setlistId) {
-      const validSetlist = await prisma.setlist.findFirst({
-        where: { id: setlistId, workspaceId: req.params.workspaceId }
-      });
-      if (!validSetlist) {
-        return res.status(400).json({ error: 'Setlist not found in this workspace' });
       }
     }
 
@@ -702,7 +685,7 @@ router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMemb
       resolvedAddress = resolvedAddress || venueRecord.address;
     }
 
-    // Create gig with optional multi-set support
+    // Create gig with GigSetlist entries (consolidated approach - no legacy setlistId)
     const gig = await prisma.gig.create({
       data: {
         title,
@@ -719,13 +702,12 @@ router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMemb
         pay,
         isLocked: canLock ? (isLocked || false) : false,
         isPersonal: isPersonal || false,
-        setlistId: setlistIds && setlistIds.length > 0 ? null : (setlistId || autoSetlistId), // Use auto-created setlist if no manual one
         workspaceId: req.params.workspaceId,
         createdById: req.user.id,
-        // Create GigSetlist entries if setlistIds provided
-        ...(setlistIds && setlistIds.length > 0 && {
+        // Create GigSetlist entries for all setlists (single or multiple)
+        ...(setlistIdsToLink.length > 0 && {
           setlists: {
-            create: setlistIds.filter(id => id).map((id, index) => ({
+            create: setlistIdsToLink.map((id, index) => ({
               setlistId: id,
               setNumber: index + 1
             }))
@@ -747,9 +729,6 @@ router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMemb
         },
         venueRecord: {
           select: { id: true, name: true, address: true, city: true, imageUrl: true, phone: true, email: true, website: true, capacity: true }
-        },
-        setlist: {
-          select: { id: true, name: true }
         },
         setlists: {
           include: {
@@ -814,14 +793,6 @@ router.get('/:gigId', authenticate, async (req, res) => {
         },
         venueRecord: {
           select: { id: true, name: true, address: true, city: true, imageUrl: true, phone: true, email: true, website: true, capacity: true }
-        },
-        setlist: {
-          include: {
-            songs: {
-              include: { song: true },
-              orderBy: { position: 'asc' }
-            }
-          }
         },
         setlists: {
           include: {
@@ -890,8 +861,7 @@ router.put('/:gigId', authenticate, async (req, res) => {
         workspace: {
           include: { members: true }
         },
-        setlist: true, // Include legacy setlist to check isAutoCreated
-        setlists: {    // Include multi-set setlists
+        setlists: {
           include: { setlist: true }
         }
       }
@@ -937,21 +907,13 @@ router.put('/:gigId', authenticate, async (req, res) => {
     // If type is changing from GIG to something else, delete auto-created setlists
     if (type && type !== 'GIG' && existingGig.type === 'GIG') {
       const autoSetlistIds = [];
-      if (existingGig.setlist?.isAutoCreated) {
-        autoSetlistIds.push(existingGig.setlist.id);
-      }
       for (const gs of existingGig.setlists || []) {
         if (gs.setlist?.isAutoCreated) {
           autoSetlistIds.push(gs.setlist.id);
         }
       }
       if (autoSetlistIds.length > 0) {
-        // Clear the setlist reference first
-        await prisma.gig.update({
-          where: { id: req.params.gigId },
-          data: { setlistId: null }
-        });
-        // Delete GigSetlist entries
+        // Delete GigSetlist entries first
         await prisma.gigSetlist.deleteMany({
           where: { gigId: req.params.gigId }
         });
@@ -962,33 +924,30 @@ router.put('/:gigId', authenticate, async (req, res) => {
       }
     }
 
+    // Consolidate setlistIds and setlistId into a single array
+    const setlistIdsToUpdate = setlistIds !== undefined
+      ? setlistIds
+      : (setlistId !== undefined ? [setlistId].filter(Boolean) : undefined);
+
     // Verify setlists belong to this workspace
-    if (setlistIds && setlistIds.length > 0) {
+    if (setlistIdsToUpdate && setlistIdsToUpdate.length > 0) {
       const validSetlists = await prisma.setlist.count({
-        where: { id: { in: setlistIds }, workspaceId: existingGig.workspaceId }
+        where: { id: { in: setlistIdsToUpdate }, workspaceId: existingGig.workspaceId }
       });
-      if (validSetlists !== setlistIds.length) {
+      if (validSetlists !== setlistIdsToUpdate.length) {
         return res.status(400).json({ error: 'One or more setlists not found in this workspace' });
-      }
-    }
-    if (setlistId) {
-      const validSetlist = await prisma.setlist.findFirst({
-        where: { id: setlistId, workspaceId: existingGig.workspaceId }
-      });
-      if (!validSetlist) {
-        return res.status(400).json({ error: 'Setlist not found in this workspace' });
       }
     }
 
     // Build transaction operations for atomic update
     const txOps = [];
 
-    // If setlistIds provided, handle multi-set update
-    if (setlistIds !== undefined) {
+    // If setlists are being updated, handle via GigSetlist (consolidated approach)
+    if (setlistIdsToUpdate !== undefined) {
       txOps.push(prisma.gigSetlist.deleteMany({ where: { gigId: req.params.gigId } }));
-      if (setlistIds && setlistIds.length > 0) {
+      if (setlistIdsToUpdate.length > 0) {
         txOps.push(prisma.gigSetlist.createMany({
-          data: setlistIds.filter(id => id).map((id, index) => ({
+          data: setlistIdsToUpdate.map((id, index) => ({
             gigId: req.params.gigId,
             setlistId: id,
             setNumber: index + 1
@@ -1047,11 +1006,7 @@ router.put('/:gigId', authenticate, async (req, res) => {
         // Only admins can toggle isLocked
         ...(isAdmin && isLocked !== undefined && { isLocked }),
         // Creator or admin can toggle isPersonal
-        ...((isCreator || isAdmin) && isPersonal !== undefined && { isPersonal }),
-        // Clear legacy setlistId if using multi-set, otherwise update it
-        ...(setlistIds !== undefined
-          ? { setlistId: null }
-          : setlistId !== undefined && { setlistId })
+        ...((isCreator || isAdmin) && isPersonal !== undefined && { isPersonal })
       },
       include: {
         createdBy: {
@@ -1059,9 +1014,6 @@ router.put('/:gigId', authenticate, async (req, res) => {
         },
         venueRecord: {
           select: { id: true, name: true, address: true, city: true, imageUrl: true, phone: true, email: true, website: true, capacity: true }
-        },
-        setlist: {
-          select: { id: true, name: true }
         },
         setlists: {
           include: {
@@ -1118,17 +1070,22 @@ router.put('/:gigId/complete', authenticate, async (req, res) => {
   try {
     let { songIds } = req.body;
 
-    // Get the gig with its setlist
+    // Get the gig with its setlists
     const existingGig = await prisma.gig.findUnique({
       where: { id: req.params.gigId },
       include: {
-        setlist: {
+        setlists: {
           include: {
-            songs: {
-              where: { type: 'SONG' }, // Only actual songs, not MC sections
-              select: { songId: true }
+            setlist: {
+              include: {
+                songs: {
+                  where: { type: 'SONG' }, // Only actual songs, not MC sections
+                  select: { songId: true }
+                }
+              }
             }
-          }
+          },
+          orderBy: { setNumber: 'asc' }
         }
       }
     });
@@ -1154,9 +1111,12 @@ router.put('/:gigId/complete', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Only admins can modify locked gigs' });
     }
 
-    // If no songIds provided but gig has a setlist, use setlist songs
-    if ((!songIds || songIds.length === 0) && existingGig.setlist?.songs?.length > 0) {
-      songIds = existingGig.setlist.songs.map(s => s.songId).filter(Boolean);
+    // If no songIds provided but gig has setlists, use all setlist songs
+    if ((!songIds || songIds.length === 0) && existingGig.setlists?.length > 0) {
+      songIds = existingGig.setlists
+        .flatMap(gs => gs.setlist?.songs || [])
+        .map(s => s.songId)
+        .filter(Boolean);
     }
 
     // Update status to completed
@@ -1177,19 +1137,11 @@ router.put('/:gigId/complete', authenticate, async (req, res) => {
     }
 
     // Sync setlists with gig completion data (performedAt, venue, performers)
-    const linkedSetlists = [];
-
-    // Get legacy single setlist (if exists)
-    if (existingGig.setlistId) {
-      linkedSetlists.push(existingGig.setlistId);
-    }
-
-    // Get multi-set setlists via GigSetlist
     const gigSetlists = await prisma.gigSetlist.findMany({
       where: { gigId: gig.id },
       select: { setlistId: true }
     });
-    gigSetlists.forEach(gs => linkedSetlists.push(gs.setlistId));
+    const linkedSetlists = gigSetlists.map(gs => gs.setlistId);
 
     // Update all linked setlists with performedAt and venue
     if (linkedSetlists.length > 0) {
@@ -1231,8 +1183,11 @@ router.put('/:gigId/complete', authenticate, async (req, res) => {
         createdBy: {
           select: USER_SELECT_BRIEF
         },
-        setlist: {
-          select: { id: true, name: true }
+        setlists: {
+          include: {
+            setlist: { select: { id: true, name: true } }
+          },
+          orderBy: { setNumber: 'asc' }
         },
         songsPlayed: {
           include: { song: true }
@@ -1306,8 +1261,7 @@ router.delete('/:gigId', authenticate, async (req, res) => {
         workspace: {
           include: { members: true }
         },
-        setlist: true, // Include legacy setlist
-        setlists: {    // Include multi-set setlists
+        setlists: {
           include: { setlist: true }
         }
       }
@@ -1338,9 +1292,6 @@ router.delete('/:gigId', authenticate, async (req, res) => {
 
     // Collect auto-created setlist IDs to delete
     const autoSetlistIds = [];
-    if (gig.setlist?.isAutoCreated) {
-      autoSetlistIds.push(gig.setlist.id);
-    }
     for (const gs of gig.setlists || []) {
       if (gs.setlist?.isAutoCreated) {
         autoSetlistIds.push(gs.setlist.id);
@@ -1439,7 +1390,7 @@ router.post('/:gigId/duplicate', authenticate, async (req, res) => {
       }
     }
 
-    // Create new gig with copied data
+    // Create new gig with copied data (using GigSetlist for all setlist links)
     const newGig = await prisma.gig.create({
       data: {
         title: title || source.title,
@@ -1454,15 +1405,13 @@ router.post('/:gigId/duplicate', authenticate, async (req, res) => {
         status: 'SCHEDULED',
         workspaceId: source.workspaceId,
         createdById: req.user.id,
-        // Copy multi-set setlists
+        // Copy setlists via GigSetlist
         setlists: source.setlists.length > 0 ? {
           create: source.setlists.map(gs => ({
             setlistId: gs.setlistId,
             setNumber: gs.setNumber
           }))
-        } : undefined,
-        // Copy legacy single setlist if present
-        setlistId: source.setlistId
+        } : undefined
       },
       include: {
         createdBy: {
@@ -1470,14 +1419,6 @@ router.post('/:gigId/duplicate', authenticate, async (req, res) => {
         },
         venueRecord: {
           select: { id: true, name: true, address: true, city: true, imageUrl: true }
-        },
-        setlist: {
-          include: {
-            songs: {
-              include: { song: true },
-              orderBy: { position: 'asc' }
-            }
-          }
         },
         setlists: {
           include: {
