@@ -2,6 +2,16 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.06] - 2026-03-31
+
+### Security
+- **Email header injection prevention** — Added `sanitizeHeader()` function to remove newlines and special characters from email From/Subject headers in song request and contact form endpoints.
+- **Improved email validation** — Replaced weak email validation (`includes('@')`) with proper regex validation.
+
+### Improved
+- **Timestamp in notification emails** — Song request and contact form emails now include "Received" timestamp so admins know when the submission arrived.
+- **Mobile touch targets** — ActivityScreen cards now have `minHeight: 60` to ensure adequate touch target size per iOS HIG.
+
 ## [1.06.05] - 2026-03-31
 
 ### Added

@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   list: { padding: 12, gap: 8 },
-  card: { borderRadius: 10, borderWidth: 1, padding: 12 },
+  card: { borderRadius: 10, borderWidth: 1, padding: 12, minHeight: 60 },
   row: { flexDirection: 'row', gap: 10 },
   iconBg: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
   content: { flex: 1 },

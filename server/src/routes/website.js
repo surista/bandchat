@@ -10,6 +10,15 @@ function escapeHtml(str) {
   if (!str) return '';
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
+
+// Sanitize strings for email headers (prevent header injection)
+function sanitizeHeader(str) {
+  if (!str) return '';
+  return String(str).replace(/[\r\n<>"]/g, '').trim().slice(0, 100);
+}
+
+// Email validation regex
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 import {
   forkTemplate,
   writeSiteConfig,
@@ -544,6 +553,7 @@ router.post('/api/:workspaceId/song-request', publicFormLimiter, async (req, res
 
     if (admins.length > 0) {
       const bandName = config?.bandName || workspace.name;
+      const timestamp = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
       const emailHtml = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h2 style="color: #059669;">New Song Request</h2>
@@ -553,6 +563,7 @@ router.post('/api/:workspaceId/song-request', publicFormLimiter, async (req, res
             ${submitterEmail ? `<tr><td style="padding: 8px 0; color: #6b7280;">Email</td><td style="padding: 8px 0;"><a href="mailto:${escapeHtml(submitterEmail.trim())}" style="color: #2563eb;">${escapeHtml(submitterEmail.trim())}</a></td></tr>` : ''}
             <tr><td style="padding: 8px 0; color: #6b7280;">Song</td><td style="padding: 8px 0; font-weight: 600;">${escapeHtml(songTitle.trim())}</td></tr>
             ${artist ? `<tr><td style="padding: 8px 0; color: #6b7280;">Artist</td><td style="padding: 8px 0;">${escapeHtml(artist.trim())}</td></tr>` : ''}
+            <tr><td style="padding: 8px 0; color: #6b7280;">Received</td><td style="padding: 8px 0;">${timestamp}</td></tr>
           </table>
           ${notes ? `
           <div style="background: #f3f4f6; border-radius: 8px; padding: 16px; margin: 16px 0;">
@@ -568,9 +579,9 @@ router.post('/api/:workspaceId/song-request', publicFormLimiter, async (req, res
       for (const admin of admins) {
         if (resend && admin.user.email) {
           await resend.emails.send({
-            from: `${bandName} via BandChat <noreply@${process.env.RESEND_DOMAIN || 'resend.dev'}>`,
+            from: `${sanitizeHeader(bandName)} via BandChat <noreply@${process.env.RESEND_DOMAIN || 'resend.dev'}>`,
             to: admin.user.email,
-            subject: `🎵 Song Request: ${songTitle.trim().slice(0, 50)}`,
+            subject: `🎵 Song Request: ${sanitizeHeader(songTitle.trim().slice(0, 50))}`,
             html: emailHtml,
           }).catch(err => console.error('Failed to send song request email:', err));
         } else if (!resend) {
@@ -615,8 +626,8 @@ router.post('/api/:workspaceId/contact', publicFormLimiter, async (req, res) => 
       return res.status(400).json({ error: 'Message too long (max 2000 chars)' });
     }
 
-    // Basic email validation
-    if (!email.includes('@') || !email.includes('.')) {
+    // Email validation
+    if (!EMAIL_REGEX.test(email.trim())) {
       return res.status(400).json({ error: 'Please enter a valid email address' });
     }
 
@@ -650,6 +661,7 @@ router.post('/api/:workspaceId/contact', publicFormLimiter, async (req, res) => 
     if (admins.length > 0) {
       const config = workspace.websiteConfig;
       const bandName = config?.bandName || workspace.name;
+      const timestamp = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
       const emailHtml = `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h2 style="color: #2563eb;">New Contact Message</h2>
@@ -658,6 +670,7 @@ router.post('/api/:workspaceId/contact', publicFormLimiter, async (req, res) => 
             <tr><td style="padding: 8px 0; color: #6b7280; width: 120px;">From</td><td style="padding: 8px 0; font-weight: 600;">${escapeHtml(name.trim())}</td></tr>
             <tr><td style="padding: 8px 0; color: #6b7280;">Email</td><td style="padding: 8px 0;"><a href="mailto:${escapeHtml(email.trim())}" style="color: #2563eb;">${escapeHtml(email.trim())}</a></td></tr>
             ${subject ? `<tr><td style="padding: 8px 0; color: #6b7280;">Subject</td><td style="padding: 8px 0;">${escapeHtml(subject.trim())}</td></tr>` : ''}
+            <tr><td style="padding: 8px 0; color: #6b7280;">Received</td><td style="padding: 8px 0;">${timestamp}</td></tr>
           </table>
           <div style="background: #f3f4f6; border-radius: 8px; padding: 16px; margin: 16px 0;">
             <div style="color: #6b7280; font-size: 12px; margin-bottom: 4px;">Message:</div>
@@ -671,10 +684,10 @@ router.post('/api/:workspaceId/contact', publicFormLimiter, async (req, res) => 
       for (const admin of admins) {
         if (resend && admin.user.email) {
           await resend.emails.send({
-            from: `${bandName} via BandChat <noreply@${process.env.RESEND_DOMAIN || 'resend.dev'}>`,
+            from: `${sanitizeHeader(bandName)} via BandChat <noreply@${process.env.RESEND_DOMAIN || 'resend.dev'}>`,
             to: admin.user.email,
             replyTo: email.trim(),
-            subject: subject ? `📬 ${subject.trim().slice(0, 50)}` : `📬 Contact from ${name.trim().slice(0, 30)}`,
+            subject: subject ? `📬 ${sanitizeHeader(subject.trim().slice(0, 50))}` : `📬 Contact from ${sanitizeHeader(name.trim().slice(0, 30))}`,
             html: emailHtml,
           }).catch(err => console.error('Failed to send contact email:', err));
         } else if (!resend) {
