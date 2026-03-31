@@ -408,6 +408,16 @@ router.get('/api/:workspaceId/data', async (req, res) => {
           soundCheckTime: true,
           eventStartTime: true,
           performanceStartTime: true,
+          pay: true,
+          media: {
+            select: {
+              id: true,
+              type: true,
+              url: true,
+              caption: true,
+            },
+            orderBy: { createdAt: 'asc' },
+          },
         },
         orderBy: { date: 'asc' },
       }),
