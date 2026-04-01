@@ -3,7 +3,7 @@ import { View, Text, Modal, TouchableOpacity, StyleSheet, Image, ScrollView } fr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { mediumImpact, selectionAsync } from '../utils/haptics';
+import { mediumImpact, selectionFeedback } from '../utils/haptics';
 
 /**
  * Workspace switcher modal component.
@@ -21,12 +21,12 @@ function WorkspaceSwitcher({ visible, currentWorkspace, workspaces = [], onSelec
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const handleSelect = (workspace) => {
-    selectionAsync();
+    selectionFeedback();
     onSelect(workspace);
   };
 
   const handleManageAll = () => {
-    selectionAsync();
+    selectionFeedback();
     onManageAll();
   };
 

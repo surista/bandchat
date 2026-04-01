@@ -234,6 +234,10 @@ function WorkspaceView() {
 
   useEffect(() => {
     setActiveWorkspaceId(workspaceId);
+    // Reset channel selection when switching workspaces
+    setSelectedChannel(null);
+    setSelectedThread(null);
+    setActiveBandView(null);
     loadWorkspace();
   }, [workspaceId]);
 
