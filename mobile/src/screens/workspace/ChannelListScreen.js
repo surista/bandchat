@@ -1192,7 +1192,8 @@ export default function ChannelListScreen({ navigation, route }) {
         workspaces={allWorkspaces}
         onSelect={(ws) => {
           setShowWorkspaceSwitcher(false);
-          navigation.navigate('Workspace', { id: ws.id, name: ws.name });
+          // Use replace to create fresh screen instance with new workspace
+          navigation.replace('Workspace', { id: ws.id, name: ws.name });
         }}
         onManageAll={() => {
           setShowWorkspaceSwitcher(false);
