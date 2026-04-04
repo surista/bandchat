@@ -115,11 +115,12 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
               text: 'Delete',
               style: 'destructive',
               onPress: async () => {
-                errorNotification();
                 try {
                   await api.deleteMessage(actionMessage.id);
+                  successNotification();
                 } catch (err) {
-                  // silently fail
+                  errorNotification();
+                  toast.error('Failed to delete message');
                 }
               },
             },
