@@ -400,6 +400,8 @@ export default function PollsScreen({ navigation, route }) {
         data={polls}
         keyExtractor={(item) => item.id}
         renderItem={renderPoll}
+        removeClippedSubviews={Platform.OS === 'android'}
+        windowSize={10}
         contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl

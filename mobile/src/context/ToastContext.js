@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Animated, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ToastContext = createContext(null);
@@ -14,10 +15,10 @@ const TOAST_COLORS = {
 };
 
 const TOAST_ICONS = {
-  success: '\u2713',
-  error: '\u2715',
-  warning: '!',
-  info: '\u2139',
+  success: 'checkmark-circle',
+  error: 'close-circle',
+  warning: 'warning',
+  info: 'information-circle',
 };
 
 function Toast({ toast: t, onRemove }) {
@@ -69,15 +70,15 @@ function Toast({ toast: t, onRemove }) {
       accessibilityLiveRegion="polite"
       accessibilityLabel={`${t.type}: ${t.message}`}
     >
-      <Text style={styles.toastIcon} accessibilityElementsHidden>{TOAST_ICONS[t.type] || TOAST_ICONS.info}</Text>
+      <Ionicons name={TOAST_ICONS[t.type] || TOAST_ICONS.info} size={18} color="#ffffff" style={styles.toastIcon} accessibilityElementsHidden />
       <Text style={styles.toastMessage} numberOfLines={3}>{t.message}</Text>
       <TouchableOpacity
         onPress={() => onRemove(t.id)}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        style={styles.toastCloseButton}
         accessibilityRole="button"
         accessibilityLabel="Dismiss notification"
       >
-        <Text style={styles.toastClose}>\u00d7</Text>
+        <Ionicons name="close" size={16} color="#9ca3af" />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -161,23 +162,19 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   toastIcon: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '700',
     marginRight: 10,
-    width: 20,
-    textAlign: 'center',
   },
   toastMessage: {
     flex: 1,
     color: '#ffffff',
     fontSize: 14,
   },
-  toastClose: {
-    color: '#9ca3af',
-    fontSize: 20,
-    fontWeight: '700',
-    marginLeft: 10,
-    paddingHorizontal: 4,
+  toastCloseButton: {
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 4,
+    marginRight: -8,
   },
 });

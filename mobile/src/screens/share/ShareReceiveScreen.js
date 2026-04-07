@@ -285,7 +285,7 @@ export default function ShareReceiveScreen({ navigation }) {
         </View>
       )}
 
-      <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView style={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
         {/* Image Preview */}
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
           {sharedFiles.length} {sharedFiles.length === 1 ? 'image' : 'images'}

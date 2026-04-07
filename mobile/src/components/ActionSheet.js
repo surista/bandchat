@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 
@@ -8,7 +8,7 @@ function ActionSheet({ visible, title, actions, onClose }) {
   const insets = useSafeAreaInsets();
   if (!visible) return null;
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible transparent animationType={Platform.OS === 'android' ? 'slide' : 'fade'} onRequestClose={onClose}>
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose} accessibilityRole="button" accessibilityLabel="Dismiss action sheet">
         <View style={[styles.sheet, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 16) }]}>
           <View style={[styles.handle, { backgroundColor: colors.border }]} />

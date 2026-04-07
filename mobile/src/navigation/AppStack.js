@@ -62,7 +62,7 @@ export default function AppStack() {
     <Stack.Navigator
       screenOptions={{
         headerStyle: { backgroundColor: colors.headerBg },
-        headerTintColor: '#ffffff',
+        headerTintColor: colors.headerText,
         headerTitleStyle: { fontWeight: '600' },
         contentStyle: { backgroundColor: colors.bgPrimary },
       }}
@@ -98,8 +98,8 @@ export default function AppStack() {
             return {
               headerTitle: () => (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="lock-closed" size={14} color="#ffffff" style={{ marginRight: 5 }} />
-                  <Text style={{ color: '#ffffff', fontSize: 17, fontWeight: '600' }}>{ch?.name || 'Channel'}</Text>
+                  <Ionicons name="lock-closed" size={14} color={colors.headerText} style={{ marginRight: 5 }} />
+                  <Text style={{ color: colors.headerText, fontSize: 17, fontWeight: '600' }}>{ch?.name || 'Channel'}</Text>
                 </View>
               ),
             };

@@ -340,7 +340,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
         {renderAttachments(message.attachments, onImagePress, attachmentWidth, attachmentHeight, handleLongPress)}
         {renderReactions(message.reactions, colors, message.id, onReactionPress)}
         {message._count?.replies > 0 && (
-          <TouchableOpacity onPress={() => onReplyPress?.(message)} activeOpacity={0.6} accessibilityRole="button" accessibilityLabel={`${message._count.replies} ${message._count.replies === 1 ? 'reply' : 'replies'}, view thread`}>
+          <TouchableOpacity onPress={() => onReplyPress?.(message)} activeOpacity={0.6} style={{ minHeight: 44, justifyContent: 'center' }} accessibilityRole="button" accessibilityLabel={`${message._count.replies} ${message._count.replies === 1 ? 'reply' : 'replies'}, view thread`}>
             <Text style={[styles.replyCount, { color: colors.primary }]}>
               {message._count.replies} {message._count.replies === 1 ? 'reply' : 'replies'}
             </Text>
@@ -568,7 +568,7 @@ function AudioAttachment({ url, filename }) {
       accessibilityRole="button"
       accessibilityLabel={`${playing ? 'Pause' : 'Play'} audio ${filename || ''}, duration ${displayDuration}`}
     >
-      <Text style={styles.audioIcon}>{playing ? '\u23F8' : '\u25B6\uFE0F'}</Text>
+      <Ionicons name={playing ? 'pause' : 'play'} size={18} color={colors.textPrimary} />
       <View style={styles.audioDetails}>
         {/* Waveform visualization */}
         <View style={styles.waveformContainer}>
@@ -622,6 +622,7 @@ function renderReactions(reactions, colors, messageId, onReactionPress) {
           key={emoji}
           style={[styles.reactionBadge, { backgroundColor: colors.bgTertiary }]}
           onPress={() => onReactionPress?.(messageId, emoji)}
+          hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
           activeOpacity={0.6}
           accessibilityRole="button"
           accessibilityLabel={`${emoji} reaction, ${count} ${count === 1 ? 'person' : 'people'}`}
@@ -641,7 +642,7 @@ function LeftAction({ drag }) {
   }));
   return (
     <Reanimated.View style={[swipeStyles.leftAction, { backgroundColor: colors.primary }, animatedStyle]}>
-      <Text style={swipeStyles.actionIcon}>{'\uD83D\uDCAC'}</Text>
+      <Ionicons name="chatbubble" size={20} color="#fff" />
       <Text style={swipeStyles.actionLabel}>Reply</Text>
     </Reanimated.View>
   );
@@ -653,7 +654,7 @@ function RightAction({ drag }) {
   }));
   return (
     <Reanimated.View style={[swipeStyles.rightAction, animatedStyle]}>
-      <Text style={swipeStyles.actionIcon}>{'\uD83D\uDC4D'}</Text>
+      <Ionicons name="thumbs-up" size={20} color="#fff" />
       <Text style={swipeStyles.actionLabel}>Like</Text>
     </Reanimated.View>
   );
@@ -674,9 +675,6 @@ const swipeStyles = StyleSheet.create({
     backgroundColor: '#f59e0b',
     borderTopRightRadius: 8,
     borderBottomRightRadius: 8,
-  },
-  actionIcon: {
-    fontSize: 20,
   },
   actionLabel: {
     color: '#fff',
@@ -777,7 +775,6 @@ const styles = StyleSheet.create({
     maxWidth: 260,
   },
   audioIcon: {
-    fontSize: 18,
     marginRight: 10,
   },
   audioDetails: {

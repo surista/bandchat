@@ -375,6 +375,8 @@ export default function RecordingListScreen({ navigation, route }) {
         data={filteredRecordings}
         keyExtractor={(item) => item.id}
         renderItem={renderRecording}
+        removeClippedSubviews={Platform.OS === 'android'}
+        windowSize={10}
         contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl

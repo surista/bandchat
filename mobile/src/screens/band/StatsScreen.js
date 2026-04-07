@@ -9,6 +9,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
 import ErrorState from '../../components/ErrorState';
@@ -39,14 +40,15 @@ function StatBox({ label, value, color, bgColor, onPress }) {
   return <View style={styles.statBoxWrapper} accessibilityLabel={`${label}: ${value}`}>{content}</View>;
 }
 
+const MEDAL_COLORS = { 1: '#ffd700', 2: '#c0c0c0', 3: '#cd7f32' };
+
 function RankedItem({ rank, title, subtitle, colors }) {
-  const medals = { 1: '\uD83E\uDD47', 2: '\uD83E\uDD48', 3: '\uD83E\uDD49' };
-  const medal = medals[rank];
+  const medalColor = MEDAL_COLORS[rank];
   return (
     <View style={[styles.rankedItem, { backgroundColor: colors.bgSecondary }]} accessibilityLabel={`Number ${rank}: ${title}${subtitle ? `, ${subtitle}` : ''}`}>
       <View style={styles.rankBadge}>
-        {medal ? (
-          <Text style={styles.medalText}>{medal}</Text>
+        {medalColor ? (
+          <Ionicons name="trophy" size={20} color={medalColor} />
         ) : (
           <Text style={[styles.rankNumber, { color: colors.textSecondary }]}>{rank}</Text>
         )}
@@ -321,7 +323,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
   },
-  medalText: { fontSize: 20 },
   rankNumber: { fontSize: 15, fontWeight: '700' },
   rankedInfo: { flex: 1 },
   rankedTitle: { fontSize: 15, fontWeight: '600' },

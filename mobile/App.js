@@ -29,6 +29,7 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 import OfflineBanner from './src/components/OfflineBanner';
 import notificationService from './src/services/notifications';
 import api from './src/services/api';
+import { updateWidgetGigData } from './src/services/widgetService';
 
 // Validate UUID format (v4 UUIDs used by the app)
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -95,6 +96,16 @@ function handleDeepLink(url, navigationRef) {
         // workspace/:id
         navigationRef.current.navigate('Workspace', { id: parts[1] });
       }
+    } else if (parts[0] === 'gig' && parts[1]) {
+      // gig/:gigId?ws=:workspaceId (from widget deep links)
+      if (!isValidUUID(parts[1])) return;
+      const workspaceId = parsed.searchParams?.get('ws');
+      if (workspaceId && isValidUUID(workspaceId)) {
+        navigationRef.current.navigate('Workspace', { id: workspaceId });
+        setTimeout(() => {
+          navigationRef.current.navigate('GigDetail', { gigId: parts[1], workspaceId });
+        }, 300);
+      }
     } else if ((parts[0] === 'invite' || parts[0] === 'join') && parts[1]) {
       // Validate invite code format
       if (!isValidInviteCode(parts[1])) {
@@ -144,9 +155,12 @@ function AppContent() {
       }
     });
 
-    // Clear badge when app comes to foreground
+    // Clear badge and refresh widget when app comes to foreground
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') notificationService.clearBadge();
+      if (state === 'active') {
+        notificationService.clearBadge();
+        updateWidgetGigData();
+      }
     });
 
     return () => {

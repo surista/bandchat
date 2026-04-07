@@ -275,6 +275,7 @@ export default function VenueDetailScreen({ navigation, route }) {
         <ScrollView
           contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
           <Text style={[styles.label, { color: colors.textSecondary }]}>Name *</Text>
           <TextInput

@@ -20,6 +20,10 @@ export function errorNotification() {
   Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
 }
 
+export function warningNotification() {
+  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+}
+
 export function selectionFeedback() {
   Haptics.selectionAsync().catch(() => {});
 }

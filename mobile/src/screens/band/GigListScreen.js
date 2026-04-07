@@ -586,6 +586,8 @@ export default function GigListScreen({ navigation, route }) {
         renderItem={renderGig}
         renderSectionHeader={renderSectionHeader}
         stickySectionHeadersEnabled={false}
+        removeClippedSubviews={Platform.OS === 'android'}
+        windowSize={10}
         contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl

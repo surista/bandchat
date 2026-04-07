@@ -32,6 +32,7 @@ import getCurrencySymbol from '../../utils/getCurrencySymbol';
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet from '../../components/ActionSheet';
 import { TYPE_COLORS, STATUS_COLORS } from '../../utils/constants';
+import { updateWidgetGigData } from '../../services/widgetService';
 
 const ATTENDEE_STATUSES = ['ATTENDING', 'MAYBE', 'NOT_ATTENDING'];
 const ATTENDEE_LABELS = { ATTENDING: 'Going', MAYBE: 'Maybe', NOT_ATTENDING: 'Not Going' };
@@ -257,6 +258,7 @@ export default function GigDetailScreen({ navigation, route }) {
         populateForm(updated);
         setEditing(false);
       }
+      updateWidgetGigData();
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to save event');
     } finally {
@@ -282,6 +284,7 @@ export default function GigDetailScreen({ navigation, route }) {
         onPress: async () => {
           try {
             await api.deleteGig(gigId);
+            updateWidgetGigData();
             navigation.goBack();
           } catch (err) {
             Alert.alert('Error', 'Failed to delete event');

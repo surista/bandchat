@@ -3,7 +3,7 @@ export default {
     name: 'BandChat',
     slug: 'bandchat',
     scheme: 'bandchat',
-    version: '1.06.15',
+    version: '1.06.16',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'dark',
@@ -16,8 +16,11 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.bandchat.mobile',
-      buildNumber: '10615',
+      buildNumber: '10616',
       associatedDomains: ['applinks:bandchat.vercel.app'],
+      entitlements: {
+        'com.apple.security.application-groups': ['group.com.bandchat.manager.mobile'],
+      },
       infoPlist: {
         NSCameraUsageDescription: 'BandChat needs camera access to take photos for your profile and messages.',
         NSPhotoLibraryUsageDescription: 'BandChat needs photo library access to share images in messages and set your profile picture.',
@@ -40,7 +43,7 @@ export default {
     android: {
       package: 'com.bandchat.mobile',
       softwareKeyboardLayoutMode: 'resize',
-      versionCode: 10615,
+      versionCode: 10616,
       adaptiveIcon: {
         backgroundColor: '#1f2937',
         foregroundImage: './assets/android-icon-foreground.png',
@@ -128,6 +131,15 @@ export default {
           },
         },
       ],
+      [
+        'react-native-widget-extension',
+        {
+          widgetsFolder: 'widgets',
+          deploymentTarget: '16.2',
+          groupIdentifier: 'group.com.bandchat.manager.mobile',
+        },
+      ],
+      './modules/widget-bridge',
     ],
   },
 };

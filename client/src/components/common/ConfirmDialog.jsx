@@ -61,6 +61,7 @@ function ConfirmDialog({
         </p>
         <div className="flex gap-3 justify-end">
           <button
+            type="button"
             ref={cancelButtonRef}
             onClick={onCancel}
             disabled={loading}
@@ -69,6 +70,7 @@ function ConfirmDialog({
             {cancelText}
           </button>
           <button
+            type="button"
             ref={confirmButtonRef}
             onClick={onConfirm}
             disabled={loading}

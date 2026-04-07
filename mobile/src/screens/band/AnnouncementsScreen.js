@@ -327,7 +327,7 @@ export default function AnnouncementsScreen({ navigation, route }) {
       <Modal visible={showModal} transparent animationType="fade" onRequestClose={() => setShowModal(false)}>
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
                 {editingAnnouncement ? 'Edit Announcement' : 'New Announcement'}
               </Text>

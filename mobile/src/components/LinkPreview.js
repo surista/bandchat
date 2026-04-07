@@ -7,6 +7,7 @@ import {
   Linking,
   StyleSheet,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
 
@@ -98,7 +99,7 @@ function LinkPreview({ content, isOwn, onDismiss, onLongPress, blockedDomains })
           accessibilityRole="button"
           accessibilityLabel="Remove link preview"
         >
-          <Text style={[styles.dismissText, { color: colors.textSecondary }]}>{'\u00D7'}</Text>
+          <Ionicons name="close" size={14} color={colors.textSecondary} />
         </TouchableOpacity>
       )}
       <TouchableOpacity
@@ -155,11 +156,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
-  },
-  dismissText: {
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 16,
   },
   container: {
     flexDirection: 'row',

@@ -65,6 +65,7 @@ function Modal({ isOpen, onClose, title, maxWidth = 'max-w-md', children, classN
           <div className="modal-header">
             <h3 id={titleId}>{title}</h3>
             <button
+              type="button"
               onClick={onClose}
               className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl leading-none"
               aria-label="Close"

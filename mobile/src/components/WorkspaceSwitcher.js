@@ -71,7 +71,7 @@ function WorkspaceSwitcher({ visible, currentWorkspace, workspaces = [], onSelec
                   Current workspace
                 </Text>
               </View>
-              <Ionicons name="checkmark-circle" size={22} color="#22c55e" />
+              <Ionicons name="checkmark-circle" size={22} color={colors.success} />
             </View>
           </View>
 
@@ -105,7 +105,7 @@ function WorkspaceSwitcher({ visible, currentWorkspace, workspaces = [], onSelec
                     </Text>
                   </View>
                   {workspace.unreadCount > 0 && (
-                    <View style={[styles.badge, { backgroundColor: '#ef4444' }]}>
+                    <View style={[styles.badge, { backgroundColor: colors.error }]}>
                       <Text style={styles.badgeText}>
                         {workspace.unreadCount > 99 ? '99+' : workspace.unreadCount}
                       </Text>

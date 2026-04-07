@@ -7,6 +7,7 @@ import Purchases from 'react-native-purchases';
 import api from '../services/api';
 import { notificationService } from '../services/notifications';
 import { clearLinkPreviewCache } from '../components/LinkPreview';
+import { updateWidgetGigData } from '../services/widgetService';
 
 const AuthContext = createContext(null);
 
@@ -77,6 +78,7 @@ export function AuthProvider({ children }) {
             setUser(userData);
             setIsOffline(false);
             await configureRevenueCat(userData.id);
+            updateWidgetGigData();
           } catch (fetchError) {
             // Check if it's a network/timeout error (app started offline)
             if (fetchError.type === 'NETWORK' || fetchError.type === 'TIMEOUT') {
@@ -162,6 +164,7 @@ export function AuthProvider({ children }) {
     const data = await api.signup(email, password, displayName);
     setUser(data.user);
     await configureRevenueCat(data.user.id);
+    updateWidgetGigData();
     return data;
   }, []);
 
@@ -213,6 +216,7 @@ export function AuthProvider({ children }) {
     const data = await api.login(email, password);
     setUser(data.user);
     await configureRevenueCat(data.user.id);
+    updateWidgetGigData();
     setTimeout(() => promptBiometricSetup(), 1000);
     return data;
   }, [promptBiometricSetup]);
@@ -221,6 +225,7 @@ export function AuthProvider({ children }) {
     const data = await api.googleAuth(credential);
     setUser(data.user);
     await configureRevenueCat(data.user.id);
+    updateWidgetGigData();
     setTimeout(() => promptBiometricSetup(), 1000);
     return data;
   }, [promptBiometricSetup]);

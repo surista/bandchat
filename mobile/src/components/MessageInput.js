@@ -7,6 +7,7 @@ import { Audio } from 'expo-av';
 import { useTheme } from '../context/ThemeContext';
 import { formatDuration as formatRecordingDuration } from '../utils/formatDuration';
 import EmojiPicker from './EmojiPicker';
+import ActionSheet from './ActionSheet';
 
 const MAX_HEIGHT = 120;
 
@@ -27,6 +28,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
 
   // Toolbar state
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showAttachSheet, setShowAttachSheet] = useState(false);
 
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -353,13 +355,8 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
   }, [attachments.length]);
 
   const showAttachOptions = useCallback(() => {
-    Alert.alert('Attach', null, [
-      { text: 'Take Photo', onPress: takePhoto },
-      { text: 'Photo Library', onPress: pickMedia },
-      { text: 'File (PDF, ZIP)', onPress: pickDocument },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  }, [takePhoto, pickMedia, pickDocument]);
+    setShowAttachSheet(true);
+  }, []);
 
   const removeAttachment = useCallback((index) => {
     setAttachments(prev => prev.filter((_, i) => i !== index));
@@ -476,8 +473,8 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
       {editingMessage && (
         <View style={[styles.editBanner, { backgroundColor: colors.bgTertiary }]}>
           <Text style={[styles.editBannerText, { color: colors.primary }]}>Editing message</Text>
-          <TouchableOpacity onPress={handleCancelEdit} accessibilityRole="button" accessibilityLabel="Cancel editing">
-            <Text style={[styles.editCancel, { color: colors.textSecondary }]}>{'\u2715'}</Text>
+          <TouchableOpacity onPress={handleCancelEdit} accessibilityRole="button" accessibilityLabel="Cancel editing" style={{ padding: 4 }}>
+            <Ionicons name="close" size={18} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
       )}
@@ -516,11 +513,11 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
               <Image source={{ uri: att.uri }} style={styles.attachmentThumb} accessibilityLabel={`Attachment ${i + 1}`} />
               {att.isVideo && (
                 <View style={styles.videoIndicator}>
-                  <Text style={styles.videoIndicatorText}>{'\u25B6'}</Text>
+                  <Ionicons name="play" size={10} color="#ffffff" />
                 </View>
               )}
               <TouchableOpacity style={styles.removeAttachment} onPress={() => removeAttachment(i)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel={`Remove attachment ${i + 1}`}>
-                <Text style={styles.removeAttachmentText}>{'\u2715'}</Text>
+                <Ionicons name="close" size={14} color="#ffffff" />
               </TouchableOpacity>
             </View>
           ))}
@@ -601,7 +598,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
               autoCapitalize="sentences"
               spellCheck={true}
               textAlignVertical="center"
-              returnKeyType={Platform.OS === 'ios' ? 'default' : 'send'}
+              returnKeyType="default"
               blurOnSubmit={false}
               accessibilityLabel={editingMessage ? 'Edit message' : 'Type a message'}
             />
@@ -616,7 +613,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
                 accessibilityRole="button"
                 accessibilityLabel="Record voice message"
               >
-                <Text style={[styles.micIcon, { color: colors.textSecondary }]}>{'\uD83C\uDF99'}</Text>
+                <Ionicons name="mic" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
@@ -630,9 +627,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
                 accessibilityRole="button"
                 accessibilityLabel={editingMessage ? 'Save edit' : 'Send message'}
               >
-                <Text style={[styles.sendIcon, { color: canSend ? '#ffffff' : colors.textSecondary }]}>
-                  {editingMessage ? '\u2713' : '\u2191'}
-                </Text>
+                <Ionicons name={editingMessage ? 'checkmark' : 'arrow-up'} size={20} color={canSend ? '#ffffff' : colors.textSecondary} />
               </TouchableOpacity>
             )}
           </View>
@@ -738,7 +733,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
             accessibilityRole="button"
             accessibilityLabel="Stop recording and send"
           >
-            <Text style={[styles.sendIcon, { color: '#ffffff' }]}>{'\u2191'}</Text>
+            <Ionicons name="arrow-up" size={20} color="#ffffff" />
           </TouchableOpacity>
         </View>
       )}
@@ -748,6 +743,18 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
         visible={showEmojiPicker}
         onClose={() => setShowEmojiPicker(false)}
         onSelect={(emoji) => insertEmoji(emoji)}
+      />
+
+      {/* Attach options sheet */}
+      <ActionSheet
+        visible={showAttachSheet}
+        title="Attach"
+        actions={[
+          { label: 'Take Photo', onPress: () => { setShowAttachSheet(false); takePhoto(); } },
+          { label: 'Photo Library', onPress: () => { setShowAttachSheet(false); pickMedia(); } },
+          { label: 'File (PDF, ZIP)', onPress: () => { setShowAttachSheet(false); pickDocument(); } },
+        ]}
+        onClose={() => setShowAttachSheet(false)}
       />
     </View>
   );
@@ -767,10 +774,6 @@ const styles = StyleSheet.create({
   editBannerText: {
     fontSize: 13,
     fontWeight: '600',
-  },
-  editCancel: {
-    fontSize: 16,
-    padding: 4,
   },
   recordingOverlay: {
     flexDirection: 'row',
@@ -823,10 +826,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  videoIndicatorText: {
-    color: '#ffffff',
-    fontSize: 10,
-  },
   removeAttachment: {
     position: 'absolute',
     top: -4,
@@ -838,30 +837,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  removeAttachmentText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: 8,
     paddingVertical: 8,
-  },
-  attachButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 4,
-    marginBottom: Platform.OS === 'ios' ? 2 : 0,
-  },
-  attachIcon: {
-    fontSize: 26,
-    fontWeight: '300',
-    lineHeight: 28,
   },
   input: {
     flex: 1,
@@ -880,13 +860,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Platform.OS === 'ios' ? 2 : 0,
-  },
-  sendIcon: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  micIcon: {
-    fontSize: 20,
   },
   mentionList: {
     maxHeight: 200,

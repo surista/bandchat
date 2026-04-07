@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
 
@@ -112,7 +113,7 @@ export default function LyricsScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Close lyrics view"
         >
-          <Text style={styles.closeText}>{'\u2715'}</Text>
+          <Ionicons name="close" size={18} color="#ffffff" />
         </TouchableOpacity>
 
         <Text style={styles.titleText} numberOfLines={1}>{songTitle}</Text>
@@ -200,11 +201,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-  },
-  closeText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
   },
   titleText: {
     flex: 1,

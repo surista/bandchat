@@ -449,6 +449,8 @@ export default function SongListScreen({ navigation, route }) {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         extraData={viewMode}
+        removeClippedSubviews={Platform.OS === 'android'}
+        windowSize={10}
         contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl
