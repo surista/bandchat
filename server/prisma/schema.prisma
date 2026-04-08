@@ -512,7 +512,7 @@ model GigAttendee {
   paddingBefore Int            @default(0) // minutes of buffer before gig start
   paddingAfter  Int            @default(0) // minutes of buffer after gig end
   createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  updatedAt     DateTime       @default(now()) @updatedAt
 
   gig        Gig        @relation(fields: [gigId], references: [id], onDelete: Cascade)
   bandMember BandMember @relation(fields: [bandMemberId], references: [id], onDelete: Cascade)
