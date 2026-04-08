@@ -139,7 +139,6 @@ export default {
           groupIdentifier: 'group.com.bandchat.manager.mobile',
         },
       ],
-      './modules/widget-bridge',
     ],
   },
 };
