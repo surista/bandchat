@@ -1,8 +1,7 @@
 import ExpoModulesCore
-import ReactNativeWidgetExtension
 
-public class WidgetExtensionModule: Module {
+public class ReactNativeWidgetExtensionModule: Module {
     public func definition() -> ModuleDefinition {
-        Name("WidgetExtension")
+        Name("ReactNativeWidgetExtension")
     }
 }
