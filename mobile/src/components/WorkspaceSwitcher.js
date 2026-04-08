@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, Image, ScrollView } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, StyleSheet, Image, ScrollView, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -31,7 +31,7 @@ function WorkspaceSwitcher({ visible, currentWorkspace, workspaces = [], onSelec
   };
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible transparent animationType={Platform.OS === 'android' ? 'slide' : 'fade'} onRequestClose={onClose}>
       <TouchableOpacity
         style={styles.overlay}
         activeOpacity={1}

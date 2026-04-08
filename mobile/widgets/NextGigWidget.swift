@@ -138,7 +138,7 @@ struct NextGigCircularView: View {
     let entry: NextGigEntry
 
     var body: some View {
-        if let days = entry.daysUntil, entry.gig != nil {
+        if let gig = entry.gig, let days = entry.daysUntil {
             ZStack {
                 AccessoryWidgetBackground()
                 VStack(spacing: 0) {
@@ -160,7 +160,7 @@ struct NextGigCircularView: View {
                     }
                 }
             }
-            .widgetURL(URL(string: "bandchat://gig/\(entry.gig!.gigId)?ws=\(entry.gig!.workspaceId)"))
+            .widgetURL(URL(string: "bandchat://gig/\(gig.gigId)?ws=\(gig.workspaceId)"))
         } else {
             ZStack {
                 AccessoryWidgetBackground()

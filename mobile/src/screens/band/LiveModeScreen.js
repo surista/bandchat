@@ -111,7 +111,7 @@ export default function LiveModeScreen({ navigation, route }) {
       return (
         <View style={[styles.page, { width: screenWidth }]}>
           <View style={styles.breakContainer}>
-            <Text style={styles.breakIcon}>&#9835;</Text>
+            <Ionicons name="musical-note" size={48} color="rgba(255,255,255,0.3)" style={{ marginBottom: 16 }} />
             <Text style={styles.breakLabel}>{item.label || 'Break'}</Text>
             {item.duration ? (
               <Text style={styles.breakDuration}>{formatDuration(item.duration)}</Text>
@@ -125,7 +125,7 @@ export default function LiveModeScreen({ navigation, route }) {
       return (
         <View style={[styles.page, { width: screenWidth }]}>
           <View style={styles.breakContainer}>
-            <Text style={styles.mcIcon}>{'\uD83C\uDFA4'}</Text>
+            <Ionicons name="mic" size={48} color="rgba(255,255,255,0.3)" style={{ marginBottom: 16 }} />
             <Text style={styles.breakLabel}>{item.label || 'MC'}</Text>
             {item.duration ? (
               <Text style={styles.breakDuration}>{formatDuration(item.duration)}</Text>
@@ -354,15 +354,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  breakIcon: {
-    fontSize: 48,
-    color: 'rgba(255,255,255,0.3)',
-    marginBottom: 16,
-  },
-  mcIcon: {
-    fontSize: 48,
-    marginBottom: 16,
   },
   breakLabel: {
     color: '#ffffff',

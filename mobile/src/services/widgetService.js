@@ -31,7 +31,7 @@ export async function updateWidgetGigData() {
     // Filter to scheduled, non-personal, future gigs and sort by date
     const now = new Date();
     const upcoming = gigs
-      .filter(g => g.status === 'SCHEDULED' && new Date(g.date) >= now)
+      .filter(g => g.status === 'SCHEDULED' && !g.isPersonal && new Date(g.date) >= now)
       .sort((a, b) => new Date(a.date) - new Date(b.date));
 
     const nextGig = upcoming[0];

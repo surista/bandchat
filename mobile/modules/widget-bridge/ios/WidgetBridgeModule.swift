@@ -11,7 +11,6 @@ public class WidgetBridgeModule: Module {
             }
             defaults.set(jsonString, forKey: "nextGigData")
             defaults.set(Date(), forKey: "nextGigUpdatedAt")
-            defaults.synchronize()
 
             if #available(iOS 14.0, *) {
                 WidgetCenter.shared.reloadAllTimelines()

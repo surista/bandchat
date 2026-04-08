@@ -214,8 +214,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   controlButton: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     borderRadius: 8,
     backgroundColor: 'rgba(255,255,255,0.1)',
     justifyContent: 'center',

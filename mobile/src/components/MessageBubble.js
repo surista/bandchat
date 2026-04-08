@@ -568,7 +568,7 @@ function AudioAttachment({ url, filename }) {
       accessibilityRole="button"
       accessibilityLabel={`${playing ? 'Pause' : 'Play'} audio ${filename || ''}, duration ${displayDuration}`}
     >
-      <Ionicons name={playing ? 'pause' : 'play'} size={18} color={colors.textPrimary} />
+      <Ionicons name={playing ? 'pause' : 'play'} size={18} color={colors.textPrimary} style={styles.audioIcon} />
       <View style={styles.audioDetails}>
         {/* Waveform visualization */}
         <View style={styles.waveformContainer}>
