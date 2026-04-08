@@ -1,5 +1,8 @@
-// Attributes.swift — ActivityAttributes placeholder.
+// Attributes.swift — Placeholder required by react-native-widget-extension.
 // No Live Activity used; only static widgets.
+import Foundation
+
+#if canImport(ActivityKit)
 import ActivityKit
 
 struct BandChatWidgetAttributes: ActivityAttributes {
@@ -7,3 +10,4 @@ struct BandChatWidgetAttributes: ActivityAttributes {
         var dummy: Bool = false
     }
 }
+#endif
