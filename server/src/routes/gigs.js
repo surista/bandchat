@@ -12,6 +12,7 @@ import { getPlanLimits } from '../lib/planLimits.js';
 import { triggerWebsiteSync } from '../services/websiteDeployment.js';
 import { sendPushToUser } from './push.js';
 import { logAudit } from '../lib/audit.js';
+import { getConflictsForUser, getAffectedWorkspaceIds } from '../services/calendarConflicts.js';
 
 const router = express.Router();
 
@@ -774,6 +775,21 @@ router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMemb
 
     logAudit('gig.created', { actorId: req.user.id, targetId: gig.id, metadata: { title } });
 
+    // Notify affected workspaces about potential conflicts
+    if (gig.attendees?.length > 0) {
+      const attendeeUserIds = gig.attendees
+        .filter(a => a.bandMember?.linkedUserId)
+        .map(a => a.bandMember.linkedUserId);
+      for (const uid of [...new Set(attendeeUserIds)]) {
+        const wsIds = await getAffectedWorkspaceIds(uid);
+        for (const wsId of wsIds) {
+          if (wsId !== req.params.workspaceId) {
+            io.to(`workspace:${wsId}`).emit('calendar:conflictsChanged', { userId: uid });
+          }
+        }
+      }
+    }
+
     res.status(201).json(gig);
     triggerWebsiteSync(req.params.workspaceId);
   } catch (error) {
@@ -815,7 +831,7 @@ router.get('/:gigId', authenticate, async (req, res) => {
         attendees: {
           include: {
             bandMember: {
-              select: { id: true, name: true, imageUrl: true }
+              select: { id: true, name: true, imageUrl: true, linkedUserId: true }
             }
           }
         },
@@ -840,6 +856,16 @@ router.get('/:gigId', authenticate, async (req, res) => {
     // Filter out personal events from other users
     if (gig.isPersonal && gig.createdById !== req.user.id) {
       return res.status(404).json({ error: 'Gig not found' });
+    }
+
+    // Include current user's padding times
+    const myBandMember = await prisma.bandMember.findFirst({
+      where: { workspaceId: gig.workspaceId, linkedUserId: req.user.id },
+    });
+    if (myBandMember) {
+      const myAttendee = gig.attendees?.find(a => a.bandMemberId === myBandMember.id);
+      gig.myPaddingBefore = myAttendee?.paddingBefore || 0;
+      gig.myPaddingAfter = myAttendee?.paddingAfter || 0;
     }
 
     res.json(gig);
@@ -1057,6 +1083,21 @@ router.put('/:gigId', authenticate, async (req, res) => {
       }, { category: 'gig', workspaceId: gig.workspaceId });
     });
 
+    // Notify affected workspaces about potential conflict changes
+    if (gig.attendees?.length > 0) {
+      const attendeeUserIds = gig.attendees
+        .filter(a => a.bandMember?.linkedUserId)
+        .map(a => a.bandMember.linkedUserId);
+      for (const uid of [...new Set(attendeeUserIds)]) {
+        const wsIds = await getAffectedWorkspaceIds(uid);
+        for (const wsId of wsIds) {
+          if (wsId !== gig.workspaceId) {
+            io.to(`workspace:${wsId}`).emit('calendar:conflictsChanged', { userId: uid });
+          }
+        }
+      }
+    }
+
     res.json(gig);
     triggerWebsiteSync(gig.workspaceId);
   } catch (error) {
@@ -1263,6 +1304,9 @@ router.delete('/:gigId', authenticate, async (req, res) => {
         },
         setlists: {
           include: { setlist: true }
+        },
+        attendees: {
+          include: { bandMember: { select: { linkedUserId: true } } }
         }
       }
     });
@@ -1270,6 +1314,11 @@ router.delete('/:gigId', authenticate, async (req, res) => {
     if (!gig) {
       return res.status(404).json({ error: 'Gig not found' });
     }
+
+    // Capture attendee user IDs before deletion (cascade will remove them)
+    const attendeeUserIds = (gig.attendees || [])
+      .filter(a => a.bandMember?.linkedUserId)
+      .map(a => a.bandMember.linkedUserId);
 
     // Check if user is a member and get their role
     const membership = gig.workspace.members.find(m => m.userId === req.user.id);
@@ -1328,6 +1377,16 @@ router.delete('/:gigId', authenticate, async (req, res) => {
 
     const io = req.app.get('io');
     io.to(`workspace:${gig.workspaceId}`).emit('gig:deleted', { gigId: req.params.gigId });
+
+    // Notify affected workspaces that conflicts may have cleared
+    for (const uid of [...new Set(attendeeUserIds)]) {
+      const wsIds = await getAffectedWorkspaceIds(uid);
+      for (const wsId of wsIds) {
+        if (wsId !== gig.workspaceId) {
+          io.to(`workspace:${wsId}`).emit('calendar:conflictsChanged', { userId: uid });
+        }
+      }
+    }
 
     logAudit('gig.deleted', { actorId: req.user.id, targetId: req.params.gigId, metadata: { title: gig.title } });
 
@@ -2064,6 +2123,136 @@ router.post('/workspace/:workspaceId/preview-ics', authenticate, isWorkspaceAdmi
   } catch (error) {
     console.error('Preview ICS error:', error);
     res.status(500).json({ error: 'Failed to preview calendar event' });
+  }
+});
+
+// ── Calendar Teaming ────────────────────────────────────────────────────
+
+// Set my attendance + padding for a gig
+router.put('/:gigId/my-attendance', authenticate, apiLimiter, async (req, res) => {
+  try {
+    const { status, paddingBefore, paddingAfter } = req.body;
+
+    if (status && !['ATTENDING', 'NOT_ATTENDING', 'MAYBE'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    if (paddingBefore !== undefined && (typeof paddingBefore !== 'number' || paddingBefore < 0 || paddingBefore > 480)) {
+      return res.status(400).json({ error: 'paddingBefore must be 0-480 minutes' });
+    }
+    if (paddingAfter !== undefined && (typeof paddingAfter !== 'number' || paddingAfter < 0 || paddingAfter > 480)) {
+      return res.status(400).json({ error: 'paddingAfter must be 0-480 minutes' });
+    }
+
+    // Get the gig and verify user is a workspace member
+    const gig = await prisma.gig.findUnique({
+      where: { id: req.params.gigId },
+      select: { id: true, workspaceId: true },
+    });
+    if (!gig) return res.status(404).json({ error: 'Gig not found' });
+
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: gig.workspaceId } },
+    });
+    if (!membership) return res.status(403).json({ error: 'Not a workspace member' });
+
+    // Find the user's BandMember in this workspace
+    const bandMember = await prisma.bandMember.findFirst({
+      where: { workspaceId: gig.workspaceId, linkedUserId: req.user.id },
+    });
+    if (!bandMember) return res.status(404).json({ error: 'No band member profile linked to your account' });
+
+    // Upsert the attendance record
+    const attendee = await prisma.gigAttendee.upsert({
+      where: { gigId_bandMemberId: { gigId: gig.id, bandMemberId: bandMember.id } },
+      update: {
+        ...(status && { status }),
+        ...(paddingBefore !== undefined && { paddingBefore }),
+        ...(paddingAfter !== undefined && { paddingAfter }),
+      },
+      create: {
+        gigId: gig.id,
+        bandMemberId: bandMember.id,
+        status: status || 'ATTENDING',
+        paddingBefore: paddingBefore || 0,
+        paddingAfter: paddingAfter || 0,
+      },
+      include: {
+        bandMember: { select: { id: true, name: true, linkedUserId: true } },
+      },
+    });
+
+    // Emit attendance update to current workspace
+    const io = req.app.get('io');
+    io.to(`workspace:${gig.workspaceId}`).emit('gig:attendanceUpdated', {
+      gigId: gig.id,
+      attendee,
+    });
+
+    // Emit conflict changes to all affected workspaces
+    const affectedWs = await getAffectedWorkspaceIds(req.user.id);
+    for (const wsId of affectedWs) {
+      io.to(`workspace:${wsId}`).emit('calendar:conflictsChanged', {
+        userId: req.user.id,
+      });
+    }
+
+    res.json(attendee);
+  } catch (error) {
+    console.error('Set attendance error:', error);
+    res.status(500).json({ error: 'Failed to update attendance' });
+  }
+});
+
+// Get my scheduling conflicts across all workspaces
+router.get('/my-conflicts', authenticate, async (req, res) => {
+  try {
+    const { from, to } = req.query;
+
+    if (from && isNaN(Date.parse(from))) {
+      return res.status(400).json({ error: 'Invalid from date' });
+    }
+    if (to && isNaN(Date.parse(to))) {
+      return res.status(400).json({ error: 'Invalid to date' });
+    }
+
+    const conflicts = await getConflictsForUser(req.user.id, { from, to });
+
+    // Format for the client — group by gig, showing what each conflicts with
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { calendarVisibility: true },
+    });
+    const visibility = user?.calendarVisibility || 'BUSY_ONLY';
+
+    const formatted = conflicts.map(({ gigA, gigB }) => ({
+      gigs: [
+        {
+          gigId: gigA.gigId,
+          gigTitle: gigA.gigTitle,
+          gigType: gigA.gigType,
+          workspaceId: gigA.workspaceId,
+          workspaceName: gigA.workspaceName,
+          venue: gigA.venue,
+          effectiveStart: gigA.effectiveStart,
+          effectiveEnd: gigA.effectiveEnd,
+        },
+        {
+          gigId: gigB.gigId,
+          gigTitle: gigB.gigTitle,
+          gigType: gigB.gigType,
+          workspaceId: gigB.workspaceId,
+          workspaceName: gigB.workspaceName,
+          venue: gigB.venue,
+          effectiveStart: gigB.effectiveStart,
+          effectiveEnd: gigB.effectiveEnd,
+        },
+      ],
+    }));
+
+    res.json({ conflicts: formatted, visibility });
+  } catch (error) {
+    console.error('Get conflicts error:', error);
+    res.status(500).json({ error: 'Failed to get conflicts' });
   }
 });
 

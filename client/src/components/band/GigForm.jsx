@@ -155,6 +155,9 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
   const [uploadSuccess, setUploadSuccess] = useState('');
   const [showAddUrl, setShowAddUrl] = useState(false);
   const [urlInput, setUrlInput] = useState('');
+  const [myPaddingBefore, setMyPaddingBefore] = useState(gig?.myPaddingBefore || 0);
+  const [myPaddingAfter, setMyPaddingAfter] = useState(gig?.myPaddingAfter || 0);
+  const [gigConflicts, setGigConflicts] = useState([]);
 
   const updateMedia = (newMedia) => {
     setMedia(newMedia);
@@ -268,6 +271,15 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
       api.getBandMembers(workspaceId)
         .then(setBandMembers)
         .catch(err => console.error('Failed to load band members:', err));
+      // Load cross-workspace conflicts
+      api.getMyConflicts()
+        .then(data => {
+          const relevant = (data.conflicts || []).filter(c =>
+            c.gigs.some(g => g.gigId === gig?.id)
+          );
+          setGigConflicts(relevant);
+        })
+        .catch(() => {});
     }
   }, [workspaceId]);
 
@@ -861,6 +873,70 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                   </div>
                 );
               })()}
+
+              {/* Travel & Buffer Time */}
+              {gig && (
+                <div>
+                  <label className="modal-label">Travel & Buffer Time</label>
+                  <p className="text-xs text-[var(--color-text-muted)] mb-2">
+                    Add buffer time to mark yourself as unavailable in other bands
+                  </p>
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <label className="text-xs text-[var(--color-text-secondary)] mb-1 block">Before (minutes)</label>
+                      <select
+                        value={myPaddingBefore}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          setMyPaddingBefore(val);
+                          api.setMyAttendance(gig.id, { paddingBefore: val }).catch(() => {});
+                        }}
+                        className="modal-input"
+                      >
+                        {[0, 15, 30, 45, 60, 90, 120].map(m => (
+                          <option key={m} value={m}>{m === 0 ? 'None' : `${m} min`}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-xs text-[var(--color-text-secondary)] mb-1 block">After (minutes)</label>
+                      <select
+                        value={myPaddingAfter}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          setMyPaddingAfter(val);
+                          api.setMyAttendance(gig.id, { paddingAfter: val }).catch(() => {});
+                        }}
+                        className="modal-input"
+                      >
+                        {[0, 15, 30, 45, 60, 90, 120].map(m => (
+                          <option key={m} value={m}>{m === 0 ? 'None' : `${m} min`}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Scheduling Conflicts */}
+              {gigConflicts.length > 0 && (
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-yellow-500">⚠</span>
+                    <span className="text-sm font-medium text-yellow-500">Scheduling Conflicts</span>
+                  </div>
+                  {gigConflicts.map((conflict, i) => {
+                    const otherGig = conflict.gigs.find(g => g.gigId !== gig?.id);
+                    if (!otherGig) return null;
+                    return (
+                      <div key={i} className="text-sm text-[var(--color-text-secondary)] ml-6">
+                        {otherGig.gigType === 'REHEARSAL' ? 'Rehearsal' : otherGig.gigType === 'RECORDING' ? 'Recording' : 'Gig'} with <span className="text-[var(--color-text-primary)] font-medium">{otherGig.workspaceName}</span>
+                        {otherGig.venue && <span className="text-[var(--color-text-muted)]"> at {otherGig.venue}</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               <div>
                 <label className="modal-label" htmlFor="gig-venue">Venue</label>

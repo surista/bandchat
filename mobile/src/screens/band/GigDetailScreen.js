@@ -1029,6 +1029,60 @@ export default function GigDetailScreen({ navigation, route }) {
         </View>
       )}
 
+      {/* Travel & Buffer Time */}
+      {gig && !editing && (
+        <View style={styles.viewSection}>
+          <Text style={[styles.viewLabel, { color: colors.textSecondary }]}>Travel & Buffer Time</Text>
+          <Text style={[styles.viewSubLabel, { color: colors.textSecondary }]}>
+            Add buffer time to mark yourself as unavailable in other bands
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Before</Text>
+              <View style={[styles.pickerContainer, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}>
+                {[0, 15, 30, 60, 90, 120].map(m => (
+                  <TouchableOpacity
+                    key={m}
+                    style={[styles.paddingChip, (gig.myPaddingBefore || 0) === m && { backgroundColor: colors.primary }]}
+                    onPress={() => {
+                      setGig(prev => ({ ...prev, myPaddingBefore: m }));
+                      api.setMyAttendance(gigId, { paddingBefore: m }).catch(() => {});
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${m} minutes before`}
+                  >
+                    <Text style={[styles.paddingChipText, { color: (gig.myPaddingBefore || 0) === m ? '#fff' : colors.textSecondary }]}>
+                      {m === 0 ? 'None' : `${m}m`}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>After</Text>
+              <View style={[styles.pickerContainer, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}>
+                {[0, 15, 30, 60, 90, 120].map(m => (
+                  <TouchableOpacity
+                    key={m}
+                    style={[styles.paddingChip, (gig.myPaddingAfter || 0) === m && { backgroundColor: colors.primary }]}
+                    onPress={() => {
+                      setGig(prev => ({ ...prev, myPaddingAfter: m }));
+                      api.setMyAttendance(gigId, { paddingAfter: m }).catch(() => {});
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${m} minutes after`}
+                  >
+                    <Text style={[styles.paddingChipText, { color: (gig.myPaddingAfter || 0) === m ? '#fff' : colors.textSecondary }]}>
+                      {m === 0 ? 'None' : `${m}m`}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* Notes */}
       {gig?.notes ? (
         <View style={styles.viewSection}>
@@ -1221,6 +1275,11 @@ const styles = StyleSheet.create({
   attendeeName: { flex: 1, fontSize: 15 },
   attendeeStatusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   attendeeStatusText: { fontSize: 12, fontWeight: '600' },
+  viewSubLabel: { fontSize: 12, marginBottom: 4 },
+  fieldLabel: { fontSize: 11, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  pickerContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, padding: 8, borderRadius: 8, borderWidth: 1 },
+  paddingChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, minWidth: 40, alignItems: 'center' },
+  paddingChipText: { fontSize: 12, fontWeight: '600' },
   mediaSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   mediaStrip: { gap: 8, marginBottom: 10 },
   mediaThumbnail: { width: 80, height: 80, borderRadius: 8, overflow: 'hidden' },

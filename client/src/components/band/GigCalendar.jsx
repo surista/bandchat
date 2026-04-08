@@ -14,7 +14,7 @@ import ErrorMessage from '../common/ErrorMessage';
 import { getCurrencySymbol } from '../../utils/currencies';
 
 // Compact single-line row for list view
-function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, onDelete, onContextMenu, workspace }) {
+function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, onDelete, onContextMenu, workspace, hasConflict }) {
   const canEdit = !gig.isExternal && (!gig.isLocked || isAdmin);
   const longPress = useLongPress({
     onLongPress: (pos) => onContextMenu(pos),
@@ -81,6 +81,11 @@ function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, on
           {gig.media.some(m => m.type === 'video') && <span className="text-lg leading-none" title="Video">🎬</span>}
           {gig.media.some(m => m.type === 'link') && <span className="text-lg leading-none" title="Link">🔗</span>}
         </div>
+      )}
+
+      {/* Conflict indicator */}
+      {hasConflict && (
+        <span className="shrink-0 text-yellow-500 text-sm" title="Scheduling conflict with another band">⚠</span>
       )}
 
       {/* Venue */}
@@ -359,6 +364,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
   const [availabilityDate, setAvailabilityDate] = useState(null); // For setting my availability
   const [savingAvailability, setSavingAvailability] = useState(false);
   const [editingAvailability, setEditingAvailability] = useState(false); // Edit mode for click-to-set
+  const [myConflicts, setMyConflicts] = useState([]); // Cross-workspace scheduling conflicts
 
   // iCal subscribe
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
@@ -376,6 +382,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
 
   useEffect(() => {
     loadData();
+    loadConflicts();
   }, [workspaceId]);
 
   // Persist calendar month to localStorage
@@ -470,6 +477,15 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
       setOtherWorkspaceGigs(otherGigs.map(g => ({ ...g, isExternal: true })));
     } catch (err) {
       console.error('Failed to load other workspace gigs:', err);
+    }
+  };
+
+  const loadConflicts = async () => {
+    try {
+      const data = await api.getMyConflicts();
+      setMyConflicts(data.conflicts || []);
+    } catch (err) {
+      console.error('Failed to load conflicts:', err);
     }
   };
 
@@ -947,6 +963,17 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
     return `https://calendar.google.com/calendar/render?${params.toString()}`;
   };
 
+  // Build set of gig IDs that have scheduling conflicts
+  const conflictGigIds = useMemo(() => {
+    const ids = new Set();
+    for (const c of myConflicts) {
+      for (const g of c.gigs) {
+        ids.add(g.gigId);
+      }
+    }
+    return ids;
+  }, [myConflicts]);
+
   // Color palettes for other bands (each band gets a unique color family)
   const externalColorPalettes = [
     { gig: 'bg-purple-600', rehearsal: 'bg-purple-400', other: 'bg-purple-500' },
@@ -1333,6 +1360,9 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                             })()} </span>
                             {gig.title}
                           </span>
+                          {conflictGigIds.has(gig.id) && (
+                            <span className="flex-shrink-0 text-yellow-300" title="Scheduling conflict with another band">⚠</span>
+                          )}
                           {gig.media?.length > 0 && (
                             <span className="flex-shrink-0 flex gap-0.5 text-xs" role="img" aria-label={`${gig.media.length} attachment${gig.media.length > 1 ? 's' : ''}`}>
                               {gig.media.some(m => m.type === 'image') && <span title="Photos">📷</span>}
@@ -1421,6 +1451,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                           onDelete={() => setDeleteGigId(gig.id)}
                           onContextMenu={(pos) => setGigContextMenu({ gigId: gig.id, ...pos })}
                           workspace={workspace}
+                          hasConflict={conflictGigIds.has(gig.id)}
                         />
                       ))}
                     </>
@@ -1473,6 +1504,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                           onDelete={() => setDeleteGigId(gig.id)}
                           onContextMenu={(pos) => setGigContextMenu({ gigId: gig.id, ...pos })}
                           workspace={workspace}
+                          hasConflict={conflictGigIds.has(gig.id)}
                         />
                       ))}
                     </>

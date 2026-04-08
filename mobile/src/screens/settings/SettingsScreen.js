@@ -354,6 +354,23 @@ export default function SettingsScreen({ navigation, route }) {
             }}
             colors={colors}
           />
+          <View style={[styles.separator, { backgroundColor: colors.border }]} />
+          <SettingsRow
+            icon="calendar-outline"
+            label="Calendar Privacy"
+            onPress={() => {
+              Alert.alert(
+                'Calendar Privacy',
+                'When you have a scheduling conflict with another band, control what they see.',
+                [
+                  { text: 'Busy only', onPress: () => api.setCalendarVisibility('BUSY_ONLY').catch(() => {}) },
+                  { text: 'Show band name', onPress: () => api.setCalendarVisibility('DETAILED').catch(() => {}) },
+                  { text: 'Cancel', style: 'cancel' },
+                ]
+              );
+            }}
+            colors={colors}
+          />
         </View>
 
         {/* Workspace */}
