@@ -1,3 +1,8 @@
-// Module.swift — Required by react-native-widget-extension plugin.
-// No Live Activity module needed; widgets use static TimelineProvider.
-import Foundation
+import ExpoModulesCore
+import ReactNativeWidgetExtension
+
+public class WidgetExtensionModule: Module {
+    public func definition() -> ModuleDefinition {
+        Name("WidgetExtension")
+    }
+}

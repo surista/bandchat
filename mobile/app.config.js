@@ -131,14 +131,15 @@ export default {
           },
         },
       ],
-      [
-        'react-native-widget-extension',
-        {
-          widgetsFolder: 'widgets',
-          deploymentTarget: '16.2',
-          groupIdentifier: 'group.com.bandchat.manager.mobile',
-        },
-      ],
+      // Widget extension temporarily disabled — provisioning profile needs App Groups capability
+      // [
+      //   'react-native-widget-extension',
+      //   {
+      //     widgetsFolder: 'widgets',
+      //     deploymentTarget: '16.2',
+      //     groupIdentifier: 'group.com.bandchat.manager.mobile',
+      //   },
+      // ],
     ],
   },
 };

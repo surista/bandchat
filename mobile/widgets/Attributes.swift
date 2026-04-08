@@ -1,3 +1,9 @@
-// Attributes.swift — Required by react-native-widget-extension plugin.
-// No Live Activity attributes needed; widgets use static TimelineProvider.
-import Foundation
+// Attributes.swift — ActivityAttributes placeholder.
+// No Live Activity used; only static widgets.
+import ActivityKit
+
+struct BandChatWidgetAttributes: ActivityAttributes {
+    public struct ContentState: Codable, Hashable {
+        var dummy: Bool = false
+    }
+}
