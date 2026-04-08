@@ -1,0 +1,17 @@
+diff --git a/node_modules/react-native-widget-extension/ios/ReactNativeWidgetExtensionModule.swift b/node_modules/react-native-widget-extension/ios/ReactNativeWidgetExtensionModule.swift
+new file mode 100644
+index 0000000..8a25389
+--- /dev/null
++++ b/node_modules/react-native-widget-extension/ios/ReactNativeWidgetExtensionModule.swift
+@@ -0,0 +1,11 @@
++import ExpoModulesCore
++
++public class ReactNativeWidgetExtensionModule: Module {
++    public func definition() -> ModuleDefinition {
++        Name("ReactNativeWidgetExtension")
++
++        Function("areActivitiesEnabled") { () -> Bool in
++            return false
++        }
++    }
++}
