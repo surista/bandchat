@@ -23,7 +23,7 @@ import * as Calendar from 'expo-calendar';
 import { format, parseISO } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { successNotification, selectionFeedback } from '../../utils/haptics';
+import { successNotification, selectionFeedback, errorNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
 import ErrorState from '../../components/ErrorState';
@@ -141,6 +141,8 @@ export default function GigDetailScreen({ navigation, route }) {
     if (Platform.OS === 'android') setShowTimePicker(null);
     if (event.type === 'dismissed') { setShowTimePicker(null); return; }
     if (selectedDate) setter(dateToTimeString(selectedDate));
+    // On iOS compact mode, dismiss after selection
+    if (Platform.OS === 'ios') setShowTimePicker(null);
   };
 
   const populateForm = useCallback((data) => {
@@ -371,7 +373,7 @@ export default function GigDetailScreen({ navigation, route }) {
     } catch (err) {
       Alert.alert('Error', 'Failed to add event to calendar.');
     }
-  }, [gig]);
+  }, [gig, workspaceName]);
 
   const onDateChange = useCallback((event, selectedDate) => {
     setShowDatePicker(false);
@@ -637,33 +639,39 @@ export default function GigDetailScreen({ navigation, route }) {
             <View style={styles.rowField}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>Start Time</Text>
               <TouchableOpacity
-                style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center' }]}
+                style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }]}
                 onPress={() => setShowTimePicker('start')}
+                onLongPress={startTime ? () => { setStartTime(''); selectionFeedback(); } : undefined}
                 accessibilityRole="button"
                 accessibilityLabel={`Start time: ${startTime || 'not set'}`}
+                accessibilityHint={startTime ? 'Long press to clear' : undefined}
               >
-                <Text style={{ color: startTime ? colors.textPrimary : colors.textSecondary, fontSize: 15 }}>
-                  {startTime || '19:00'}
+                <Text style={{ color: startTime ? colors.textPrimary : colors.textSecondary, fontSize: 15, flex: 1 }}>
+                  {startTime || 'Set time'}
                 </Text>
+                {startTime ? <Ionicons name="close-circle" size={16} color={colors.textSecondary} /> : null}
               </TouchableOpacity>
               {showTimePicker === 'start' && (
-                <DateTimePicker value={timeStringToDate(startTime)} mode="time" display={Platform.OS === 'ios' ? 'spinner' : 'default'} minuteInterval={5} onChange={handleTimeChange('start', setStartTime)} />
+                <DateTimePicker value={timeStringToDate(startTime)} mode="time" display={Platform.OS === 'ios' ? 'compact' : 'default'} minuteInterval={5} onChange={handleTimeChange('start', setStartTime)} />
               )}
             </View>
             <View style={styles.rowField}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>End Time</Text>
               <TouchableOpacity
-                style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center' }]}
+                style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }]}
                 onPress={() => setShowTimePicker('end')}
+                onLongPress={endTime ? () => { setEndTime(''); selectionFeedback(); } : undefined}
                 accessibilityRole="button"
                 accessibilityLabel={`End time: ${endTime || 'not set'}`}
+                accessibilityHint={endTime ? 'Long press to clear' : undefined}
               >
-                <Text style={{ color: endTime ? colors.textPrimary : colors.textSecondary, fontSize: 15 }}>
-                  {endTime || '21:00'}
+                <Text style={{ color: endTime ? colors.textPrimary : colors.textSecondary, fontSize: 15, flex: 1 }}>
+                  {endTime || 'Set time'}
                 </Text>
+                {endTime ? <Ionicons name="close-circle" size={16} color={colors.textSecondary} /> : null}
               </TouchableOpacity>
               {showTimePicker === 'end' && (
-                <DateTimePicker value={timeStringToDate(endTime)} mode="time" display={Platform.OS === 'ios' ? 'spinner' : 'default'} minuteInterval={5} onChange={handleTimeChange('end', setEndTime)} />
+                <DateTimePicker value={timeStringToDate(endTime)} mode="time" display={Platform.OS === 'ios' ? 'compact' : 'default'} minuteInterval={5} onChange={handleTimeChange('end', setEndTime)} />
               )}
             </View>
           </View>
@@ -674,49 +682,58 @@ export default function GigDetailScreen({ navigation, route }) {
               <View style={[styles.rowField, { flex: 1 }]}>
                 <Text style={[styles.label, { color: colors.textSecondary, fontSize: 12 }]}>Sound Check</Text>
                 <TouchableOpacity
-                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center' }]}
+                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }]}
                   onPress={() => setShowTimePicker('soundCheck')}
+                  onLongPress={soundCheckTime ? () => { setSoundCheckTime(''); selectionFeedback(); } : undefined}
                   accessibilityRole="button"
                   accessibilityLabel={`Sound check: ${soundCheckTime || 'not set'}`}
+                  accessibilityHint={soundCheckTime ? 'Long press to clear' : undefined}
                 >
-                  <Text style={{ color: soundCheckTime ? colors.textPrimary : colors.textSecondary, fontSize: 14 }}>
-                    {soundCheckTime || '16:00'}
+                  <Text style={{ color: soundCheckTime ? colors.textPrimary : colors.textSecondary, fontSize: 14, flex: 1 }}>
+                    {soundCheckTime || 'Set'}
                   </Text>
+                  {soundCheckTime ? <Ionicons name="close-circle" size={14} color={colors.textSecondary} /> : null}
                 </TouchableOpacity>
                 {showTimePicker === 'soundCheck' && (
-                  <DateTimePicker value={timeStringToDate(soundCheckTime)} mode="time" display={Platform.OS === 'ios' ? 'spinner' : 'default'} minuteInterval={5} onChange={handleTimeChange('soundCheck', setSoundCheckTime)} />
+                  <DateTimePicker value={timeStringToDate(soundCheckTime)} mode="time" display={Platform.OS === 'ios' ? 'compact' : 'default'} minuteInterval={5} onChange={handleTimeChange('soundCheck', setSoundCheckTime)} />
                 )}
               </View>
               <View style={[styles.rowField, { flex: 1 }]}>
                 <Text style={[styles.label, { color: colors.textSecondary, fontSize: 12 }]}>Doors</Text>
                 <TouchableOpacity
-                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center' }]}
+                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }]}
                   onPress={() => setShowTimePicker('doors')}
+                  onLongPress={eventStartTime ? () => { setEventStartTime(''); selectionFeedback(); } : undefined}
                   accessibilityRole="button"
                   accessibilityLabel={`Doors: ${eventStartTime || 'not set'}`}
+                  accessibilityHint={eventStartTime ? 'Long press to clear' : undefined}
                 >
-                  <Text style={{ color: eventStartTime ? colors.textPrimary : colors.textSecondary, fontSize: 14 }}>
-                    {eventStartTime || '19:00'}
+                  <Text style={{ color: eventStartTime ? colors.textPrimary : colors.textSecondary, fontSize: 14, flex: 1 }}>
+                    {eventStartTime || 'Set'}
                   </Text>
+                  {eventStartTime ? <Ionicons name="close-circle" size={14} color={colors.textSecondary} /> : null}
                 </TouchableOpacity>
                 {showTimePicker === 'doors' && (
-                  <DateTimePicker value={timeStringToDate(eventStartTime)} mode="time" display={Platform.OS === 'ios' ? 'spinner' : 'default'} minuteInterval={5} onChange={handleTimeChange('doors', setEventStartTime)} />
+                  <DateTimePicker value={timeStringToDate(eventStartTime)} mode="time" display={Platform.OS === 'ios' ? 'compact' : 'default'} minuteInterval={5} onChange={handleTimeChange('doors', setEventStartTime)} />
                 )}
               </View>
               <View style={[styles.rowField, { flex: 1 }]}>
                 <Text style={[styles.label, { color: colors.textSecondary, fontSize: 12 }]}>Stage</Text>
                 <TouchableOpacity
-                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center' }]}
+                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }]}
                   onPress={() => setShowTimePicker('stage')}
+                  onLongPress={performanceStartTime ? () => { setPerformanceStartTime(''); selectionFeedback(); } : undefined}
                   accessibilityRole="button"
                   accessibilityLabel={`Stage time: ${performanceStartTime || 'not set'}`}
+                  accessibilityHint={performanceStartTime ? 'Long press to clear' : undefined}
                 >
-                  <Text style={{ color: performanceStartTime ? colors.textPrimary : colors.textSecondary, fontSize: 14 }}>
-                    {performanceStartTime || '20:00'}
+                  <Text style={{ color: performanceStartTime ? colors.textPrimary : colors.textSecondary, fontSize: 14, flex: 1 }}>
+                    {performanceStartTime || 'Set'}
                   </Text>
+                  {performanceStartTime ? <Ionicons name="close-circle" size={14} color={colors.textSecondary} /> : null}
                 </TouchableOpacity>
                 {showTimePicker === 'stage' && (
-                  <DateTimePicker value={timeStringToDate(performanceStartTime)} mode="time" display={Platform.OS === 'ios' ? 'spinner' : 'default'} minuteInterval={5} onChange={handleTimeChange('stage', setPerformanceStartTime)} />
+                  <DateTimePicker value={timeStringToDate(performanceStartTime)} mode="time" display={Platform.OS === 'ios' ? 'compact' : 'default'} minuteInterval={5} onChange={handleTimeChange('stage', setPerformanceStartTime)} />
                 )}
               </View>
             </View>
@@ -1099,6 +1116,7 @@ export default function GigDetailScreen({ navigation, route }) {
                         setGig(p => ({ ...p, myPaddingBefore: m }));
                         api.setMyAttendance(gigId, { paddingBefore: m }).catch(() => {
                           setGig(p => ({ ...p, myPaddingBefore: prev }));
+                          errorNotification();
                         });
                       }}
                       accessibilityRole="radio"
@@ -1128,6 +1146,7 @@ export default function GigDetailScreen({ navigation, route }) {
                         setGig(p => ({ ...p, myPaddingAfter: m }));
                         api.setMyAttendance(gigId, { paddingAfter: m }).catch(() => {
                           setGig(p => ({ ...p, myPaddingAfter: prev }));
+                          errorNotification();
                         });
                       }}
                       accessibilityRole="radio"
