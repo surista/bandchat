@@ -94,21 +94,6 @@ export default {
       googleIosClientId: process.env.GOOGLE_IOS_CLIENT_ID,
       eas: {
         projectId: 'd4038ff4-1904-4b0d-98a0-d8bcab2cb00f',
-        build: {
-          experimental: {
-            ios: {
-              appExtensions: [
-                {
-                  targetName: 'BandChatWidgets',
-                  bundleIdentifier: 'com.bandchat.mobile.BandChatWidgets',
-                  entitlements: {
-                    'com.apple.security.application-groups': ['group.com.bandchat.manager.mobile'],
-                  },
-                },
-              ],
-            },
-          },
-        },
       },
     },
     plugins: [
