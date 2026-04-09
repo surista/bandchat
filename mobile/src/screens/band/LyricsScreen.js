@@ -231,7 +231,8 @@ const styles = StyleSheet.create({
   },
   scrollToggle: {
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: 8,
     backgroundColor: 'rgba(255,255,255,0.1)',
   },

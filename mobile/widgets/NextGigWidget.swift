@@ -440,13 +440,8 @@ struct NextGigCountdownWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: NextGigProvider()) { entry in
             if #available(iOS 17.0, *) {
-                Group {
-                    switch WidgetFamily(rawValue: 0) {
-                    default:
-                        NextGigWidgetEntryView(entry: entry)
-                    }
-                }
-                .containerBackground(.fill.tertiary, for: .widget)
+                NextGigWidgetEntryView(entry: entry)
+                    .containerBackground(.fill.tertiary, for: .widget)
             } else {
                 NextGigWidgetEntryView(entry: entry)
             }

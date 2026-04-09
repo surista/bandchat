@@ -23,7 +23,7 @@ import * as Calendar from 'expo-calendar';
 import { format, parseISO } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { successNotification } from '../../utils/haptics';
+import { successNotification, selectionFeedback } from '../../utils/haptics';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
 import ErrorState from '../../components/ErrorState';
@@ -1039,44 +1039,60 @@ export default function GigDetailScreen({ navigation, route }) {
           <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
             <View style={{ flex: 1 }}>
               <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Before</Text>
-              <View style={[styles.pickerContainer, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}>
-                {[0, 15, 30, 60, 90, 120].map(m => (
-                  <TouchableOpacity
-                    key={m}
-                    style={[styles.paddingChip, (gig.myPaddingBefore || 0) === m && { backgroundColor: colors.primary }]}
-                    onPress={() => {
-                      setGig(prev => ({ ...prev, myPaddingBefore: m }));
-                      api.setMyAttendance(gigId, { paddingBefore: m }).catch(() => {});
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${m} minutes before`}
-                  >
-                    <Text style={[styles.paddingChipText, { color: (gig.myPaddingBefore || 0) === m ? '#fff' : colors.textSecondary }]}>
-                      {m === 0 ? 'None' : `${m}m`}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+              <View style={[styles.pickerContainer, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]} accessibilityRole="radiogroup" accessibilityLabel="Buffer time before event">
+                {[0, 15, 30, 45, 60, 90, 120].map(m => {
+                  const selected = (gig.myPaddingBefore || 0) === m;
+                  return (
+                    <TouchableOpacity
+                      key={m}
+                      style={[styles.paddingChip, selected && { backgroundColor: colors.primary }]}
+                      onPress={() => {
+                        selectionFeedback();
+                        const prev = gig.myPaddingBefore || 0;
+                        setGig(p => ({ ...p, myPaddingBefore: m }));
+                        api.setMyAttendance(gigId, { paddingBefore: m }).catch(() => {
+                          setGig(p => ({ ...p, myPaddingBefore: prev }));
+                        });
+                      }}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected }}
+                      accessibilityLabel={m === 0 ? 'No buffer before' : `${m} minutes before`}
+                    >
+                      <Text style={[styles.paddingChipText, { color: selected ? '#fff' : colors.textSecondary }]}>
+                        {m === 0 ? 'None' : `${m}m`}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>After</Text>
-              <View style={[styles.pickerContainer, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}>
-                {[0, 15, 30, 60, 90, 120].map(m => (
-                  <TouchableOpacity
-                    key={m}
-                    style={[styles.paddingChip, (gig.myPaddingAfter || 0) === m && { backgroundColor: colors.primary }]}
-                    onPress={() => {
-                      setGig(prev => ({ ...prev, myPaddingAfter: m }));
-                      api.setMyAttendance(gigId, { paddingAfter: m }).catch(() => {});
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${m} minutes after`}
-                  >
-                    <Text style={[styles.paddingChipText, { color: (gig.myPaddingAfter || 0) === m ? '#fff' : colors.textSecondary }]}>
-                      {m === 0 ? 'None' : `${m}m`}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+              <View style={[styles.pickerContainer, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]} accessibilityRole="radiogroup" accessibilityLabel="Buffer time after event">
+                {[0, 15, 30, 45, 60, 90, 120].map(m => {
+                  const selected = (gig.myPaddingAfter || 0) === m;
+                  return (
+                    <TouchableOpacity
+                      key={m}
+                      style={[styles.paddingChip, selected && { backgroundColor: colors.primary }]}
+                      onPress={() => {
+                        selectionFeedback();
+                        const prev = gig.myPaddingAfter || 0;
+                        setGig(p => ({ ...p, myPaddingAfter: m }));
+                        api.setMyAttendance(gigId, { paddingAfter: m }).catch(() => {
+                          setGig(p => ({ ...p, myPaddingAfter: prev }));
+                        });
+                      }}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected }}
+                      accessibilityLabel={m === 0 ? 'No buffer after' : `${m} minutes after`}
+                    >
+                      <Text style={[styles.paddingChipText, { color: selected ? '#fff' : colors.textSecondary }]}>
+                        {m === 0 ? 'None' : `${m}m`}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
           </View>
@@ -1277,8 +1293,8 @@ const styles = StyleSheet.create({
   attendeeStatusText: { fontSize: 12, fontWeight: '600' },
   viewSubLabel: { fontSize: 12, marginBottom: 4 },
   fieldLabel: { fontSize: 11, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
-  pickerContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, padding: 8, borderRadius: 8, borderWidth: 1 },
-  paddingChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, minWidth: 40, alignItems: 'center' },
+  pickerContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 8, borderRadius: 8, borderWidth: 1 },
+  paddingChip: { paddingHorizontal: 12, paddingVertical: 12, borderRadius: 8, minWidth: 48, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   paddingChipText: { fontSize: 12, fontWeight: '600' },
   mediaSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   mediaStrip: { gap: 8, marginBottom: 10 },

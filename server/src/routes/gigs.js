@@ -798,6 +798,53 @@ router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMemb
   }
 });
 
+// Get my scheduling conflicts across all workspaces
+// IMPORTANT: Must be registered before /:gigId to avoid route shadowing
+router.get('/my-conflicts', authenticate, apiLimiter, async (req, res) => {
+  try {
+    const { from, to } = req.query;
+
+    if (from && isNaN(Date.parse(from))) {
+      return res.status(400).json({ error: 'Invalid from date' });
+    }
+    if (to && isNaN(Date.parse(to))) {
+      return res.status(400).json({ error: 'Invalid to date' });
+    }
+
+    const conflicts = await getConflictsForUser(req.user.id, { from, to });
+
+    const formatted = conflicts.map(({ gigA, gigB }) => ({
+      gigs: [
+        {
+          gigId: gigA.gigId,
+          gigTitle: gigA.gigTitle,
+          gigType: gigA.gigType,
+          workspaceId: gigA.workspaceId,
+          workspaceName: gigA.workspaceName,
+          venue: gigA.venue,
+          effectiveStart: gigA.effectiveStart,
+          effectiveEnd: gigA.effectiveEnd,
+        },
+        {
+          gigId: gigB.gigId,
+          gigTitle: gigB.gigTitle,
+          gigType: gigB.gigType,
+          workspaceId: gigB.workspaceId,
+          workspaceName: gigB.workspaceName,
+          venue: gigB.venue,
+          effectiveStart: gigB.effectiveStart,
+          effectiveEnd: gigB.effectiveEnd,
+        },
+      ],
+    }));
+
+    res.json({ conflicts: formatted });
+  } catch (error) {
+    console.error('Get conflicts error:', error);
+    res.status(500).json({ error: 'Failed to get conflicts' });
+  }
+});
+
 // Get a single gig
 router.get('/:gigId', authenticate, async (req, res) => {
   try {
@@ -2136,11 +2183,11 @@ router.put('/:gigId/my-attendance', authenticate, apiLimiter, async (req, res) =
     if (status && !['ATTENDING', 'NOT_ATTENDING', 'MAYBE'].includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
-    if (paddingBefore !== undefined && (typeof paddingBefore !== 'number' || paddingBefore < 0 || paddingBefore > 480)) {
-      return res.status(400).json({ error: 'paddingBefore must be 0-480 minutes' });
+    if (paddingBefore !== undefined && (typeof paddingBefore !== 'number' || !Number.isInteger(paddingBefore) || paddingBefore < 0 || paddingBefore > 480)) {
+      return res.status(400).json({ error: 'paddingBefore must be an integer 0-480 minutes' });
     }
-    if (paddingAfter !== undefined && (typeof paddingAfter !== 'number' || paddingAfter < 0 || paddingAfter > 480)) {
-      return res.status(400).json({ error: 'paddingAfter must be 0-480 minutes' });
+    if (paddingAfter !== undefined && (typeof paddingAfter !== 'number' || !Number.isInteger(paddingAfter) || paddingAfter < 0 || paddingAfter > 480)) {
+      return res.status(400).json({ error: 'paddingAfter must be an integer 0-480 minutes' });
     }
 
     // Get the gig and verify user is a workspace member
@@ -2200,59 +2247,6 @@ router.put('/:gigId/my-attendance', authenticate, apiLimiter, async (req, res) =
   } catch (error) {
     console.error('Set attendance error:', error);
     res.status(500).json({ error: 'Failed to update attendance' });
-  }
-});
-
-// Get my scheduling conflicts across all workspaces
-router.get('/my-conflicts', authenticate, async (req, res) => {
-  try {
-    const { from, to } = req.query;
-
-    if (from && isNaN(Date.parse(from))) {
-      return res.status(400).json({ error: 'Invalid from date' });
-    }
-    if (to && isNaN(Date.parse(to))) {
-      return res.status(400).json({ error: 'Invalid to date' });
-    }
-
-    const conflicts = await getConflictsForUser(req.user.id, { from, to });
-
-    // Format for the client — group by gig, showing what each conflicts with
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: { calendarVisibility: true },
-    });
-    const visibility = user?.calendarVisibility || 'BUSY_ONLY';
-
-    const formatted = conflicts.map(({ gigA, gigB }) => ({
-      gigs: [
-        {
-          gigId: gigA.gigId,
-          gigTitle: gigA.gigTitle,
-          gigType: gigA.gigType,
-          workspaceId: gigA.workspaceId,
-          workspaceName: gigA.workspaceName,
-          venue: gigA.venue,
-          effectiveStart: gigA.effectiveStart,
-          effectiveEnd: gigA.effectiveEnd,
-        },
-        {
-          gigId: gigB.gigId,
-          gigTitle: gigB.gigTitle,
-          gigType: gigB.gigType,
-          workspaceId: gigB.workspaceId,
-          workspaceName: gigB.workspaceName,
-          venue: gigB.venue,
-          effectiveStart: gigB.effectiveStart,
-          effectiveEnd: gigB.effectiveEnd,
-        },
-      ],
-    }));
-
-    res.json({ conflicts: formatted, visibility });
-  } catch (error) {
-    console.error('Get conflicts error:', error);
-    res.status(500).json({ error: 'Failed to get conflicts' });
   }
 });
 

@@ -101,7 +101,6 @@ export async function getConflictsForUser(userId, dateRange = {}) {
 
   // Find all pairs of gigs from different workspaces that overlap
   const conflicts = [];
-  const seen = new Set();
 
   for (let i = 0; i < gigs.length; i++) {
     for (let j = i + 1; j < gigs.length; j++) {
@@ -115,75 +114,12 @@ export async function getConflictsForUser(userId, dateRange = {}) {
         { start: a.effectiveStart, end: a.effectiveEnd },
         { start: b.effectiveStart, end: b.effectiveEnd }
       )) {
-        const key = [a.gigId, b.gigId].sort().join(':');
-        if (seen.has(key)) continue;
-        seen.add(key);
-
         conflicts.push({ gigA: a, gigB: b });
       }
     }
   }
 
   return conflicts;
-}
-
-/**
- * Get conflicts formatted for a specific workspace's perspective.
- * Applies the user's calendarVisibility setting to filter what other
- * workspace members can see.
- *
- * @param {string} userId
- * @param {string} workspaceId - the "viewing" workspace
- * @param {object} dateRange
- * @returns {Array} conflicts visible from this workspace
- */
-export async function getConflictsForWorkspace(userId, workspaceId, dateRange = {}) {
-  const allConflicts = await getConflictsForUser(userId, dateRange);
-
-  // Get user's visibility preference
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { calendarVisibility: true },
-  });
-  const visibility = user?.calendarVisibility || 'BUSY_ONLY';
-
-  // Filter to conflicts involving this workspace
-  const relevant = [];
-  for (const { gigA, gigB } of allConflicts) {
-    let thisGig, otherGig;
-    if (gigA.workspaceId === workspaceId) {
-      thisGig = gigA;
-      otherGig = gigB;
-    } else if (gigB.workspaceId === workspaceId) {
-      thisGig = gigB;
-      otherGig = gigA;
-    } else {
-      continue;
-    }
-
-    relevant.push({
-      gigId: thisGig.gigId,
-      gigTitle: thisGig.gigTitle,
-      effectiveStart: thisGig.effectiveStart,
-      effectiveEnd: thisGig.effectiveEnd,
-      conflict: {
-        effectiveStart: otherGig.effectiveStart,
-        effectiveEnd: otherGig.effectiveEnd,
-        // Apply visibility filter
-        ...(visibility === 'DETAILED'
-          ? {
-              label: `${otherGig.gigType === 'REHEARSAL' ? 'Rehearsal' : otherGig.gigType === 'RECORDING' ? 'Recording' : 'Gig'} with ${otherGig.workspaceName}`,
-              workspaceName: otherGig.workspaceName,
-              gigType: otherGig.gigType,
-            }
-          : {
-              label: 'Busy — other commitment',
-            }),
-      },
-    });
-  }
-
-  return relevant;
 }
 
 /**

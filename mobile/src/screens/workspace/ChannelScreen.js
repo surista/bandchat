@@ -901,7 +901,7 @@ export default function ChannelScreen({ navigation, route }) {
         maxToRenderPerBatch={10}
         updateCellsBatchingPeriod={50}
         windowSize={10}
-        removeClippedSubviews={Platform.OS === 'android'}
+        removeClippedSubviews={false} // Disabled — inverted FlatList + removeClippedSubviews causes rendering bugs on Android
         initialNumToRender={15}
         getItemLayout={undefined} // Can't use with variable height items
       />

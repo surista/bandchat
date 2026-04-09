@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, subDays, addDays, isToday, parseISO } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
 import useIsAdmin from '../../hooks/useIsAdmin';
@@ -85,7 +86,7 @@ function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, on
 
       {/* Conflict indicator */}
       {hasConflict && (
-        <span className="shrink-0 text-yellow-500 text-sm" title="Scheduling conflict with another band">⚠</span>
+        <span className="shrink-0 text-yellow-500 text-sm" role="img" aria-label="Scheduling conflict" title="Scheduling conflict with another band">⚠</span>
       )}
 
       {/* Venue */}
@@ -321,6 +322,7 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
 
 function GigCalendar({ workspaceId, workspace, focusGigId }) {
   const { user } = useAuth();
+  const { socket } = useSocket();
   const toast = useToast();
 
   const isAdmin = useIsAdmin(workspace);
@@ -384,6 +386,14 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
     loadData();
     loadConflicts();
   }, [workspaceId]);
+
+  // Refresh conflicts when another workspace's gig changes affect this user
+  useEffect(() => {
+    if (!socket) return;
+    const handler = () => loadConflicts();
+    socket.on('calendar:conflictsChanged', handler);
+    return () => socket.off('calendar:conflictsChanged', handler);
+  }, [socket]);
 
   // Persist calendar month to localStorage
   useEffect(() => {
@@ -501,6 +511,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
       setShowForm(false);
       setEditingGig(null);
       setSelectedDate(null);
+      loadConflicts();
     } catch (err) {
       throw err;
     }
@@ -511,6 +522,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
       await api.deleteGig(gigId);
       setGigs(prev => prev.filter(g => g.id !== gigId));
       setDeleteGigId(null);
+      loadConflicts();
     } catch (err) {
       setError(err.message);
       setDeleteGigId(null);
@@ -1361,7 +1373,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                             {gig.title}
                           </span>
                           {conflictGigIds.has(gig.id) && (
-                            <span className="flex-shrink-0 text-yellow-300" title="Scheduling conflict with another band">⚠</span>
+                            <span className="flex-shrink-0 text-yellow-300" role="img" aria-label="Scheduling conflict" title="Scheduling conflict with another band">⚠</span>
                           )}
                           {gig.media?.length > 0 && (
                             <span className="flex-shrink-0 flex gap-0.5 text-xs" role="img" aria-label={`${gig.media.length} attachment${gig.media.length > 1 ? 's' : ''}`}>
