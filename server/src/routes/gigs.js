@@ -2064,7 +2064,7 @@ router.get('/workspace/:workspaceId/calendar.ics', calendarLimiter, async (req, 
       if (gig.endDate) {
         ical += `DTEND:${formatDate(gig.endDate)}\r\n`;
       }
-      ical += `SUMMARY:${(gig.title || '').replace(/[,;\\]/g, '\\$&')}\r\n`;
+      ical += `SUMMARY:(${workspace.name.replace(/[,;\\]/g, '\\$&')}) ${(gig.title || '').replace(/[,;\\]/g, '\\$&')}\r\n`;
       if (gig.venue || gig.address) {
         const location = [gig.venue, gig.address].filter(Boolean).join(', ');
         ical += `LOCATION:${location.replace(/[,;\\]/g, '\\$&')}\r\n`;

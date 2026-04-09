@@ -5,7 +5,7 @@ import Modal from '../common/Modal';
 import { getCurrencySymbol } from '../../utils/currencies';
 
 // Generate Google Calendar URL
-const getGoogleCalendarUrl = (gig) => {
+const getGoogleCalendarUrl = (gig, workspaceName) => {
   const formatGoogleDate = (date) => {
     // Use UTC format with Z suffix so Google Calendar interprets it correctly regardless of user's account timezone
     return format(new Date(date), "yyyyMMdd'T'HHmmss'Z'");
@@ -18,7 +18,7 @@ const getGoogleCalendarUrl = (gig) => {
 
   const params = new URLSearchParams({
     action: 'TEMPLATE',
-    text: gig.title,
+    text: workspaceName ? `(${workspaceName}) ${gig.title}` : gig.title,
     dates: `${startDate}/${endDate}`,
   });
 
@@ -1316,7 +1316,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
               )}
               {gig && (
                 <a
-                  href={getGoogleCalendarUrl(gig)}
+                  href={getGoogleCalendarUrl(gig, workspace?.name)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn bg-orange-600 hover:bg-orange-700 text-white"

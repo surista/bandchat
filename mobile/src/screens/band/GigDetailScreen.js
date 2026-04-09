@@ -74,6 +74,8 @@ export default function GigDetailScreen({ navigation, route }) {
 
   // Currency
   const [currencySymbol, setCurrencySymbol] = useState('$');
+  const [workspaceName, setWorkspaceName] = useState('');
+  const [showTimePicker, setShowTimePicker] = useState(null); // 'start' | 'end' | 'soundCheck' | 'doors' | 'stage'
 
   // Media
   const [gigMedia, setGigMedia] = useState([]);
@@ -97,6 +99,7 @@ export default function GigDetailScreen({ navigation, route }) {
   useEffect(() => {
     api.getWorkspace(workspaceId).then(ws => {
       setCurrencySymbol(getCurrencySymbol(ws.currency || 'USD'));
+      setWorkspaceName(ws.name || '');
       const membership = ws.members?.find(m => m.userId === user?.id);
       setIsAdmin(membership?.role === 'ADMIN');
     }).catch(() => {});
@@ -121,6 +124,24 @@ export default function GigDetailScreen({ navigation, route }) {
       }
     })();
   }, [gigId, isNew, navigation]);
+
+  // Convert HH:mm string to Date for time picker, and back
+  const timeStringToDate = (timeStr) => {
+    if (!timeStr) return new Date(2000, 0, 1, 19, 0); // default 19:00
+    const [h, m] = timeStr.split(':').map(Number);
+    return new Date(2000, 0, 1, h || 0, m || 0);
+  };
+  const dateToTimeString = (d) => {
+    const h = d.getHours().toString().padStart(2, '0');
+    const m = d.getMinutes().toString().padStart(2, '0');
+    return `${h}:${m}`;
+  };
+
+  const handleTimeChange = (field, setter) => (event, selectedDate) => {
+    if (Platform.OS === 'android') setShowTimePicker(null);
+    if (event.type === 'dismissed') { setShowTimePicker(null); return; }
+    if (selectedDate) setter(dateToTimeString(selectedDate));
+  };
 
   const populateForm = useCallback((data) => {
     if (!data) return;
@@ -335,8 +356,9 @@ export default function GigDetailScreen({ navigation, route }) {
 
       const location = [gig.venue, gig.address].filter(Boolean).join(', ');
 
+      const calendarTitle = workspaceName ? `(${workspaceName}) ${gig.title}` : gig.title;
       await Calendar.createEventAsync(calendarId, {
-        title: gig.title,
+        title: calendarTitle,
         startDate,
         endDate,
         location: location || undefined,
@@ -614,25 +636,35 @@ export default function GigDetailScreen({ navigation, route }) {
           <View style={styles.row}>
             <View style={styles.rowField}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>Start Time</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-                value={startTime}
-                onChangeText={setStartTime}
-                placeholder="19:00"
-                placeholderTextColor={colors.textSecondary}
-                accessibilityLabel="Start time"
-              />
+              <TouchableOpacity
+                style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center' }]}
+                onPress={() => setShowTimePicker('start')}
+                accessibilityRole="button"
+                accessibilityLabel={`Start time: ${startTime || 'not set'}`}
+              >
+                <Text style={{ color: startTime ? colors.textPrimary : colors.textSecondary, fontSize: 15 }}>
+                  {startTime || '19:00'}
+                </Text>
+              </TouchableOpacity>
+              {showTimePicker === 'start' && (
+                <DateTimePicker value={timeStringToDate(startTime)} mode="time" display={Platform.OS === 'ios' ? 'spinner' : 'default'} minuteInterval={5} onChange={handleTimeChange('start', setStartTime)} />
+              )}
             </View>
             <View style={styles.rowField}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>End Time</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-                value={endTime}
-                onChangeText={setEndTime}
-                placeholder="21:00"
-                placeholderTextColor={colors.textSecondary}
-                accessibilityLabel="End time"
-              />
+              <TouchableOpacity
+                style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center' }]}
+                onPress={() => setShowTimePicker('end')}
+                accessibilityRole="button"
+                accessibilityLabel={`End time: ${endTime || 'not set'}`}
+              >
+                <Text style={{ color: endTime ? colors.textPrimary : colors.textSecondary, fontSize: 15 }}>
+                  {endTime || '21:00'}
+                </Text>
+              </TouchableOpacity>
+              {showTimePicker === 'end' && (
+                <DateTimePicker value={timeStringToDate(endTime)} mode="time" display={Platform.OS === 'ios' ? 'spinner' : 'default'} minuteInterval={5} onChange={handleTimeChange('end', setEndTime)} />
+              )}
             </View>
           </View>
 
@@ -641,36 +673,51 @@ export default function GigDetailScreen({ navigation, route }) {
             <View style={styles.row}>
               <View style={[styles.rowField, { flex: 1 }]}>
                 <Text style={[styles.label, { color: colors.textSecondary, fontSize: 12 }]}>Sound Check</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-                  value={soundCheckTime}
-                  onChangeText={setSoundCheckTime}
-                  placeholder="16:00"
-                  placeholderTextColor={colors.textSecondary}
-                  accessibilityLabel="Sound check time"
-                />
+                <TouchableOpacity
+                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center' }]}
+                  onPress={() => setShowTimePicker('soundCheck')}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Sound check: ${soundCheckTime || 'not set'}`}
+                >
+                  <Text style={{ color: soundCheckTime ? colors.textPrimary : colors.textSecondary, fontSize: 14 }}>
+                    {soundCheckTime || '16:00'}
+                  </Text>
+                </TouchableOpacity>
+                {showTimePicker === 'soundCheck' && (
+                  <DateTimePicker value={timeStringToDate(soundCheckTime)} mode="time" display={Platform.OS === 'ios' ? 'spinner' : 'default'} minuteInterval={5} onChange={handleTimeChange('soundCheck', setSoundCheckTime)} />
+                )}
               </View>
               <View style={[styles.rowField, { flex: 1 }]}>
                 <Text style={[styles.label, { color: colors.textSecondary, fontSize: 12 }]}>Doors</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-                  value={eventStartTime}
-                  onChangeText={setEventStartTime}
-                  placeholder="19:00"
-                  placeholderTextColor={colors.textSecondary}
-                  accessibilityLabel="Doors open time"
-                />
+                <TouchableOpacity
+                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center' }]}
+                  onPress={() => setShowTimePicker('doors')}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Doors: ${eventStartTime || 'not set'}`}
+                >
+                  <Text style={{ color: eventStartTime ? colors.textPrimary : colors.textSecondary, fontSize: 14 }}>
+                    {eventStartTime || '19:00'}
+                  </Text>
+                </TouchableOpacity>
+                {showTimePicker === 'doors' && (
+                  <DateTimePicker value={timeStringToDate(eventStartTime)} mode="time" display={Platform.OS === 'ios' ? 'spinner' : 'default'} minuteInterval={5} onChange={handleTimeChange('doors', setEventStartTime)} />
+                )}
               </View>
               <View style={[styles.rowField, { flex: 1 }]}>
                 <Text style={[styles.label, { color: colors.textSecondary, fontSize: 12 }]}>Stage</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-                  value={performanceStartTime}
-                  onChangeText={setPerformanceStartTime}
-                  placeholder="20:00"
-                  placeholderTextColor={colors.textSecondary}
-                  accessibilityLabel="Stage time"
-                />
+                <TouchableOpacity
+                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center' }]}
+                  onPress={() => setShowTimePicker('stage')}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Stage time: ${performanceStartTime || 'not set'}`}
+                >
+                  <Text style={{ color: performanceStartTime ? colors.textPrimary : colors.textSecondary, fontSize: 14 }}>
+                    {performanceStartTime || '20:00'}
+                  </Text>
+                </TouchableOpacity>
+                {showTimePicker === 'stage' && (
+                  <DateTimePicker value={timeStringToDate(performanceStartTime)} mode="time" display={Platform.OS === 'ios' ? 'spinner' : 'default'} minuteInterval={5} onChange={handleTimeChange('stage', setPerformanceStartTime)} />
+                )}
               </View>
             </View>
           )}
