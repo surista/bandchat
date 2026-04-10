@@ -33,7 +33,7 @@ export default function OfflineBanner() {
       accessibilityLiveRegion="assertive"
       accessibilityLabel="No internet connection"
     >
-      <Text style={styles.text}>No internet connection</Text>
+      <Text style={styles.text} maxFontSizeMultiplier={1.3}>No internet connection</Text>
     </Animated.View>
   );
 }

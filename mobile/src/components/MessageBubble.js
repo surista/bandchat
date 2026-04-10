@@ -268,7 +268,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
           {message.content ? (
             <Text style={[styles.content, { color: colors.textPrimary, fontSize: density.contentFontSize, lineHeight: density.contentLineHeight }]}>
               {renderContent(message.content)}
-              {isEdited && <Text style={[styles.edited, { color: colors.textSecondary }]}> (edited)</Text>}
+              {isEdited && <Text style={[styles.edited, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}> (edited)</Text>}
             </Text>
           ) : null}
           <YouTubeThumbnail content={message.content} colors={colors} />
@@ -325,14 +325,14 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
           <Text style={[styles.authorName, { color: colors.textPrimary, fontSize: density.authorFontSize }]}>
             {displayName}
           </Text>
-          <Text style={[styles.timestamp, { color: colors.textSecondary }]}>
+          <Text style={[styles.timestamp, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>
             {formatTimestamp(message.createdAt)}
           </Text>
         </View>
         {message.content ? (
           <Text style={[styles.content, { color: colors.textPrimary, fontSize: density.contentFontSize, lineHeight: density.contentLineHeight }]}>
             {renderContent(message.content)}
-            {isEdited && <Text style={[styles.edited, { color: colors.textSecondary }]}> (edited)</Text>}
+            {isEdited && <Text style={[styles.edited, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}> (edited)</Text>}
           </Text>
         ) : null}
         <YouTubeThumbnail content={message.content} colors={colors} />
@@ -341,7 +341,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
         {renderReactions(message.reactions, colors, message.id, onReactionPress)}
         {message._count?.replies > 0 && (
           <TouchableOpacity onPress={() => onReplyPress?.(message)} activeOpacity={0.6} accessibilityRole="button" accessibilityLabel={`${message._count.replies} ${message._count.replies === 1 ? 'reply' : 'replies'}, view thread`}>
-            <Text style={[styles.replyCount, { color: colors.primary }]}>
+            <Text style={[styles.replyCount, { color: colors.primary }]} maxFontSizeMultiplier={1.3}>
               {message._count.replies} {message._count.replies === 1 ? 'reply' : 'replies'}
             </Text>
           </TouchableOpacity>
@@ -592,11 +592,11 @@ function AudioAttachment({ url, filename }) {
         </View>
         {/* Duration / position */}
         <View style={styles.audioDurationRow}>
-          <Text style={[styles.audioDuration, { color: colors.textSecondary }]}>
+          <Text style={[styles.audioDuration, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>
             {playing ? displayPosition : displayDuration}
           </Text>
           {!isVoice && filename ? (
-            <Text style={[styles.audioFilenameSmall, { color: colors.textSecondary }]} numberOfLines={1}>
+            <Text style={[styles.audioFilenameSmall, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={1.2}>
               {filename}
             </Text>
           ) : null}
@@ -627,7 +627,7 @@ function renderReactions(reactions, colors, messageId, onReactionPress) {
           accessibilityLabel={`${emoji} reaction, ${count} ${count === 1 ? 'person' : 'people'}`}
         >
           {CUSTOM_EMOJI[emoji] ? renderCustomEmoji(emoji, 16) : <Text style={styles.reactionEmoji}>{emoji}</Text>}
-          <Text style={[styles.reactionCount, { color: colors.textSecondary }]}>{count}</Text>
+          <Text style={[styles.reactionCount, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>{count}</Text>
         </TouchableOpacity>
       ))}
     </View>
@@ -642,7 +642,7 @@ function LeftAction({ drag }) {
   return (
     <Reanimated.View style={[swipeStyles.leftAction, { backgroundColor: colors.primary }, animatedStyle]}>
       <Text style={swipeStyles.actionIcon}>{'\uD83D\uDCAC'}</Text>
-      <Text style={swipeStyles.actionLabel}>Reply</Text>
+      <Text style={swipeStyles.actionLabel} maxFontSizeMultiplier={1.2}>Reply</Text>
     </Reanimated.View>
   );
 }
@@ -654,7 +654,7 @@ function RightAction({ drag }) {
   return (
     <Reanimated.View style={[swipeStyles.rightAction, animatedStyle]}>
       <Text style={swipeStyles.actionIcon}>{'\uD83D\uDC4D'}</Text>
-      <Text style={swipeStyles.actionLabel}>Like</Text>
+      <Text style={swipeStyles.actionLabel} maxFontSizeMultiplier={1.2}>Like</Text>
     </Reanimated.View>
   );
 }

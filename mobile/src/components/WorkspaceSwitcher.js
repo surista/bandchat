@@ -67,7 +67,7 @@ function WorkspaceSwitcher({ visible, currentWorkspace, workspaces = [], onSelec
                 <Text style={[styles.workspaceName, { color: colors.textPrimary }]} numberOfLines={1}>
                   {currentWorkspace?.name}
                 </Text>
-                <Text style={[styles.workspaceSubtext, { color: colors.textSecondary }]}>
+                <Text style={[styles.workspaceSubtext, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.3}>
                   Current workspace
                 </Text>
               </View>
@@ -100,13 +100,13 @@ function WorkspaceSwitcher({ visible, currentWorkspace, workspaces = [], onSelec
                     <Text style={[styles.workspaceName, { color: colors.textPrimary }]} numberOfLines={1}>
                       {workspace.name}
                     </Text>
-                    <Text style={[styles.workspaceSubtext, { color: colors.textSecondary }]}>
+                    <Text style={[styles.workspaceSubtext, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.3}>
                       {workspace._count?.members || 0} member{workspace._count?.members !== 1 ? 's' : ''}
                     </Text>
                   </View>
                   {workspace.unreadCount > 0 && (
                     <View style={[styles.badge, { backgroundColor: '#ef4444' }]}>
-                      <Text style={styles.badgeText}>
+                      <Text style={styles.badgeText} maxFontSizeMultiplier={1.0}>
                         {workspace.unreadCount > 99 ? '99+' : workspace.unreadCount}
                       </Text>
                     </View>

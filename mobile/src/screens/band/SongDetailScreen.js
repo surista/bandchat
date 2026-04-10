@@ -125,7 +125,7 @@ function SongAudioPlayer({ url, filename, colors }) {
         )}
       </TouchableOpacity>
       <View style={songAudioStyles.info}>
-        <Text style={[songAudioStyles.filename, { color: colors.textPrimary }]} numberOfLines={1}>{filename}</Text>
+        <Text style={[songAudioStyles.filename, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.3}>{filename}</Text>
         <TouchableOpacity
           ref={progressBarRef}
           onPress={handleScrub}
@@ -142,10 +142,10 @@ function SongAudioPlayer({ url, filename, colors }) {
           </View>
         </TouchableOpacity>
         <View style={songAudioStyles.timeRow}>
-          <Text style={[songAudioStyles.time, { color: colors.textSecondary }]}>
+          <Text style={[songAudioStyles.time, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>
             {fmt(position)}
           </Text>
-          <Text style={[songAudioStyles.time, { color: colors.textSecondary }]}>
+          <Text style={[songAudioStyles.time, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>
             {duration > 0 ? fmt(duration) : '--:--'}
           </Text>
         </View>
@@ -778,7 +778,7 @@ export default function SongDetailScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
           {attachments.length === 0 ? (
-            <Text style={{ color: colors.textSecondary, fontSize: 13, fontStyle: 'italic' }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, fontStyle: 'italic' }} maxFontSizeMultiplier={1.3}>
               No attachments. Add chord charts, audio files, or PDFs.
             </Text>
           ) : (
@@ -812,7 +812,7 @@ export default function SongDetailScreen({ navigation, route }) {
                     >
                       <Text style={[songAudioStyles.filename, { color: colors.primary }]} numberOfLines={1}>{att.filename}</Text>
                       {att.size > 0 && (
-                        <Text style={[songAudioStyles.time, { color: colors.textSecondary }]}>{(att.size / 1024).toFixed(0)} KB</Text>
+                        <Text style={[songAudioStyles.time, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>{(att.size / 1024).toFixed(0)} KB</Text>
                       )}
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -834,7 +834,7 @@ export default function SongDetailScreen({ navigation, route }) {
       {/* Desktop Feature Hint */}
       <View style={[styles.desktopHint, { backgroundColor: colors.bgTertiary }]}>
         <Ionicons name="volume-high-outline" size={20} color={colors.textSecondary} />
-        <Text style={[styles.desktopHintText, { color: colors.textSecondary }]}>
+        <Text style={[styles.desktopHintText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.3}>
           Audio analysis (BPM/key detection) available on web
         </Text>
       </View>

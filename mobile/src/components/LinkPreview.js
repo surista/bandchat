@@ -111,16 +111,16 @@ function LinkPreview({ content, isOwn, onDismiss, onLongPress, blockedDomains })
         accessibilityLabel={`Link preview: ${preview.title || getHostname(url)}`}
       >
         <View style={styles.textContent}>
-          <Text style={[styles.domain, { color: colors.textSecondary }]} numberOfLines={1}>
+          <Text style={[styles.domain, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={1.2}>
             {getHostname(url)}
           </Text>
           {preview.title && (
-            <Text style={[styles.title, { color: colors.primary }]} numberOfLines={2}>
+            <Text style={[styles.title, { color: colors.primary }]} numberOfLines={2} maxFontSizeMultiplier={1.3}>
               {preview.title}
             </Text>
           )}
           {preview.description && (
-            <Text style={[styles.description, { color: colors.textSecondary }]} numberOfLines={2}>
+            <Text style={[styles.description, { color: colors.textSecondary }]} numberOfLines={2} maxFontSizeMultiplier={1.3}>
               {preview.description}
             </Text>
           )}

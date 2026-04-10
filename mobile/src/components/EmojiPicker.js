@@ -79,6 +79,7 @@ function EmojiPicker({ visible, onClose, onSelect }) {
                     styles.tabText,
                     { color: activeCategory === cat ? colors.primary : colors.textSecondary },
                   ]}
+                  maxFontSizeMultiplier={1.2}
                 >
                   {cat}
                 </Text>
@@ -102,7 +103,7 @@ function EmojiPicker({ visible, onClose, onSelect }) {
                   {custom ? (
                     <Image source={custom.source} style={{ width: 28, height: 28, borderRadius: 4 }} />
                   ) : (
-                    <Text style={styles.emoji}>{emoji}</Text>
+                    <Text style={styles.emoji} maxFontSizeMultiplier={1.0}>{emoji}</Text>
                   )}
                 </TouchableOpacity>
               );
@@ -159,7 +160,8 @@ const styles = StyleSheet.create({
   },
   emojiButton: {
     width: '14.28%',
-    aspectRatio: 1,
+    minWidth: 44,
+    minHeight: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },
