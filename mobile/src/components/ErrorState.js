@@ -31,7 +31,7 @@ export default function ErrorState({
           accessibilityRole="button"
           accessibilityLabel={retryLabel}
         >
-          <Text style={styles.retryText}>{retryLabel}</Text>
+          <Text style={[styles.retryText, { color: colors.primaryText }]}>{retryLabel}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -68,7 +68,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   retryText: {
-    color: '#ffffff',
     fontSize: 15,
     fontWeight: '600',
   },

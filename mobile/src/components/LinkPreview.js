@@ -2,11 +2,11 @@ import { useState, useEffect, memo } from 'react';
 import {
   View,
   Text,
-  Image,
   TouchableOpacity,
   Linking,
   StyleSheet,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
@@ -130,7 +130,7 @@ function LinkPreview({ content, isOwn, onDismiss, onLongPress, blockedDomains })
           <Image
             source={{ uri: preview.image }}
             style={styles.thumbnail}
-            resizeMode="cover"
+            contentFit="cover"
           />
         )}
       </TouchableOpacity>

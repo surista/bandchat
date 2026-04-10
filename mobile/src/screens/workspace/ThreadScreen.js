@@ -362,6 +362,10 @@ export default function ThreadScreen({ navigation, route }) {
         contentContainerStyle={styles.listContent}
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         keyboardShouldPersistTaps="handled"
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        initialNumToRender={15}
+        removeClippedSubviews={Platform.OS === 'android'}
       />
       <MessageInput
         onSend={handleSend}

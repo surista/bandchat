@@ -594,6 +594,9 @@ export default function SetlistDetailScreen({ navigation, route }) {
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
               contentContainerStyle={{ paddingBottom: 120 }}
+              maxToRenderPerBatch={15}
+              windowSize={10}
+              removeClippedSubviews={Platform.OS === 'android'}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.pickerItem, { borderBottomColor: colors.border }]}
@@ -697,7 +700,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
       {/* Edit Details Modal */}
       <Modal visible={showEditDetails} transparent animationType="fade" onRequestClose={() => setShowEditDetails(false)}>
         <View style={styles.detailsOverlay}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <KeyboardAvoidingView behavior="padding">
             <View style={[styles.detailsContent, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.detailsTitle, { color: colors.textPrimary }]} accessibilityRole="header">Edit Details</Text>
               <Text style={[styles.detailsLabel, { color: colors.textSecondary }]}>Name</Text>

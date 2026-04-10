@@ -382,6 +382,8 @@ export function ThemeProvider({ children }) {
 
     // Header text color: white for dark headers, dark for light headers
     const headerText = hexLuminance(theme.sidebar) > 0.4 ? '#111827' : '#ffffff';
+    // Primary button text: ensure contrast against primary color
+    const primaryText = hexLuminance(theme.primary) > 0.4 ? '#111827' : '#ffffff';
 
     return {
       ...theme,
@@ -389,6 +391,7 @@ export function ThemeProvider({ children }) {
       ...modalColors,
       ...channelListColors,
       headerText,
+      primaryText,
       error: mode === 'dark' ? '#ef4444' : '#dc2626',
       success: mode === 'dark' ? '#22c55e' : '#16a34a',
       warning: mode === 'dark' ? '#eab308' : '#ca8a04',

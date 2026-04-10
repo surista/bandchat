@@ -473,8 +473,8 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
       {editingMessage && (
         <View style={[styles.editBanner, { backgroundColor: colors.bgTertiary }]}>
           <Text style={[styles.editBannerText, { color: colors.primary }]}>Editing message</Text>
-          <TouchableOpacity onPress={handleCancelEdit} accessibilityRole="button" accessibilityLabel="Cancel editing" style={{ padding: 4 }}>
-            <Ionicons name="close" size={18} color={colors.textSecondary} />
+          <TouchableOpacity onPress={handleCancelEdit} accessibilityRole="button" accessibilityLabel="Cancel editing" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ padding: 8 }}>
+            <Ionicons name="close" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
       )}
@@ -597,7 +597,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
               autoCorrect={true}
               autoCapitalize="sentences"
               spellCheck={true}
-              textAlignVertical="center"
+              textAlignVertical="top"
               returnKeyType="default"
               blurOnSubmit={false}
               accessibilityLabel={editingMessage ? 'Edit message' : 'Type a message'}
@@ -870,6 +870,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 10,
+    minHeight: 48,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   mentionAvatar: {

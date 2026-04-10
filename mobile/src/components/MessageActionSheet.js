@@ -6,11 +6,13 @@ import {
   Modal,
   StyleSheet,
   Pressable,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { selectionFeedback } from '../utils/haptics';
+import PressableRow from './PressableRow';
 
 const QUICK_EMOJIS = ['\uD83D\uDC4D', '\uD83D\uDC4E', '\uD83C\uDFB8', '\uD83D\uDD25', '\u2764\uFE0F'];
 
@@ -96,7 +98,7 @@ function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwn
           </View>
 
           {filteredActions.map((action, i) => (
-            <TouchableOpacity
+            <PressableRow
               key={action.key}
               style={[
                 styles.actionRow,
@@ -106,10 +108,9 @@ function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwn
               onPress={() => {
                 selectionFeedback();
                 onClose();
-                // Delay action to let Modal close animation finish (iOS Alert conflicts with Modal)
-                setTimeout(() => onAction(action.key), 350);
+                // Delay on iOS to let Modal close before Alert opens; Android doesn't need it
+                setTimeout(() => onAction(action.key), Platform.OS === 'ios' ? 350 : 50);
               }}
-              activeOpacity={0.6}
               accessibilityRole="button"
               accessibilityLabel={action.label}
               accessibilityHint={ACTION_HINTS[action.key]}
@@ -123,17 +124,18 @@ function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwn
               >
                 {action.label}
               </Text>
-            </TouchableOpacity>
+            </PressableRow>
           ))}
-          <TouchableOpacity
-            style={[styles.cancelButton, { backgroundColor: colors.bgTertiary }]}
-            onPress={onClose}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="Cancel"
-          >
-            <Text style={[styles.cancelText, { color: colors.textPrimary }]}>Cancel</Text>
-          </TouchableOpacity>
+          {Platform.OS === 'ios' && (
+            <PressableRow
+              style={[styles.cancelButton, { backgroundColor: colors.bgTertiary }]}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
+            >
+              <Text style={[styles.cancelText, { color: colors.textPrimary }]}>Cancel</Text>
+            </PressableRow>
+          )}
         </View>
       </Pressable>
     </Modal>

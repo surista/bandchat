@@ -1,8 +1,9 @@
 import { memo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import getAvatarColor from '../utils/getAvatarColor';
+import PressableRow from './PressableRow';
 
 function ChannelItem({ channel, isDM, dmMembers, onPress, onLongPress, unreadCount, accessibilityHint }) {
   const { colors } = useTheme();
@@ -35,13 +36,11 @@ function ChannelItem({ channel, isDM, dmMembers, onPress, onLongPress, unreadCou
   const hasUnread = unreadCount > 0;
 
   return (
-    <TouchableOpacity
+    <PressableRow
       style={styles.container}
       onPress={onPress}
       onLongPress={onLongPress ? () => onLongPress(channel) : undefined}
       delayLongPress={400}
-      activeOpacity={0.6}
-      delayPressIn={80}
       accessibilityRole="button"
       accessibilityLabel={`${isDM ? 'Direct message with' : 'Channel'} ${displayName}${!isDM && channel.starred ? ', starred' : ''}${hasUnread ? `, ${unreadCount} unread` : ''}`}
       accessibilityHint={accessibilityHint || (isDM ? 'Open conversation' : 'Open channel')}
@@ -70,7 +69,7 @@ function ChannelItem({ channel, isDM, dmMembers, onPress, onLongPress, unreadCou
           </Text>
         </View>
       )}
-    </TouchableOpacity>
+    </PressableRow>
   );
 }
 
@@ -85,7 +84,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginHorizontal: 8,
     marginVertical: 1,
-    minHeight: 44,
+    minHeight: 48,
   },
   channelIcon: {
     fontSize: 18,

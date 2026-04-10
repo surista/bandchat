@@ -339,7 +339,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
 
       {/* Password Reset Modal */}
       <Modal visible={showPasswordReset} transparent animationType="fade" onRequestClose={() => { setShowPasswordReset(false); clearPasswordFields(); }}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Reset Password</Text>
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>

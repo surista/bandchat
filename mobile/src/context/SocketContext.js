@@ -59,9 +59,20 @@ export function SocketProvider({ children }) {
 
     newSocket.on('disconnect', (reason) => {
       setConnected(false);
-      // If server disconnected us, don't auto-reconnect
       if (reason === 'io server disconnect') {
-        setError('Disconnected by server');
+        // Server kicked us — likely stale token. Try refreshing and reconnecting.
+        (async () => {
+          if (refreshingToken.current || !api.refreshToken) return;
+          refreshingToken.current = true;
+          try {
+            const refreshed = await api.refreshAccessToken();
+            if (refreshed) {
+              newSocket.connect(); // Reconnect with fresh token
+            }
+          } catch {} finally {
+            refreshingToken.current = false;
+          }
+        })();
       }
     });
 
@@ -70,19 +81,21 @@ export function SocketProvider({ children }) {
       reconnectAttempts.current++;
 
       if (socketError.message?.includes('Authentication') || socketError.message?.includes('token')) {
-        // Prevent concurrent token refresh attempts
         if (refreshingToken.current) return;
         refreshingToken.current = true;
         try {
           const refreshed = await api.refreshAccessToken();
           if (refreshed) {
-            // Token refreshed, socket will auto-reconnect with new token
             reconnectAttempts.current = 0;
-          } else {
+            // Socket.IO will auto-reconnect with the fresh token via auth callback
+          } else if (!api.refreshToken) {
+            // Tokens were definitively cleared (server rejected refresh token)
             setError('Session expired');
           }
-        } catch (e) {
-          setError('Authentication failed');
+          // If refresh returned false but tokens still exist, it was a network issue.
+          // Socket.IO's built-in reconnection will retry automatically.
+        } catch {
+          // Network error — let Socket.IO retry
         } finally {
           refreshingToken.current = false;
         }

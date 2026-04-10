@@ -1,28 +1,31 @@
 import { memo } from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, Modal, Pressable, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
+import PressableRow from './PressableRow';
 
 function ActionSheet({ visible, title, actions, onClose }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   if (!visible) return null;
   return (
-    <Modal visible transparent animationType={Platform.OS === 'android' ? 'slide' : 'fade'} onRequestClose={onClose}>
-      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose} accessibilityRole="button" accessibilityLabel="Dismiss action sheet">
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.overlay} onPress={onClose} accessibilityRole="button" accessibilityLabel="Dismiss action sheet">
         <View style={[styles.sheet, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 16) }]}>
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
           {title ? <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>{title}</Text> : null}
           {actions.map((action, i) => (
-            <TouchableOpacity key={i} style={styles.actionItem} onPress={action.onPress} activeOpacity={0.6} accessibilityRole="button" accessibilityLabel={action.label}>
+            <PressableRow key={i} style={styles.actionItem} onPress={action.onPress} accessibilityRole="button" accessibilityLabel={action.label}>
               <Text style={[styles.actionText, { color: action.destructive ? '#ef4444' : colors.textPrimary }]}>{action.label}</Text>
-            </TouchableOpacity>
+            </PressableRow>
           ))}
-          <TouchableOpacity style={[styles.actionItem, styles.cancelItem]} onPress={onClose} activeOpacity={0.6} accessibilityRole="button" accessibilityLabel="Cancel">
-            <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
-          </TouchableOpacity>
+          {Platform.OS === 'ios' && (
+            <PressableRow style={[styles.actionItem, styles.cancelItem]} onPress={onClose} accessibilityRole="button" accessibilityLabel="Cancel">
+              <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
+            </PressableRow>
+          )}
         </View>
-      </TouchableOpacity>
+      </Pressable>
     </Modal>
   );
 }

@@ -9,6 +9,7 @@ import {
   Pressable,
   StyleSheet,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { getRecentEmojis, addRecentEmoji } from '../services/storage';
 
@@ -36,6 +37,7 @@ const BASE_CATEGORIES = Object.keys(EMOJI_CATEGORIES);
 
 function EmojiPicker({ visible, onClose, onSelect }) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const [recentEmojis, setRecentEmojis] = useState([]);
   const [activeCategory, setActiveCategory] = useState(BASE_CATEGORIES[0]);
 
@@ -60,7 +62,7 @@ function EmojiPicker({ visible, onClose, onSelect }) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={[styles.container, { backgroundColor: colors.modalBg }]}>
+        <Pressable style={[styles.container, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 16) }]}>
           {/* Category tabs */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.tabBar, { borderBottomColor: colors.border }]} contentContainerStyle={styles.tabBarContent}>
             {categoryNames.map(cat => (
@@ -126,7 +128,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     maxHeight: 350,
-    paddingBottom: 34,
+    paddingBottom: 16,
     maxWidth: 500,
     alignSelf: 'center',
     width: '100%',
@@ -141,6 +143,8 @@ const styles = StyleSheet.create({
   tab: {
     paddingHorizontal: 14,
     paddingVertical: 12,
+    minHeight: 48,
+    justifyContent: 'center',
     alignItems: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',

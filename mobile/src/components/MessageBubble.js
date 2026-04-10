@@ -1,5 +1,6 @@
 import { memo, useState, useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from 'react';
-import { View, Text, Image, TouchableOpacity, Pressable, Animated, Linking, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Pressable, Animated, Linking, StyleSheet, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Reanimated, { useAnimatedStyle, interpolate } from 'react-native-reanimated';
@@ -374,7 +375,7 @@ function YouTubeThumbnail({ content, colors }) {
       <Image
         source={{ uri: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` }}
         style={ytStyles.thumbnail}
-        resizeMode="cover"
+        contentFit="cover"
       />
       <View style={ytStyles.playOverlay}>
         <View style={ytStyles.playButton}>
@@ -436,7 +437,7 @@ function renderAttachments(attachments, onImagePress, imgWidth, imgHeight, onLon
               <Image
                 source={{ uri: att.thumbnailUrl || att.url }}
                 style={[styles.attachmentImage, { width: imgWidth, height: imgHeight }]}
-                resizeMode="cover"
+                contentFit="cover"
                 accessibilityLabel="Attached image"
               />
             </TouchableOpacity>
@@ -622,7 +623,7 @@ function renderReactions(reactions, colors, messageId, onReactionPress) {
           key={emoji}
           style={[styles.reactionBadge, { backgroundColor: colors.bgTertiary }]}
           onPress={() => onReactionPress?.(messageId, emoji)}
-          hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+          hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
           activeOpacity={0.6}
           accessibilityRole="button"
           accessibilityLabel={`${emoji} reaction, ${count} ${count === 1 ? 'person' : 'people'}`}
@@ -823,6 +824,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+    minHeight: 32,
   },
   reactionEmoji: {
     fontSize: 14,

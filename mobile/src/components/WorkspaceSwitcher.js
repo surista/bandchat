@@ -1,9 +1,11 @@
 import { memo } from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, Image, ScrollView, Platform } from 'react-native';
+import { View, Text, Modal, Pressable, StyleSheet, ScrollView, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { mediumImpact, selectionFeedback } from '../utils/haptics';
+import { selectionFeedback } from '../utils/haptics';
+import PressableRow from './PressableRow';
 
 /**
  * Workspace switcher modal component.
@@ -31,10 +33,9 @@ function WorkspaceSwitcher({ visible, currentWorkspace, workspaces = [], onSelec
   };
 
   return (
-    <Modal visible transparent animationType={Platform.OS === 'android' ? 'slide' : 'fade'} onRequestClose={onClose}>
-      <TouchableOpacity
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable
         style={styles.overlay}
-        activeOpacity={1}
         onPress={onClose}
         accessibilityRole="button"
         accessibilityLabel="Dismiss workspace switcher"
@@ -79,11 +80,10 @@ function WorkspaceSwitcher({ visible, currentWorkspace, workspaces = [], onSelec
           {otherWorkspaces.length > 0 && (
             <ScrollView style={styles.listSection} showsVerticalScrollIndicator={false}>
               {otherWorkspaces.map((workspace) => (
-                <TouchableOpacity
+                <PressableRow
                   key={workspace.id}
                   style={styles.workspaceRow}
                   onPress={() => handleSelect(workspace)}
-                  activeOpacity={0.6}
                   accessibilityRole="button"
                   accessibilityLabel={`Switch to ${workspace.name}`}
                 >
@@ -111,35 +111,35 @@ function WorkspaceSwitcher({ visible, currentWorkspace, workspaces = [], onSelec
                       </Text>
                     </View>
                   )}
-                </TouchableOpacity>
+                </PressableRow>
               ))}
             </ScrollView>
           )}
 
           {/* All Workspaces link */}
-          <TouchableOpacity
+          <PressableRow
             style={[styles.footerRow, { borderTopColor: colors.border }]}
             onPress={handleManageAll}
-            activeOpacity={0.6}
             accessibilityRole="button"
             accessibilityLabel="All workspaces"
           >
             <Ionicons name="grid-outline" size={20} color={colors.textSecondary} />
             <Text style={[styles.footerText, { color: colors.textPrimary }]}>All Workspaces</Text>
-          </TouchableOpacity>
+          </PressableRow>
 
-          {/* Cancel */}
-          <TouchableOpacity
-            style={[styles.cancelRow, { borderTopColor: colors.border }]}
-            onPress={onClose}
-            activeOpacity={0.6}
-            accessibilityRole="button"
-            accessibilityLabel="Cancel"
-          >
-            <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Cancel</Text>
-          </TouchableOpacity>
+          {/* Cancel — iOS only */}
+          {Platform.OS === 'ios' && (
+            <PressableRow
+              style={[styles.cancelRow, { borderTopColor: colors.border }]}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
+            >
+              <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Cancel</Text>
+            </PressableRow>
+          )}
         </View>
-      </TouchableOpacity>
+      </Pressable>
     </Modal>
   );
 }

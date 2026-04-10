@@ -311,11 +311,15 @@ class ApiService {
           const retryResponse = await fetchWithTimeout(url, { ...options, headers }, timeout);
           return this.handleResponse(retryResponse);
         }
-        if (this.onSessionExpired) {
+        // Only trigger session expiry if tokens were actually cleared
+        // (i.e., server definitively rejected the refresh token, not a network blip)
+        if (!this.refreshToken && this.onSessionExpired) {
           this.onSessionExpired();
         }
-        const error = new Error('Session expired. Please log in again.');
-        error.type = ErrorTypes.AUTH;
+        const error = new Error(this.refreshToken
+          ? 'Unable to refresh session. Please try again.'
+          : 'Session expired. Please log in again.');
+        error.type = this.refreshToken ? ErrorTypes.NETWORK : ErrorTypes.AUTH;
         throw error;
       }
 
@@ -380,25 +384,47 @@ class ApiService {
   }
 
   async refreshAccessToken() {
-    try {
-      const response = await fetch(`${API_URL}/auth/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: this.refreshToken }),
-      });
+    if (!this.refreshToken) return false;
 
-      if (response.ok) {
-        const data = await response.json();
-        await this.setTokens(data.accessToken, data.refreshToken);
-        return true;
+    const MAX_RETRIES = 2;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const response = await fetchWithTimeout(`${API_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken: this.refreshToken }),
+        }, 15000);
+
+        if (response.ok) {
+          const data = await response.json();
+          await this.setTokens(data.accessToken, data.refreshToken);
+          return true;
+        }
+
+        // Only clear tokens on definitive auth rejection (401/403)
+        // Server is telling us the refresh token is invalid/revoked
+        if (response.status === 401 || response.status === 403) {
+          await this.clearTokens();
+          return false;
+        }
+
+        // Transient server errors (429, 500, 502, 503, 504) — retry
+        if (attempt < MAX_RETRIES) {
+          await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+          continue;
+        }
+        // Exhausted retries but tokens are still valid — keep them
+        return false;
+      } catch {
+        // Network error — retry with backoff, never clear tokens
+        if (attempt < MAX_RETRIES) {
+          await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+          continue;
+        }
+        return false;
       }
-
-      await this.clearTokens();
-      return false;
-    } catch {
-      await this.clearTokens();
-      return false;
     }
+    return false;
   }
 
   // Auth

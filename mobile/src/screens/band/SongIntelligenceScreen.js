@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
+import ErrorState from '../../components/ErrorState';
 
 const TABS = ['recommendations', 'mashups', 'transitions', 'optimizer'];
 const TAB_LABELS = {
@@ -57,21 +58,22 @@ function RecommendationsTab({ workspaceId, colors }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const result = await api.getSongRecommendations(workspaceId);
-        setData(result);
-      } catch (err) {
-        // silently fail
-      } finally {
-        setLoading(false);
-      }
-    })();
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = await api.getSongRecommendations(workspaceId);
+      setData(result);
+    } catch (err) {
+      // data stays null, ErrorState will show
+    } finally {
+      setLoading(false);
+    }
   }, [workspaceId]);
 
+  useEffect(() => { loadData(); }, [loadData]);
+
   if (loading) return <ActivityIndicator style={{ padding: 40 }} size="large" color={colors.primary} />;
-  if (!data) return <Text style={[styles.emptyText, { color: colors.textSecondary, padding: 40 }]}>Failed to load</Text>;
+  if (!data) return <ErrorState iconName="analytics-outline" title="Failed to load" message="Could not load song intelligence" onRetry={loadData} />;
 
   const { analysis, recommendations } = data;
 

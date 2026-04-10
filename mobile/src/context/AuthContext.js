@@ -110,17 +110,15 @@ export function AuthProvider({ children }) {
     initAuth();
   }, []);
 
-  // AppState listener for background → foreground lock
-  // Only lock after actual background (not brief inactive from notification shade, Face ID, etc.)
+  // AppState listener for background → foreground: biometric lock + token refresh
   useEffect(() => {
     const subscription = AppState.addEventListener('change', async (nextAppState) => {
       if (nextAppState === 'background') {
-        // Only record timestamp when fully backgrounded (not inactive)
         if (!backgroundTimestamp.current) {
           backgroundTimestamp.current = Date.now();
         }
       } else if (nextAppState === 'active' && appState.current === 'background') {
-        // Only check lock when returning from background (not inactive → active)
+        // Biometric lock check
         if (backgroundTimestamp.current && biometricEnabled) {
           const elapsed = Date.now() - backgroundTimestamp.current;
           if (elapsed > BACKGROUND_LOCK_DELAY_MS) {
@@ -131,6 +129,18 @@ export function AuthProvider({ children }) {
           }
         }
         backgroundTimestamp.current = null;
+
+        // Proactively refresh token when returning from background
+        // This prevents stale-token 401s on the user's first action back
+        if (api.accessToken && api.refreshToken) {
+          try {
+            if (api.isTokenExpiringSoon()) {
+              await api.refreshAccessToken();
+            }
+          } catch {
+            // Non-fatal: the normal request flow will also try to refresh
+          }
+        }
       }
       appState.current = nextAppState;
     });

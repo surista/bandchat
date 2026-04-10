@@ -57,7 +57,7 @@ export default function SecurityScreen() {
         if (hasFaceId) {
           setBiometricLabel('Face ID');
         } else if (hasFingerprint) {
-          setBiometricLabel(Platform.OS === 'ios' ? 'Touch ID' : 'Fingerprint');
+          setBiometricLabel(Platform.OS === 'ios' ? 'Touch ID' : 'Biometric Unlock');
         }
       } catch {
         // No biometrics available

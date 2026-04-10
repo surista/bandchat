@@ -15,6 +15,7 @@ if (TextInput.defaultProps == null) TextInput.defaultProps = {};
 TextInput.defaultProps.maxFontSizeMultiplier = 1.5;
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
+import * as NavigationBar from 'expo-navigation-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as QuickActions from 'expo-quick-actions';
@@ -90,7 +91,7 @@ function handleDeepLink(url, navigationRef) {
           const channelData = await prepareChannelForNav(channel);
           setTimeout(() => {
             navigationRef.current.navigate('Channel', { channel: channelData, workspaceId: parts[1] });
-          }, 300);
+          }, Platform.OS === 'android' ? 500 : 300);
         }).catch(() => {});
       } else {
         // workspace/:id
@@ -104,7 +105,7 @@ function handleDeepLink(url, navigationRef) {
         navigationRef.current.navigate('Workspace', { id: workspaceId });
         setTimeout(() => {
           navigationRef.current.navigate('GigDetail', { gigId: parts[1], workspaceId });
-        }, 300);
+        }, Platform.OS === 'android' ? 500 : 300);
       }
     } else if ((parts[0] === 'invite' || parts[0] === 'join') && parts[1]) {
       // Validate invite code format
@@ -122,8 +123,16 @@ function handleDeepLink(url, navigationRef) {
 
 function AppContent() {
   const navigationRef = useRef(null);
-  const { mode } = useTheme();
+  const { mode, colors } = useTheme();
   const { hasShareIntent, shareIntent } = useShareIntent();
+
+  // Sync Android navigation bar color with theme
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setBackgroundColorAsync(colors.bgPrimary).catch(() => {});
+      NavigationBar.setButtonStyleAsync(mode === 'dark' ? 'light' : 'dark').catch(() => {});
+    }
+  }, [mode, colors.bgPrimary]);
 
   // Handle share intent - navigate to ShareReceive screen
   useEffect(() => {

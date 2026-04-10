@@ -1056,7 +1056,7 @@ export default function ChannelScreen({ navigation, route }) {
         animationType="fade"
         onRequestClose={() => setShowReportModal(false)}
       >
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg || colors.bgSecondary }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Report Message</Text>
             <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
@@ -1070,7 +1070,7 @@ export default function ChannelScreen({ navigation, route }) {
               onChangeText={setReportReason}
               multiline
               maxLength={500}
-              autoFocus
+              autoFocus={Platform.OS === 'ios'}
               accessibilityLabel="Reason for reporting"
             />
             <View style={styles.modalButtons}>

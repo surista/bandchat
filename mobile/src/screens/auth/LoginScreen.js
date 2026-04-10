@@ -112,7 +112,7 @@ export default function LoginScreen({ navigation }) {
 
           <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
             {error ? (
-              <View style={styles.errorBox}>
+              <View style={styles.errorBox} accessibilityLiveRegion="polite">
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             ) : null}

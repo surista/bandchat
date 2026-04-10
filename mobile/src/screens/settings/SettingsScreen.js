@@ -28,6 +28,7 @@ import { useTheme } from '../../context/ThemeContext';
 import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
 import { APP_BASE_URL } from '../../utils/constants';
+import PressableRow from '../../components/PressableRow';
 import { useLayout } from '../../hooks/useLayout';
 
 const CURRENCIES = ['USD', 'GBP', 'EUR', 'JPY', 'AUD', 'CAD', 'NZD', 'CHF', 'ZAR'];
@@ -40,10 +41,9 @@ const EVENT_TYPES = [
 
 function SettingsRow({ icon, label, subtitle, onPress, color, colors, showArrow = true }) {
   return (
-    <TouchableOpacity
+    <PressableRow
       style={[styles.row, { backgroundColor: colors.bgSecondary }]}
       onPress={onPress}
-      activeOpacity={0.6}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityHint="Opens setting"
@@ -58,7 +58,7 @@ function SettingsRow({ icon, label, subtitle, onPress, color, colors, showArrow 
       {showArrow && (
         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
       )}
-    </TouchableOpacity>
+    </PressableRow>
   );
 }
 
