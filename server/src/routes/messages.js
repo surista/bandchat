@@ -693,6 +693,7 @@ router.delete('/:messageId', authenticate, async (req, res) => {
     const io = req.app.get('io');
     io.to(`channel:${message.channelId}`).emit('message:deleted', {
       messageId: req.params.messageId,
+      channelId: message.channelId,
       parentId: message.parentId
     });
 
