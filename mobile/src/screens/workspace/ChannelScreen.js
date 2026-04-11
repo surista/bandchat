@@ -157,17 +157,21 @@ export default function ChannelScreen({ navigation, route }) {
   const messagesRef = useRef(messages);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
-  // Android: scroll to newest messages when keyboard opens
-  // On iOS, KAV behavior='padding' handles this. On Android with softwareKeyboardLayoutMode='resize',
-  // the window shrinks but the inverted FlatList doesn't auto-scroll, hiding recent messages.
+  // Track keyboard visibility for Android bottom inset handling
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   useEffect(() => {
     if (Platform.OS !== 'android') return;
-    const sub = Keyboard.addListener('keyboardDidShow', () => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+      // Scroll to newest messages when keyboard opens
       if (flatListRef.current && scrollOffsetRef.current < 100) {
         flatListRef.current.scrollToOffset({ offset: 0, animated: true });
       }
     });
-    return () => sub.remove();
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+    return () => { showSub.remove(); hideSub.remove(); };
   }, []);
 
   const findMessage = useCallback((id) => messagesRef.current.find(m => m.id === id), []);
@@ -811,7 +815,7 @@ export default function ChannelScreen({ navigation, route }) {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
       <View style={[styles.chatContainer, isTablet && { maxWidth: contentMaxWidth }]}>
@@ -945,7 +949,7 @@ export default function ChannelScreen({ navigation, route }) {
         members={workspaceMembers}
         channels={workspaceChannels}
       />
-      {insets.bottom > 0 && <View style={{ height: insets.bottom }} />}
+      {insets.bottom > 0 && !keyboardVisible && <View style={{ height: insets.bottom }} />}
       </View>
 
       {/* Action Sheet */}

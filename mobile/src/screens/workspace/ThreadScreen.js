@@ -51,15 +51,20 @@ export default function ThreadScreen({ navigation, route }) {
 
   const parentIdRef = useRef(parentMessage.id);
 
-  // Android: scroll to end when keyboard opens so replies stay visible
+  // Track keyboard visibility for Android bottom inset + scroll handling
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   useEffect(() => {
     if (Platform.OS !== 'android') return;
-    const sub = Keyboard.addListener('keyboardDidShow', () => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     });
-    return () => sub.remove();
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+    return () => { showSub.remove(); hideSub.remove(); };
   }, []);
 
   // Suppress foreground notifications for this channel while viewing thread
@@ -364,7 +369,7 @@ export default function ThreadScreen({ navigation, route }) {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
       <View style={[styles.chatContainer, isTablet && { maxWidth: contentMaxWidth }]}>
@@ -391,7 +396,7 @@ export default function ThreadScreen({ navigation, route }) {
         members={workspaceMembers}
         channels={workspaceChannels}
       />
-      {insets.bottom > 0 && <View style={{ height: insets.bottom }} />}
+      {insets.bottom > 0 && !keyboardVisible && <View style={{ height: insets.bottom }} />}
 
       {/* Action Sheet */}
       <MessageActionSheet
