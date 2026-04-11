@@ -24,6 +24,7 @@ class NotificationService {
     this.expoPushToken = null;
     this.notificationListener = null;
     this.responseListener = null;
+    this.tokenRefreshListener = null;
     this.onNotificationTapped = null;
   }
 
@@ -59,13 +60,22 @@ class NotificationService {
       this.expoPushToken = tokenData.data;
 
       // Send token to server
-      try {
-        await api.request('/push/expo-token', {
-          method: 'POST',
-          body: JSON.stringify({ token: this.expoPushToken, platform: Platform.OS }),
+      await api.request('/push/expo-token', {
+        method: 'POST',
+        body: JSON.stringify({ token: this.expoPushToken, platform: Platform.OS }),
+      }).catch(err => console.warn('Push token registration failed:', err.message));
+
+      // Listen for token refresh (e.g., after reinstall, token rotation)
+      if (!this.tokenRefreshListener) {
+        this.tokenRefreshListener = Notifications.addPushTokenListener(({ data }) => {
+          if (data && data !== this.expoPushToken) {
+            this.expoPushToken = data;
+            api.request('/push/expo-token', {
+              method: 'POST',
+              body: JSON.stringify({ token: data, platform: Platform.OS }),
+            }).catch(() => {});
+          }
         });
-      } catch {
-        // Server may not have this endpoint yet
       }
 
       // Android notification channels
@@ -148,6 +158,9 @@ class NotificationService {
     if (this.responseListener) {
       this.responseListener.remove();
     }
+    if (this.tokenRefreshListener) {
+      this.tokenRefreshListener.remove();
+    }
   }
 
   /** Set the currently active channel (suppresses notifications for it) */
@@ -169,7 +182,7 @@ class NotificationService {
     }
   }
 
-  /** Dismiss delivered notifications for a specific channel */
+  /** Dismiss delivered notifications for a specific channel and update badge */
   async dismissChannelNotifications(channelId) {
     try {
       const delivered = await Notifications.getPresentedNotificationsAsync();
@@ -179,6 +192,9 @@ class NotificationService {
       await Promise.all(
         matching.map(n => Notifications.dismissNotificationAsync(n.request.identifier))
       );
+      // Update badge to reflect remaining notifications
+      const remaining = delivered.length - matching.length;
+      await Notifications.setBadgeCountAsync(Math.max(0, remaining));
     } catch {
       // Best-effort
     }

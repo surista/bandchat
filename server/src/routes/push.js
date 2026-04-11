@@ -372,6 +372,15 @@ export const sendPushToUser = async (userId, payload, options = {}) => {
       console.error('Failed to calculate badge count:', e);
     }
 
+    // Map notification category to Android notification channel ID
+    const androidChannelId = {
+      dm: 'messages',
+      channel: 'messages',
+      mention: 'mentions',
+      gig: 'events',
+      announcement: 'announcements',
+    }[options.category] || 'default';
+
     const expoMessages = expoTokens
       .filter(t => Expo.isExpoPushToken(t.token))
       .map(t => ({
@@ -380,6 +389,8 @@ export const sendPushToUser = async (userId, payload, options = {}) => {
         title: payload.title,
         body: payload.body,
         badge: badgeCount,
+        channelId: androidChannelId,
+        priority: 'high',
         ...(payload.threadId && { threadId: payload.threadId }),
         data: {
           url: payload.url,
@@ -395,14 +406,17 @@ export const sendPushToUser = async (userId, payload, options = {}) => {
       for (const chunk of chunks) {
         try {
           const receipts = await expo.sendPushNotificationsAsync(chunk);
-          // Clean up invalid tokens
+          // Clean up invalid/expired tokens
           for (let i = 0; i < receipts.length; i++) {
-            if (receipts[i].status === 'error' &&
-                receipts[i].details?.error === 'DeviceNotRegistered') {
-              const badToken = chunk[i].to;
-              await prisma.expoPushToken.deleteMany({
-                where: { token: badToken }
-              }).catch(err => console.warn('Failed to remove invalid Expo token:', err.message));
+            const receipt = receipts[i];
+            if (receipt.status === 'error') {
+              const errorType = receipt.details?.error;
+              if (errorType === 'DeviceNotRegistered' || errorType === 'InvalidCredentials') {
+                const badToken = chunk[i].to;
+                await prisma.expoPushToken.deleteMany({
+                  where: { token: badToken }
+                }).catch(err => console.warn('Failed to remove invalid Expo token:', err.message));
+              }
             }
           }
         } catch (err) {
