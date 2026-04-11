@@ -125,10 +125,10 @@ export default function ChannelListScreen({ navigation, route }) {
     load();
   }, [workspaceId]);
 
-  // Fetch all workspaces for workspace switcher
+  // Fetch all workspaces for workspace switcher (refresh when opened)
   useEffect(() => {
     api.getWorkspaces().then(setAllWorkspaces).catch(console.error);
-  }, []);
+  }, [showWorkspaceSwitcher]);
 
   // Persist collapse state on change
   useEffect(() => {

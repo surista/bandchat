@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -52,9 +53,12 @@ export default function WorkspaceListScreen({ navigation, route }) {
     }
   }, [toast, navigation, route.params?.inviteCode, route.params?.showList]);
 
-  useEffect(() => {
-    loadWorkspaces();
-  }, [loadWorkspaces]);
+  // Refresh workspace list (including unread counts) every time screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      loadWorkspaces();
+    }, [loadWorkspaces])
+  );
 
   // Handle invite deep link
   useEffect(() => {

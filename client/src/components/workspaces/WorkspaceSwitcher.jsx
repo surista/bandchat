@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import api from '../../services/api';
 
 /**
  * Workspace switcher dropdown component.
@@ -11,20 +12,24 @@ import { useNavigate } from 'react-router-dom';
  * @param {Array} props.allWorkspaces - All workspaces the user belongs to
  * @param {function} props.onSwitch - Callback when switching workspaces (optional, defaults to navigate)
  */
-function WorkspaceSwitcher({ currentWorkspace, allWorkspaces = [] }) {
+function WorkspaceSwitcher({ currentWorkspace, allWorkspaces: initialWorkspaces = [] }) {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const triggerRef = useRef(null);
   const menuRef = useRef(null);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const [freshWorkspaces, setFreshWorkspaces] = useState(null);
+
+  // Use fresh data if available, otherwise fall back to initial prop
+  const workspaces = freshWorkspaces || initialWorkspaces;
 
   // Filter out current workspace and sort by name
-  const otherWorkspaces = allWorkspaces
+  const otherWorkspaces = workspaces
     .filter(ws => ws.id !== currentWorkspace?.id)
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  // Position menu below trigger
+  // Position menu below trigger and refresh unread counts
   useEffect(() => {
     if (isOpen && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
@@ -32,6 +37,8 @@ function WorkspaceSwitcher({ currentWorkspace, allWorkspaces = [] }) {
         top: rect.bottom + 4,
         left: rect.left,
       });
+      // Fetch fresh unread counts every time the switcher opens
+      api.getWorkspaces().then(setFreshWorkspaces).catch(() => {});
     }
   }, [isOpen]);
 
