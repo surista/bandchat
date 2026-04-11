@@ -25,6 +25,7 @@ import ErrorState from '../../components/ErrorState';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
+import PressableRow from '../../components/PressableRow';
 
 const CATEGORY_FILTERS = [
   { key: 'all', label: 'All' },
@@ -233,11 +234,10 @@ export default function ContactsScreen({ navigation, route }) {
     const catLabel = CATEGORY_LABELS[item.category] || item.category;
 
     return (
-      <TouchableOpacity
+      <PressableRow
         style={[styles.contactCard, { backgroundColor: colors.bgSecondary }]}
         onLongPress={() => { setSelectedContact(item); setShowActions(true); }}
         delayLongPress={400}
-        activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={`${item.name}. Long press for options`}
         accessibilityHint="View contact details"
@@ -281,7 +281,7 @@ export default function ContactsScreen({ navigation, route }) {
         {item.notes && (
           <Text style={[styles.contactNotes, { color: colors.textSecondary }]}>{item.notes}</Text>
         )}
-      </TouchableOpacity>
+      </PressableRow>
     );
   }, [colors, openLink]);
 

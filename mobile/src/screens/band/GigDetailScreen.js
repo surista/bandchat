@@ -12,7 +12,6 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Image,
   FlatList,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -28,6 +27,7 @@ import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
 import ErrorState from '../../components/ErrorState';
 import { SkeletonList } from '../../components/SkeletonLoader';
+import { Image } from 'expo-image';
 import getCurrencySymbol from '../../utils/getCurrencySymbol';
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet from '../../components/ActionSheet';
@@ -1207,7 +1207,7 @@ export default function GigDetailScreen({ navigation, route }) {
                 accessibilityLabel={item.type === 'video' ? 'Video thumbnail' : 'Photo thumbnail'}
               >
                 {item.type === 'image' ? (
-                  <Image source={{ uri: item.url }} style={styles.mediaThumbnailImage} resizeMode="cover" />
+                  <Image source={{ uri: item.url }} style={styles.mediaThumbnailImage} contentFit="cover" />
                 ) : item.type === 'video' ? (
                   <View style={[styles.mediaThumbnailImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bgTertiary }]}>
                     <View style={styles.videoOverlay}>

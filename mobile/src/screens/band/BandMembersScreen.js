@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo, useLayoutEffect, useRef } fr
 import {
   View,
   Text,
-  Image,
   SectionList,
   TextInput,
   TouchableOpacity,
@@ -15,6 +14,7 @@ import {
   Platform,
   StyleSheet,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';

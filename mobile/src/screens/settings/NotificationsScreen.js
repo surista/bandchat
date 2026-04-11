@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
+import PressableRow from '../../components/PressableRow';
 
 const SNOOZE_OPTIONS = [
   { label: '30 minutes', value: 30 },
@@ -167,7 +168,7 @@ export default function NotificationsScreen({ route }) {
         <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>SNOOZE NOTIFICATIONS</Text>
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
           {SNOOZE_OPTIONS.map((option, index) => (
-            <TouchableOpacity
+            <PressableRow
               key={option.value}
               style={[
                 styles.optionRow,
@@ -175,12 +176,11 @@ export default function NotificationsScreen({ route }) {
               ]}
               onPress={() => handleSnooze(option.value)}
               disabled={updating}
-              activeOpacity={0.6}
               accessibilityRole="button"
               accessibilityLabel={`Snooze for ${option.label}`}
             >
               <Text style={[styles.optionText, { color: colors.textPrimary }]}>{option.label}</Text>
-            </TouchableOpacity>
+            </PressableRow>
           ))}
         </View>
 

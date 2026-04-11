@@ -13,8 +13,8 @@ import {
   Platform,
   StyleSheet,
   KeyboardAvoidingView,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme, themes } from '../../context/ThemeContext';
@@ -22,6 +22,7 @@ import { useToast } from '../../context/ToastContext';
 import Constants from 'expo-constants';
 import api from '../../services/api';
 import ErrorState from '../../components/ErrorState';
+import PressableRow from '../../components/PressableRow';
 
 export default function WorkspaceListScreen({ navigation, route }) {
   const { user, logout } = useAuth();
@@ -96,13 +97,12 @@ export default function WorkspaceListScreen({ navigation, route }) {
     const wsThemeId = getWorkspaceTheme(item.id) || globalTheme;
     const wsTheme = themes[wsThemeId] || themes.default;
     return (
-    <TouchableOpacity
+    <PressableRow
       style={[styles.workspaceItem, { backgroundColor: colors.bgSecondary }]}
       onPress={() => {
         setWorkspaces(prev => prev.map(w => w.id === item.id ? { ...w, unreadCount: 0 } : w));
         navigation.navigate('Workspace', { id: item.id, name: item.name });
       }}
-      activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityLabel={`Open ${item.name} workspace, ${item._count?.members || 0} members${item.unreadCount > 0 ? `, ${item.unreadCount} unread` : ''}`}
     >
@@ -114,7 +114,7 @@ export default function WorkspaceListScreen({ navigation, route }) {
           <Image
             source={{ uri: item.avatarUrl }}
             style={styles.workspaceAvatarImg}
-            resizeMode="cover"
+            contentFit="cover"
             accessible={false}
           />
         )}
@@ -137,7 +137,7 @@ export default function WorkspaceListScreen({ navigation, route }) {
         )}
         <Text style={[styles.chevron, { color: colors.textSecondary }]}>{'\u203a'}</Text>
       </View>
-    </TouchableOpacity>
+    </PressableRow>
     );
   };
 

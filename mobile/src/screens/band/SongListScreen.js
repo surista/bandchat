@@ -28,6 +28,7 @@ import { useLayout } from '../../hooks/useLayout';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { buildSongListHTML } from '../../utils/buildSongListHTML';
+import PressableRow from '../../components/PressableRow';
 
 const SORT_OPTIONS = [
   { key: 'title', label: 'Title' },
@@ -273,12 +274,11 @@ export default function SongListScreen({ navigation, route }) {
   const renderItem = useCallback(({ item, index }) => {
     if (viewModeRef.current === 'compact') {
       return (
-        <TouchableOpacity
+        <PressableRow
           style={[styles.compactRow, { borderBottomColor: colors.border }]}
           onPress={() => navigation.navigate('SongDetail', { songId: item.id, workspaceId })}
           onLongPress={() => handleLongPress(item)}
           delayLongPress={400}
-          activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel={`${index + 1}. ${item.title}${item.artist ? ` by ${item.artist}` : ''}${item.key ? `, key of ${item.key}` : ''}${item.bpm ? `, ${item.bpm} BPM` : ''}${item.duration ? `, ${formatDuration(item.duration)}` : ''}`}
           accessibilityHint="Tap for details, long press for options"
@@ -303,17 +303,16 @@ export default function SongListScreen({ navigation, route }) {
             {item.duration ? <Text style={[styles.compactMetaText, { color: colors.textSecondary }]}>{formatDuration(item.duration)}</Text> : null}
           </View>
           <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} style={{ opacity: 0.4, marginLeft: 4 }} />
-        </TouchableOpacity>
+        </PressableRow>
       );
     }
 
     return (
-      <TouchableOpacity
+      <PressableRow
         style={[styles.songCard, { backgroundColor: colors.bgSecondary }]}
         onPress={() => navigation.navigate('SongDetail', { songId: item.id, workspaceId })}
         onLongPress={() => handleLongPress(item)}
         delayLongPress={400}
-        activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={`${item.title}${item.artist ? ` by ${item.artist}` : ''}`}
         accessibilityHint="Tap for details, long press for options"
@@ -363,7 +362,7 @@ export default function SongListScreen({ navigation, route }) {
             </Text>
           );
         })()}
-      </TouchableOpacity>
+      </PressableRow>
     );
   }, [colors, navigation, workspaceId, handleLongPress, practiceSummary]);
 

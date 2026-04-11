@@ -6,9 +6,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
-  Image,
   RefreshControl,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
@@ -177,7 +177,7 @@ export default function TimelineScreen({ navigation, route }) {
                   key={att.id}
                   source={{ uri: att.thumbnailUrl || att.url }}
                   style={styles.attachmentImage}
-                  resizeMode="cover"
+                  contentFit="cover"
                 />
               ) : (
                 <Text key={att.id} style={[styles.attachmentFile, { color: colors.textSecondary }]}>

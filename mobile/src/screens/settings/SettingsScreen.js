@@ -9,7 +9,6 @@ import {
   Alert,
   ActivityIndicator,
   Linking,
-  Image,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -18,6 +17,7 @@ import {
 const ActionSheetIOS = Platform.OS === 'ios' ? require('react-native').ActionSheetIOS : null;
 import { File, Paths } from 'expo-file-system/next';
 import * as Sharing from 'expo-sharing';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
@@ -426,7 +426,7 @@ export default function SettingsScreen({ navigation, route }) {
                           {workspaceName.charAt(0).toUpperCase()}
                         </Text>
                         {wsAvatarUrl && (
-                          <Image source={{ uri: wsAvatarUrl }} style={styles.wsAvatarImg} resizeMode="cover" accessible={false} />
+                          <Image source={{ uri: wsAvatarUrl }} style={styles.wsAvatarImg} contentFit="cover" accessible={false} />
                         )}
                       </>
                     )}

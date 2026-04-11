@@ -12,8 +12,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { mediumImpact, successNotification, errorNotification } from '../../utils/haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';

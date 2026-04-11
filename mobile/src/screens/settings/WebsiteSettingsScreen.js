@@ -12,8 +12,8 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -366,7 +366,7 @@ export default function WebsiteSettingsScreen({ route }) {
             <Text style={[styles.label, { color: colors.textSecondary }]}>Logo</Text>
             {logoUrl ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <Image source={{ uri: logoUrl }} style={{ width: 72, height: 72, borderRadius: 8, backgroundColor: colors.bgTertiary }} resizeMode="contain" />
+                <Image source={{ uri: logoUrl }} style={{ width: 72, height: 72, borderRadius: 8, backgroundColor: colors.bgTertiary }} contentFit="contain" />
                 <TouchableOpacity onPress={() => setLogoUrl('')} style={{ backgroundColor: 'rgba(239,68,68,0.15)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}>
                   <Text style={{ color: '#ef4444', fontSize: 14, fontWeight: '600' }}>Remove</Text>
                 </TouchableOpacity>
@@ -398,7 +398,7 @@ export default function WebsiteSettingsScreen({ route }) {
             <Text style={[styles.label, { color: colors.textSecondary }]}>Hero Image</Text>
             {heroImageUrl ? (
               <View style={{ gap: 8 }}>
-                <Image source={{ uri: heroImageUrl }} style={{ width: '100%', height: 100, borderRadius: 8 }} resizeMode="cover" />
+                <Image source={{ uri: heroImageUrl }} style={{ width: '100%', height: 100, borderRadius: 8 }} contentFit="cover" />
                 <TouchableOpacity onPress={() => setHeroImageUrl('')} style={{ backgroundColor: 'rgba(239,68,68,0.15)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, alignSelf: 'flex-start' }}>
                   <Text style={{ color: '#ef4444', fontSize: 14, fontWeight: '600' }}>Remove</Text>
                 </TouchableOpacity>

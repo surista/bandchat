@@ -20,6 +20,7 @@ import { mediumImpact, successNotification } from '../../utils/haptics';
 import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
+import PressableRow from '../../components/PressableRow';
 
 export default function WorkspaceMembersScreen({ route, navigation }) {
   const { workspaceId } = route.params;
@@ -160,7 +161,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
     const email = item.user?.email || '';
     const isCurrentUser = item.userId === user?.id;
     return (
-      <TouchableOpacity
+      <PressableRow
         style={[styles.memberCard, { backgroundColor: colors.bgSecondary }]}
         onPress={() => navigation.navigate('MemberProfile', {
           workspaceId,
@@ -175,7 +176,6 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
           }
         }}
         delayLongPress={400}
-        activeOpacity={0.7}
       >
         <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
           <Text style={styles.avatarText}>{getInitial(displayName)}</Text>
@@ -198,7 +198,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
           </View>
           <Text style={[styles.memberEmail, { color: colors.textSecondary }]}>{email}</Text>
         </View>
-      </TouchableOpacity>
+      </PressableRow>
     );
   }, [colors, user?.id]);
 

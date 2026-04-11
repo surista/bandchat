@@ -16,6 +16,7 @@ import ErrorState from '../../components/ErrorState';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
+import PressableRow from '../../components/PressableRow';
 
 export default function VenuesScreen({ navigation, route }) {
   const { workspaceId } = route.params;
@@ -112,10 +113,9 @@ export default function VenuesScreen({ navigation, route }) {
     const gigCount = item._count?.gigs || 0;
 
     return (
-      <TouchableOpacity
+      <PressableRow
         style={[styles.venueCard, { backgroundColor: colors.bgSecondary }]}
         onPress={() => navigation.navigate('VenueDetail', { venueId: item.id, workspaceId })}
-        activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={`${item.name}${item.city ? `, ${item.city}` : ''}`}
         accessibilityHint="View venue details"
@@ -156,7 +156,7 @@ export default function VenuesScreen({ navigation, route }) {
             </Text>
           </View>
         )}
-      </TouchableOpacity>
+      </PressableRow>
     );
   }, [colors, navigation, workspaceId]);
 

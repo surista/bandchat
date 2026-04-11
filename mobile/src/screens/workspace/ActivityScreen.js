@@ -3,7 +3,6 @@ import {
   View,
   Text,
   FlatList,
-  TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
   Image,
@@ -14,6 +13,7 @@ import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
 import ErrorState from '../../components/ErrorState';
+import PressableRow from '../../components/PressableRow';
 
 function formatDate(dateStr) {
   const d = new Date(dateStr);
@@ -90,10 +90,9 @@ export default function ActivityScreen({ navigation, route }) {
   }, [navigation, workspaceId]);
 
   const renderItem = useCallback(({ item }) => (
-    <TouchableOpacity
+    <PressableRow
       style={[styles.card, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
       onPress={() => handlePress(item)}
-      activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityLabel={`${item.actor?.displayName} ${getDescription(item)} in ${item.channelName}`}
     >
@@ -118,7 +117,7 @@ export default function ActivityScreen({ navigation, route }) {
           ) : null}
         </View>
       </View>
-    </TouchableOpacity>
+    </PressableRow>
   ), [colors, handlePress]);
 
   if (loading) {
