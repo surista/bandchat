@@ -259,7 +259,7 @@ export default function SearchScreen({ navigation, route }) {
               >
                 <Text style={[
                   styles.filterChipText,
-                  { color: isActive ? '#ffffff' : colors.textSecondary },
+                  { color: isActive ? colors.primaryText : colors.textSecondary },
                 ]}>
                   {item.id ? `# ${item.name}` : item.name}
                 </Text>
@@ -292,7 +292,7 @@ export default function SearchScreen({ navigation, route }) {
               >
                 <Text style={[
                   styles.filterChipText,
-                  { color: isActive ? '#ffffff' : colors.textSecondary },
+                  { color: isActive ? colors.primaryText : colors.textSecondary },
                 ]}>
                   {item.user?.displayName || 'Unknown'}
                 </Text>

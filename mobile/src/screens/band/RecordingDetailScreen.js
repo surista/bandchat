@@ -420,9 +420,9 @@ export default function RecordingDetailScreen({ navigation, route }) {
               accessibilityLabel={isNew ? "Create recording" : "Save recording"}
             >
               {saving ? (
-                <ActivityIndicator color="#ffffff" size="small" />
+                <ActivityIndicator color={colors.primaryText} size="small" />
               ) : (
-                <Text style={styles.formButtonTextWhite}>{isNew ? 'Create' : 'Save'}</Text>
+                <Text style={[styles.formButtonTextWhite, { color: colors.primaryText }]}>{isNew ? 'Create' : 'Save'}</Text>
               )}
             </TouchableOpacity>
           </View>

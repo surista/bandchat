@@ -197,9 +197,9 @@ export default function NotificationsScreen({ route }) {
               accessibilityLabel="Turn off snooze"
             >
               {updating ? (
-                <ActivityIndicator color="#ffffff" size="small" />
+                <ActivityIndicator color={colors.primaryText} size="small" />
               ) : (
-                <Text style={styles.unsnoozeText}>Turn Off Snooze</Text>
+                <Text style={[styles.unsnoozeText, { color: colors.primaryText }]}>Turn Off Snooze</Text>
               )}
             </TouchableOpacity>
           </>
@@ -257,5 +257,5 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
   },
-  unsnoozeText: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
+  unsnoozeText: { fontSize: 16, fontWeight: '600' },
 });

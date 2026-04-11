@@ -425,7 +425,7 @@ function OptimizerTab({ workspaceId, colors }) {
                 accessibilityLabel={`${song.title}${isSelected ? ', selected' : ''}`}
               >
                 <View style={[styles.checkbox, { borderColor: isSelected ? colors.primary : colors.border }, isSelected && { backgroundColor: colors.primary }]}>
-                  {isSelected && <Text style={styles.checkmark}>{'\u2713'}</Text>}
+                  {isSelected && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.songCheckTitle, { color: colors.textPrimary }]} numberOfLines={1}>{song.title}</Text>
@@ -446,9 +446,9 @@ function OptimizerTab({ workspaceId, colors }) {
             accessibilityLabel="Optimize order"
           >
             {loading ? (
-              <ActivityIndicator color="#ffffff" size="small" />
+              <ActivityIndicator color={colors.primaryText} size="small" />
             ) : (
-              <Text style={[styles.optimizeButtonText, { color: selected.size >= 2 ? '#ffffff' : colors.textSecondary }]}>
+              <Text style={[styles.optimizeButtonText, { color: selected.size >= 2 ? colors.primaryText : colors.textSecondary }]}>
                 Optimize Order
               </Text>
             )}
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
   // Optimizer
   songCheckRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 8, padding: 10, marginBottom: 4, gap: 10 },
   checkbox: { width: 22, height: 22, borderRadius: 4, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
-  checkmark: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  checkmark: { fontSize: 14, fontWeight: '700' },
   songCheckTitle: { fontSize: 14, fontWeight: '600' },
   optimizeButton: { marginTop: 16, paddingVertical: 14, borderRadius: 8, alignItems: 'center' },
   optimizeButtonText: { fontSize: 16, fontWeight: '600' },

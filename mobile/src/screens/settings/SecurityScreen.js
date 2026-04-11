@@ -258,9 +258,9 @@ export default function SecurityScreen() {
                 accessibilityLabel="Update password"
               >
                 {changingPassword ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.buttonText}>Update Password</Text>
+                  <Text style={[styles.buttonText, { color: colors.primaryText }]}>Update Password</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -474,9 +474,9 @@ export default function SecurityScreen() {
                 accessibilityLabel="Send verification email"
               >
                 {changingEmail ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>Send Verification</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>Send Verification</Text>
                 )}
               </TouchableOpacity>
             </View>

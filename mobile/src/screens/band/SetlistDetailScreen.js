@@ -539,12 +539,12 @@ export default function SetlistDetailScreen({ navigation, route }) {
                 Switch to edit mode to add songs
               </Text>
               <TouchableOpacity
-                style={styles.emptyButton}
+                style={[styles.emptyButton, { backgroundColor: colors.primary }]}
                 onPress={() => { setEditing(true); openSongPicker(); }}
                 accessibilityRole="button"
                 accessibilityLabel="Add song to setlist"
               >
-                <Text style={styles.emptyButtonText}>+ Add Song</Text>
+                <Text style={[styles.emptyButtonText, { color: colors.primaryText }]}>+ Add Song</Text>
               </TouchableOpacity>
             </View>
           }
@@ -653,7 +653,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
                     accessibilityLabel={`${member.name}${selected ? ', selected' : ''}`}
                   >
                     <View style={[styles.performerCheckbox, { borderColor: colors.border, backgroundColor: selected ? colors.primary : 'transparent' }]}>
-                      {selected && <Text style={styles.performerCheckmark}>{'\u2713'}</Text>}
+                      {selected && <Text style={[styles.performerCheckmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
                     </View>
                     <Text style={[styles.performerPickerName, { color: colors.textPrimary }]}>{member.name}</Text>
                     {member.instruments && member.instruments.length > 0 && (
@@ -687,9 +687,9 @@ export default function SetlistDetailScreen({ navigation, route }) {
                 accessibilityLabel="Save performers"
               >
                 {savingPerformers ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.detailsButtonTextWhite}>Save</Text>
+                  <Text style={[styles.detailsButtonTextWhite, { color: colors.primaryText }]}>Save</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -737,9 +737,9 @@ export default function SetlistDetailScreen({ navigation, route }) {
                   accessibilityLabel="Save details"
                 >
                   {savingDetails ? (
-                    <ActivityIndicator color="#ffffff" size="small" />
+                    <ActivityIndicator color={colors.primaryText} size="small" />
                   ) : (
-                    <Text style={styles.detailsButtonTextWhite}>Save</Text>
+                    <Text style={[styles.detailsButtonTextWhite, { color: colors.primaryText }]}>Save</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -910,7 +910,7 @@ const styles = StyleSheet.create({
   noPerformers: { fontSize: 13 },
   performerPickerRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 8, borderRadius: 8, gap: 10 },
   performerCheckbox: { width: 22, height: 22, borderRadius: 4, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
-  performerCheckmark: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  performerCheckmark: { fontSize: 14, fontWeight: '700' },
   performerPickerName: { fontSize: 15, fontWeight: '600', flex: 1 },
   performerInstrument: { fontSize: 13 },
 });

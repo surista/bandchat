@@ -603,7 +603,7 @@ export default function GigDetailScreen({ navigation, route }) {
             accessibilityLabel="Multi-day event"
           >
             <View style={[styles.checkbox, { borderColor: colors.border }, multiDay && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-              {multiDay && <Ionicons name="checkmark" size={14} color="#fff" />}
+              {multiDay && <Ionicons name="checkmark" size={14} color={colors.primaryText} />}
             </View>
             <Text style={{ color: colors.textSecondary, fontSize: 14 }}>Multi-day event</Text>
           </TouchableOpacity>
@@ -833,7 +833,7 @@ export default function GigDetailScreen({ navigation, route }) {
               accessibilityLabel={`Lock event, ${isLocked ? 'checked' : 'unchecked'}`}
             >
               <View style={[styles.checkbox, { borderColor: colors.border }, isLocked && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-                {isLocked && <Text style={styles.checkmark}>{'\u2713'}</Text>}
+                {isLocked && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
               </View>
               <Text style={[styles.checkboxLabel, { color: colors.textPrimary }]}>Lock event (prevents member edits)</Text>
             </TouchableOpacity>
@@ -857,9 +857,9 @@ export default function GigDetailScreen({ navigation, route }) {
               accessibilityLabel={isNew ? 'Create event' : 'Save event'}
             >
               {saving ? (
-                <ActivityIndicator color="#ffffff" size="small" />
+                <ActivityIndicator color={colors.primaryText} size="small" />
               ) : (
-                <Text style={styles.formButtonTextWhite}>{isNew ? 'Create' : 'Save'}</Text>
+                <Text style={[styles.formButtonTextWhite, { color: colors.primaryText }]}>{isNew ? 'Create' : 'Save'}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -1123,7 +1123,7 @@ export default function GigDetailScreen({ navigation, route }) {
                       accessibilityState={{ selected }}
                       accessibilityLabel={m === 0 ? 'No buffer before' : `${m} minutes before`}
                     >
-                      <Text style={[styles.paddingChipText, { color: selected ? '#fff' : colors.textSecondary }]}>
+                      <Text style={[styles.paddingChipText, { color: selected ? colors.primaryText : colors.textSecondary }]}>
                         {m === 0 ? 'None' : `${m}m`}
                       </Text>
                     </TouchableOpacity>
@@ -1153,7 +1153,7 @@ export default function GigDetailScreen({ navigation, route }) {
                       accessibilityState={{ selected }}
                       accessibilityLabel={m === 0 ? 'No buffer after' : `${m} minutes after`}
                     >
-                      <Text style={[styles.paddingChipText, { color: selected ? '#fff' : colors.textSecondary }]}>
+                      <Text style={[styles.paddingChipText, { color: selected ? colors.primaryText : colors.textSecondary }]}>
                         {m === 0 ? 'None' : `${m}m`}
                       </Text>
                     </TouchableOpacity>

@@ -619,7 +619,7 @@ export default function SettingsScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Save new name"
               >
-                <Text style={[styles.modalButtonText, { color: '#fff' }]}>{renaming ? 'Saving...' : 'Save'}</Text>
+                <Text style={[styles.modalButtonText, { color: colors.primaryText }]}>{renaming ? 'Saving...' : 'Save'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -766,9 +766,9 @@ export default function SettingsScreen({ navigation, route }) {
                 disabled={savingDefaults}
               >
                 {savingDefaults ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>Save</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>Save</Text>
                 )}
               </TouchableOpacity>
             </View>

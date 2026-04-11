@@ -218,7 +218,7 @@ export default function WorkspaceListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Create workspace"
         >
-          <Text style={styles.actionButtonTextWhite}>Create Workspace</Text>
+          <Text style={[styles.actionButtonTextWhite, { color: colors.primaryText }]}>Create Workspace</Text>
         </TouchableOpacity>
       </View>
 
@@ -282,9 +282,9 @@ export default function WorkspaceListScreen({ navigation, route }) {
                 accessibilityLabel="Join workspace"
               >
                 {submitting ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>Join</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>Join</Text>
                 )}
               </TouchableOpacity>
             </View>

@@ -50,11 +50,6 @@ export function SocketProvider({ children }) {
       setConnected(true);
       setError(null);
       reconnectAttempts.current = 0;
-      // Register socket → SQLite sync and flush offline queue
-      if (dbReady) {
-        registerSocketSync(newSocket);
-        processQueue().catch(() => {});
-      }
     });
 
     newSocket.on('disconnect', (reason) => {
@@ -110,12 +105,20 @@ export function SocketProvider({ children }) {
       if (reconnectTimeout.current) {
         clearTimeout(reconnectTimeout.current);
       }
-      unregisterSocketSync(newSocket);
       newSocket.disconnect();
       setSocket(null);
       setConnected(false);
     };
-  }, [isAuthenticated, isOffline, dbReady]);
+  }, [isAuthenticated, isOffline]);
+
+  // Register socket → SQLite sync separately so dbReady changes don't tear down the socket
+  useEffect(() => {
+    if (socket && connected && dbReady) {
+      registerSocketSync(socket);
+      processQueue().catch(() => {});
+      return () => unregisterSocketSync(socket);
+    }
+  }, [socket, connected, dbReady]);
 
   const joinChannel = useCallback((channelId) => {
     if (socket) socket.emit('channel:join', channelId);

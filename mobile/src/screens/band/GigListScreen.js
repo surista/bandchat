@@ -557,7 +557,7 @@ export default function GigListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel={`Filter: ${f.label}${active ? ', selected' : ''}`}
             >
-              <Text style={[styles.filterChipText, { color: active ? '#ffffff' : colors.textSecondary }]}>
+              <Text style={[styles.filterChipText, { color: active ? colors.primaryText : colors.textSecondary }]}>
                 {f.label}
               </Text>
             </TouchableOpacity>
@@ -574,7 +574,7 @@ export default function GigListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel={`All Bands${showAllBands ? ', selected' : ''}`}
         >
-          <Text style={[styles.filterChipText, { color: showAllBands ? '#ffffff' : colors.textSecondary }]}>
+          <Text style={[styles.filterChipText, { color: showAllBands ? colors.primaryText : colors.textSecondary }]}>
             All Bands
           </Text>
         </TouchableOpacity>
@@ -605,12 +605,12 @@ export default function GigListScreen({ navigation, route }) {
               Tap + to add a gig or rehearsal
             </Text>
             <TouchableOpacity
-              style={styles.emptyButton}
+              style={[styles.emptyButton, { backgroundColor: colors.primary }]}
               onPress={() => navigation.navigate('GigDetail', { workspaceId })}
               accessibilityRole="button"
               accessibilityLabel="Create event"
             >
-              <Text style={styles.emptyButtonText}>+ Create Event</Text>
+              <Text style={[styles.emptyButtonText, { color: colors.primaryText }]}>+ Create Event</Text>
             </TouchableOpacity>
           </View>
         }
@@ -662,7 +662,7 @@ export default function GigListScreen({ navigation, route }) {
               <Text style={[styles.calendarActionButtonText, { color: colors.primary }]}>Open in Calendar</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionItem, styles.actionCancel]}
+              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => setShowCalendarModal(false)}
               accessibilityRole="button"
               accessibilityLabel="Close"
@@ -737,7 +737,7 @@ export default function GigListScreen({ navigation, route }) {
               </View>
             )}
             <TouchableOpacity
-              style={[styles.actionItem, styles.actionCancel]}
+              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedGig(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"
@@ -798,7 +798,7 @@ export default function GigListScreen({ navigation, route }) {
               </TouchableOpacity>
             )}
             <TouchableOpacity
-              style={[styles.actionItem, styles.actionCancel]}
+              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowAvailabilityModal(false); setAvailabilityDate(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"

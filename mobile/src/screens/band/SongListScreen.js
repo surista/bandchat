@@ -423,7 +423,7 @@ export default function SongListScreen({ navigation, route }) {
             accessibilityLabel="Card view"
             accessibilityState={{ selected: viewMode === 'cards' }}
           >
-            <Ionicons name="grid-outline" size={16} color={viewMode === 'cards' ? '#fff' : colors.textSecondary} />
+            <Ionicons name="grid-outline" size={16} color={viewMode === 'cards' ? colors.primaryText : colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.segmentButton, viewMode === 'compact' && { backgroundColor: colors.primary }]}
@@ -439,7 +439,7 @@ export default function SongListScreen({ navigation, route }) {
             accessibilityLabel="List view"
             accessibilityState={{ selected: viewMode === 'compact' }}
           >
-            <Ionicons name="list-outline" size={16} color={viewMode === 'compact' ? '#fff' : colors.textSecondary} />
+            <Ionicons name="list-outline" size={16} color={viewMode === 'compact' ? colors.primaryText : colors.textSecondary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -472,12 +472,12 @@ export default function SongListScreen({ navigation, route }) {
                   Tap + to add songs or use bulk import
                 </Text>
                 <TouchableOpacity
-                  style={styles.emptyButton}
+                  style={[styles.emptyButton, { backgroundColor: colors.primary }]}
                   onPress={() => navigation.navigate('SongDetail', { workspaceId })}
                   accessibilityRole="button"
                   accessibilityLabel="Add song"
                 >
-                  <Text style={styles.emptyButtonText}>+ Add Song</Text>
+                  <Text style={[styles.emptyButtonText, { color: colors.primaryText }]}>+ Add Song</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -641,7 +641,7 @@ export default function SongListScreen({ navigation, route }) {
                 accessibilityLabel={`Auto-fetch metadata${fetchMetadata ? ', enabled' : ', disabled'}`}
               >
                 <View style={[styles.checkbox, { borderColor: colors.border, backgroundColor: fetchMetadata ? colors.primary : 'transparent' }]}>
-                  {fetchMetadata && <Text style={styles.checkmark}>{'\u2713'}</Text>}
+                  {fetchMetadata && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
                 </View>
                 <Text style={[styles.metadataLabel, { color: colors.textPrimary }]}>
                   Auto-fetch metadata (BPM, key, duration)
@@ -655,9 +655,9 @@ export default function SongListScreen({ navigation, route }) {
                 accessibilityLabel={`Import ${parsedSongs.length} songs`}
               >
                 {importing ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.bulkButtonText}>Import {parsedSongs.length} Song{parsedSongs.length !== 1 ? 's' : ''}</Text>
+                  <Text style={[styles.bulkButtonText, { color: colors.primaryText }]}>Import {parsedSongs.length} Song{parsedSongs.length !== 1 ? 's' : ''}</Text>
                 )}
               </TouchableOpacity>
             </ScrollView>
@@ -847,7 +847,7 @@ const styles = StyleSheet.create({
   bulkCount: { fontSize: 14, fontWeight: '600', marginTop: 8, marginBottom: 4 },
   metadataToggle: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 12, paddingVertical: 8 },
   checkbox: { width: 22, height: 22, borderRadius: 4, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
-  checkmark: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  checkmark: { fontSize: 14, fontWeight: '700' },
   metadataLabel: { fontSize: 15 },
   bulkButton: { paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 8 },
   bulkButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '600' },

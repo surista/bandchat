@@ -376,9 +376,9 @@ export default function SetlistListScreen({ navigation, route }) {
                 accessibilityLabel="Create setlist"
               >
                 {creating ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>Create</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>Create</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -422,7 +422,7 @@ export default function SetlistListScreen({ navigation, route }) {
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionItem, styles.actionCancel]}
+              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedSetlist(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"

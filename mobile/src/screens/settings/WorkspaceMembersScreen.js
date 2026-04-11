@@ -275,7 +275,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionItem, styles.actionCancel]}
+              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedMember(null); }}
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
@@ -399,9 +399,9 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
                 disabled={resettingPassword || !newPassword || !confirmPassword || !adminPassword}
               >
                 {resettingPassword ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>Reset</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>Reset</Text>
                 )}
               </TouchableOpacity>
             </View>

@@ -303,7 +303,7 @@ export default function TimelineScreen({ navigation, route }) {
       return (
         <View style={styles.yearRow}>
           <View style={[styles.yearBadge, { backgroundColor: colors.primary }]}>
-            <Text style={styles.yearText}>{item.year}</Text>
+            <Text style={[styles.yearText, { color: colors.primaryText }]}>{item.year}</Text>
           </View>
         </View>
       );
@@ -477,9 +477,9 @@ export default function TimelineScreen({ navigation, route }) {
               accessibilityLabel={editingEvent ? 'Save event' : 'Create event'}
             >
               {saving ? (
-                <ActivityIndicator color="#ffffff" size="small" />
+                <ActivityIndicator color={colors.primaryText} size="small" />
               ) : (
-                <Text style={styles.formButtonTextWhite}>{editingEvent ? 'Save' : 'Create'}</Text>
+                <Text style={[styles.formButtonTextWhite, { color: colors.primaryText }]}>{editingEvent ? 'Save' : 'Create'}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -610,7 +610,7 @@ export default function TimelineScreen({ navigation, route }) {
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionItem, styles.actionCancel]}
+              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedEvent(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"

@@ -237,9 +237,9 @@ export default function ChannelSettingsScreen({ navigation, route }) {
                     disabled={saving}
                   >
                     {saving ? (
-                      <ActivityIndicator size="small" color="#ffffff" />
+                      <ActivityIndicator size="small" color={colors.primaryText} />
                     ) : (
-                      <Text style={styles.editNameButtonText}>Save</Text>
+                      <Text style={[styles.editNameButtonText, { color: colors.primaryText }]}>Save</Text>
                     )}
                   </TouchableOpacity>
                   <TouchableOpacity

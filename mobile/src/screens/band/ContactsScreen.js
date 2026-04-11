@@ -326,7 +326,7 @@ export default function ContactsScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel={`Filter by ${f.label}${active ? ', selected' : ''}`}
             >
-              <Text style={[styles.filterChipText, { color: active ? '#ffffff' : colors.textSecondary }]}>
+              <Text style={[styles.filterChipText, { color: active ? colors.primaryText : colors.textSecondary }]}>
                 {f.label}
               </Text>
             </TouchableOpacity>
@@ -391,7 +391,7 @@ export default function ContactsScreen({ navigation, route }) {
                       accessibilityRole="button"
                       accessibilityLabel={`${opt.label}${active ? ', selected' : ''}`}
                     >
-                      <Text style={[styles.categoryChipText, { color: active ? '#ffffff' : colors.textSecondary }]}>
+                      <Text style={[styles.categoryChipText, { color: active ? colors.primaryText : colors.textSecondary }]}>
                         {opt.label}
                       </Text>
                     </TouchableOpacity>
@@ -473,9 +473,9 @@ export default function ContactsScreen({ navigation, route }) {
                 accessibilityLabel={editingContact ? 'Save contact' : 'Create contact'}
               >
                 {saving ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>{editingContact ? 'Save' : 'Create'}</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>{editingContact ? 'Save' : 'Create'}</Text>
                 )}
               </TouchableOpacity>
             </View>

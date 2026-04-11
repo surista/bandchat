@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 import { formatDuration } from '../../utils/formatDuration';
 import Modal from '../common/Modal';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -7,6 +8,7 @@ import ErrorMessage from '../common/ErrorMessage';
 import Skeleton from '../common/Skeleton';
 
 function MedleyList({ workspaceId }) {
+  const toast = useToast();
   const [medleys, setMedleys] = useState([]);
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +60,7 @@ function MedleyList({ workspaceId }) {
       setMedleys(prev => prev.filter(m => m.id !== medleyId));
       setDeleteMedleyId(null);
     } catch (err) {
-      console.error('Failed to delete medley:', err);
+      toast.error(err.message || 'Failed to delete medley');
       setDeleteMedleyId(null);
     }
   };
@@ -68,7 +70,7 @@ function MedleyList({ workspaceId }) {
       const updated = await api.reorderMedley(medleyId, songIds);
       setMedleys(prev => prev.map(m => m.id === updated.id ? updated : m));
     } catch (err) {
-      console.error('Failed to reorder medley:', err);
+      toast.error(err.message || 'Failed to reorder medley');
     }
   };
 

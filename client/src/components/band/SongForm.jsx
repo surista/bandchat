@@ -73,6 +73,7 @@ function SongForm({ song, workspaceId, onSave, onClose, initialTab }) {
       setAttachments(data);
     } catch (err) {
       console.error('Failed to load attachments:', err);
+      toast.error(err.message || 'Failed to load attachments');
     }
   };
 

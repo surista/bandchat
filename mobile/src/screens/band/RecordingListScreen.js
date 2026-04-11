@@ -313,7 +313,7 @@ export default function RecordingListScreen({ navigation, route }) {
           >
             <Text style={[
               styles.filterChipText,
-              { color: typeFilter === f.key ? '#ffffff' : colors.textSecondary },
+              { color: typeFilter === f.key ? colors.primaryText : colors.textSecondary },
             ]}>
               {f.label}
             </Text>
@@ -340,7 +340,7 @@ export default function RecordingListScreen({ navigation, route }) {
           >
             <Text style={[
               styles.filterChipText,
-              { color: songFilter === 'all' ? '#ffffff' : colors.textSecondary },
+              { color: songFilter === 'all' ? colors.primaryText : colors.textSecondary },
             ]}>
               All Songs
             </Text>
@@ -360,7 +360,7 @@ export default function RecordingListScreen({ navigation, route }) {
               <Text
                 style={[
                   styles.filterChipText,
-                  { color: songFilter === s.id ? '#ffffff' : colors.textSecondary },
+                  { color: songFilter === s.id ? colors.primaryText : colors.textSecondary },
                 ]}
                 numberOfLines={1}
               >
@@ -418,7 +418,7 @@ export default function RecordingListScreen({ navigation, route }) {
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionItem, styles.actionCancel]}
+              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedRecording(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"

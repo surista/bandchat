@@ -1,6 +1,7 @@
 import { isSafeUrl } from '../../utils/urlSafety';
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 import Modal from '../common/Modal';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ErrorMessage from '../common/ErrorMessage';
@@ -15,6 +16,7 @@ const CATEGORIES = [
 ];
 
 function ContactsList({ workspaceId }) {
+  const toast = useToast();
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -59,7 +61,7 @@ function ContactsList({ workspaceId }) {
       setContacts(prev => prev.filter(c => c.id !== contactId));
       setDeleteContactId(null);
     } catch (err) {
-      console.error('Failed to delete contact:', err);
+      toast.error(err.message || 'Failed to delete contact');
       setDeleteContactId(null);
     }
   };

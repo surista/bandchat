@@ -86,9 +86,13 @@ function WorkspaceSwitcher({ currentWorkspace, allWorkspaces: initialWorkspaces 
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, handleKeyDown]);
 
-  // Reset active index when menu opens
+  // Reset active index when menu opens, clear stale data on close
   useEffect(() => {
-    if (isOpen) setActiveIndex(-1);
+    if (isOpen) {
+      setActiveIndex(-1);
+    } else {
+      setFreshWorkspaces(null);
+    }
   }, [isOpen]);
 
   const handleSelectWorkspace = (workspace) => {

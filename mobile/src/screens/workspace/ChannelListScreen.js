@@ -993,7 +993,7 @@ export default function ChannelListScreen({ navigation, route }) {
               activeOpacity={0.6}
             >
               <View style={[styles.checkbox, { borderColor: colors.border }, newChannelPrivate && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-                {newChannelPrivate && <Text style={styles.checkmark}>{'\u2713'}</Text>}
+                {newChannelPrivate && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
               </View>
               <Text style={[styles.checkboxLabel, { color: colors.textPrimary }]}>Private channel</Text>
             </TouchableOpacity>
@@ -1011,9 +1011,9 @@ export default function ChannelListScreen({ navigation, route }) {
                 disabled={creating || !newChannelName.trim()}
               >
                 {creating ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>Create</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>Create</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -1071,9 +1071,9 @@ export default function ChannelListScreen({ navigation, route }) {
                 disabled={creating || selectedMemberIds.length === 0}
               >
                 {creating ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>Start</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>Start</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -1175,9 +1175,9 @@ export default function ChannelListScreen({ navigation, route }) {
                 disabled={savingGroup || !groupName.trim()}
               >
                 {savingGroup ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>{editingGroup ? 'Save' : 'Create'}</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>{editingGroup ? 'Save' : 'Create'}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -1330,7 +1330,6 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   checkmark: {
-    color: '#ffffff',
     fontSize: 14,
     fontWeight: '700',
   },

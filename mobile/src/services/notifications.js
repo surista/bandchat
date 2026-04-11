@@ -65,15 +65,25 @@ class NotificationService {
         body: JSON.stringify({ token: this.expoPushToken, platform: Platform.OS }),
       }).catch(err => console.warn('Push token registration failed:', err.message));
 
-      // Listen for token refresh (e.g., after reinstall, token rotation)
+      // Listen for device token refresh (e.g., after reinstall, token rotation)
+      // When the device token changes, re-fetch the Expo push token and update the server
       if (!this.tokenRefreshListener) {
-        this.tokenRefreshListener = Notifications.addPushTokenListener(({ data }) => {
-          if (data && data !== this.expoPushToken) {
-            this.expoPushToken = data;
-            api.request('/push/expo-token', {
-              method: 'POST',
-              body: JSON.stringify({ token: data, platform: Platform.OS }),
-            }).catch(() => {});
+        this.tokenRefreshListener = Notifications.addPushTokenListener(async () => {
+          try {
+            const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+            const tokenData = await Notifications.getExpoPushTokenAsync(
+              projectId ? { projectId } : {}
+            );
+            const newToken = tokenData.data;
+            if (newToken && newToken !== this.expoPushToken) {
+              this.expoPushToken = newToken;
+              await api.request('/push/expo-token', {
+                method: 'POST',
+                body: JSON.stringify({ token: newToken, platform: Platform.OS }),
+              });
+            }
+          } catch {
+            // Best-effort — register() will retry on next app launch
           }
         });
       }

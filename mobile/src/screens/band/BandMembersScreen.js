@@ -369,7 +369,7 @@ export default function BandMembersScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel={`${seg.label}${segment === seg.key ? ', selected' : ''}`}
           >
-            <Text style={[styles.segmentChipText, { color: segment === seg.key ? '#ffffff' : colors.textSecondary }]}>
+            <Text style={[styles.segmentChipText, { color: segment === seg.key ? colors.primaryText : colors.textSecondary }]}>
               {seg.label}
             </Text>
           </TouchableOpacity>
@@ -456,7 +456,7 @@ export default function BandMembersScreen({ navigation, route }) {
                 accessibilityLabel={`Guest musician, ${isGuest ? 'checked' : 'unchecked'}`}
               >
                 <View style={[styles.checkbox, { borderColor: colors.border }, isGuest && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-                  {isGuest && <Text style={styles.checkmark}>{'\u2713'}</Text>}
+                  {isGuest && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
                 </View>
                 <Text style={[styles.checkboxLabel, { color: colors.textPrimary }]}>Guest musician</Text>
               </TouchableOpacity>
@@ -491,9 +491,9 @@ export default function BandMembersScreen({ navigation, route }) {
                 accessibilityLabel={editingMember ? 'Save member' : 'Add member'}
               >
                 {saving ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>{editingMember ? 'Save' : 'Add'}</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>{editingMember ? 'Save' : 'Add'}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -526,7 +526,7 @@ export default function BandMembersScreen({ navigation, route }) {
               </>
             )}
             <TouchableOpacity
-              style={[styles.actionItem, styles.actionCancel]}
+              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedMember(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"
@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
   },
-  checkmark: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  checkmark: { fontSize: 14, fontWeight: '700' },
   checkboxLabel: { fontSize: 15 },
   modalActions: { flexDirection: 'row', gap: 10, marginTop: 8 },
   modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },

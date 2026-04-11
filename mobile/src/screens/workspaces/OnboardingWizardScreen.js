@@ -266,9 +266,9 @@ export default function OnboardingWizardScreen({ navigation }) {
         accessibilityLabel={loading ? 'Creating...' : 'Create Workspace'}
       >
         {loading ? (
-          <ActivityIndicator color="#fff" size="small" />
+          <ActivityIndicator color={colors.primaryText} size="small" />
         ) : (
-          <Text style={styles.nextButtonText}>Create Workspace</Text>
+          <Text style={[styles.nextButtonText, { color: colors.primaryText }]}>Create Workspace</Text>
         )}
       </TouchableOpacity>
     </View>
@@ -379,8 +379,8 @@ export default function OnboardingWizardScreen({ navigation }) {
             accessibilityRole="button"
             accessibilityLabel="Share invite link"
           >
-            <Ionicons name="share-outline" size={18} color="#ffffff" />
-            <Text style={[styles.shareButtonText, { color: '#ffffff' }]}>Share</Text>
+            <Ionicons name="share-outline" size={18} color={colors.primaryText} />
+            <Text style={[styles.shareButtonText, { color: colors.primaryText }]}>Share</Text>
           </TouchableOpacity>
         </View>
         <Text style={[styles.linkHint, { color: colors.textSecondary }]}>This invite link expires in 24 hours.</Text>
@@ -411,9 +411,9 @@ export default function OnboardingWizardScreen({ navigation }) {
             accessibilityLabel="Send invite email"
           >
             {emailLoading ? (
-              <ActivityIndicator size="small" color="#ffffff" />
+              <ActivityIndicator size="small" color={colors.primaryText} />
             ) : (
-              <Text style={styles.sendButtonText}>Send</Text>
+              <Text style={[styles.sendButtonText, { color: colors.primaryText }]}>Send</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -574,9 +574,9 @@ export default function OnboardingWizardScreen({ navigation }) {
             accessibilityLabel={nextLabel()}
           >
             {loading ? (
-              <ActivityIndicator size="small" color="#ffffff" />
+              <ActivityIndicator size="small" color={colors.primaryText} />
             ) : (
-              <Text style={styles.nextButtonText}>{nextLabel()}</Text>
+              <Text style={[styles.nextButtonText, { color: colors.primaryText }]}>{nextLabel()}</Text>
             )}
           </TouchableOpacity>
         </View>}

@@ -400,6 +400,10 @@ export function ThemeProvider({ children }) {
 
   const density = useMemo(() => DENSITY_VALUES[messageDensity] || DENSITY_VALUES.default, [messageDensity]);
 
+  const safeSetGlobalTheme = useCallback((id) => {
+    if (themes[id]) setGlobalTheme(id);
+  }, []);
+
   const contextValue = useMemo(() => ({
     currentTheme,
     setTheme,
@@ -411,12 +415,12 @@ export function ThemeProvider({ children }) {
     setMessageDensity,
     density,
     globalTheme,
-    setGlobalTheme: (id) => { if (themes[id]) setGlobalTheme(id); },
+    setGlobalTheme: safeSetGlobalTheme,
     activeWorkspaceId,
     setActiveWorkspaceId,
     setWorkspaceTheme,
     getWorkspaceTheme,
-  }), [currentTheme, setTheme, mode, toggleMode, colors, messageDensity, setMessageDensity, density, globalTheme, activeWorkspaceId, setWorkspaceTheme, getWorkspaceTheme]);
+  }), [currentTheme, setTheme, mode, toggleMode, colors, messageDensity, setMessageDensity, density, globalTheme, safeSetGlobalTheme, activeWorkspaceId, setWorkspaceTheme, getWorkspaceTheme]);
 
   return (
     <ThemeContext.Provider value={contextValue}>

@@ -221,9 +221,9 @@ export default function InviteScreen({ route }) {
             activeOpacity={0.7}
           >
             {sending ? (
-              <ActivityIndicator color="#ffffff" size="small" />
+              <ActivityIndicator color={colors.primaryText} size="small" />
             ) : (
-              <Text style={[styles.sendButtonText, { color: email.trim() ? '#ffffff' : colors.textSecondary }]}>
+              <Text style={[styles.sendButtonText, { color: email.trim() ? colors.primaryText : colors.textSecondary }]}>
                 Send Invitation
               </Text>
             )}

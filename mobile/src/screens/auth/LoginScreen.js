@@ -171,9 +171,9 @@ export default function LoginScreen({ navigation }) {
               accessibilityLabel="Sign in"
             >
               {loading ? (
-                <ActivityIndicator color="#ffffff" size="small" />
+                <ActivityIndicator color={colors.primaryText} size="small" />
               ) : (
-                <Text style={styles.buttonText}>Sign In</Text>
+                <Text style={[styles.buttonText, { color: colors.primaryText }]}>Sign In</Text>
               )}
             </TouchableOpacity>
 

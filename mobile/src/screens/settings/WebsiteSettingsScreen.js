@@ -480,7 +480,7 @@ export default function WebsiteSettingsScreen({ route }) {
             {isDeployed ? (
               <>
                 <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: colors.primary }, (!bandName.trim() || savingConfig) && { opacity: 0.5 }]} onPress={handleSaveConfig} disabled={savingConfig || !bandName.trim()}>
-                  {savingConfig ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.primaryBtnText}>Save Config</Text>}
+                  {savingConfig ? <ActivityIndicator color={colors.primaryText} size="small" /> : <Text style={[styles.primaryBtnText, { color: colors.primaryText }]}>Save Config</Text>}
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: colors.bgTertiary }, (!bandName.trim() || deploying) && { opacity: 0.5 }]} onPress={handleDeploy} disabled={deploying || !bandName.trim()}>
                   {deploying ? <ActivityIndicator color={colors.textPrimary} size="small" /> : <Text style={[styles.primaryBtnText, { color: colors.textPrimary }]}>Save & Redeploy</Text>}

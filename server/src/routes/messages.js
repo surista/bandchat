@@ -509,14 +509,15 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
         select: { userId: true }
       });
       if (optedInMembers.length > 0) {
-        // Check mute status for opted-in members
+        // Only notify users who are actually members of this channel (prevents private channel leak)
         const optedInIds = optedInMembers.map(m => m.userId);
-        const mutedOptedIn = await prisma.channelMember.findMany({
-          where: { channelId: req.params.channelId, userId: { in: optedInIds }, muted: true },
-          select: { userId: true }
+        const channelMembers = await prisma.channelMember.findMany({
+          where: { channelId: req.params.channelId, userId: { in: optedInIds } },
+          select: { userId: true, muted: true }
         });
-        const mutedOptedInSet = new Set(mutedOptedIn.map(m => m.userId));
-        optedInMembers.filter(m => !mutedOptedInSet.has(m.userId)).forEach(m => {
+        const mutedSet = new Set(channelMembers.filter(m => m.muted).map(m => m.userId));
+        const memberSet = new Set(channelMembers.map(m => m.userId));
+        optedInMembers.filter(m => memberSet.has(m.userId) && !mutedSet.has(m.userId)).forEach(m => {
           sendPushToUser(m.userId, {
             title: `#${channel.name}`,
             body: `${req.user.displayName}: ${pushBody}`,

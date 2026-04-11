@@ -82,7 +82,7 @@ router.post('/unsubscribe', authenticate, async (req, res) => {
 });
 
 // Register Expo push token (mobile)
-router.post('/expo-token', authenticate, async (req, res) => {
+router.post('/expo-token', authenticate, apiLimiter, async (req, res) => {
   try {
     const { token, platform } = req.body;
 
@@ -93,9 +93,14 @@ router.post('/expo-token', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Invalid platform' });
     }
 
+    // Delete any existing record for this token owned by a different user,
+    // then upsert for the current user (prevents cross-user token hijacking)
+    await prisma.expoPushToken.deleteMany({
+      where: { token, userId: { not: req.user.id } }
+    });
     await prisma.expoPushToken.upsert({
       where: { token },
-      update: { userId: req.user.id, platform },
+      update: { platform },
       create: { userId: req.user.id, token, platform }
     });
 
@@ -107,7 +112,7 @@ router.post('/expo-token', authenticate, async (req, res) => {
 });
 
 // Unregister Expo push token (on logout)
-router.delete('/expo-token', authenticate, async (req, res) => {
+router.delete('/expo-token', authenticate, apiLimiter, async (req, res) => {
   try {
     const { token } = req.body;
 
@@ -144,7 +149,7 @@ router.get('/snooze-status', authenticate, async (req, res) => {
 });
 
 // Set notification snooze
-router.post('/snooze', authenticate, async (req, res) => {
+router.post('/snooze', authenticate, apiLimiter, async (req, res) => {
   try {
     const { duration } = req.body; // 'off' | 30 | 60 | 120 | 'indefinitely'
 
@@ -203,7 +208,7 @@ router.get('/preferences/:workspaceId', authenticate, async (req, res) => {
 });
 
 // Update notification preferences for a workspace
-router.put('/preferences/:workspaceId', authenticate, async (req, res) => {
+router.put('/preferences/:workspaceId', authenticate, apiLimiter, async (req, res) => {
   try {
     const { notifyDMs, notifyMentions, notifyGigChanges, notifyAnnouncements, notifyChannelMessages } = req.body;
 

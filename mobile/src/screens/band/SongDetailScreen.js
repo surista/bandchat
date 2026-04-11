@@ -632,9 +632,9 @@ export default function SongDetailScreen({ navigation, route }) {
               accessibilityLabel={isNew ? 'Create song' : 'Save song'}
             >
               {saving ? (
-                <ActivityIndicator color="#ffffff" size="small" />
+                <ActivityIndicator color={colors.primaryText} size="small" />
               ) : (
-                <Text style={styles.formButtonTextWhite}>{isNew ? 'Create' : 'Save'}</Text>
+                <Text style={[styles.formButtonTextWhite, { color: colors.primaryText }]}>{isNew ? 'Create' : 'Save'}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -846,7 +846,7 @@ export default function SongDetailScreen({ navigation, route }) {
         accessibilityRole="button"
         accessibilityLabel="Log practice session"
       >
-        <Text style={styles.practiceButtonText}>Log Practice</Text>
+        <Text style={[styles.practiceButtonText, { color: colors.primaryText }]}>Log Practice</Text>
       </TouchableOpacity>
 
       {/* Practice Modal */}
@@ -899,9 +899,9 @@ export default function SongDetailScreen({ navigation, route }) {
                 accessibilityLabel="Save practice session"
               >
                 {loggingPractice ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.formButtonTextWhite}>Save</Text>
+                  <Text style={[styles.formButtonTextWhite, { color: colors.primaryText }]}>Save</Text>
                 )}
               </TouchableOpacity>
             </View>

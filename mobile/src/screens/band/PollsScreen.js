@@ -323,7 +323,7 @@ export default function PollsScreen({ navigation, route }) {
                 accessibilityLabel={`${opt.text}${isSelected ? ", selected" : ""}`}
               >
                 <View style={[styles.voteIndicator, isSelected && { backgroundColor: colors.primary }]}>
-                  {isSelected && <Text style={styles.voteCheck}>{'\u2713'}</Text>}
+                  {isSelected && <Text style={[styles.voteCheck, { color: colors.primaryText }]}>{'\u2713'}</Text>}
                 </View>
                 <Text style={[styles.voteText, { color: colors.textPrimary }]}>{opt.text}</Text>
               </TouchableOpacity>
@@ -342,9 +342,9 @@ export default function PollsScreen({ navigation, route }) {
             accessibilityLabel="Submit vote"
           >
             {isVoting ? (
-              <ActivityIndicator color="#ffffff" size="small" />
+              <ActivityIndicator color={colors.primaryText} size="small" />
             ) : (
-              <Text style={styles.voteButtonText}>Submit Vote</Text>
+              <Text style={[styles.voteButtonText, { color: colors.primaryText }]}>Submit Vote</Text>
             )}
           </TouchableOpacity>
         )}
@@ -391,7 +391,7 @@ export default function PollsScreen({ navigation, route }) {
         accessibilityLabel={`Show closed polls, ${showClosed ? "checked" : "unchecked"}`}
       >
         <View style={[styles.toggleCheck, { borderColor: colors.border }, showClosed && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-          {showClosed && <Text style={styles.toggleCheckmark}>{'\u2713'}</Text>}
+          {showClosed && <Text style={[styles.toggleCheckmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
         </View>
         <Text style={[styles.toggleLabel, { color: colors.textPrimary }]}>Show closed polls</Text>
       </TouchableOpacity>
@@ -482,7 +482,7 @@ export default function PollsScreen({ navigation, route }) {
                 accessibilityLabel={`Allow multiple selections, ${allowMultiple ? "checked" : "unchecked"}`}
               >
                 <View style={[styles.checkbox, { borderColor: colors.border }, allowMultiple && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-                  {allowMultiple && <Text style={styles.checkmark}>{'\u2713'}</Text>}
+                  {allowMultiple && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
                 </View>
                 <Text style={[styles.checkboxLabel, { color: colors.textPrimary }]}>Allow multiple selections</Text>
               </TouchableOpacity>
@@ -495,7 +495,7 @@ export default function PollsScreen({ navigation, route }) {
                 accessibilityLabel={`Anonymous voting, ${isAnonymous ? "checked" : "unchecked"}`}
               >
                 <View style={[styles.checkbox, { borderColor: colors.border }, isAnonymous && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-                  {isAnonymous && <Text style={styles.checkmark}>{'\u2713'}</Text>}
+                  {isAnonymous && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
                 </View>
                 <Text style={[styles.checkboxLabel, { color: colors.textPrimary }]}>Anonymous voting</Text>
               </TouchableOpacity>
@@ -519,9 +519,9 @@ export default function PollsScreen({ navigation, route }) {
                 accessibilityLabel="Create poll"
               >
                 {creating ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>Create</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>Create</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -552,7 +552,7 @@ export default function PollsScreen({ navigation, route }) {
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionItem, styles.actionCancel]}
+              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedPoll(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"
@@ -589,7 +589,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
   },
-  toggleCheckmark: { color: '#ffffff', fontSize: 12, fontWeight: '700' },
+  toggleCheckmark: { fontSize: 12, fontWeight: '700' },
   toggleLabel: { fontSize: 14 },
   // List
   listContent: { paddingHorizontal: 12, paddingBottom: 20 },
@@ -631,7 +631,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
   },
-  voteCheck: { color: '#ffffff', fontSize: 12, fontWeight: '700' },
+  voteCheck: { fontSize: 12, fontWeight: '700' },
   voteText: { fontSize: 15, flex: 1 },
   // Results
   resultRow: { marginBottom: 4 },
@@ -715,7 +715,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
   },
-  checkmark: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  checkmark: { fontSize: 14, fontWeight: '700' },
   checkboxLabel: { fontSize: 15 },
   modalActions: { flexDirection: 'row', gap: 10, marginTop: 8 },
   modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },

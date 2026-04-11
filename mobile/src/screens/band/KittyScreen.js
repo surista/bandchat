@@ -447,9 +447,9 @@ export default function KittyScreen({ navigation, route }) {
               accessibilityLabel={editingTx ? 'Save transaction' : 'Create transaction'}
             >
               {saving ? (
-                <ActivityIndicator color="#ffffff" size="small" />
+                <ActivityIndicator color={colors.primaryText} size="small" />
               ) : (
-                <Text style={styles.formButtonTextWhite}>{editingTx ? 'Save' : 'Create'}</Text>
+                <Text style={[styles.formButtonTextWhite, { color: colors.primaryText }]}>{editingTx ? 'Save' : 'Create'}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -536,7 +536,7 @@ export default function KittyScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel={`${f.label}${filterTab === f.key ? ', selected' : ''}`}
           >
-            <Text style={[styles.filterChipText, { color: filterTab === f.key ? '#ffffff' : colors.textSecondary }]}>
+            <Text style={[styles.filterChipText, { color: filterTab === f.key ? colors.primaryText : colors.textSecondary }]}>
               {f.label}
             </Text>
           </TouchableOpacity>
@@ -598,7 +598,7 @@ export default function KittyScreen({ navigation, route }) {
                     accessibilityRole="button"
                     accessibilityLabel={`${c.code}${settingsCurrency === c.code ? ', selected' : ''}`}
                   >
-                    <Text style={[styles.currencyChipText, { color: settingsCurrency === c.code ? '#ffffff' : colors.textSecondary }]}>
+                    <Text style={[styles.currencyChipText, { color: settingsCurrency === c.code ? colors.primaryText : colors.textSecondary }]}>
                       {c.symbol} {c.code}
                     </Text>
                   </TouchableOpacity>
@@ -620,7 +620,7 @@ export default function KittyScreen({ navigation, route }) {
                 <Text style={[styles.formButtonText, { color: colors.textPrimary }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.formButton, { backgroundColor: colors.primary }]} onPress={handleSaveSettings} disabled={savingSettings} accessibilityRole="button" accessibilityLabel="Save settings">
-                {savingSettings ? <ActivityIndicator color="#ffffff" size="small" /> : <Text style={styles.formButtonTextWhite}>Save</Text>}
+                {savingSettings ? <ActivityIndicator color={colors.primaryText} size="small" /> : <Text style={[styles.formButtonTextWhite, { color: colors.primaryText }]}>Save</Text>}
               </TouchableOpacity>
             </View>
           </View>
