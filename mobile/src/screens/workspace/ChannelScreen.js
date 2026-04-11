@@ -10,6 +10,7 @@ import {
   ScrollView,
   ActivityIndicator,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   StyleSheet,
   AppState,
@@ -155,6 +156,19 @@ export default function ChannelScreen({ navigation, route }) {
   const blockedIdsRef = useRef(new Set());
   const messagesRef = useRef(messages);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
+
+  // Android: scroll to newest messages when keyboard opens
+  // On iOS, KAV behavior='padding' handles this. On Android with softwareKeyboardLayoutMode='resize',
+  // the window shrinks but the inverted FlatList doesn't auto-scroll, hiding recent messages.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = Keyboard.addListener('keyboardDidShow', () => {
+      if (flatListRef.current && scrollOffsetRef.current < 100) {
+        flatListRef.current.scrollToOffset({ offset: 0, animated: true });
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   const findMessage = useCallback((id) => messagesRef.current.find(m => m.id === id), []);
 

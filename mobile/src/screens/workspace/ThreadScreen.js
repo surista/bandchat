@@ -5,6 +5,7 @@ import {
   FlatList,
   ActivityIndicator,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   StyleSheet,
 } from 'react-native';
@@ -40,6 +41,7 @@ export default function ThreadScreen({ navigation, route }) {
   const [replies, setReplies] = useState([]);
   const parentRef = useRef(parent);
   const repliesRef = useRef(replies);
+  const flatListRef = useRef(null);
   useEffect(() => { parentRef.current = parent; }, [parent]);
   useEffect(() => { repliesRef.current = replies; }, [replies]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +50,17 @@ export default function ThreadScreen({ navigation, route }) {
   const [workspaceChannels, setWorkspaceChannels] = useState([]);
 
   const parentIdRef = useRef(parentMessage.id);
+
+  // Android: scroll to end when keyboard opens so replies stay visible
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = Keyboard.addListener('keyboardDidShow', () => {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    });
+    return () => sub.remove();
+  }, []);
 
   // Suppress foreground notifications for this channel while viewing thread
   useEffect(() => {
@@ -356,6 +369,7 @@ export default function ThreadScreen({ navigation, route }) {
     >
       <View style={[styles.chatContainer, isTablet && { maxWidth: contentMaxWidth }]}>
       <FlatList
+        ref={flatListRef}
         data={listData}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
