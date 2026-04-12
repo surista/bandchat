@@ -51,18 +51,18 @@ export default function ThreadScreen({ navigation, route }) {
 
   const parentIdRef = useRef(parentMessage.id);
 
-  // Track keyboard visibility for Android bottom inset + scroll handling
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  // Android: manually track keyboard height and apply as bottom padding
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   useEffect(() => {
     if (Platform.OS !== 'android') return;
-    const showSub = Keyboard.addListener('keyboardDidShow', () => {
-      setKeyboardVisible(true);
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     });
     const hideSub = Keyboard.addListener('keyboardDidHide', () => {
-      setKeyboardVisible(false);
+      setKeyboardHeight(0);
     });
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
@@ -368,8 +368,8 @@ export default function ThreadScreen({ navigation, route }) {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={[styles.container, { backgroundColor: colors.bgPrimary, paddingBottom: Platform.OS === 'android' ? keyboardHeight : 0 }, isTablet && styles.tabletContainer]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
       <View style={[styles.chatContainer, isTablet && { maxWidth: contentMaxWidth }]}>
@@ -396,7 +396,7 @@ export default function ThreadScreen({ navigation, route }) {
         members={workspaceMembers}
         channels={workspaceChannels}
       />
-      {insets.bottom > 0 && !keyboardVisible && <View style={{ height: insets.bottom }} />}
+      {insets.bottom > 0 && keyboardHeight === 0 && <View style={{ height: insets.bottom }} />}
 
       {/* Action Sheet */}
       <MessageActionSheet

@@ -157,19 +157,21 @@ export default function ChannelScreen({ navigation, route }) {
   const messagesRef = useRef(messages);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
-  // Track keyboard visibility for Android bottom inset handling
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  // Android: manually track keyboard height and apply as bottom padding.
+  // With softwareKeyboardLayoutMode='pan', the system pans the window up, but
+  // edge-to-edge rendering + inverted FlatList makes this unreliable. We bypass
+  // all native keyboard handling and directly compensate with padding.
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   useEffect(() => {
     if (Platform.OS !== 'android') return;
-    const showSub = Keyboard.addListener('keyboardDidShow', () => {
-      setKeyboardVisible(true);
-      // Scroll to newest messages when keyboard opens
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
       if (flatListRef.current && scrollOffsetRef.current < 100) {
         flatListRef.current.scrollToOffset({ offset: 0, animated: true });
       }
     });
     const hideSub = Keyboard.addListener('keyboardDidHide', () => {
-      setKeyboardVisible(false);
+      setKeyboardHeight(0);
     });
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
@@ -814,8 +816,8 @@ export default function ChannelScreen({ navigation, route }) {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={[styles.container, { backgroundColor: colors.bgPrimary, paddingBottom: Platform.OS === 'android' ? keyboardHeight : 0 }, isTablet && styles.tabletContainer]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
       <View style={[styles.chatContainer, isTablet && { maxWidth: contentMaxWidth }]}>
@@ -949,7 +951,7 @@ export default function ChannelScreen({ navigation, route }) {
         members={workspaceMembers}
         channels={workspaceChannels}
       />
-      {insets.bottom > 0 && !keyboardVisible && <View style={{ height: insets.bottom }} />}
+      {insets.bottom > 0 && keyboardHeight === 0 && <View style={{ height: insets.bottom }} />}
       </View>
 
       {/* Action Sheet */}
