@@ -20,6 +20,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { APP_BASE_URL } from '../../utils/constants';
 import { useLayout } from '../../hooks/useLayout';
+import PressableRow from '../../components/PressableRow';
 
 export default function SignupScreen({ navigation }) {
   const { signup, googleLogin, appleLogin } = useAuth()
@@ -231,11 +232,11 @@ export default function SignupScreen({ navigation }) {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
+            <PressableRow
               style={[styles.button, { backgroundColor: colors.primary }, (loading || !agreedToTerms) && styles.buttonDisabled]}
               onPress={handleSubmit}
               disabled={loading || !agreedToTerms}
-              activeOpacity={0.8}
+              rippleColor="rgba(255,255,255,0.2)"
               accessibilityRole="button"
               accessibilityLabel="Create account"
             >
@@ -244,7 +245,7 @@ export default function SignupScreen({ navigation }) {
               ) : (
                 <Text style={[styles.buttonText, { color: colors.primaryText }]}>Create Account</Text>
               )}
-            </TouchableOpacity>
+            </PressableRow>
 
             <TouchableOpacity
               style={styles.linkButton}

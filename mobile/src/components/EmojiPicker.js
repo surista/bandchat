@@ -3,15 +3,16 @@ import {
   View,
   Text,
   Image,
-  TouchableOpacity,
   Modal,
   ScrollView,
   Pressable,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { getRecentEmojis, addRecentEmoji } from '../services/storage';
+import PressableRow from './PressableRow';
 
 // Custom emoji rendered as images
 export const CUSTOM_EMOJI = {
@@ -60,13 +61,22 @@ function EmojiPicker({ visible, onClose, onSelect }) {
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      <Pressable style={styles.overlay} onPress={onClose} accessibilityRole="button" accessibilityLabel="Dismiss emoji picker">
         <Pressable style={[styles.container, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 16) }]}>
+          {/* Drag handle */}
+          <View style={[styles.handle, { backgroundColor: colors.border }]} />
+
           {/* Category tabs */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.tabBar, { borderBottomColor: colors.border }]} contentContainerStyle={styles.tabBarContent}>
             {categoryNames.map(cat => (
-              <TouchableOpacity
+              <PressableRow
                 key={cat}
                 style={[
                   styles.tab,
@@ -84,7 +94,7 @@ function EmojiPicker({ visible, onClose, onSelect }) {
                 >
                   {cat}
                 </Text>
-              </TouchableOpacity>
+              </PressableRow>
             ))}
           </ScrollView>
 
@@ -93,11 +103,11 @@ function EmojiPicker({ visible, onClose, onSelect }) {
             {currentEmojis.map((emoji, idx) => {
               const custom = CUSTOM_EMOJI[emoji];
               return (
-                <TouchableOpacity
+                <PressableRow
                   key={`${emoji}-${idx}`}
                   style={styles.emojiButton}
                   onPress={() => handleSelect(emoji)}
-                  activeOpacity={0.5}
+                  borderless
                   accessibilityRole="button"
                   accessibilityLabel={`Select ${custom?.alt || emoji}`}
                 >
@@ -106,7 +116,7 @@ function EmojiPicker({ visible, onClose, onSelect }) {
                   ) : (
                     <Text style={styles.emoji}>{emoji}</Text>
                   )}
-                </TouchableOpacity>
+                </PressableRow>
               );
             })}
           </ScrollView>
@@ -127,11 +137,19 @@ const styles = StyleSheet.create({
   container: {
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    maxHeight: 350,
+    maxHeight: 380,
+    paddingTop: 8,
     paddingBottom: 16,
     maxWidth: 500,
     alignSelf: 'center',
     width: '100%',
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 8,
   },
   tabBar: {
     borderBottomWidth: StyleSheet.hairlineWidth,

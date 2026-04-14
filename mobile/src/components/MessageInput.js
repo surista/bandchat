@@ -6,8 +6,10 @@ import * as DocumentPicker from 'expo-document-picker';
 import { Audio } from 'expo-av';
 import { useTheme } from '../context/ThemeContext';
 import { formatDuration as formatRecordingDuration } from '../utils/formatDuration';
+import { mediumImpact } from '../utils/haptics';
 import EmojiPicker from './EmojiPicker';
 import ActionSheet from './ActionSheet';
+import PressableRow from './PressableRow';
 
 const MAX_HEIGHT = 120;
 
@@ -385,6 +387,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
       await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
       await recording.startAsync();
 
+      mediumImpact();
       recordingRef.current = recording;
       setIsRecording(true);
       setRecordingDuration(0);
@@ -604,31 +607,31 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
             />
 
             {showMic ? (
-              <TouchableOpacity
+              <PressableRow
                 style={[styles.sendButton, { backgroundColor: colors.bgTertiary }]}
                 onLongPress={startRecording}
                 delayLongPress={200}
                 onPress={() => startRecording()}
-                activeOpacity={0.7}
+                borderless
                 accessibilityRole="button"
                 accessibilityLabel="Record voice message"
               >
                 <Ionicons name="mic" size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
+              </PressableRow>
             ) : (
-              <TouchableOpacity
+              <PressableRow
                 style={[
                   styles.sendButton,
                   { backgroundColor: canSend ? colors.primary : colors.bgTertiary },
                 ]}
                 onPress={handleSend}
                 disabled={!canSend}
-                activeOpacity={0.7}
+                borderless
                 accessibilityRole="button"
                 accessibilityLabel={editingMessage ? 'Save edit' : 'Send message'}
               >
                 <Ionicons name={editingMessage ? 'checkmark' : 'arrow-up'} size={20} color={canSend ? '#ffffff' : colors.textSecondary} />
-              </TouchableOpacity>
+              </PressableRow>
             )}
           </View>
 
@@ -641,83 +644,83 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
             style={styles.toolbarContainer}
           >
             {!editingMessage && (
-              <TouchableOpacity
+              <PressableRow
                 style={styles.toolbarButton}
                 onPress={showAttachOptions}
-                activeOpacity={0.6}
+                borderless
                 accessibilityRole="button"
                 accessibilityLabel="Attach photo or file"
               >
                 <Ionicons name="add-circle-outline" size={22} color={colors.textSecondary} />
-              </TouchableOpacity>
+              </PressableRow>
             )}
             {!editingMessage && (
-              <TouchableOpacity
+              <PressableRow
                 style={styles.toolbarButton}
                 onPress={pickMedia}
-                activeOpacity={0.6}
+                borderless
                 accessibilityRole="button"
                 accessibilityLabel="Choose from photo library"
               >
                 <Ionicons name="image-outline" size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
+              </PressableRow>
             )}
             <View style={[styles.toolbarDivider, { backgroundColor: colors.border }]} />
-            <TouchableOpacity
+            <PressableRow
               style={styles.toolbarButton}
               onPress={() => wrapSelection('**')}
-              activeOpacity={0.6}
+              borderless
               accessibilityRole="button"
               accessibilityLabel="Bold"
             >
               <Text style={[styles.toolbarTextBold, { color: colors.textSecondary }]}>B</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={styles.toolbarButton}
               onPress={() => wrapSelection('*')}
-              activeOpacity={0.6}
+              borderless
               accessibilityRole="button"
               accessibilityLabel="Italic"
             >
               <Text style={[styles.toolbarTextItalic, { color: colors.textSecondary }]}>I</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={styles.toolbarButton}
               onPress={() => wrapSelection('~~')}
-              activeOpacity={0.6}
+              borderless
               accessibilityRole="button"
               accessibilityLabel="Strikethrough"
             >
               <Text style={[styles.toolbarTextStrike, { color: colors.textSecondary }]}>S</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={styles.toolbarButton}
               onPress={() => wrapSelection('`')}
-              activeOpacity={0.6}
+              borderless
               accessibilityRole="button"
               accessibilityLabel="Inline code"
             >
               <Ionicons name="code-slash" size={18} color={colors.textSecondary} />
-            </TouchableOpacity>
+            </PressableRow>
             <View style={[styles.toolbarDivider, { backgroundColor: colors.border }]} />
-            <TouchableOpacity
+            <PressableRow
               style={styles.toolbarButton}
               onPress={triggerMention}
-              activeOpacity={0.6}
+              borderless
               accessibilityRole="button"
               accessibilityLabel="Mention someone"
             >
               <Ionicons name="at-outline" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={styles.toolbarButton}
               onPress={() => setShowEmojiPicker(true)}
-              activeOpacity={0.6}
+              borderless
               accessibilityRole="button"
               accessibilityLabel="Insert emoji"
             >
               <Ionicons name="happy-outline" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
+            </PressableRow>
           </ScrollView>
         </>
       )}

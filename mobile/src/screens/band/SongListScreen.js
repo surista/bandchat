@@ -119,6 +119,14 @@ export default function SongListScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
       ),
+      ...(Platform.OS === 'ios' ? {
+        headerSearchBarOptions: {
+          placeholder: 'Search songs',
+          hideWhenScrolling: false,
+          onChangeText: (e) => setSearch(e.nativeEvent.text),
+          onCancelButtonPress: () => setSearch(''),
+        },
+      } : {}),
     });
   }, [navigation, workspaceId, colors.primary]);
 
@@ -386,15 +394,17 @@ export default function SongListScreen({ navigation, route }) {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       {/* Search + Sort */}
       <View style={styles.toolbar}>
-        <TextInput
-          style={[styles.searchInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary }]}
-          placeholder="Search songs..."
-          placeholderTextColor={colors.textSecondary}
-          value={search}
-          onChangeText={setSearch}
-          autoCapitalize="none"
-          accessibilityLabel="Search songs"
-        />
+        {Platform.OS !== 'ios' && (
+          <TextInput
+            style={[styles.searchInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary }]}
+            placeholder="Search songs..."
+            placeholderTextColor={colors.textSecondary}
+            value={search}
+            onChangeText={setSearch}
+            autoCapitalize="none"
+            accessibilityLabel="Search songs"
+          />
+        )}
         <TouchableOpacity
           style={[styles.sortButton, { backgroundColor: colors.bgTertiary }]}
           onPress={() => setShowSortModal(true)}

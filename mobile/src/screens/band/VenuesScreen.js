@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,6 +47,14 @@ export default function VenuesScreen({ navigation, route }) {
           <Ionicons name="add" size={28} color={colors.primary} />
         </TouchableOpacity>
       ),
+      ...(Platform.OS === 'ios' ? {
+        headerSearchBarOptions: {
+          placeholder: 'Search venues',
+          hideWhenScrolling: false,
+          onChangeText: (e) => setSearch(e.nativeEvent.text),
+          onCancelButtonPress: () => setSearch(''),
+        },
+      } : {}),
     });
   }, [navigation, colors.primary, workspaceId]);
 
@@ -184,8 +193,8 @@ export default function VenuesScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-      {/* Search bar */}
-      {venues.length > 0 && (
+      {/* Search bar (Android only — iOS uses native headerSearchBarOptions) */}
+      {Platform.OS !== 'ios' && venues.length > 0 && (
         <View style={[styles.searchContainer, { borderBottomColor: colors.border }]}>
           <View style={[styles.searchBar, { backgroundColor: colors.bgTertiary }]}>
             <Ionicons name="search" size={18} color={colors.textSecondary} />

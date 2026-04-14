@@ -119,6 +119,14 @@ export default function BandMembersScreen({ navigation, route }) {
           <Ionicons name="add" size={28} color={colors.primary} />
         </TouchableOpacity>
       ) : null,
+      ...(Platform.OS === 'ios' ? {
+        headerSearchBarOptions: {
+          placeholder: 'Search members',
+          hideWhenScrolling: false,
+          onChangeText: (e) => setSearch(e.nativeEvent.text),
+          onCancelButtonPress: () => setSearch(''),
+        },
+      } : {}),
     });
   }, [navigation, colors.primary, isAdmin]);
 
@@ -343,17 +351,19 @@ export default function BandMembersScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-      <View style={[styles.toolbar, { borderBottomColor: colors.border }]}>
-        <TextInput
-          style={[styles.searchInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary }]}
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search members..."
-          placeholderTextColor={colors.textSecondary}
-          autoCorrect={false}
-          accessibilityLabel="Search members"
-        />
-      </View>
+      {Platform.OS !== 'ios' && (
+        <View style={[styles.toolbar, { borderBottomColor: colors.border }]}>
+          <TextInput
+            style={[styles.searchInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary }]}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search members..."
+            placeholderTextColor={colors.textSecondary}
+            autoCorrect={false}
+            accessibilityLabel="Search members"
+          />
+        </View>
+      )}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
