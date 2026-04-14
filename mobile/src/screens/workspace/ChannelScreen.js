@@ -822,31 +822,35 @@ export default function ChannelScreen({ navigation, route }) {
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.bgPrimary, paddingBottom: Platform.OS === 'android' ? keyboardHeight : 0 }, isTablet && styles.tabletContainer]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? (splitPane ? 0 : headerHeight) : 0}
     >
       <View style={[styles.chatContainer, isTablet && { maxWidth: contentMaxWidth }]}>
       {/* Split-mode inline header bar — only rendered on iPad landscape,
           where the native stack header belongs to ChannelListScreen and the
           proxy navigation drops setOptions(). Gives split-mode users access
           to the channel-options menu (pinned messages, pin setlist, etc). */}
-      {splitPane && !channel.isDM && (
-        <View style={[styles.splitHeader, { backgroundColor: colors.bgSecondary, borderBottomColor: colors.border }]}>
+      {splitPane && (
+        <View style={[styles.splitHeader, { backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
           <View style={styles.splitHeaderTitleRow}>
-            {channel.isPrivate && <Ionicons name="lock-closed" size={14} color={colors.textPrimary} style={{ marginRight: 6 }} />}
-            <Text style={[styles.splitHeaderTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-              {channel.isPrivate ? channel.name : `# ${channel.name}`}
+            {!channel.isDM && channel.isPrivate && <Ionicons name="lock-closed" size={14} color={colors.headerText} style={{ marginRight: 6 }} />}
+            <Text style={[styles.splitHeaderTitle, { color: colors.headerText }]} numberOfLines={1}>
+              {channel.isDM
+                ? (channel.displayName || 'Direct Message')
+                : (channel.isPrivate ? channel.name : `#${channel.name}`)}
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={() => setShowHeaderMenu(true)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            style={styles.splitHeaderMenuButton}
-            accessibilityRole="button"
-            accessibilityLabel="More options"
-            accessibilityHint="Channel options"
-          >
-            <Ionicons name="ellipsis-horizontal" size={22} color={colors.textPrimary} />
-          </TouchableOpacity>
+          {!channel.isDM && (
+            <TouchableOpacity
+              onPress={() => setShowHeaderMenu(true)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={styles.splitHeaderMenuButton}
+              accessibilityRole="button"
+              accessibilityLabel="More options"
+              accessibilityHint="Channel options"
+            >
+              <Ionicons name="ellipsis-horizontal" size={22} color={colors.headerText} />
+            </TouchableOpacity>
+          )}
         </View>
       )}
       {/* Pinned Setlist Banner */}
@@ -1101,6 +1105,7 @@ export default function ChannelScreen({ navigation, route }) {
       <Modal
         visible={showReportModal}
         transparent
+        statusBarTranslucent
         animationType="fade"
         onRequestClose={() => setShowReportModal(false)}
       >

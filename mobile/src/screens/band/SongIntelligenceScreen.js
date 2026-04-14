@@ -241,7 +241,7 @@ function MashupsTab({ workspaceId, colors }) {
       )}
 
       {/* Song Picker */}
-      <Modal visible={showPicker} transparent animationType="fade" onRequestClose={() => setShowPicker(false)}>
+      <Modal visible={showPicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowPicker(false)}>
         <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowPicker(false)} accessibilityRole="button" accessibilityLabel="Dismiss song picker">
           <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Select Song</Text>

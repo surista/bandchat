@@ -617,7 +617,7 @@ export default function GigListScreen({ navigation, route }) {
       />
 
       {/* Calendar Subscribe Modal */}
-      <Modal visible={showCalendarModal} transparent animationType="fade" onRequestClose={() => setShowCalendarModal(false)}>
+      <Modal visible={showCalendarModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowCalendarModal(false)}>
         <TouchableOpacity
           style={styles.actionOverlay}
           activeOpacity={1}
@@ -674,7 +674,7 @@ export default function GigListScreen({ navigation, route }) {
       </Modal>
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => setShowActions(false)}>
+      <Modal visible={showActions} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowActions(false)}>
         <TouchableOpacity
           style={styles.actionOverlay}
           activeOpacity={1}
@@ -749,7 +749,7 @@ export default function GigListScreen({ navigation, route }) {
       </Modal>
 
       {/* Availability Modal */}
-      <Modal visible={showAvailabilityModal} transparent animationType="fade" onRequestClose={() => setShowAvailabilityModal(false)}>
+      <Modal visible={showAvailabilityModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowAvailabilityModal(false)}>
         <TouchableOpacity
           style={styles.actionOverlay}
           activeOpacity={1}

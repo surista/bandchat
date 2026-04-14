@@ -48,15 +48,15 @@ function ActionSheet({ visible, title, actions, onClose }) {
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={styles.overlay} onPress={onClose} accessibilityRole="button" accessibilityLabel="Dismiss action sheet">
-        <View style={[styles.sheet, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <Pressable style={[styles.sheet, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 16) }]} onPress={() => {}}>
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
           {title ? <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>{title}</Text> : null}
           {actions.map((action, i) => (
             <PressableRow key={i} style={styles.actionItem} onPress={() => { onClose?.(); action.onPress?.(); }} accessibilityRole="button" accessibilityLabel={action.label}>
-              <Text style={[styles.actionText, { color: action.destructive ? '#ef4444' : colors.textPrimary }]}>{action.label}</Text>
+              <Text style={[styles.actionText, { color: action.destructive ? colors.error : colors.textPrimary }]}>{action.label}</Text>
             </PressableRow>
           ))}
-        </View>
+        </Pressable>
       </Pressable>
     </Modal>
   );

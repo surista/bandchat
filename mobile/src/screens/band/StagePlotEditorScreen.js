@@ -737,7 +737,7 @@ export default function StagePlotEditorScreen({ navigation, route }) {
       </KeyboardAvoidingView>
 
       {/* Instrument palette modal */}
-      <Modal visible={showPalette} transparent animationType="fade" onRequestClose={() => setShowPalette(false)}>
+      <Modal visible={showPalette} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowPalette(false)}>
         <TouchableOpacity style={styles.paletteOverlay} activeOpacity={1} onPress={() => setShowPalette(false)} accessibilityRole="button" accessibilityLabel="Close instrument palette">
           <View style={[styles.paletteSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.paletteHandle, { backgroundColor: colors.border }]} />

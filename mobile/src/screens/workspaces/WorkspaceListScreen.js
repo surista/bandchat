@@ -247,8 +247,8 @@ export default function WorkspaceListScreen({ navigation, route }) {
       </KeyboardAvoidingView>
 
       {/* Join Workspace Modal */}
-      <Modal visible={showJoin} transparent animationType="fade" onRequestClose={() => setShowJoin(false)}>
-        <View style={styles.modalOverlay}>
+      <Modal visible={showJoin} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowJoin(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Join a Workspace</Text>
             <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Invite Code</Text>
@@ -289,7 +289,7 @@ export default function WorkspaceListScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

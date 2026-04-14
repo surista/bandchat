@@ -458,7 +458,7 @@ export default function KittyScreen({ navigation, route }) {
         </ScrollView>
 
         {/* Type Picker */}
-        <Modal visible={showTypePicker} transparent animationType="fade" onRequestClose={() => setShowTypePicker(false)}>
+        <Modal visible={showTypePicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowTypePicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowTypePicker(false)} accessibilityRole="button" accessibilityLabel="Close type picker">
             <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Transaction Type</Text>
@@ -480,7 +480,7 @@ export default function KittyScreen({ navigation, route }) {
         </Modal>
 
         {/* Category Picker */}
-        <Modal visible={showCategoryPicker} transparent animationType="fade" onRequestClose={() => setShowCategoryPicker(false)}>
+        <Modal visible={showCategoryPicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowCategoryPicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowCategoryPicker(false)} accessibilityRole="button" accessibilityLabel="Close category picker">
             <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Expense Category</Text>
@@ -585,7 +585,7 @@ export default function KittyScreen({ navigation, route }) {
       />
 
       {/* Settings Modal */}
-      <Modal visible={showSettings} transparent animationType="fade" onRequestClose={() => setShowSettings(false)}>
+      <Modal visible={showSettings} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowSettings(false)}>
         <View style={styles.settingsOverlay}>
           <View style={[styles.settingsContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.settingsTitle, { color: colors.textPrimary }]}>Kitty Settings</Text>

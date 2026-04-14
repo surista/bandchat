@@ -10,8 +10,11 @@ import {
   ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { mediumImpact, successNotification, errorNotification } from '../../utils/haptics';
@@ -1005,8 +1008,8 @@ export default function ChannelListScreen({ navigation, route }) {
       />
 
       {/* Create Channel Modal */}
-      <Modal visible={showCreateChannel} transparent animationType="fade" onRequestClose={() => setShowCreateChannel(false)}>
-        <View style={styles.modalOverlay}>
+      <Modal visible={showCreateChannel} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowCreateChannel(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Create Channel</Text>
             <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Channel Name</Text>
@@ -1051,11 +1054,11 @@ export default function ChannelListScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* New DM Modal */}
-      <Modal visible={showNewDM} transparent animationType="fade" onRequestClose={() => setShowNewDM(false)}>
+      <Modal visible={showNewDM} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowNewDM(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>New Message</Text>
@@ -1115,13 +1118,12 @@ export default function ChannelListScreen({ navigation, route }) {
       </Modal>
 
       {/* Channel Actions Modal (Star/Unstar) */}
-      <Modal visible={showChannelActions} transparent animationType="fade" onRequestClose={() => setShowChannelActions(false)}>
-        <TouchableOpacity
+      <Modal visible={showChannelActions} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowChannelActions(false)}>
+        <Pressable
           style={styles.modalOverlay}
-          activeOpacity={1}
           onPress={() => setShowChannelActions(false)}
         >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
+          <Pressable style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} onPress={() => {}}>
             <Text style={[styles.actionSheetTitle, { color: colors.textPrimary }]}>
               #{selectedChannel?.name}
             </Text>
@@ -1139,18 +1141,17 @@ export default function ChannelListScreen({ navigation, route }) {
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* Group Actions Modal (Rename/Delete) */}
-      <Modal visible={showGroupActions} transparent animationType="fade" onRequestClose={() => setShowGroupActions(false)}>
-        <TouchableOpacity
+      <Modal visible={showGroupActions} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowGroupActions(false)}>
+        <Pressable
           style={styles.modalOverlay}
-          activeOpacity={1}
           onPress={() => setShowGroupActions(false)}
         >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
+          <Pressable style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} onPress={() => {}}>
             <Text style={[styles.actionSheetTitle, { color: colors.textPrimary }]}>
               {selectedGroup?.name}
             </Text>
@@ -1164,7 +1165,7 @@ export default function ChannelListScreen({ navigation, route }) {
               style={styles.actionItem}
               onPress={handleDeleteGroup}
             >
-              <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete Section</Text>
+              <Text style={[styles.actionText, { color: colors.error }]}>Delete Section</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionItem, styles.cancelAction, { borderTopColor: colors.border }]}
@@ -1172,13 +1173,13 @@ export default function ChannelListScreen({ navigation, route }) {
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* Group Create/Edit Modal */}
-      <Modal visible={showGroupModal} transparent animationType="fade" onRequestClose={() => setShowGroupModal(false)}>
-        <View style={styles.modalOverlay}>
+      <Modal visible={showGroupModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowGroupModal(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
               {editingGroup ? 'Rename Section' : 'New Section'}
@@ -1215,7 +1216,7 @@ export default function ChannelListScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Workspace Switcher */}

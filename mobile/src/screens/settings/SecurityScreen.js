@@ -436,8 +436,8 @@ export default function SecurityScreen() {
       </KeyboardAvoidingView>
 
       {/* Change Email Modal */}
-      <Modal visible={showEmailModal} transparent animationType="fade" onRequestClose={() => setShowEmailModal(false)}>
-        <View style={styles.modalOverlay}>
+      <Modal visible={showEmailModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowEmailModal(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Change Email</Text>
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
@@ -493,11 +493,11 @@ export default function SecurityScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
       {/* Delete Account Modal */}
-      <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => { setShowDeleteModal(false); setDeletePassword(''); }}>
-        <View style={styles.modalOverlay}>
+      <Modal visible={showDeleteModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => { setShowDeleteModal(false); setDeletePassword(''); }}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: '#ef4444' }]} accessibilityRole="header">Delete Account</Text>
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
@@ -554,7 +554,7 @@ export default function SecurityScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

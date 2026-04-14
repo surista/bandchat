@@ -69,9 +69,12 @@ function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwn
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
-        <View style={[styles.sheet, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <Pressable
+          style={[styles.sheet, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 16) }]}
+          onPress={() => {}}
+        >
           {/* Quick Reaction Row */}
           <View style={[styles.quickReactionRow, { borderBottomColor: colors.border }]}>
             {QUICK_EMOJIS.map((emoji) => (
@@ -136,7 +139,7 @@ function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwn
               <Text style={[styles.cancelText, { color: colors.textPrimary }]}>Cancel</Text>
             </PressableRow>
           )}
-        </View>
+        </Pressable>
       </Pressable>
     </Modal>
   );

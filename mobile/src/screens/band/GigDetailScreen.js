@@ -874,7 +874,7 @@ export default function GigDetailScreen({ navigation, route }) {
         </ScrollView>
 
         {/* Type Picker */}
-        <Modal visible={showTypePicker} transparent animationType="fade" onRequestClose={() => setShowTypePicker(false)}>
+        <Modal visible={showTypePicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowTypePicker(false)}>
           <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowTypePicker(false)} accessibilityRole="button" accessibilityLabel="Close type picker">
             <View style={[styles.pickerModal, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.pickerModalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Event Type</Text>
@@ -896,7 +896,7 @@ export default function GigDetailScreen({ navigation, route }) {
         </Modal>
 
         {/* Status Picker */}
-        <Modal visible={showStatusPicker} transparent animationType="fade" onRequestClose={() => setShowStatusPicker(false)}>
+        <Modal visible={showStatusPicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowStatusPicker(false)}>
           <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowStatusPicker(false)} accessibilityRole="button" accessibilityLabel="Close status picker">
             <View style={[styles.pickerModal, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.pickerModalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Status</Text>

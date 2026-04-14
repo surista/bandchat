@@ -236,7 +236,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
       />
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => { setShowActions(false); setSelectedMember(null); }}>
+      <Modal visible={showActions} transparent animationType="slide" statusBarTranslucent onRequestClose={() => { setShowActions(false); setSelectedMember(null); }}>
         <TouchableOpacity
           style={styles.actionOverlay}
           activeOpacity={1}
@@ -285,7 +285,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
       </Modal>
 
       {/* Remove Confirmation Modal */}
-      <Modal visible={showRemoveConfirm} transparent animationType="fade" onRequestClose={() => setShowRemoveConfirm(false)}>
+      <Modal visible={showRemoveConfirm} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowRemoveConfirm(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Remove Member</Text>
@@ -338,7 +338,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
       </Modal>
 
       {/* Password Reset Modal */}
-      <Modal visible={showPasswordReset} transparent animationType="fade" onRequestClose={() => { setShowPasswordReset(false); clearPasswordFields(); }}>
+      <Modal visible={showPasswordReset} transparent animationType="fade" statusBarTranslucent onRequestClose={() => { setShowPasswordReset(false); clearPasswordFields(); }}>
         <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Reset Password</Text>

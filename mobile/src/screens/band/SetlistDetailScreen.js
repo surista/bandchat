@@ -636,7 +636,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
       </Modal>
 
       {/* Performer Picker Modal */}
-      <Modal visible={showPerformerPicker} transparent animationType="fade" onRequestClose={() => setShowPerformerPicker(false)}>
+      <Modal visible={showPerformerPicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowPerformerPicker(false)}>
         <View style={styles.detailsOverlay}>
           <View style={[styles.detailsContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.detailsTitle, { color: colors.textPrimary }]} accessibilityRole="header">Select Performers</Text>
@@ -698,7 +698,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
       </Modal>
 
       {/* Edit Details Modal */}
-      <Modal visible={showEditDetails} transparent animationType="fade" onRequestClose={() => setShowEditDetails(false)}>
+      <Modal visible={showEditDetails} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowEditDetails(false)}>
         <View style={styles.detailsOverlay}>
           <KeyboardAvoidingView behavior="padding">
             <View style={[styles.detailsContent, { backgroundColor: colors.modalBg }]}>

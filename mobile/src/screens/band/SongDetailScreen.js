@@ -649,7 +649,7 @@ export default function SongDetailScreen({ navigation, route }) {
         </ScrollView>
 
         {/* Key Picker Modal */}
-        <Modal visible={showKeyPicker} transparent animationType="fade" onRequestClose={() => setShowKeyPicker(false)}>
+        <Modal visible={showKeyPicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowKeyPicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowKeyPicker(false)} accessibilityRole="button" accessibilityLabel="Dismiss key picker">
             <View style={[styles.keyPickerContent, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.keyPickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Select Key</Text>
@@ -852,7 +852,7 @@ export default function SongDetailScreen({ navigation, route }) {
       </TouchableOpacity>
 
       {/* Practice Modal */}
-      <Modal visible={showPracticeModal} transparent animationType="fade" onRequestClose={() => setShowPracticeModal(false)}>
+      <Modal visible={showPracticeModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowPracticeModal(false)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowPracticeModal(false)} accessibilityRole="button" accessibilityLabel="Dismiss practice modal">
           <View style={[styles.practiceModalContent, { backgroundColor: colors.modalBg }]} onStartShouldSetResponder={() => true}>
             <Text style={[styles.practiceModalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Log Practice</Text>

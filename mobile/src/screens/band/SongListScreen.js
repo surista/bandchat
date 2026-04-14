@@ -495,7 +495,7 @@ export default function SongListScreen({ navigation, route }) {
       />
 
       {/* Sort Modal */}
-      <Modal visible={showSortModal} transparent animationType="fade" onRequestClose={() => setShowSortModal(false)}>
+      <Modal visible={showSortModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowSortModal(false)}>
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
@@ -531,7 +531,7 @@ export default function SongListScreen({ navigation, route }) {
       )}
 
       {/* More Menu */}
-      <Modal visible={showMoreMenu} transparent animationType="fade" onRequestClose={() => setShowMoreMenu(false)}>
+      <Modal visible={showMoreMenu} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowMoreMenu(false)}>
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
@@ -675,7 +675,7 @@ export default function SongListScreen({ navigation, route }) {
       </Modal>
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => setShowActions(false)}>
+      <Modal visible={showActions} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowActions(false)}>
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}

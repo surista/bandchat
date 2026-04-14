@@ -585,8 +585,8 @@ export default function SettingsScreen({ navigation, route }) {
       </ScrollView>
 
       {/* Rename Workspace Modal */}
-      <Modal visible={showRenameModal} transparent animationType="fade" onRequestClose={() => setShowRenameModal(false)}>
-        <View style={styles.modalOverlay}>
+      <Modal visible={showRenameModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowRenameModal(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Rename Workspace</Text>
             <TextInput
@@ -623,12 +623,12 @@ export default function SettingsScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Delete Workspace Confirmation Modal */}
-      <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
-        <View style={styles.modalOverlay}>
+      <Modal visible={showDeleteModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowDeleteModal(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Delete Workspace</Text>
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
@@ -668,11 +668,11 @@ export default function SettingsScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Workspace Defaults Modal */}
-      <Modal visible={showDefaultsModal} transparent animationType="fade" onRequestClose={() => setShowDefaultsModal(false)}>
+      <Modal visible={showDefaultsModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowDefaultsModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Workspace Defaults</Text>

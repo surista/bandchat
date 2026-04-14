@@ -33,14 +33,15 @@ function WorkspaceSwitcher({ visible, currentWorkspace, workspaces = [], onSelec
   };
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
       <Pressable
         style={styles.overlay}
         onPress={onClose}
         accessibilityRole="button"
         accessibilityLabel="Dismiss workspace switcher"
       >
-        <View
+        <Pressable
+          onPress={() => {}}
           style={[
             styles.sheet,
             {
@@ -138,7 +139,7 @@ function WorkspaceSwitcher({ visible, currentWorkspace, workspaces = [], onSelec
               <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Cancel</Text>
             </PressableRow>
           )}
-        </View>
+        </Pressable>
       </Pressable>
     </Modal>
   );
