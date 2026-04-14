@@ -12,11 +12,16 @@ export function useLayout() {
   const isTablet = width >= TABLET_BREAKPOINT || Platform.isPad;
   const isLandscape = width > height;
   const isTabletLandscape = isTablet && isLandscape;
+  // STRICTLY iPad iOS landscape — never iPhone, never Android, never iPad portrait.
+  // Intentionally uses Platform.isPad (not the width heuristic) so an iPhone in
+  // Split View at 768pt width will never accidentally take the split path.
+  const isSplitView = Platform.OS === 'ios' && Platform.isPad === true && isLandscape && width >= 900;
 
   return {
     isTablet,
     isLandscape,
     isTabletLandscape,
+    isSplitView,
     screenWidth: width,
     screenHeight: height,
     // Wider content area on tablet landscape so ultra-wide iPads don't

@@ -26,6 +26,8 @@ import { getLocalChannels, upsertChannels, upsertMembers } from '../../services/
 import ChannelItem from '../../components/ChannelItem';
 import ErrorState from '../../components/ErrorState';
 import WorkspaceSwitcher from '../../components/WorkspaceSwitcher';
+import SplitLayout from '../../components/split/SplitLayout';
+import ChannelPaneHost from '../../components/split/ChannelPaneHost';
 import { useLayout } from '../../hooks/useLayout';
 
 const BAND_CATEGORIES = [
@@ -73,7 +75,26 @@ export default function ChannelListScreen({ navigation, route }) {
   const { user } = useAuth();
   const { colors, setActiveWorkspaceId } = useTheme();
   const { socket, joinWorkspace } = useSocket();
-  const { isTablet, contentMaxWidth } = useLayout();
+  const { isTablet, contentMaxWidth, isSplitView, sidebarWidth } = useLayout();
+  // Split-mode active channel (only relevant when isSplitView === true).
+  // On iPhone and Android this state exists but is never read — the split
+  // render path is gated below and `handleChannelPress` still calls
+  // `navigation.navigate('Channel', ...)` on phones exactly as before.
+  const [splitActiveChannel, setSplitActiveChannel] = useState(null);
+  const prevIsSplitViewRef = useRef(isSplitView);
+
+  // Rotation handling: when iPad goes landscape → portrait while viewing a
+  // channel in the split pane, push that channel onto the real stack so the
+  // user isn't yanked back to the channel list. No-op on phones (isSplitView
+  // is permanently false, so the transition never fires).
+  useEffect(() => {
+    const wasSplit = prevIsSplitViewRef.current;
+    prevIsSplitViewRef.current = isSplitView;
+    if (wasSplit && !isSplitView && splitActiveChannel) {
+      navigation.navigate('Channel', { channel: splitActiveChannel, workspaceId });
+      setSplitActiveChannel(null);
+    }
+  }, [isSplitView, splitActiveChannel, navigation, workspaceId]);
 
   const [workspace, setWorkspace] = useState(null);
   const [channels, setChannels] = useState([]);
@@ -428,8 +449,14 @@ export default function ChannelListScreen({ navigation, route }) {
     const channelData = isDM
       ? { ...channel, displayName: getDMDisplayName(channel), isDM: true }
       : channel;
+    // iPad landscape: swap the right pane instead of pushing a new screen.
+    // Gated on isSplitView which is false on iPhone / Android / iPad portrait.
+    if (isSplitView) {
+      setSplitActiveChannel(channelData);
+      return;
+    }
     navigation.navigate('Channel', { channel: channelData, workspaceId });
-  }, [navigation, workspaceId, getDMDisplayName]);
+  }, [navigation, workspaceId, getDMDisplayName, isSplitView]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -847,7 +874,9 @@ export default function ChannelListScreen({ navigation, route }) {
     );
   }
 
-  return (
+  // Shared channel-list JSX. Rendered as the full screen on phones,
+  // or as the LEFT pane inside SplitLayout on iPad landscape.
+  const channelListContent = (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.channelListBg }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       {/* Collapsible: Next upcoming event banner + Calendar + Saved Messages */}
       <View style={[styles.stickyHeader, { backgroundColor: colors.channelListBg, borderBottomColor: colors.border }, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
@@ -1208,6 +1237,30 @@ export default function ChannelListScreen({ navigation, route }) {
 
     </SafeAreaView>
   );
+
+  // ──────────────────────────────────────────────────────────────────
+  // iPad landscape: master/detail split layout.
+  // Phone / Android / iPad portrait fall through to the default return
+  // below and see the same `channelListContent` they always have.
+  // ──────────────────────────────────────────────────────────────────
+  if (isSplitView) {
+    return (
+      <SplitLayout
+        sidebarWidth={sidebarWidth || 380}
+        left={channelListContent}
+        right={(
+          <ChannelPaneHost
+            channel={splitActiveChannel}
+            workspaceId={workspaceId}
+            parentNavigation={navigation}
+            onSwitchChannel={setSplitActiveChannel}
+          />
+        )}
+      />
+    );
+  }
+
+  return channelListContent;
 }
 
 const styles = StyleSheet.create({
