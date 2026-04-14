@@ -2,6 +2,14 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.35] - 2026-04-14
+
+### Added
+- **Comments on calendar events** — Any workspace member can add comments to a gig/event. Authors can edit their own comments; authors or workspace admins can delete. Real-time updates via Socket.IO.
+
+### Changed
+- **Event edit/delete permissions tightened (breaking)** — Previously, any workspace member could edit or delete non-personal events they did not create. Now only the event creator or a workspace admin can modify or delete an event (personal or shared). Locked events still require admin.
+
 ## [1.06.08] - 2026-04-01
 
 ### Added

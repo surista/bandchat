@@ -4,6 +4,7 @@ import api from '../../services/api';
 import Modal from '../common/Modal';
 import { getCurrencySymbol } from '../../utils/currencies';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
 
 // Generate Google Calendar URL
 const getGoogleCalendarUrl = (gig, workspaceName) => {
@@ -57,6 +58,7 @@ const MEDIA_TYPE_META = {
 
 function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmin, workspaceId, workspace, workspaceMembers = [], previousEvents = [], onMediaChange }) {
   const { user } = useAuth();
+  const { socket } = useSocket();
   // Read-only mode: locked events, OR shared events the user didn't create (non-admin)
   const isCreator = !gig || gig.createdById === user?.id;
   const readOnly = (gig?.isLocked && !isAdmin) || (gig && !isCreator && !isAdmin);
@@ -184,6 +186,31 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
       .finally(() => { if (!cancelled) setCommentsLoading(false); });
     return () => { cancelled = true; };
   }, [gig?.id]);
+
+  useEffect(() => {
+    if (!socket || !gig?.id) return;
+    const onAdded = ({ gigId, comment }) => {
+      if (gigId !== gig.id || !comment) return;
+      setComments(prev => prev.some(c => c.id === comment.id) ? prev : [...prev, comment]);
+    };
+    const onUpdated = ({ gigId, comment }) => {
+      if (gigId !== gig.id || !comment) return;
+      setComments(prev => prev.map(c => c.id === comment.id ? comment : c));
+    };
+    const onDeleted = ({ gigId, commentId }) => {
+      if (gigId !== gig.id) return;
+      setComments(prev => prev.filter(c => c.id !== commentId));
+      setEditingCommentId(prev => prev === commentId ? null : prev);
+    };
+    socket.on('gig:commentAdded', onAdded);
+    socket.on('gig:commentUpdated', onUpdated);
+    socket.on('gig:commentDeleted', onDeleted);
+    return () => {
+      socket.off('gig:commentAdded', onAdded);
+      socket.off('gig:commentUpdated', onUpdated);
+      socket.off('gig:commentDeleted', onDeleted);
+    };
+  }, [socket, gig?.id]);
 
   const handleAddComment = async () => {
     const content = newComment.trim();

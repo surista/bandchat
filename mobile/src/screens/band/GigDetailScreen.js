@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useLayoutEffect } from 'react';
+import { useState, useEffect, useCallback, useLayoutEffect, useRef, memo } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ import { format, parseISO } from 'date-fns';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useSocket } from '../../context/SocketContext';
 import { successNotification, selectionFeedback, errorNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
@@ -48,7 +49,9 @@ export default function GigDetailScreen({ navigation, route }) {
   const { user } = useAuth()
   const { isTablet, contentMaxWidth } = useLayout();
   const { colors, mode } = useTheme();
+  const { socket } = useSocket();
   const headerHeight = useHeaderHeight();
+  const viewScrollRef = useRef(null);
 
   const [gig, setGig] = useState(null);
   const [loading, setLoading] = useState(!isNew);
@@ -88,6 +91,7 @@ export default function GigDetailScreen({ navigation, route }) {
   // Comments
   const [comments, setComments] = useState([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsError, setCommentsError] = useState(null);
   const [newComment, setNewComment] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState(null);
@@ -120,14 +124,20 @@ export default function GigDetailScreen({ navigation, route }) {
     if (isNew) return;
     (async () => {
       try {
-        const [data, mediaData, commentsData] = await Promise.all([
+        const [data, mediaData, commentsResult] = await Promise.all([
           api.getGig(gigId),
           api.getGigMedia(gigId).catch(() => []),
-          api.getGigComments(gigId).catch(() => []),
+          api.getGigComments(gigId).then(d => ({ ok: true, data: d })).catch(err => ({ ok: false, err })),
         ]);
         setGig(data);
         setGigMedia(mediaData);
-        setComments(Array.isArray(commentsData) ? commentsData : []);
+        if (commentsResult.ok) {
+          setComments(Array.isArray(commentsResult.data) ? commentsResult.data : []);
+          setCommentsError(null);
+        } else {
+          setComments([]);
+          setCommentsError(commentsResult.err?.message || 'Failed to load comments');
+        }
         populateForm(data);
       } catch (err) {
         setLoadError(err.message || 'Failed to load event');
@@ -137,18 +147,79 @@ export default function GigDetailScreen({ navigation, route }) {
     })();
   }, [gigId, isNew, navigation]);
 
+  useEffect(() => {
+    if (!socket || !gigId) return;
+    const onAdded = ({ gigId: incomingGigId, comment }) => {
+      if (incomingGigId !== gigId || !comment) return;
+      setComments(prev => prev.some(c => c.id === comment.id) ? prev : [...prev, comment]);
+    };
+    const onUpdated = ({ gigId: incomingGigId, comment }) => {
+      if (incomingGigId !== gigId || !comment) return;
+      setComments(prev => prev.map(c => c.id === comment.id ? comment : c));
+    };
+    const onDeleted = ({ gigId: incomingGigId, commentId }) => {
+      if (incomingGigId !== gigId) return;
+      setComments(prev => prev.filter(c => c.id !== commentId));
+      setEditingCommentId(prev => prev === commentId ? null : prev);
+    };
+    socket.on('gig:commentAdded', onAdded);
+    socket.on('gig:commentUpdated', onUpdated);
+    socket.on('gig:commentDeleted', onDeleted);
+    return () => {
+      socket.off('gig:commentAdded', onAdded);
+      socket.off('gig:commentUpdated', onUpdated);
+      socket.off('gig:commentDeleted', onDeleted);
+    };
+  }, [socket, gigId]);
+
+  useEffect(() => {
+    if (!editingCommentId) return;
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (!editingCommentId) return;
+      e.preventDefault();
+      Alert.alert(
+        'Discard changes?',
+        'You have an unsaved comment edit. Discard it?',
+        [
+          { text: 'Keep editing', style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => {
+              setEditingCommentId(null);
+              setEditingCommentContent('');
+              navigation.dispatch(e.data.action);
+            },
+          },
+        ],
+      );
+    });
+    return unsubscribe;
+  }, [navigation, editingCommentId]);
+
   const reloadComments = useCallback(async () => {
     if (!gigId) return;
     setCommentsLoading(true);
     try {
       const data = await api.getGigComments(gigId);
       setComments(Array.isArray(data) ? data : []);
-    } catch {
-      // ignore
+      setCommentsError(null);
+    } catch (err) {
+      setCommentsError(err?.message || 'Failed to load comments');
     } finally {
       setCommentsLoading(false);
     }
   }, [gigId]);
+
+  const handleStartEditComment = useCallback((id, content) => {
+    setEditingCommentId(id);
+    setEditingCommentContent(content);
+  }, []);
+
+  const handleCancelEditComment = useCallback(() => {
+    setEditingCommentId(null);
+    setEditingCommentContent('');
+  }, []);
 
   const handleAddComment = useCallback(async () => {
     const content = newComment.trim();
@@ -1037,9 +1108,17 @@ export default function GigDetailScreen({ navigation, route }) {
   const setlistItems = gig.setlists || [];
 
   return (
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+    >
     <ScrollView
+      ref={viewScrollRef}
       style={[styles.container, { backgroundColor: colors.bgPrimary }]}
       contentContainerStyle={[styles.viewContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
     >
       {/* Type + Status + Lock badges */}
       <View style={styles.viewBadgeRow}>
@@ -1381,109 +1460,49 @@ export default function GigDetailScreen({ navigation, route }) {
           <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 8 }} />
         ) : null}
 
-        {!commentsLoading && comments.length === 0 ? (
-          <Text style={{ color: colors.textSecondary, fontSize: 14, marginBottom: 12 }}>
-            No comments yet.
-          </Text>
+        {!commentsLoading && commentsError ? (
+          <View style={{ paddingVertical: 8, marginBottom: 8 }}>
+            <Text style={{ color: colors.error, fontSize: 14, marginBottom: 8 }}>
+              {commentsError}
+            </Text>
+            <TouchableOpacity
+              onPress={reloadComments}
+              style={{ alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 10, minHeight: 44, justifyContent: 'center', borderRadius: 8, backgroundColor: colors.bgTertiary }}
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading comments"
+            >
+              <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        {!commentsLoading && !commentsError && comments.length === 0 ? (
+          <View style={{ alignItems: 'center', paddingVertical: 20, marginBottom: 8 }}>
+            <Ionicons name="chatbubble-outline" size={32} color={colors.textSecondary} style={{ marginBottom: 8, opacity: 0.6 }} />
+            <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: 'center' }}>
+              No comments yet.{'\n'}Be the first to comment on this event.
+            </Text>
+          </View>
         ) : null}
 
         {comments.map(c => {
-          const isOwn = c.createdById === user?.id;
-          const canDelete = isOwn || isAdmin;
           const isEditingThis = editingCommentId === c.id;
-          const authorName = c.createdBy?.displayName || c.removedCreatorName || 'Unknown';
-          const edited = c.updatedAt && c.updatedAt !== c.createdAt;
           return (
-            <View
+            <CommentItem
               key={c.id}
-              style={[styles.commentItem, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
-            >
-              <View style={styles.commentHeader}>
-                <View style={[styles.commentAvatar, { backgroundColor: colors.bgTertiary }]}>
-                  {c.createdBy?.avatarUrl ? (
-                    <Image source={{ uri: c.createdBy.avatarUrl }} style={styles.commentAvatarImg} contentFit="cover" />
-                  ) : (
-                    <Text style={[styles.commentAvatarText, { color: colors.textSecondary }]}>
-                      {authorName.charAt(0).toUpperCase()}
-                    </Text>
-                  )}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.commentAuthor, { color: colors.textPrimary }]} numberOfLines={1}>
-                    {authorName}
-                  </Text>
-                  <Text style={[styles.commentMeta, { color: colors.textSecondary }]}>
-                    {format(new Date(c.createdAt), 'MMM d, h:mm a')}{edited ? ' (edited)' : ''}
-                  </Text>
-                </View>
-              </View>
-
-              {isEditingThis ? (
-                <View>
-                  <TextInput
-                    style={[styles.commentInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-                    value={editingCommentContent}
-                    onChangeText={setEditingCommentContent}
-                    multiline
-                    maxLength={2000}
-                    placeholder="Edit comment..."
-                    placeholderTextColor={colors.textSecondary}
-                    accessibilityLabel="Edit comment"
-                  />
-                  <View style={styles.commentActions}>
-                    <TouchableOpacity
-                      style={[styles.commentBtn, { backgroundColor: '#16a34a' }]}
-                      onPress={handleSaveEditComment}
-                      disabled={commentSubmitting || !editingCommentContent.trim()}
-                      activeOpacity={0.7}
-                      accessibilityRole="button"
-                      accessibilityLabel="Save comment edit"
-                    >
-                      <Text style={styles.commentBtnText}>Save</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.commentBtn, { backgroundColor: colors.bgTertiary }]}
-                      onPress={() => { setEditingCommentId(null); setEditingCommentContent(''); }}
-                      activeOpacity={0.7}
-                      accessibilityRole="button"
-                      accessibilityLabel="Cancel comment edit"
-                    >
-                      <Text style={[styles.commentBtnText, { color: colors.textPrimary }]}>Cancel</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ) : (
-                <>
-                  <Text style={[styles.commentBody, { color: colors.textPrimary }]}>
-                    {c.content}
-                  </Text>
-                  {(isOwn || canDelete) && (
-                    <View style={styles.commentActions}>
-                      {isOwn && (
-                        <TouchableOpacity
-                          onPress={() => { setEditingCommentId(c.id); setEditingCommentContent(c.content); }}
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                          accessibilityRole="button"
-                          accessibilityLabel="Edit comment"
-                        >
-                          <Text style={[styles.commentLink, { color: colors.primary }]}>Edit</Text>
-                        </TouchableOpacity>
-                      )}
-                      {canDelete && (
-                        <TouchableOpacity
-                          onPress={() => handleDeleteComment(c.id)}
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                          accessibilityRole="button"
-                          accessibilityLabel="Delete comment"
-                        >
-                          <Text style={[styles.commentLink, { color: '#ef4444' }]}>Delete</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  )}
-                </>
-              )}
-            </View>
+              comment={c}
+              isOwn={c.createdById === user?.id}
+              canDelete={c.createdById === user?.id || isAdmin}
+              isEditing={isEditingThis}
+              editingContent={isEditingThis ? editingCommentContent : undefined}
+              submitting={isEditingThis && commentSubmitting}
+              colors={colors}
+              onStartEdit={handleStartEditComment}
+              onChangeEditingContent={setEditingCommentContent}
+              onSaveEdit={handleSaveEditComment}
+              onCancelEdit={handleCancelEditComment}
+              onDelete={handleDeleteComment}
+            />
           );
         })}
 
@@ -1493,6 +1512,10 @@ export default function GigDetailScreen({ navigation, route }) {
             style={[styles.commentInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
             value={newComment}
             onChangeText={setNewComment}
+            onFocus={() => {
+              setTimeout(() => viewScrollRef.current?.scrollToEnd({ animated: true }), 150);
+            }}
+            underlineColorAndroid="transparent"
             multiline
             maxLength={2000}
             placeholder="Add a comment..."
@@ -1560,8 +1583,129 @@ export default function GigDetailScreen({ navigation, route }) {
         </TouchableOpacity>
       )}
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
+
+const CommentItem = memo(function CommentItem({
+  comment,
+  isOwn,
+  canDelete,
+  isEditing,
+  editingContent,
+  submitting,
+  colors,
+  onStartEdit,
+  onChangeEditingContent,
+  onSaveEdit,
+  onCancelEdit,
+  onDelete,
+}) {
+  const authorName = comment.createdBy?.displayName || comment.removedCreatorName || 'Unknown';
+  const edited = comment.updatedAt && comment.updatedAt !== comment.createdAt;
+  return (
+    <View style={[styles.commentItem, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}>
+      <View style={styles.commentHeader}>
+        <View
+          style={[styles.commentAvatar, { backgroundColor: colors.bgTertiary }]}
+          importantForAccessibility="no"
+          accessibilityElementsHidden
+        >
+          {comment.createdBy?.avatarUrl ? (
+            <Image source={{ uri: comment.createdBy.avatarUrl }} style={styles.commentAvatarImg} contentFit="cover" />
+          ) : (
+            <Text style={[styles.commentAvatarText, { color: colors.textSecondary }]}>
+              {authorName.charAt(0).toUpperCase()}
+            </Text>
+          )}
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text
+            style={[styles.commentAuthor, { color: colors.textPrimary }]}
+            numberOfLines={2}
+            maxFontSizeMultiplier={1.8}
+          >
+            {authorName}
+          </Text>
+          <Text
+            style={[styles.commentMeta, { color: colors.textSecondary }]}
+            maxFontSizeMultiplier={1.6}
+          >
+            {format(new Date(comment.createdAt), 'MMM d, h:mm a')}{edited ? ' (edited)' : ''}
+          </Text>
+        </View>
+      </View>
+
+      {isEditing ? (
+        <View>
+          <TextInput
+            style={[styles.commentInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+            value={editingContent}
+            onChangeText={onChangeEditingContent}
+            underlineColorAndroid="transparent"
+            multiline
+            maxLength={2000}
+            placeholder="Edit comment..."
+            placeholderTextColor={colors.textSecondary}
+            accessibilityLabel="Edit comment"
+          />
+          <View style={styles.commentActions}>
+            <TouchableOpacity
+              style={[styles.commentBtn, { backgroundColor: colors.success }]}
+              onPress={onSaveEdit}
+              disabled={submitting || !editingContent?.trim()}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Save comment edit"
+              accessibilityState={{ busy: !!submitting, disabled: submitting || !editingContent?.trim() }}
+            >
+              <Text style={styles.commentBtnText}>Save</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.commentBtn, { backgroundColor: colors.bgTertiary }]}
+              onPress={onCancelEdit}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel comment edit"
+            >
+              <Text style={[styles.commentBtnText, { color: colors.textPrimary }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <>
+          <Text style={[styles.commentBody, { color: colors.textPrimary }]}>
+            {comment.content}
+          </Text>
+          {(isOwn || canDelete) && (
+            <View style={styles.commentActions}>
+              {isOwn && (
+                <TouchableOpacity
+                  onPress={() => onStartEdit(comment.id, comment.content)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit comment"
+                >
+                  <Text style={[styles.commentLink, { color: colors.primary }]}>Edit</Text>
+                </TouchableOpacity>
+              )}
+              {canDelete && (
+                <TouchableOpacity
+                  onPress={() => onDelete(comment.id)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete comment"
+                >
+                  <Text style={[styles.commentLink, { color: colors.error }]}>Delete</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+        </>
+      )}
+    </View>
+  );
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -1605,7 +1749,7 @@ const styles = StyleSheet.create({
   calendarButtonText: { fontSize: 16, fontWeight: '600' },
   // Comments
   commentItem: { borderRadius: 10, borderWidth: 1, padding: 12, marginBottom: 10 },
-  commentHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
+  commentHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 6 },
   commentAvatar: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   commentAvatarImg: { width: '100%', height: '100%' },
   commentAvatarText: { fontSize: 14, fontWeight: '700' },
@@ -1613,12 +1757,12 @@ const styles = StyleSheet.create({
   commentMeta: { fontSize: 11 },
   commentBody: { fontSize: 15, lineHeight: 21, marginTop: 4 },
   commentActions: { flexDirection: 'row', gap: 16, marginTop: 8, alignItems: 'center' },
-  commentLink: { fontSize: 13, fontWeight: '600', minHeight: 24, paddingVertical: 4 },
+  commentLink: { fontSize: 13, fontWeight: '600', minHeight: 44, paddingHorizontal: 8, paddingVertical: 12, textAlignVertical: 'center' },
   commentInput: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, minHeight: 60, textAlignVertical: 'top' },
-  commentBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, minHeight: 36, justifyContent: 'center', alignItems: 'center' },
+  commentBtn: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, minHeight: 48, justifyContent: 'center', alignItems: 'center' },
   commentBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
   commentComposer: { borderRadius: 10, borderWidth: 1, padding: 12, marginTop: 4, gap: 8 },
-  commentPostBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, minHeight: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-end' },
+  commentPostBtn: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8, minHeight: 48, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-end' },
   completeButton: { paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 8, marginBottom: 20 },
   completeButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
   // Form

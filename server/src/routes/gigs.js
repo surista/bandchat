@@ -2317,6 +2317,25 @@ router.post('/:gigId/comments', authenticate, apiLimiter, async (req, res) => {
     const io = req.app.get('io');
     io.to(`workspace:${gig.workspaceId}`).emit('gig:commentAdded', { gigId: gig.id, comment });
 
+    // Push notification to workspace members (excluding the author)
+    const wsMembers = await prisma.workspaceMember.findMany({
+      where: { workspaceId: gig.workspaceId, userId: { not: req.user.id } },
+      select: { userId: true },
+    });
+    const authorName = comment.createdBy?.displayName || 'Someone';
+    const snippet = comment.content.length > 120 ? comment.content.slice(0, 117) + '...' : comment.content;
+    const pushBody = `${authorName} on ${gig.title}: ${snippet}`;
+    wsMembers.forEach(m => {
+      sendPushToUser(m.userId, {
+        title: 'New comment',
+        body: pushBody,
+        tag: `gig-comment-${gig.id}`,
+        url: `/workspace/${gig.workspaceId}`,
+        workspaceId: gig.workspaceId,
+        threadId: `gig-${gig.id}`,
+      }, { category: 'gig', workspaceId: gig.workspaceId });
+    });
+
     res.status(201).json(comment);
   } catch (err) {
     console.error('Add gig comment error:', err);
