@@ -1,10 +1,130 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { format } from 'date-fns';
 import api from '../../services/api';
 import Modal from '../common/Modal';
 import { getCurrencySymbol } from '../../utils/currencies';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
+import { useToast } from '../../context/ToastContext';
+
+function formatCommentDate(iso) {
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  } catch {
+    return '';
+  }
+}
+
+const CommentItem = memo(function CommentItem({
+  comment,
+  isOwn,
+  canDelete,
+  isEditing,
+  editingContent,
+  submitting,
+  onStartEdit,
+  onChangeEditingContent,
+  onSaveEdit,
+  onCancelEdit,
+  onDelete,
+}) {
+  const authorName = comment.createdBy?.displayName || comment.removedCreatorName || 'Unknown';
+  const edited = comment.updatedAt && comment.updatedAt !== comment.createdAt;
+  const dateLabel = formatCommentDate(comment.createdAt);
+  const groupedLabel = `Comment by ${authorName}, ${dateLabel}${edited ? ', edited' : ''}: ${comment.content}`;
+
+  return (
+    <div className="bg-[var(--color-bg-tertiary)] rounded-lg p-3 border border-[var(--color-border)]">
+      <div className="flex items-start justify-between gap-2 mb-1">
+        <div className="flex items-center gap-2 min-w-0" role="group" aria-label={groupedLabel}>
+          {comment.createdBy?.avatarUrl ? (
+            <img
+              src={comment.createdBy.avatarUrl}
+              alt=""
+              aria-hidden="true"
+              className="w-6 h-6 rounded-full flex-shrink-0"
+            />
+          ) : (
+            <div aria-hidden="true" className="w-6 h-6 rounded-full bg-[var(--color-bg-secondary)] flex items-center justify-center text-xs text-[var(--color-text-muted)] flex-shrink-0">
+              {authorName.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <span className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+            {authorName}
+          </span>
+          <span className="text-xs text-[var(--color-text-muted)] flex-shrink-0">
+            {dateLabel}
+            {edited && ' (edited)'}
+          </span>
+        </div>
+        {!isEditing && (isOwn || canDelete) && (
+          <div className="flex gap-1 flex-shrink-0">
+            {isOwn && (
+              <button
+                type="button"
+                onClick={() => onStartEdit(comment)}
+                className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] px-1"
+                aria-label="Edit comment"
+              >
+                Edit
+              </button>
+            )}
+            {canDelete && (
+              <button
+                type="button"
+                onClick={() => onDelete(comment.id)}
+                className="text-xs text-[var(--color-text-muted)] hover:text-red-500 px-1"
+                aria-label="Delete comment"
+              >
+                Delete
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {isEditing ? (
+        <div className="space-y-2">
+          <textarea
+            value={editingContent}
+            onChange={(e) => onChangeEditingContent(e.target.value)}
+            className="modal-input w-full"
+            rows={2}
+            maxLength={2000}
+            autoFocus
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onSaveEdit}
+              disabled={submitting || !editingContent?.trim()}
+              className="btn bg-green-600 hover:bg-green-700 text-white text-xs disabled:opacity-50"
+              aria-busy={submitting || undefined}
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={onCancelEdit}
+              className="btn btn-secondary text-xs"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap break-words">
+          {comment.content}
+        </p>
+      )}
+    </div>
+  );
+});
 
 // Generate Google Calendar URL
 const getGoogleCalendarUrl = (gig, workspaceName) => {
@@ -59,6 +179,8 @@ const MEDIA_TYPE_META = {
 function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmin, workspaceId, workspace, workspaceMembers = [], previousEvents = [], onMediaChange }) {
   const { user } = useAuth();
   const { socket } = useSocket();
+  const toast = useToast();
+  const editingCommentIdRef = useRef(null);
   // Read-only mode: locked events, OR shared events the user didn't create (non-admin)
   const isCreator = !gig || gig.createdById === user?.id;
   const readOnly = (gig?.isLocked && !isAdmin) || (gig && !isCreator && !isAdmin);
@@ -188,6 +310,10 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
   }, [gig?.id]);
 
   useEffect(() => {
+    editingCommentIdRef.current = editingCommentId;
+  }, [editingCommentId]);
+
+  useEffect(() => {
     if (!socket || !gig?.id) return;
     const onAdded = ({ gigId, comment }) => {
       if (gigId !== gig.id || !comment) return;
@@ -196,11 +322,18 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     const onUpdated = ({ gigId, comment }) => {
       if (gigId !== gig.id || !comment) return;
       setComments(prev => prev.map(c => c.id === comment.id ? comment : c));
+      if (editingCommentIdRef.current === comment.id) {
+        toast?.warning?.('This comment was just updated by someone else. Your edits will overwrite theirs if you save.');
+      }
     };
     const onDeleted = ({ gigId, commentId }) => {
       if (gigId !== gig.id) return;
       setComments(prev => prev.filter(c => c.id !== commentId));
-      setEditingCommentId(prev => prev === commentId ? null : prev);
+      if (editingCommentIdRef.current === commentId) {
+        setEditingCommentId(null);
+        setEditingCommentContent('');
+        toast?.info?.('The comment you were editing was deleted.');
+      }
     };
     socket.on('gig:commentAdded', onAdded);
     socket.on('gig:commentUpdated', onUpdated);
@@ -210,7 +343,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
       socket.off('gig:commentUpdated', onUpdated);
       socket.off('gig:commentDeleted', onDeleted);
     };
-  }, [socket, gig?.id]);
+  }, [socket, gig?.id, toast]);
 
   const handleAddComment = async () => {
     const content = newComment.trim();
@@ -228,13 +361,18 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     }
   };
 
-  const handleStartEditComment = (c) => {
+  const handleStartEditComment = useCallback((c) => {
     setEditingCommentId(c.id);
     setEditingCommentContent(c.content);
     setCommentError('');
-  };
+  }, []);
 
-  const handleSaveEditComment = async () => {
+  const handleCancelEditComment = useCallback(() => {
+    setEditingCommentId(null);
+    setEditingCommentContent('');
+  }, []);
+
+  const handleSaveEditComment = useCallback(async () => {
     const content = editingCommentContent.trim();
     if (!content || !gig?.id || !editingCommentId) return;
     setCommentSubmitting(true);
@@ -249,9 +387,9 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     } finally {
       setCommentSubmitting(false);
     }
-  };
+  }, [editingCommentContent, editingCommentId, gig?.id]);
 
-  const handleDeleteComment = async (commentId) => {
+  const handleDeleteComment = useCallback(async (commentId) => {
     if (!gig?.id) return;
     if (!window.confirm('Delete this comment?')) return;
     setCommentError('');
@@ -261,7 +399,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     } catch (err) {
       setCommentError(err.message || 'Failed to delete comment');
     }
-  };
+  }, [gig?.id]);
 
   const updateMedia = (newMedia) => {
     setMedia(newMedia);
@@ -1392,96 +1530,22 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                   {comments.length > 0 && (
                     <div className="space-y-2 mb-3">
                       {comments.map(c => {
-                        const isOwn = c.createdById === user?.id;
-                        const canDelete = isOwn || isAdmin;
                         const isEditing = editingCommentId === c.id;
-                        const authorName = c.createdBy?.displayName || c.removedCreatorName || 'Unknown';
                         return (
-                          <div
+                          <CommentItem
                             key={c.id}
-                            className="bg-[var(--color-bg-tertiary)] rounded-lg p-3 border border-[var(--color-border)]"
-                          >
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                              <div className="flex items-center gap-2 min-w-0">
-                                {c.createdBy?.avatarUrl ? (
-                                  <img
-                                    src={c.createdBy.avatarUrl}
-                                    alt=""
-                                    className="w-6 h-6 rounded-full flex-shrink-0"
-                                  />
-                                ) : (
-                                  <div className="w-6 h-6 rounded-full bg-[var(--color-bg-secondary)] flex items-center justify-center text-xs text-[var(--color-text-muted)] flex-shrink-0">
-                                    {authorName.charAt(0).toUpperCase()}
-                                  </div>
-                                )}
-                                <span className="text-sm font-medium text-[var(--color-text-primary)] truncate">
-                                  {authorName}
-                                </span>
-                                <span className="text-xs text-[var(--color-text-muted)] flex-shrink-0">
-                                  {format(new Date(c.createdAt), 'MMM d, h:mm a')}
-                                  {c.updatedAt && c.updatedAt !== c.createdAt && ' (edited)'}
-                                </span>
-                              </div>
-                              {!isEditing && (isOwn || canDelete) && (
-                                <div className="flex gap-1 flex-shrink-0">
-                                  {isOwn && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleStartEditComment(c)}
-                                      className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] px-1"
-                                      aria-label="Edit comment"
-                                    >
-                                      Edit
-                                    </button>
-                                  )}
-                                  {canDelete && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteComment(c.id)}
-                                      className="text-xs text-[var(--color-text-muted)] hover:text-red-500 px-1"
-                                      aria-label="Delete comment"
-                                    >
-                                      Delete
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-
-                            {isEditing ? (
-                              <div className="space-y-2">
-                                <textarea
-                                  value={editingCommentContent}
-                                  onChange={(e) => setEditingCommentContent(e.target.value)}
-                                  className="modal-input w-full"
-                                  rows={2}
-                                  maxLength={2000}
-                                  autoFocus
-                                />
-                                <div className="flex gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={handleSaveEditComment}
-                                    disabled={commentSubmitting || !editingCommentContent.trim()}
-                                    className="btn bg-green-600 hover:bg-green-700 text-white text-xs disabled:opacity-50"
-                                  >
-                                    Save
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => { setEditingCommentId(null); setEditingCommentContent(''); }}
-                                    className="btn btn-secondary text-xs"
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap break-words">
-                                {c.content}
-                              </p>
-                            )}
-                          </div>
+                            comment={c}
+                            isOwn={c.createdById === user?.id}
+                            canDelete={(c.createdById === user?.id) || isAdmin}
+                            isEditing={isEditing}
+                            editingContent={isEditing ? editingCommentContent : undefined}
+                            submitting={isEditing && commentSubmitting}
+                            onStartEdit={handleStartEditComment}
+                            onChangeEditingContent={setEditingCommentContent}
+                            onSaveEdit={handleSaveEditComment}
+                            onCancelEdit={handleCancelEditComment}
+                            onDelete={handleDeleteComment}
+                          />
                         );
                       })}
                     </div>

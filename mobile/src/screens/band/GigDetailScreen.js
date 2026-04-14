@@ -24,6 +24,7 @@ import { useHeaderHeight } from '@react-navigation/elements';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
+import { useToast } from '../../context/ToastContext';
 import { successNotification, selectionFeedback, errorNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
@@ -50,8 +51,10 @@ export default function GigDetailScreen({ navigation, route }) {
   const { isTablet, contentMaxWidth } = useLayout();
   const { colors, mode } = useTheme();
   const { socket } = useSocket();
+  const toast = useToast();
   const headerHeight = useHeaderHeight();
   const viewScrollRef = useRef(null);
+  const editingCommentIdRef = useRef(null);
 
   const [gig, setGig] = useState(null);
   const [loading, setLoading] = useState(!isNew);
@@ -148,6 +151,10 @@ export default function GigDetailScreen({ navigation, route }) {
   }, [gigId, isNew, navigation]);
 
   useEffect(() => {
+    editingCommentIdRef.current = editingCommentId;
+  }, [editingCommentId]);
+
+  useEffect(() => {
     if (!socket || !gigId) return;
     const onAdded = ({ gigId: incomingGigId, comment }) => {
       if (incomingGigId !== gigId || !comment) return;
@@ -156,11 +163,18 @@ export default function GigDetailScreen({ navigation, route }) {
     const onUpdated = ({ gigId: incomingGigId, comment }) => {
       if (incomingGigId !== gigId || !comment) return;
       setComments(prev => prev.map(c => c.id === comment.id ? comment : c));
+      if (editingCommentIdRef.current === comment.id) {
+        toast.warning('This comment was just updated by someone else. Your edits will overwrite theirs if you save.');
+      }
     };
     const onDeleted = ({ gigId: incomingGigId, commentId }) => {
       if (incomingGigId !== gigId) return;
       setComments(prev => prev.filter(c => c.id !== commentId));
-      setEditingCommentId(prev => prev === commentId ? null : prev);
+      if (editingCommentIdRef.current === commentId) {
+        setEditingCommentId(null);
+        setEditingCommentContent('');
+        toast.info('The comment you were editing was deleted.');
+      }
     };
     socket.on('gig:commentAdded', onAdded);
     socket.on('gig:commentUpdated', onUpdated);
@@ -170,7 +184,7 @@ export default function GigDetailScreen({ navigation, route }) {
       socket.off('gig:commentUpdated', onUpdated);
       socket.off('gig:commentDeleted', onDeleted);
     };
-  }, [socket, gigId]);
+  }, [socket, gigId, toast]);
 
   useEffect(() => {
     if (!editingCommentId) return;
@@ -212,6 +226,7 @@ export default function GigDetailScreen({ navigation, route }) {
   }, [gigId]);
 
   const handleStartEditComment = useCallback((id, content) => {
+    selectionFeedback();
     setEditingCommentId(id);
     setEditingCommentContent(content);
   }, []);
@@ -1587,6 +1602,19 @@ export default function GigDetailScreen({ navigation, route }) {
   );
 }
 
+function formatCommentDate(iso) {
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  } catch {
+    return '';
+  }
+}
+
 const CommentItem = memo(function CommentItem({
   comment,
   isOwn,
@@ -1603,41 +1631,47 @@ const CommentItem = memo(function CommentItem({
 }) {
   const authorName = comment.createdBy?.displayName || comment.removedCreatorName || 'Unknown';
   const edited = comment.updatedAt && comment.updatedAt !== comment.createdAt;
+  const dateLabel = formatCommentDate(comment.createdAt);
+  const groupedLabel = `Comment by ${authorName}, ${dateLabel}${edited ? ', edited' : ''}: ${comment.content}`;
+
+  const header = (
+    <View style={styles.commentHeader}>
+      <View
+        style={[styles.commentAvatar, { backgroundColor: colors.bgTertiary }]}
+        importantForAccessibility="no"
+        accessibilityElementsHidden
+      >
+        {comment.createdBy?.avatarUrl ? (
+          <Image source={{ uri: comment.createdBy.avatarUrl }} style={styles.commentAvatarImg} contentFit="cover" />
+        ) : (
+          <Text style={[styles.commentAvatarText, { color: colors.textSecondary }]}>
+            {authorName.charAt(0).toUpperCase()}
+          </Text>
+        )}
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text
+          style={[styles.commentAuthor, { color: colors.textPrimary }]}
+          numberOfLines={2}
+          maxFontSizeMultiplier={1.8}
+        >
+          {authorName}
+        </Text>
+        <Text
+          style={[styles.commentMeta, { color: colors.textSecondary }]}
+          maxFontSizeMultiplier={1.6}
+        >
+          {dateLabel}{edited ? ' (edited)' : ''}
+        </Text>
+      </View>
+    </View>
+  );
+
   return (
     <View style={[styles.commentItem, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}>
-      <View style={styles.commentHeader}>
-        <View
-          style={[styles.commentAvatar, { backgroundColor: colors.bgTertiary }]}
-          importantForAccessibility="no"
-          accessibilityElementsHidden
-        >
-          {comment.createdBy?.avatarUrl ? (
-            <Image source={{ uri: comment.createdBy.avatarUrl }} style={styles.commentAvatarImg} contentFit="cover" />
-          ) : (
-            <Text style={[styles.commentAvatarText, { color: colors.textSecondary }]}>
-              {authorName.charAt(0).toUpperCase()}
-            </Text>
-          )}
-        </View>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text
-            style={[styles.commentAuthor, { color: colors.textPrimary }]}
-            numberOfLines={2}
-            maxFontSizeMultiplier={1.8}
-          >
-            {authorName}
-          </Text>
-          <Text
-            style={[styles.commentMeta, { color: colors.textSecondary }]}
-            maxFontSizeMultiplier={1.6}
-          >
-            {format(new Date(comment.createdAt), 'MMM d, h:mm a')}{edited ? ' (edited)' : ''}
-          </Text>
-        </View>
-      </View>
-
       {isEditing ? (
         <View>
+          {header}
           <TextInput
             style={[styles.commentInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
             value={editingContent}
@@ -1674,9 +1708,12 @@ const CommentItem = memo(function CommentItem({
         </View>
       ) : (
         <>
-          <Text style={[styles.commentBody, { color: colors.textPrimary }]}>
-            {comment.content}
-          </Text>
+          <View accessible accessibilityLabel={groupedLabel}>
+            {header}
+            <Text style={[styles.commentBody, { color: colors.textPrimary }]}>
+              {comment.content}
+            </Text>
+          </View>
           {(isOwn || canDelete) && (
             <View style={styles.commentActions}>
               {isOwn && (
