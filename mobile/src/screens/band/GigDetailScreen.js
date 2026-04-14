@@ -85,6 +85,14 @@ export default function GigDetailScreen({ navigation, route }) {
   const [showAddLink, setShowAddLink] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
 
+  // Comments
+  const [comments, setComments] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingCommentContent, setEditingCommentContent] = useState('');
+
   // Pickers
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
@@ -112,12 +120,14 @@ export default function GigDetailScreen({ navigation, route }) {
     if (isNew) return;
     (async () => {
       try {
-        const [data, mediaData] = await Promise.all([
+        const [data, mediaData, commentsData] = await Promise.all([
           api.getGig(gigId),
           api.getGigMedia(gigId).catch(() => []),
+          api.getGigComments(gigId).catch(() => []),
         ]);
         setGig(data);
         setGigMedia(mediaData);
+        setComments(Array.isArray(commentsData) ? commentsData : []);
         populateForm(data);
       } catch (err) {
         setLoadError(err.message || 'Failed to load event');
@@ -126,6 +136,74 @@ export default function GigDetailScreen({ navigation, route }) {
       }
     })();
   }, [gigId, isNew, navigation]);
+
+  const reloadComments = useCallback(async () => {
+    if (!gigId) return;
+    setCommentsLoading(true);
+    try {
+      const data = await api.getGigComments(gigId);
+      setComments(Array.isArray(data) ? data : []);
+    } catch {
+      // ignore
+    } finally {
+      setCommentsLoading(false);
+    }
+  }, [gigId]);
+
+  const handleAddComment = useCallback(async () => {
+    const content = newComment.trim();
+    if (!content || !gigId || commentSubmitting) return;
+    setCommentSubmitting(true);
+    try {
+      const created = await api.addGigComment(gigId, content);
+      setComments(prev => [...prev, created]);
+      setNewComment('');
+      successNotification();
+    } catch (err) {
+      errorNotification();
+      Alert.alert('Error', err.message || 'Failed to add comment');
+    } finally {
+      setCommentSubmitting(false);
+    }
+  }, [newComment, gigId, commentSubmitting]);
+
+  const handleSaveEditComment = useCallback(async () => {
+    const content = editingCommentContent.trim();
+    if (!content || !editingCommentId || commentSubmitting) return;
+    setCommentSubmitting(true);
+    try {
+      const updated = await api.updateGigComment(gigId, editingCommentId, content);
+      setComments(prev => prev.map(c => c.id === updated.id ? updated : c));
+      setEditingCommentId(null);
+      setEditingCommentContent('');
+      successNotification();
+    } catch (err) {
+      errorNotification();
+      Alert.alert('Error', err.message || 'Failed to update comment');
+    } finally {
+      setCommentSubmitting(false);
+    }
+  }, [editingCommentContent, editingCommentId, gigId, commentSubmitting]);
+
+  const handleDeleteComment = useCallback((commentId) => {
+    Alert.alert('Delete Comment', 'Delete this comment?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.deleteGigComment(gigId, commentId);
+            setComments(prev => prev.filter(c => c.id !== commentId));
+            successNotification();
+          } catch (err) {
+            errorNotification();
+            Alert.alert('Error', err.message || 'Failed to delete comment');
+          }
+        },
+      },
+    ]);
+  }, [gigId]);
 
   // Convert HH:mm string to Date for time picker, and back
   const timeStringToDate = (timeStr) => {
@@ -209,8 +287,10 @@ export default function GigDetailScreen({ navigation, route }) {
     }
   }, [navigation, isNew, editing, gig]);
 
+  const isCreator = !gig || gig.createdById === user?.id;
+  const canEdit = (!gig?.isLocked && (isCreator || isAdmin)) || isAdmin;
+
   useLayoutEffect(() => {
-    const canEdit = !gig?.isLocked || isAdmin;
     if (!isNew && !editing && !loading && canEdit) {
       navigation.setOptions({
         headerRight: () => (
@@ -222,7 +302,7 @@ export default function GigDetailScreen({ navigation, route }) {
     } else {
       navigation.setOptions({ headerRight: undefined });
     }
-  }, [navigation, isNew, editing, loading, colors.primary, gig?.isLocked, isAdmin]);
+  }, [navigation, isNew, editing, loading, colors.primary, canEdit]);
 
   const handleSave = useCallback(async () => {
     const errors = {};
@@ -1293,6 +1373,152 @@ export default function GigDetailScreen({ navigation, route }) {
         )}
       </View>
 
+      {/* Comments */}
+      <View style={styles.viewSection}>
+        <Text style={[styles.viewLabel, { color: colors.textSecondary }]}>Comments</Text>
+
+        {commentsLoading && comments.length === 0 ? (
+          <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 8 }} />
+        ) : null}
+
+        {!commentsLoading && comments.length === 0 ? (
+          <Text style={{ color: colors.textSecondary, fontSize: 14, marginBottom: 12 }}>
+            No comments yet.
+          </Text>
+        ) : null}
+
+        {comments.map(c => {
+          const isOwn = c.createdById === user?.id;
+          const canDelete = isOwn || isAdmin;
+          const isEditingThis = editingCommentId === c.id;
+          const authorName = c.createdBy?.displayName || c.removedCreatorName || 'Unknown';
+          const edited = c.updatedAt && c.updatedAt !== c.createdAt;
+          return (
+            <View
+              key={c.id}
+              style={[styles.commentItem, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
+            >
+              <View style={styles.commentHeader}>
+                <View style={[styles.commentAvatar, { backgroundColor: colors.bgTertiary }]}>
+                  {c.createdBy?.avatarUrl ? (
+                    <Image source={{ uri: c.createdBy.avatarUrl }} style={styles.commentAvatarImg} contentFit="cover" />
+                  ) : (
+                    <Text style={[styles.commentAvatarText, { color: colors.textSecondary }]}>
+                      {authorName.charAt(0).toUpperCase()}
+                    </Text>
+                  )}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.commentAuthor, { color: colors.textPrimary }]} numberOfLines={1}>
+                    {authorName}
+                  </Text>
+                  <Text style={[styles.commentMeta, { color: colors.textSecondary }]}>
+                    {format(new Date(c.createdAt), 'MMM d, h:mm a')}{edited ? ' (edited)' : ''}
+                  </Text>
+                </View>
+              </View>
+
+              {isEditingThis ? (
+                <View>
+                  <TextInput
+                    style={[styles.commentInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+                    value={editingCommentContent}
+                    onChangeText={setEditingCommentContent}
+                    multiline
+                    maxLength={2000}
+                    placeholder="Edit comment..."
+                    placeholderTextColor={colors.textSecondary}
+                    accessibilityLabel="Edit comment"
+                  />
+                  <View style={styles.commentActions}>
+                    <TouchableOpacity
+                      style={[styles.commentBtn, { backgroundColor: '#16a34a' }]}
+                      onPress={handleSaveEditComment}
+                      disabled={commentSubmitting || !editingCommentContent.trim()}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel="Save comment edit"
+                    >
+                      <Text style={styles.commentBtnText}>Save</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.commentBtn, { backgroundColor: colors.bgTertiary }]}
+                      onPress={() => { setEditingCommentId(null); setEditingCommentContent(''); }}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel="Cancel comment edit"
+                    >
+                      <Text style={[styles.commentBtnText, { color: colors.textPrimary }]}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <>
+                  <Text style={[styles.commentBody, { color: colors.textPrimary }]}>
+                    {c.content}
+                  </Text>
+                  {(isOwn || canDelete) && (
+                    <View style={styles.commentActions}>
+                      {isOwn && (
+                        <TouchableOpacity
+                          onPress={() => { setEditingCommentId(c.id); setEditingCommentContent(c.content); }}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          accessibilityRole="button"
+                          accessibilityLabel="Edit comment"
+                        >
+                          <Text style={[styles.commentLink, { color: colors.primary }]}>Edit</Text>
+                        </TouchableOpacity>
+                      )}
+                      {canDelete && (
+                        <TouchableOpacity
+                          onPress={() => handleDeleteComment(c.id)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          accessibilityRole="button"
+                          accessibilityLabel="Delete comment"
+                        >
+                          <Text style={[styles.commentLink, { color: '#ef4444' }]}>Delete</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
+          );
+        })}
+
+        {/* Add new comment */}
+        <View style={[styles.commentComposer, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}>
+          <TextInput
+            style={[styles.commentInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+            value={newComment}
+            onChangeText={setNewComment}
+            multiline
+            maxLength={2000}
+            placeholder="Add a comment..."
+            placeholderTextColor={colors.textSecondary}
+            accessibilityLabel="New comment"
+          />
+          <TouchableOpacity
+            style={[
+              styles.commentPostBtn,
+              { backgroundColor: newComment.trim() && !commentSubmitting ? colors.primary : colors.bgTertiary },
+            ]}
+            onPress={handleAddComment}
+            disabled={!newComment.trim() || commentSubmitting}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Post comment"
+          >
+            {commentSubmitting ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={[styles.commentBtnText, { color: newComment.trim() ? '#fff' : colors.textSecondary }]}>Post</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {/* Add to Calendar */}
       <TouchableOpacity
         style={[styles.calendarButton, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
@@ -1377,6 +1603,22 @@ const styles = StyleSheet.create({
   addLinkButton: { borderRadius: 8, paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center' },
   calendarButton: { paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 8, borderWidth: 1 },
   calendarButtonText: { fontSize: 16, fontWeight: '600' },
+  // Comments
+  commentItem: { borderRadius: 10, borderWidth: 1, padding: 12, marginBottom: 10 },
+  commentHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
+  commentAvatar: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  commentAvatarImg: { width: '100%', height: '100%' },
+  commentAvatarText: { fontSize: 14, fontWeight: '700' },
+  commentAuthor: { fontSize: 14, fontWeight: '600' },
+  commentMeta: { fontSize: 11 },
+  commentBody: { fontSize: 15, lineHeight: 21, marginTop: 4 },
+  commentActions: { flexDirection: 'row', gap: 16, marginTop: 8, alignItems: 'center' },
+  commentLink: { fontSize: 13, fontWeight: '600', minHeight: 24, paddingVertical: 4 },
+  commentInput: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, minHeight: 60, textAlignVertical: 'top' },
+  commentBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, minHeight: 36, justifyContent: 'center', alignItems: 'center' },
+  commentBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  commentComposer: { borderRadius: 10, borderWidth: 1, padding: 12, marginTop: 4, gap: 8 },
+  commentPostBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, minHeight: 44, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-end' },
   completeButton: { paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 8, marginBottom: 20 },
   completeButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
   // Form

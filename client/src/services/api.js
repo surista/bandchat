@@ -1044,6 +1044,31 @@ class ApiService {
     });
   }
 
+  // Gig Comments
+  async getGigComments(gigId) {
+    return this.request(`/gigs/${gigId}/comments`);
+  }
+
+  async addGigComment(gigId, content) {
+    return this.request(`/gigs/${gigId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  async updateGigComment(gigId, commentId, content) {
+    return this.request(`/gigs/${gigId}/comments/${commentId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  async deleteGigComment(gigId, commentId) {
+    return this.request(`/gigs/${gigId}/comments/${commentId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // iCal Calendar Sync
   async getCalendarToken(workspaceId) {
     return this.request(`/gigs/workspace/${workspaceId}/calendar-token`);

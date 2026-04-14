@@ -58,6 +58,7 @@ model User {
   blocksReceived     BlockedUser[]                @relation("blocksReceived")
   practiceSessions   PracticeSession[]
   uploadedGigMedia   GigMedia[]
+  gigComments        GigComment[]
   savedMessages      SavedMessage[]
   expoPushTokens     ExpoPushToken[]
   stagePlots         StagePlot[]
@@ -497,11 +498,28 @@ model Gig {
   attendees         GigAttendee[]
   kittyTransactions KittyTransaction[]
   stagePlots        StagePlot[]
+  comments          GigComment[]
 
   @@index([workspaceId, date])
   @@index([createdById])
   @@index([workspaceId, status])
   @@index([venueId])
+}
+
+model GigComment {
+  id                 String   @id @default(uuid())
+  gigId              String
+  content            String
+  createdById        String?
+  removedCreatorName String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  gig       Gig   @relation(fields: [gigId], references: [id], onDelete: Cascade)
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([gigId, createdAt])
+  @@index([createdById])
 }
 
 model GigAttendee {

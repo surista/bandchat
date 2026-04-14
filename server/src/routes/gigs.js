@@ -972,9 +972,9 @@ router.put('/:gigId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'This event is locked and can only be modified by an admin' });
     }
 
-    // Non-admins can only modify their own personal events or non-locked shared events
-    if (existingGig.isPersonal && !isCreator && !isAdmin) {
-      return res.status(403).json({ error: 'You can only modify your own personal events' });
+    // Non-admins can only modify events they created (personal or shared). Admins can modify anything.
+    if (!isCreator && !isAdmin) {
+      return res.status(403).json({ error: 'Only the event creator or a workspace admin can modify this event' });
     }
 
     // If type is changing from GIG to something else, delete auto-created setlists
@@ -1381,9 +1381,9 @@ router.delete('/:gigId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'This event is locked and can only be deleted by an admin' });
     }
 
-    // Non-admins can only delete their own personal events or non-locked shared events they created
-    if (gig.isPersonal && !isCreator && !isAdmin) {
-      return res.status(403).json({ error: 'You can only delete your own personal events' });
+    // Non-admins can only delete events they created. Admins can delete anything.
+    if (!isCreator && !isAdmin) {
+      return res.status(403).json({ error: 'Only the event creator or a workspace admin can delete this event' });
     }
 
     // Collect auto-created setlist IDs to delete
@@ -2247,6 +2247,165 @@ router.put('/:gigId/my-attendance', authenticate, apiLimiter, async (req, res) =
   } catch (error) {
     console.error('Set attendance error:', error);
     res.status(500).json({ error: 'Failed to update attendance' });
+  }
+});
+
+// ============================================================================
+// Gig Comments
+// Any workspace member can add a comment.
+// Only the author can edit their own comment.
+// The author or a workspace admin can delete a comment.
+// ============================================================================
+
+const COMMENT_MAX_LENGTH = 2000;
+
+async function loadGigWithMembership(gigId, userId) {
+  const gig = await prisma.gig.findUnique({
+    where: { id: gigId },
+    include: { workspace: { include: { members: true } } },
+  });
+  if (!gig) return { error: { status: 404, message: 'Gig not found' } };
+  const membership = gig.workspace.members.find(m => m.userId === userId);
+  if (!membership) return { error: { status: 403, message: 'Not a workspace member' } };
+  if (gig.isPersonal && gig.createdById !== userId && membership.role !== 'ADMIN') {
+    return { error: { status: 403, message: 'Not authorized to view this event' } };
+  }
+  return { gig, membership };
+}
+
+// List comments for a gig
+router.get('/:gigId/comments', authenticate, async (req, res) => {
+  try {
+    const { error } = await loadGigWithMembership(req.params.gigId, req.user.id);
+    if (error) return res.status(error.status).json({ error: error.message });
+
+    const comments = await prisma.gigComment.findMany({
+      where: { gigId: req.params.gigId },
+      orderBy: { createdAt: 'asc' },
+      include: { createdBy: { select: USER_SELECT_BRIEF } },
+    });
+    res.json(comments);
+  } catch (err) {
+    console.error('List gig comments error:', err);
+    res.status(500).json({ error: 'Failed to load comments' });
+  }
+});
+
+// Add a comment to a gig
+router.post('/:gigId/comments', authenticate, apiLimiter, async (req, res) => {
+  try {
+    const { content } = req.body;
+    if (typeof content !== 'string' || !content.trim()) {
+      return res.status(400).json({ error: 'Comment content is required' });
+    }
+    if (content.length > COMMENT_MAX_LENGTH) {
+      return res.status(400).json({ error: `Comment must be ${COMMENT_MAX_LENGTH} characters or less` });
+    }
+
+    const { error, gig } = await loadGigWithMembership(req.params.gigId, req.user.id);
+    if (error) return res.status(error.status).json({ error: error.message });
+
+    const comment = await prisma.gigComment.create({
+      data: {
+        gigId: gig.id,
+        content: content.trim(),
+        createdById: req.user.id,
+      },
+      include: { createdBy: { select: USER_SELECT_BRIEF } },
+    });
+
+    const io = req.app.get('io');
+    io.to(`workspace:${gig.workspaceId}`).emit('gig:commentAdded', { gigId: gig.id, comment });
+
+    res.status(201).json(comment);
+  } catch (err) {
+    console.error('Add gig comment error:', err);
+    res.status(500).json({ error: 'Failed to add comment' });
+  }
+});
+
+// Edit own comment
+router.put('/:gigId/comments/:commentId', authenticate, apiLimiter, async (req, res) => {
+  try {
+    const { content } = req.body;
+    if (typeof content !== 'string' || !content.trim()) {
+      return res.status(400).json({ error: 'Comment content is required' });
+    }
+    if (content.length > COMMENT_MAX_LENGTH) {
+      return res.status(400).json({ error: `Comment must be ${COMMENT_MAX_LENGTH} characters or less` });
+    }
+
+    const existing = await prisma.gigComment.findUnique({
+      where: { id: req.params.commentId },
+      include: { gig: { select: { id: true, workspaceId: true } } },
+    });
+    if (!existing || existing.gigId !== req.params.gigId) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+    if (existing.createdById !== req.user.id) {
+      return res.status(403).json({ error: 'You can only edit your own comments' });
+    }
+
+    const comment = await prisma.gigComment.update({
+      where: { id: existing.id },
+      data: { content: content.trim() },
+      include: { createdBy: { select: USER_SELECT_BRIEF } },
+    });
+
+    const io = req.app.get('io');
+    io.to(`workspace:${existing.gig.workspaceId}`).emit('gig:commentUpdated', {
+      gigId: existing.gig.id,
+      comment,
+    });
+
+    res.json(comment);
+  } catch (err) {
+    console.error('Edit gig comment error:', err);
+    res.status(500).json({ error: 'Failed to update comment' });
+  }
+});
+
+// Delete own comment, or any comment if workspace admin
+router.delete('/:gigId/comments/:commentId', authenticate, apiLimiter, async (req, res) => {
+  try {
+    const existing = await prisma.gigComment.findUnique({
+      where: { id: req.params.commentId },
+      include: {
+        gig: {
+          select: {
+            id: true,
+            workspaceId: true,
+            workspace: { select: { members: true } },
+          },
+        },
+      },
+    });
+    if (!existing || existing.gigId !== req.params.gigId) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    const membership = existing.gig.workspace.members.find(m => m.userId === req.user.id);
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+    const isAdmin = membership.role === 'ADMIN';
+    const isAuthor = existing.createdById === req.user.id;
+    if (!isAuthor && !isAdmin) {
+      return res.status(403).json({ error: 'Only the author or a workspace admin can delete this comment' });
+    }
+
+    await prisma.gigComment.delete({ where: { id: existing.id } });
+
+    const io = req.app.get('io');
+    io.to(`workspace:${existing.gig.workspaceId}`).emit('gig:commentDeleted', {
+      gigId: existing.gig.id,
+      commentId: existing.id,
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete gig comment error:', err);
+    res.status(500).json({ error: 'Failed to delete comment' });
   }
 });
 
