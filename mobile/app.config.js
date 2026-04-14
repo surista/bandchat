@@ -3,7 +3,7 @@ export default {
     name: 'BandChat',
     slug: 'bandchat',
     scheme: 'bandchat',
-    version: '1.06.28',
+    version: '1.06.29',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
@@ -13,10 +13,15 @@ export default {
       resizeMode: 'contain',
       backgroundColor: '#1f2937',
     },
+    notification: {
+      icon: './assets/android-icon-monochrome.png',
+      color: '#2BAC76',
+      androidMode: 'default',
+    },
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.bandchat.mobile',
-      buildNumber: '10628',
+      buildNumber: '10629',
       associatedDomains: ['applinks:bandchat.vercel.app'],
       entitlements: {
         'com.apple.security.application-groups': ['group.com.bandchat.manager.mobile'],
@@ -43,7 +48,9 @@ export default {
     android: {
       package: 'com.bandchat.mobile',
       softwareKeyboardLayoutMode: 'pan',
-      versionCode: 10628,
+      versionCode: 10629,
+      allowBackup: false,
+      predictiveBackGestureEnabled: true,
       adaptiveIcon: {
         backgroundColor: '#1f2937',
         foregroundImage: './assets/android-icon-foreground.png',

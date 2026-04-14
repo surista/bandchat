@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
   sheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingTop: 8, maxWidth: 500, alignSelf: 'center', width: '100%' },
   handle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
   title: { fontSize: 15, fontWeight: '600', paddingHorizontal: 20, paddingBottom: 12, textAlign: 'center' },
-  actionItem: { paddingVertical: 16, paddingHorizontal: 20 },
+  actionItem: { minHeight: 48, paddingVertical: 16, paddingHorizontal: 20, justifyContent: 'center' },
   cancelItem: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(128,128,128,0.3)', marginTop: 4 },
   actionText: { fontSize: 16, textAlign: 'center' },
 });

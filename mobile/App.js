@@ -8,11 +8,11 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// Limit Dynamic Type scaling to prevent layout breakage at large accessibility sizes
+// Support Dynamic Type / Android font scaling up to 1.8× (accessibility sizes)
 if (Text.defaultProps == null) Text.defaultProps = {};
-Text.defaultProps.maxFontSizeMultiplier = 1.5;
+Text.defaultProps.maxFontSizeMultiplier = 1.8;
 if (TextInput.defaultProps == null) TextInput.defaultProps = {};
-TextInput.defaultProps.maxFontSizeMultiplier = 1.5;
+TextInput.defaultProps.maxFontSizeMultiplier = 1.8;
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import * as NavigationBar from 'expo-navigation-bar';
@@ -241,7 +241,7 @@ function AppContent() {
       <ToastProvider>
         <OfflineBanner />
         <RootNavigator />
-        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} backgroundColor="transparent" translucent />
+        <StatusBar style={colors.isLightHeader ? 'dark' : 'light'} backgroundColor="transparent" translucent />
       </ToastProvider>
     </NavigationContainer>
   );

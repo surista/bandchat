@@ -210,12 +210,16 @@ export default function ChannelListScreen({ navigation, route }) {
           <TouchableOpacity
             onPress={() => navigation.navigate('Search', { workspaceId })}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Search messages"
           >
             <Ionicons name="search-outline" size={22} color={colors.primary} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('Settings', { workspaceId })}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Workspace settings"
           >
             <Ionicons name="settings-outline" size={22} color={colors.primary} />
           </TouchableOpacity>

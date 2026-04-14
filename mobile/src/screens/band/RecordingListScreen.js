@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { Audio } from 'expo-av';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useTheme } from '../../context/ThemeContext';
 import formatDate from '../../utils/formatDate';
 import api from '../../services/api';
@@ -110,6 +111,7 @@ export default function RecordingListScreen({ navigation, route }) {
   const { workspaceId } = route.params;
   const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
+  const headerHeight = useHeaderHeight();
 
   const [recordings, setRecordings] = useState([]);
   const [songs, setSongs] = useState([]);
@@ -280,7 +282,7 @@ export default function RecordingListScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
       <View style={[styles.searchBar, { borderBottomColor: colors.border }]}>
         <TextInput
           style={[styles.searchInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary }]}
