@@ -23,9 +23,9 @@ function PressableRow({
     <Pressable
       style={({ pressed }) => [
         typeof style === 'function' ? style({ pressed }) : style,
-        Platform.OS === 'ios' && pressed && styles.iosPressed,
+        Platform.OS === 'ios' && pressed && !disabled && styles.iosPressed,
       ]}
-      android_ripple={{
+      android_ripple={disabled ? null : {
         color: rippleColor || 'rgba(128,128,128,0.2)',
         borderless: borderless || false,
       }}

@@ -1,5 +1,6 @@
 import { useMemo, memo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import ChannelScreen from '../../screens/workspace/ChannelScreen';
@@ -24,11 +25,14 @@ function ChannelPaneHost({ channel, workspaceId, parentNavigation, onSwitchChann
 
   // Synthesize a stable route — key on channel.id so ChannelScreen's effects
   // re-run correctly when the user switches channels in the list.
+  // `_splitPane: true` signals to ChannelScreen that it should render its
+  // channel-options button inline instead of via `navigation.setOptions`,
+  // because the proxy navigation intentionally drops setOptions calls.
   const syntheticRoute = useMemo(
     () => ({
       key: `split-channel-${channel?.id ?? 'none'}`,
       name: 'Channel',
-      params: { channel, workspaceId },
+      params: { channel, workspaceId, _splitPane: true },
     }),
     [channel, workspaceId],
   );
@@ -66,7 +70,7 @@ function ChannelPaneHost({ channel, workspaceId, parentNavigation, onSwitchChann
 
   if (!channel) {
     return (
-      <View style={[styles.placeholder, { backgroundColor: colors.bgPrimary }]}>
+      <SafeAreaView style={[styles.placeholder, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
         <Ionicons name="chatbubbles-outline" size={64} color={colors.textSecondary} />
         <Text style={[styles.placeholderTitle, { color: colors.textPrimary }]}>
           Select a channel
@@ -74,22 +78,32 @@ function ChannelPaneHost({ channel, workspaceId, parentNavigation, onSwitchChann
         <Text style={[styles.placeholderSubtitle, { color: colors.textSecondary }]}>
           Pick a channel from the list to start reading messages.
         </Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
+  // Bottom safe-area padding so the MessageInput in the right pane never
+  // sits flush against the iPad home indicator. The `key={channel.id}` is
+  // intentional — it forces ChannelScreen to remount on channel switch so
+  // messages/loading/socket state resets to a clean slate instead of
+  // briefly flashing the previous channel's messages.
   return (
-    <ChannelScreen
-      key={channel.id}
-      navigation={proxyNavigation}
-      route={syntheticRoute}
-    />
+    <SafeAreaView style={styles.paneContainer} edges={['bottom']}>
+      <ChannelScreen
+        key={channel.id}
+        navigation={proxyNavigation}
+        route={syntheticRoute}
+      />
+    </SafeAreaView>
   );
 }
 
 export default memo(ChannelPaneHost);
 
 const styles = StyleSheet.create({
+  paneContainer: {
+    flex: 1,
+  },
   placeholder: {
     flex: 1,
     alignItems: 'center',

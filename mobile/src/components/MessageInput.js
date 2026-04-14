@@ -5,8 +5,9 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { Audio } from 'expo-av';
 import { useTheme } from '../context/ThemeContext';
+import { useToast } from '../context/ToastContext';
 import { formatDuration as formatRecordingDuration } from '../utils/formatDuration';
-import { mediumImpact } from '../utils/haptics';
+import { mediumImpact, errorNotification } from '../utils/haptics';
 import EmojiPicker from './EmojiPicker';
 import ActionSheet from './ActionSheet';
 import PressableRow from './PressableRow';
@@ -15,6 +16,7 @@ const MAX_HEIGHT = 120;
 
 export default function MessageInput({ onSend, onSendVoice, onTyping, editingMessage, onCancelEdit, onSendEdit, members = [], channels = [] }) {
   const { colors } = useTheme();
+  const toast = useToast();
   const [text, setText] = useState('');
   const [inputHeight, setInputHeight] = useState(40);
   const [attachments, setAttachments] = useState([]);
@@ -375,6 +377,8 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
     try {
       const permission = await Audio.requestPermissionsAsync();
       if (!permission.granted) {
+        errorNotification();
+        toast.error('Microphone access is required to record voice messages.');
         return;
       }
 
@@ -398,9 +402,10 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
         setRecordingDuration(prev => prev + 1);
       }, 1000);
     } catch (err) {
-      // silently fail
+      errorNotification();
+      toast.error('Could not start recording. Please try again.');
     }
-  }, []);
+  }, [toast]);
 
   const stopRecording = useCallback(async () => {
     if (!recordingRef.current) return;
