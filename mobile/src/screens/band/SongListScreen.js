@@ -280,6 +280,37 @@ export default function SongListScreen({ navigation, route }) {
   }, [selectedSong]);
 
   const renderItem = useCallback(({ item, index }) => {
+    if (viewModeRef.current === 'mini') {
+      return (
+        <PressableRow
+          style={[styles.miniCard, { backgroundColor: colors.bgSecondary }]}
+          onPress={() => navigation.navigate('SongDetail', { songId: item.id, workspaceId })}
+          onLongPress={() => handleLongPress(item)}
+          delayLongPress={400}
+          accessibilityRole="button"
+          accessibilityLabel={`${item.title}${item.artist ? ` by ${item.artist}` : ''}`}
+          accessibilityHint="Tap for details, long press for options"
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Text style={[styles.miniTitle, { color: colors.textPrimary, flex: 1 }]} numberOfLines={1}>
+              {item.title}
+            </Text>
+            {item.hasAudio ? <Ionicons name="musical-notes-outline" size={12} color={colors.textSecondary} /> : null}
+          </View>
+          {item.artist ? (
+            <Text style={[styles.miniArtist, { color: colors.textSecondary }]} numberOfLines={1}>
+              {item.artist}
+            </Text>
+          ) : null}
+          <View style={styles.miniBadgeRow}>
+            {item.key ? <Text style={[styles.miniBadge, { color: colors.badgeKey }]}>{item.key}</Text> : null}
+            {item.bpm ? <Text style={[styles.miniBadge, { color: colors.badgeBpm }]}>{item.bpm}</Text> : null}
+            {item.duration ? <Text style={[styles.miniBadge, { color: colors.textSecondary }]}>{formatDuration(item.duration)}</Text> : null}
+          </View>
+        </PressableRow>
+      );
+    }
+
     if (viewModeRef.current === 'compact') {
       return (
         <PressableRow
@@ -433,6 +464,22 @@ export default function SongListScreen({ navigation, route }) {
             accessibilityState={{ selected: viewMode === 'cards' }}
           >
             <Ionicons name="grid-outline" size={16} color={viewMode === 'cards' ? colors.primaryText : colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.segmentButton, viewMode === 'mini' && { backgroundColor: colors.primary }]}
+            onPress={() => {
+              if (viewMode !== 'mini') {
+                selectionFeedback();
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setViewMode('mini');
+              }
+            }}
+            activeOpacity={0.7}
+            accessibilityRole="tab"
+            accessibilityLabel="Mini card view"
+            accessibilityState={{ selected: viewMode === 'mini' }}
+          >
+            <Ionicons name="apps-outline" size={16} color={viewMode === 'mini' ? colors.primaryText : colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.segmentButton, viewMode === 'compact' && { backgroundColor: colors.primary }]}
@@ -758,6 +805,16 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 12, fontWeight: '600' },
   setlistCount: { fontSize: 12, marginTop: 6 },
   practiceInfo: { fontSize: 11, marginTop: 4 },
+  // Mini card view
+  miniCard: {
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 6,
+  },
+  miniTitle: { fontSize: 14, fontWeight: '600' },
+  miniArtist: { fontSize: 12, marginTop: 1 },
+  miniBadgeRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  miniBadge: { fontSize: 11, fontWeight: '600' },
   // Compact view
   compactRow: {
     flexDirection: 'row',

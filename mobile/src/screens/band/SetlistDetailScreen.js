@@ -384,35 +384,48 @@ export default function SetlistDetailScreen({ navigation, route }) {
       if (s.type === 'SONG' || (!s.type && s.song)) songNumber++;
     }
 
+    const songRow = (
+      <View style={[styles.itemRow, { backgroundColor: colors.bgSecondary }]} accessible accessibilityLabel={`${songNumber}. ${item.song?.title || 'Unknown'}${item.song?.artist ? ` by ${item.song.artist}` : ''}`} accessibilityHint={editing ? 'Drag to reorder' : 'Tap to view song details'}>
+        <Text style={[styles.songNumber, { color: colors.textSecondary }]}>{songNumber}</Text>
+        <View style={styles.itemContent}>
+          <Text style={[styles.songTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+            {item.song?.title || 'Unknown'}
+          </Text>
+          {item.song?.artist ? (
+            <Text style={[styles.songArtist, { color: colors.textSecondary }]} numberOfLines={1}>
+              {item.song.artist}
+            </Text>
+          ) : null}
+        </View>
+        {item.song?.key ? (
+          <Badge label={item.song.key} color={colors.badgeKey} bgColor={colors.badgeKeyBg} />
+        ) : null}
+        {item.song?.duration ? (
+          <Text style={[styles.itemDuration, { color: colors.textSecondary }]}>
+            {formatDuration(item.song.duration)}
+          </Text>
+        ) : null}
+        {editing ? (
+          <TouchableOpacity onPress={() => removeItem(item)} style={styles.removeButton} accessibilityRole="button" accessibilityLabel={`Remove ${item.song?.title || 'song'}`}>
+            <Text style={styles.removeText}>{'\u2715'}</Text>
+          </TouchableOpacity>
+        ) : (
+          <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} style={{ opacity: 0.4, marginLeft: 4 }} />
+        )}
+      </View>
+    );
+
     return (
       <>
         {!isDragItem && setHeader}
-        <View style={[styles.itemRow, { backgroundColor: colors.bgSecondary }]} accessible accessibilityLabel={`${songNumber}. ${item.song?.title || 'Unknown'}${item.song?.artist ? ` by ${item.song.artist}` : ''}`} accessibilityHint={editing ? 'Drag to reorder' : undefined}>
-          <Text style={[styles.songNumber, { color: colors.textSecondary }]}>{songNumber}</Text>
-          <View style={styles.itemContent}>
-            <Text style={[styles.songTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-              {item.song?.title || 'Unknown'}
-            </Text>
-            {item.song?.artist ? (
-              <Text style={[styles.songArtist, { color: colors.textSecondary }]} numberOfLines={1}>
-                {item.song.artist}
-              </Text>
-            ) : null}
-          </View>
-          {item.song?.key ? (
-            <Badge label={item.song.key} color={colors.badgeKey} bgColor={colors.badgeKeyBg} />
-          ) : null}
-          {item.song?.duration ? (
-            <Text style={[styles.itemDuration, { color: colors.textSecondary }]}>
-              {formatDuration(item.song.duration)}
-            </Text>
-          ) : null}
-          {editing && (
-            <TouchableOpacity onPress={() => removeItem(item)} style={styles.removeButton} accessibilityRole="button" accessibilityLabel={`Remove ${item.song?.title || 'song'}`}>
-              <Text style={styles.removeText}>{'\u2715'}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        {editing ? songRow : (
+          <TouchableOpacity
+            activeOpacity={0.6}
+            onPress={() => item.song?.id && navigation.navigate('SongDetail', { songId: item.song.id, workspaceId })}
+          >
+            {songRow}
+          </TouchableOpacity>
+        )}
       </>
     );
   }, [colors, editing, items, removeItem]);
