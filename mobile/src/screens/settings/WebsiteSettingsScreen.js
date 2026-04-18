@@ -16,6 +16,7 @@ import {
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { prepareImageForUpload } from '../../utils/prepareImageUpload';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useTheme } from '../../context/ThemeContext';
@@ -382,11 +383,13 @@ export default function WebsiteSettingsScreen({ route }) {
                   if (result.canceled) return;
                   setLogoUploading(true);
                   try {
-                    const asset = result.assets[0];
-                    const formData = new FormData();
-                    formData.append('file', { uri: asset.uri, name: 'logo.jpg', type: 'image/jpeg' });
-                    formData.append('workspaceId', workspaceId);
-                    const uploaded = await api.uploadFile(formData, workspaceId);
+                    const asset = await prepareImageForUpload(result.assets[0]);
+                    const uploaded = await api.uploadFile(
+                      asset.uri,
+                      asset.fileName || 'logo.jpg',
+                      asset.mimeType || 'image/jpeg',
+                      workspaceId
+                    );
                     setLogoUrl(uploaded.url);
                   } catch { Alert.alert('Error', 'Failed to upload logo'); }
                   finally { setLogoUploading(false); }
@@ -414,11 +417,13 @@ export default function WebsiteSettingsScreen({ route }) {
                   if (result.canceled) return;
                   setHeroUploading(true);
                   try {
-                    const asset = result.assets[0];
-                    const formData = new FormData();
-                    formData.append('file', { uri: asset.uri, name: 'hero.jpg', type: 'image/jpeg' });
-                    formData.append('workspaceId', workspaceId);
-                    const uploaded = await api.uploadFile(formData, workspaceId);
+                    const asset = await prepareImageForUpload(result.assets[0]);
+                    const uploaded = await api.uploadFile(
+                      asset.uri,
+                      asset.fileName || 'hero.jpg',
+                      asset.mimeType || 'image/jpeg',
+                      workspaceId
+                    );
                     setHeroImageUrl(uploaded.url);
                   } catch { Alert.alert('Error', 'Failed to upload hero image'); }
                   finally { setHeroUploading(false); }

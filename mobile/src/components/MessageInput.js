@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { View, TextInput, TouchableOpacity, Text, Image, StyleSheet, Platform, Animated, PanResponder, Alert, FlatList, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { prepareImageForUpload, prepareImagesForUpload } from '../utils/prepareImageUpload';
 import * as DocumentPicker from 'expo-document-picker';
 import { Audio } from 'expo-av';
 import { useTheme } from '../context/ThemeContext';
@@ -279,7 +280,8 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
     });
 
     if (!result.canceled && result.assets?.length > 0) {
-      const newAttachments = result.assets.slice(0, remaining).map(asset => {
+      const prepared = await prepareImagesForUpload(result.assets.slice(0, remaining));
+      const newAttachments = prepared.map(asset => {
         const isVideo = asset.type === 'video';
         return {
           uri: asset.uri,
@@ -308,7 +310,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
     });
 
     if (!result.canceled && result.assets?.[0]) {
-      const asset = result.assets[0];
+      const asset = await prepareImageForUpload(result.assets[0]);
       setAttachments(prev => [...prev, {
         uri: asset.uri,
         filename: asset.fileName || `photo-${Date.now()}.jpg`,

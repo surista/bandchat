@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { prepareImageForUpload } from '../../utils/prepareImageUpload';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
@@ -187,7 +188,7 @@ export default function VenueDetailScreen({ navigation, route }) {
       quality: 0.8,
     });
     if (result.canceled) return;
-    const asset = result.assets[0];
+    const asset = await prepareImageForUpload(result.assets[0]);
     setImageUploading(true);
     try {
       const filename = asset.fileName || 'venue.jpg';

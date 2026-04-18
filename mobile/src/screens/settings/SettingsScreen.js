@@ -22,6 +22,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
+import { prepareImageForUpload } from '../../utils/prepareImageUpload';
 import { successNotification, errorNotification, selectionFeedback } from '../../utils/haptics';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -231,7 +232,7 @@ export default function SettingsScreen({ navigation, route }) {
     });
     if (result.canceled) return;
 
-    const asset = result.assets[0];
+    const asset = await prepareImageForUpload(result.assets[0]);
     setUploadingWsAvatar(true);
     try {
       const filename = asset.fileName || 'workspace-avatar.jpg';

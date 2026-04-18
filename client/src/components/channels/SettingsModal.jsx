@@ -1309,7 +1309,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                             {workspace.avatarUrl ? 'Change' : 'Upload'}
                             <input
                               type="file"
-                              accept="image/jpeg,image/png,image/gif,image/webp"
+                              accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif"
                               className="hidden"
                               onChange={async (e) => {
                                 const file = e.target.files?.[0];

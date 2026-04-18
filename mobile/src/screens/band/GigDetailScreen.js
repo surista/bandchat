@@ -16,6 +16,7 @@ import {
   Pressable,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { prepareImageForUpload } from '../../utils/prepareImageUpload';
 import * as DocumentPicker from 'expo-document-picker';
 import { Audio } from 'expo-av';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -618,7 +619,8 @@ export default function GigDetailScreen({ navigation, route }) {
       if (result.canceled || !result.assets?.length) return;
 
       setUploadingMedia(true);
-      for (const asset of result.assets) {
+      for (const rawAsset of result.assets) {
+        const asset = await prepareImageForUpload(rawAsset);
         const filename = asset.fileName || `media_${Date.now()}.jpg`;
         const mimeType = asset.mimeType || (asset.type === 'video' ? 'video/mp4' : 'image/jpeg');
         const uploaded = await api.uploadFile(asset.uri, filename, mimeType, workspaceId);

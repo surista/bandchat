@@ -9,7 +9,10 @@ export const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
 export const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024; // 10MB
 
 /** Allowed file types */
-export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+// HEIC/HEIF included for parity with mobile uploads from iPhone camera roll.
+// Most modern browsers don't render HEIC natively — mobile transcodes to JPEG
+// on-device; desktop browsers that upload .heic will still reach the server.
+export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'];
 export const ALLOWED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/aac', 'audio/m4a', 'audio/x-m4a', 'audio/mp4'];
 export const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo', 'video/x-matroska'];
 export const ALLOWED_DOCUMENT_TYPES = ['application/pdf', 'application/zip', 'application/x-zip-compressed'];
