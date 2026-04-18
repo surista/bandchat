@@ -907,6 +907,8 @@ GET /workspace/:workspaceId
 - `from`: ISO date string
 - `to`: ISO date string
 
+**Response:** each gig includes `_count: { songsPlayed, comments }` so clients can surface comment-count badges on calendar rows / list cards without a follow-up fetch. `GET /workspace/:workspaceId/next` and `GET /:gigId` also return `_count.comments`.
+
 ---
 
 #### Create Gig
@@ -983,6 +985,89 @@ POST /:gigId/media
   "caption": "Great crowd tonight!"
 }
 ```
+
+---
+
+#### List Gig Comments
+
+```http
+GET /:gigId/comments
+```
+
+**Auth:** Workspace member (personal events also require creator-or-admin)
+
+**Response:** Array of comments, oldest first, capped at 500 entries.
+
+```json
+[
+  {
+    "id": "...",
+    "gigId": "...",
+    "content": "Set times confirmed — doors at 7.",
+    "createdAt": "2026-04-18T14:30:00Z",
+    "updatedAt": "2026-04-18T14:30:00Z",
+    "createdBy": { "id": "...", "displayName": "Alex", "avatarUrl": "..." },
+    "removedCreatorName": null
+  }
+]
+```
+
+Rate-limited per user (`apiLimiter`).
+
+---
+
+#### Add Gig Comment
+
+```http
+POST /:gigId/comments
+```
+
+**Auth:** Workspace member (personal events require creator-or-admin to see at all)
+
+**Request Body:**
+```json
+{
+  "content": "Set times confirmed — doors at 7."
+}
+```
+
+Max 2000 chars. The server enforces a 1000-comments-per-gig cap. On success, the server emits a `gig:commentAdded` socket event and sends push notifications to the appropriate audience:
+
+- **Shared events:** all workspace members except the author
+- **Personal events (`gig.isPersonal` true):** only the creator + workspace admins (excluding the author)
+
+Returns the created comment including `createdBy` details.
+
+---
+
+#### Edit Gig Comment
+
+```http
+PUT /:gigId/comments/:commentId
+```
+
+**Auth:** Comment author only
+
+**Request Body:**
+```json
+{
+  "content": "Updated set times."
+}
+```
+
+Emits `gig:commentUpdated` to the same audience as creation.
+
+---
+
+#### Delete Gig Comment
+
+```http
+DELETE /:gigId/comments/:commentId
+```
+
+**Auth:** Comment author OR workspace admin
+
+Emits `gig:commentDeleted` (`{ gigId, commentId }`).
 
 ---
 
@@ -1456,7 +1541,18 @@ DELETE /unsubscribe
 
 Base path: `/api/uploads`
 
-#### Upload Single Image
+**Allowed types (verified by magic bytes, not declared MIME):**
+- Images: JPEG, PNG, GIF, WebP, HEIC/HEIF (max 15MB)
+- Audio: MP3, WAV, OGG, WebM, AAC, M4A, MP4-audio (max 30MB)
+- Video: MP4, QuickTime, WebM, AVI, MKV (max 50MB)
+- Documents: PDF, ZIP (max 10MB)
+- Guitar Pro: .gp / .gp3 / .gp4 / .gp5 / .gpx / .gp6 / .gp7 (custom signature detection)
+
+**iPhone HEIC note:** The mobile client transcodes HEIC/HEIF to JPEG on-device via `expo-image-manipulator` before upload. HEIC is accepted as a server fallback when a client skips that step; the Sharp thumbnail pipeline returns no thumbnail if libvips lacks libheif (upload still succeeds).
+
+Rate limit: 10 uploads/minute per user.
+
+#### Upload Single File
 
 ```http
 POST /
@@ -1464,20 +1560,33 @@ POST /
 
 **Content-Type:** `multipart/form-data`
 
-**Body:** `file` - Image file (max 10MB)
+**Body:**
+- `file` — the file
+- `workspaceId` — required for per-workspace storage quota accounting
 
 **Response:**
 ```json
 {
-  "url": "https://res.cloudinary.com/...",
+  "url": "https://pub-<r2>.r2.dev/...",
   "filename": "image.jpg",
-  "type": "IMAGE"
+  "size": 184322,
+  "type": "IMAGE",
+  "thumbnailUrl": "https://pub-<r2>.r2.dev/thumbnails/...",
+  "width": 3024,
+  "height": 4032
 }
 ```
 
+`thumbnailUrl`, `width`, `height` are omitted for non-image types or when thumbnail generation failed.
+
+**Errors:**
+- `400` — invalid file type, over size limit, or malformed upload
+- `413` — storage quota reached for the workspace (upgrade prompt)
+- `429` — rate limited
+
 ---
 
-#### Upload Multiple Images
+#### Upload Multiple Files
 
 ```http
 POST /multiple
@@ -1485,7 +1594,11 @@ POST /multiple
 
 **Content-Type:** `multipart/form-data`
 
-**Body:** `files` - Up to 5 image files
+**Body:**
+- `files` — up to 5 files (each subject to the per-type size limits above)
+- `workspaceId` — required
+
+Validates all files by magic bytes before uploading any. If any fails, none are persisted.
 
 ---
 
@@ -1530,6 +1643,9 @@ const socket = io(SOCKET_URL, {
 | `gig:created` | `Gig` | New gig created |
 | `gig:updated` | `Gig` | Gig was updated |
 | `gig:deleted` | `{ gigId }` | Gig was deleted |
+| `gig:commentAdded` | `{ gigId, comment }` | Event comment posted (workspace-wide for shared events, creator + admins for personal events) |
+| `gig:commentUpdated` | `{ gigId, comment }` | Event comment edited (same audience as added) |
+| `gig:commentDeleted` | `{ gigId, commentId }` | Event comment deleted (same audience as added) |
 | `setlist:created` | `Setlist` | New setlist created |
 | `setlist:updated` | `Setlist` | Setlist was updated |
 | `announcement:created` | `Announcement` | New announcement |

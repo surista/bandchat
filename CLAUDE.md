@@ -93,7 +93,7 @@ eas build --platform android --profile production # Build Android for Play Store
 bandchat/
 ├── client/                     # React web frontend
 │   ├── src/
-│   │   ├── components/         # 64 components across 9 subdirectories
+│   │   ├── components/         # 83 components across 9 subdirectories
 │   │   │   ├── auth/           # Login, Signup, GoogleSignInButton, ForgotPassword, ResetPassword, VerifyEmailChange
 │   │   │   ├── band/           # 22 components: Songs, Setlists, Calendar, Stats, Live Mode, Practice, etc.
 │   │   │   ├── channels/       # Sidebar, ChannelView, ChannelMembersPanel, SettingsModal, PinnedMessages, NewMessage
@@ -110,17 +110,17 @@ bandchat/
 │   └── package.json
 ├── mobile/                     # Expo/React Native mobile app
 │   ├── src/
-│   │   ├── screens/            # 44 screens organized by feature
-│   │   ├── components/         # 15 shared: ActionSheet, Badge, DraggableList, EmojiPicker, MessageBubble, etc.
+│   │   ├── screens/            # 54 screens organized by feature
+│   │   ├── components/         # 18 shared: ActionSheet, Badge, DraggableList, EmojiPicker, MessageBubble, PressableRow, etc.
 │   │   ├── context/            # AuthContext, SocketContext, ThemeContext, ToastContext
-│   │   ├── services/           # ApiService (~1400 lines, with in-memory TTL cache)
-│   │   └── utils/              # 9 utilities: formatDate, haptics, parseMentions, urlSafety, buildSetlistHTML, etc.
+│   │   ├── services/           # ApiService (~1700 lines, with in-memory TTL cache)
+│   │   └── utils/              # 10 utilities: formatDate, haptics, parseMentions, urlSafety, buildSetlistHTML, prepareImageUpload, etc.
 │   ├── app.config.js           # Expo config with permissions
 │   ├── eas.json                # EAS Build profiles (dev/preview/production)
 │   └── package.json
 ├── server/                     # Express backend
 │   ├── src/
-│   │   ├── routes/             # 29 route modules
+│   │   ├── routes/             # 33 route modules
 │   │   ├── middleware/         # auth.js (JWT + role checks), rateLimit.js (per-route), requestId.js
 │   │   ├── admin/              # System admin dashboard (standalone HTML/CSS/JS, not bundled)
 │   │   ├── services/           # 8 services: backup, itunes, youtube, spotify, deezer, songbpm-scraper, slackTextConverter, slackEmojiMap
@@ -128,7 +128,7 @@ bandchat/
 │   │   ├── scripts/            # CLI utilities: import-slack, seed-test-workspace, generate-slack-mapping, etc.
 │   │   └── lib/                # 7 modules: prisma (with soft-delete middleware), storage (R2), validateUrl, validators, planLimits, revenuecat, icsParser
 │   ├── prisma/
-│   │   └── schema.prisma       # Database schema (45 models, 8 enums)
+│   │   └── schema.prisma       # Database schema (54 models, 8 enums)
 │   └── package.json
 ├── CLAUDE.md                   # AI assistant instructions (this file)
 ├── CHANGELOG.md                # Version history
@@ -154,7 +154,7 @@ bandchat/
 
 **Server:**
 - Express 4 / Node.js
-- Prisma ORM with PostgreSQL (45 models, 8 enums)
+- Prisma ORM with PostgreSQL (54 models, 8 enums)
 - Socket.IO (real-time messaging)
 - JWT Authentication (access tokens + httpOnly cookie refresh tokens)
 - Cloudflare R2 (file uploads via @aws-sdk/client-s3, with magic byte validation and MIME-based extensions)
@@ -165,28 +165,31 @@ bandchat/
 - JWT secret strength validation at startup
 - Socket.IO hardening (maxHttpBufferSize, payload validation, connection limiting, room eviction)
 
-### Database Schema (47 models)
+### Database Schema (54 models)
 
 **Core:** User, RefreshToken, Workspace, WorkspaceMember, Channel, ChannelGroup, ChannelMember
-**Messaging:** Message, Attachment, Reaction, ThreadRead, PinnedMessage, SavedMessage, PushSubscription
+**Messaging:** Message, Attachment, Reaction, ThreadRead, PinnedMessage, SavedMessage, PushSubscription, ExpoPushToken, Mention
 **Music:** Song, SongAttachment, Setlist, SetlistSong, SetlistPerformer, Medley, MedleySong, Recording
-**Gigs:** Gig, GigAttendee, GigSetlist, GigMedia, GigSong
-**People:** BandMember, InstrumentStint, MemberAvailability, Contact, BlockedUser
+**Gigs:** Gig, GigAttendee, GigSetlist, GigMedia, GigSong, GigComment
+**People:** BandMember, InstrumentStint, MemberAvailability, Contact, BlockedUser, Venue
 **Community:** Announcement, AnnouncementAcknowledgment, Poll, PollOption, PollVote, TimelineEvent
 **Achievements:** Achievement, MemberAchievement, BandAchievement
 **Finance:** BandKitty, KittyTransaction
-**Website:** SongRequest, ContactSubmission
-**Other:** Report, PracticeSession
+**Stage Plots:** StagePlot
+**Website:** SongRequest, ContactSubmission, WebsiteApiToken
+**Platform:** AuditLog, Report, PracticeSession
 
 **Enums:** Role, AttachmentType, SetlistItemType, GigType, GigStatus, AttendeeStatus, AvailabilityStatus, KittyTransactionType
 
 ### Key Features
 - Real-time messaging with channels, DMs, threads, reactions, voice messages, and saved messages (bookmarks)
-- File/image/audio sharing (up to 10MB) with auto-generated thumbnails, link previews (dismissible by author), and photo gallery
+- File/image (15MB, iPhone HEIC auto-transcoded to JPEG)/audio (30MB)/video (50MB) sharing with auto-generated thumbnails, link previews (dismissible by author), and photo gallery (up to 5 attachments per message)
 - Stage plot editor with drag-and-drop equipment icons, text labels, and PDF export (web + mobile)
 - Song repertoire with bulk import, async metadata enrichment (iTunes/Spotify/Deezer/YouTube/SongBPM), and lyrics
 - Drag-and-drop setlist builder with MC sections, medleys, and PDF export
 - Calendar for gigs/rehearsals with device calendar sync, iCal feed, and optional time fields (sound check, doors, stage)
+- Event comments (any workspace member posts, authors edit their own, admins can delete any; personal events restrict comment visibility to creator + admins; real-time via Socket.IO with push notifications)
+- Comment count badges surface on calendar rows, list cards, and the upcoming-event banner
 - Upcoming event banner with pinned Calendar shortcut in sidebar
 - Gig attendance tracking, completion, history, and live mode
 - Practice tracker with streaks and timezone-aware calculations
@@ -200,8 +203,8 @@ bandchat/
 - Onboarding wizard for new workspaces
 - System admin dashboard with user/workspace management, storage, backups, and deleted items
 
-### Server Routes (29 modules)
-auth, channels, channelGroups, messages, workspaces, songs, setlists, gigs, bandMembers, availability, blocks, contacts, announcements, polls, timeline, achievements, recordings, medleys, kitty, uploads, push, linkPreview, suggestions, slackImport, practice, reports, admin, subscriptions, workspaceImport
+### Server Routes (33 modules)
+achievements, admin, announcements, auth, availability, bandMembers, blocks, channelGroups, channels, contacts, gigs, kitty, linkPreview, medleys, messages, polls, practice, push, recordings, reports, setlists, slackImport, songs, stagePlots, subscriptions, suggestions, sync, timeline, uploads, venues, website, workspaceImport, workspaces
 
 ### Server Background Jobs
 - **Token cleanup** — Expired refresh tokens purged every hour
@@ -316,6 +319,9 @@ BandChat has two distinct admin concepts:
 - API caching (mobile): in-memory Map with TTL in ApiService, auto-invalidated on mutations
 - Bundle splitting: auth/legal routes lazy-loaded via `lazyRetry()` in App.jsx
 - Message virtualization: 150-message DOM cap
+- iPhone HEIC photo uploads: transcode on-device to JPEG via `expo-image-manipulator` — always route picker results through `mobile/src/utils/prepareImageUpload.js` before calling `api.uploadFile`. Server also accepts `image/heic`/`image/heif` as a belt-and-suspenders fallback; `generateThumbnail` silently produces no thumbnail when libvips lacks libheif
+- Gig comment audience: use `resolveCommentAudience(gig)` + `emitCommentEvent()` in `server/src/routes/gigs.js` whenever emitting comment events or sending push — returns null for workspace broadcast or an explicit userId list when `gig.isPersonal`
+- iPad split view is gated behind `useLayout().isSplitView` (iPad + `width >= 720`), which covers common Stage Manager / Split View widths
 
 ### Web + Mobile Parity
 

@@ -2,6 +2,73 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.42] - 2026-04-18
+
+### Fixed
+- **iPhone HEIC photo uploads** — Native iPhone camera-roll photos (HEIC/HEIF, default since iOS 11) were silently rejected by the upload magic-byte validator. Mobile now transcodes HEIC to JPEG on-device via `expo-image-manipulator` across every picker site (messages, camera, gig media, venue/profile/workspace avatars, website logo + hero). `ALLOWED_IMAGE_TYPES` on the server and web client also now includes `image/heic` / `image/heif` as a fallback.
+- **WebsiteSettingsScreen uploadFile signature** — Was passing a `FormData` object as the `uri` argument. Corrected to match `(uri, filename, mimeType, workspaceId)`.
+
+## [1.06.41] - 2026-04-18
+
+### Added
+- **Comment count badges on events** — `_count.comments` now surfaces on gig list/next/detail endpoints. Web shows a 💬 badge on `GigCalendar` compact rows, an inline count on list cards, and a dot on the Sidebar upcoming-event banner. Mobile shows the count on `GigListScreen` cards and the next-event banner in `ChannelListScreen`.
+- **Long-press context menu on mobile comments** — Long-press on a `CommentItem` opens an ActionSheet (native on iOS / themed bottom sheet on Android) with Copy / Edit (own) / Delete (own or admin). Copy uses `expo-clipboard`.
+- **Swipe-to-delete on mobile comments** — Own comments support left swipe via `ReanimatedSwipeable` revealing a destructive Delete. Non-own comments remain long-press only. Editing disables both gestures.
+
+### Improved
+- **BandMemberForm image cropper** — ESC now closes the fullscreen cropper; `role="dialog"`, `aria-modal`, `aria-labelledby` added.
+
+## [1.06.40] - 2026-04-18
+
+### Added
+- **Mobile onboarding auto-launch** — New users with zero workspaces (and no pending invite code) are routed directly into `OnboardingWizardScreen` on login instead of an empty list. The empty state also gained prominent Create Workspace + Join with Invite Code buttons for users who back out.
+
+### Fixed
+- **Onboarding channel creation partial-failure handling** — `Promise.all` replaced with `Promise.allSettled` plus a `_created` flag on each channel so a single failure doesn't abort the batch, and retry only re-attempts missing channels (no duplicates). Error messages surface the specific failing channel when only one fails.
+
+### Improved
+- **OnboardingWizard Android feel** — `TouchableOpacity` migrated to `PressableRow` across header, footer, share/copy/send, add/remove channel, inline Create, and error-dismiss for proper Material ripple. `accessibilityState(busy/disabled)` added to async buttons.
+
+## [1.06.39] - 2026-04-18
+
+### Security
+- **Personal-event comment privacy leak** — Comments on personal events were being broadcast to the whole workspace socket room and pushed to every member, leaking the event title and first ~120 chars of content. Socket + push audience now restricted to the creator and workspace admins via `resolveCommentAudience()` / `emitCommentEvent()` when `gig.isPersonal`.
+- **Calendar Edit/Delete shown to non-creator non-admins** — Server auth was tightened in v1.06.35 to creator-or-admin, but `GigCalendar` still offered the controls to everyone. `canEdit`/`canDrag` updated to match.
+- **Admin "purge now" now anonymizes GigComment** — The scheduled soft-delete job already did this; the admin endpoint was missed and left comments with `removedCreatorName` empty.
+
+### Added
+- **Rate limiting on gig comment list endpoint** — Added `apiLimiter` to `GET /:gigId/comments`, plus a 500-entry response cap (`take`) and a 1000-comments-per-gig cap at write time.
+
+### Fixed
+- **Duplicate comment on author's screen** — Optimistic POST append + subsequent socket `gig:commentAdded` event could render the comment twice. `handleAddComment` now dedupes by id on both web and mobile.
+- **All Messages (mobile) didn't show recent messages at top** — Socket `message:new` handler filtered out your own posts, so posts you just sent never prepended. Removed the self-filter, added `useFocusEffect` refresh when returning to the screen, wired `message:updated` and `message:deleted` handlers, and added `contentInsetAdjustmentBehavior="automatic"` for iOS large title.
+- **`window.confirm` for delete** in GigForm replaced with themed `ConfirmDialog`.
+
+### Improved
+- **Expanded emoji picker** — ESC handler, sticky search input, 7-col grid with Up/Down/Home/End keyboard nav, `aria-expanded`, `min(320px, 92vw)` width, focus ring. Android `Keyboard.dismiss()` before the picker opens so the bottom sheet doesn't sit above an open IME. Haptic feedback on emoji select and category tap. Deduplicated `🎶`/`💀`/`👍`/`👎`/`🙏` from multiple categories.
+- **Gig comment UX polish** — Web comment list capped at `max-h-80 overflow-y-auto` with auto-scroll to newest when near bottom, `aria-live="polite"`, load-error state with Retry. Mobile `TextInput` capped at `maxHeight: 120`; `onContentSizeChange` keeps the Post button in view. Comments show relative time for <24h (`formatDistanceToNow`). TalkBack says "Your comment" for own comments.
+- **iPad split-view threshold** — Lowered from `width >= 900` to `width >= 720` so Stage Manager and Split View multitasking widths (592–692pt) get the master/detail layout instead of snapping.
+- **Mini-card touch target** — `minHeight: 48` on `SongListScreen` mini cards plus `maxFontSizeMultiplier: 1.5` on title/artist/badges.
+- **Android comment UI ripple** — Post/Save/Cancel/Edit/Delete/Retry on `GigDetailScreen` migrated from `TouchableOpacity` to `PressableRow`.
+- **Mobile unsent-comment guard** — `beforeRemove` navigation guard extended to warn on an unsent `newComment`, not just an active edit.
+- **Theme variable migration** — `modal-input`, `modal-body`, `modal-label` now use `var(--color-text-*)` instead of hardcoded `text-gray-200`/`text-white`/`placeholder-gray-400`.
+
+## [1.06.38] - 2026-04-14
+
+### Added
+- **Expanded emoji picker** — Web + mobile picker categories grew from 8 to 13 (reactions, smileys, hands, people, music, animals, nature, food, activities, travel, objects, symbols, text, flags).
+- **Setlist song details from SetlistList** — Tapping a song inside a setlist opens the full `SongForm` modal for inline edits.
+
+## [1.06.37] - 2026-04-14
+
+### Improved
+- **Gig comments P2 polish** — Accessibility grouping on comment items, locale-aware date formatting, toast on socket race when editing a comment someone else just updated.
+
+## [1.06.36] - 2026-04-14
+
+### Improved
+- **Gig comments polish** — Socket listeners dedupe, push notifications, accessibility labels.
+
 ## [1.06.35] - 2026-04-14
 
 ### Added

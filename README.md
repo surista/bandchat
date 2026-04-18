@@ -9,7 +9,7 @@ A real-time communication and management app for bands. Think Slack, but built s
 - **Direct Messages** — Private 1-on-1 and group conversations
 - **Threads** — Reply to specific messages in-line
 - **Reactions** — Emoji reactions on messages
-- **File Sharing** — Upload images, audio, and files up to 10MB via Cloudflare R2 with auto-generated thumbnails
+- **File Sharing** — Upload images (15MB, iPhone HEIC photos transcoded to JPEG on-device), audio (30MB), video (50MB), PDFs, Guitar Pro, and ZIPs via Cloudflare R2 with auto-generated thumbnails. Up to 5 attachments per message.
 - **Voice Messages** — Record and send audio messages
 - **Link Previews** — Automatic rich previews for shared URLs (dismissible by author, with SSRF protection)
 - **Search** — Full-text search across all channels, DMs, and messages (trigram index)
@@ -27,6 +27,7 @@ A real-time communication and management app for bands. Think Slack, but built s
 - **Stage Plots** — Drag-and-drop stage layout editor with 20+ equipment icons, text labels, and print/PDF export
 - **Medleys** — Group songs into medleys within setlists
 - **Calendar** — Schedule gigs, rehearsals, and recording sessions with venue, address, pay tracking, device calendar sync, iCal feed, and optional time fields (sound check, doors, stage time)
+- **Event Comments** — Discuss a specific event inline. Authors can edit their own comments; authors and workspace admins can delete. Comment count surfaces on calendar rows, list cards, and the upcoming-event banner. Real-time via Socket.IO with push notifications. Personal events restrict comment visibility to creator + admins.
 - **Upcoming Event Banner** — Next gig/rehearsal always visible at the top of the sidebar with pinned Calendar shortcut
 - **Gig Management** — Track attendance, mark gigs complete, view gig history, live mode during performances
 - **Gig Gallery** — Photo/video collection per gig
