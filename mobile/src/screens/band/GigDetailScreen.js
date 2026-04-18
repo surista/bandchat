@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   FlatList,
+  Pressable,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -35,6 +36,9 @@ import getCurrencySymbol from '../../utils/getCurrencySymbol';
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet from '../../components/ActionSheet';
 import PressableRow from '../../components/PressableRow';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import Reanimated, { useAnimatedStyle, interpolate, Extrapolate } from 'react-native-reanimated';
+import * as Clipboard from 'expo-clipboard';
 import { TYPE_COLORS, STATUS_COLORS } from '../../utils/constants';
 import { updateWidgetGigData } from '../../services/widgetService';
 
@@ -100,6 +104,7 @@ export default function GigDetailScreen({ navigation, route }) {
   const [commentSubmitting, setCommentSubmitting] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editingCommentContent, setEditingCommentContent] = useState('');
+  const [actionSheetCommentId, setActionSheetCommentId] = useState(null);
 
   // Pickers
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -308,6 +313,38 @@ export default function GigDetailScreen({ navigation, route }) {
       },
     ]);
   }, [gigId]);
+
+  const handleLongPressComment = useCallback((commentId) => {
+    selectionFeedback();
+    setActionSheetCommentId(commentId);
+  }, []);
+
+  const handleCopyComment = useCallback(async (commentId) => {
+    const c = comments.find(x => x.id === commentId);
+    if (!c?.content) return;
+    try {
+      await Clipboard.setStringAsync(c.content);
+      toast.success('Comment copied');
+    } catch {
+      toast.error('Failed to copy');
+    }
+  }, [comments, toast]);
+
+  const actionSheetComment = comments.find(c => c.id === actionSheetCommentId) || null;
+  const actionSheetActions = actionSheetComment ? (() => {
+    const isOwn = actionSheetComment.createdById === user?.id;
+    const canDelete = isOwn || isAdmin;
+    const out = [
+      { label: 'Copy', onPress: () => handleCopyComment(actionSheetComment.id) },
+    ];
+    if (isOwn) {
+      out.push({ label: 'Edit', onPress: () => handleStartEditComment(actionSheetComment.id, actionSheetComment.content) });
+    }
+    if (canDelete) {
+      out.push({ label: 'Delete', destructive: true, onPress: () => handleDeleteComment(actionSheetComment.id) });
+    }
+    return out;
+  })() : [];
 
   // Convert HH:mm string to Date for time picker, and back
   const timeStringToDate = (timeStr) => {
@@ -1540,6 +1577,7 @@ export default function GigDetailScreen({ navigation, route }) {
               onSaveEdit={handleSaveEditComment}
               onCancelEdit={handleCancelEditComment}
               onDelete={handleDeleteComment}
+              onLongPress={handleLongPressComment}
             />
           );
         })}
@@ -1626,6 +1664,12 @@ export default function GigDetailScreen({ navigation, route }) {
         </TouchableOpacity>
       )}
     </ScrollView>
+    <ActionSheet
+      visible={actionSheetCommentId !== null}
+      title="Comment"
+      actions={actionSheetActions}
+      onClose={() => setActionSheetCommentId(null)}
+    />
     </KeyboardAvoidingView>
   );
 }
@@ -1660,7 +1704,9 @@ const CommentItem = memo(function CommentItem({
   onSaveEdit,
   onCancelEdit,
   onDelete,
+  onLongPress,
 }) {
+  const swipeableRef = useRef(null);
   const authorName = comment.createdBy?.displayName || comment.removedCreatorName || 'Unknown';
   const edited = comment.updatedAt && comment.updatedAt !== comment.createdAt;
   const dateLabel = formatCommentDate(comment.createdAt);
@@ -1699,9 +1745,10 @@ const CommentItem = memo(function CommentItem({
     </View>
   );
 
-  return (
-    <View style={[styles.commentItem, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}>
-      {isEditing ? (
+  // Editing takes full width and disables swipe / long-press interactions.
+  if (isEditing) {
+    return (
+      <View style={[styles.commentItem, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}>
         <View>
           {header}
           <TextInput
@@ -1736,45 +1783,88 @@ const CommentItem = memo(function CommentItem({
             </PressableRow>
           </View>
         </View>
-      ) : (
-        <>
-          <View accessible accessibilityLabel={groupedLabel}>
-            {header}
-            <Text style={[styles.commentBody, { color: colors.textPrimary }]}>
-              {comment.content}
-            </Text>
-          </View>
-          {(isOwn || canDelete) && (
-            <View style={styles.commentActions}>
-              {isOwn && (
-                <PressableRow
-                  onPress={() => onStartEdit(comment.id, comment.content)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  accessibilityRole="button"
-                  accessibilityLabel="Edit comment"
-                  borderless
-                >
-                  <Text style={[styles.commentLink, { color: colors.primary }]}>Edit</Text>
-                </PressableRow>
-              )}
-              {canDelete && (
-                <PressableRow
-                  onPress={() => onDelete(comment.id)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  accessibilityRole="button"
-                  accessibilityLabel="Delete comment"
-                  borderless
-                >
-                  <Text style={[styles.commentLink, { color: colors.error }]}>Delete</Text>
-                </PressableRow>
-              )}
-            </View>
+      </View>
+    );
+  }
+
+  const content = (
+    <Pressable
+      onLongPress={() => onLongPress?.(comment.id)}
+      delayLongPress={350}
+      style={[styles.commentItem, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
+      accessibilityRole="button"
+      accessibilityLabel={groupedLabel}
+      accessibilityHint="Long press for options"
+    >
+      <View>
+        {header}
+        <Text style={[styles.commentBody, { color: colors.textPrimary }]}>
+          {comment.content}
+        </Text>
+      </View>
+      {(isOwn || canDelete) && (
+        <View style={styles.commentActions}>
+          {isOwn && (
+            <PressableRow
+              onPress={() => onStartEdit(comment.id, comment.content)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Edit comment"
+              borderless
+            >
+              <Text style={[styles.commentLink, { color: colors.primary }]}>Edit</Text>
+            </PressableRow>
           )}
-        </>
+          {canDelete && (
+            <PressableRow
+              onPress={() => onDelete(comment.id)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Delete comment"
+              borderless
+            >
+              <Text style={[styles.commentLink, { color: colors.error }]}>Delete</Text>
+            </PressableRow>
+          )}
+        </View>
       )}
-    </View>
+    </Pressable>
+  );
+
+  // Only own comments get swipe-to-delete. Non-own comments still get long-press actions.
+  if (!isOwn) return content;
+
+  return (
+    <ReanimatedSwipeable
+      ref={swipeableRef}
+      renderRightActions={(_p, drag) => <CommentSwipeDelete drag={drag} />}
+      rightThreshold={56}
+      overshootRight={false}
+      friction={2}
+      onSwipeableOpen={(direction) => {
+        if (direction === 'right') {
+          swipeableRef.current?.close();
+          onDelete?.(comment.id);
+        }
+      }}
+    >
+      {content}
+    </ReanimatedSwipeable>
   );
 });
+
+function CommentSwipeDelete({ drag }) {
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(drag.value, [0, -80], [80, 0], Extrapolate.CLAMP) }],
+    opacity: interpolate(drag.value, [0, -20, -60], [0, 0.4, 1], Extrapolate.CLAMP),
+  }));
+  return (
+    <Reanimated.View style={[styles.commentSwipeDelete, animatedStyle]}>
+      <Ionicons name="trash-outline" size={20} color="#fff" />
+      <Text style={styles.commentSwipeDeleteText}>Delete</Text>
+    </Reanimated.View>
+  );
+}
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -1832,6 +1922,20 @@ const styles = StyleSheet.create({
   commentBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
   commentComposer: { borderRadius: 10, borderWidth: 1, padding: 12, marginTop: 4, gap: 8 },
   commentPostBtn: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8, minHeight: 48, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-end' },
+  commentSwipeDelete: {
+    width: 80,
+    backgroundColor: '#dc2626',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+    borderRadius: 10,
+  },
+  commentSwipeDeleteText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 2,
+  },
   completeButton: { paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 8, marginBottom: 20 },
   completeButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
   // Form

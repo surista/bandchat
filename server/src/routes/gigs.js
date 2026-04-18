@@ -90,7 +90,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
           }
         },
         _count: {
-          select: { songsPlayed: true }
+          select: { songsPlayed: true, comments: true }
         }
       },
       orderBy: { date: 'asc' },
@@ -128,7 +128,7 @@ router.get('/workspace/:workspaceId/next', authenticate, isWorkspaceMember, asyn
           where: { bandMember: { linkedUserId: req.user.id } },
           select: { status: true }
         },
-        _count: { select: { attendees: true } }
+        _count: { select: { attendees: true, comments: true } }
       },
       orderBy: { date: 'asc' },
     });
@@ -230,7 +230,7 @@ router.get('/all-workspaces', authenticate, async (req, res) => {
           orderBy: { createdAt: 'desc' }
         },
         _count: {
-          select: { songsPlayed: true }
+          select: { songsPlayed: true, comments: true }
         }
       },
       orderBy: { date: 'asc' },
@@ -884,7 +884,8 @@ router.get('/:gigId', authenticate, async (req, res) => {
         },
         media: {
           orderBy: { createdAt: 'desc' }
-        }
+        },
+        _count: { select: { comments: true } }
       }
     });
 
@@ -1543,7 +1544,7 @@ router.post('/:gigId/duplicate', authenticate, async (req, res) => {
           orderBy: { createdAt: 'desc' }
         },
         _count: {
-          select: { songsPlayed: true }
+          select: { songsPlayed: true, comments: true }
         }
       }
     });

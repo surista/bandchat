@@ -90,6 +90,17 @@ function GigCompactRow({ gig, isAdmin, currentUserId, getTypeColor, formatTimeRa
         <span className="shrink-0 text-yellow-500 text-sm" role="img" aria-label="Scheduling conflict" title="Scheduling conflict with another band">⚠</span>
       )}
 
+      {/* Comment count */}
+      {gig._count?.comments > 0 && (
+        <span
+          className="shrink-0 text-xs text-[var(--color-text-muted)] flex items-center gap-0.5"
+          title={`${gig._count.comments} comment${gig._count.comments === 1 ? '' : 's'}`}
+          aria-label={`${gig._count.comments} comment${gig._count.comments === 1 ? '' : 's'}`}
+        >
+          💬<span>{gig._count.comments}</span>
+        </span>
+      )}
+
       {/* Venue */}
       <div className="shrink-0 max-w-[8rem] text-sm text-[var(--color-text-muted)] truncate hidden md:block">
         {gig.venue || '—'}
@@ -260,6 +271,15 @@ function GigListCard({ gig, isAdmin, currentUserId, getTypeColor, getStatusBadge
 
           {gig.notes && (
             <p className="text-[var(--color-text-muted)] text-sm mt-2 italic">{gig.notes}</p>
+          )}
+
+          {gig._count?.comments > 0 && (
+            <p
+              className="text-[var(--color-text-muted)] text-sm mt-1"
+              aria-label={`${gig._count.comments} comment${gig._count.comments === 1 ? '' : 's'}`}
+            >
+              💬 {gig._count.comments} {gig._count.comments === 1 ? 'comment' : 'comments'}
+            </p>
           )}
 
           {gig.media?.length > 0 && (

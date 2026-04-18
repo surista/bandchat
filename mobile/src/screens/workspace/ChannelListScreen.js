@@ -933,6 +933,7 @@ export default function ChannelListScreen({ navigation, route }) {
                       return displayTime ? ` · ${displayTime}` : '';
                     })()}
                     {nextGig.venue ? ` · ${nextGig.venue}` : ''}
+                    {nextGig._count?.comments > 0 ? ` · 💬 ${nextGig._count.comments}` : ''}
                   </Text>
                 </View>
                 {nextGig.notes ? (

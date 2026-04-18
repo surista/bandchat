@@ -476,6 +476,15 @@ export default function GigListScreen({ navigation, route }) {
             </Text>
           ) : null}
 
+          {item._count?.comments > 0 ? (
+            <Text
+              style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}
+              accessibilityLabel={`${item._count.comments} comment${item._count.comments === 1 ? '' : 's'}`}
+            >
+              <Ionicons name="chatbubble-outline" size={12} color={colors.textSecondary} /> {item._count.comments} {item._count.comments === 1 ? 'comment' : 'comments'}
+            </Text>
+          ) : null}
+
           {item.media?.length > 0 ? (
             <View style={styles.mediaIndicators}>
               {(() => {
