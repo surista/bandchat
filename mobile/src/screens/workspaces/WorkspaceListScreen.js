@@ -41,6 +41,11 @@ export default function WorkspaceListScreen({ navigation, route }) {
       setError(null);
       const data = await api.getWorkspaces();
       setWorkspaces(data);
+      // First-time user (no workspaces, no pending invite) → onboarding wizard
+      if (data.length === 0 && !route.params?.inviteCode && !route.params?.showList) {
+        navigation.replace('OnboardingWizard');
+        return;
+      }
       // Auto-navigate if exactly one workspace, no invite code, and not explicitly returning here
       if (data.length === 1 && !route.params?.inviteCode && !route.params?.showList) {
         navigation.replace('Workspace', { id: data[0].id, name: data[0].name });
@@ -149,6 +154,24 @@ export default function WorkspaceListScreen({ navigation, route }) {
       <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
         Create a new workspace for your band or join one with an invite code.
       </Text>
+      <View style={styles.emptyActions}>
+        <PressableRow
+          style={[styles.emptyPrimaryBtn, { backgroundColor: colors.primary }]}
+          onPress={() => navigation.navigate('OnboardingWizard')}
+          accessibilityRole="button"
+          accessibilityLabel="Create a workspace"
+        >
+          <Text style={[styles.emptyPrimaryText, { color: colors.primaryText }]}>Create Workspace</Text>
+        </PressableRow>
+        <PressableRow
+          style={[styles.emptySecondaryBtn, { backgroundColor: colors.bgTertiary }]}
+          onPress={() => setShowJoin(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Join a workspace with invite code"
+        >
+          <Text style={[styles.emptySecondaryText, { color: colors.textPrimary }]}>Join with Invite Code</Text>
+        </PressableRow>
+      </View>
     </View>
   );
 
@@ -428,6 +451,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+    marginBottom: 20,
+  },
+  emptyActions: {
+    width: '100%',
+    gap: 10,
+  },
+  emptyPrimaryBtn: {
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  emptyPrimaryText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptySecondaryBtn: {
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  emptySecondaryText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
