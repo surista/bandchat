@@ -19,7 +19,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { Audio } from 'expo-av';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Calendar from 'expo-calendar';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, formatDistanceToNow, differenceInHours } from 'date-fns';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -34,6 +34,7 @@ import { Image } from 'expo-image';
 import getCurrencySymbol from '../../utils/getCurrencySymbol';
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet from '../../components/ActionSheet';
+import PressableRow from '../../components/PressableRow';
 import { TYPE_COLORS, STATUS_COLORS } from '../../utils/constants';
 import { updateWidgetGigData } from '../../services/widgetService';
 
@@ -154,6 +155,18 @@ export default function GigDetailScreen({ navigation, route }) {
     editingCommentIdRef.current = editingCommentId;
   }, [editingCommentId]);
 
+  // Auto-scroll to newest comment when count grows, as long as the user
+  // is already viewing near the bottom.
+  const nearBottomRef = useRef(true);
+  useEffect(() => {
+    if (comments.length === 0) return;
+    if (nearBottomRef.current && viewScrollRef.current?.scrollToEnd) {
+      requestAnimationFrame(() => {
+        viewScrollRef.current?.scrollToEnd({ animated: true });
+      });
+    }
+  }, [comments.length]);
+
   useEffect(() => {
     if (!socket || !gigId) return;
     const onAdded = ({ gigId: incomingGigId, comment }) => {
@@ -187,13 +200,17 @@ export default function GigDetailScreen({ navigation, route }) {
   }, [socket, gigId, toast]);
 
   useEffect(() => {
-    if (!editingCommentId) return;
+    const hasPendingComment = () => !!editingCommentId || newComment.trim().length > 0;
+    if (!hasPendingComment()) return;
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      if (!editingCommentId) return;
+      if (!hasPendingComment()) return;
       e.preventDefault();
+      const message = editingCommentId
+        ? 'You have an unsaved comment edit. Discard it?'
+        : 'You have an unsent comment. Discard it?';
       Alert.alert(
         'Discard changes?',
-        'You have an unsaved comment edit. Discard it?',
+        message,
         [
           { text: 'Keep editing', style: 'cancel' },
           {
@@ -202,6 +219,7 @@ export default function GigDetailScreen({ navigation, route }) {
             onPress: () => {
               setEditingCommentId(null);
               setEditingCommentContent('');
+              setNewComment('');
               navigation.dispatch(e.data.action);
             },
           },
@@ -209,7 +227,7 @@ export default function GigDetailScreen({ navigation, route }) {
       );
     });
     return unsubscribe;
-  }, [navigation, editingCommentId]);
+  }, [navigation, editingCommentId, newComment]);
 
   const reloadComments = useCallback(async () => {
     if (!gigId) return;
@@ -242,7 +260,7 @@ export default function GigDetailScreen({ navigation, route }) {
     setCommentSubmitting(true);
     try {
       const created = await api.addGigComment(gigId, content);
-      setComments(prev => [...prev, created]);
+      setComments(prev => prev.some(c => c.id === created.id) ? prev : [...prev, created]);
       setNewComment('');
       successNotification();
     } catch (err) {
@@ -1134,6 +1152,11 @@ export default function GigDetailScreen({ navigation, route }) {
       contentContainerStyle={[styles.viewContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      onScroll={(e) => {
+        const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+        nearBottomRef.current = (contentSize.height - contentOffset.y - layoutMeasurement.height) < 120;
+      }}
+      scrollEventThrottle={100}
     >
       {/* Type + Status + Lock badges */}
       <View style={styles.viewBadgeRow}>
@@ -1180,21 +1203,21 @@ export default function GigDetailScreen({ navigation, route }) {
         {(gig?.soundCheckTime || gig?.eventStartTime || gig?.performanceStartTime) && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
             {gig.soundCheckTime && (
-              <View>
-                <Text style={{ fontSize: 11, color: colors.textSecondary }}>Sound Check</Text>
-                <Text style={{ fontSize: 14, color: colors.textPrimary }}>{gig.soundCheckTime}</Text>
+              <View style={{ flexShrink: 1 }}>
+                <Text style={{ fontSize: 11, color: colors.textSecondary }} maxFontSizeMultiplier={1.5}>Sound Check</Text>
+                <Text style={{ fontSize: 14, color: colors.textPrimary }} maxFontSizeMultiplier={1.5}>{gig.soundCheckTime}</Text>
               </View>
             )}
             {gig.eventStartTime && (
-              <View>
-                <Text style={{ fontSize: 11, color: colors.textSecondary }}>Doors</Text>
-                <Text style={{ fontSize: 14, color: colors.textPrimary }}>{gig.eventStartTime}</Text>
+              <View style={{ flexShrink: 1 }}>
+                <Text style={{ fontSize: 11, color: colors.textSecondary }} maxFontSizeMultiplier={1.5}>Doors</Text>
+                <Text style={{ fontSize: 14, color: colors.textPrimary }} maxFontSizeMultiplier={1.5}>{gig.eventStartTime}</Text>
               </View>
             )}
             {gig.performanceStartTime && (
-              <View>
-                <Text style={{ fontSize: 11, color: colors.textSecondary }}>Stage</Text>
-                <Text style={{ fontSize: 14, color: colors.textPrimary }}>{gig.performanceStartTime}</Text>
+              <View style={{ flexShrink: 1 }}>
+                <Text style={{ fontSize: 11, color: colors.textSecondary }} maxFontSizeMultiplier={1.5}>Stage</Text>
+                <Text style={{ fontSize: 14, color: colors.textPrimary }} maxFontSizeMultiplier={1.5}>{gig.performanceStartTime}</Text>
               </View>
             )}
           </View>
@@ -1480,14 +1503,14 @@ export default function GigDetailScreen({ navigation, route }) {
             <Text style={{ color: colors.error, fontSize: 14, marginBottom: 8 }}>
               {commentsError}
             </Text>
-            <TouchableOpacity
+            <PressableRow
               onPress={reloadComments}
               style={{ alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 10, minHeight: 44, justifyContent: 'center', borderRadius: 8, backgroundColor: colors.bgTertiary }}
               accessibilityRole="button"
               accessibilityLabel="Retry loading comments"
             >
               <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
-            </TouchableOpacity>
+            </PressableRow>
           </View>
         ) : null}
 
@@ -1530,6 +1553,11 @@ export default function GigDetailScreen({ navigation, route }) {
             onFocus={() => {
               setTimeout(() => viewScrollRef.current?.scrollToEnd({ animated: true }), 150);
             }}
+            onContentSizeChange={() => {
+              if (nearBottomRef.current) {
+                viewScrollRef.current?.scrollToEnd({ animated: false });
+              }
+            }}
             underlineColorAndroid="transparent"
             multiline
             maxLength={2000}
@@ -1537,23 +1565,23 @@ export default function GigDetailScreen({ navigation, route }) {
             placeholderTextColor={colors.textSecondary}
             accessibilityLabel="New comment"
           />
-          <TouchableOpacity
+          <PressableRow
             style={[
               styles.commentPostBtn,
               { backgroundColor: newComment.trim() && !commentSubmitting ? colors.primary : colors.bgTertiary },
             ]}
             onPress={handleAddComment}
             disabled={!newComment.trim() || commentSubmitting}
-            activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel="Post comment"
+            accessibilityState={{ busy: commentSubmitting, disabled: !newComment.trim() || commentSubmitting }}
           >
             {commentSubmitting ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
               <Text style={[styles.commentBtnText, { color: newComment.trim() ? '#fff' : colors.textSecondary }]}>Post</Text>
             )}
-          </TouchableOpacity>
+          </PressableRow>
         </View>
       </View>
 
@@ -1604,7 +1632,11 @@ export default function GigDetailScreen({ navigation, route }) {
 
 function formatCommentDate(iso) {
   try {
-    return new Date(iso).toLocaleString(undefined, {
+    const d = new Date(iso);
+    if (differenceInHours(new Date(), d) < 24) {
+      return formatDistanceToNow(d, { addSuffix: true });
+    }
+    return d.toLocaleString(undefined, {
       month: 'short',
       day: 'numeric',
       hour: 'numeric',
@@ -1632,7 +1664,7 @@ const CommentItem = memo(function CommentItem({
   const authorName = comment.createdBy?.displayName || comment.removedCreatorName || 'Unknown';
   const edited = comment.updatedAt && comment.updatedAt !== comment.createdAt;
   const dateLabel = formatCommentDate(comment.createdAt);
-  const groupedLabel = `Comment by ${authorName}, ${dateLabel}${edited ? ', edited' : ''}: ${comment.content}`;
+  const groupedLabel = `${isOwn ? 'Your comment' : `Comment by ${authorName}`}, ${dateLabel}${edited ? ', edited' : ''}: ${comment.content}`;
 
   const header = (
     <View style={styles.commentHeader}>
@@ -1684,26 +1716,24 @@ const CommentItem = memo(function CommentItem({
             accessibilityLabel="Edit comment"
           />
           <View style={styles.commentActions}>
-            <TouchableOpacity
+            <PressableRow
               style={[styles.commentBtn, { backgroundColor: colors.success }]}
               onPress={onSaveEdit}
               disabled={submitting || !editingContent?.trim()}
-              activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel="Save comment edit"
               accessibilityState={{ busy: !!submitting, disabled: submitting || !editingContent?.trim() }}
             >
               <Text style={styles.commentBtnText}>Save</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={[styles.commentBtn, { backgroundColor: colors.bgTertiary }]}
               onPress={onCancelEdit}
-              activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel="Cancel comment edit"
             >
               <Text style={[styles.commentBtnText, { color: colors.textPrimary }]}>Cancel</Text>
-            </TouchableOpacity>
+            </PressableRow>
           </View>
         </View>
       ) : (
@@ -1717,24 +1747,26 @@ const CommentItem = memo(function CommentItem({
           {(isOwn || canDelete) && (
             <View style={styles.commentActions}>
               {isOwn && (
-                <TouchableOpacity
+                <PressableRow
                   onPress={() => onStartEdit(comment.id, comment.content)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   accessibilityRole="button"
                   accessibilityLabel="Edit comment"
+                  borderless
                 >
                   <Text style={[styles.commentLink, { color: colors.primary }]}>Edit</Text>
-                </TouchableOpacity>
+                </PressableRow>
               )}
               {canDelete && (
-                <TouchableOpacity
+                <PressableRow
                   onPress={() => onDelete(comment.id)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   accessibilityRole="button"
                   accessibilityLabel="Delete comment"
+                  borderless
                 >
                   <Text style={[styles.commentLink, { color: colors.error }]}>Delete</Text>
-                </TouchableOpacity>
+                </PressableRow>
               )}
             </View>
           )}
@@ -1795,7 +1827,7 @@ const styles = StyleSheet.create({
   commentBody: { fontSize: 15, lineHeight: 21, marginTop: 4 },
   commentActions: { flexDirection: 'row', gap: 16, marginTop: 8, alignItems: 'center' },
   commentLink: { fontSize: 13, fontWeight: '600', minHeight: 44, paddingHorizontal: 8, paddingVertical: 12, textAlignVertical: 'center' },
-  commentInput: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, minHeight: 60, textAlignVertical: 'top' },
+  commentInput: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, minHeight: 60, maxHeight: 120, textAlignVertical: 'top' },
   commentBtn: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, minHeight: 48, justifyContent: 'center', alignItems: 'center' },
   commentBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
   commentComposer: { borderRadius: 10, borderWidth: 1, padding: 12, marginTop: 4, gap: 8 },

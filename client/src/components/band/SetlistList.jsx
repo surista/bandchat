@@ -1476,7 +1476,9 @@ function SetlistList({ workspaceId, workspaceName }) {
               try {
                 const updated = await api.getSetlist(viewingSetlist.id);
                 setViewingSetlist(updated);
-              } catch {}
+              } catch (err) {
+                console.error('Failed to refresh setlist after song update:', err);
+              }
             }
           }}
           onClose={() => setViewingSong(null)}

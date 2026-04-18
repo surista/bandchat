@@ -7,12 +7,13 @@ import {
   ActivityIndicator,
   StyleSheet,
   RefreshControl,
+  Platform,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
-import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { format, isToday, isYesterday } from 'date-fns';
 import { useLayout } from '../../hooks/useLayout';
@@ -29,7 +30,6 @@ export default function TimelineScreen({ navigation, route }) {
   const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
   const { socket } = useSocket();
-  const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -74,22 +74,44 @@ export default function TimelineScreen({ navigation, route }) {
     loadTimeline();
   }, [loadTimeline]);
 
-  // Listen for new messages across all channels
+  // Refresh when the screen regains focus so messages sent in other screens appear
+  useFocusEffect(
+    useCallback(() => {
+      loadTimeline(null, true);
+    }, [loadTimeline])
+  );
+
+  // Listen for new messages across all channels (socket auto-joins all accessible channel rooms)
   useEffect(() => {
     if (!socket) return;
 
     const handleNewMessage = (message) => {
-      // Only add if it's a top-level message (not a reply)
-      if (!message.parentId && message.author?.id !== user?.id) {
-        setMessages(prev => [message, ...prev]);
-      }
+      if (!message?.id) return;
+      setMessages(prev => {
+        if (prev.some(m => m.id === message.id)) return prev;
+        return [message, ...prev];
+      });
+    };
+
+    const handleMessageUpdated = (message) => {
+      if (!message?.id) return;
+      setMessages(prev => prev.map(m => (m.id === message.id ? { ...m, ...message } : m)));
+    };
+
+    const handleMessageDeleted = ({ messageId }) => {
+      if (!messageId) return;
+      setMessages(prev => prev.filter(m => m.id !== messageId));
     };
 
     socket.on('message:new', handleNewMessage);
+    socket.on('message:updated', handleMessageUpdated);
+    socket.on('message:deleted', handleMessageDeleted);
     return () => {
       socket.off('message:new', handleNewMessage);
+      socket.off('message:updated', handleMessageUpdated);
+      socket.off('message:deleted', handleMessageDeleted);
     };
-  }, [socket, user?.id]);
+  }, [socket]);
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
@@ -240,6 +262,7 @@ export default function TimelineScreen({ navigation, route }) {
         onEndReached={loadMore}
         onEndReachedThreshold={0.3}
         ListFooterComponent={renderFooter}
+        contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : 'never'}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

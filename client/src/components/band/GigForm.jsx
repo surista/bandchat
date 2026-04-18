@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow, differenceInHours } from 'date-fns';
 import api from '../../services/api';
 import Modal from '../common/Modal';
+import ConfirmDialog from '../common/ConfirmDialog';
 import { getCurrencySymbol } from '../../utils/currencies';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
@@ -9,7 +10,11 @@ import { useToast } from '../../context/ToastContext';
 
 function formatCommentDate(iso) {
   try {
-    return new Date(iso).toLocaleString(undefined, {
+    const d = new Date(iso);
+    if (differenceInHours(new Date(), d) < 24) {
+      return formatDistanceToNow(d, { addSuffix: true });
+    }
+    return d.toLocaleString(undefined, {
       month: 'short',
       day: 'numeric',
       hour: 'numeric',
@@ -93,17 +98,28 @@ const CommentItem = memo(function CommentItem({
           <textarea
             value={editingContent}
             onChange={(e) => onChangeEditingContent(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                onSaveEdit?.();
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                onCancelEdit?.();
+              }
+            }}
             className="modal-input w-full"
             rows={2}
             maxLength={2000}
             autoFocus
+            aria-label="Edit comment"
           />
           <div className="flex gap-2">
             <button
               type="button"
               onClick={onSaveEdit}
               disabled={submitting || !editingContent?.trim()}
-              className="btn bg-green-600 hover:bg-green-700 text-white text-xs disabled:opacity-50"
+              className="btn bg-[var(--color-primary)] hover:opacity-90 text-white text-xs disabled:opacity-50"
               aria-busy={submitting || undefined}
             >
               Save
@@ -181,6 +197,8 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
   const { socket } = useSocket();
   const toast = useToast();
   const editingCommentIdRef = useRef(null);
+  const commentsScrollRef = useRef(null);
+  const commentsEndRef = useRef(null);
   // Read-only mode: locked events, OR shared events the user didn't create (non-admin)
   const isCreator = !gig || gig.createdById === user?.id;
   const readOnly = (gig?.isLocked && !isAdmin) || (gig && !isCreator && !isAdmin);
@@ -294,24 +312,47 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editingCommentContent, setEditingCommentContent] = useState('');
   const [commentError, setCommentError] = useState('');
+  const [commentLoadError, setCommentLoadError] = useState('');
+  const [deletingCommentId, setDeletingCommentId] = useState(null);
 
-  useEffect(() => {
+  const loadComments = useCallback(() => {
     if (!gig?.id) {
       setComments([]);
-      return;
+      return () => {};
     }
     let cancelled = false;
     setCommentsLoading(true);
+    setCommentLoadError('');
     api.getGigComments(gig.id)
       .then(data => { if (!cancelled) setComments(Array.isArray(data) ? data : []); })
-      .catch(() => { if (!cancelled) setComments([]); })
+      .catch((err) => {
+        if (!cancelled) {
+          setComments([]);
+          setCommentLoadError(err?.message || 'Failed to load comments');
+        }
+      })
       .finally(() => { if (!cancelled) setCommentsLoading(false); });
     return () => { cancelled = true; };
   }, [gig?.id]);
 
   useEffect(() => {
+    return loadComments();
+  }, [loadComments]);
+
+  useEffect(() => {
     editingCommentIdRef.current = editingCommentId;
   }, [editingCommentId]);
+
+  // Auto-scroll the comment list to the newest comment when the count grows,
+  // but only if the reader is already near the bottom (so we don't fight active scroll-up).
+  useEffect(() => {
+    const scroller = commentsScrollRef.current;
+    if (!scroller || comments.length === 0) return;
+    const nearBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80;
+    if (nearBottom) {
+      commentsEndRef.current?.scrollIntoView({ block: 'nearest' });
+    }
+  }, [comments.length]);
 
   useEffect(() => {
     if (!socket || !gig?.id) return;
@@ -352,7 +393,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     setCommentError('');
     try {
       const created = await api.addGigComment(gig.id, content);
-      setComments(prev => [...prev, created]);
+      setComments(prev => prev.some(c => c.id === created.id) ? prev : [...prev, created]);
       setNewComment('');
     } catch (err) {
       setCommentError(err.message || 'Failed to add comment');
@@ -389,17 +430,24 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     }
   }, [editingCommentContent, editingCommentId, gig?.id]);
 
-  const handleDeleteComment = useCallback(async (commentId) => {
+  const handleDeleteComment = useCallback((commentId) => {
     if (!gig?.id) return;
-    if (!window.confirm('Delete this comment?')) return;
+    setDeletingCommentId(commentId);
+  }, [gig?.id]);
+
+  const confirmDeleteComment = useCallback(async () => {
+    if (!gig?.id || !deletingCommentId) return;
+    const commentId = deletingCommentId;
     setCommentError('');
     try {
       await api.deleteGigComment(gig.id, commentId);
       setComments(prev => prev.filter(c => c.id !== commentId));
     } catch (err) {
       setCommentError(err.message || 'Failed to delete comment');
+    } finally {
+      setDeletingCommentId(null);
     }
-  }, [gig?.id]);
+  }, [gig?.id, deletingCommentId]);
 
   const updateMedia = (newMedia) => {
     setMedia(newMedia);
@@ -1516,19 +1564,37 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
 
               {/* Comments - only for existing gigs. Always interactive even in readOnly. */}
               {gig && (
-                <div className={readOnly ? 'pointer-events-auto opacity-100' : ''}>
+                <div>
                   <label className="modal-label">Comments</label>
 
                   {commentsLoading && (
                     <p className="text-sm text-[var(--color-text-muted)]">Loading comments...</p>
                   )}
 
-                  {!commentsLoading && comments.length === 0 && (
+                  {!commentsLoading && commentLoadError && (
+                    <div className="flex items-center gap-3 mb-3 text-sm">
+                      <span className="text-red-400">{commentLoadError}</span>
+                      <button
+                        type="button"
+                        onClick={loadComments}
+                        className="text-[var(--color-primary)] hover:underline"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  )}
+
+                  {!commentsLoading && !commentLoadError && comments.length === 0 && (
                     <p className="text-sm text-[var(--color-text-muted)] mb-3">No comments yet.</p>
                   )}
 
                   {comments.length > 0 && (
-                    <div className="space-y-2 mb-3">
+                    <div
+                      ref={commentsScrollRef}
+                      className="space-y-2 mb-3 max-h-80 overflow-y-auto pr-1"
+                      aria-live="polite"
+                      aria-relevant="additions"
+                    >
                       {comments.map(c => {
                         const isEditing = editingCommentId === c.id;
                         return (
@@ -1548,6 +1614,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                           />
                         );
                       })}
+                      <div ref={commentsEndRef} />
                     </div>
                   )}
 
@@ -1565,7 +1632,8 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                       className="modal-input w-full"
                       rows={2}
                       maxLength={2000}
-                      placeholder="Add a comment..."
+                      placeholder="Add a comment... (Ctrl+Enter to post)"
+                      aria-label="New comment"
                     />
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-[var(--color-text-muted)]">
@@ -1575,7 +1643,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                         type="button"
                         onClick={handleAddComment}
                         disabled={commentSubmitting || !newComment.trim()}
-                        className="btn bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-50"
+                        className="btn bg-[var(--color-primary)] hover:opacity-90 text-white text-sm disabled:opacity-50"
                       >
                         {commentSubmitting ? 'Posting...' : 'Post comment'}
                       </button>
@@ -1659,6 +1727,15 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
             </div>
           </form>
         </div>
+        <ConfirmDialog
+          isOpen={deletingCommentId !== null}
+          title="Delete Comment"
+          message="Delete this comment? This cannot be undone."
+          confirmText="Delete"
+          confirmVariant="danger"
+          onConfirm={confirmDeleteComment}
+          onCancel={() => setDeletingCommentId(null)}
+        />
     </Modal>
   );
 }

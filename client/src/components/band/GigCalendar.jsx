@@ -15,8 +15,9 @@ import ErrorMessage from '../common/ErrorMessage';
 import { getCurrencySymbol } from '../../utils/currencies';
 
 // Compact single-line row for list view
-function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, onDelete, onContextMenu, workspace, hasConflict }) {
-  const canEdit = !gig.isExternal && (!gig.isLocked || isAdmin);
+function GigCompactRow({ gig, isAdmin, currentUserId, getTypeColor, formatTimeRange, onEdit, onDelete, onContextMenu, workspace, hasConflict }) {
+  const isCreator = !!currentUserId && gig.createdById === currentUserId;
+  const canEdit = !gig.isExternal && (isAdmin || (isCreator && !gig.isLocked));
   const longPress = useLongPress({
     onLongPress: (pos) => onContextMenu(pos),
     onTap: !gig.isExternal ? onEdit : undefined, // Always open for viewing (GigForm shows read-only for locked)
@@ -128,9 +129,10 @@ function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, on
   );
 }
 
-function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRange, formatDateRange, onEdit, onDuplicate, onComplete, onDelete, onContextMenu, getGoogleCalendarUrl }) {
+function GigListCard({ gig, isAdmin, currentUserId, getTypeColor, getStatusBadge, formatTimeRange, formatDateRange, onEdit, onDuplicate, onComplete, onDelete, onContextMenu, getGoogleCalendarUrl }) {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const canEdit = !gig.isExternal && (!gig.isLocked || isAdmin);
+  const isCreator = !!currentUserId && gig.createdById === currentUserId;
+  const canEdit = !gig.isExternal && (isAdmin || (isCreator && !gig.isLocked));
   const longPress = useLongPress({
     onLongPress: (pos) => onContextMenu(pos),
     onTap: !gig.isExternal ? onEdit : undefined, // Always open for viewing (GigForm shows read-only for locked)
@@ -1335,7 +1337,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                     </div>
                     <div className="space-y-1">
                       {filteredDayGigs.slice(0, 3).map(gig => {
-                        const canDrag = !gig.isExternal && (!gig.isLocked || isAdmin);
+                        const canDrag = !gig.isExternal && (isAdmin || (gig.createdById === user?.id && !gig.isLocked));
                         return (
                         <div
                           key={gig.id}
@@ -1457,6 +1459,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                           key={gig.id}
                           gig={gig}
                           isAdmin={isAdmin}
+                          currentUserId={user?.id}
                           getTypeColor={getTypeColor}
                           formatTimeRange={formatTimeRange}
                           onEdit={() => { setEditingGig(gig); setShowForm(true); }}
@@ -1473,6 +1476,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                         key={gig.id}
                         gig={gig}
                         isAdmin={isAdmin}
+                        currentUserId={user?.id}
                         getTypeColor={getTypeColor}
                         getStatusBadge={getStatusBadge}
                         formatTimeRange={formatTimeRange}
@@ -1510,6 +1514,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                           key={gig.id}
                           gig={gig}
                           isAdmin={isAdmin}
+                          currentUserId={user?.id}
                           getTypeColor={getTypeColor}
                           formatTimeRange={formatTimeRange}
                           onEdit={() => { setEditingGig(gig); setShowForm(true); }}
@@ -1526,6 +1531,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                         key={gig.id}
                         gig={gig}
                         isAdmin={isAdmin}
+                        currentUserId={user?.id}
                         getTypeColor={getTypeColor}
                         getStatusBadge={getStatusBadge}
                         formatTimeRange={formatTimeRange}
@@ -1621,7 +1627,8 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
         items={(() => {
           const gig = allGigs.find(g => g.id === gigContextMenu?.gigId);
           if (!gig) return [];
-          const canEdit = !gig.isExternal && (!gig.isLocked || isAdmin);
+          const isCreator = !!user?.id && gig.createdById === user.id;
+          const canEdit = !gig.isExternal && (isAdmin || (isCreator && !gig.isLocked));
           return [
             { label: 'Edit', icon: '✏️', onClick: () => { setEditingGig(gig); setShowForm(true); }, show: canEdit },
             { label: 'Duplicate to Today', icon: '📋', onClick: () => handleDuplicateGig(gig), show: !gig.isExternal },

@@ -292,20 +292,20 @@ export default function SongListScreen({ navigation, route }) {
           accessibilityHint="Tap for details, long press for options"
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Text style={[styles.miniTitle, { color: colors.textPrimary, flex: 1 }]} numberOfLines={1}>
+            <Text style={[styles.miniTitle, { color: colors.textPrimary, flex: 1 }]} numberOfLines={1} maxFontSizeMultiplier={1.5}>
               {item.title}
             </Text>
             {item.hasAudio ? <Ionicons name="musical-notes-outline" size={12} color={colors.textSecondary} /> : null}
           </View>
           {item.artist ? (
-            <Text style={[styles.miniArtist, { color: colors.textSecondary }]} numberOfLines={1}>
+            <Text style={[styles.miniArtist, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={1.5}>
               {item.artist}
             </Text>
           ) : null}
           <View style={styles.miniBadgeRow}>
-            {item.key ? <Text style={[styles.miniBadge, { color: colors.badgeKey }]}>{item.key}</Text> : null}
-            {item.bpm ? <Text style={[styles.miniBadge, { color: colors.badgeBpm }]}>{item.bpm}</Text> : null}
-            {item.duration ? <Text style={[styles.miniBadge, { color: colors.textSecondary }]}>{formatDuration(item.duration)}</Text> : null}
+            {item.key ? <Text style={[styles.miniBadge, { color: colors.badgeKey }]} maxFontSizeMultiplier={1.5}>{item.key}</Text> : null}
+            {item.bpm ? <Text style={[styles.miniBadge, { color: colors.badgeBpm }]} maxFontSizeMultiplier={1.5}>{item.bpm}</Text> : null}
+            {item.duration ? <Text style={[styles.miniBadge, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>{formatDuration(item.duration)}</Text> : null}
           </View>
         </PressableRow>
       );
@@ -810,6 +810,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 10,
     marginBottom: 6,
+    minHeight: 48,
+    justifyContent: 'center',
   },
   miniTitle: { fontSize: 14, fontWeight: '600' },
   miniArtist: { fontSize: 12, marginTop: 1 },

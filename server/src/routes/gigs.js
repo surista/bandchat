@@ -2258,14 +2258,25 @@ router.put('/:gigId/my-attendance', authenticate, apiLimiter, async (req, res) =
 // ============================================================================
 
 const COMMENT_MAX_LENGTH = 2000;
+const COMMENT_LIST_MAX = 500;
+const COMMENT_PER_GIG_CAP = 1000;
 
 async function loadGigWithMembership(gigId, userId) {
   const gig = await prisma.gig.findUnique({
     where: { id: gigId },
-    include: { workspace: { include: { members: true } } },
+    select: {
+      id: true,
+      title: true,
+      workspaceId: true,
+      isPersonal: true,
+      createdById: true,
+    },
   });
   if (!gig) return { error: { status: 404, message: 'Gig not found' } };
-  const membership = gig.workspace.members.find(m => m.userId === userId);
+  const membership = await prisma.workspaceMember.findUnique({
+    where: { userId_workspaceId: { userId, workspaceId: gig.workspaceId } },
+    select: { role: true },
+  });
   if (!membership) return { error: { status: 403, message: 'Not a workspace member' } };
   if (gig.isPersonal && gig.createdById !== userId && membership.role !== 'ADMIN') {
     return { error: { status: 403, message: 'Not authorized to view this event' } };
@@ -2273,8 +2284,30 @@ async function loadGigWithMembership(gigId, userId) {
   return { gig, membership };
 }
 
+// For personal events, only creator + workspace admins should see comment updates.
+async function resolveCommentAudience(gig) {
+  if (!gig.isPersonal) return null; // null = broadcast to whole workspace room
+  const admins = await prisma.workspaceMember.findMany({
+    where: { workspaceId: gig.workspaceId, role: 'ADMIN' },
+    select: { userId: true },
+  });
+  const ids = new Set(admins.map(a => a.userId));
+  if (gig.createdById) ids.add(gig.createdById);
+  return Array.from(ids);
+}
+
+function emitCommentEvent(io, event, payload, gig, audienceUserIds) {
+  if (audienceUserIds === null) {
+    io.to(`workspace:${gig.workspaceId}`).emit(event, payload);
+  } else {
+    for (const uid of audienceUserIds) {
+      io.to(`user:${uid}`).emit(event, payload);
+    }
+  }
+}
+
 // List comments for a gig
-router.get('/:gigId/comments', authenticate, async (req, res) => {
+router.get('/:gigId/comments', authenticate, apiLimiter, async (req, res) => {
   try {
     const { error } = await loadGigWithMembership(req.params.gigId, req.user.id);
     if (error) return res.status(error.status).json({ error: error.message });
@@ -2282,6 +2315,7 @@ router.get('/:gigId/comments', authenticate, async (req, res) => {
     const comments = await prisma.gigComment.findMany({
       where: { gigId: req.params.gigId },
       orderBy: { createdAt: 'asc' },
+      take: COMMENT_LIST_MAX,
       include: { createdBy: { select: USER_SELECT_BRIEF } },
     });
     res.json(comments);
@@ -2305,6 +2339,12 @@ router.post('/:gigId/comments', authenticate, apiLimiter, async (req, res) => {
     const { error, gig } = await loadGigWithMembership(req.params.gigId, req.user.id);
     if (error) return res.status(error.status).json({ error: error.message });
 
+    // Storage amplification guard: cap comments per gig
+    const existingCount = await prisma.gigComment.count({ where: { gigId: gig.id } });
+    if (existingCount >= COMMENT_PER_GIG_CAP) {
+      return res.status(400).json({ error: 'This event has reached the maximum comment count' });
+    }
+
     const comment = await prisma.gigComment.create({
       data: {
         gigId: gig.id,
@@ -2315,26 +2355,34 @@ router.post('/:gigId/comments', authenticate, apiLimiter, async (req, res) => {
     });
 
     const io = req.app.get('io');
-    io.to(`workspace:${gig.workspaceId}`).emit('gig:commentAdded', { gigId: gig.id, comment });
+    const audience = await resolveCommentAudience(gig);
+    emitCommentEvent(io, 'gig:commentAdded', { gigId: gig.id, comment }, gig, audience);
 
-    // Push notification to workspace members (excluding the author)
-    const wsMembers = await prisma.workspaceMember.findMany({
-      where: { workspaceId: gig.workspaceId, userId: { not: req.user.id } },
-      select: { userId: true },
-    });
+    // Push recipients: for personal events, only creator + admins; otherwise all workspace members.
+    // Always exclude the comment author.
+    let recipientIds;
+    if (audience === null) {
+      const wsMembers = await prisma.workspaceMember.findMany({
+        where: { workspaceId: gig.workspaceId, userId: { not: req.user.id } },
+        select: { userId: true },
+      });
+      recipientIds = wsMembers.map(m => m.userId);
+    } else {
+      recipientIds = audience.filter(uid => uid !== req.user.id);
+    }
     const authorName = comment.createdBy?.displayName || 'Someone';
     const snippet = comment.content.length > 120 ? comment.content.slice(0, 117) + '...' : comment.content;
     const pushBody = `${authorName} on ${gig.title}: ${snippet}`;
-    wsMembers.forEach(m => {
-      sendPushToUser(m.userId, {
+    await Promise.allSettled(recipientIds.map(uid =>
+      sendPushToUser(uid, {
         title: 'New comment',
         body: pushBody,
         tag: `gig-comment-${gig.id}`,
         url: `/workspace/${gig.workspaceId}`,
         workspaceId: gig.workspaceId,
         threadId: `gig-${gig.id}`,
-      }, { category: 'gig', workspaceId: gig.workspaceId });
-    });
+      }, { category: 'gig', workspaceId: gig.workspaceId })
+    ));
 
     res.status(201).json(comment);
   } catch (err) {
@@ -2356,7 +2404,11 @@ router.put('/:gigId/comments/:commentId', authenticate, apiLimiter, async (req, 
 
     const existing = await prisma.gigComment.findUnique({
       where: { id: req.params.commentId },
-      include: { gig: { select: { id: true, workspaceId: true } } },
+      include: {
+        gig: {
+          select: { id: true, workspaceId: true, isPersonal: true, createdById: true, title: true },
+        },
+      },
     });
     if (!existing || existing.gigId !== req.params.gigId) {
       return res.status(404).json({ error: 'Comment not found' });
@@ -2372,10 +2424,8 @@ router.put('/:gigId/comments/:commentId', authenticate, apiLimiter, async (req, 
     });
 
     const io = req.app.get('io');
-    io.to(`workspace:${existing.gig.workspaceId}`).emit('gig:commentUpdated', {
-      gigId: existing.gig.id,
-      comment,
-    });
+    const audience = await resolveCommentAudience(existing.gig);
+    emitCommentEvent(io, 'gig:commentUpdated', { gigId: existing.gig.id, comment }, existing.gig, audience);
 
     res.json(comment);
   } catch (err) {
@@ -2391,11 +2441,7 @@ router.delete('/:gigId/comments/:commentId', authenticate, apiLimiter, async (re
       where: { id: req.params.commentId },
       include: {
         gig: {
-          select: {
-            id: true,
-            workspaceId: true,
-            workspace: { select: { members: true } },
-          },
+          select: { id: true, workspaceId: true, isPersonal: true, createdById: true, title: true },
         },
       },
     });
@@ -2403,7 +2449,10 @@ router.delete('/:gigId/comments/:commentId', authenticate, apiLimiter, async (re
       return res.status(404).json({ error: 'Comment not found' });
     }
 
-    const membership = existing.gig.workspace.members.find(m => m.userId === req.user.id);
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: existing.gig.workspaceId } },
+      select: { role: true },
+    });
     if (!membership) {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
@@ -2416,10 +2465,8 @@ router.delete('/:gigId/comments/:commentId', authenticate, apiLimiter, async (re
     await prisma.gigComment.delete({ where: { id: existing.id } });
 
     const io = req.app.get('io');
-    io.to(`workspace:${existing.gig.workspaceId}`).emit('gig:commentDeleted', {
-      gigId: existing.gig.id,
-      commentId: existing.id,
-    });
+    const audience = await resolveCommentAudience(existing.gig);
+    emitCommentEvent(io, 'gig:commentDeleted', { gigId: existing.gig.id, commentId: existing.id }, existing.gig, audience);
 
     res.json({ success: true });
   } catch (err) {

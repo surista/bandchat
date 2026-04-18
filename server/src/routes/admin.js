@@ -886,6 +886,7 @@ router.delete('/users/:userId/purge', async (req, res) => {
       prisma.kittyTransaction.updateMany({ where: { createdById: userId }, data: { removedCreatorName: displayName, createdById: null } }),
       prisma.stagePlot.updateMany({ where: { createdById: userId }, data: { removedCreatorName: displayName, createdById: null } }),
       prisma.pinnedMessage.updateMany({ where: { pinnedById: userId }, data: { pinnedById: null } }),
+      prisma.gigComment.updateMany({ where: { createdById: userId }, data: { removedCreatorName: displayName, createdById: null } }),
       prisma.user.delete({ where: { id: userId } }),
     ]);
 
