@@ -10,6 +10,7 @@ import {
   ScrollView,
   ActivityIndicator,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   StyleSheet,
   AppState,
@@ -34,6 +35,7 @@ import MessageActionSheet from '../../components/MessageActionSheet';
 import EmojiPicker from '../../components/EmojiPicker';
 import ImageViewer from '../../components/ImageViewer';
 import ActionSheet from '../../components/ActionSheet';
+import ReactionUsersSheet from '../../components/ReactionUsersSheet';
 import { format, isSameDay } from 'date-fns';
 import { useLayout } from '../../hooks/useLayout';
 import useMessageActions from '../../hooks/useMessageActions';
@@ -54,6 +56,7 @@ const MessageRow = memo(function MessageRow({
   onReplyPress,
   onImagePress,
   onReactionPress,
+  onReactionLongPress,
   onSwipeReply,
   onSwipeReact,
   onAvatarPress,
@@ -95,6 +98,7 @@ const MessageRow = memo(function MessageRow({
         onReplyPress={onReplyPress}
         onImagePress={onImagePress}
         onReactionPress={onReactionPress}
+        onReactionLongPress={onReactionLongPress}
         onSwipeReply={onSwipeReply}
         onSwipeReact={onSwipeReact}
         onAvatarPress={onAvatarPress}
@@ -111,7 +115,7 @@ const MessageRow = memo(function MessageRow({
 });
 
 export default function ChannelScreen({ navigation, route }) {
-  const { channel, workspaceId } = route.params;
+  const { channel, workspaceId, _splitPane: splitPane = false } = route.params;
   const { user } = useAuth();
   const { colors } = useTheme();
   const { socket, joinChannel, leaveChannel, startTyping, stopTyping } = useSocket();
@@ -156,6 +160,25 @@ export default function ChannelScreen({ navigation, route }) {
   const messagesRef = useRef(messages);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
+  // Android: manually track keyboard height and apply as bottom padding.
+  // With softwareKeyboardLayoutMode='pan', the system pans the window up, but
+  // edge-to-edge rendering + inverted FlatList makes this unreliable. We bypass
+  // all native keyboard handling and directly compensate with padding.
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+      if (flatListRef.current && scrollOffsetRef.current < 100) {
+        flatListRef.current.scrollToOffset({ offset: 0, animated: true });
+      }
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
+
   const findMessage = useCallback((id) => messagesRef.current.find(m => m.id === id), []);
 
   // Extra actions specific to ChannelScreen (reply, pin, bookmark, report)
@@ -194,11 +217,11 @@ export default function ChannelScreen({ navigation, route }) {
 
   const {
     actionMessage, showActions, showEmojiPicker, editingMessage, viewingImage,
-    blockedDomains, linkActionUrl,
+    blockedDomains, linkActionUrl, reactionUsers,
     setShowActions, setShowEmojiPicker, setViewingImage, setLinkActionUrl, setActionMessage,
     handleLongPress, handleAction, handleAddReaction, handleSendEdit,
-    handleCancelEdit, handleReactionPress, handleImagePress, handleTogglePreview,
-    handleLinkLongPress, toggleBlockedDomain,
+    handleCancelEdit, handleReactionPress, handleReactionLongPress, closeReactionUsers,
+    handleImagePress, handleTogglePreview, handleLinkLongPress, toggleBlockedDomain,
   } = useMessageActions({ findMessage, extraActions, workspaceId, channelId: channel.id });
 
   useEffect(() => {
@@ -237,6 +260,10 @@ export default function ChannelScreen({ navigation, route }) {
   // Header: "..." menu button (hidden for DMs)
   useLayoutEffect(() => {
     if (channel.isDM) return;
+    // In iPad split mode, the parent ChannelListScreen owns the stack header
+    // and the proxy navigation no-ops setOptions — the ellipsis is rendered
+    // inline below (`splitPane` branch in the return) instead.
+    if (splitPane) return;
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity
@@ -251,7 +278,7 @@ export default function ChannelScreen({ navigation, route }) {
         </TouchableOpacity>
       ),
     });
-  }, [navigation, channel]);
+  }, [navigation, channel, splitPane]);
 
   // Load blocked user IDs for socket filtering
   useEffect(() => {
@@ -747,6 +774,7 @@ export default function ChannelScreen({ navigation, route }) {
       onReplyPress={handleReplyPress}
       onImagePress={handleImagePress}
       onReactionPress={handleReactionPress}
+      onReactionLongPress={handleReactionLongPress}
       onSwipeReply={handleReplyPress}
       onSwipeReact={handleReactionPress}
       onAvatarPress={handleAvatarPress}
@@ -758,7 +786,7 @@ export default function ChannelScreen({ navigation, route }) {
       onChannelPress={handleChannelRefPress}
       colors={colors}
     />
-  ), [colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, handleAvatarPress, handleTogglePreview, workspaceMembers, blockedDomains, handleLinkLongPress, workspaceChannels, handleChannelRefPress]);
+  ), [colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, handleReactionLongPress, handleAvatarPress, handleTogglePreview, workspaceMembers, blockedDomains, handleLinkLongPress, workspaceChannels, handleChannelRefPress]);
 
   const renderFooter = useCallback(() => {
     if (!loadingMore) return null;
@@ -796,11 +824,39 @@ export default function ChannelScreen({ navigation, route }) {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
+      style={[styles.container, { backgroundColor: colors.bgPrimary, paddingBottom: Platform.OS === 'android' ? keyboardHeight : 0 }, isTablet && styles.tabletContainer]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? (splitPane ? 0 : headerHeight) : 0}
     >
       <View style={[styles.chatContainer, isTablet && { maxWidth: contentMaxWidth }]}>
+      {/* Split-mode inline header bar — only rendered on iPad landscape,
+          where the native stack header belongs to ChannelListScreen and the
+          proxy navigation drops setOptions(). Gives split-mode users access
+          to the channel-options menu (pinned messages, pin setlist, etc). */}
+      {splitPane && (
+        <View style={[styles.splitHeader, { backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
+          <View style={styles.splitHeaderTitleRow}>
+            {!channel.isDM && channel.isPrivate && <Ionicons name="lock-closed" size={14} color={colors.headerText} style={{ marginRight: 6 }} />}
+            <Text style={[styles.splitHeaderTitle, { color: colors.headerText }]} numberOfLines={1}>
+              {channel.isDM
+                ? (channel.displayName || 'Direct Message')
+                : (channel.isPrivate ? channel.name : `#${channel.name}`)}
+            </Text>
+          </View>
+          {!channel.isDM && (
+            <TouchableOpacity
+              onPress={() => setShowHeaderMenu(true)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={styles.splitHeaderMenuButton}
+              accessibilityRole="button"
+              accessibilityLabel="More options"
+              accessibilityHint="Channel options"
+            >
+              <Ionicons name="ellipsis-horizontal" size={22} color={colors.headerText} />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
       {/* Pinned Setlist Banner */}
       {pinnedSetlist && (
         <View style={[styles.setlistBanner, { backgroundColor: colors.bgTertiary, borderBottomColor: colors.border }]}>
@@ -901,7 +957,7 @@ export default function ChannelScreen({ navigation, route }) {
         maxToRenderPerBatch={10}
         updateCellsBatchingPeriod={50}
         windowSize={10}
-        removeClippedSubviews={Platform.OS === 'android'}
+        removeClippedSubviews={false} // Disabled — inverted FlatList + removeClippedSubviews causes rendering bugs on Android
         initialNumToRender={15}
         getItemLayout={undefined} // Can't use with variable height items
       />
@@ -931,7 +987,7 @@ export default function ChannelScreen({ navigation, route }) {
         members={workspaceMembers}
         channels={workspaceChannels}
       />
-      {insets.bottom > 0 && <View style={{ height: insets.bottom }} />}
+      {insets.bottom > 0 && keyboardHeight === 0 && <View style={{ height: insets.bottom }} />}
       </View>
 
       {/* Action Sheet */}
@@ -958,6 +1014,14 @@ export default function ChannelScreen({ navigation, route }) {
         visible={!!viewingImage}
         imageUrl={viewingImage}
         onClose={() => setViewingImage(null)}
+      />
+
+      {/* Reaction Users Sheet */}
+      <ReactionUsersSheet
+        visible={reactionUsers.visible}
+        reactions={reactionUsers.reactions}
+        selectedEmoji={reactionUsers.emoji}
+        onClose={closeReactionUsers}
       />
 
       {/* Header Menu ActionSheet */}
@@ -1053,10 +1117,11 @@ export default function ChannelScreen({ navigation, route }) {
       <Modal
         visible={showReportModal}
         transparent
+        statusBarTranslucent
         animationType="fade"
         onRequestClose={() => setShowReportModal(false)}
       >
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg || colors.bgSecondary }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Report Message</Text>
             <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
@@ -1070,7 +1135,7 @@ export default function ChannelScreen({ navigation, route }) {
               onChangeText={setReportReason}
               multiline
               maxLength={500}
-              autoFocus
+              autoFocus={Platform.OS === 'ios'}
               accessibilityLabel="Reason for reporting"
             />
             <View style={styles.modalButtons}>
@@ -1111,6 +1176,30 @@ const styles = StyleSheet.create({
   chatContainer: {
     flex: 1,
     width: '100%',
+  },
+  splitHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    minHeight: 48,
+  },
+  splitHeaderTitleRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  splitHeaderTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    flexShrink: 1,
+  },
+  splitHeaderMenuButton: {
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
   },
   loadingContainer: {
     flex: 1,

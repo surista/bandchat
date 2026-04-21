@@ -1,0 +1,30 @@
+diff --git a/node_modules/react-native-widget-extension/ios/ReactNativeWidgetExtensionModule.swift b/node_modules/react-native-widget-extension/ios/ReactNativeWidgetExtensionModule.swift
+new file mode 100644
+index 0000000..8a25389
+--- /dev/null
++++ b/node_modules/react-native-widget-extension/ios/ReactNativeWidgetExtensionModule.swift
+@@ -0,0 +1,11 @@
++import ExpoModulesCore
++
++public class ReactNativeWidgetExtensionModule: Module {
++    public func definition() -> ModuleDefinition {
++        Name("ReactNativeWidgetExtension")
++
++        Function("areActivitiesEnabled") { () -> Bool in
++            return false
++        }
++    }
++}
+diff --git a/node_modules/react-native-widget-extension/plugin/build/withConfig.js b/node_modules/react-native-widget-extension/plugin/build/withConfig.js
+index f8e6af7..285c81c 100644
+--- a/node_modules/react-native-widget-extension/plugin/build/withConfig.js
++++ b/node_modules/react-native-widget-extension/plugin/build/withConfig.js
+@@ -9,7 +9,7 @@ const withConfig = (config, { bundleIdentifier, targetName, groupIdentifier, key
+             configIndex = index;
+         }
+     });
+-    if (!configIndex) {
++    if (configIndex === null) {
+         config.extra = {
+             ...config.extra,
+             eas: {

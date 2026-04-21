@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   ScrollView,
   Switch,
   Alert,
@@ -14,6 +13,7 @@ import {
   Share,
   StyleSheet,
 } from 'react-native';
+import PressableRow from '../../components/PressableRow';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -136,23 +136,37 @@ export default function OnboardingWizardScreen({ navigation }) {
   }, []);
 
   const handleCreateChannels = useCallback(async () => {
-    const toCreate = channels.filter(c => c.enabled && !c.isDefault);
+    // Only try channels we haven't successfully created yet — lets users retry
+    // after a partial failure without creating duplicates.
+    const toCreate = channels.filter(c => c.enabled && !c.isDefault && !c._created);
     if (toCreate.length === 0) {
       setStep('invite');
       return;
     }
     setLoading(true);
     setError(null);
-    try {
-      await Promise.all(
-        toCreate.map(c => api.createChannel(workspace.id, { name: c.name, description: c.description }))
-      );
+    const results = await Promise.allSettled(
+      toCreate.map(c => api.createChannel(workspace.id, { name: c.name, description: c.description }).then(() => c.name))
+    );
+    const createdNames = new Set();
+    const failures = [];
+    results.forEach((r, i) => {
+      if (r.status === 'fulfilled') {
+        createdNames.add(toCreate[i].name);
+      } else {
+        failures.push({ name: toCreate[i].name, message: r.reason?.message || 'Unknown error' });
+      }
+    });
+    setChannels(prev => prev.map(c => (createdNames.has(c.name) ? { ...c, _created: true } : c)));
+    setLoading(false);
+    if (failures.length === 0) {
       successNotification();
       setStep('invite');
-    } catch (err) {
-      setError(err.message || 'Failed to create some channels');
-    } finally {
-      setLoading(false);
+    } else {
+      const msg = failures.length === 1
+        ? `Couldn't create #${failures[0].name}: ${failures[0].message}`
+        : `Couldn't create ${failures.length} channels. You can retry or skip to continue.`;
+      setError(msg);
     }
   }, [channels, workspace]);
 
@@ -254,23 +268,23 @@ export default function OnboardingWizardScreen({ navigation }) {
         accessibilityLabel="Workspace name"
       />
       <Text style={[styles.charCount, { color: colors.textSecondary }]}>{workspaceName.length} / 50</Text>
-      <TouchableOpacity
+      <PressableRow
         style={[
           styles.footerButton,
           { backgroundColor: colors.primary, opacity: workspaceName.trim().length > 0 && !loading ? 1 : 0.5, marginTop: 24 },
         ]}
         onPress={handleCreateWorkspace}
         disabled={!workspaceName.trim().length || loading}
-        activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={loading ? 'Creating...' : 'Create Workspace'}
+        accessibilityState={{ busy: loading, disabled: !workspaceName.trim().length || loading }}
       >
         {loading ? (
-          <ActivityIndicator color="#fff" size="small" />
+          <ActivityIndicator color={colors.primaryText} size="small" />
         ) : (
-          <Text style={styles.nextButtonText}>Create Workspace</Text>
+          <Text style={[styles.nextButtonText, { color: colors.primaryText }]}>Create Workspace</Text>
         )}
-      </TouchableOpacity>
+      </PressableRow>
     </View>
   );
 
@@ -305,14 +319,15 @@ export default function OnboardingWizardScreen({ navigation }) {
             ) : null}
           </View>
           {ch.isCustom && (
-            <TouchableOpacity
+            <PressableRow
               onPress={() => handleRemoveCustomChannel(index)}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessibilityRole="button"
               accessibilityLabel={`Remove ${ch.name} channel`}
+              borderless
             >
               <Ionicons name="close-circle" size={22} color={colors.textSecondary} />
-            </TouchableOpacity>
+            </PressableRow>
           )}
         </View>
       ))}
@@ -331,7 +346,7 @@ export default function OnboardingWizardScreen({ navigation }) {
           onSubmitEditing={handleAddCustomChannel}
           accessibilityLabel="Custom channel name"
         />
-        <TouchableOpacity
+        <PressableRow
           style={[styles.addButton, { backgroundColor: colors.bgSecondary, opacity: customChannelName.trim() ? 1 : 0.5 }]}
           onPress={handleAddCustomChannel}
           disabled={!customChannelName.trim()}
@@ -339,7 +354,7 @@ export default function OnboardingWizardScreen({ navigation }) {
           accessibilityLabel="Add channel"
         >
           <Text style={[styles.addButtonText, { color: colors.textPrimary }]}>Add</Text>
-        </TouchableOpacity>
+        </PressableRow>
       </View>
     </View>
   );
@@ -360,10 +375,9 @@ export default function OnboardingWizardScreen({ navigation }) {
           </Text>
         </View>
         <View style={styles.shareButtons}>
-          <TouchableOpacity
+          <PressableRow
             style={[styles.shareButton, { backgroundColor: colors.bgTertiary }]}
             onPress={handleCopyInvite}
-            activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel="Copy invite link"
           >
@@ -371,17 +385,16 @@ export default function OnboardingWizardScreen({ navigation }) {
             <Text style={[styles.shareButtonText, { color: copied ? '#22c55e' : colors.textPrimary }]}>
               {copied ? 'Copied!' : 'Copy'}
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </PressableRow>
+          <PressableRow
             style={[styles.shareButton, { backgroundColor: colors.primary }]}
             onPress={handleShareInvite}
-            activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel="Share invite link"
           >
-            <Ionicons name="share-outline" size={18} color="#ffffff" />
-            <Text style={[styles.shareButtonText, { color: '#ffffff' }]}>Share</Text>
-          </TouchableOpacity>
+            <Ionicons name="share-outline" size={18} color={colors.primaryText} />
+            <Text style={[styles.shareButtonText, { color: colors.primaryText }]}>Share</Text>
+          </PressableRow>
         </View>
         <Text style={[styles.linkHint, { color: colors.textSecondary }]}>This invite link expires in 24 hours.</Text>
       </View>
@@ -403,19 +416,20 @@ export default function OnboardingWizardScreen({ navigation }) {
             onSubmitEditing={handleSendEmail}
             accessibilityLabel="Email address"
           />
-          <TouchableOpacity
+          <PressableRow
             style={[styles.sendButton, { backgroundColor: colors.primary, opacity: emailInput.trim() && !emailLoading ? 1 : 0.5 }]}
             onPress={handleSendEmail}
             disabled={!emailInput.trim() || emailLoading}
             accessibilityRole="button"
             accessibilityLabel="Send invite email"
+            accessibilityState={{ busy: emailLoading, disabled: !emailInput.trim() || emailLoading }}
           >
             {emailLoading ? (
-              <ActivityIndicator size="small" color="#ffffff" />
+              <ActivityIndicator size="small" color={colors.primaryText} />
             ) : (
-              <Text style={styles.sendButtonText}>Send</Text>
+              <Text style={[styles.sendButtonText, { color: colors.primaryText }]}>Send</Text>
             )}
-          </TouchableOpacity>
+          </PressableRow>
         </View>
         {emailError ? <Text style={styles.emailError}>{emailError}</Text> : null}
         {emailsSent.map(email => (
@@ -503,28 +517,30 @@ export default function OnboardingWizardScreen({ navigation }) {
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
           {showBack ? (
-            <TouchableOpacity
+            <PressableRow
               onPress={handleBack}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={styles.headerButton}
               accessibilityRole="button"
               accessibilityLabel="Go back"
+              borderless
             >
               <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
+            </PressableRow>
           ) : (
             <View style={styles.headerButton} />
           )}
           <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Create Workspace</Text>
-          <TouchableOpacity
+          <PressableRow
             onPress={handleClose}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             style={styles.headerButton}
             accessibilityRole="button"
             accessibilityLabel="Close wizard"
+            borderless
           >
             <Ionicons name="close" size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
+          </PressableRow>
         </View>
 
         {/* Progress */}
@@ -539,9 +555,15 @@ export default function OnboardingWizardScreen({ navigation }) {
           {error && (
             <View style={styles.errorBanner}>
               <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity onPress={() => setError(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <PressableRow
+                onPress={() => setError(null)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss error"
+                borderless
+              >
                 <Ionicons name="close" size={16} color="#fca5a5" />
-              </TouchableOpacity>
+              </PressableRow>
             </View>
           )}
           {renderStep()}
@@ -550,17 +572,16 @@ export default function OnboardingWizardScreen({ navigation }) {
         {/* Footer — hidden on name step (button is inline) */}
         {step !== 'name' && <View style={[styles.footer, { borderTopColor: colors.border }]}>
           {showSkip && (
-            <TouchableOpacity
+            <PressableRow
               style={[styles.footerButton, styles.skipButton, { backgroundColor: colors.bgTertiary }]}
               onPress={handleSkip}
-              activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel="Skip this step"
             >
               <Text style={[styles.footerButtonText, { color: colors.textPrimary }]}>Skip</Text>
-            </TouchableOpacity>
+            </PressableRow>
           )}
-          <TouchableOpacity
+          <PressableRow
             style={[
               styles.footerButton,
               styles.nextButton,
@@ -569,16 +590,16 @@ export default function OnboardingWizardScreen({ navigation }) {
             ]}
             onPress={handleNext}
             disabled={!canGoNext()}
-            activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel={nextLabel()}
+            accessibilityState={{ busy: loading, disabled: !canGoNext() }}
           >
             {loading ? (
-              <ActivityIndicator size="small" color="#ffffff" />
+              <ActivityIndicator size="small" color={colors.primaryText} />
             ) : (
-              <Text style={styles.nextButtonText}>{nextLabel()}</Text>
+              <Text style={[styles.nextButtonText, { color: colors.primaryText }]}>{nextLabel()}</Text>
             )}
-          </TouchableOpacity>
+          </PressableRow>
         </View>}
       </KeyboardAvoidingView>
     </SafeAreaView>

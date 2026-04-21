@@ -9,7 +9,6 @@ import {
   Alert,
   ActivityIndicator,
   Linking,
-  Image,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -18,16 +17,19 @@ import {
 const ActionSheetIOS = Platform.OS === 'ios' ? require('react-native').ActionSheetIOS : null;
 import { File, Paths } from 'expo-file-system/next';
 import * as Sharing from 'expo-sharing';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
+import { prepareImageForUpload } from '../../utils/prepareImageUpload';
 import { successNotification, errorNotification, selectionFeedback } from '../../utils/haptics';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
 import { APP_BASE_URL } from '../../utils/constants';
+import PressableRow from '../../components/PressableRow';
 import { useLayout } from '../../hooks/useLayout';
 
 const CURRENCIES = ['USD', 'GBP', 'EUR', 'JPY', 'AUD', 'CAD', 'NZD', 'CHF', 'ZAR'];
@@ -40,10 +42,9 @@ const EVENT_TYPES = [
 
 function SettingsRow({ icon, label, subtitle, onPress, color, colors, showArrow = true }) {
   return (
-    <TouchableOpacity
+    <PressableRow
       style={[styles.row, { backgroundColor: colors.bgSecondary }]}
       onPress={onPress}
-      activeOpacity={0.6}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityHint="Opens setting"
@@ -58,7 +59,7 @@ function SettingsRow({ icon, label, subtitle, onPress, color, colors, showArrow 
       {showArrow && (
         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
       )}
-    </TouchableOpacity>
+    </PressableRow>
   );
 }
 
@@ -231,7 +232,7 @@ export default function SettingsScreen({ navigation, route }) {
     });
     if (result.canceled) return;
 
-    const asset = result.assets[0];
+    const asset = await prepareImageForUpload(result.assets[0]);
     setUploadingWsAvatar(true);
     try {
       const filename = asset.fileName || 'workspace-avatar.jpg';
@@ -354,6 +355,23 @@ export default function SettingsScreen({ navigation, route }) {
             }}
             colors={colors}
           />
+          <View style={[styles.separator, { backgroundColor: colors.border }]} />
+          <SettingsRow
+            icon="calendar-outline"
+            label="Calendar Privacy"
+            onPress={() => {
+              Alert.alert(
+                'Calendar Privacy',
+                'When you have a scheduling conflict with another band, control what they see.',
+                [
+                  { text: 'Busy only', onPress: () => api.setCalendarVisibility('BUSY_ONLY').catch(() => {}) },
+                  { text: 'Show band name', onPress: () => api.setCalendarVisibility('DETAILED').catch(() => {}) },
+                  { text: 'Cancel', style: 'cancel' },
+                ]
+              );
+            }}
+            colors={colors}
+          />
         </View>
 
         {/* Workspace */}
@@ -409,7 +427,7 @@ export default function SettingsScreen({ navigation, route }) {
                           {workspaceName.charAt(0).toUpperCase()}
                         </Text>
                         {wsAvatarUrl && (
-                          <Image source={{ uri: wsAvatarUrl }} style={styles.wsAvatarImg} resizeMode="cover" accessible={false} />
+                          <Image source={{ uri: wsAvatarUrl }} style={styles.wsAvatarImg} contentFit="cover" accessible={false} />
                         )}
                       </>
                     )}
@@ -568,8 +586,8 @@ export default function SettingsScreen({ navigation, route }) {
       </ScrollView>
 
       {/* Rename Workspace Modal */}
-      <Modal visible={showRenameModal} transparent animationType="fade" onRequestClose={() => setShowRenameModal(false)}>
-        <View style={styles.modalOverlay}>
+      <Modal visible={showRenameModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowRenameModal(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Rename Workspace</Text>
             <TextInput
@@ -602,16 +620,16 @@ export default function SettingsScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Save new name"
               >
-                <Text style={[styles.modalButtonText, { color: '#fff' }]}>{renaming ? 'Saving...' : 'Save'}</Text>
+                <Text style={[styles.modalButtonText, { color: colors.primaryText }]}>{renaming ? 'Saving...' : 'Save'}</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Delete Workspace Confirmation Modal */}
-      <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
-        <View style={styles.modalOverlay}>
+      <Modal visible={showDeleteModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowDeleteModal(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Delete Workspace</Text>
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
@@ -651,11 +669,11 @@ export default function SettingsScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Workspace Defaults Modal */}
-      <Modal visible={showDefaultsModal} transparent animationType="fade" onRequestClose={() => setShowDefaultsModal(false)}>
+      <Modal visible={showDefaultsModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowDefaultsModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Workspace Defaults</Text>
@@ -749,9 +767,9 @@ export default function SettingsScreen({ navigation, route }) {
                 disabled={savingDefaults}
               >
                 {savingDefaults ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>Save</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>Save</Text>
                 )}
               </TouchableOpacity>
             </View>

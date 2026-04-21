@@ -29,6 +29,7 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
   const [viewingImage, setViewingImage] = useState(null);
   const [blockedDomains, setBlockedDomains] = useState(new Set());
   const [linkActionUrl, setLinkActionUrl] = useState(null);
+  const [reactionUsers, setReactionUsers] = useState({ visible: false, reactions: [], emoji: null });
 
   // Load blocked preview domains
   useEffect(() => {
@@ -178,6 +179,15 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
     setViewingImage(url);
   }, []);
 
+  const handleReactionLongPress = useCallback((reactions, emoji) => {
+    mediumImpact();
+    setReactionUsers({ visible: true, reactions, emoji });
+  }, []);
+
+  const closeReactionUsers = useCallback(() => {
+    setReactionUsers({ visible: false, reactions: [], emoji: null });
+  }, []);
+
   const handleTogglePreview = useCallback(async (messageId) => {
     try {
       await api.toggleMessagePreview(messageId);
@@ -206,6 +216,7 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
     viewingImage,
     blockedDomains,
     linkActionUrl,
+    reactionUsers,
     // Setters
     setActionMessage,
     setShowActions,
@@ -219,6 +230,8 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
     handleSendEdit,
     handleCancelEdit,
     handleReactionPress,
+    handleReactionLongPress,
+    closeReactionUsers,
     handleImagePress,
     handleTogglePreview,
     handleLinkLongPress,

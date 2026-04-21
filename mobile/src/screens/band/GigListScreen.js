@@ -476,6 +476,15 @@ export default function GigListScreen({ navigation, route }) {
             </Text>
           ) : null}
 
+          {item._count?.comments > 0 ? (
+            <Text
+              style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}
+              accessibilityLabel={`${item._count.comments} comment${item._count.comments === 1 ? '' : 's'}`}
+            >
+              <Ionicons name="chatbubble-outline" size={12} color={colors.textSecondary} /> {item._count.comments} {item._count.comments === 1 ? 'comment' : 'comments'}
+            </Text>
+          ) : null}
+
           {item.media?.length > 0 ? (
             <View style={styles.mediaIndicators}>
               {(() => {
@@ -557,7 +566,7 @@ export default function GigListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel={`Filter: ${f.label}${active ? ', selected' : ''}`}
             >
-              <Text style={[styles.filterChipText, { color: active ? '#ffffff' : colors.textSecondary }]}>
+              <Text style={[styles.filterChipText, { color: active ? colors.primaryText : colors.textSecondary }]}>
                 {f.label}
               </Text>
             </TouchableOpacity>
@@ -574,7 +583,7 @@ export default function GigListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel={`All Bands${showAllBands ? ', selected' : ''}`}
         >
-          <Text style={[styles.filterChipText, { color: showAllBands ? '#ffffff' : colors.textSecondary }]}>
+          <Text style={[styles.filterChipText, { color: showAllBands ? colors.primaryText : colors.textSecondary }]}>
             All Bands
           </Text>
         </TouchableOpacity>
@@ -586,6 +595,8 @@ export default function GigListScreen({ navigation, route }) {
         renderItem={renderGig}
         renderSectionHeader={renderSectionHeader}
         stickySectionHeadersEnabled={false}
+        removeClippedSubviews={Platform.OS === 'android'}
+        windowSize={10}
         contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl
@@ -603,19 +614,19 @@ export default function GigListScreen({ navigation, route }) {
               Tap + to add a gig or rehearsal
             </Text>
             <TouchableOpacity
-              style={styles.emptyButton}
+              style={[styles.emptyButton, { backgroundColor: colors.primary }]}
               onPress={() => navigation.navigate('GigDetail', { workspaceId })}
               accessibilityRole="button"
               accessibilityLabel="Create event"
             >
-              <Text style={styles.emptyButtonText}>+ Create Event</Text>
+              <Text style={[styles.emptyButtonText, { color: colors.primaryText }]}>+ Create Event</Text>
             </TouchableOpacity>
           </View>
         }
       />
 
       {/* Calendar Subscribe Modal */}
-      <Modal visible={showCalendarModal} transparent animationType="fade" onRequestClose={() => setShowCalendarModal(false)}>
+      <Modal visible={showCalendarModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowCalendarModal(false)}>
         <TouchableOpacity
           style={styles.actionOverlay}
           activeOpacity={1}
@@ -660,7 +671,7 @@ export default function GigListScreen({ navigation, route }) {
               <Text style={[styles.calendarActionButtonText, { color: colors.primary }]}>Open in Calendar</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionItem, styles.actionCancel]}
+              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => setShowCalendarModal(false)}
               accessibilityRole="button"
               accessibilityLabel="Close"
@@ -672,7 +683,7 @@ export default function GigListScreen({ navigation, route }) {
       </Modal>
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => setShowActions(false)}>
+      <Modal visible={showActions} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowActions(false)}>
         <TouchableOpacity
           style={styles.actionOverlay}
           activeOpacity={1}
@@ -735,7 +746,7 @@ export default function GigListScreen({ navigation, route }) {
               </View>
             )}
             <TouchableOpacity
-              style={[styles.actionItem, styles.actionCancel]}
+              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedGig(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"
@@ -747,7 +758,7 @@ export default function GigListScreen({ navigation, route }) {
       </Modal>
 
       {/* Availability Modal */}
-      <Modal visible={showAvailabilityModal} transparent animationType="fade" onRequestClose={() => setShowAvailabilityModal(false)}>
+      <Modal visible={showAvailabilityModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowAvailabilityModal(false)}>
         <TouchableOpacity
           style={styles.actionOverlay}
           activeOpacity={1}
@@ -796,7 +807,7 @@ export default function GigListScreen({ navigation, route }) {
               </TouchableOpacity>
             )}
             <TouchableOpacity
-              style={[styles.actionItem, styles.actionCancel]}
+              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowAvailabilityModal(false); setAvailabilityDate(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"

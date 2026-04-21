@@ -5,6 +5,7 @@ import { useToast } from '../../context/ToastContext';
 import { escapeHtml } from '../../utils/escapeHtml';
 import { formatDuration } from '../../utils/formatDuration';
 import SetlistBuilder from './SetlistBuilder';
+import SongForm from './SongForm';
 import Modal from '../common/Modal';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ActionDropdown from '../common/ActionDropdown';
@@ -146,6 +147,7 @@ function SetlistList({ workspaceId, workspaceName }) {
   const [importLoading, setImportLoading] = useState(false);
   const [importResults, setImportResults] = useState(null);
   const [viewingSetlist, setViewingSetlist] = useState(null);
+  const [viewingSong, setViewingSong] = useState(null);
   const [editingDetails, setEditingDetails] = useState(null);
   const [editName, setEditName] = useState('');
   const [editDate, setEditDate] = useState('');
@@ -1239,7 +1241,14 @@ function SetlistList({ workspaceId, workspaceName }) {
                     songNum++;
                     const song = item.song;
                     return (
-                      <div key={item.id} className="flex items-center gap-3 py-2 hover:bg-[var(--color-bg-tertiary)]/50 rounded px-2 -mx-2">
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-3 py-2 hover:bg-[var(--color-bg-tertiary)]/50 rounded px-2 -mx-2 cursor-pointer"
+                        onClick={() => song?.id && setViewingSong(song)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && song?.id) setViewingSong(song); }}
+                      >
                         <span className="w-8 text-right text-[var(--color-text-muted)]">{songNum}.</span>
                         <div className="flex-1 min-w-0">
                           <div className="text-[var(--color-text-primary)] truncate">{song?.title || 'Unknown'}</div>
@@ -1452,6 +1461,27 @@ function SetlistList({ workspaceId, workspaceName }) {
           setlistItems={liveModeSetlist.songs || []}
           setlistName={liveModeSetlist.name}
           onClose={() => setLiveModeSetlist(null)}
+        />
+      )}
+
+      {/* Song Detail from setlist view */}
+      {viewingSong && (
+        <SongForm
+          song={viewingSong}
+          workspaceId={workspaceId}
+          onSave={async (songData) => {
+            await api.updateSong(viewingSong.id, songData);
+            setViewingSong(null);
+            if (viewingSetlist) {
+              try {
+                const updated = await api.getSetlist(viewingSetlist.id);
+                setViewingSetlist(updated);
+              } catch (err) {
+                console.error('Failed to refresh setlist after song update:', err);
+              }
+            }
+          }}
+          onClose={() => setViewingSong(null)}
         />
       )}
     </div>

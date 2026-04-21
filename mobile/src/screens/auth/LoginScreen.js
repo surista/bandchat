@@ -19,6 +19,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { APP_BASE_URL } from '../../utils/constants';
 import { useLayout } from '../../hooks/useLayout';
+import PressableRow from '../../components/PressableRow';
 
 export default function LoginScreen({ navigation }) {
   const { login, googleLogin, appleLogin } = useAuth()
@@ -112,7 +113,7 @@ export default function LoginScreen({ navigation }) {
 
           <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
             {error ? (
-              <View style={styles.errorBox}>
+              <View style={styles.errorBox} accessibilityLiveRegion="polite">
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             ) : null}
@@ -162,20 +163,20 @@ export default function LoginScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity
+            <PressableRow
               style={[styles.button, { backgroundColor: colors.primary }, loading && styles.buttonDisabled]}
               onPress={handleSubmit}
               disabled={loading}
-              activeOpacity={0.8}
+              rippleColor="rgba(255,255,255,0.2)"
               accessibilityRole="button"
               accessibilityLabel="Sign in"
             >
               {loading ? (
-                <ActivityIndicator color="#ffffff" size="small" />
+                <ActivityIndicator color={colors.primaryText} size="small" />
               ) : (
-                <Text style={styles.buttonText}>Sign In</Text>
+                <Text style={[styles.buttonText, { color: colors.primaryText }]}>Sign In</Text>
               )}
-            </TouchableOpacity>
+            </PressableRow>
 
             <TouchableOpacity
               style={styles.linkButton}

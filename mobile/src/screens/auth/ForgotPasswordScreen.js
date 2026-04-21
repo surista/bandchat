@@ -58,8 +58,8 @@ export default function ForgotPasswordScreen({ navigation }) {
           <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
             {sent ? (
               <>
-                <View style={styles.successBox}>
-                  <Text style={styles.successText}>
+                <View style={[styles.successBox, { borderColor: colors.success }]} accessibilityLiveRegion="polite">
+                  <Text style={[styles.successText, { color: colors.success }]}>
                     If an account exists with that email, we've sent password reset instructions.
                   </Text>
                 </View>
@@ -70,14 +70,14 @@ export default function ForgotPasswordScreen({ navigation }) {
                   accessibilityRole="button"
                   accessibilityLabel="Back to sign in"
                 >
-                  <Text style={styles.buttonText}>Back to Sign In</Text>
+                  <Text style={[styles.buttonText, { color: colors.primaryText }]}>Back to Sign In</Text>
                 </TouchableOpacity>
               </>
             ) : (
               <>
                 {error ? (
-                  <View style={styles.errorBox}>
-                    <Text style={styles.errorText}>{error}</Text>
+                  <View style={[styles.errorBox, { borderColor: colors.error }]} accessibilityLiveRegion="polite">
+                    <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
                   </View>
                 ) : null}
 
@@ -113,9 +113,9 @@ export default function ForgotPasswordScreen({ navigation }) {
                   accessibilityLabel="Send reset link"
                 >
                   {loading ? (
-                    <ActivityIndicator color="#ffffff" size="small" />
+                    <ActivityIndicator color={colors.primaryText} size="small" />
                   ) : (
-                    <Text style={styles.buttonText}>Send Reset Link</Text>
+                    <Text style={[styles.buttonText, { color: colors.primaryText }]}>Send Reset Link</Text>
                   )}
                 </TouchableOpacity>
 

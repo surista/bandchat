@@ -24,6 +24,7 @@ import Animated, {
   useAnimatedStyle,
   runOnJS,
 } from 'react-native-reanimated';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useTheme } from '../../context/ThemeContext';
 import { lightImpact, mediumImpact, successNotification } from '../../utils/haptics';
 import api from '../../services/api';
@@ -416,6 +417,7 @@ function DraggableItem({ item, stageLayout, onMove, onRemove, onLongPress, onUpd
 export default function StagePlotEditorScreen({ navigation, route }) {
   const { plotId, workspaceId } = route.params;
   const { colors } = useTheme();
+  const headerHeight = useHeaderHeight();
 
   const [loading, setLoading] = useState(true);
   const [plot, setPlot] = useState(null);
@@ -648,7 +650,7 @@ export default function StagePlotEditorScreen({ navigation, route }) {
 
   return (
     <GestureHandlerRootView style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
       {/* Info bar */}
       <View style={[styles.infoBar, { backgroundColor: colors.bgSecondary, borderBottomColor: colors.border }]}>
         <View style={styles.infoRow}>
@@ -735,7 +737,7 @@ export default function StagePlotEditorScreen({ navigation, route }) {
       </KeyboardAvoidingView>
 
       {/* Instrument palette modal */}
-      <Modal visible={showPalette} transparent animationType="fade" onRequestClose={() => setShowPalette(false)}>
+      <Modal visible={showPalette} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowPalette(false)}>
         <TouchableOpacity style={styles.paletteOverlay} activeOpacity={1} onPress={() => setShowPalette(false)} accessibilityRole="button" accessibilityLabel="Close instrument palette">
           <View style={[styles.paletteSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.paletteHandle, { backgroundColor: colors.border }]} />

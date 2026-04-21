@@ -20,6 +20,7 @@ import { mediumImpact, successNotification } from '../../utils/haptics';
 import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
+import PressableRow from '../../components/PressableRow';
 
 export default function WorkspaceMembersScreen({ route, navigation }) {
   const { workspaceId } = route.params;
@@ -160,7 +161,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
     const email = item.user?.email || '';
     const isCurrentUser = item.userId === user?.id;
     return (
-      <TouchableOpacity
+      <PressableRow
         style={[styles.memberCard, { backgroundColor: colors.bgSecondary }]}
         onPress={() => navigation.navigate('MemberProfile', {
           workspaceId,
@@ -175,7 +176,6 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
           }
         }}
         delayLongPress={400}
-        activeOpacity={0.7}
       >
         <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
           <Text style={styles.avatarText}>{getInitial(displayName)}</Text>
@@ -198,7 +198,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
           </View>
           <Text style={[styles.memberEmail, { color: colors.textSecondary }]}>{email}</Text>
         </View>
-      </TouchableOpacity>
+      </PressableRow>
     );
   }, [colors, user?.id]);
 
@@ -236,7 +236,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
       />
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => { setShowActions(false); setSelectedMember(null); }}>
+      <Modal visible={showActions} transparent animationType="slide" statusBarTranslucent onRequestClose={() => { setShowActions(false); setSelectedMember(null); }}>
         <TouchableOpacity
           style={styles.actionOverlay}
           activeOpacity={1}
@@ -275,7 +275,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionItem, styles.actionCancel]}
+              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedMember(null); }}
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
@@ -285,7 +285,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
       </Modal>
 
       {/* Remove Confirmation Modal */}
-      <Modal visible={showRemoveConfirm} transparent animationType="fade" onRequestClose={() => setShowRemoveConfirm(false)}>
+      <Modal visible={showRemoveConfirm} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowRemoveConfirm(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Remove Member</Text>
@@ -338,8 +338,8 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
       </Modal>
 
       {/* Password Reset Modal */}
-      <Modal visible={showPasswordReset} transparent animationType="fade" onRequestClose={() => { setShowPasswordReset(false); clearPasswordFields(); }}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Modal visible={showPasswordReset} transparent animationType="fade" statusBarTranslucent onRequestClose={() => { setShowPasswordReset(false); clearPasswordFields(); }}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Reset Password</Text>
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
@@ -399,9 +399,9 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
                 disabled={resettingPassword || !newPassword || !confirmPassword || !adminPassword}
               >
                 {resettingPassword ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>Reset</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>Reset</Text>
                 )}
               </TouchableOpacity>
             </View>

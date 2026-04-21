@@ -24,6 +24,7 @@ model User {
   appleId                   String?   @unique
   authProvider              String    @default("local")
   isSystemAdmin             Boolean   @default(false)
+  calendarVisibility        String    @default("BUSY_ONLY") // "BUSY_ONLY" or "DETAILED" — cross-band conflict visibility
   notificationsSnoozedUntil DateTime? // null = active, future date = snoozed until then
   deletedAt                 DateTime?
   createdAt                 DateTime  @default(now())
@@ -57,6 +58,7 @@ model User {
   blocksReceived     BlockedUser[]                @relation("blocksReceived")
   practiceSessions   PracticeSession[]
   uploadedGigMedia   GigMedia[]
+  gigComments        GigComment[]
   savedMessages      SavedMessage[]
   expoPushTokens     ExpoPushToken[]
   stagePlots         StagePlot[]
@@ -496,6 +498,7 @@ model Gig {
   attendees         GigAttendee[]
   kittyTransactions KittyTransaction[]
   stagePlots        StagePlot[]
+  comments          GigComment[]
 
   @@index([workspaceId, date])
   @@index([createdById])
@@ -503,18 +506,38 @@ model Gig {
   @@index([venueId])
 }
 
+model GigComment {
+  id                 String   @id @default(uuid())
+  gigId              String
+  content            String
+  createdById        String?
+  removedCreatorName String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  gig       Gig   @relation(fields: [gigId], references: [id], onDelete: Cascade)
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([gigId, createdAt])
+  @@index([createdById])
+}
+
 model GigAttendee {
-  id           String         @id @default(uuid())
-  gigId        String
-  bandMemberId String
-  status       AttendeeStatus @default(ATTENDING)
-  createdAt    DateTime       @default(now())
+  id            String         @id @default(uuid())
+  gigId         String
+  bandMemberId  String
+  status        AttendeeStatus @default(ATTENDING)
+  paddingBefore Int            @default(0) // minutes of buffer before gig start
+  paddingAfter  Int            @default(0) // minutes of buffer after gig end
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @default(now()) @updatedAt
 
   gig        Gig        @relation(fields: [gigId], references: [id], onDelete: Cascade)
   bandMember BandMember @relation(fields: [bandMemberId], references: [id], onDelete: Cascade)
 
   @@unique([gigId, bandMemberId])
   @@index([gigId])
+  @@index([bandMemberId, status])
 }
 
 enum AttendeeStatus {

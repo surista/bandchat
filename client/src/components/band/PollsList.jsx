@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
 import { formatDistanceToNow } from 'date-fns';
 import Modal from '../common/Modal';
@@ -9,6 +10,7 @@ import Skeleton from '../common/Skeleton';
 
 function PollsList({ workspaceId }) {
   const { user } = useAuth();
+  const toast = useToast();
   const [polls, setPolls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -61,7 +63,7 @@ function PollsList({ workspaceId }) {
         })
       );
     } catch (err) {
-      console.error('Failed to vote:', err);
+      toast.error(err.message || 'Failed to vote');
     }
   };
 
@@ -74,7 +76,7 @@ function PollsList({ workspaceId }) {
         )
       );
     } catch (err) {
-      console.error('Failed to close poll:', err);
+      toast.error(err.message || 'Failed to close poll');
     }
   };
 

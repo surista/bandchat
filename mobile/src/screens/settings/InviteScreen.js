@@ -13,6 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
 import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -26,6 +27,7 @@ export default function InviteScreen({ route }) {
   const { user } = useAuth()
   const { isTablet, contentMaxWidth } = useLayout();
   const { colors } = useTheme();
+  const headerHeight = useHeaderHeight();
 
   const [inviteData, setInviteData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -142,7 +144,7 @@ export default function InviteScreen({ route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
         {/* Invite Code */}
         <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>INVITE CODE</Text>
@@ -221,9 +223,9 @@ export default function InviteScreen({ route }) {
             activeOpacity={0.7}
           >
             {sending ? (
-              <ActivityIndicator color="#ffffff" size="small" />
+              <ActivityIndicator color={colors.primaryText} size="small" />
             ) : (
-              <Text style={[styles.sendButtonText, { color: email.trim() ? '#ffffff' : colors.textSecondary }]}>
+              <Text style={[styles.sendButtonText, { color: email.trim() ? colors.primaryText : colors.textSecondary }]}>
                 Send Invitation
               </Text>
             )}

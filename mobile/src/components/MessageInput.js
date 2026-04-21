@@ -2,16 +2,22 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { View, TextInput, TouchableOpacity, Text, Image, StyleSheet, Platform, Animated, PanResponder, Alert, FlatList, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { prepareImageForUpload, prepareImagesForUpload } from '../utils/prepareImageUpload';
 import * as DocumentPicker from 'expo-document-picker';
 import { Audio } from 'expo-av';
 import { useTheme } from '../context/ThemeContext';
+import { useToast } from '../context/ToastContext';
 import { formatDuration as formatRecordingDuration } from '../utils/formatDuration';
+import { mediumImpact, errorNotification } from '../utils/haptics';
 import EmojiPicker from './EmojiPicker';
+import ActionSheet from './ActionSheet';
+import PressableRow from './PressableRow';
 
 const MAX_HEIGHT = 120;
 
 export default function MessageInput({ onSend, onSendVoice, onTyping, editingMessage, onCancelEdit, onSendEdit, members = [], channels = [] }) {
   const { colors } = useTheme();
+  const toast = useToast();
   const [text, setText] = useState('');
   const [inputHeight, setInputHeight] = useState(40);
   const [attachments, setAttachments] = useState([]);
@@ -27,6 +33,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
 
   // Toolbar state
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showAttachSheet, setShowAttachSheet] = useState(false);
 
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -273,7 +280,8 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
     });
 
     if (!result.canceled && result.assets?.length > 0) {
-      const newAttachments = result.assets.slice(0, remaining).map(asset => {
+      const prepared = await prepareImagesForUpload(result.assets.slice(0, remaining));
+      const newAttachments = prepared.map(asset => {
         const isVideo = asset.type === 'video';
         return {
           uri: asset.uri,
@@ -302,7 +310,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
     });
 
     if (!result.canceled && result.assets?.[0]) {
-      const asset = result.assets[0];
+      const asset = await prepareImageForUpload(result.assets[0]);
       setAttachments(prev => [...prev, {
         uri: asset.uri,
         filename: asset.fileName || `photo-${Date.now()}.jpg`,
@@ -353,13 +361,8 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
   }, [attachments.length]);
 
   const showAttachOptions = useCallback(() => {
-    Alert.alert('Attach', null, [
-      { text: 'Take Photo', onPress: takePhoto },
-      { text: 'Photo Library', onPress: pickMedia },
-      { text: 'File (PDF, ZIP)', onPress: pickDocument },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  }, [takePhoto, pickMedia, pickDocument]);
+    setShowAttachSheet(true);
+  }, []);
 
   const removeAttachment = useCallback((index) => {
     setAttachments(prev => prev.filter((_, i) => i !== index));
@@ -376,6 +379,8 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
     try {
       const permission = await Audio.requestPermissionsAsync();
       if (!permission.granted) {
+        errorNotification();
+        toast.error('Microphone access is required to record voice messages.');
         return;
       }
 
@@ -388,6 +393,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
       await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
       await recording.startAsync();
 
+      mediumImpact();
       recordingRef.current = recording;
       setIsRecording(true);
       setRecordingDuration(0);
@@ -398,9 +404,10 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
         setRecordingDuration(prev => prev + 1);
       }, 1000);
     } catch (err) {
-      // silently fail
+      errorNotification();
+      toast.error('Could not start recording. Please try again.');
     }
-  }, []);
+  }, [toast]);
 
   const stopRecording = useCallback(async () => {
     if (!recordingRef.current) return;
@@ -476,8 +483,8 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
       {editingMessage && (
         <View style={[styles.editBanner, { backgroundColor: colors.bgTertiary }]}>
           <Text style={[styles.editBannerText, { color: colors.primary }]}>Editing message</Text>
-          <TouchableOpacity onPress={handleCancelEdit} accessibilityRole="button" accessibilityLabel="Cancel editing">
-            <Text style={[styles.editCancel, { color: colors.textSecondary }]}>{'\u2715'}</Text>
+          <TouchableOpacity onPress={handleCancelEdit} accessibilityRole="button" accessibilityLabel="Cancel editing" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ padding: 8 }}>
+            <Ionicons name="close" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
       )}
@@ -516,11 +523,11 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
               <Image source={{ uri: att.uri }} style={styles.attachmentThumb} accessibilityLabel={`Attachment ${i + 1}`} />
               {att.isVideo && (
                 <View style={styles.videoIndicator}>
-                  <Text style={styles.videoIndicatorText}>{'\u25B6'}</Text>
+                  <Ionicons name="play" size={10} color="#ffffff" />
                 </View>
               )}
               <TouchableOpacity style={styles.removeAttachment} onPress={() => removeAttachment(i)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel={`Remove attachment ${i + 1}`}>
-                <Text style={styles.removeAttachmentText}>{'\u2715'}</Text>
+                <Ionicons name="close" size={14} color="#ffffff" />
               </TouchableOpacity>
             </View>
           ))}
@@ -600,40 +607,38 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
               autoCorrect={true}
               autoCapitalize="sentences"
               spellCheck={true}
-              textAlignVertical="center"
-              returnKeyType={Platform.OS === 'ios' ? 'default' : 'send'}
+              textAlignVertical="top"
+              returnKeyType="default"
               blurOnSubmit={false}
               accessibilityLabel={editingMessage ? 'Edit message' : 'Type a message'}
             />
 
             {showMic ? (
-              <TouchableOpacity
+              <PressableRow
                 style={[styles.sendButton, { backgroundColor: colors.bgTertiary }]}
                 onLongPress={startRecording}
                 delayLongPress={200}
                 onPress={() => startRecording()}
-                activeOpacity={0.7}
+                borderless
                 accessibilityRole="button"
                 accessibilityLabel="Record voice message"
               >
-                <Text style={[styles.micIcon, { color: colors.textSecondary }]}>{'\uD83C\uDF99'}</Text>
-              </TouchableOpacity>
+                <Ionicons name="mic" size={20} color={colors.textSecondary} />
+              </PressableRow>
             ) : (
-              <TouchableOpacity
+              <PressableRow
                 style={[
                   styles.sendButton,
                   { backgroundColor: canSend ? colors.primary : colors.bgTertiary },
                 ]}
                 onPress={handleSend}
                 disabled={!canSend}
-                activeOpacity={0.7}
+                borderless
                 accessibilityRole="button"
                 accessibilityLabel={editingMessage ? 'Save edit' : 'Send message'}
               >
-                <Text style={[styles.sendIcon, { color: canSend ? '#ffffff' : colors.textSecondary }]}>
-                  {editingMessage ? '\u2713' : '\u2191'}
-                </Text>
-              </TouchableOpacity>
+                <Ionicons name={editingMessage ? 'checkmark' : 'arrow-up'} size={20} color={canSend ? '#ffffff' : colors.textSecondary} />
+              </PressableRow>
             )}
           </View>
 
@@ -646,83 +651,83 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
             style={styles.toolbarContainer}
           >
             {!editingMessage && (
-              <TouchableOpacity
+              <PressableRow
                 style={styles.toolbarButton}
                 onPress={showAttachOptions}
-                activeOpacity={0.6}
+                borderless
                 accessibilityRole="button"
                 accessibilityLabel="Attach photo or file"
               >
                 <Ionicons name="add-circle-outline" size={22} color={colors.textSecondary} />
-              </TouchableOpacity>
+              </PressableRow>
             )}
             {!editingMessage && (
-              <TouchableOpacity
+              <PressableRow
                 style={styles.toolbarButton}
                 onPress={pickMedia}
-                activeOpacity={0.6}
+                borderless
                 accessibilityRole="button"
                 accessibilityLabel="Choose from photo library"
               >
                 <Ionicons name="image-outline" size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
+              </PressableRow>
             )}
             <View style={[styles.toolbarDivider, { backgroundColor: colors.border }]} />
-            <TouchableOpacity
+            <PressableRow
               style={styles.toolbarButton}
               onPress={() => wrapSelection('**')}
-              activeOpacity={0.6}
+              borderless
               accessibilityRole="button"
               accessibilityLabel="Bold"
             >
               <Text style={[styles.toolbarTextBold, { color: colors.textSecondary }]}>B</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={styles.toolbarButton}
               onPress={() => wrapSelection('*')}
-              activeOpacity={0.6}
+              borderless
               accessibilityRole="button"
               accessibilityLabel="Italic"
             >
               <Text style={[styles.toolbarTextItalic, { color: colors.textSecondary }]}>I</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={styles.toolbarButton}
               onPress={() => wrapSelection('~~')}
-              activeOpacity={0.6}
+              borderless
               accessibilityRole="button"
               accessibilityLabel="Strikethrough"
             >
               <Text style={[styles.toolbarTextStrike, { color: colors.textSecondary }]}>S</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={styles.toolbarButton}
               onPress={() => wrapSelection('`')}
-              activeOpacity={0.6}
+              borderless
               accessibilityRole="button"
               accessibilityLabel="Inline code"
             >
               <Ionicons name="code-slash" size={18} color={colors.textSecondary} />
-            </TouchableOpacity>
+            </PressableRow>
             <View style={[styles.toolbarDivider, { backgroundColor: colors.border }]} />
-            <TouchableOpacity
+            <PressableRow
               style={styles.toolbarButton}
               onPress={triggerMention}
-              activeOpacity={0.6}
+              borderless
               accessibilityRole="button"
               accessibilityLabel="Mention someone"
             >
               <Ionicons name="at-outline" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={styles.toolbarButton}
               onPress={() => setShowEmojiPicker(true)}
-              activeOpacity={0.6}
+              borderless
               accessibilityRole="button"
               accessibilityLabel="Insert emoji"
             >
               <Ionicons name="happy-outline" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
+            </PressableRow>
           </ScrollView>
         </>
       )}
@@ -738,7 +743,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
             accessibilityRole="button"
             accessibilityLabel="Stop recording and send"
           >
-            <Text style={[styles.sendIcon, { color: '#ffffff' }]}>{'\u2191'}</Text>
+            <Ionicons name="arrow-up" size={20} color="#ffffff" />
           </TouchableOpacity>
         </View>
       )}
@@ -748,6 +753,18 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
         visible={showEmojiPicker}
         onClose={() => setShowEmojiPicker(false)}
         onSelect={(emoji) => insertEmoji(emoji)}
+      />
+
+      {/* Attach options sheet */}
+      <ActionSheet
+        visible={showAttachSheet}
+        title="Attach"
+        actions={[
+          { label: 'Take Photo', onPress: () => { setShowAttachSheet(false); takePhoto(); } },
+          { label: 'Photo Library', onPress: () => { setShowAttachSheet(false); pickMedia(); } },
+          { label: 'File (PDF, ZIP)', onPress: () => { setShowAttachSheet(false); pickDocument(); } },
+        ]}
+        onClose={() => setShowAttachSheet(false)}
       />
     </View>
   );
@@ -767,10 +784,6 @@ const styles = StyleSheet.create({
   editBannerText: {
     fontSize: 13,
     fontWeight: '600',
-  },
-  editCancel: {
-    fontSize: 16,
-    padding: 4,
   },
   recordingOverlay: {
     flexDirection: 'row',
@@ -823,10 +836,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  videoIndicatorText: {
-    color: '#ffffff',
-    fontSize: 10,
-  },
   removeAttachment: {
     position: 'absolute',
     top: -4,
@@ -838,30 +847,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  removeAttachmentText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: 8,
     paddingVertical: 8,
-  },
-  attachButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 4,
-    marginBottom: Platform.OS === 'ios' ? 2 : 0,
-  },
-  attachIcon: {
-    fontSize: 26,
-    fontWeight: '300',
-    lineHeight: 28,
   },
   input: {
     flex: 1,
@@ -874,19 +864,12 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Platform.OS === 'ios' ? 2 : 0,
-  },
-  sendIcon: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  micIcon: {
-    fontSize: 20,
   },
   mentionList: {
     maxHeight: 200,
@@ -897,6 +880,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 10,
+    minHeight: 48,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   mentionAvatar: {

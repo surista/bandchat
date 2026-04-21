@@ -1,16 +1,20 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import {
   View,
   Text,
   Image,
-  TouchableOpacity,
   Modal,
   ScrollView,
   Pressable,
   StyleSheet,
+  Platform,
+  Keyboard,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { getRecentEmojis, addRecentEmoji } from '../services/storage';
+import PressableRow from './PressableRow';
+import { selectionFeedback } from '../utils/haptics';
 
 // Custom emoji rendered as images
 export const CUSTOM_EMOJI = {
@@ -25,22 +29,39 @@ export function renderCustomEmoji(emoji, size = 18) {
   return null;
 }
 
-const EMOJI_CATEGORIES = {
-  Reactions: [':bandchat:', '👍', '👎', '❤️', '🔥', '😂', '😮', '😢', '😡', '🎉', '🙏', '👏', '💯', '✅', '❌', '👀', '🤔', '💪', '🙌', '😍', '🥳'],
-  Music: ['🎸', '🥁', '🎤', '🎹', '🎵', '🎶', '🎧', '🎼', '🎺', '🎻', '🪘', '🎷', '🪗', '🎚️', '🔊'],
-  People: ['😀', '😎', '🤘', '🤟', '👋', '🙋', '💃', '🕺', '🧑‍🎤', '👨‍🎤', '👩‍🎤', '🤷', '🙅', '🙆', '💁'],
-  Food: ['🍕', '🍔', '🍟', '🌮', '🍣', '🍜', '🍺', '🍷', '☕', '🍰', '🍩', '🌭', '🥗', '🍝', '🥤'],
+const rawCategories = {
+  Reactions: [':bandchat:', '👍', '👎', '❤️', '🔥', '😂', '😮', '😢', '😡', '🎉', '🙏', '👏', '💯', '✅', '❌', '👀', '🤔', '💪', '🙌', '😍', '🥳', '🫡', '😬', '🤯', '💀'],
+  Smileys: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😊', '😇', '🙂', '😉', '😌', '😎', '🥹', '😏', '😒', '😞', '😔', '😟', '🙁', '😣', '😖', '😫', '😩', '🥺', '😤', '😠', '🤬', '🥴', '😵', '🤮', '🤢', '🥶', '🥵', '😶‍🌫️', '🫠', '🤥', '😈', '👿', '🤡'],
+  Hands: ['👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🫰', '🤟', '🤘', '🤙', '👈', '👉', '👆', '👇', '✊', '👊', '🤛', '🤜', '🫶', '🤝', '💅', '🫵', '☝️'],
+  People: ['🧑‍🎤', '👨‍🎤', '👩‍🎤', '💃', '🕺', '🙋', '🤷', '🙅', '🙆', '💁', '🧑‍💻', '👨‍💻', '👩‍💻', '🧑‍🎨', '🧑‍🔧', '🦸', '🦹', '🧙', '🧛', '👻', '🤖', '👽', '🫃', '🎅', '🧑‍🎄'],
+  Music: ['🎸', '🥁', '🎤', '🎹', '🎵', '🎶', '🎧', '🎼', '🎺', '🎻', '🪘', '🎷', '🪗', '🎚️', '🔊', '🔉', '🔈', '🔇', '📻', '🪕', '🪈', '🎙️', '📯', '🔔'],
+  Animals: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🦁', '🐯', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🦅', '🦆', '🦉', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐙', '🦑'],
+  Nature: ['🌸', '🌹', '🌺', '🌻', '🌼', '🌷', '🌱', '🌲', '🌳', '🌴', '🌵', '🍀', '🍁', '🍂', '🍃', '🌍', '🌎', '🌏', '⭐', '🌟', '✨', '⚡', '☀️', '🌤️', '⛅', '🌧️', '⛈️', '🌈', '❄️', '💧'],
+  Food: ['🍕', '🍔', '🍟', '🌮', '🌯', '🥙', '🍣', '🍜', '🍝', '🍛', '🍲', '🥘', '🍺', '🍷', '🍸', '🍹', '🍾', '🥂', '☕', '🫖', '🍰', '🎂', '🍩', '🍪', '🍫', '🍬', '🍭', '🌭', '🥗', '🥤', '🧃', '🥡', '🥪', '🧇', '🥞', '🥓', '🥚', '🍳', '🧀', '🥐'],
+  Activities: ['⚽', '🏀', '🏈', '⚾', '🎾', '🏐', '🏉', '🎱', '🏓', '🏸', '🥊', '🎯', '⛳', '🏄', '🏊', '🚴', '🏋️', '🤸', '⛷️', '🏂', '🛹', '🎮', '🕹️', '🎲', '🧩', '🎳', '🎪', '🎨', '🎭', '🏆'],
+  Travel: ['🚗', '🚕', '🚌', '🏎️', '🚑', '🚒', '✈️', '🚀', '🛸', '🚁', '⛵', '🚢', '🏠', '🏢', '🏰', '🏟️', '🗼', '🗽', '⛩️', '🕌', '🏝️', '🏖️', '⛰️', '🗻', '🌋', '🏕️', '🎡', '🎢', '🎠', '🗿'],
+  Objects: ['⌚', '📱', '💻', '⌨️', '🖥️', '🖨️', '📷', '📹', '🎥', '📺', '🔦', '💡', '🔋', '💰', '💎', '🔑', '🗝️', '🔒', '🔓', '📦', '✉️', '📬', '📝', '📚', '📖', '🔗', '✂️', '🗑️', '🧲'],
+  Symbols: ['🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💝', '💫', '💥', '💤', '💬', '💭', '🏳️‍🌈'],
+  Flags: ['🇺🇸', '🇬🇧', '🇯🇵', '🇩🇪', '🇫🇷', '🇮🇹', '🇪🇸', '🇧🇷', '🇨🇦', '🇦🇺', '🇲🇽', '🇰🇷', '🇳🇱', '🇸🇪', '🇨🇭', '🇮🇳', '🇨🇳', '🇷🇺', '🇿🇦', '🇳🇿', '🇮🇪', '🇵🇹', '🇦🇷', '🇨🇴', '🇵🇱', '🇹🇷', '🇹🇭', '🇻🇳', '🇵🇭', '🇳🇬'],
 };
+const EMOJI_CATEGORIES = Object.fromEntries(
+  Object.entries(rawCategories).map(([k, arr]) => [k, Array.from(new Set(arr))])
+);
 
 const BASE_CATEGORIES = Object.keys(EMOJI_CATEGORIES);
 
 function EmojiPicker({ visible, onClose, onSelect }) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const [recentEmojis, setRecentEmojis] = useState([]);
   const [activeCategory, setActiveCategory] = useState(BASE_CATEGORIES[0]);
+  const tabScrollRef = useRef(null);
 
   useEffect(() => {
     if (visible) {
+      // Dismiss any keyboard that was open before showing the picker,
+      // so on Android the 380pt sheet isn't pushed above an open IME.
+      Keyboard.dismiss();
       getRecentEmojis().then(recent => {
         setRecentEmojis(recent);
         if (recent.length > 0) setActiveCategory('Recent');
@@ -52,25 +73,46 @@ function EmojiPicker({ visible, onClose, onSelect }) {
   const currentEmojis = activeCategory === 'Recent' ? recentEmojis : (EMOJI_CATEGORIES[activeCategory] || []);
 
   const handleSelect = (emoji) => {
+    selectionFeedback();
     addRecentEmoji(emoji).then(setRecentEmojis);
     onSelect(emoji);
     onClose();
   };
 
+  const handleCategoryTap = (cat) => {
+    selectionFeedback();
+    setActiveCategory(cat);
+  };
+
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={[styles.container, { backgroundColor: colors.modalBg }]}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      <Pressable style={styles.overlay} onPress={onClose} accessibilityRole="button" accessibilityLabel="Dismiss emoji picker">
+        <Pressable style={[styles.container, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 16) }]}>
+          {/* Drag handle */}
+          <View style={[styles.handle, { backgroundColor: colors.border }]} />
+
           {/* Category tabs */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={[styles.tabBar, { borderBottomColor: colors.border }]} contentContainerStyle={styles.tabBarContent}>
+          <ScrollView
+            ref={tabScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={[styles.tabBar, { borderBottomColor: colors.border }]}
+            contentContainerStyle={styles.tabBarContent}
+          >
             {categoryNames.map(cat => (
-              <TouchableOpacity
+              <PressableRow
                 key={cat}
                 style={[
                   styles.tab,
                   activeCategory === cat && [styles.activeTab, { borderBottomColor: colors.primary }],
                 ]}
-                onPress={() => setActiveCategory(cat)}
+                onPress={() => handleCategoryTap(cat)}
                 accessibilityRole="button"
                 accessibilityLabel={`${cat} category${activeCategory === cat ? ', selected' : ''}`}
               >
@@ -79,11 +121,11 @@ function EmojiPicker({ visible, onClose, onSelect }) {
                     styles.tabText,
                     { color: activeCategory === cat ? colors.primary : colors.textSecondary },
                   ]}
-                  maxFontSizeMultiplier={1.2}
+                  maxFontSizeMultiplier={1.3}
                 >
                   {cat}
                 </Text>
-              </TouchableOpacity>
+              </PressableRow>
             ))}
           </ScrollView>
 
@@ -92,11 +134,11 @@ function EmojiPicker({ visible, onClose, onSelect }) {
             {currentEmojis.map((emoji, idx) => {
               const custom = CUSTOM_EMOJI[emoji];
               return (
-                <TouchableOpacity
+                <PressableRow
                   key={`${emoji}-${idx}`}
                   style={styles.emojiButton}
                   onPress={() => handleSelect(emoji)}
-                  activeOpacity={0.5}
+                  borderless
                   accessibilityRole="button"
                   accessibilityLabel={`Select ${custom?.alt || emoji}`}
                 >
@@ -105,7 +147,7 @@ function EmojiPicker({ visible, onClose, onSelect }) {
                   ) : (
                     <Text style={styles.emoji} maxFontSizeMultiplier={1.0}>{emoji}</Text>
                   )}
-                </TouchableOpacity>
+                </PressableRow>
               );
             })}
           </ScrollView>
@@ -126,11 +168,19 @@ const styles = StyleSheet.create({
   container: {
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    maxHeight: 350,
-    paddingBottom: 34,
+    maxHeight: 380,
+    paddingTop: 8,
+    paddingBottom: 16,
     maxWidth: 500,
     alignSelf: 'center',
     width: '100%',
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 8,
   },
   tabBar: {
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -142,6 +192,8 @@ const styles = StyleSheet.create({
   tab: {
     paddingHorizontal: 14,
     paddingVertical: 12,
+    minHeight: 48,
+    justifyContent: 'center',
     alignItems: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',

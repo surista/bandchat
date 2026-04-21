@@ -73,6 +73,7 @@ function SongForm({ song, workspaceId, onSave, onClose, initialTab }) {
       setAttachments(data);
     } catch (err) {
       console.error('Failed to load attachments:', err);
+      toast.error(err.message || 'Failed to load attachments');
     }
   };
 
@@ -145,8 +146,10 @@ function SongForm({ song, workspaceId, onSave, onClose, initialTab }) {
       await api.deleteSongAttachment(song.id, attachmentId);
       setAttachments(prev => prev.filter(a => a.id !== attachmentId));
       setDeleteAttachmentId(null);
+      toast.success('Attachment deleted');
     } catch (err) {
       console.error('Failed to delete attachment:', err);
+      toast.error(err.message || 'Failed to delete attachment');
       setDeleteAttachmentId(null);
     }
   };

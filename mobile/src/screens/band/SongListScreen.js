@@ -28,6 +28,7 @@ import { useLayout } from '../../hooks/useLayout';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { buildSongListHTML } from '../../utils/buildSongListHTML';
+import PressableRow from '../../components/PressableRow';
 
 const SORT_OPTIONS = [
   { key: 'title', label: 'Title' },
@@ -118,6 +119,14 @@ export default function SongListScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
       ),
+      ...(Platform.OS === 'ios' ? {
+        headerSearchBarOptions: {
+          placeholder: 'Search songs',
+          hideWhenScrolling: false,
+          onChangeText: (e) => setSearch(e.nativeEvent.text),
+          onCancelButtonPress: () => setSearch(''),
+        },
+      } : {}),
     });
   }, [navigation, workspaceId, colors.primary]);
 
@@ -271,14 +280,44 @@ export default function SongListScreen({ navigation, route }) {
   }, [selectedSong]);
 
   const renderItem = useCallback(({ item, index }) => {
+    if (viewModeRef.current === 'mini') {
+      return (
+        <PressableRow
+          style={[styles.miniCard, { backgroundColor: colors.bgSecondary }]}
+          onPress={() => navigation.navigate('SongDetail', { songId: item.id, workspaceId })}
+          onLongPress={() => handleLongPress(item)}
+          delayLongPress={400}
+          accessibilityRole="button"
+          accessibilityLabel={`${item.title}${item.artist ? ` by ${item.artist}` : ''}`}
+          accessibilityHint="Tap for details, long press for options"
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Text style={[styles.miniTitle, { color: colors.textPrimary, flex: 1 }]} numberOfLines={1} maxFontSizeMultiplier={1.5}>
+              {item.title}
+            </Text>
+            {item.hasAudio ? <Ionicons name="musical-notes-outline" size={12} color={colors.textSecondary} /> : null}
+          </View>
+          {item.artist ? (
+            <Text style={[styles.miniArtist, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={1.5}>
+              {item.artist}
+            </Text>
+          ) : null}
+          <View style={styles.miniBadgeRow}>
+            {item.key ? <Text style={[styles.miniBadge, { color: colors.badgeKey }]} maxFontSizeMultiplier={1.5}>{item.key}</Text> : null}
+            {item.bpm ? <Text style={[styles.miniBadge, { color: colors.badgeBpm }]} maxFontSizeMultiplier={1.5}>{item.bpm}</Text> : null}
+            {item.duration ? <Text style={[styles.miniBadge, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>{formatDuration(item.duration)}</Text> : null}
+          </View>
+        </PressableRow>
+      );
+    }
+
     if (viewModeRef.current === 'compact') {
       return (
-        <TouchableOpacity
+        <PressableRow
           style={[styles.compactRow, { borderBottomColor: colors.border }]}
           onPress={() => navigation.navigate('SongDetail', { songId: item.id, workspaceId })}
           onLongPress={() => handleLongPress(item)}
           delayLongPress={400}
-          activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel={`${index + 1}. ${item.title}${item.artist ? ` by ${item.artist}` : ''}${item.key ? `, key of ${item.key}` : ''}${item.bpm ? `, ${item.bpm} BPM` : ''}${item.duration ? `, ${formatDuration(item.duration)}` : ''}`}
           accessibilityHint="Tap for details, long press for options"
@@ -303,17 +342,16 @@ export default function SongListScreen({ navigation, route }) {
             {item.duration ? <Text style={[styles.compactMetaText, { color: colors.textSecondary }]}>{formatDuration(item.duration)}</Text> : null}
           </View>
           <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} style={{ opacity: 0.4, marginLeft: 4 }} />
-        </TouchableOpacity>
+        </PressableRow>
       );
     }
 
     return (
-      <TouchableOpacity
+      <PressableRow
         style={[styles.songCard, { backgroundColor: colors.bgSecondary }]}
         onPress={() => navigation.navigate('SongDetail', { songId: item.id, workspaceId })}
         onLongPress={() => handleLongPress(item)}
         delayLongPress={400}
-        activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={`${item.title}${item.artist ? ` by ${item.artist}` : ''}`}
         accessibilityHint="Tap for details, long press for options"
@@ -363,7 +401,7 @@ export default function SongListScreen({ navigation, route }) {
             </Text>
           );
         })()}
-      </TouchableOpacity>
+      </PressableRow>
     );
   }, [colors, navigation, workspaceId, handleLongPress, practiceSummary]);
 
@@ -387,15 +425,17 @@ export default function SongListScreen({ navigation, route }) {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       {/* Search + Sort */}
       <View style={styles.toolbar}>
-        <TextInput
-          style={[styles.searchInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary }]}
-          placeholder="Search songs..."
-          placeholderTextColor={colors.textSecondary}
-          value={search}
-          onChangeText={setSearch}
-          autoCapitalize="none"
-          accessibilityLabel="Search songs"
-        />
+        {Platform.OS !== 'ios' && (
+          <TextInput
+            style={[styles.searchInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary }]}
+            placeholder="Search songs..."
+            placeholderTextColor={colors.textSecondary}
+            value={search}
+            onChangeText={setSearch}
+            autoCapitalize="none"
+            accessibilityLabel="Search songs"
+          />
+        )}
         <TouchableOpacity
           style={[styles.sortButton, { backgroundColor: colors.bgTertiary }]}
           onPress={() => setShowSortModal(true)}
@@ -423,7 +463,23 @@ export default function SongListScreen({ navigation, route }) {
             accessibilityLabel="Card view"
             accessibilityState={{ selected: viewMode === 'cards' }}
           >
-            <Ionicons name="grid-outline" size={16} color={viewMode === 'cards' ? '#fff' : colors.textSecondary} />
+            <Ionicons name="grid-outline" size={16} color={viewMode === 'cards' ? colors.primaryText : colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.segmentButton, viewMode === 'mini' && { backgroundColor: colors.primary }]}
+            onPress={() => {
+              if (viewMode !== 'mini') {
+                selectionFeedback();
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setViewMode('mini');
+              }
+            }}
+            activeOpacity={0.7}
+            accessibilityRole="tab"
+            accessibilityLabel="Mini card view"
+            accessibilityState={{ selected: viewMode === 'mini' }}
+          >
+            <Ionicons name="apps-outline" size={16} color={viewMode === 'mini' ? colors.primaryText : colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.segmentButton, viewMode === 'compact' && { backgroundColor: colors.primary }]}
@@ -439,7 +495,7 @@ export default function SongListScreen({ navigation, route }) {
             accessibilityLabel="List view"
             accessibilityState={{ selected: viewMode === 'compact' }}
           >
-            <Ionicons name="list-outline" size={16} color={viewMode === 'compact' ? '#fff' : colors.textSecondary} />
+            <Ionicons name="list-outline" size={16} color={viewMode === 'compact' ? colors.primaryText : colors.textSecondary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -449,6 +505,8 @@ export default function SongListScreen({ navigation, route }) {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         extraData={viewMode}
+        removeClippedSubviews={Platform.OS === 'android'}
+        windowSize={10}
         contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl
@@ -470,12 +528,12 @@ export default function SongListScreen({ navigation, route }) {
                   Tap + to add songs or use bulk import
                 </Text>
                 <TouchableOpacity
-                  style={styles.emptyButton}
+                  style={[styles.emptyButton, { backgroundColor: colors.primary }]}
                   onPress={() => navigation.navigate('SongDetail', { workspaceId })}
                   accessibilityRole="button"
                   accessibilityLabel="Add song"
                 >
-                  <Text style={styles.emptyButtonText}>+ Add Song</Text>
+                  <Text style={[styles.emptyButtonText, { color: colors.primaryText }]}>+ Add Song</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -484,7 +542,7 @@ export default function SongListScreen({ navigation, route }) {
       />
 
       {/* Sort Modal */}
-      <Modal visible={showSortModal} transparent animationType="fade" onRequestClose={() => setShowSortModal(false)}>
+      <Modal visible={showSortModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowSortModal(false)}>
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
@@ -520,7 +578,7 @@ export default function SongListScreen({ navigation, route }) {
       )}
 
       {/* More Menu */}
-      <Modal visible={showMoreMenu} transparent animationType="fade" onRequestClose={() => setShowMoreMenu(false)}>
+      <Modal visible={showMoreMenu} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowMoreMenu(false)}>
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
@@ -639,7 +697,7 @@ export default function SongListScreen({ navigation, route }) {
                 accessibilityLabel={`Auto-fetch metadata${fetchMetadata ? ', enabled' : ', disabled'}`}
               >
                 <View style={[styles.checkbox, { borderColor: colors.border, backgroundColor: fetchMetadata ? colors.primary : 'transparent' }]}>
-                  {fetchMetadata && <Text style={styles.checkmark}>{'\u2713'}</Text>}
+                  {fetchMetadata && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
                 </View>
                 <Text style={[styles.metadataLabel, { color: colors.textPrimary }]}>
                   Auto-fetch metadata (BPM, key, duration)
@@ -653,9 +711,9 @@ export default function SongListScreen({ navigation, route }) {
                 accessibilityLabel={`Import ${parsedSongs.length} songs`}
               >
                 {importing ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.bulkButtonText}>Import {parsedSongs.length} Song{parsedSongs.length !== 1 ? 's' : ''}</Text>
+                  <Text style={[styles.bulkButtonText, { color: colors.primaryText }]}>Import {parsedSongs.length} Song{parsedSongs.length !== 1 ? 's' : ''}</Text>
                 )}
               </TouchableOpacity>
             </ScrollView>
@@ -664,7 +722,7 @@ export default function SongListScreen({ navigation, route }) {
       </Modal>
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => setShowActions(false)}>
+      <Modal visible={showActions} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowActions(false)}>
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
@@ -747,6 +805,18 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 12, fontWeight: '600' },
   setlistCount: { fontSize: 12, marginTop: 6 },
   practiceInfo: { fontSize: 11, marginTop: 4 },
+  // Mini card view
+  miniCard: {
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 6,
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  miniTitle: { fontSize: 14, fontWeight: '600' },
+  miniArtist: { fontSize: 12, marginTop: 1 },
+  miniBadgeRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  miniBadge: { fontSize: 11, fontWeight: '600' },
   // Compact view
   compactRow: {
     flexDirection: 'row',
@@ -845,7 +915,7 @@ const styles = StyleSheet.create({
   bulkCount: { fontSize: 14, fontWeight: '600', marginTop: 8, marginBottom: 4 },
   metadataToggle: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 12, paddingVertical: 8 },
   checkbox: { width: 22, height: 22, borderRadius: 4, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
-  checkmark: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  checkmark: { fontSize: 14, fontWeight: '700' },
   metadataLabel: { fontSize: 15 },
   bulkButton: { paddingVertical: 14, borderRadius: 8, alignItems: 'center', marginTop: 8 },
   bulkButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '600' },

@@ -161,6 +161,14 @@ const themes = {
   },
 };
 
+function hexLuminance(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const toLinear = (c) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
 function hexToHSL(hex) {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
   const g = parseInt(hex.slice(3, 5), 16) / 255;
@@ -372,15 +380,31 @@ export function ThemeProvider({ children }) {
       channelListTextBold: mode === 'dark' ? '#ffffff' : structural.textPrimary,
     };
 
+    // Header text color: white for dark headers, dark for light headers
+    const isLightHeader = hexLuminance(theme.sidebar) > 0.4;
+    const headerText = isLightHeader ? '#111827' : '#ffffff';
+    // Primary button text: ensure contrast against primary color
+    const primaryText = hexLuminance(theme.primary) > 0.4 ? '#111827' : '#ffffff';
+
     return {
       ...theme,
       ...structural,
       ...modalColors,
       ...channelListColors,
+      headerText,
+      isLightHeader,
+      primaryText,
+      error: mode === 'dark' ? '#ef4444' : '#dc2626',
+      success: mode === 'dark' ? '#22c55e' : '#16a34a',
+      warning: mode === 'dark' ? '#eab308' : '#ca8a04',
     };
   }, [currentTheme, mode]);
 
   const density = useMemo(() => DENSITY_VALUES[messageDensity] || DENSITY_VALUES.default, [messageDensity]);
+
+  const safeSetGlobalTheme = useCallback((id) => {
+    if (themes[id]) setGlobalTheme(id);
+  }, []);
 
   const contextValue = useMemo(() => ({
     currentTheme,
@@ -393,12 +417,12 @@ export function ThemeProvider({ children }) {
     setMessageDensity,
     density,
     globalTheme,
-    setGlobalTheme: (id) => { if (themes[id]) setGlobalTheme(id); },
+    setGlobalTheme: safeSetGlobalTheme,
     activeWorkspaceId,
     setActiveWorkspaceId,
     setWorkspaceTheme,
     getWorkspaceTheme,
-  }), [currentTheme, setTheme, mode, toggleMode, colors, messageDensity, setMessageDensity, density, globalTheme, activeWorkspaceId, setWorkspaceTheme, getWorkspaceTheme]);
+  }), [currentTheme, setTheme, mode, toggleMode, colors, messageDensity, setMessageDensity, density, globalTheme, safeSetGlobalTheme, activeWorkspaceId, setWorkspaceTheme, getWorkspaceTheme]);
 
   return (
     <ThemeContext.Provider value={contextValue}>

@@ -956,6 +956,28 @@ class ApiService {
     return this.request(`/gigs/all-workspaces${query ? `?${query}` : ''}`);
   }
 
+  async setMyAttendance(gigId, data) {
+    return this.request(`/gigs/${gigId}/my-attendance`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getMyConflicts(filters = {}) {
+    const params = new URLSearchParams();
+    if (filters.from) params.append('from', filters.from);
+    if (filters.to) params.append('to', filters.to);
+    const query = params.toString();
+    return this.request(`/gigs/my-conflicts${query ? `?${query}` : ''}`);
+  }
+
+  async setCalendarVisibility(calendarVisibility) {
+    return this.request('/auth/me/calendar-visibility', {
+      method: 'PUT',
+      body: JSON.stringify({ calendarVisibility }),
+    });
+  }
+
   async createGig(workspaceId, data) {
     return this.request(`/gigs/workspace/${workspaceId}`, {
       method: 'POST',
@@ -1019,6 +1041,31 @@ class ApiService {
   async deleteGigMedia(gigId, mediaId) {
     return this.request(`/gigs/${gigId}/media/${mediaId}`, {
       method: 'DELETE'
+    });
+  }
+
+  // Gig Comments
+  async getGigComments(gigId) {
+    return this.request(`/gigs/${gigId}/comments`);
+  }
+
+  async addGigComment(gigId, content) {
+    return this.request(`/gigs/${gigId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  async updateGigComment(gigId, commentId, content) {
+    return this.request(`/gigs/${gigId}/comments/${commentId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  async deleteGigComment(gigId, commentId) {
+    return this.request(`/gigs/${gigId}/comments/${commentId}`, {
+      method: 'DELETE',
     });
   }
 

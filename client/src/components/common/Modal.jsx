@@ -7,14 +7,19 @@ import { createPortal } from 'react-dom';
 function Modal({ isOpen, onClose, title, maxWidth = 'max-w-md', children, className = '', ariaLabelledBy }) {
   const titleId = useId();
   const modalRef = useRef(null);
+  const previouslyFocused = useRef(null);
 
-  // Focus first focusable element on open
+  // Focus first focusable element on open; restore focus on close
   useEffect(() => {
     if (!isOpen || !modalRef.current) return;
+    previouslyFocused.current = document.activeElement;
     const focusable = modalRef.current.querySelectorAll(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
     );
     if (focusable.length > 0) focusable[0].focus();
+    return () => {
+      previouslyFocused.current?.focus?.();
+    };
   }, [isOpen]);
 
   // ESC to close
@@ -65,6 +70,7 @@ function Modal({ isOpen, onClose, title, maxWidth = 'max-w-md', children, classN
           <div className="modal-header">
             <h3 id={titleId}>{title}</h3>
             <button
+              type="button"
               onClick={onClose}
               className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl leading-none"
               aria-label="Close"

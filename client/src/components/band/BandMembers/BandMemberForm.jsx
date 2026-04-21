@@ -79,6 +79,20 @@ function BandMemberForm({ member, onSave, onCancel, loading, workspaceMembers = 
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
 
+  // ESC closes the cropper (consistent with Modal.jsx behavior across the app).
+  useEffect(() => {
+    if (!showCropper) return;
+    const handler = (e) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        setShowCropper(false);
+        setImageToCrop(null);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [showCropper]);
+
   useEffect(() => {
     if (member) {
       setName(member.name || '');
@@ -498,10 +512,15 @@ function BandMemberForm({ member, onSave, onCancel, loading, workspaceMembers = 
 
       {/* Image Cropper Modal */}
       {showCropper && (
-        <div className="fixed inset-0 bg-black/80 flex flex-col z-[100]">
+        <div
+          className="fixed inset-0 bg-black/80 flex flex-col z-[100]"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cropper-title"
+        >
           {/* Header */}
           <div className="flex items-center justify-between p-4 bg-gray-900 border-b border-gray-700">
-            <h3 className="text-[var(--color-text-primary)] font-medium">Adjust Photo</h3>
+            <h3 id="cropper-title" className="text-[var(--color-text-primary)] font-medium">Adjust Photo</h3>
             <button
               onClick={handleCancelCrop}
               className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-2xl"

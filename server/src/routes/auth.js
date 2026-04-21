@@ -852,6 +852,7 @@ router.get('/me', authenticate, async (req, res) => {
         googleId: true,
         appleId: true,
         password: true,
+        calendarVisibility: true,
         createdAt: true,
         workspaces: {
           include: {
@@ -919,6 +920,27 @@ router.put('/me', authenticate, apiLimiter, async (req, res) => {
     res.json(user);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+// Update calendar visibility preference
+router.put('/me/calendar-visibility', authenticate, apiLimiter, async (req, res) => {
+  try {
+    const { calendarVisibility } = req.body;
+
+    if (!['BUSY_ONLY', 'DETAILED'].includes(calendarVisibility)) {
+      return res.status(400).json({ error: 'Invalid visibility. Must be BUSY_ONLY or DETAILED.' });
+    }
+
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { calendarVisibility },
+      select: { id: true, calendarVisibility: true },
+    });
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update calendar visibility' });
   }
 });
 

@@ -10,10 +10,13 @@ import {
   ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   Alert,
-  Image,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { mediumImpact, successNotification, errorNotification } from '../../utils/haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +29,8 @@ import { getLocalChannels, upsertChannels, upsertMembers } from '../../services/
 import ChannelItem from '../../components/ChannelItem';
 import ErrorState from '../../components/ErrorState';
 import WorkspaceSwitcher from '../../components/WorkspaceSwitcher';
+import SplitLayout from '../../components/split/SplitLayout';
+import ChannelPaneHost from '../../components/split/ChannelPaneHost';
 import { useLayout } from '../../hooks/useLayout';
 
 const BAND_CATEGORIES = [
@@ -73,7 +78,26 @@ export default function ChannelListScreen({ navigation, route }) {
   const { user } = useAuth();
   const { colors, setActiveWorkspaceId } = useTheme();
   const { socket, joinWorkspace } = useSocket();
-  const { isTablet, contentMaxWidth } = useLayout();
+  const { isTablet, contentMaxWidth, isSplitView, sidebarWidth } = useLayout();
+  // Split-mode active channel (only relevant when isSplitView === true).
+  // On iPhone and Android this state exists but is never read — the split
+  // render path is gated below and `handleChannelPress` still calls
+  // `navigation.navigate('Channel', ...)` on phones exactly as before.
+  const [splitActiveChannel, setSplitActiveChannel] = useState(null);
+  const prevIsSplitViewRef = useRef(isSplitView);
+
+  // Rotation handling: when iPad goes landscape → portrait while viewing a
+  // channel in the split pane, push that channel onto the real stack so the
+  // user isn't yanked back to the channel list. No-op on phones (isSplitView
+  // is permanently false, so the transition never fires).
+  useEffect(() => {
+    const wasSplit = prevIsSplitViewRef.current;
+    prevIsSplitViewRef.current = isSplitView;
+    if (wasSplit && !isSplitView && splitActiveChannel) {
+      navigation.navigate('Channel', { channel: splitActiveChannel, workspaceId });
+      setSplitActiveChannel(null);
+    }
+  }, [isSplitView, splitActiveChannel, navigation, workspaceId]);
 
   const [workspace, setWorkspace] = useState(null);
   const [channels, setChannels] = useState([]);
@@ -125,10 +149,10 @@ export default function ChannelListScreen({ navigation, route }) {
     load();
   }, [workspaceId]);
 
-  // Fetch all workspaces for workspace switcher
+  // Fetch all workspaces for workspace switcher (refresh when opened)
   useEffect(() => {
     api.getWorkspaces().then(setAllWorkspaces).catch(console.error);
-  }, []);
+  }, [showWorkspaceSwitcher]);
 
   // Persist collapse state on change
   useEffect(() => {
@@ -210,12 +234,16 @@ export default function ChannelListScreen({ navigation, route }) {
           <TouchableOpacity
             onPress={() => navigation.navigate('Search', { workspaceId })}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Search messages"
           >
             <Ionicons name="search-outline" size={22} color={colors.primary} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('Settings', { workspaceId })}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Workspace settings"
           >
             <Ionicons name="settings-outline" size={22} color={colors.primary} />
           </TouchableOpacity>
@@ -424,8 +452,14 @@ export default function ChannelListScreen({ navigation, route }) {
     const channelData = isDM
       ? { ...channel, displayName: getDMDisplayName(channel), isDM: true }
       : channel;
+    // iPad landscape: swap the right pane instead of pushing a new screen.
+    // Gated on isSplitView which is false on iPhone / Android / iPad portrait.
+    if (isSplitView) {
+      setSplitActiveChannel(channelData);
+      return;
+    }
     navigation.navigate('Channel', { channel: channelData, workspaceId });
-  }, [navigation, workspaceId, getDMDisplayName]);
+  }, [navigation, workspaceId, getDMDisplayName, isSplitView]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -843,7 +877,9 @@ export default function ChannelListScreen({ navigation, route }) {
     );
   }
 
-  return (
+  // Shared channel-list JSX. Rendered as the full screen on phones,
+  // or as the LEFT pane inside SplitLayout on iPad landscape.
+  const channelListContent = (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.channelListBg }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       {/* Collapsible: Next upcoming event banner + Calendar + Saved Messages */}
       <View style={[styles.stickyHeader, { backgroundColor: colors.channelListBg, borderBottomColor: colors.border }, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
@@ -897,6 +933,7 @@ export default function ChannelListScreen({ navigation, route }) {
                       return displayTime ? ` · ${displayTime}` : '';
                     })()}
                     {nextGig.venue ? ` · ${nextGig.venue}` : ''}
+                    {nextGig._count?.comments > 0 ? ` · 💬 ${nextGig._count.comments}` : ''}
                   </Text>
                 </View>
                 {nextGig.notes ? (
@@ -972,8 +1009,8 @@ export default function ChannelListScreen({ navigation, route }) {
       />
 
       {/* Create Channel Modal */}
-      <Modal visible={showCreateChannel} transparent animationType="fade" onRequestClose={() => setShowCreateChannel(false)}>
-        <View style={styles.modalOverlay}>
+      <Modal visible={showCreateChannel} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowCreateChannel(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Create Channel</Text>
             <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Channel Name</Text>
@@ -993,7 +1030,7 @@ export default function ChannelListScreen({ navigation, route }) {
               activeOpacity={0.6}
             >
               <View style={[styles.checkbox, { borderColor: colors.border }, newChannelPrivate && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-                {newChannelPrivate && <Text style={styles.checkmark}>{'\u2713'}</Text>}
+                {newChannelPrivate && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
               </View>
               <Text style={[styles.checkboxLabel, { color: colors.textPrimary }]}>Private channel</Text>
             </TouchableOpacity>
@@ -1011,18 +1048,18 @@ export default function ChannelListScreen({ navigation, route }) {
                 disabled={creating || !newChannelName.trim()}
               >
                 {creating ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>Create</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>Create</Text>
                 )}
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* New DM Modal */}
-      <Modal visible={showNewDM} transparent animationType="fade" onRequestClose={() => setShowNewDM(false)}>
+      <Modal visible={showNewDM} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowNewDM(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>New Message</Text>
@@ -1071,9 +1108,9 @@ export default function ChannelListScreen({ navigation, route }) {
                 disabled={creating || selectedMemberIds.length === 0}
               >
                 {creating ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>Start</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>Start</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -1082,13 +1119,12 @@ export default function ChannelListScreen({ navigation, route }) {
       </Modal>
 
       {/* Channel Actions Modal (Star/Unstar) */}
-      <Modal visible={showChannelActions} transparent animationType="fade" onRequestClose={() => setShowChannelActions(false)}>
-        <TouchableOpacity
+      <Modal visible={showChannelActions} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowChannelActions(false)}>
+        <Pressable
           style={styles.modalOverlay}
-          activeOpacity={1}
           onPress={() => setShowChannelActions(false)}
         >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
+          <Pressable style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} onPress={() => {}}>
             <Text style={[styles.actionSheetTitle, { color: colors.textPrimary }]}>
               #{selectedChannel?.name}
             </Text>
@@ -1106,18 +1142,17 @@ export default function ChannelListScreen({ navigation, route }) {
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* Group Actions Modal (Rename/Delete) */}
-      <Modal visible={showGroupActions} transparent animationType="fade" onRequestClose={() => setShowGroupActions(false)}>
-        <TouchableOpacity
+      <Modal visible={showGroupActions} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowGroupActions(false)}>
+        <Pressable
           style={styles.modalOverlay}
-          activeOpacity={1}
           onPress={() => setShowGroupActions(false)}
         >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
+          <Pressable style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} onPress={() => {}}>
             <Text style={[styles.actionSheetTitle, { color: colors.textPrimary }]}>
               {selectedGroup?.name}
             </Text>
@@ -1131,7 +1166,7 @@ export default function ChannelListScreen({ navigation, route }) {
               style={styles.actionItem}
               onPress={handleDeleteGroup}
             >
-              <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete Section</Text>
+              <Text style={[styles.actionText, { color: colors.error }]}>Delete Section</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionItem, styles.cancelAction, { borderTopColor: colors.border }]}
@@ -1139,13 +1174,13 @@ export default function ChannelListScreen({ navigation, route }) {
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* Group Create/Edit Modal */}
-      <Modal visible={showGroupModal} transparent animationType="fade" onRequestClose={() => setShowGroupModal(false)}>
-        <View style={styles.modalOverlay}>
+      <Modal visible={showGroupModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowGroupModal(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
               {editingGroup ? 'Rename Section' : 'New Section'}
@@ -1175,14 +1210,14 @@ export default function ChannelListScreen({ navigation, route }) {
                 disabled={savingGroup || !groupName.trim()}
               >
                 {savingGroup ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>{editingGroup ? 'Save' : 'Create'}</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>{editingGroup ? 'Save' : 'Create'}</Text>
                 )}
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Workspace Switcher */}
@@ -1204,6 +1239,30 @@ export default function ChannelListScreen({ navigation, route }) {
 
     </SafeAreaView>
   );
+
+  // ──────────────────────────────────────────────────────────────────
+  // iPad landscape: master/detail split layout.
+  // Phone / Android / iPad portrait fall through to the default return
+  // below and see the same `channelListContent` they always have.
+  // ──────────────────────────────────────────────────────────────────
+  if (isSplitView) {
+    return (
+      <SplitLayout
+        sidebarWidth={sidebarWidth || 380}
+        left={channelListContent}
+        right={(
+          <ChannelPaneHost
+            channel={splitActiveChannel}
+            workspaceId={workspaceId}
+            parentNavigation={navigation}
+            onSwitchChannel={setSplitActiveChannel}
+          />
+        )}
+      />
+    );
+  }
+
+  return channelListContent;
 }
 
 const styles = StyleSheet.create({
@@ -1330,7 +1389,6 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   checkmark: {
-    color: '#ffffff',
     fontSize: 14,
     fontWeight: '700',
   },

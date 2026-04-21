@@ -12,6 +12,7 @@ import { getPlanLimits } from '../lib/planLimits.js';
 import { triggerWebsiteSync } from '../services/websiteDeployment.js';
 import { sendPushToUser } from './push.js';
 import { logAudit } from '../lib/audit.js';
+import { getConflictsForUser, getAffectedWorkspaceIds } from '../services/calendarConflicts.js';
 
 const router = express.Router();
 
@@ -89,7 +90,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
           }
         },
         _count: {
-          select: { songsPlayed: true }
+          select: { songsPlayed: true, comments: true }
         }
       },
       orderBy: { date: 'asc' },
@@ -127,7 +128,7 @@ router.get('/workspace/:workspaceId/next', authenticate, isWorkspaceMember, asyn
           where: { bandMember: { linkedUserId: req.user.id } },
           select: { status: true }
         },
-        _count: { select: { attendees: true } }
+        _count: { select: { attendees: true, comments: true } }
       },
       orderBy: { date: 'asc' },
     });
@@ -229,7 +230,7 @@ router.get('/all-workspaces', authenticate, async (req, res) => {
           orderBy: { createdAt: 'desc' }
         },
         _count: {
-          select: { songsPlayed: true }
+          select: { songsPlayed: true, comments: true }
         }
       },
       orderBy: { date: 'asc' },
@@ -774,11 +775,73 @@ router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMemb
 
     logAudit('gig.created', { actorId: req.user.id, targetId: gig.id, metadata: { title } });
 
+    // Notify affected workspaces about potential conflicts
+    if (gig.attendees?.length > 0) {
+      const attendeeUserIds = gig.attendees
+        .filter(a => a.bandMember?.linkedUserId)
+        .map(a => a.bandMember.linkedUserId);
+      for (const uid of [...new Set(attendeeUserIds)]) {
+        const wsIds = await getAffectedWorkspaceIds(uid);
+        for (const wsId of wsIds) {
+          if (wsId !== req.params.workspaceId) {
+            io.to(`workspace:${wsId}`).emit('calendar:conflictsChanged', { userId: uid });
+          }
+        }
+      }
+    }
+
     res.status(201).json(gig);
     triggerWebsiteSync(req.params.workspaceId);
   } catch (error) {
     console.error('Create gig error:', error);
     res.status(500).json({ error: 'Failed to create gig' });
+  }
+});
+
+// Get my scheduling conflicts across all workspaces
+// IMPORTANT: Must be registered before /:gigId to avoid route shadowing
+router.get('/my-conflicts', authenticate, apiLimiter, async (req, res) => {
+  try {
+    const { from, to } = req.query;
+
+    if (from && isNaN(Date.parse(from))) {
+      return res.status(400).json({ error: 'Invalid from date' });
+    }
+    if (to && isNaN(Date.parse(to))) {
+      return res.status(400).json({ error: 'Invalid to date' });
+    }
+
+    const conflicts = await getConflictsForUser(req.user.id, { from, to });
+
+    const formatted = conflicts.map(({ gigA, gigB }) => ({
+      gigs: [
+        {
+          gigId: gigA.gigId,
+          gigTitle: gigA.gigTitle,
+          gigType: gigA.gigType,
+          workspaceId: gigA.workspaceId,
+          workspaceName: gigA.workspaceName,
+          venue: gigA.venue,
+          effectiveStart: gigA.effectiveStart,
+          effectiveEnd: gigA.effectiveEnd,
+        },
+        {
+          gigId: gigB.gigId,
+          gigTitle: gigB.gigTitle,
+          gigType: gigB.gigType,
+          workspaceId: gigB.workspaceId,
+          workspaceName: gigB.workspaceName,
+          venue: gigB.venue,
+          effectiveStart: gigB.effectiveStart,
+          effectiveEnd: gigB.effectiveEnd,
+        },
+      ],
+    }));
+
+    res.json({ conflicts: formatted });
+  } catch (error) {
+    console.error('Get conflicts error:', error);
+    res.status(500).json({ error: 'Failed to get conflicts' });
   }
 });
 
@@ -815,13 +878,14 @@ router.get('/:gigId', authenticate, async (req, res) => {
         attendees: {
           include: {
             bandMember: {
-              select: { id: true, name: true, imageUrl: true }
+              select: { id: true, name: true, imageUrl: true, linkedUserId: true }
             }
           }
         },
         media: {
           orderBy: { createdAt: 'desc' }
-        }
+        },
+        _count: { select: { comments: true } }
       }
     });
 
@@ -840,6 +904,16 @@ router.get('/:gigId', authenticate, async (req, res) => {
     // Filter out personal events from other users
     if (gig.isPersonal && gig.createdById !== req.user.id) {
       return res.status(404).json({ error: 'Gig not found' });
+    }
+
+    // Include current user's padding times
+    const myBandMember = await prisma.bandMember.findFirst({
+      where: { workspaceId: gig.workspaceId, linkedUserId: req.user.id },
+    });
+    if (myBandMember) {
+      const myAttendee = gig.attendees?.find(a => a.bandMemberId === myBandMember.id);
+      gig.myPaddingBefore = myAttendee?.paddingBefore || 0;
+      gig.myPaddingAfter = myAttendee?.paddingAfter || 0;
     }
 
     res.json(gig);
@@ -899,9 +973,9 @@ router.put('/:gigId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'This event is locked and can only be modified by an admin' });
     }
 
-    // Non-admins can only modify their own personal events or non-locked shared events
-    if (existingGig.isPersonal && !isCreator && !isAdmin) {
-      return res.status(403).json({ error: 'You can only modify your own personal events' });
+    // Non-admins can only modify events they created (personal or shared). Admins can modify anything.
+    if (!isCreator && !isAdmin) {
+      return res.status(403).json({ error: 'Only the event creator or a workspace admin can modify this event' });
     }
 
     // If type is changing from GIG to something else, delete auto-created setlists
@@ -1056,6 +1130,21 @@ router.put('/:gigId', authenticate, async (req, res) => {
         threadId: gig.workspaceId
       }, { category: 'gig', workspaceId: gig.workspaceId });
     });
+
+    // Notify affected workspaces about potential conflict changes
+    if (gig.attendees?.length > 0) {
+      const attendeeUserIds = gig.attendees
+        .filter(a => a.bandMember?.linkedUserId)
+        .map(a => a.bandMember.linkedUserId);
+      for (const uid of [...new Set(attendeeUserIds)]) {
+        const wsIds = await getAffectedWorkspaceIds(uid);
+        for (const wsId of wsIds) {
+          if (wsId !== gig.workspaceId) {
+            io.to(`workspace:${wsId}`).emit('calendar:conflictsChanged', { userId: uid });
+          }
+        }
+      }
+    }
 
     res.json(gig);
     triggerWebsiteSync(gig.workspaceId);
@@ -1263,6 +1352,9 @@ router.delete('/:gigId', authenticate, async (req, res) => {
         },
         setlists: {
           include: { setlist: true }
+        },
+        attendees: {
+          include: { bandMember: { select: { linkedUserId: true } } }
         }
       }
     });
@@ -1270,6 +1362,11 @@ router.delete('/:gigId', authenticate, async (req, res) => {
     if (!gig) {
       return res.status(404).json({ error: 'Gig not found' });
     }
+
+    // Capture attendee user IDs before deletion (cascade will remove them)
+    const attendeeUserIds = (gig.attendees || [])
+      .filter(a => a.bandMember?.linkedUserId)
+      .map(a => a.bandMember.linkedUserId);
 
     // Check if user is a member and get their role
     const membership = gig.workspace.members.find(m => m.userId === req.user.id);
@@ -1285,9 +1382,9 @@ router.delete('/:gigId', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'This event is locked and can only be deleted by an admin' });
     }
 
-    // Non-admins can only delete their own personal events or non-locked shared events they created
-    if (gig.isPersonal && !isCreator && !isAdmin) {
-      return res.status(403).json({ error: 'You can only delete your own personal events' });
+    // Non-admins can only delete events they created. Admins can delete anything.
+    if (!isCreator && !isAdmin) {
+      return res.status(403).json({ error: 'Only the event creator or a workspace admin can delete this event' });
     }
 
     // Collect auto-created setlist IDs to delete
@@ -1328,6 +1425,16 @@ router.delete('/:gigId', authenticate, async (req, res) => {
 
     const io = req.app.get('io');
     io.to(`workspace:${gig.workspaceId}`).emit('gig:deleted', { gigId: req.params.gigId });
+
+    // Notify affected workspaces that conflicts may have cleared
+    for (const uid of [...new Set(attendeeUserIds)]) {
+      const wsIds = await getAffectedWorkspaceIds(uid);
+      for (const wsId of wsIds) {
+        if (wsId !== gig.workspaceId) {
+          io.to(`workspace:${wsId}`).emit('calendar:conflictsChanged', { userId: uid });
+        }
+      }
+    }
 
     logAudit('gig.deleted', { actorId: req.user.id, targetId: req.params.gigId, metadata: { title: gig.title } });
 
@@ -1437,7 +1544,7 @@ router.post('/:gigId/duplicate', authenticate, async (req, res) => {
           orderBy: { createdAt: 'desc' }
         },
         _count: {
-          select: { songsPlayed: true }
+          select: { songsPlayed: true, comments: true }
         }
       }
     });
@@ -1958,7 +2065,7 @@ router.get('/workspace/:workspaceId/calendar.ics', calendarLimiter, async (req, 
       if (gig.endDate) {
         ical += `DTEND:${formatDate(gig.endDate)}\r\n`;
       }
-      ical += `SUMMARY:${(gig.title || '').replace(/[,;\\]/g, '\\$&')}\r\n`;
+      ical += `SUMMARY:(${workspace.name.replace(/[,;\\]/g, '\\$&')}) ${(gig.title || '').replace(/[,;\\]/g, '\\$&')}\r\n`;
       if (gig.venue || gig.address) {
         const location = [gig.venue, gig.address].filter(Boolean).join(', ');
         ical += `LOCATION:${location.replace(/[,;\\]/g, '\\$&')}\r\n`;
@@ -2064,6 +2171,308 @@ router.post('/workspace/:workspaceId/preview-ics', authenticate, isWorkspaceAdmi
   } catch (error) {
     console.error('Preview ICS error:', error);
     res.status(500).json({ error: 'Failed to preview calendar event' });
+  }
+});
+
+// ── Calendar Teaming ────────────────────────────────────────────────────
+
+// Set my attendance + padding for a gig
+router.put('/:gigId/my-attendance', authenticate, apiLimiter, async (req, res) => {
+  try {
+    const { status, paddingBefore, paddingAfter } = req.body;
+
+    if (status && !['ATTENDING', 'NOT_ATTENDING', 'MAYBE'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    if (paddingBefore !== undefined && (typeof paddingBefore !== 'number' || !Number.isInteger(paddingBefore) || paddingBefore < 0 || paddingBefore > 480)) {
+      return res.status(400).json({ error: 'paddingBefore must be an integer 0-480 minutes' });
+    }
+    if (paddingAfter !== undefined && (typeof paddingAfter !== 'number' || !Number.isInteger(paddingAfter) || paddingAfter < 0 || paddingAfter > 480)) {
+      return res.status(400).json({ error: 'paddingAfter must be an integer 0-480 minutes' });
+    }
+
+    // Get the gig and verify user is a workspace member
+    const gig = await prisma.gig.findUnique({
+      where: { id: req.params.gigId },
+      select: { id: true, workspaceId: true },
+    });
+    if (!gig) return res.status(404).json({ error: 'Gig not found' });
+
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: gig.workspaceId } },
+    });
+    if (!membership) return res.status(403).json({ error: 'Not a workspace member' });
+
+    // Find the user's BandMember in this workspace
+    const bandMember = await prisma.bandMember.findFirst({
+      where: { workspaceId: gig.workspaceId, linkedUserId: req.user.id },
+    });
+    if (!bandMember) return res.status(404).json({ error: 'No band member profile linked to your account' });
+
+    // Upsert the attendance record
+    const attendee = await prisma.gigAttendee.upsert({
+      where: { gigId_bandMemberId: { gigId: gig.id, bandMemberId: bandMember.id } },
+      update: {
+        ...(status && { status }),
+        ...(paddingBefore !== undefined && { paddingBefore }),
+        ...(paddingAfter !== undefined && { paddingAfter }),
+      },
+      create: {
+        gigId: gig.id,
+        bandMemberId: bandMember.id,
+        status: status || 'ATTENDING',
+        paddingBefore: paddingBefore || 0,
+        paddingAfter: paddingAfter || 0,
+      },
+      include: {
+        bandMember: { select: { id: true, name: true, linkedUserId: true } },
+      },
+    });
+
+    // Emit attendance update to current workspace
+    const io = req.app.get('io');
+    io.to(`workspace:${gig.workspaceId}`).emit('gig:attendanceUpdated', {
+      gigId: gig.id,
+      attendee,
+    });
+
+    // Emit conflict changes to all affected workspaces
+    const affectedWs = await getAffectedWorkspaceIds(req.user.id);
+    for (const wsId of affectedWs) {
+      io.to(`workspace:${wsId}`).emit('calendar:conflictsChanged', {
+        userId: req.user.id,
+      });
+    }
+
+    res.json(attendee);
+  } catch (error) {
+    console.error('Set attendance error:', error);
+    res.status(500).json({ error: 'Failed to update attendance' });
+  }
+});
+
+// ============================================================================
+// Gig Comments
+// Any workspace member can add a comment.
+// Only the author can edit their own comment.
+// The author or a workspace admin can delete a comment.
+// ============================================================================
+
+const COMMENT_MAX_LENGTH = 2000;
+const COMMENT_LIST_MAX = 500;
+const COMMENT_PER_GIG_CAP = 1000;
+
+async function loadGigWithMembership(gigId, userId) {
+  const gig = await prisma.gig.findUnique({
+    where: { id: gigId },
+    select: {
+      id: true,
+      title: true,
+      workspaceId: true,
+      isPersonal: true,
+      createdById: true,
+    },
+  });
+  if (!gig) return { error: { status: 404, message: 'Gig not found' } };
+  const membership = await prisma.workspaceMember.findUnique({
+    where: { userId_workspaceId: { userId, workspaceId: gig.workspaceId } },
+    select: { role: true },
+  });
+  if (!membership) return { error: { status: 403, message: 'Not a workspace member' } };
+  if (gig.isPersonal && gig.createdById !== userId && membership.role !== 'ADMIN') {
+    return { error: { status: 403, message: 'Not authorized to view this event' } };
+  }
+  return { gig, membership };
+}
+
+// For personal events, only creator + workspace admins should see comment updates.
+async function resolveCommentAudience(gig) {
+  if (!gig.isPersonal) return null; // null = broadcast to whole workspace room
+  const admins = await prisma.workspaceMember.findMany({
+    where: { workspaceId: gig.workspaceId, role: 'ADMIN' },
+    select: { userId: true },
+  });
+  const ids = new Set(admins.map(a => a.userId));
+  if (gig.createdById) ids.add(gig.createdById);
+  return Array.from(ids);
+}
+
+function emitCommentEvent(io, event, payload, gig, audienceUserIds) {
+  if (audienceUserIds === null) {
+    io.to(`workspace:${gig.workspaceId}`).emit(event, payload);
+  } else {
+    for (const uid of audienceUserIds) {
+      io.to(`user:${uid}`).emit(event, payload);
+    }
+  }
+}
+
+// List comments for a gig
+router.get('/:gigId/comments', authenticate, apiLimiter, async (req, res) => {
+  try {
+    const { error } = await loadGigWithMembership(req.params.gigId, req.user.id);
+    if (error) return res.status(error.status).json({ error: error.message });
+
+    const comments = await prisma.gigComment.findMany({
+      where: { gigId: req.params.gigId },
+      orderBy: { createdAt: 'asc' },
+      take: COMMENT_LIST_MAX,
+      include: { createdBy: { select: USER_SELECT_BRIEF } },
+    });
+    res.json(comments);
+  } catch (err) {
+    console.error('List gig comments error:', err);
+    res.status(500).json({ error: 'Failed to load comments' });
+  }
+});
+
+// Add a comment to a gig
+router.post('/:gigId/comments', authenticate, apiLimiter, async (req, res) => {
+  try {
+    const { content } = req.body;
+    if (typeof content !== 'string' || !content.trim()) {
+      return res.status(400).json({ error: 'Comment content is required' });
+    }
+    if (content.length > COMMENT_MAX_LENGTH) {
+      return res.status(400).json({ error: `Comment must be ${COMMENT_MAX_LENGTH} characters or less` });
+    }
+
+    const { error, gig } = await loadGigWithMembership(req.params.gigId, req.user.id);
+    if (error) return res.status(error.status).json({ error: error.message });
+
+    // Storage amplification guard: cap comments per gig
+    const existingCount = await prisma.gigComment.count({ where: { gigId: gig.id } });
+    if (existingCount >= COMMENT_PER_GIG_CAP) {
+      return res.status(400).json({ error: 'This event has reached the maximum comment count' });
+    }
+
+    const comment = await prisma.gigComment.create({
+      data: {
+        gigId: gig.id,
+        content: content.trim(),
+        createdById: req.user.id,
+      },
+      include: { createdBy: { select: USER_SELECT_BRIEF } },
+    });
+
+    const io = req.app.get('io');
+    const audience = await resolveCommentAudience(gig);
+    emitCommentEvent(io, 'gig:commentAdded', { gigId: gig.id, comment }, gig, audience);
+
+    // Push recipients: for personal events, only creator + admins; otherwise all workspace members.
+    // Always exclude the comment author.
+    let recipientIds;
+    if (audience === null) {
+      const wsMembers = await prisma.workspaceMember.findMany({
+        where: { workspaceId: gig.workspaceId, userId: { not: req.user.id } },
+        select: { userId: true },
+      });
+      recipientIds = wsMembers.map(m => m.userId);
+    } else {
+      recipientIds = audience.filter(uid => uid !== req.user.id);
+    }
+    const authorName = comment.createdBy?.displayName || 'Someone';
+    const snippet = comment.content.length > 120 ? comment.content.slice(0, 117) + '...' : comment.content;
+    const pushBody = `${authorName} on ${gig.title}: ${snippet}`;
+    await Promise.allSettled(recipientIds.map(uid =>
+      sendPushToUser(uid, {
+        title: 'New comment',
+        body: pushBody,
+        tag: `gig-comment-${gig.id}`,
+        url: `/workspace/${gig.workspaceId}`,
+        workspaceId: gig.workspaceId,
+        threadId: `gig-${gig.id}`,
+      }, { category: 'gig', workspaceId: gig.workspaceId })
+    ));
+
+    res.status(201).json(comment);
+  } catch (err) {
+    console.error('Add gig comment error:', err);
+    res.status(500).json({ error: 'Failed to add comment' });
+  }
+});
+
+// Edit own comment
+router.put('/:gigId/comments/:commentId', authenticate, apiLimiter, async (req, res) => {
+  try {
+    const { content } = req.body;
+    if (typeof content !== 'string' || !content.trim()) {
+      return res.status(400).json({ error: 'Comment content is required' });
+    }
+    if (content.length > COMMENT_MAX_LENGTH) {
+      return res.status(400).json({ error: `Comment must be ${COMMENT_MAX_LENGTH} characters or less` });
+    }
+
+    const existing = await prisma.gigComment.findUnique({
+      where: { id: req.params.commentId },
+      include: {
+        gig: {
+          select: { id: true, workspaceId: true, isPersonal: true, createdById: true, title: true },
+        },
+      },
+    });
+    if (!existing || existing.gigId !== req.params.gigId) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+    if (existing.createdById !== req.user.id) {
+      return res.status(403).json({ error: 'You can only edit your own comments' });
+    }
+
+    const comment = await prisma.gigComment.update({
+      where: { id: existing.id },
+      data: { content: content.trim() },
+      include: { createdBy: { select: USER_SELECT_BRIEF } },
+    });
+
+    const io = req.app.get('io');
+    const audience = await resolveCommentAudience(existing.gig);
+    emitCommentEvent(io, 'gig:commentUpdated', { gigId: existing.gig.id, comment }, existing.gig, audience);
+
+    res.json(comment);
+  } catch (err) {
+    console.error('Edit gig comment error:', err);
+    res.status(500).json({ error: 'Failed to update comment' });
+  }
+});
+
+// Delete own comment, or any comment if workspace admin
+router.delete('/:gigId/comments/:commentId', authenticate, apiLimiter, async (req, res) => {
+  try {
+    const existing = await prisma.gigComment.findUnique({
+      where: { id: req.params.commentId },
+      include: {
+        gig: {
+          select: { id: true, workspaceId: true, isPersonal: true, createdById: true, title: true },
+        },
+      },
+    });
+    if (!existing || existing.gigId !== req.params.gigId) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: existing.gig.workspaceId } },
+      select: { role: true },
+    });
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a workspace member' });
+    }
+    const isAdmin = membership.role === 'ADMIN';
+    const isAuthor = existing.createdById === req.user.id;
+    if (!isAuthor && !isAdmin) {
+      return res.status(403).json({ error: 'Only the author or a workspace admin can delete this comment' });
+    }
+
+    await prisma.gigComment.delete({ where: { id: existing.id } });
+
+    const io = req.app.get('io');
+    const audience = await resolveCommentAudience(existing.gig);
+    emitCommentEvent(io, 'gig:commentDeleted', { gigId: existing.gig.id, commentId: existing.id }, existing.gig, audience);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete gig comment error:', err);
+    res.status(500).json({ error: 'Failed to delete comment' });
   }
 });
 

@@ -1,5 +1,6 @@
 import { memo, useState, useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from 'react';
-import { View, Text, Image, TouchableOpacity, Pressable, Animated, Linking, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Pressable, Animated, Linking, StyleSheet, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Reanimated, { useAnimatedStyle, interpolate } from 'react-native-reanimated';
@@ -34,7 +35,7 @@ const SWIPE_COOLDOWN = 500; // ms between swipe actions
 
 const SWIPE_REACT_EMOJI = '\uD83D\uDC4D'; // 👍
 
-const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress, onSwipeReply, onSwipeReact, onAvatarPress, members, isOwn, onTogglePreview, blockedDomains, onLinkLongPress, channels, onChannelPress }, ref) {
+const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress, onReactionLongPress, onSwipeReply, onSwipeReact, onAvatarPress, members, isOwn, onTogglePreview, blockedDomains, onLinkLongPress, channels, onChannelPress }, ref) {
   const { colors, density } = useTheme();
   const { attachmentWidth, attachmentHeight } = useLayout();
   const swipeableRef = useRef(null);
@@ -274,7 +275,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
           <YouTubeThumbnail content={message.content} colors={colors} />
           {message.content && !message.hidePreview && !YT_REGEX.test(message.content) ? <LinkPreview content={message.content} isOwn={isOwn} onDismiss={onTogglePreview ? () => onTogglePreview(message.id) : undefined} blockedDomains={blockedDomains} onLongPress={onLinkLongPress} /> : null}
           {renderAttachments(message.attachments, onImagePress, attachmentWidth, attachmentHeight, handleLongPress)}
-          {renderReactions(message.reactions, colors, message.id, onReactionPress)}
+          {renderReactions(message.reactions, colors, message.id, onReactionPress, onReactionLongPress)}
         </View>
       </Pressable>
       </ReanimatedSwipeable>
@@ -338,9 +339,9 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
         <YouTubeThumbnail content={message.content} colors={colors} />
         {message.content && !message.hidePreview && !YT_REGEX.test(message.content) ? <LinkPreview content={message.content} isOwn={isOwn} onDismiss={onTogglePreview ? () => onTogglePreview(message.id) : undefined} blockedDomains={blockedDomains} onLongPress={onLinkLongPress} /> : null}
         {renderAttachments(message.attachments, onImagePress, attachmentWidth, attachmentHeight, handleLongPress)}
-        {renderReactions(message.reactions, colors, message.id, onReactionPress)}
+        {renderReactions(message.reactions, colors, message.id, onReactionPress, onReactionLongPress)}
         {message._count?.replies > 0 && (
-          <TouchableOpacity onPress={() => onReplyPress?.(message)} activeOpacity={0.6} accessibilityRole="button" accessibilityLabel={`${message._count.replies} ${message._count.replies === 1 ? 'reply' : 'replies'}, view thread`}>
+          <TouchableOpacity onPress={() => onReplyPress?.(message)} activeOpacity={0.6} style={{ minHeight: 44, justifyContent: 'center' }} accessibilityRole="button" accessibilityLabel={`${message._count.replies} ${message._count.replies === 1 ? 'reply' : 'replies'}, view thread`}>
             <Text style={[styles.replyCount, { color: colors.primary }]} maxFontSizeMultiplier={1.3}>
               {message._count.replies} {message._count.replies === 1 ? 'reply' : 'replies'}
             </Text>
@@ -374,7 +375,7 @@ function YouTubeThumbnail({ content, colors }) {
       <Image
         source={{ uri: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` }}
         style={ytStyles.thumbnail}
-        resizeMode="cover"
+        contentFit="cover"
       />
       <View style={ytStyles.playOverlay}>
         <View style={ytStyles.playButton}>
@@ -436,7 +437,7 @@ function renderAttachments(attachments, onImagePress, imgWidth, imgHeight, onLon
               <Image
                 source={{ uri: att.thumbnailUrl || att.url }}
                 style={[styles.attachmentImage, { width: imgWidth, height: imgHeight }]}
-                resizeMode="cover"
+                contentFit="cover"
                 accessibilityLabel="Attached image"
               />
             </TouchableOpacity>
@@ -568,7 +569,7 @@ function AudioAttachment({ url, filename }) {
       accessibilityRole="button"
       accessibilityLabel={`${playing ? 'Pause' : 'Play'} audio ${filename || ''}, duration ${displayDuration}`}
     >
-      <Text style={styles.audioIcon}>{playing ? '\u23F8' : '\u25B6\uFE0F'}</Text>
+      <Ionicons name={playing ? 'pause' : 'play'} size={18} color={colors.textPrimary} style={styles.audioIcon} />
       <View style={styles.audioDetails}>
         {/* Waveform visualization */}
         <View style={styles.waveformContainer}>
@@ -606,7 +607,7 @@ function AudioAttachment({ url, filename }) {
   );
 }
 
-function renderReactions(reactions, colors, messageId, onReactionPress) {
+function renderReactions(reactions, colors, messageId, onReactionPress, onReactionLongPress) {
   if (!reactions || reactions.length === 0) return null;
 
   const grouped = {};
@@ -622,9 +623,13 @@ function renderReactions(reactions, colors, messageId, onReactionPress) {
           key={emoji}
           style={[styles.reactionBadge, { backgroundColor: colors.bgTertiary }]}
           onPress={() => onReactionPress?.(messageId, emoji)}
+          onLongPress={() => onReactionLongPress?.(reactions, emoji)}
+          delayLongPress={300}
+          hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
           activeOpacity={0.6}
           accessibilityRole="button"
-          accessibilityLabel={`${emoji} reaction, ${count} ${count === 1 ? 'person' : 'people'}`}
+          accessibilityLabel={`${emoji} reaction, ${count} ${count === 1 ? 'person' : 'people'}. Long press to see who reacted.`}
+          accessibilityHint="Long press to see who reacted"
         >
           {CUSTOM_EMOJI[emoji] ? renderCustomEmoji(emoji, 16) : <Text style={styles.reactionEmoji}>{emoji}</Text>}
           <Text style={[styles.reactionCount, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>{count}</Text>
@@ -641,7 +646,7 @@ function LeftAction({ drag }) {
   }));
   return (
     <Reanimated.View style={[swipeStyles.leftAction, { backgroundColor: colors.primary }, animatedStyle]}>
-      <Text style={swipeStyles.actionIcon}>{'\uD83D\uDCAC'}</Text>
+      <Ionicons name="chatbubble" size={20} color="#fff" />
       <Text style={swipeStyles.actionLabel} maxFontSizeMultiplier={1.2}>Reply</Text>
     </Reanimated.View>
   );
@@ -653,7 +658,7 @@ function RightAction({ drag }) {
   }));
   return (
     <Reanimated.View style={[swipeStyles.rightAction, animatedStyle]}>
-      <Text style={swipeStyles.actionIcon}>{'\uD83D\uDC4D'}</Text>
+      <Ionicons name="thumbs-up" size={20} color="#fff" />
       <Text style={swipeStyles.actionLabel} maxFontSizeMultiplier={1.2}>Like</Text>
     </Reanimated.View>
   );
@@ -674,9 +679,6 @@ const swipeStyles = StyleSheet.create({
     backgroundColor: '#f59e0b',
     borderTopRightRadius: 8,
     borderBottomRightRadius: 8,
-  },
-  actionIcon: {
-    fontSize: 20,
   },
   actionLabel: {
     color: '#fff',
@@ -777,7 +779,6 @@ const styles = StyleSheet.create({
     maxWidth: 260,
   },
   audioIcon: {
-    fontSize: 18,
     marginRight: 10,
   },
   audioDetails: {
@@ -826,6 +827,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+    minHeight: 32,
   },
   reactionEmoji: {
     fontSize: 14,

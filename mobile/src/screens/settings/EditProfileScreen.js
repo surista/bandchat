@@ -1,8 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
-  Image,
   TextInput,
   ScrollView,
   TouchableOpacity,
@@ -12,8 +11,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
 import * as ImagePicker from 'expo-image-picker';
+import { prepareImageForUpload } from '../../utils/prepareImageUpload';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import getInitial from '../../utils/getInitial';
@@ -25,6 +27,7 @@ export default function EditProfileScreen({ navigation }) {
   const { user, updateUser } = useAuth()
   const { isTablet, contentMaxWidth } = useLayout();
   const { colors } = useTheme();
+  const headerHeight = useHeaderHeight();
 
   const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [bio, setBio] = useState(user?.bio || '');
@@ -42,7 +45,7 @@ export default function EditProfileScreen({ navigation }) {
 
     if (result.canceled) return;
 
-    const asset = result.assets[0];
+    const asset = await prepareImageForUpload(result.assets[0]);
     setUploadingAvatar(true);
     try {
       const filename = asset.fileName || 'avatar.jpg';
@@ -82,9 +85,26 @@ export default function EditProfileScreen({ navigation }) {
   const hasChanges = displayName.trim() !== (user?.displayName || '') ||
     (bio.trim() || '') !== (user?.bio || '');
 
+  // Prompt before navigating away with unsaved changes
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (!hasChanges || saving) return;
+      e.preventDefault();
+      Alert.alert(
+        'Discard changes?',
+        'You have unsaved changes. Are you sure you want to leave without saving?',
+        [
+          { text: 'Keep editing', style: 'cancel' },
+          { text: 'Discard', style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
+        ],
+      );
+    });
+    return unsubscribe;
+  }, [navigation, hasChanges, saving]);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
         {/* Avatar */}
         <TouchableOpacity
@@ -97,11 +117,11 @@ export default function EditProfileScreen({ navigation }) {
         >
           <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
             {uploadingAvatar ? (
-              <ActivityIndicator color="#ffffff" />
+              <ActivityIndicator color={colors.primaryText} />
             ) : user?.avatarUrl ? (
               <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} />
             ) : (
-              <Text style={styles.avatarText}>{getInitial(user?.displayName)}</Text>
+              <Text style={[styles.avatarText, { color: colors.primaryText }]}>{getInitial(user?.displayName)}</Text>
             )}
           </View>
           <View style={[styles.cameraOverlay, { backgroundColor: colors.bgTertiary }]}>
@@ -165,9 +185,9 @@ export default function EditProfileScreen({ navigation }) {
           activeOpacity={0.7}
         >
           {saving ? (
-            <ActivityIndicator color="#ffffff" size="small" />
+            <ActivityIndicator color={colors.primaryText} size="small" />
           ) : (
-            <Text style={[styles.saveText, { color: hasChanges ? '#ffffff' : colors.textSecondary }]}>
+            <Text style={[styles.saveText, { color: hasChanges ? colors.primaryText : colors.textSecondary }]}>
               Save Changes
             </Text>
           )}

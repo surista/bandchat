@@ -13,6 +13,8 @@ const MIME_TO_EXT = {
   'image/png': '.png',
   'image/gif': '.gif',
   'image/webp': '.webp',
+  'image/heic': '.heic',
+  'image/heif': '.heif',
   'audio/mpeg': '.mp3',
   'audio/mp3': '.mp3',
   'audio/wav': '.wav',

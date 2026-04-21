@@ -181,13 +181,13 @@ export default function StagePlotListScreen({ navigation, route }) {
             contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
           />
           <TouchableOpacity
-            style={[styles.fab, { backgroundColor: '#16a34a' }]}
+            style={[styles.fab, { backgroundColor: colors.primary }]}
             onPress={handleCreate}
             activeOpacity={0.8}
             accessibilityRole="button"
             accessibilityLabel="Create stage plot"
           >
-            <Text style={styles.fabText}>+</Text>
+            <Ionicons name="add" size={28} color="#ffffff" />
           </TouchableOpacity>
         </>
       )}
@@ -312,15 +312,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
-    elevation: 5,
-  },
-  fabText: {
-    color: '#ffffff',
-    fontSize: 28,
-    fontWeight: '400',
-    marginTop: -2,
+    elevation: 8,
   },
 });

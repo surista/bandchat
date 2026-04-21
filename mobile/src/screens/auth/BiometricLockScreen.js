@@ -68,7 +68,7 @@ export default function BiometricLockScreen() {
             accessibilityRole="button"
             accessibilityLabel="Try again"
           >
-            <Text style={styles.retryButtonText}>Try Again</Text>
+            <Text style={[styles.retryButtonText, { color: colors.primaryText }]}>Try Again</Text>
           </TouchableOpacity>
         )}
 
@@ -125,7 +125,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   retryButtonText: {
-    color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
   },

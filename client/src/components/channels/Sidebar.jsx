@@ -681,6 +681,11 @@ function Sidebar({
                     <span>{gigDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
                     {displayTime && <span>· {displayTime}</span>}
                     {nextGig.venue && <span className="truncate">· {nextGig.venue}</span>}
+                    {nextGig._count?.comments > 0 && (
+                      <span title={`${nextGig._count.comments} comment${nextGig._count.comments === 1 ? '' : 's'}`}>
+                        · 💬 {nextGig._count.comments}
+                      </span>
+                    )}
                   </div>
                   {diffDays <= 7 && (
                     <div className="flex items-center gap-3 mt-1.5 text-xs">

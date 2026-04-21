@@ -246,7 +246,7 @@ export default function MedleyListScreen({ navigation, route }) {
       />
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => setShowActions(false)}>
+      <Modal visible={showActions} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowActions(false)}>
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
@@ -275,7 +275,7 @@ export default function MedleyListScreen({ navigation, route }) {
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionItem, styles.actionCancel]}
+              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedMedley(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"

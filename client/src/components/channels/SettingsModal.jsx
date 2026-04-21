@@ -1,3 +1,4 @@
+/* global __APP_VERSION__ */
 /**
  * @fileoverview Settings modal extracted from Sidebar.
  * Contains profile, workspace, theme, members, band members, import, what's new, and support tabs.
@@ -412,6 +413,42 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                       </button>
                     </div>
                   </form>
+
+                  {/* Calendar Privacy */}
+                  <div className="bg-[var(--color-modal-card)] rounded-lg p-5 border border-[var(--color-modal-border)]">
+                    <h4 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">Calendar Privacy</h4>
+                    <p className="text-sm text-[var(--color-text-muted)] mb-4">
+                      When you have a scheduling conflict with another band, control what they see.
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      {[
+                        { value: 'BUSY_ONLY', label: 'Show as Busy only', desc: 'Other bands just see "Busy — other commitment"' },
+                        { value: 'DETAILED', label: 'Show band name & event type', desc: 'Other bands see "Gig with [band name]"' },
+                      ].map(opt => (
+                        <label key={opt.value} className="flex items-start gap-3 p-3 rounded-lg hover:bg-[var(--color-bg-tertiary)] cursor-pointer">
+                          <input
+                            type="radio"
+                            name="calendarVisibility"
+                            value={opt.value}
+                            checked={(user?.calendarVisibility || 'BUSY_ONLY') === opt.value}
+                            onChange={async () => {
+                              try {
+                                await api.setCalendarVisibility(opt.value);
+                                updateUser({ calendarVisibility: opt.value });
+                              } catch (err) {
+                                console.error('Failed to update calendar visibility:', err);
+                              }
+                            }}
+                            className="mt-1"
+                          />
+                          <div>
+                            <div className="text-sm font-medium text-[var(--color-text-primary)]">{opt.label}</div>
+                            <div className="text-xs text-[var(--color-text-muted)]">{opt.desc}</div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
 
                   {/* Email Section */}
                   <form
@@ -1272,7 +1309,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                             {workspace.avatarUrl ? 'Change' : 'Upload'}
                             <input
                               type="file"
-                              accept="image/jpeg,image/png,image/gif,image/webp"
+                              accept="image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif"
                               className="hidden"
                               onChange={async (e) => {
                                 const file = e.target.files?.[0];

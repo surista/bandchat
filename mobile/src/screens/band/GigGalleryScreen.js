@@ -4,11 +4,11 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
@@ -79,7 +79,7 @@ export default function GigGalleryScreen({ route }) {
           <Image
             source={{ uri: item.url }}
             style={styles.thumbnail}
-            resizeMode="cover"
+            contentFit="cover"
             accessibilityLabel={item.caption || 'Gig photo'}
           />
         ) : isVideo ? (

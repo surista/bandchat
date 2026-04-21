@@ -324,10 +324,10 @@ export default function AnnouncementsScreen({ navigation, route }) {
       />
 
       {/* Create/Edit Modal */}
-      <Modal visible={showModal} transparent animationType="fade" onRequestClose={() => setShowModal(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Modal visible={showModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowModal(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
                 {editingAnnouncement ? 'Edit Announcement' : 'New Announcement'}
               </Text>
@@ -384,7 +384,7 @@ export default function AnnouncementsScreen({ navigation, route }) {
                 accessibilityLabel={`Pin and require acknowledgment, ${isPinned ? 'checked' : 'unchecked'}`}
               >
                 <View style={[styles.checkbox, { borderColor: colors.border }, isPinned && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-                  {isPinned && <Text style={styles.checkmark}>{'\u2713'}</Text>}
+                  {isPinned && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
                 </View>
                 <Text style={[styles.checkboxLabel, { color: colors.textPrimary }]}>Pin & require acknowledgment</Text>
               </TouchableOpacity>
@@ -408,9 +408,9 @@ export default function AnnouncementsScreen({ navigation, route }) {
                 accessibilityLabel={editingAnnouncement ? 'Save announcement' : 'Post announcement'}
               >
                 {saving ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>{editingAnnouncement ? 'Save' : 'Post'}</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>{editingAnnouncement ? 'Save' : 'Post'}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
   },
-  checkmark: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  checkmark: { fontSize: 14, fontWeight: '700' },
   checkboxLabel: { fontSize: 15 },
   modalActions: { flexDirection: 'row', gap: 10, marginTop: 8 },
   modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },

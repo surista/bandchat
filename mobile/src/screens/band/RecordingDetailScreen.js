@@ -16,6 +16,7 @@ import {
 import { Audio, Video, ResizeMode } from 'expo-av';
 import * as DocumentPicker from 'expo-document-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useTheme } from '../../context/ThemeContext';
 import formatDate from '../../utils/formatDate';
 import api from '../../services/api';
@@ -133,6 +134,7 @@ export default function RecordingDetailScreen({ navigation, route }) {
   const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
   const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
 
   const [recording, setRecording] = useState(null);
   const [loading, setLoading] = useState(!isNew);
@@ -340,9 +342,9 @@ export default function RecordingDetailScreen({ navigation, route }) {
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={100}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
       >
-        <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
           <Text style={[styles.label, { color: colors.textSecondary }]}>Title *</Text>
           <TextInput
             style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
@@ -420,9 +422,9 @@ export default function RecordingDetailScreen({ navigation, route }) {
               accessibilityLabel={isNew ? "Create recording" : "Save recording"}
             >
               {saving ? (
-                <ActivityIndicator color="#ffffff" size="small" />
+                <ActivityIndicator color={colors.primaryText} size="small" />
               ) : (
-                <Text style={styles.formButtonTextWhite}>{isNew ? 'Create' : 'Save'}</Text>
+                <Text style={[styles.formButtonTextWhite, { color: colors.primaryText }]}>{isNew ? 'Create' : 'Save'}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -435,7 +437,7 @@ export default function RecordingDetailScreen({ navigation, route }) {
         </ScrollView>
 
         {/* Song Picker Modal */}
-        <Modal visible={showSongPicker} transparent animationType="fade" onRequestClose={() => setShowSongPicker(false)}>
+        <Modal visible={showSongPicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowSongPicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowSongPicker(false)} accessibilityRole="button" accessibilityLabel="Close song picker">
             <View style={[styles.pickerContent, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 20) + 20 }]}>
               <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Select Song</Text>

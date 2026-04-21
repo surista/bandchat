@@ -5,6 +5,7 @@ import NetInfo from '@react-native-community/netinfo';
 
 export default function OfflineBanner() {
   const [isOffline, setIsOffline] = useState(false);
+  const [visible, setVisible] = useState(false);
   const [slideAnim] = useState(() => new Animated.Value(-120));
   const insets = useSafeAreaInsets();
 
@@ -17,14 +18,25 @@ export default function OfflineBanner() {
   }, []);
 
   useEffect(() => {
-    Animated.timing(slideAnim, {
-      toValue: isOffline ? 0 : -120,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
+    if (isOffline) {
+      setVisible(true);
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(slideAnim, {
+        toValue: -120,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) setVisible(false);
+      });
+    }
   }, [isOffline, slideAnim]);
 
-  if (!isOffline) return null;
+  if (!visible) return null;
 
   return (
     <Animated.View

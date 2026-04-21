@@ -5,6 +5,7 @@ import {
   FlatList,
   ActivityIndicator,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   StyleSheet,
 } from 'react-native';
@@ -21,6 +22,7 @@ import MessageActionSheet from '../../components/MessageActionSheet';
 import EmojiPicker from '../../components/EmojiPicker';
 import ImageViewer from '../../components/ImageViewer';
 import ActionSheet from '../../components/ActionSheet';
+import ReactionUsersSheet from '../../components/ReactionUsersSheet';
 import ErrorState from '../../components/ErrorState';
 import { useLayout } from '../../hooks/useLayout';
 import useMessageActions from '../../hooks/useMessageActions';
@@ -40,6 +42,7 @@ export default function ThreadScreen({ navigation, route }) {
   const [replies, setReplies] = useState([]);
   const parentRef = useRef(parent);
   const repliesRef = useRef(replies);
+  const flatListRef = useRef(null);
   useEffect(() => { parentRef.current = parent; }, [parent]);
   useEffect(() => { repliesRef.current = replies; }, [replies]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +51,22 @@ export default function ThreadScreen({ navigation, route }) {
   const [workspaceChannels, setWorkspaceChannels] = useState([]);
 
   const parentIdRef = useRef(parentMessage.id);
+
+  // Android: manually track keyboard height and apply as bottom padding
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    });
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
 
   // Suppress foreground notifications for this channel while viewing thread
   useEffect(() => {
@@ -63,11 +82,11 @@ export default function ThreadScreen({ navigation, route }) {
 
   const {
     actionMessage, showActions, showEmojiPicker, editingMessage, viewingImage,
-    blockedDomains, linkActionUrl,
+    blockedDomains, linkActionUrl, reactionUsers,
     setShowActions, setShowEmojiPicker, setViewingImage, setLinkActionUrl,
     handleLongPress, handleAction, handleAddReaction, handleSendEdit,
-    handleCancelEdit, handleReactionPress, handleImagePress, handleTogglePreview,
-    handleLinkLongPress, toggleBlockedDomain,
+    handleCancelEdit, handleReactionPress, handleReactionLongPress, closeReactionUsers,
+    handleImagePress, handleTogglePreview, handleLinkLongPress, toggleBlockedDomain,
   } = useMessageActions({ findMessage, workspaceId, channelId });
 
   useEffect(() => {
@@ -297,6 +316,7 @@ export default function ThreadScreen({ navigation, route }) {
         onLongPress={handleLongPress}
         onImagePress={handleImagePress}
         onReactionPress={handleReactionPress}
+        onReactionLongPress={handleReactionLongPress}
         onSwipeReact={handleReactionPress}
         onAvatarPress={handleAvatarPress}
         members={workspaceMembers}
@@ -308,7 +328,7 @@ export default function ThreadScreen({ navigation, route }) {
         onChannelPress={handleChannelRefPress}
       />
     );
-  }, [colors, handleLongPress, handleImagePress, handleReactionPress, handleAvatarPress, handleTogglePreview, workspaceMembers, user?.id, blockedDomains, handleLinkLongPress, workspaceChannels, handleChannelRefPress]);
+  }, [colors, handleLongPress, handleImagePress, handleReactionPress, handleReactionLongPress, handleAvatarPress, handleTogglePreview, workspaceMembers, user?.id, blockedDomains, handleLinkLongPress, workspaceChannels, handleChannelRefPress]);
 
   const handleRetry = useCallback(() => {
     setLoading(true);
@@ -350,18 +370,23 @@ export default function ThreadScreen({ navigation, route }) {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
+      style={[styles.container, { backgroundColor: colors.bgPrimary, paddingBottom: Platform.OS === 'android' ? keyboardHeight : 0 }, isTablet && styles.tabletContainer]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
       <View style={[styles.chatContainer, isTablet && { maxWidth: contentMaxWidth }]}>
       <FlatList
+        ref={flatListRef}
         data={listData}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         keyboardShouldPersistTaps="handled"
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        initialNumToRender={15}
+        removeClippedSubviews={Platform.OS === 'android'}
       />
       <MessageInput
         onSend={handleSend}
@@ -373,7 +398,7 @@ export default function ThreadScreen({ navigation, route }) {
         members={workspaceMembers}
         channels={workspaceChannels}
       />
-      {insets.bottom > 0 && <View style={{ height: insets.bottom }} />}
+      {insets.bottom > 0 && keyboardHeight === 0 && <View style={{ height: insets.bottom }} />}
 
       {/* Action Sheet */}
       <MessageActionSheet
@@ -398,6 +423,14 @@ export default function ThreadScreen({ navigation, route }) {
         visible={!!viewingImage}
         imageUrl={viewingImage}
         onClose={() => setViewingImage(null)}
+      />
+
+      {/* Reaction Users Sheet */}
+      <ReactionUsersSheet
+        visible={reactionUsers.visible}
+        reactions={reactionUsers.reactions}
+        selectedEmoji={reactionUsers.emoji}
+        onClose={closeReactionUsers}
       />
 
       {/* Link Preview Domain Block ActionSheet */}

@@ -7,6 +7,7 @@ import Purchases from 'react-native-purchases';
 import api from '../services/api';
 import { notificationService } from '../services/notifications';
 import { clearLinkPreviewCache } from '../components/LinkPreview';
+import { updateWidgetGigData } from '../services/widgetService';
 
 const AuthContext = createContext(null);
 
@@ -77,6 +78,7 @@ export function AuthProvider({ children }) {
             setUser(userData);
             setIsOffline(false);
             await configureRevenueCat(userData.id);
+            updateWidgetGigData();
           } catch (fetchError) {
             // Check if it's a network/timeout error (app started offline)
             if (fetchError.type === 'NETWORK' || fetchError.type === 'TIMEOUT') {
@@ -108,17 +110,15 @@ export function AuthProvider({ children }) {
     initAuth();
   }, []);
 
-  // AppState listener for background → foreground lock
-  // Only lock after actual background (not brief inactive from notification shade, Face ID, etc.)
+  // AppState listener for background → foreground: biometric lock + token refresh
   useEffect(() => {
     const subscription = AppState.addEventListener('change', async (nextAppState) => {
       if (nextAppState === 'background') {
-        // Only record timestamp when fully backgrounded (not inactive)
         if (!backgroundTimestamp.current) {
           backgroundTimestamp.current = Date.now();
         }
       } else if (nextAppState === 'active' && appState.current === 'background') {
-        // Only check lock when returning from background (not inactive → active)
+        // Biometric lock check
         if (backgroundTimestamp.current && biometricEnabled) {
           const elapsed = Date.now() - backgroundTimestamp.current;
           if (elapsed > BACKGROUND_LOCK_DELAY_MS) {
@@ -129,6 +129,18 @@ export function AuthProvider({ children }) {
           }
         }
         backgroundTimestamp.current = null;
+
+        // Proactively refresh token when returning from background
+        // This prevents stale-token 401s on the user's first action back
+        if (api.accessToken && api.refreshToken) {
+          try {
+            if (api.isTokenExpiringSoon()) {
+              await api.refreshAccessToken();
+            }
+          } catch {
+            // Non-fatal: the normal request flow will also try to refresh
+          }
+        }
       }
       appState.current = nextAppState;
     });
@@ -162,6 +174,7 @@ export function AuthProvider({ children }) {
     const data = await api.signup(email, password, displayName);
     setUser(data.user);
     await configureRevenueCat(data.user.id);
+    updateWidgetGigData();
     return data;
   }, []);
 
@@ -213,6 +226,7 @@ export function AuthProvider({ children }) {
     const data = await api.login(email, password);
     setUser(data.user);
     await configureRevenueCat(data.user.id);
+    updateWidgetGigData();
     setTimeout(() => promptBiometricSetup(), 1000);
     return data;
   }, [promptBiometricSetup]);
@@ -221,6 +235,7 @@ export function AuthProvider({ children }) {
     const data = await api.googleAuth(credential);
     setUser(data.user);
     await configureRevenueCat(data.user.id);
+    updateWidgetGigData();
     setTimeout(() => promptBiometricSetup(), 1000);
     return data;
   }, [promptBiometricSetup]);

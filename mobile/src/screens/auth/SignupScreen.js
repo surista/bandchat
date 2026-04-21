@@ -20,6 +20,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { APP_BASE_URL } from '../../utils/constants';
 import { useLayout } from '../../hooks/useLayout';
+import PressableRow from '../../components/PressableRow';
 
 export default function SignupScreen({ navigation }) {
   const { signup, googleLogin, appleLogin } = useAuth()
@@ -124,8 +125,8 @@ export default function SignupScreen({ navigation }) {
 
           <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
             {error ? (
-              <View style={styles.errorBox}>
-                <Text style={styles.errorText}>{error}</Text>
+              <View style={[styles.errorBox, { borderColor: colors.error }]} accessibilityLiveRegion="polite">
+                <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
               </View>
             ) : null}
 
@@ -211,7 +212,7 @@ export default function SignupScreen({ navigation }) {
               accessibilityLabel="Agree to Terms of Service and Privacy Policy"
             >
               <View style={[styles.checkbox, { borderColor: colors.border, backgroundColor: agreedToTerms ? colors.primary : 'transparent' }]}>
-                {agreedToTerms && <Ionicons name="checkmark" size={14} color="#ffffff" />}
+                {agreedToTerms && <Ionicons name="checkmark" size={14} color={colors.primaryText} />}
               </View>
               <Text style={[styles.termsText, { color: colors.textSecondary }]}>
                 I agree to the{' '}
@@ -231,20 +232,20 @@ export default function SignupScreen({ navigation }) {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
+            <PressableRow
               style={[styles.button, { backgroundColor: colors.primary }, (loading || !agreedToTerms) && styles.buttonDisabled]}
               onPress={handleSubmit}
               disabled={loading || !agreedToTerms}
-              activeOpacity={0.8}
+              rippleColor="rgba(255,255,255,0.2)"
               accessibilityRole="button"
               accessibilityLabel="Create account"
             >
               {loading ? (
-                <ActivityIndicator color="#ffffff" size="small" />
+                <ActivityIndicator color={colors.primaryText} size="small" />
               ) : (
-                <Text style={styles.buttonText}>Create Account</Text>
+                <Text style={[styles.buttonText, { color: colors.primaryText }]}>Create Account</Text>
               )}
-            </TouchableOpacity>
+            </PressableRow>
 
             <TouchableOpacity
               style={styles.linkButton}

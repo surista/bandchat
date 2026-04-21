@@ -140,6 +140,7 @@ httpServer.listen(PORT, async () => {
             prisma.song.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
             prisma.setlist.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
             prisma.gig.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
+            prisma.gigComment.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
             prisma.medley.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
             prisma.contact.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),
             prisma.announcement.updateMany({ where: { createdById: user.id }, data: { removedCreatorName: user.displayName, createdById: null } }),

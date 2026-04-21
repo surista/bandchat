@@ -8,13 +8,14 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// Limit Dynamic Type scaling to prevent layout breakage at large accessibility sizes
+// Support Dynamic Type / Android font scaling up to 1.8× (accessibility sizes)
 if (Text.defaultProps == null) Text.defaultProps = {};
-Text.defaultProps.maxFontSizeMultiplier = 1.5;
+Text.defaultProps.maxFontSizeMultiplier = 1.8;
 if (TextInput.defaultProps == null) TextInput.defaultProps = {};
-TextInput.defaultProps.maxFontSizeMultiplier = 1.5;
+TextInput.defaultProps.maxFontSizeMultiplier = 1.8;
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
+import * as NavigationBar from 'expo-navigation-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as QuickActions from 'expo-quick-actions';
@@ -29,6 +30,7 @@ import ErrorBoundary from './src/components/ErrorBoundary';
 import OfflineBanner from './src/components/OfflineBanner';
 import notificationService from './src/services/notifications';
 import api from './src/services/api';
+import { updateWidgetGigData } from './src/services/widgetService';
 
 // Validate UUID format (v4 UUIDs used by the app)
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -89,11 +91,21 @@ function handleDeepLink(url, navigationRef) {
           const channelData = await prepareChannelForNav(channel);
           setTimeout(() => {
             navigationRef.current.navigate('Channel', { channel: channelData, workspaceId: parts[1] });
-          }, 300);
+          }, Platform.OS === 'android' ? 500 : 300);
         }).catch(() => {});
       } else {
         // workspace/:id
         navigationRef.current.navigate('Workspace', { id: parts[1] });
+      }
+    } else if (parts[0] === 'gig' && parts[1]) {
+      // gig/:gigId?ws=:workspaceId (from widget deep links)
+      if (!isValidUUID(parts[1])) return;
+      const workspaceId = parsed.searchParams?.get('ws');
+      if (workspaceId && isValidUUID(workspaceId)) {
+        navigationRef.current.navigate('Workspace', { id: workspaceId });
+        setTimeout(() => {
+          navigationRef.current.navigate('GigDetail', { gigId: parts[1], workspaceId });
+        }, Platform.OS === 'android' ? 500 : 300);
       }
     } else if ((parts[0] === 'invite' || parts[0] === 'join') && parts[1]) {
       // Validate invite code format
@@ -111,8 +123,16 @@ function handleDeepLink(url, navigationRef) {
 
 function AppContent() {
   const navigationRef = useRef(null);
-  const { mode } = useTheme();
+  const { mode, colors } = useTheme();
   const { hasShareIntent, shareIntent } = useShareIntent();
+
+  // Sync Android navigation bar color with theme
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setBackgroundColorAsync(colors.bgPrimary).catch(() => {});
+      NavigationBar.setButtonStyleAsync(mode === 'dark' ? 'light' : 'dark').catch(() => {});
+    }
+  }, [mode, colors.bgPrimary]);
 
   // Handle share intent - navigate to ShareReceive screen
   useEffect(() => {
@@ -144,9 +164,12 @@ function AppContent() {
       }
     });
 
-    // Clear badge when app comes to foreground
+    // Clear badge and refresh widget when app comes to foreground
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') notificationService.clearBadge();
+      if (state === 'active') {
+        notificationService.clearBadge();
+        updateWidgetGigData();
+      }
     });
 
     return () => {
@@ -218,7 +241,7 @@ function AppContent() {
       <ToastProvider>
         <OfflineBanner />
         <RootNavigator />
-        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} backgroundColor="transparent" translucent />
+        <StatusBar style={colors.isLightHeader ? 'dark' : 'light'} backgroundColor="transparent" translucent />
       </ToastProvider>
     </NavigationContainer>
   );

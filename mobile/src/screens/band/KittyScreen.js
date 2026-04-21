@@ -15,6 +15,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import ActionSheet from '../../components/ActionSheet';
@@ -69,6 +70,7 @@ export default function KittyScreen({ navigation, route }) {
   const { user } = useAuth()
   const { isTablet, contentMaxWidth } = useLayout();
   const { colors } = useTheme();
+  const headerHeight = useHeaderHeight();
 
   const [kitty, setKitty] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -374,7 +376,7 @@ export default function KittyScreen({ navigation, route }) {
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={100}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
       >
         <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
           <Text style={[styles.formTitle, { color: colors.textPrimary }]}>
@@ -447,16 +449,16 @@ export default function KittyScreen({ navigation, route }) {
               accessibilityLabel={editingTx ? 'Save transaction' : 'Create transaction'}
             >
               {saving ? (
-                <ActivityIndicator color="#ffffff" size="small" />
+                <ActivityIndicator color={colors.primaryText} size="small" />
               ) : (
-                <Text style={styles.formButtonTextWhite}>{editingTx ? 'Save' : 'Create'}</Text>
+                <Text style={[styles.formButtonTextWhite, { color: colors.primaryText }]}>{editingTx ? 'Save' : 'Create'}</Text>
               )}
             </TouchableOpacity>
           </View>
         </ScrollView>
 
         {/* Type Picker */}
-        <Modal visible={showTypePicker} transparent animationType="fade" onRequestClose={() => setShowTypePicker(false)}>
+        <Modal visible={showTypePicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowTypePicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowTypePicker(false)} accessibilityRole="button" accessibilityLabel="Close type picker">
             <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Transaction Type</Text>
@@ -478,7 +480,7 @@ export default function KittyScreen({ navigation, route }) {
         </Modal>
 
         {/* Category Picker */}
-        <Modal visible={showCategoryPicker} transparent animationType="fade" onRequestClose={() => setShowCategoryPicker(false)}>
+        <Modal visible={showCategoryPicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowCategoryPicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowCategoryPicker(false)} accessibilityRole="button" accessibilityLabel="Close category picker">
             <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Expense Category</Text>
@@ -536,7 +538,7 @@ export default function KittyScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel={`${f.label}${filterTab === f.key ? ', selected' : ''}`}
           >
-            <Text style={[styles.filterChipText, { color: filterTab === f.key ? '#ffffff' : colors.textSecondary }]}>
+            <Text style={[styles.filterChipText, { color: filterTab === f.key ? colors.primaryText : colors.textSecondary }]}>
               {f.label}
             </Text>
           </TouchableOpacity>
@@ -583,7 +585,7 @@ export default function KittyScreen({ navigation, route }) {
       />
 
       {/* Settings Modal */}
-      <Modal visible={showSettings} transparent animationType="fade" onRequestClose={() => setShowSettings(false)}>
+      <Modal visible={showSettings} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowSettings(false)}>
         <View style={styles.settingsOverlay}>
           <View style={[styles.settingsContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.settingsTitle, { color: colors.textPrimary }]}>Kitty Settings</Text>
@@ -598,7 +600,7 @@ export default function KittyScreen({ navigation, route }) {
                     accessibilityRole="button"
                     accessibilityLabel={`${c.code}${settingsCurrency === c.code ? ', selected' : ''}`}
                   >
-                    <Text style={[styles.currencyChipText, { color: settingsCurrency === c.code ? '#ffffff' : colors.textSecondary }]}>
+                    <Text style={[styles.currencyChipText, { color: settingsCurrency === c.code ? colors.primaryText : colors.textSecondary }]}>
                       {c.symbol} {c.code}
                     </Text>
                   </TouchableOpacity>
@@ -620,7 +622,7 @@ export default function KittyScreen({ navigation, route }) {
                 <Text style={[styles.formButtonText, { color: colors.textPrimary }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.formButton, { backgroundColor: colors.primary }]} onPress={handleSaveSettings} disabled={savingSettings} accessibilityRole="button" accessibilityLabel="Save settings">
-                {savingSettings ? <ActivityIndicator color="#ffffff" size="small" /> : <Text style={styles.formButtonTextWhite}>Save</Text>}
+                {savingSettings ? <ActivityIndicator color={colors.primaryText} size="small" /> : <Text style={[styles.formButtonTextWhite, { color: colors.primaryText }]}>Save</Text>}
               </TouchableOpacity>
             </View>
           </View>

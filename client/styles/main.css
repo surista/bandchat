@@ -291,13 +291,19 @@ input:focus, textarea:focus {
 }
 
 .modal-body {
-  @apply p-4 text-gray-200;
+  @apply p-4;
+  color: var(--color-text-primary);
 }
 
 .modal-input {
   background-color: var(--color-modal-card);
   border: 1px solid var(--color-modal-border);
-  @apply w-full px-3 py-2 rounded-lg text-white placeholder-gray-400;
+  color: var(--color-text-primary);
+  @apply w-full px-3 py-2 rounded-lg;
+}
+
+.modal-input::placeholder {
+  color: var(--color-text-muted);
 }
 
 .modal-input:focus {
@@ -307,7 +313,8 @@ input:focus, textarea:focus {
 }
 
 .modal-label {
-  @apply block text-gray-300 font-medium mb-2;
+  @apply block font-medium mb-2;
+  color: var(--color-text-secondary);
 }
 
 /* Safe area for iOS devices */

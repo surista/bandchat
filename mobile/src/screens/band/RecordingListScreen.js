@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { Audio } from 'expo-av';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useTheme } from '../../context/ThemeContext';
 import formatDate from '../../utils/formatDate';
 import api from '../../services/api';
@@ -110,6 +111,7 @@ export default function RecordingListScreen({ navigation, route }) {
   const { workspaceId } = route.params;
   const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
+  const headerHeight = useHeaderHeight();
 
   const [recordings, setRecordings] = useState([]);
   const [songs, setSongs] = useState([]);
@@ -280,7 +282,7 @@ export default function RecordingListScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
       <View style={[styles.searchBar, { borderBottomColor: colors.border }]}>
         <TextInput
           style={[styles.searchInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary }]}
@@ -313,7 +315,7 @@ export default function RecordingListScreen({ navigation, route }) {
           >
             <Text style={[
               styles.filterChipText,
-              { color: typeFilter === f.key ? '#ffffff' : colors.textSecondary },
+              { color: typeFilter === f.key ? colors.primaryText : colors.textSecondary },
             ]}>
               {f.label}
             </Text>
@@ -340,7 +342,7 @@ export default function RecordingListScreen({ navigation, route }) {
           >
             <Text style={[
               styles.filterChipText,
-              { color: songFilter === 'all' ? '#ffffff' : colors.textSecondary },
+              { color: songFilter === 'all' ? colors.primaryText : colors.textSecondary },
             ]}>
               All Songs
             </Text>
@@ -360,7 +362,7 @@ export default function RecordingListScreen({ navigation, route }) {
               <Text
                 style={[
                   styles.filterChipText,
-                  { color: songFilter === s.id ? '#ffffff' : colors.textSecondary },
+                  { color: songFilter === s.id ? colors.primaryText : colors.textSecondary },
                 ]}
                 numberOfLines={1}
               >
@@ -375,6 +377,8 @@ export default function RecordingListScreen({ navigation, route }) {
         data={filteredRecordings}
         keyExtractor={(item) => item.id}
         renderItem={renderRecording}
+        removeClippedSubviews={Platform.OS === 'android'}
+        windowSize={10}
         contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl
@@ -399,7 +403,7 @@ export default function RecordingListScreen({ navigation, route }) {
       </KeyboardAvoidingView>
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => setShowActions(false)}>
+      <Modal visible={showActions} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowActions(false)}>
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
@@ -416,7 +420,7 @@ export default function RecordingListScreen({ navigation, route }) {
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionItem, styles.actionCancel]}
+              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedRecording(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"

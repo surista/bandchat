@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +17,7 @@ import ErrorState from '../../components/ErrorState';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
+import PressableRow from '../../components/PressableRow';
 
 export default function VenuesScreen({ navigation, route }) {
   const { workspaceId } = route.params;
@@ -45,6 +47,14 @@ export default function VenuesScreen({ navigation, route }) {
           <Ionicons name="add" size={28} color={colors.primary} />
         </TouchableOpacity>
       ),
+      ...(Platform.OS === 'ios' ? {
+        headerSearchBarOptions: {
+          placeholder: 'Search venues',
+          hideWhenScrolling: false,
+          onChangeText: (e) => setSearch(e.nativeEvent.text),
+          onCancelButtonPress: () => setSearch(''),
+        },
+      } : {}),
     });
   }, [navigation, colors.primary, workspaceId]);
 
@@ -112,10 +122,9 @@ export default function VenuesScreen({ navigation, route }) {
     const gigCount = item._count?.gigs || 0;
 
     return (
-      <TouchableOpacity
+      <PressableRow
         style={[styles.venueCard, { backgroundColor: colors.bgSecondary }]}
         onPress={() => navigation.navigate('VenueDetail', { venueId: item.id, workspaceId })}
-        activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={`${item.name}${item.city ? `, ${item.city}` : ''}`}
         accessibilityHint="View venue details"
@@ -156,7 +165,7 @@ export default function VenuesScreen({ navigation, route }) {
             </Text>
           </View>
         )}
-      </TouchableOpacity>
+      </PressableRow>
     );
   }, [colors, navigation, workspaceId]);
 
@@ -184,8 +193,8 @@ export default function VenuesScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-      {/* Search bar */}
-      {venues.length > 0 && (
+      {/* Search bar (Android only — iOS uses native headerSearchBarOptions) */}
+      {Platform.OS !== 'ios' && venues.length > 0 && (
         <View style={[styles.searchContainer, { borderBottomColor: colors.border }]}>
           <View style={[styles.searchBar, { backgroundColor: colors.bgTertiary }]}>
             <Ionicons name="search" size={18} color={colors.textSecondary} />

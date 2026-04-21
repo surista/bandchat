@@ -5,48 +5,73 @@ const RECENT_EMOJIS_KEY = 'recentEmojis';
 const MAX_RECENT_EMOJIS = 20;
 const OFFLINE_QUEUE_KEY = 'offlineMessageQueue';
 
+const FALLBACK_PREFIX = '__fallback_';
+
 /**
- * Storage service with error tracking for secure token persistence.
- * Uses expo-secure-store for encrypted storage on device.
+ * Storage service with error tracking and AsyncStorage fallback for token persistence.
+ * Primary: expo-secure-store (encrypted). Fallback: AsyncStorage (if SecureStore fails
+ * under memory pressure on Android).
  */
 const storage = {
-  /** Track if we've had a storage failure (for diagnostic purposes) */
   _lastError: null,
 
   async getItem(key) {
     try {
-      return await SecureStore.getItemAsync(key);
+      const value = await SecureStore.getItemAsync(key);
+      if (value !== null) return value;
     } catch (error) {
       this._lastError = { operation: 'get', key, error: error.message, timestamp: Date.now() };
+    }
+    // Fallback: check AsyncStorage
+    try {
+      return await AsyncStorage.getItem(FALLBACK_PREFIX + key);
+    } catch {
       return null;
     }
   },
 
   /**
-   * Store a value securely. Returns true on success, false on failure.
-   * Important: Token storage failures can cause re-login loops.
+   * Store a value securely. Falls back to AsyncStorage if SecureStore fails.
+   * Returns true if stored in at least one location.
    */
   async setItem(key, value) {
+    let secureOk = false;
     try {
       await SecureStore.setItemAsync(key, value);
-      return true;
+      secureOk = true;
+      // Clean up fallback if secure store succeeds
+      AsyncStorage.removeItem(FALLBACK_PREFIX + key).catch(() => {});
     } catch (error) {
       this._lastError = { operation: 'set', key, error: error.message, timestamp: Date.now() };
-      return false;
     }
+
+    if (!secureOk) {
+      // Fallback to AsyncStorage so tokens survive process kill
+      try {
+        await AsyncStorage.setItem(FALLBACK_PREFIX + key, value);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    return true;
   },
 
   async removeItem(key) {
+    let ok = false;
     try {
       await SecureStore.deleteItemAsync(key);
-      return true;
+      ok = true;
     } catch (error) {
       this._lastError = { operation: 'remove', key, error: error.message, timestamp: Date.now() };
-      return false;
     }
+    try {
+      await AsyncStorage.removeItem(FALLBACK_PREFIX + key);
+      ok = true;
+    } catch {}
+    return ok;
   },
 
-  /** Get the last storage error for diagnostics */
   getLastError() {
     return this._lastError;
   },

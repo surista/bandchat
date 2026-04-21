@@ -15,6 +15,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -27,6 +28,7 @@ export default function ChannelSettingsScreen({ navigation, route }) {
   const { user } = useAuth()
   const { isTablet, contentMaxWidth } = useLayout();
   const { colors } = useTheme();
+  const headerHeight = useHeaderHeight();
 
   const [channelData, setChannelData] = useState(channel);
   const [channelMembers, setChannelMembers] = useState([]);
@@ -210,8 +212,8 @@ export default function ChannelSettingsScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardDismissMode="on-drag">
         {/* Channel Info Card */}
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
           <View style={styles.channelIconRow}>
@@ -237,9 +239,9 @@ export default function ChannelSettingsScreen({ navigation, route }) {
                     disabled={saving}
                   >
                     {saving ? (
-                      <ActivityIndicator size="small" color="#ffffff" />
+                      <ActivityIndicator size="small" color={colors.primaryText} />
                     ) : (
-                      <Text style={styles.editNameButtonText}>Save</Text>
+                      <Text style={[styles.editNameButtonText, { color: colors.primaryText }]}>Save</Text>
                     )}
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -373,7 +375,7 @@ export default function ChannelSettingsScreen({ navigation, route }) {
       </KeyboardAvoidingView>
 
       {/* Add Member Modal */}
-      <Modal visible={showAddMember} transparent animationType="fade" onRequestClose={() => setShowAddMember(false)}>
+      <Modal visible={showAddMember} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowAddMember(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Add Member</Text>

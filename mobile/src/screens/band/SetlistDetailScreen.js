@@ -384,35 +384,48 @@ export default function SetlistDetailScreen({ navigation, route }) {
       if (s.type === 'SONG' || (!s.type && s.song)) songNumber++;
     }
 
+    const songRow = (
+      <View style={[styles.itemRow, { backgroundColor: colors.bgSecondary }]} accessible accessibilityLabel={`${songNumber}. ${item.song?.title || 'Unknown'}${item.song?.artist ? ` by ${item.song.artist}` : ''}`} accessibilityHint={editing ? 'Drag to reorder' : 'Tap to view song details'}>
+        <Text style={[styles.songNumber, { color: colors.textSecondary }]}>{songNumber}</Text>
+        <View style={styles.itemContent}>
+          <Text style={[styles.songTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+            {item.song?.title || 'Unknown'}
+          </Text>
+          {item.song?.artist ? (
+            <Text style={[styles.songArtist, { color: colors.textSecondary }]} numberOfLines={1}>
+              {item.song.artist}
+            </Text>
+          ) : null}
+        </View>
+        {item.song?.key ? (
+          <Badge label={item.song.key} color={colors.badgeKey} bgColor={colors.badgeKeyBg} />
+        ) : null}
+        {item.song?.duration ? (
+          <Text style={[styles.itemDuration, { color: colors.textSecondary }]}>
+            {formatDuration(item.song.duration)}
+          </Text>
+        ) : null}
+        {editing ? (
+          <TouchableOpacity onPress={() => removeItem(item)} style={styles.removeButton} accessibilityRole="button" accessibilityLabel={`Remove ${item.song?.title || 'song'}`}>
+            <Text style={styles.removeText}>{'\u2715'}</Text>
+          </TouchableOpacity>
+        ) : (
+          <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} style={{ opacity: 0.4, marginLeft: 4 }} />
+        )}
+      </View>
+    );
+
     return (
       <>
         {!isDragItem && setHeader}
-        <View style={[styles.itemRow, { backgroundColor: colors.bgSecondary }]} accessible accessibilityLabel={`${songNumber}. ${item.song?.title || 'Unknown'}${item.song?.artist ? ` by ${item.song.artist}` : ''}`} accessibilityHint={editing ? 'Drag to reorder' : undefined}>
-          <Text style={[styles.songNumber, { color: colors.textSecondary }]}>{songNumber}</Text>
-          <View style={styles.itemContent}>
-            <Text style={[styles.songTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-              {item.song?.title || 'Unknown'}
-            </Text>
-            {item.song?.artist ? (
-              <Text style={[styles.songArtist, { color: colors.textSecondary }]} numberOfLines={1}>
-                {item.song.artist}
-              </Text>
-            ) : null}
-          </View>
-          {item.song?.key ? (
-            <Badge label={item.song.key} color={colors.badgeKey} bgColor={colors.badgeKeyBg} />
-          ) : null}
-          {item.song?.duration ? (
-            <Text style={[styles.itemDuration, { color: colors.textSecondary }]}>
-              {formatDuration(item.song.duration)}
-            </Text>
-          ) : null}
-          {editing && (
-            <TouchableOpacity onPress={() => removeItem(item)} style={styles.removeButton} accessibilityRole="button" accessibilityLabel={`Remove ${item.song?.title || 'song'}`}>
-              <Text style={styles.removeText}>{'\u2715'}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        {editing ? songRow : (
+          <TouchableOpacity
+            activeOpacity={0.6}
+            onPress={() => item.song?.id && navigation.navigate('SongDetail', { songId: item.song.id, workspaceId })}
+          >
+            {songRow}
+          </TouchableOpacity>
+        )}
       </>
     );
   }, [colors, editing, items, removeItem]);
@@ -539,12 +552,12 @@ export default function SetlistDetailScreen({ navigation, route }) {
                 Switch to edit mode to add songs
               </Text>
               <TouchableOpacity
-                style={styles.emptyButton}
+                style={[styles.emptyButton, { backgroundColor: colors.primary }]}
                 onPress={() => { setEditing(true); openSongPicker(); }}
                 accessibilityRole="button"
                 accessibilityLabel="Add song to setlist"
               >
-                <Text style={styles.emptyButtonText}>+ Add Song</Text>
+                <Text style={[styles.emptyButtonText, { color: colors.primaryText }]}>+ Add Song</Text>
               </TouchableOpacity>
             </View>
           }
@@ -594,6 +607,9 @@ export default function SetlistDetailScreen({ navigation, route }) {
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
               contentContainerStyle={{ paddingBottom: 120 }}
+              maxToRenderPerBatch={15}
+              windowSize={10}
+              removeClippedSubviews={Platform.OS === 'android'}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.pickerItem, { borderBottomColor: colors.border }]}
@@ -633,7 +649,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
       </Modal>
 
       {/* Performer Picker Modal */}
-      <Modal visible={showPerformerPicker} transparent animationType="fade" onRequestClose={() => setShowPerformerPicker(false)}>
+      <Modal visible={showPerformerPicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowPerformerPicker(false)}>
         <View style={styles.detailsOverlay}>
           <View style={[styles.detailsContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.detailsTitle, { color: colors.textPrimary }]} accessibilityRole="header">Select Performers</Text>
@@ -650,7 +666,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
                     accessibilityLabel={`${member.name}${selected ? ', selected' : ''}`}
                   >
                     <View style={[styles.performerCheckbox, { borderColor: colors.border, backgroundColor: selected ? colors.primary : 'transparent' }]}>
-                      {selected && <Text style={styles.performerCheckmark}>{'\u2713'}</Text>}
+                      {selected && <Text style={[styles.performerCheckmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
                     </View>
                     <Text style={[styles.performerPickerName, { color: colors.textPrimary }]}>{member.name}</Text>
                     {member.instruments && member.instruments.length > 0 && (
@@ -684,9 +700,9 @@ export default function SetlistDetailScreen({ navigation, route }) {
                 accessibilityLabel="Save performers"
               >
                 {savingPerformers ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.detailsButtonTextWhite}>Save</Text>
+                  <Text style={[styles.detailsButtonTextWhite, { color: colors.primaryText }]}>Save</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -695,9 +711,9 @@ export default function SetlistDetailScreen({ navigation, route }) {
       </Modal>
 
       {/* Edit Details Modal */}
-      <Modal visible={showEditDetails} transparent animationType="fade" onRequestClose={() => setShowEditDetails(false)}>
+      <Modal visible={showEditDetails} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowEditDetails(false)}>
         <View style={styles.detailsOverlay}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <KeyboardAvoidingView behavior="padding">
             <View style={[styles.detailsContent, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.detailsTitle, { color: colors.textPrimary }]} accessibilityRole="header">Edit Details</Text>
               <Text style={[styles.detailsLabel, { color: colors.textSecondary }]}>Name</Text>
@@ -734,9 +750,9 @@ export default function SetlistDetailScreen({ navigation, route }) {
                   accessibilityLabel="Save details"
                 >
                   {savingDetails ? (
-                    <ActivityIndicator color="#ffffff" size="small" />
+                    <ActivityIndicator color={colors.primaryText} size="small" />
                   ) : (
-                    <Text style={styles.detailsButtonTextWhite}>Save</Text>
+                    <Text style={[styles.detailsButtonTextWhite, { color: colors.primaryText }]}>Save</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -907,7 +923,7 @@ const styles = StyleSheet.create({
   noPerformers: { fontSize: 13 },
   performerPickerRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 8, borderRadius: 8, gap: 10 },
   performerCheckbox: { width: 22, height: 22, borderRadius: 4, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
-  performerCheckmark: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  performerCheckmark: { fontSize: 14, fontWeight: '700' },
   performerPickerName: { fontSize: 15, fontWeight: '600', flex: 1 },
   performerInstrument: { fontSize: 13 },
 });

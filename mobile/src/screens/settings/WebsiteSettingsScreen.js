@@ -12,11 +12,13 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { prepareImageForUpload } from '../../utils/prepareImageUpload';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useTheme } from '../../context/ThemeContext';
 import { useLayout } from '../../hooks/useLayout';
 import { successNotification } from '../../utils/haptics';
@@ -40,6 +42,7 @@ export default function WebsiteSettingsScreen({ route }) {
   const { workspaceId, workspaceName } = route.params;
   const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
+  const headerHeight = useHeaderHeight();
 
   const [loading, setLoading] = useState(true);
   const [deploying, setDeploying] = useState(false);
@@ -242,7 +245,7 @@ export default function WebsiteSettingsScreen({ route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
           {/* Status card */}
           {isDeployed && (
@@ -366,7 +369,7 @@ export default function WebsiteSettingsScreen({ route }) {
             <Text style={[styles.label, { color: colors.textSecondary }]}>Logo</Text>
             {logoUrl ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <Image source={{ uri: logoUrl }} style={{ width: 72, height: 72, borderRadius: 8, backgroundColor: colors.bgTertiary }} resizeMode="contain" />
+                <Image source={{ uri: logoUrl }} style={{ width: 72, height: 72, borderRadius: 8, backgroundColor: colors.bgTertiary }} contentFit="contain" />
                 <TouchableOpacity onPress={() => setLogoUrl('')} style={{ backgroundColor: 'rgba(239,68,68,0.15)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}>
                   <Text style={{ color: '#ef4444', fontSize: 14, fontWeight: '600' }}>Remove</Text>
                 </TouchableOpacity>
@@ -380,11 +383,13 @@ export default function WebsiteSettingsScreen({ route }) {
                   if (result.canceled) return;
                   setLogoUploading(true);
                   try {
-                    const asset = result.assets[0];
-                    const formData = new FormData();
-                    formData.append('file', { uri: asset.uri, name: 'logo.jpg', type: 'image/jpeg' });
-                    formData.append('workspaceId', workspaceId);
-                    const uploaded = await api.uploadFile(formData, workspaceId);
+                    const asset = await prepareImageForUpload(result.assets[0]);
+                    const uploaded = await api.uploadFile(
+                      asset.uri,
+                      asset.fileName || 'logo.jpg',
+                      asset.mimeType || 'image/jpeg',
+                      workspaceId
+                    );
                     setLogoUrl(uploaded.url);
                   } catch { Alert.alert('Error', 'Failed to upload logo'); }
                   finally { setLogoUploading(false); }
@@ -398,7 +403,7 @@ export default function WebsiteSettingsScreen({ route }) {
             <Text style={[styles.label, { color: colors.textSecondary }]}>Hero Image</Text>
             {heroImageUrl ? (
               <View style={{ gap: 8 }}>
-                <Image source={{ uri: heroImageUrl }} style={{ width: '100%', height: 100, borderRadius: 8 }} resizeMode="cover" />
+                <Image source={{ uri: heroImageUrl }} style={{ width: '100%', height: 100, borderRadius: 8 }} contentFit="cover" />
                 <TouchableOpacity onPress={() => setHeroImageUrl('')} style={{ backgroundColor: 'rgba(239,68,68,0.15)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, alignSelf: 'flex-start' }}>
                   <Text style={{ color: '#ef4444', fontSize: 14, fontWeight: '600' }}>Remove</Text>
                 </TouchableOpacity>
@@ -412,11 +417,13 @@ export default function WebsiteSettingsScreen({ route }) {
                   if (result.canceled) return;
                   setHeroUploading(true);
                   try {
-                    const asset = result.assets[0];
-                    const formData = new FormData();
-                    formData.append('file', { uri: asset.uri, name: 'hero.jpg', type: 'image/jpeg' });
-                    formData.append('workspaceId', workspaceId);
-                    const uploaded = await api.uploadFile(formData, workspaceId);
+                    const asset = await prepareImageForUpload(result.assets[0]);
+                    const uploaded = await api.uploadFile(
+                      asset.uri,
+                      asset.fileName || 'hero.jpg',
+                      asset.mimeType || 'image/jpeg',
+                      workspaceId
+                    );
                     setHeroImageUrl(uploaded.url);
                   } catch { Alert.alert('Error', 'Failed to upload hero image'); }
                   finally { setHeroUploading(false); }
@@ -480,7 +487,7 @@ export default function WebsiteSettingsScreen({ route }) {
             {isDeployed ? (
               <>
                 <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: colors.primary }, (!bandName.trim() || savingConfig) && { opacity: 0.5 }]} onPress={handleSaveConfig} disabled={savingConfig || !bandName.trim()}>
-                  {savingConfig ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.primaryBtnText}>Save Config</Text>}
+                  {savingConfig ? <ActivityIndicator color={colors.primaryText} size="small" /> : <Text style={[styles.primaryBtnText, { color: colors.primaryText }]}>Save Config</Text>}
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: colors.bgTertiary }, (!bandName.trim() || deploying) && { opacity: 0.5 }]} onPress={handleDeploy} disabled={deploying || !bandName.trim()}>
                   {deploying ? <ActivityIndicator color={colors.textPrimary} size="small" /> : <Text style={[styles.primaryBtnText, { color: colors.textPrimary }]}>Save & Redeploy</Text>}

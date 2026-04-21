@@ -17,6 +17,7 @@ import api from '../../services/api';
 import ErrorState from '../../components/ErrorState';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import { useLayout } from '../../hooks/useLayout';
+import PressableRow from '../../components/PressableRow';
 
 const TABS = ['band', 'my', 'leaderboard'];
 const TAB_LABELS = { band: 'Band', my: 'My Badges', leaderboard: 'Leaderboard' };
@@ -240,11 +241,10 @@ export default function AchievementsScreen({ navigation, route }) {
         {/* Tabs */}
         <View style={styles.tabRow}>
           {TABS.map(tab => (
-            <TouchableOpacity
+            <PressableRow
               key={tab}
               style={[styles.tab, activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
               onPress={() => setActiveTab(tab)}
-              activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel={`${TAB_LABELS[tab]} tab`}
             >
@@ -253,7 +253,7 @@ export default function AchievementsScreen({ navigation, route }) {
                 {tab === 'band' ? ` (${bandEarnedCount}/${bandDefinitions.length})` : ''}
                 {tab === 'my' ? ` (${myEarnedCount}/${memberDefinitions.length})` : ''}
               </Text>
-            </TouchableOpacity>
+            </PressableRow>
           ))}
         </View>
 

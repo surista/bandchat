@@ -11,8 +11,10 @@ import {
   Platform,
   useWindowDimensions,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../context/ThemeContext';
 import { formatDuration } from '../../utils/formatDuration';
 
 export default function LiveModeScreen({ navigation, route }) {
@@ -20,6 +22,7 @@ export default function LiveModeScreen({ navigation, route }) {
   const { setlistItems, setlistName } = route.params;
   useKeepAwake();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [autoAdvance, setAutoAdvance] = useState(false);
@@ -108,7 +111,7 @@ export default function LiveModeScreen({ navigation, route }) {
       return (
         <View style={[styles.page, { width: screenWidth }]}>
           <View style={styles.breakContainer}>
-            <Text style={styles.breakIcon}>&#9835;</Text>
+            <Ionicons name="musical-note" size={48} color="rgba(255,255,255,0.3)" style={{ marginBottom: 16 }} />
             <Text style={styles.breakLabel}>{item.label || 'Break'}</Text>
             {item.duration ? (
               <Text style={styles.breakDuration}>{formatDuration(item.duration)}</Text>
@@ -122,7 +125,7 @@ export default function LiveModeScreen({ navigation, route }) {
       return (
         <View style={[styles.page, { width: screenWidth }]}>
           <View style={styles.breakContainer}>
-            <Text style={styles.mcIcon}>{'\uD83C\uDFA4'}</Text>
+            <Ionicons name="mic" size={48} color="rgba(255,255,255,0.3)" style={{ marginBottom: 16 }} />
             <Text style={styles.breakLabel}>{item.label || 'MC'}</Text>
             {item.duration ? (
               <Text style={styles.breakDuration}>{formatDuration(item.duration)}</Text>
@@ -143,18 +146,18 @@ export default function LiveModeScreen({ navigation, route }) {
           ) : null}
           <View style={styles.badgeRow}>
             {song?.key ? (
-              <View style={[styles.badge, { backgroundColor: 'rgba(192,132,252,0.2)' }]}>
-                <Text style={[styles.badgeText, { color: '#c084fc' }]}>{song.key}</Text>
+              <View style={[styles.badge, { backgroundColor: colors.badgeKeyBg }]}>
+                <Text style={[styles.badgeText, { color: colors.badgeKey }]}>{song.key}</Text>
               </View>
             ) : null}
             {song?.bpm ? (
-              <View style={[styles.badge, { backgroundColor: 'rgba(96,165,250,0.2)' }]}>
-                <Text style={[styles.badgeText, { color: '#60a5fa' }]}>{song.bpm} BPM</Text>
+              <View style={[styles.badge, { backgroundColor: colors.badgeBpmBg }]}>
+                <Text style={[styles.badgeText, { color: colors.badgeBpm }]}>{song.bpm} BPM</Text>
               </View>
             ) : null}
             {song?.duration ? (
-              <View style={[styles.badge, { backgroundColor: 'rgba(156,163,175,0.2)' }]}>
-                <Text style={[styles.badgeText, { color: '#9ca3af' }]}>{formatDuration(song.duration)}</Text>
+              <View style={[styles.badge, { backgroundColor: colors.badgeDurationBg }]}>
+                <Text style={[styles.badgeText, { color: colors.badgeDuration }]}>{formatDuration(song.duration)}</Text>
               </View>
             ) : null}
           </View>
@@ -187,7 +190,7 @@ export default function LiveModeScreen({ navigation, route }) {
         accessibilityRole="button"
         accessibilityLabel="Close live mode"
       >
-        <Text style={styles.closeText}>{'\u2715'}</Text>
+        <Ionicons name="close" size={20} color="#ffffff" />
       </TouchableOpacity>
 
       {/* Auto-advance toggle */}
@@ -255,11 +258,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  closeText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '600',
   },
   autoButton: {
     position: 'absolute',
@@ -356,15 +354,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  breakIcon: {
-    fontSize: 48,
-    color: 'rgba(255,255,255,0.3)',
-    marginBottom: 16,
-  },
-  mcIcon: {
-    fontSize: 48,
-    marginBottom: 16,
   },
   breakLabel: {
     color: '#ffffff',

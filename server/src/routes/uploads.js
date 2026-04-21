@@ -51,8 +51,14 @@ const uploadLimiter = rateLimit({
   keyGenerator: (req) => req.user?.id || req.ip,
 });
 
-// Allowed MIME types (validated by magic bytes)
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+// Allowed MIME types (validated by magic bytes).
+// HEIC/HEIF accepted as a fallback for iPhone clients that skip on-device
+// transcoding — sharp re-encodes the thumbnail as JPEG when libvips has
+// libheif support; otherwise the original HEIC is served and clients that
+// can render it will (iOS Safari, modern Chrome on macOS). Legacy web
+// browsers that can't render HEIC will see a broken image, so clients
+// should still transcode before upload when possible.
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'];
 const ALLOWED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/aac', 'audio/m4a', 'audio/x-m4a', 'audio/mp4'];
 const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo', 'video/x-matroska'];
 const ALLOWED_DOCUMENT_TYPES = ['application/pdf', 'application/zip'];

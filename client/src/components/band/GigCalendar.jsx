@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, subDays, addDays, isToday, parseISO } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
 import useIsAdmin from '../../hooks/useIsAdmin';
@@ -14,8 +15,9 @@ import ErrorMessage from '../common/ErrorMessage';
 import { getCurrencySymbol } from '../../utils/currencies';
 
 // Compact single-line row for list view
-function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, onDelete, onContextMenu, workspace }) {
-  const canEdit = !gig.isExternal && (!gig.isLocked || isAdmin);
+function GigCompactRow({ gig, isAdmin, currentUserId, getTypeColor, formatTimeRange, onEdit, onDelete, onContextMenu, workspace, hasConflict }) {
+  const isCreator = !!currentUserId && gig.createdById === currentUserId;
+  const canEdit = !gig.isExternal && (isAdmin || (isCreator && !gig.isLocked));
   const longPress = useLongPress({
     onLongPress: (pos) => onContextMenu(pos),
     onTap: !gig.isExternal ? onEdit : undefined, // Always open for viewing (GigForm shows read-only for locked)
@@ -83,6 +85,22 @@ function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, on
         </div>
       )}
 
+      {/* Conflict indicator */}
+      {hasConflict && (
+        <span className="shrink-0 text-yellow-500 text-sm" role="img" aria-label="Scheduling conflict" title="Scheduling conflict with another band">⚠</span>
+      )}
+
+      {/* Comment count */}
+      {gig._count?.comments > 0 && (
+        <span
+          className="shrink-0 text-xs text-[var(--color-text-muted)] flex items-center gap-0.5"
+          title={`${gig._count.comments} comment${gig._count.comments === 1 ? '' : 's'}`}
+          aria-label={`${gig._count.comments} comment${gig._count.comments === 1 ? '' : 's'}`}
+        >
+          💬<span>{gig._count.comments}</span>
+        </span>
+      )}
+
       {/* Venue */}
       <div className="shrink-0 max-w-[8rem] text-sm text-[var(--color-text-muted)] truncate hidden md:block">
         {gig.venue || '—'}
@@ -122,9 +140,10 @@ function GigCompactRow({ gig, isAdmin, getTypeColor, formatTimeRange, onEdit, on
   );
 }
 
-function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRange, formatDateRange, onEdit, onDuplicate, onComplete, onDelete, onContextMenu, getGoogleCalendarUrl }) {
+function GigListCard({ gig, isAdmin, currentUserId, getTypeColor, getStatusBadge, formatTimeRange, formatDateRange, onEdit, onDuplicate, onComplete, onDelete, onContextMenu, getGoogleCalendarUrl }) {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const canEdit = !gig.isExternal && (!gig.isLocked || isAdmin);
+  const isCreator = !!currentUserId && gig.createdById === currentUserId;
+  const canEdit = !gig.isExternal && (isAdmin || (isCreator && !gig.isLocked));
   const longPress = useLongPress({
     onLongPress: (pos) => onContextMenu(pos),
     onTap: !gig.isExternal ? onEdit : undefined, // Always open for viewing (GigForm shows read-only for locked)
@@ -254,6 +273,15 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
             <p className="text-[var(--color-text-muted)] text-sm mt-2 italic">{gig.notes}</p>
           )}
 
+          {gig._count?.comments > 0 && (
+            <p
+              className="text-[var(--color-text-muted)] text-sm mt-1"
+              aria-label={`${gig._count.comments} comment${gig._count.comments === 1 ? '' : 's'}`}
+            >
+              💬 {gig._count.comments} {gig._count.comments === 1 ? 'comment' : 'comments'}
+            </p>
+          )}
+
           {gig.media?.length > 0 && (
             <div className="flex items-center gap-1.5 mt-2 flex-wrap">
               {(() => {
@@ -316,6 +344,7 @@ function GigListCard({ gig, isAdmin, getTypeColor, getStatusBadge, formatTimeRan
 
 function GigCalendar({ workspaceId, workspace, focusGigId }) {
   const { user } = useAuth();
+  const { socket } = useSocket();
   const toast = useToast();
 
   const isAdmin = useIsAdmin(workspace);
@@ -359,6 +388,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
   const [availabilityDate, setAvailabilityDate] = useState(null); // For setting my availability
   const [savingAvailability, setSavingAvailability] = useState(false);
   const [editingAvailability, setEditingAvailability] = useState(false); // Edit mode for click-to-set
+  const [myConflicts, setMyConflicts] = useState([]); // Cross-workspace scheduling conflicts
 
   // iCal subscribe
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
@@ -376,7 +406,16 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
 
   useEffect(() => {
     loadData();
+    loadConflicts();
   }, [workspaceId]);
+
+  // Refresh conflicts when another workspace's gig changes affect this user
+  useEffect(() => {
+    if (!socket) return;
+    const handler = () => loadConflicts();
+    socket.on('calendar:conflictsChanged', handler);
+    return () => socket.off('calendar:conflictsChanged', handler);
+  }, [socket]);
 
   // Persist calendar month to localStorage
   useEffect(() => {
@@ -473,6 +512,15 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
     }
   };
 
+  const loadConflicts = async () => {
+    try {
+      const data = await api.getMyConflicts();
+      setMyConflicts(data.conflicts || []);
+    } catch (err) {
+      console.error('Failed to load conflicts:', err);
+    }
+  };
+
   const handleSaveGig = async (gigData) => {
     try {
       if (editingGig) {
@@ -485,6 +533,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
       setShowForm(false);
       setEditingGig(null);
       setSelectedDate(null);
+      loadConflicts();
     } catch (err) {
       throw err;
     }
@@ -495,6 +544,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
       await api.deleteGig(gigId);
       setGigs(prev => prev.filter(g => g.id !== gigId));
       setDeleteGigId(null);
+      loadConflicts();
     } catch (err) {
       setError(err.message);
       setDeleteGigId(null);
@@ -947,6 +997,17 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
     return `https://calendar.google.com/calendar/render?${params.toString()}`;
   };
 
+  // Build set of gig IDs that have scheduling conflicts
+  const conflictGigIds = useMemo(() => {
+    const ids = new Set();
+    for (const c of myConflicts) {
+      for (const g of c.gigs) {
+        ids.add(g.gigId);
+      }
+    }
+    return ids;
+  }, [myConflicts]);
+
   // Color palettes for other bands (each band gets a unique color family)
   const externalColorPalettes = [
     { gig: 'bg-purple-600', rehearsal: 'bg-purple-400', other: 'bg-purple-500' },
@@ -1296,7 +1357,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                     </div>
                     <div className="space-y-1">
                       {filteredDayGigs.slice(0, 3).map(gig => {
-                        const canDrag = !gig.isExternal && (!gig.isLocked || isAdmin);
+                        const canDrag = !gig.isExternal && (isAdmin || (gig.createdById === user?.id && !gig.isLocked));
                         return (
                         <div
                           key={gig.id}
@@ -1333,6 +1394,9 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                             })()} </span>
                             {gig.title}
                           </span>
+                          {conflictGigIds.has(gig.id) && (
+                            <span className="flex-shrink-0 text-yellow-300" role="img" aria-label="Scheduling conflict" title="Scheduling conflict with another band">⚠</span>
+                          )}
                           {gig.media?.length > 0 && (
                             <span className="flex-shrink-0 flex gap-0.5 text-xs" role="img" aria-label={`${gig.media.length} attachment${gig.media.length > 1 ? 's' : ''}`}>
                               {gig.media.some(m => m.type === 'image') && <span title="Photos">📷</span>}
@@ -1415,12 +1479,14 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                           key={gig.id}
                           gig={gig}
                           isAdmin={isAdmin}
+                          currentUserId={user?.id}
                           getTypeColor={getTypeColor}
                           formatTimeRange={formatTimeRange}
                           onEdit={() => { setEditingGig(gig); setShowForm(true); }}
                           onDelete={() => setDeleteGigId(gig.id)}
                           onContextMenu={(pos) => setGigContextMenu({ gigId: gig.id, ...pos })}
                           workspace={workspace}
+                          hasConflict={conflictGigIds.has(gig.id)}
                         />
                       ))}
                     </>
@@ -1430,6 +1496,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                         key={gig.id}
                         gig={gig}
                         isAdmin={isAdmin}
+                        currentUserId={user?.id}
                         getTypeColor={getTypeColor}
                         getStatusBadge={getStatusBadge}
                         formatTimeRange={formatTimeRange}
@@ -1467,12 +1534,14 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                           key={gig.id}
                           gig={gig}
                           isAdmin={isAdmin}
+                          currentUserId={user?.id}
                           getTypeColor={getTypeColor}
                           formatTimeRange={formatTimeRange}
                           onEdit={() => { setEditingGig(gig); setShowForm(true); }}
                           onDelete={() => setDeleteGigId(gig.id)}
                           onContextMenu={(pos) => setGigContextMenu({ gigId: gig.id, ...pos })}
                           workspace={workspace}
+                          hasConflict={conflictGigIds.has(gig.id)}
                         />
                       ))}
                     </>
@@ -1482,6 +1551,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
                         key={gig.id}
                         gig={gig}
                         isAdmin={isAdmin}
+                        currentUserId={user?.id}
                         getTypeColor={getTypeColor}
                         getStatusBadge={getStatusBadge}
                         formatTimeRange={formatTimeRange}
@@ -1577,7 +1647,8 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
         items={(() => {
           const gig = allGigs.find(g => g.id === gigContextMenu?.gigId);
           if (!gig) return [];
-          const canEdit = !gig.isExternal && (!gig.isLocked || isAdmin);
+          const isCreator = !!user?.id && gig.createdById === user.id;
+          const canEdit = !gig.isExternal && (isAdmin || (isCreator && !gig.isLocked));
           return [
             { label: 'Edit', icon: '✏️', onClick: () => { setEditingGig(gig); setShowForm(true); }, show: canEdit },
             { label: 'Duplicate to Today', icon: '📋', onClick: () => handleDuplicateGig(gig), show: !gig.isExternal },

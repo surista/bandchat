@@ -1,26 +1,37 @@
 import { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Animated, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from './ThemeContext';
 
 const ToastContext = createContext(null);
 
 let toastId = 0;
 
 const TOAST_COLORS = {
-  success: { bg: '#065f46', border: '#10b981' },
-  error: { bg: '#7f1d1d', border: '#ef4444' },
-  warning: { bg: '#78350f', border: '#f59e0b' },
-  info: { bg: '#1e3a5f', border: '#3b82f6' },
+  dark: {
+    success: { bg: '#065f46', border: '#10b981', text: '#ffffff', icon: '#ffffff', close: '#d1d5db' },
+    error: { bg: '#7f1d1d', border: '#ef4444', text: '#ffffff', icon: '#ffffff', close: '#d1d5db' },
+    warning: { bg: '#78350f', border: '#f59e0b', text: '#ffffff', icon: '#ffffff', close: '#d1d5db' },
+    info: { bg: '#1e3a5f', border: '#3b82f6', text: '#ffffff', icon: '#ffffff', close: '#d1d5db' },
+  },
+  light: {
+    success: { bg: '#ecfdf5', border: '#10b981', text: '#064e3b', icon: '#059669', close: '#6b7280' },
+    error: { bg: '#fef2f2', border: '#ef4444', text: '#7f1d1d', icon: '#dc2626', close: '#6b7280' },
+    warning: { bg: '#fffbeb', border: '#f59e0b', text: '#78350f', icon: '#d97706', close: '#6b7280' },
+    info: { bg: '#eff6ff', border: '#3b82f6', text: '#1e3a8a', icon: '#2563eb', close: '#6b7280' },
+  },
 };
 
 const TOAST_ICONS = {
-  success: '\u2713',
-  error: '\u2715',
-  warning: '!',
-  info: '\u2139',
+  success: 'checkmark-circle',
+  error: 'close-circle',
+  warning: 'warning',
+  info: 'information-circle',
 };
 
 function Toast({ toast: t, onRemove }) {
+  const { mode } = useTheme();
   const translateY = useRef(new Animated.Value(-100)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -57,27 +68,29 @@ function Toast({ toast: t, onRemove }) {
     }
   }, [t.exiting]);
 
-  const colors = TOAST_COLORS[t.type] || TOAST_COLORS.info;
+  const palette = TOAST_COLORS[mode === 'dark' ? 'dark' : 'light'];
+  const c = palette[t.type] || palette.info;
 
   return (
     <Animated.View
       style={[
         styles.toast,
-        { backgroundColor: colors.bg, borderLeftColor: colors.border, transform: [{ translateY }], opacity },
+        { backgroundColor: c.bg, borderLeftColor: c.border, transform: [{ translateY }], opacity },
       ]}
       accessibilityRole="alert"
       accessibilityLiveRegion="polite"
       accessibilityLabel={`${t.type}: ${t.message}`}
     >
-      <Text style={styles.toastIcon} accessibilityElementsHidden>{TOAST_ICONS[t.type] || TOAST_ICONS.info}</Text>
-      <Text style={styles.toastMessage} numberOfLines={3}>{t.message}</Text>
+      <Ionicons name={TOAST_ICONS[t.type] || TOAST_ICONS.info} size={18} color={c.icon} style={styles.toastIcon} accessibilityElementsHidden />
+      <Text style={[styles.toastMessage, { color: c.text }]} numberOfLines={3}>{t.message}</Text>
       <TouchableOpacity
         onPress={() => onRemove(t.id)}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        style={styles.toastCloseButton}
         accessibilityRole="button"
         accessibilityLabel="Dismiss notification"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Text style={styles.toastClose}>\u00d7</Text>
+        <Ionicons name="close" size={16} color={c.close} />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -161,23 +174,19 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   toastIcon: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '700',
     marginRight: 10,
-    width: 20,
-    textAlign: 'center',
   },
   toastMessage: {
     flex: 1,
-    color: '#ffffff',
     fontSize: 14,
+    fontWeight: '500',
   },
-  toastClose: {
-    color: '#9ca3af',
-    fontSize: 20,
-    fontWeight: '700',
-    marginLeft: 10,
-    paddingHorizontal: 4,
+  toastCloseButton: {
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 4,
+    marginRight: -8,
   },
 });

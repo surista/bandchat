@@ -14,8 +14,10 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { prepareImageForUpload } from '../../utils/prepareImageUpload';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
@@ -32,6 +34,7 @@ export default function VenueDetailScreen({ navigation, route }) {
   const { colors } = useTheme();
   const toast = useToast();
   const { isTablet, contentMaxWidth } = useLayout();
+  const headerHeight = useHeaderHeight();
 
   const [venue, setVenue] = useState(null);
   const [loading, setLoading] = useState(!isNew);
@@ -185,7 +188,7 @@ export default function VenueDetailScreen({ navigation, route }) {
       quality: 0.8,
     });
     if (result.canceled) return;
-    const asset = result.assets[0];
+    const asset = await prepareImageForUpload(result.assets[0]);
     setImageUploading(true);
     try {
       const filename = asset.fileName || 'venue.jpg';
@@ -270,11 +273,12 @@ export default function VenueDetailScreen({ navigation, route }) {
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={100}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
       >
         <ScrollView
           contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
           <Text style={[styles.label, { color: colors.textSecondary }]}>Name *</Text>
           <TextInput
@@ -419,9 +423,9 @@ export default function VenueDetailScreen({ navigation, route }) {
               accessibilityLabel={isNew ? 'Create venue' : 'Save venue'}
             >
               {saving ? (
-                <ActivityIndicator color="#ffffff" size="small" />
+                <ActivityIndicator color={colors.primaryText} size="small" />
               ) : (
-                <Text style={styles.formButtonTextWhite}>{isNew ? 'Create' : 'Save'}</Text>
+                <Text style={[styles.formButtonTextWhite, { color: colors.primaryText }]}>{isNew ? 'Create' : 'Save'}</Text>
               )}
             </TouchableOpacity>
           </View>

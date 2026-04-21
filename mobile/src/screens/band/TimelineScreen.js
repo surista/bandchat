@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import ErrorState from '../../components/ErrorState';
@@ -59,6 +60,7 @@ export default function TimelineScreen({ navigation, route }) {
   const { user } = useAuth()
   const { isTablet, contentMaxWidth } = useLayout();
   const { colors, mode } = useTheme();
+  const headerHeight = useHeaderHeight();
 
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -303,7 +305,7 @@ export default function TimelineScreen({ navigation, route }) {
       return (
         <View style={styles.yearRow}>
           <View style={[styles.yearBadge, { backgroundColor: colors.primary }]}>
-            <Text style={styles.yearText}>{item.year}</Text>
+            <Text style={[styles.yearText, { color: colors.primaryText }]}>{item.year}</Text>
           </View>
         </View>
       );
@@ -366,9 +368,9 @@ export default function TimelineScreen({ navigation, route }) {
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={100}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
       >
-        <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
           <Text style={[styles.formTitle, { color: colors.textPrimary }]}>
             {editingEvent ? 'Edit Event' : 'New Event'}
           </Text>
@@ -477,16 +479,16 @@ export default function TimelineScreen({ navigation, route }) {
               accessibilityLabel={editingEvent ? 'Save event' : 'Create event'}
             >
               {saving ? (
-                <ActivityIndicator color="#ffffff" size="small" />
+                <ActivityIndicator color={colors.primaryText} size="small" />
               ) : (
-                <Text style={styles.formButtonTextWhite}>{editingEvent ? 'Save' : 'Create'}</Text>
+                <Text style={[styles.formButtonTextWhite, { color: colors.primaryText }]}>{editingEvent ? 'Save' : 'Create'}</Text>
               )}
             </TouchableOpacity>
           </View>
         </ScrollView>
 
         {/* Type Picker Modal */}
-        <Modal visible={showTypePicker} transparent animationType="fade" onRequestClose={() => setShowTypePicker(false)}>
+        <Modal visible={showTypePicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowTypePicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowTypePicker(false)} accessibilityRole="button" accessibilityLabel="Dismiss event type picker">
             <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Event Type</Text>
@@ -581,7 +583,7 @@ export default function TimelineScreen({ navigation, route }) {
       />
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => setShowActions(false)}>
+      <Modal visible={showActions} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowActions(false)}>
         <TouchableOpacity
           style={styles.actionOverlay}
           activeOpacity={1}
@@ -610,7 +612,7 @@ export default function TimelineScreen({ navigation, route }) {
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionItem, styles.actionCancel]}
+              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedEvent(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"

@@ -28,7 +28,7 @@ function ActionDropdown({ actions }) {
     <div className="relative sm:hidden ml-2">
       <button
         onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
-        className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-lg"
+        className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-lg"
         aria-label="More actions"
         aria-haspopup="menu"
         aria-expanded={open}

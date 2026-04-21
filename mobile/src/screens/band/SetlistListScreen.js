@@ -311,7 +311,7 @@ export default function SetlistListScreen({ navigation, route }) {
       />
 
       {/* Create Setlist Modal */}
-      <Modal visible={showCreate} transparent animationType="fade" onRequestClose={() => setShowCreate(false)}>
+      <Modal visible={showCreate} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowCreate(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">New Setlist</Text>
@@ -376,9 +376,9 @@ export default function SetlistListScreen({ navigation, route }) {
                 accessibilityLabel="Create setlist"
               >
                 {creating ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>Create</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>Create</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -387,7 +387,7 @@ export default function SetlistListScreen({ navigation, route }) {
       </Modal>
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => setShowActions(false)}>
+      <Modal visible={showActions} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowActions(false)}>
         <TouchableOpacity
           style={styles.actionOverlay}
           activeOpacity={1}
@@ -422,7 +422,7 @@ export default function SetlistListScreen({ navigation, route }) {
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionItem, styles.actionCancel]}
+              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedSetlist(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"

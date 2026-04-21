@@ -25,6 +25,7 @@ import ErrorState from '../../components/ErrorState';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
+import PressableRow from '../../components/PressableRow';
 
 const CATEGORY_FILTERS = [
   { key: 'all', label: 'All' },
@@ -233,11 +234,10 @@ export default function ContactsScreen({ navigation, route }) {
     const catLabel = CATEGORY_LABELS[item.category] || item.category;
 
     return (
-      <TouchableOpacity
+      <PressableRow
         style={[styles.contactCard, { backgroundColor: colors.bgSecondary }]}
         onLongPress={() => { setSelectedContact(item); setShowActions(true); }}
         delayLongPress={400}
-        activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={`${item.name}. Long press for options`}
         accessibilityHint="View contact details"
@@ -281,7 +281,7 @@ export default function ContactsScreen({ navigation, route }) {
         {item.notes && (
           <Text style={[styles.contactNotes, { color: colors.textSecondary }]}>{item.notes}</Text>
         )}
-      </TouchableOpacity>
+      </PressableRow>
     );
   }, [colors, openLink]);
 
@@ -326,7 +326,7 @@ export default function ContactsScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel={`Filter by ${f.label}${active ? ', selected' : ''}`}
             >
-              <Text style={[styles.filterChipText, { color: active ? '#ffffff' : colors.textSecondary }]}>
+              <Text style={[styles.filterChipText, { color: active ? colors.primaryText : colors.textSecondary }]}>
                 {f.label}
               </Text>
             </TouchableOpacity>
@@ -359,8 +359,8 @@ export default function ContactsScreen({ navigation, route }) {
       />
 
       {/* Create/Edit Modal */}
-      <Modal visible={showModal} transparent animationType="fade" onRequestClose={() => setShowModal(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Modal visible={showModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowModal(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
@@ -391,7 +391,7 @@ export default function ContactsScreen({ navigation, route }) {
                       accessibilityRole="button"
                       accessibilityLabel={`${opt.label}${active ? ', selected' : ''}`}
                     >
-                      <Text style={[styles.categoryChipText, { color: active ? '#ffffff' : colors.textSecondary }]}>
+                      <Text style={[styles.categoryChipText, { color: active ? colors.primaryText : colors.textSecondary }]}>
                         {opt.label}
                       </Text>
                     </TouchableOpacity>
@@ -473,9 +473,9 @@ export default function ContactsScreen({ navigation, route }) {
                 accessibilityLabel={editingContact ? 'Save contact' : 'Create contact'}
               >
                 {saving ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>{editingContact ? 'Save' : 'Create'}</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>{editingContact ? 'Save' : 'Create'}</Text>
                 )}
               </TouchableOpacity>
             </View>

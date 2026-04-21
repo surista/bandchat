@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -28,6 +29,7 @@ export default function SearchScreen({ navigation, route }) {
   const { workspaceId } = route.params;
   const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
+  const headerHeight = useHeaderHeight();
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -208,7 +210,7 @@ export default function SearchScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
       {/* Search Input */}
       <View style={[styles.searchBar, { backgroundColor: colors.bgSecondary, borderBottomColor: colors.border }]}>
         <Ionicons name="search" size={16} color={colors.textSecondary} style={styles.searchIcon} />
@@ -259,7 +261,7 @@ export default function SearchScreen({ navigation, route }) {
               >
                 <Text style={[
                   styles.filterChipText,
-                  { color: isActive ? '#ffffff' : colors.textSecondary },
+                  { color: isActive ? colors.primaryText : colors.textSecondary },
                 ]}>
                   {item.id ? `# ${item.name}` : item.name}
                 </Text>
@@ -292,7 +294,7 @@ export default function SearchScreen({ navigation, route }) {
               >
                 <Text style={[
                   styles.filterChipText,
-                  { color: isActive ? '#ffffff' : colors.textSecondary },
+                  { color: isActive ? colors.primaryText : colors.textSecondary },
                 ]}>
                   {item.user?.displayName || 'Unknown'}
                 </Text>

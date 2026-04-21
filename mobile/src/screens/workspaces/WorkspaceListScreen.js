@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -12,8 +13,8 @@ import {
   Platform,
   StyleSheet,
   KeyboardAvoidingView,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme, themes } from '../../context/ThemeContext';
@@ -21,6 +22,7 @@ import { useToast } from '../../context/ToastContext';
 import Constants from 'expo-constants';
 import api from '../../services/api';
 import ErrorState from '../../components/ErrorState';
+import PressableRow from '../../components/PressableRow';
 
 export default function WorkspaceListScreen({ navigation, route }) {
   const { user, logout } = useAuth();
@@ -39,6 +41,11 @@ export default function WorkspaceListScreen({ navigation, route }) {
       setError(null);
       const data = await api.getWorkspaces();
       setWorkspaces(data);
+      // First-time user (no workspaces, no pending invite) → onboarding wizard
+      if (data.length === 0 && !route.params?.inviteCode && !route.params?.showList) {
+        navigation.replace('OnboardingWizard');
+        return;
+      }
       // Auto-navigate if exactly one workspace, no invite code, and not explicitly returning here
       if (data.length === 1 && !route.params?.inviteCode && !route.params?.showList) {
         navigation.replace('Workspace', { id: data[0].id, name: data[0].name });
@@ -52,9 +59,12 @@ export default function WorkspaceListScreen({ navigation, route }) {
     }
   }, [toast, navigation, route.params?.inviteCode, route.params?.showList]);
 
-  useEffect(() => {
-    loadWorkspaces();
-  }, [loadWorkspaces]);
+  // Refresh workspace list (including unread counts) every time screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      loadWorkspaces();
+    }, [loadWorkspaces])
+  );
 
   // Handle invite deep link
   useEffect(() => {
@@ -92,13 +102,12 @@ export default function WorkspaceListScreen({ navigation, route }) {
     const wsThemeId = getWorkspaceTheme(item.id) || globalTheme;
     const wsTheme = themes[wsThemeId] || themes.default;
     return (
-    <TouchableOpacity
+    <PressableRow
       style={[styles.workspaceItem, { backgroundColor: colors.bgSecondary }]}
       onPress={() => {
         setWorkspaces(prev => prev.map(w => w.id === item.id ? { ...w, unreadCount: 0 } : w));
         navigation.navigate('Workspace', { id: item.id, name: item.name });
       }}
-      activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityLabel={`Open ${item.name} workspace, ${item._count?.members || 0} members${item.unreadCount > 0 ? `, ${item.unreadCount} unread` : ''}`}
     >
@@ -110,7 +119,7 @@ export default function WorkspaceListScreen({ navigation, route }) {
           <Image
             source={{ uri: item.avatarUrl }}
             style={styles.workspaceAvatarImg}
-            resizeMode="cover"
+            contentFit="cover"
             accessible={false}
           />
         )}
@@ -133,7 +142,7 @@ export default function WorkspaceListScreen({ navigation, route }) {
         )}
         <Text style={[styles.chevron, { color: colors.textSecondary }]}>{'\u203a'}</Text>
       </View>
-    </TouchableOpacity>
+    </PressableRow>
     );
   };
 
@@ -145,6 +154,24 @@ export default function WorkspaceListScreen({ navigation, route }) {
       <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
         Create a new workspace for your band or join one with an invite code.
       </Text>
+      <View style={styles.emptyActions}>
+        <PressableRow
+          style={[styles.emptyPrimaryBtn, { backgroundColor: colors.primary }]}
+          onPress={() => navigation.navigate('OnboardingWizard')}
+          accessibilityRole="button"
+          accessibilityLabel="Create a workspace"
+        >
+          <Text style={[styles.emptyPrimaryText, { color: colors.primaryText }]}>Create Workspace</Text>
+        </PressableRow>
+        <PressableRow
+          style={[styles.emptySecondaryBtn, { backgroundColor: colors.bgTertiary }]}
+          onPress={() => setShowJoin(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Join a workspace with invite code"
+        >
+          <Text style={[styles.emptySecondaryText, { color: colors.textPrimary }]}>Join with Invite Code</Text>
+        </PressableRow>
+      </View>
     </View>
   );
 
@@ -214,7 +241,7 @@ export default function WorkspaceListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Create workspace"
         >
-          <Text style={styles.actionButtonTextWhite}>Create Workspace</Text>
+          <Text style={[styles.actionButtonTextWhite, { color: colors.primaryText }]}>Create Workspace</Text>
         </TouchableOpacity>
       </View>
 
@@ -243,8 +270,8 @@ export default function WorkspaceListScreen({ navigation, route }) {
       </KeyboardAvoidingView>
 
       {/* Join Workspace Modal */}
-      <Modal visible={showJoin} transparent animationType="fade" onRequestClose={() => setShowJoin(false)}>
-        <View style={styles.modalOverlay}>
+      <Modal visible={showJoin} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowJoin(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Join a Workspace</Text>
             <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Invite Code</Text>
@@ -278,14 +305,14 @@ export default function WorkspaceListScreen({ navigation, route }) {
                 accessibilityLabel="Join workspace"
               >
                 {submitting ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>Join</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>Join</Text>
                 )}
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
@@ -424,6 +451,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+    marginBottom: 20,
+  },
+  emptyActions: {
+    width: '100%',
+    gap: 10,
+  },
+  emptyPrimaryBtn: {
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  emptyPrimaryText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptySecondaryBtn: {
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  emptySecondaryText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,

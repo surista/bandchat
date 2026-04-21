@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { Audio } from 'expo-av';
 import * as DocumentPicker from 'expo-document-picker';
 import { useTheme } from '../../context/ThemeContext';
@@ -182,6 +183,7 @@ export default function SongDetailScreen({ navigation, route }) {
   const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
   const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
 
   const [song, setSong] = useState(null);
   const [loading, setLoading] = useState(!isNew);
@@ -457,7 +459,7 @@ export default function SongDetailScreen({ navigation, route }) {
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={100}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
       >
         <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
           <Text style={[styles.label, { color: colors.textSecondary }]}>Title *</Text>
@@ -632,9 +634,9 @@ export default function SongDetailScreen({ navigation, route }) {
               accessibilityLabel={isNew ? 'Create song' : 'Save song'}
             >
               {saving ? (
-                <ActivityIndicator color="#ffffff" size="small" />
+                <ActivityIndicator color={colors.primaryText} size="small" />
               ) : (
-                <Text style={styles.formButtonTextWhite}>{isNew ? 'Create' : 'Save'}</Text>
+                <Text style={[styles.formButtonTextWhite, { color: colors.primaryText }]}>{isNew ? 'Create' : 'Save'}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -647,7 +649,7 @@ export default function SongDetailScreen({ navigation, route }) {
         </ScrollView>
 
         {/* Key Picker Modal */}
-        <Modal visible={showKeyPicker} transparent animationType="fade" onRequestClose={() => setShowKeyPicker(false)}>
+        <Modal visible={showKeyPicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowKeyPicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowKeyPicker(false)} accessibilityRole="button" accessibilityLabel="Dismiss key picker">
             <View style={[styles.keyPickerContent, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.keyPickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Select Key</Text>
@@ -846,11 +848,11 @@ export default function SongDetailScreen({ navigation, route }) {
         accessibilityRole="button"
         accessibilityLabel="Log practice session"
       >
-        <Text style={styles.practiceButtonText}>Log Practice</Text>
+        <Text style={[styles.practiceButtonText, { color: colors.primaryText }]}>Log Practice</Text>
       </TouchableOpacity>
 
       {/* Practice Modal */}
-      <Modal visible={showPracticeModal} transparent animationType="fade" onRequestClose={() => setShowPracticeModal(false)}>
+      <Modal visible={showPracticeModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowPracticeModal(false)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowPracticeModal(false)} accessibilityRole="button" accessibilityLabel="Dismiss practice modal">
           <View style={[styles.practiceModalContent, { backgroundColor: colors.modalBg }]} onStartShouldSetResponder={() => true}>
             <Text style={[styles.practiceModalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Log Practice</Text>
@@ -899,9 +901,9 @@ export default function SongDetailScreen({ navigation, route }) {
                 accessibilityLabel="Save practice session"
               >
                 {loggingPractice ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.formButtonTextWhite}>Save</Text>
+                  <Text style={[styles.formButtonTextWhite, { color: colors.primaryText }]}>Save</Text>
                 )}
               </TouchableOpacity>
             </View>

@@ -3,21 +3,29 @@ export default {
     name: 'BandChat',
     slug: 'bandchat',
     scheme: 'bandchat',
-    version: '1.06.17',
+    version: '1.06.44',
     orientation: 'portrait',
     icon: './assets/icon.png',
-    userInterfaceStyle: 'dark',
+    userInterfaceStyle: 'automatic',
     description: 'Real-time communication and management app for bands. Channels, messaging, song management, setlists, calendar, and more.',
     splash: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',
       backgroundColor: '#1f2937',
     },
+    notification: {
+      icon: './assets/android-icon-monochrome.png',
+      color: '#2BAC76',
+      androidMode: 'default',
+    },
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.bandchat.mobile',
-      buildNumber: '10617',
+      buildNumber: '10644',
       associatedDomains: ['applinks:bandchat.vercel.app'],
+      entitlements: {
+        'com.apple.security.application-groups': ['group.com.bandchat.manager.mobile'],
+      },
       infoPlist: {
         NSCameraUsageDescription: 'BandChat needs camera access to take photos for your profile and messages.',
         NSPhotoLibraryUsageDescription: 'BandChat needs photo library access to share images in messages and set your profile picture.',
@@ -40,7 +48,9 @@ export default {
     android: {
       package: 'com.bandchat.mobile',
       softwareKeyboardLayoutMode: 'resize',
-      versionCode: 10617,
+      versionCode: 10644,
+      allowBackup: false,
+      predictiveBackGestureEnabled: true,
       adaptiveIcon: {
         backgroundColor: '#1f2937',
         foregroundImage: './assets/android-icon-foreground.png',
@@ -91,6 +101,21 @@ export default {
       googleIosClientId: process.env.GOOGLE_IOS_CLIENT_ID,
       eas: {
         projectId: 'd4038ff4-1904-4b0d-98a0-d8bcab2cb00f',
+        build: {
+          experimental: {
+            ios: {
+              appExtensions: [
+                {
+                  targetName: 'BandChatWidgets',
+                  bundleIdentifier: 'com.bandchat.mobile.BandChatWidgets',
+                  entitlements: {
+                    'com.apple.security.application-groups': ['group.com.bandchat.manager.mobile'],
+                  },
+                },
+              ],
+            },
+          },
+        },
       },
     },
     plugins: [
@@ -126,6 +151,14 @@ export default {
           android: {
             kotlinVersion: '2.2.0',
           },
+        },
+      ],
+      [
+        'react-native-widget-extension',
+        {
+          widgetsFolder: 'widgets',
+          deploymentTarget: '16.2',
+          groupIdentifier: 'group.com.bandchat.manager.mobile',
         },
       ],
     ],

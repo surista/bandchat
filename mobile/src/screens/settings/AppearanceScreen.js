@@ -135,7 +135,7 @@ export default function AppearanceScreen({ route }) {
                   <View style={[styles.swatchInner, { backgroundColor: theme.primary }]} />
                   {isActive && (
                     <View style={[styles.checkContainer, { backgroundColor: colors.primary }]}>
-                      <Text style={styles.checkmark}>{'\u2713'}</Text>
+                      <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'\u2713'}</Text>
                     </View>
                   )}
                 </View>
@@ -216,6 +216,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  checkmark: { color: '#ffffff', fontSize: 12, fontWeight: '700' },
+  checkmark: { fontSize: 12, fontWeight: '700' },
   themeName: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
 });

@@ -66,7 +66,7 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
       await loadTimeline();
       resetForm();
     } catch (error) {
-      console.error('Failed to save event:', error);
+      toast.error(error.message || 'Failed to save event');
     }
   }
 
@@ -76,7 +76,7 @@ export default function BandTimeline({ workspaceId, isAdmin = false }) {
       setEvents(events.filter(e => e.id !== eventId));
       setDeleteEventId(null);
     } catch (error) {
-      console.error('Failed to delete event:', error);
+      toast.error(error.message || 'Failed to delete event');
       setDeleteEventId(null);
     }
   }

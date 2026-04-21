@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
+import ErrorState from '../../components/ErrorState';
 
 const TABS = ['recommendations', 'mashups', 'transitions', 'optimizer'];
 const TAB_LABELS = {
@@ -57,21 +58,22 @@ function RecommendationsTab({ workspaceId, colors }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const result = await api.getSongRecommendations(workspaceId);
-        setData(result);
-      } catch (err) {
-        // silently fail
-      } finally {
-        setLoading(false);
-      }
-    })();
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const result = await api.getSongRecommendations(workspaceId);
+      setData(result);
+    } catch (err) {
+      // data stays null, ErrorState will show
+    } finally {
+      setLoading(false);
+    }
   }, [workspaceId]);
 
+  useEffect(() => { loadData(); }, [loadData]);
+
   if (loading) return <ActivityIndicator style={{ padding: 40 }} size="large" color={colors.primary} />;
-  if (!data) return <Text style={[styles.emptyText, { color: colors.textSecondary, padding: 40 }]}>Failed to load</Text>;
+  if (!data) return <ErrorState iconName="analytics-outline" title="Failed to load" message="Could not load song intelligence" onRetry={loadData} />;
 
   const { analysis, recommendations } = data;
 
@@ -239,7 +241,7 @@ function MashupsTab({ workspaceId, colors }) {
       )}
 
       {/* Song Picker */}
-      <Modal visible={showPicker} transparent animationType="fade" onRequestClose={() => setShowPicker(false)}>
+      <Modal visible={showPicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowPicker(false)}>
         <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowPicker(false)} accessibilityRole="button" accessibilityLabel="Dismiss song picker">
           <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Select Song</Text>
@@ -423,7 +425,7 @@ function OptimizerTab({ workspaceId, colors }) {
                 accessibilityLabel={`${song.title}${isSelected ? ', selected' : ''}`}
               >
                 <View style={[styles.checkbox, { borderColor: isSelected ? colors.primary : colors.border }, isSelected && { backgroundColor: colors.primary }]}>
-                  {isSelected && <Text style={styles.checkmark}>{'\u2713'}</Text>}
+                  {isSelected && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.songCheckTitle, { color: colors.textPrimary }]} numberOfLines={1}>{song.title}</Text>
@@ -444,9 +446,9 @@ function OptimizerTab({ workspaceId, colors }) {
             accessibilityLabel="Optimize order"
           >
             {loading ? (
-              <ActivityIndicator color="#ffffff" size="small" />
+              <ActivityIndicator color={colors.primaryText} size="small" />
             ) : (
-              <Text style={[styles.optimizeButtonText, { color: selected.size >= 2 ? '#ffffff' : colors.textSecondary }]}>
+              <Text style={[styles.optimizeButtonText, { color: selected.size >= 2 ? colors.primaryText : colors.textSecondary }]}>
                 Optimize Order
               </Text>
             )}
@@ -555,7 +557,7 @@ const styles = StyleSheet.create({
   // Optimizer
   songCheckRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 8, padding: 10, marginBottom: 4, gap: 10 },
   checkbox: { width: 22, height: 22, borderRadius: 4, borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
-  checkmark: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  checkmark: { fontSize: 14, fontWeight: '700' },
   songCheckTitle: { fontSize: 14, fontWeight: '600' },
   optimizeButton: { marginTop: 16, paddingVertical: 14, borderRadius: 8, alignItems: 'center' },
   optimizeButtonText: { fontSize: 16, fontWeight: '600' },

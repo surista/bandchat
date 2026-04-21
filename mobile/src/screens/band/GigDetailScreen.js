@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useLayoutEffect } from 'react';
+import { useState, useEffect, useCallback, useLayoutEffect, useRef, memo } from 'react';
 import {
   View,
   Text,
@@ -12,26 +12,36 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Image,
   FlatList,
+  Pressable,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { prepareImageForUpload } from '../../utils/prepareImageUpload';
 import * as DocumentPicker from 'expo-document-picker';
 import { Audio } from 'expo-av';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Calendar from 'expo-calendar';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, formatDistanceToNow, differenceInHours } from 'date-fns';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { successNotification } from '../../utils/haptics';
+import { useSocket } from '../../context/SocketContext';
+import { useToast } from '../../context/ToastContext';
+import { successNotification, selectionFeedback, errorNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
 import ErrorState from '../../components/ErrorState';
 import { SkeletonList } from '../../components/SkeletonLoader';
+import { Image } from 'expo-image';
 import getCurrencySymbol from '../../utils/getCurrencySymbol';
 import { Ionicons } from '@expo/vector-icons';
 import ActionSheet from '../../components/ActionSheet';
+import PressableRow from '../../components/PressableRow';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import Reanimated, { useAnimatedStyle, interpolate, Extrapolate } from 'react-native-reanimated';
+import * as Clipboard from 'expo-clipboard';
 import { TYPE_COLORS, STATUS_COLORS } from '../../utils/constants';
+import { updateWidgetGigData } from '../../services/widgetService';
 
 const ATTENDEE_STATUSES = ['ATTENDING', 'MAYBE', 'NOT_ATTENDING'];
 const ATTENDEE_LABELS = { ATTENDING: 'Going', MAYBE: 'Maybe', NOT_ATTENDING: 'Not Going' };
@@ -46,6 +56,11 @@ export default function GigDetailScreen({ navigation, route }) {
   const { user } = useAuth()
   const { isTablet, contentMaxWidth } = useLayout();
   const { colors, mode } = useTheme();
+  const { socket } = useSocket();
+  const toast = useToast();
+  const headerHeight = useHeaderHeight();
+  const viewScrollRef = useRef(null);
+  const editingCommentIdRef = useRef(null);
 
   const [gig, setGig] = useState(null);
   const [loading, setLoading] = useState(!isNew);
@@ -73,12 +88,24 @@ export default function GigDetailScreen({ navigation, route }) {
 
   // Currency
   const [currencySymbol, setCurrencySymbol] = useState('$');
+  const [workspaceName, setWorkspaceName] = useState('');
+  const [showTimePicker, setShowTimePicker] = useState(null); // 'start' | 'end' | 'soundCheck' | 'doors' | 'stage'
 
   // Media
   const [gigMedia, setGigMedia] = useState([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [showAddLink, setShowAddLink] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
+
+  // Comments
+  const [comments, setComments] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsError, setCommentsError] = useState(null);
+  const [newComment, setNewComment] = useState('');
+  const [commentSubmitting, setCommentSubmitting] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingCommentContent, setEditingCommentContent] = useState('');
+  const [actionSheetCommentId, setActionSheetCommentId] = useState(null);
 
   // Pickers
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -96,6 +123,7 @@ export default function GigDetailScreen({ navigation, route }) {
   useEffect(() => {
     api.getWorkspace(workspaceId).then(ws => {
       setCurrencySymbol(getCurrencySymbol(ws.currency || 'USD'));
+      setWorkspaceName(ws.name || '');
       const membership = ws.members?.find(m => m.userId === user?.id);
       setIsAdmin(membership?.role === 'ADMIN');
     }).catch(() => {});
@@ -106,12 +134,20 @@ export default function GigDetailScreen({ navigation, route }) {
     if (isNew) return;
     (async () => {
       try {
-        const [data, mediaData] = await Promise.all([
+        const [data, mediaData, commentsResult] = await Promise.all([
           api.getGig(gigId),
           api.getGigMedia(gigId).catch(() => []),
+          api.getGigComments(gigId).then(d => ({ ok: true, data: d })).catch(err => ({ ok: false, err })),
         ]);
         setGig(data);
         setGigMedia(mediaData);
+        if (commentsResult.ok) {
+          setComments(Array.isArray(commentsResult.data) ? commentsResult.data : []);
+          setCommentsError(null);
+        } else {
+          setComments([]);
+          setCommentsError(commentsResult.err?.message || 'Failed to load comments');
+        }
         populateForm(data);
       } catch (err) {
         setLoadError(err.message || 'Failed to load event');
@@ -120,6 +156,216 @@ export default function GigDetailScreen({ navigation, route }) {
       }
     })();
   }, [gigId, isNew, navigation]);
+
+  useEffect(() => {
+    editingCommentIdRef.current = editingCommentId;
+  }, [editingCommentId]);
+
+  // Auto-scroll to newest comment when count grows, as long as the user
+  // is already viewing near the bottom.
+  const nearBottomRef = useRef(true);
+  useEffect(() => {
+    if (comments.length === 0) return;
+    if (nearBottomRef.current && viewScrollRef.current?.scrollToEnd) {
+      requestAnimationFrame(() => {
+        viewScrollRef.current?.scrollToEnd({ animated: true });
+      });
+    }
+  }, [comments.length]);
+
+  useEffect(() => {
+    if (!socket || !gigId) return;
+    const onAdded = ({ gigId: incomingGigId, comment }) => {
+      if (incomingGigId !== gigId || !comment) return;
+      setComments(prev => prev.some(c => c.id === comment.id) ? prev : [...prev, comment]);
+    };
+    const onUpdated = ({ gigId: incomingGigId, comment }) => {
+      if (incomingGigId !== gigId || !comment) return;
+      setComments(prev => prev.map(c => c.id === comment.id ? comment : c));
+      if (editingCommentIdRef.current === comment.id) {
+        toast.warning('This comment was just updated by someone else. Your edits will overwrite theirs if you save.');
+      }
+    };
+    const onDeleted = ({ gigId: incomingGigId, commentId }) => {
+      if (incomingGigId !== gigId) return;
+      setComments(prev => prev.filter(c => c.id !== commentId));
+      if (editingCommentIdRef.current === commentId) {
+        setEditingCommentId(null);
+        setEditingCommentContent('');
+        toast.info('The comment you were editing was deleted.');
+      }
+    };
+    socket.on('gig:commentAdded', onAdded);
+    socket.on('gig:commentUpdated', onUpdated);
+    socket.on('gig:commentDeleted', onDeleted);
+    return () => {
+      socket.off('gig:commentAdded', onAdded);
+      socket.off('gig:commentUpdated', onUpdated);
+      socket.off('gig:commentDeleted', onDeleted);
+    };
+  }, [socket, gigId, toast]);
+
+  useEffect(() => {
+    const hasPendingComment = () => !!editingCommentId || newComment.trim().length > 0;
+    if (!hasPendingComment()) return;
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (!hasPendingComment()) return;
+      e.preventDefault();
+      const message = editingCommentId
+        ? 'You have an unsaved comment edit. Discard it?'
+        : 'You have an unsent comment. Discard it?';
+      Alert.alert(
+        'Discard changes?',
+        message,
+        [
+          { text: 'Keep editing', style: 'cancel' },
+          {
+            text: 'Discard',
+            style: 'destructive',
+            onPress: () => {
+              setEditingCommentId(null);
+              setEditingCommentContent('');
+              setNewComment('');
+              navigation.dispatch(e.data.action);
+            },
+          },
+        ],
+      );
+    });
+    return unsubscribe;
+  }, [navigation, editingCommentId, newComment]);
+
+  const reloadComments = useCallback(async () => {
+    if (!gigId) return;
+    setCommentsLoading(true);
+    try {
+      const data = await api.getGigComments(gigId);
+      setComments(Array.isArray(data) ? data : []);
+      setCommentsError(null);
+    } catch (err) {
+      setCommentsError(err?.message || 'Failed to load comments');
+    } finally {
+      setCommentsLoading(false);
+    }
+  }, [gigId]);
+
+  const handleStartEditComment = useCallback((id, content) => {
+    selectionFeedback();
+    setEditingCommentId(id);
+    setEditingCommentContent(content);
+  }, []);
+
+  const handleCancelEditComment = useCallback(() => {
+    setEditingCommentId(null);
+    setEditingCommentContent('');
+  }, []);
+
+  const handleAddComment = useCallback(async () => {
+    const content = newComment.trim();
+    if (!content || !gigId || commentSubmitting) return;
+    setCommentSubmitting(true);
+    try {
+      const created = await api.addGigComment(gigId, content);
+      setComments(prev => prev.some(c => c.id === created.id) ? prev : [...prev, created]);
+      setNewComment('');
+      successNotification();
+    } catch (err) {
+      errorNotification();
+      Alert.alert('Error', err.message || 'Failed to add comment');
+    } finally {
+      setCommentSubmitting(false);
+    }
+  }, [newComment, gigId, commentSubmitting]);
+
+  const handleSaveEditComment = useCallback(async () => {
+    const content = editingCommentContent.trim();
+    if (!content || !editingCommentId || commentSubmitting) return;
+    setCommentSubmitting(true);
+    try {
+      const updated = await api.updateGigComment(gigId, editingCommentId, content);
+      setComments(prev => prev.map(c => c.id === updated.id ? updated : c));
+      setEditingCommentId(null);
+      setEditingCommentContent('');
+      successNotification();
+    } catch (err) {
+      errorNotification();
+      Alert.alert('Error', err.message || 'Failed to update comment');
+    } finally {
+      setCommentSubmitting(false);
+    }
+  }, [editingCommentContent, editingCommentId, gigId, commentSubmitting]);
+
+  const handleDeleteComment = useCallback((commentId) => {
+    Alert.alert('Delete Comment', 'Delete this comment?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.deleteGigComment(gigId, commentId);
+            setComments(prev => prev.filter(c => c.id !== commentId));
+            successNotification();
+          } catch (err) {
+            errorNotification();
+            Alert.alert('Error', err.message || 'Failed to delete comment');
+          }
+        },
+      },
+    ]);
+  }, [gigId]);
+
+  const handleLongPressComment = useCallback((commentId) => {
+    selectionFeedback();
+    setActionSheetCommentId(commentId);
+  }, []);
+
+  const handleCopyComment = useCallback(async (commentId) => {
+    const c = comments.find(x => x.id === commentId);
+    if (!c?.content) return;
+    try {
+      await Clipboard.setStringAsync(c.content);
+      toast.success('Comment copied');
+    } catch {
+      toast.error('Failed to copy');
+    }
+  }, [comments, toast]);
+
+  const actionSheetComment = comments.find(c => c.id === actionSheetCommentId) || null;
+  const actionSheetActions = actionSheetComment ? (() => {
+    const isOwn = actionSheetComment.createdById === user?.id;
+    const canDelete = isOwn || isAdmin;
+    const out = [
+      { label: 'Copy', onPress: () => handleCopyComment(actionSheetComment.id) },
+    ];
+    if (isOwn) {
+      out.push({ label: 'Edit', onPress: () => handleStartEditComment(actionSheetComment.id, actionSheetComment.content) });
+    }
+    if (canDelete) {
+      out.push({ label: 'Delete', destructive: true, onPress: () => handleDeleteComment(actionSheetComment.id) });
+    }
+    return out;
+  })() : [];
+
+  // Convert HH:mm string to Date for time picker, and back
+  const timeStringToDate = (timeStr) => {
+    if (!timeStr) return new Date(2000, 0, 1, 19, 0); // default 19:00
+    const [h, m] = timeStr.split(':').map(Number);
+    return new Date(2000, 0, 1, h || 0, m || 0);
+  };
+  const dateToTimeString = (d) => {
+    const h = d.getHours().toString().padStart(2, '0');
+    const m = d.getMinutes().toString().padStart(2, '0');
+    return `${h}:${m}`;
+  };
+
+  const handleTimeChange = (field, setter) => (event, selectedDate) => {
+    if (Platform.OS === 'android') setShowTimePicker(null);
+    if (event.type === 'dismissed') { setShowTimePicker(null); return; }
+    if (selectedDate) setter(dateToTimeString(selectedDate));
+    // On iOS compact mode, dismiss after selection
+    if (Platform.OS === 'ios') setShowTimePicker(null);
+  };
 
   const populateForm = useCallback((data) => {
     if (!data) return;
@@ -183,8 +429,10 @@ export default function GigDetailScreen({ navigation, route }) {
     }
   }, [navigation, isNew, editing, gig]);
 
+  const isCreator = !gig || gig.createdById === user?.id;
+  const canEdit = (!gig?.isLocked && (isCreator || isAdmin)) || isAdmin;
+
   useLayoutEffect(() => {
-    const canEdit = !gig?.isLocked || isAdmin;
     if (!isNew && !editing && !loading && canEdit) {
       navigation.setOptions({
         headerRight: () => (
@@ -196,7 +444,7 @@ export default function GigDetailScreen({ navigation, route }) {
     } else {
       navigation.setOptions({ headerRight: undefined });
     }
-  }, [navigation, isNew, editing, loading, colors.primary, gig?.isLocked, isAdmin]);
+  }, [navigation, isNew, editing, loading, colors.primary, canEdit]);
 
   const handleSave = useCallback(async () => {
     const errors = {};
@@ -257,6 +505,7 @@ export default function GigDetailScreen({ navigation, route }) {
         populateForm(updated);
         setEditing(false);
       }
+      updateWidgetGigData();
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to save event');
     } finally {
@@ -282,6 +531,7 @@ export default function GigDetailScreen({ navigation, route }) {
         onPress: async () => {
           try {
             await api.deleteGig(gigId);
+            updateWidgetGigData();
             navigation.goBack();
           } catch (err) {
             Alert.alert('Error', 'Failed to delete event');
@@ -332,8 +582,9 @@ export default function GigDetailScreen({ navigation, route }) {
 
       const location = [gig.venue, gig.address].filter(Boolean).join(', ');
 
+      const calendarTitle = workspaceName ? `(${workspaceName}) ${gig.title}` : gig.title;
       await Calendar.createEventAsync(calendarId, {
-        title: gig.title,
+        title: calendarTitle,
         startDate,
         endDate,
         location: location || undefined,
@@ -346,7 +597,7 @@ export default function GigDetailScreen({ navigation, route }) {
     } catch (err) {
       Alert.alert('Error', 'Failed to add event to calendar.');
     }
-  }, [gig]);
+  }, [gig, workspaceName]);
 
   const onDateChange = useCallback((event, selectedDate) => {
     setShowDatePicker(false);
@@ -368,7 +619,8 @@ export default function GigDetailScreen({ navigation, route }) {
       if (result.canceled || !result.assets?.length) return;
 
       setUploadingMedia(true);
-      for (const asset of result.assets) {
+      for (const rawAsset of result.assets) {
+        const asset = await prepareImageForUpload(rawAsset);
         const filename = asset.fileName || `media_${Date.now()}.jpg`;
         const mimeType = asset.mimeType || (asset.type === 'video' ? 'video/mp4' : 'image/jpeg');
         const uploaded = await api.uploadFile(asset.uri, filename, mimeType, workspaceId);
@@ -471,7 +723,7 @@ export default function GigDetailScreen({ navigation, route }) {
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={100}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
       >
         <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
           <Text style={[styles.label, { color: colors.textSecondary }]}>Title *</Text>
@@ -576,7 +828,7 @@ export default function GigDetailScreen({ navigation, route }) {
             accessibilityLabel="Multi-day event"
           >
             <View style={[styles.checkbox, { borderColor: colors.border }, multiDay && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-              {multiDay && <Ionicons name="checkmark" size={14} color="#fff" />}
+              {multiDay && <Ionicons name="checkmark" size={14} color={colors.primaryText} />}
             </View>
             <Text style={{ color: colors.textSecondary, fontSize: 14 }}>Multi-day event</Text>
           </TouchableOpacity>
@@ -611,25 +863,41 @@ export default function GigDetailScreen({ navigation, route }) {
           <View style={styles.row}>
             <View style={styles.rowField}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>Start Time</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-                value={startTime}
-                onChangeText={setStartTime}
-                placeholder="19:00"
-                placeholderTextColor={colors.textSecondary}
-                accessibilityLabel="Start time"
-              />
+              <TouchableOpacity
+                style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }]}
+                onPress={() => setShowTimePicker('start')}
+                onLongPress={startTime ? () => { setStartTime(''); selectionFeedback(); } : undefined}
+                accessibilityRole="button"
+                accessibilityLabel={`Start time: ${startTime || 'not set'}`}
+                accessibilityHint={startTime ? 'Long press to clear' : undefined}
+              >
+                <Text style={{ color: startTime ? colors.textPrimary : colors.textSecondary, fontSize: 15, flex: 1 }}>
+                  {startTime || 'Set time'}
+                </Text>
+                {startTime ? <Ionicons name="close-circle" size={16} color={colors.textSecondary} /> : null}
+              </TouchableOpacity>
+              {showTimePicker === 'start' && (
+                <DateTimePicker value={timeStringToDate(startTime)} mode="time" display={Platform.OS === 'ios' ? 'compact' : 'default'} minuteInterval={5} onChange={handleTimeChange('start', setStartTime)} />
+              )}
             </View>
             <View style={styles.rowField}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>End Time</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-                value={endTime}
-                onChangeText={setEndTime}
-                placeholder="21:00"
-                placeholderTextColor={colors.textSecondary}
-                accessibilityLabel="End time"
-              />
+              <TouchableOpacity
+                style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }]}
+                onPress={() => setShowTimePicker('end')}
+                onLongPress={endTime ? () => { setEndTime(''); selectionFeedback(); } : undefined}
+                accessibilityRole="button"
+                accessibilityLabel={`End time: ${endTime || 'not set'}`}
+                accessibilityHint={endTime ? 'Long press to clear' : undefined}
+              >
+                <Text style={{ color: endTime ? colors.textPrimary : colors.textSecondary, fontSize: 15, flex: 1 }}>
+                  {endTime || 'Set time'}
+                </Text>
+                {endTime ? <Ionicons name="close-circle" size={16} color={colors.textSecondary} /> : null}
+              </TouchableOpacity>
+              {showTimePicker === 'end' && (
+                <DateTimePicker value={timeStringToDate(endTime)} mode="time" display={Platform.OS === 'ios' ? 'compact' : 'default'} minuteInterval={5} onChange={handleTimeChange('end', setEndTime)} />
+              )}
             </View>
           </View>
 
@@ -638,36 +906,60 @@ export default function GigDetailScreen({ navigation, route }) {
             <View style={styles.row}>
               <View style={[styles.rowField, { flex: 1 }]}>
                 <Text style={[styles.label, { color: colors.textSecondary, fontSize: 12 }]}>Sound Check</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-                  value={soundCheckTime}
-                  onChangeText={setSoundCheckTime}
-                  placeholder="16:00"
-                  placeholderTextColor={colors.textSecondary}
-                  accessibilityLabel="Sound check time"
-                />
+                <TouchableOpacity
+                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }]}
+                  onPress={() => setShowTimePicker('soundCheck')}
+                  onLongPress={soundCheckTime ? () => { setSoundCheckTime(''); selectionFeedback(); } : undefined}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Sound check: ${soundCheckTime || 'not set'}`}
+                  accessibilityHint={soundCheckTime ? 'Long press to clear' : undefined}
+                >
+                  <Text style={{ color: soundCheckTime ? colors.textPrimary : colors.textSecondary, fontSize: 14, flex: 1 }}>
+                    {soundCheckTime || 'Set'}
+                  </Text>
+                  {soundCheckTime ? <Ionicons name="close-circle" size={14} color={colors.textSecondary} /> : null}
+                </TouchableOpacity>
+                {showTimePicker === 'soundCheck' && (
+                  <DateTimePicker value={timeStringToDate(soundCheckTime)} mode="time" display={Platform.OS === 'ios' ? 'compact' : 'default'} minuteInterval={5} onChange={handleTimeChange('soundCheck', setSoundCheckTime)} />
+                )}
               </View>
               <View style={[styles.rowField, { flex: 1 }]}>
                 <Text style={[styles.label, { color: colors.textSecondary, fontSize: 12 }]}>Doors</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-                  value={eventStartTime}
-                  onChangeText={setEventStartTime}
-                  placeholder="19:00"
-                  placeholderTextColor={colors.textSecondary}
-                  accessibilityLabel="Doors open time"
-                />
+                <TouchableOpacity
+                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }]}
+                  onPress={() => setShowTimePicker('doors')}
+                  onLongPress={eventStartTime ? () => { setEventStartTime(''); selectionFeedback(); } : undefined}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Doors: ${eventStartTime || 'not set'}`}
+                  accessibilityHint={eventStartTime ? 'Long press to clear' : undefined}
+                >
+                  <Text style={{ color: eventStartTime ? colors.textPrimary : colors.textSecondary, fontSize: 14, flex: 1 }}>
+                    {eventStartTime || 'Set'}
+                  </Text>
+                  {eventStartTime ? <Ionicons name="close-circle" size={14} color={colors.textSecondary} /> : null}
+                </TouchableOpacity>
+                {showTimePicker === 'doors' && (
+                  <DateTimePicker value={timeStringToDate(eventStartTime)} mode="time" display={Platform.OS === 'ios' ? 'compact' : 'default'} minuteInterval={5} onChange={handleTimeChange('doors', setEventStartTime)} />
+                )}
               </View>
               <View style={[styles.rowField, { flex: 1 }]}>
                 <Text style={[styles.label, { color: colors.textSecondary, fontSize: 12 }]}>Stage</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-                  value={performanceStartTime}
-                  onChangeText={setPerformanceStartTime}
-                  placeholder="20:00"
-                  placeholderTextColor={colors.textSecondary}
-                  accessibilityLabel="Stage time"
-                />
+                <TouchableOpacity
+                  style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }]}
+                  onPress={() => setShowTimePicker('stage')}
+                  onLongPress={performanceStartTime ? () => { setPerformanceStartTime(''); selectionFeedback(); } : undefined}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Stage time: ${performanceStartTime || 'not set'}`}
+                  accessibilityHint={performanceStartTime ? 'Long press to clear' : undefined}
+                >
+                  <Text style={{ color: performanceStartTime ? colors.textPrimary : colors.textSecondary, fontSize: 14, flex: 1 }}>
+                    {performanceStartTime || 'Set'}
+                  </Text>
+                  {performanceStartTime ? <Ionicons name="close-circle" size={14} color={colors.textSecondary} /> : null}
+                </TouchableOpacity>
+                {showTimePicker === 'stage' && (
+                  <DateTimePicker value={timeStringToDate(performanceStartTime)} mode="time" display={Platform.OS === 'ios' ? 'compact' : 'default'} minuteInterval={5} onChange={handleTimeChange('stage', setPerformanceStartTime)} />
+                )}
               </View>
             </View>
           )}
@@ -766,7 +1058,7 @@ export default function GigDetailScreen({ navigation, route }) {
               accessibilityLabel={`Lock event, ${isLocked ? 'checked' : 'unchecked'}`}
             >
               <View style={[styles.checkbox, { borderColor: colors.border }, isLocked && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-                {isLocked && <Text style={styles.checkmark}>{'\u2713'}</Text>}
+                {isLocked && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
               </View>
               <Text style={[styles.checkboxLabel, { color: colors.textPrimary }]}>Lock event (prevents member edits)</Text>
             </TouchableOpacity>
@@ -790,9 +1082,9 @@ export default function GigDetailScreen({ navigation, route }) {
               accessibilityLabel={isNew ? 'Create event' : 'Save event'}
             >
               {saving ? (
-                <ActivityIndicator color="#ffffff" size="small" />
+                <ActivityIndicator color={colors.primaryText} size="small" />
               ) : (
-                <Text style={styles.formButtonTextWhite}>{isNew ? 'Create' : 'Save'}</Text>
+                <Text style={[styles.formButtonTextWhite, { color: colors.primaryText }]}>{isNew ? 'Create' : 'Save'}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -805,7 +1097,7 @@ export default function GigDetailScreen({ navigation, route }) {
         </ScrollView>
 
         {/* Type Picker */}
-        <Modal visible={showTypePicker} transparent animationType="fade" onRequestClose={() => setShowTypePicker(false)}>
+        <Modal visible={showTypePicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowTypePicker(false)}>
           <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowTypePicker(false)} accessibilityRole="button" accessibilityLabel="Close type picker">
             <View style={[styles.pickerModal, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.pickerModalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Event Type</Text>
@@ -827,7 +1119,7 @@ export default function GigDetailScreen({ navigation, route }) {
         </Modal>
 
         {/* Status Picker */}
-        <Modal visible={showStatusPicker} transparent animationType="fade" onRequestClose={() => setShowStatusPicker(false)}>
+        <Modal visible={showStatusPicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowStatusPicker(false)}>
           <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowStatusPicker(false)} accessibilityRole="button" accessibilityLabel="Close status picker">
             <View style={[styles.pickerModal, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.pickerModalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Status</Text>
@@ -888,9 +1180,22 @@ export default function GigDetailScreen({ navigation, route }) {
   const setlistItems = gig.setlists || [];
 
   return (
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.bgPrimary }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+    >
     <ScrollView
+      ref={viewScrollRef}
       style={[styles.container, { backgroundColor: colors.bgPrimary }]}
       contentContainerStyle={[styles.viewContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      onScroll={(e) => {
+        const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+        nearBottomRef.current = (contentSize.height - contentOffset.y - layoutMeasurement.height) < 120;
+      }}
+      scrollEventThrottle={100}
     >
       {/* Type + Status + Lock badges */}
       <View style={styles.viewBadgeRow}>
@@ -937,21 +1242,21 @@ export default function GigDetailScreen({ navigation, route }) {
         {(gig?.soundCheckTime || gig?.eventStartTime || gig?.performanceStartTime) && (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 }}>
             {gig.soundCheckTime && (
-              <View>
-                <Text style={{ fontSize: 11, color: colors.textSecondary }}>Sound Check</Text>
-                <Text style={{ fontSize: 14, color: colors.textPrimary }}>{gig.soundCheckTime}</Text>
+              <View style={{ flexShrink: 1 }}>
+                <Text style={{ fontSize: 11, color: colors.textSecondary }} maxFontSizeMultiplier={1.5}>Sound Check</Text>
+                <Text style={{ fontSize: 14, color: colors.textPrimary }} maxFontSizeMultiplier={1.5}>{gig.soundCheckTime}</Text>
               </View>
             )}
             {gig.eventStartTime && (
-              <View>
-                <Text style={{ fontSize: 11, color: colors.textSecondary }}>Doors</Text>
-                <Text style={{ fontSize: 14, color: colors.textPrimary }}>{gig.eventStartTime}</Text>
+              <View style={{ flexShrink: 1 }}>
+                <Text style={{ fontSize: 11, color: colors.textSecondary }} maxFontSizeMultiplier={1.5}>Doors</Text>
+                <Text style={{ fontSize: 14, color: colors.textPrimary }} maxFontSizeMultiplier={1.5}>{gig.eventStartTime}</Text>
               </View>
             )}
             {gig.performanceStartTime && (
-              <View>
-                <Text style={{ fontSize: 11, color: colors.textSecondary }}>Stage</Text>
-                <Text style={{ fontSize: 14, color: colors.textPrimary }}>{gig.performanceStartTime}</Text>
+              <View style={{ flexShrink: 1 }}>
+                <Text style={{ fontSize: 11, color: colors.textSecondary }} maxFontSizeMultiplier={1.5}>Stage</Text>
+                <Text style={{ fontSize: 14, color: colors.textPrimary }} maxFontSizeMultiplier={1.5}>{gig.performanceStartTime}</Text>
               </View>
             )}
           </View>
@@ -1026,6 +1331,78 @@ export default function GigDetailScreen({ navigation, route }) {
         </View>
       )}
 
+      {/* Travel & Buffer Time */}
+      {gig && !editing && (
+        <View style={styles.viewSection}>
+          <Text style={[styles.viewLabel, { color: colors.textSecondary }]}>Travel & Buffer Time</Text>
+          <Text style={[styles.viewSubLabel, { color: colors.textSecondary }]}>
+            Add buffer time to mark yourself as unavailable in other bands
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Before</Text>
+              <View style={[styles.pickerContainer, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]} accessibilityRole="radiogroup" accessibilityLabel="Buffer time before event">
+                {[0, 15, 30, 45, 60, 90, 120].map(m => {
+                  const selected = (gig.myPaddingBefore || 0) === m;
+                  return (
+                    <TouchableOpacity
+                      key={m}
+                      style={[styles.paddingChip, selected && { backgroundColor: colors.primary }]}
+                      onPress={() => {
+                        selectionFeedback();
+                        const prev = gig.myPaddingBefore || 0;
+                        setGig(p => ({ ...p, myPaddingBefore: m }));
+                        api.setMyAttendance(gigId, { paddingBefore: m }).catch(() => {
+                          setGig(p => ({ ...p, myPaddingBefore: prev }));
+                          errorNotification();
+                        });
+                      }}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected }}
+                      accessibilityLabel={m === 0 ? 'No buffer before' : `${m} minutes before`}
+                    >
+                      <Text style={[styles.paddingChipText, { color: selected ? colors.primaryText : colors.textSecondary }]}>
+                        {m === 0 ? 'None' : `${m}m`}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>After</Text>
+              <View style={[styles.pickerContainer, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]} accessibilityRole="radiogroup" accessibilityLabel="Buffer time after event">
+                {[0, 15, 30, 45, 60, 90, 120].map(m => {
+                  const selected = (gig.myPaddingAfter || 0) === m;
+                  return (
+                    <TouchableOpacity
+                      key={m}
+                      style={[styles.paddingChip, selected && { backgroundColor: colors.primary }]}
+                      onPress={() => {
+                        selectionFeedback();
+                        const prev = gig.myPaddingAfter || 0;
+                        setGig(p => ({ ...p, myPaddingAfter: m }));
+                        api.setMyAttendance(gigId, { paddingAfter: m }).catch(() => {
+                          setGig(p => ({ ...p, myPaddingAfter: prev }));
+                          errorNotification();
+                        });
+                      }}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected }}
+                      accessibilityLabel={m === 0 ? 'No buffer after' : `${m} minutes after`}
+                    >
+                      <Text style={[styles.paddingChipText, { color: selected ? colors.primaryText : colors.textSecondary }]}>
+                        {m === 0 ? 'None' : `${m}m`}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* Notes */}
       {gig?.notes ? (
         <View style={styles.viewSection}>
@@ -1068,7 +1445,7 @@ export default function GigDetailScreen({ navigation, route }) {
                 accessibilityLabel={item.type === 'video' ? 'Video thumbnail' : 'Photo thumbnail'}
               >
                 {item.type === 'image' ? (
-                  <Image source={{ uri: item.url }} style={styles.mediaThumbnailImage} resizeMode="cover" />
+                  <Image source={{ uri: item.url }} style={styles.mediaThumbnailImage} contentFit="cover" />
                 ) : item.type === 'video' ? (
                   <View style={[styles.mediaThumbnailImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bgTertiary }]}>
                     <View style={styles.videoOverlay}>
@@ -1152,6 +1529,102 @@ export default function GigDetailScreen({ navigation, route }) {
         )}
       </View>
 
+      {/* Comments */}
+      <View style={styles.viewSection}>
+        <Text style={[styles.viewLabel, { color: colors.textSecondary }]}>Comments</Text>
+
+        {commentsLoading && comments.length === 0 ? (
+          <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 8 }} />
+        ) : null}
+
+        {!commentsLoading && commentsError ? (
+          <View style={{ paddingVertical: 8, marginBottom: 8 }}>
+            <Text style={{ color: colors.error, fontSize: 14, marginBottom: 8 }}>
+              {commentsError}
+            </Text>
+            <PressableRow
+              onPress={reloadComments}
+              style={{ alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 10, minHeight: 44, justifyContent: 'center', borderRadius: 8, backgroundColor: colors.bgTertiary }}
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading comments"
+            >
+              <Text style={{ color: colors.primary, fontWeight: '600' }}>Retry</Text>
+            </PressableRow>
+          </View>
+        ) : null}
+
+        {!commentsLoading && !commentsError && comments.length === 0 ? (
+          <View style={{ alignItems: 'center', paddingVertical: 20, marginBottom: 8 }}>
+            <Ionicons name="chatbubble-outline" size={32} color={colors.textSecondary} style={{ marginBottom: 8, opacity: 0.6 }} />
+            <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: 'center' }}>
+              No comments yet.{'\n'}Be the first to comment on this event.
+            </Text>
+          </View>
+        ) : null}
+
+        {comments.map(c => {
+          const isEditingThis = editingCommentId === c.id;
+          return (
+            <CommentItem
+              key={c.id}
+              comment={c}
+              isOwn={c.createdById === user?.id}
+              canDelete={c.createdById === user?.id || isAdmin}
+              isEditing={isEditingThis}
+              editingContent={isEditingThis ? editingCommentContent : undefined}
+              submitting={isEditingThis && commentSubmitting}
+              colors={colors}
+              onStartEdit={handleStartEditComment}
+              onChangeEditingContent={setEditingCommentContent}
+              onSaveEdit={handleSaveEditComment}
+              onCancelEdit={handleCancelEditComment}
+              onDelete={handleDeleteComment}
+              onLongPress={handleLongPressComment}
+            />
+          );
+        })}
+
+        {/* Add new comment */}
+        <View style={[styles.commentComposer, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}>
+          <TextInput
+            style={[styles.commentInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+            value={newComment}
+            onChangeText={setNewComment}
+            onFocus={() => {
+              setTimeout(() => viewScrollRef.current?.scrollToEnd({ animated: true }), 150);
+            }}
+            onContentSizeChange={() => {
+              if (nearBottomRef.current) {
+                viewScrollRef.current?.scrollToEnd({ animated: false });
+              }
+            }}
+            underlineColorAndroid="transparent"
+            multiline
+            maxLength={2000}
+            placeholder="Add a comment..."
+            placeholderTextColor={colors.textSecondary}
+            accessibilityLabel="New comment"
+          />
+          <PressableRow
+            style={[
+              styles.commentPostBtn,
+              { backgroundColor: newComment.trim() && !commentSubmitting ? colors.primary : colors.bgTertiary },
+            ]}
+            onPress={handleAddComment}
+            disabled={!newComment.trim() || commentSubmitting}
+            accessibilityRole="button"
+            accessibilityLabel="Post comment"
+            accessibilityState={{ busy: commentSubmitting, disabled: !newComment.trim() || commentSubmitting }}
+          >
+            {commentSubmitting ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={[styles.commentBtnText, { color: newComment.trim() ? '#fff' : colors.textSecondary }]}>Post</Text>
+            )}
+          </PressableRow>
+        </View>
+      </View>
+
       {/* Add to Calendar */}
       <TouchableOpacity
         style={[styles.calendarButton, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
@@ -1193,6 +1666,205 @@ export default function GigDetailScreen({ navigation, route }) {
         </TouchableOpacity>
       )}
     </ScrollView>
+    <ActionSheet
+      visible={actionSheetCommentId !== null}
+      title="Comment"
+      actions={actionSheetActions}
+      onClose={() => setActionSheetCommentId(null)}
+    />
+    </KeyboardAvoidingView>
+  );
+}
+
+function formatCommentDate(iso) {
+  try {
+    const d = new Date(iso);
+    if (differenceInHours(new Date(), d) < 24) {
+      return formatDistanceToNow(d, { addSuffix: true });
+    }
+    return d.toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  } catch {
+    return '';
+  }
+}
+
+const CommentItem = memo(function CommentItem({
+  comment,
+  isOwn,
+  canDelete,
+  isEditing,
+  editingContent,
+  submitting,
+  colors,
+  onStartEdit,
+  onChangeEditingContent,
+  onSaveEdit,
+  onCancelEdit,
+  onDelete,
+  onLongPress,
+}) {
+  const swipeableRef = useRef(null);
+  const authorName = comment.createdBy?.displayName || comment.removedCreatorName || 'Unknown';
+  const edited = comment.updatedAt && comment.updatedAt !== comment.createdAt;
+  const dateLabel = formatCommentDate(comment.createdAt);
+  const groupedLabel = `${isOwn ? 'Your comment' : `Comment by ${authorName}`}, ${dateLabel}${edited ? ', edited' : ''}: ${comment.content}`;
+
+  const header = (
+    <View style={styles.commentHeader}>
+      <View
+        style={[styles.commentAvatar, { backgroundColor: colors.bgTertiary }]}
+        importantForAccessibility="no"
+        accessibilityElementsHidden
+      >
+        {comment.createdBy?.avatarUrl ? (
+          <Image source={{ uri: comment.createdBy.avatarUrl }} style={styles.commentAvatarImg} contentFit="cover" />
+        ) : (
+          <Text style={[styles.commentAvatarText, { color: colors.textSecondary }]}>
+            {authorName.charAt(0).toUpperCase()}
+          </Text>
+        )}
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text
+          style={[styles.commentAuthor, { color: colors.textPrimary }]}
+          numberOfLines={2}
+          maxFontSizeMultiplier={1.8}
+        >
+          {authorName}
+        </Text>
+        <Text
+          style={[styles.commentMeta, { color: colors.textSecondary }]}
+          maxFontSizeMultiplier={1.6}
+        >
+          {dateLabel}{edited ? ' (edited)' : ''}
+        </Text>
+      </View>
+    </View>
+  );
+
+  // Editing takes full width and disables swipe / long-press interactions.
+  if (isEditing) {
+    return (
+      <View style={[styles.commentItem, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}>
+        <View>
+          {header}
+          <TextInput
+            style={[styles.commentInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+            value={editingContent}
+            onChangeText={onChangeEditingContent}
+            underlineColorAndroid="transparent"
+            multiline
+            maxLength={2000}
+            placeholder="Edit comment..."
+            placeholderTextColor={colors.textSecondary}
+            accessibilityLabel="Edit comment"
+          />
+          <View style={styles.commentActions}>
+            <PressableRow
+              style={[styles.commentBtn, { backgroundColor: colors.success }]}
+              onPress={onSaveEdit}
+              disabled={submitting || !editingContent?.trim()}
+              accessibilityRole="button"
+              accessibilityLabel="Save comment edit"
+              accessibilityState={{ busy: !!submitting, disabled: submitting || !editingContent?.trim() }}
+            >
+              <Text style={styles.commentBtnText}>Save</Text>
+            </PressableRow>
+            <PressableRow
+              style={[styles.commentBtn, { backgroundColor: colors.bgTertiary }]}
+              onPress={onCancelEdit}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel comment edit"
+            >
+              <Text style={[styles.commentBtnText, { color: colors.textPrimary }]}>Cancel</Text>
+            </PressableRow>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  const content = (
+    <Pressable
+      onLongPress={() => onLongPress?.(comment.id)}
+      delayLongPress={350}
+      style={[styles.commentItem, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
+      accessibilityRole="button"
+      accessibilityLabel={groupedLabel}
+      accessibilityHint="Long press for options"
+    >
+      <View>
+        {header}
+        <Text style={[styles.commentBody, { color: colors.textPrimary }]}>
+          {comment.content}
+        </Text>
+      </View>
+      {(isOwn || canDelete) && (
+        <View style={styles.commentActions}>
+          {isOwn && (
+            <PressableRow
+              onPress={() => onStartEdit(comment.id, comment.content)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Edit comment"
+              borderless
+            >
+              <Text style={[styles.commentLink, { color: colors.primary }]}>Edit</Text>
+            </PressableRow>
+          )}
+          {canDelete && (
+            <PressableRow
+              onPress={() => onDelete(comment.id)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Delete comment"
+              borderless
+            >
+              <Text style={[styles.commentLink, { color: colors.error }]}>Delete</Text>
+            </PressableRow>
+          )}
+        </View>
+      )}
+    </Pressable>
+  );
+
+  // Only own comments get swipe-to-delete. Non-own comments still get long-press actions.
+  if (!isOwn) return content;
+
+  return (
+    <ReanimatedSwipeable
+      ref={swipeableRef}
+      renderRightActions={(_p, drag) => <CommentSwipeDelete drag={drag} />}
+      rightThreshold={56}
+      overshootRight={false}
+      friction={2}
+      onSwipeableOpen={(direction) => {
+        if (direction === 'right') {
+          swipeableRef.current?.close();
+          onDelete?.(comment.id);
+        }
+      }}
+    >
+      {content}
+    </ReanimatedSwipeable>
+  );
+});
+
+function CommentSwipeDelete({ drag }) {
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(drag.value, [0, -80], [80, 0], Extrapolate.CLAMP) }],
+    opacity: interpolate(drag.value, [0, -20, -60], [0, 0.4, 1], Extrapolate.CLAMP),
+  }));
+  return (
+    <Reanimated.View style={[styles.commentSwipeDelete, animatedStyle]}>
+      <Ionicons name="trash-outline" size={20} color="#fff" />
+      <Text style={styles.commentSwipeDeleteText}>Delete</Text>
+    </Reanimated.View>
   );
 }
 
@@ -1218,6 +1890,11 @@ const styles = StyleSheet.create({
   attendeeName: { flex: 1, fontSize: 15 },
   attendeeStatusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   attendeeStatusText: { fontSize: 12, fontWeight: '600' },
+  viewSubLabel: { fontSize: 12, marginBottom: 4 },
+  fieldLabel: { fontSize: 11, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  pickerContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 8, borderRadius: 8, borderWidth: 1 },
+  paddingChip: { paddingHorizontal: 12, paddingVertical: 12, borderRadius: 8, minWidth: 48, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  paddingChipText: { fontSize: 12, fontWeight: '600' },
   mediaSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   mediaStrip: { gap: 8, marginBottom: 10 },
   mediaThumbnail: { width: 80, height: 80, borderRadius: 8, overflow: 'hidden' },
@@ -1231,6 +1908,36 @@ const styles = StyleSheet.create({
   addLinkButton: { borderRadius: 8, paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center' },
   calendarButton: { paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 8, borderWidth: 1 },
   calendarButtonText: { fontSize: 16, fontWeight: '600' },
+  // Comments
+  commentItem: { borderRadius: 10, borderWidth: 1, padding: 12, marginBottom: 10 },
+  commentHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 6 },
+  commentAvatar: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  commentAvatarImg: { width: '100%', height: '100%' },
+  commentAvatarText: { fontSize: 14, fontWeight: '700' },
+  commentAuthor: { fontSize: 14, fontWeight: '600' },
+  commentMeta: { fontSize: 11 },
+  commentBody: { fontSize: 15, lineHeight: 21, marginTop: 4 },
+  commentActions: { flexDirection: 'row', gap: 16, marginTop: 8, alignItems: 'center' },
+  commentLink: { fontSize: 13, fontWeight: '600', minHeight: 44, paddingHorizontal: 8, paddingVertical: 12, textAlignVertical: 'center' },
+  commentInput: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, minHeight: 60, maxHeight: 120, textAlignVertical: 'top' },
+  commentBtn: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, minHeight: 48, justifyContent: 'center', alignItems: 'center' },
+  commentBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  commentComposer: { borderRadius: 10, borderWidth: 1, padding: 12, marginTop: 4, gap: 8 },
+  commentPostBtn: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8, minHeight: 48, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-end' },
+  commentSwipeDelete: {
+    width: 80,
+    backgroundColor: '#dc2626',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+    borderRadius: 10,
+  },
+  commentSwipeDeleteText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 2,
+  },
   completeButton: { paddingVertical: 14, borderRadius: 10, alignItems: 'center', marginTop: 8, marginBottom: 20 },
   completeButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
   // Form

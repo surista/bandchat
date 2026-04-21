@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo, useLayoutEffect, useRef } fr
 import {
   View,
   Text,
-  Image,
   SectionList,
   TextInput,
   TouchableOpacity,
@@ -15,6 +14,7 @@ import {
   Platform,
   StyleSheet,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
@@ -119,6 +119,14 @@ export default function BandMembersScreen({ navigation, route }) {
           <Ionicons name="add" size={28} color={colors.primary} />
         </TouchableOpacity>
       ) : null,
+      ...(Platform.OS === 'ios' ? {
+        headerSearchBarOptions: {
+          placeholder: 'Search members',
+          hideWhenScrolling: false,
+          onChangeText: (e) => setSearch(e.nativeEvent.text),
+          onCancelButtonPress: () => setSearch(''),
+        },
+      } : {}),
     });
   }, [navigation, colors.primary, isAdmin]);
 
@@ -343,17 +351,19 @@ export default function BandMembersScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-      <View style={[styles.toolbar, { borderBottomColor: colors.border }]}>
-        <TextInput
-          style={[styles.searchInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary }]}
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search members..."
-          placeholderTextColor={colors.textSecondary}
-          autoCorrect={false}
-          accessibilityLabel="Search members"
-        />
-      </View>
+      {Platform.OS !== 'ios' && (
+        <View style={[styles.toolbar, { borderBottomColor: colors.border }]}>
+          <TextInput
+            style={[styles.searchInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary }]}
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search members..."
+            placeholderTextColor={colors.textSecondary}
+            autoCorrect={false}
+            accessibilityLabel="Search members"
+          />
+        </View>
+      )}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -369,7 +379,7 @@ export default function BandMembersScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel={`${seg.label}${segment === seg.key ? ', selected' : ''}`}
           >
-            <Text style={[styles.segmentChipText, { color: segment === seg.key ? '#ffffff' : colors.textSecondary }]}>
+            <Text style={[styles.segmentChipText, { color: segment === seg.key ? colors.primaryText : colors.textSecondary }]}>
               {seg.label}
             </Text>
           </TouchableOpacity>
@@ -406,8 +416,8 @@ export default function BandMembersScreen({ navigation, route }) {
       />
 
       {/* Create/Edit Modal */}
-      <Modal visible={showModal} transparent animationType="fade" onRequestClose={() => setShowModal(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Modal visible={showModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowModal(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
@@ -456,7 +466,7 @@ export default function BandMembersScreen({ navigation, route }) {
                 accessibilityLabel={`Guest musician, ${isGuest ? 'checked' : 'unchecked'}`}
               >
                 <View style={[styles.checkbox, { borderColor: colors.border }, isGuest && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-                  {isGuest && <Text style={styles.checkmark}>{'\u2713'}</Text>}
+                  {isGuest && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
                 </View>
                 <Text style={[styles.checkboxLabel, { color: colors.textPrimary }]}>Guest musician</Text>
               </TouchableOpacity>
@@ -491,9 +501,9 @@ export default function BandMembersScreen({ navigation, route }) {
                 accessibilityLabel={editingMember ? 'Save member' : 'Add member'}
               >
                 {saving ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>{editingMember ? 'Save' : 'Add'}</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>{editingMember ? 'Save' : 'Add'}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -502,7 +512,7 @@ export default function BandMembersScreen({ navigation, route }) {
       </Modal>
 
       {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide" onRequestClose={() => setShowActions(false)}>
+      <Modal visible={showActions} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowActions(false)}>
         <TouchableOpacity
           style={styles.actionOverlay}
           activeOpacity={1}
@@ -526,7 +536,7 @@ export default function BandMembersScreen({ navigation, route }) {
               </>
             )}
             <TouchableOpacity
-              style={[styles.actionItem, styles.actionCancel]}
+              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedMember(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"
@@ -622,7 +632,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
   },
-  checkmark: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  checkmark: { fontSize: 14, fontWeight: '700' },
   checkboxLabel: { fontSize: 15 },
   modalActions: { flexDirection: 'row', gap: 10, marginTop: 8 },
   modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },

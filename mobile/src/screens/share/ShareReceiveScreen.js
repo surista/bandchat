@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  Image,
   TouchableOpacity,
   TextInput,
   FlatList,
@@ -13,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useShareIntent } from 'expo-share-intent';
@@ -172,7 +172,7 @@ export default function ShareReceiveScreen({ navigation }) {
             key={index}
             source={{ uri: file.path }}
             style={styles.previewImage}
-            resizeMode="cover"
+            contentFit="cover"
           />
         ))}
       </ScrollView>
@@ -285,7 +285,7 @@ export default function ShareReceiveScreen({ navigation }) {
         </View>
       )}
 
-      <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView style={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
         {/* Image Preview */}
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
           {sharedFiles.length} {sharedFiles.length === 1 ? 'image' : 'images'}

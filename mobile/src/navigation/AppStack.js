@@ -1,4 +1,4 @@
-import { View, Text } from 'react-native';
+import { View, Text, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import WorkspaceListScreen from '../screens/workspaces/WorkspaceListScreen';
@@ -55,6 +55,11 @@ import { useTheme } from '../context/ThemeContext';
 
 const Stack = createNativeStackNavigator();
 
+// iOS-only: enable large titles on top-level list screens for native feel
+const iosLargeTitle = Platform.OS === 'ios'
+  ? { headerLargeTitle: true, headerLargeTitleShadowVisible: false }
+  : {};
+
 export default function AppStack() {
   const { colors } = useTheme();
 
@@ -62,8 +67,10 @@ export default function AppStack() {
     <Stack.Navigator
       screenOptions={{
         headerStyle: { backgroundColor: colors.headerBg },
-        headerTintColor: '#ffffff',
+        headerTintColor: colors.headerText,
         headerTitleStyle: { fontWeight: '600' },
+        headerLargeTitleStyle: { color: colors.headerText, fontWeight: '700' },
+        headerBackButtonDisplayMode: 'minimal',
         contentStyle: { backgroundColor: colors.bgPrimary },
       }}
     >
@@ -98,8 +105,8 @@ export default function AppStack() {
             return {
               headerTitle: () => (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="lock-closed" size={14} color="#ffffff" style={{ marginRight: 5 }} />
-                  <Text style={{ color: '#ffffff', fontSize: 17, fontWeight: '600' }}>{ch?.name || 'Channel'}</Text>
+                  <Ionicons name="lock-closed" size={14} color={colors.headerText} style={{ marginRight: 5 }} />
+                  <Text style={{ color: colors.headerText, fontSize: 17, fontWeight: '600' }}>{ch?.name || 'Channel'}</Text>
                 </View>
               ),
             };
@@ -114,41 +121,41 @@ export default function AppStack() {
       />
 
       {/* Band Features */}
-      <Stack.Screen name="SongList" component={SongListScreen} options={{ title: 'Songs' }} />
+      <Stack.Screen name="SongList" component={SongListScreen} options={{ title: 'Songs', ...iosLargeTitle }} />
       <Stack.Screen name="SongDetail" component={SongDetailScreen} options={{ title: 'Song' }} />
-      <Stack.Screen name="SetlistList" component={SetlistListScreen} options={{ title: 'Setlists' }} />
+      <Stack.Screen name="SetlistList" component={SetlistListScreen} options={{ title: 'Setlists', ...iosLargeTitle }} />
       <Stack.Screen name="SetlistDetail" component={SetlistDetailScreen} options={{ title: 'Setlist' }} />
-      <Stack.Screen name="GigList" component={GigListScreen} options={{ title: 'Calendar' }} />
+      <Stack.Screen name="GigList" component={GigListScreen} options={{ title: 'Calendar', ...iosLargeTitle }} />
       <Stack.Screen name="GigDetail" component={GigDetailScreen} options={{ title: 'Event' }} />
       <Stack.Screen name="GigGallery" component={GigGalleryScreen} options={({ route }) => ({ title: route.params?.gigTitle ? `${route.params.gigTitle} - Gallery` : 'Gallery' })} />
       <Stack.Screen name="Stats" component={StatsScreen} options={{ title: 'Stats' }} />
-      <Stack.Screen name="BandMembers" component={BandMembersScreen} options={{ title: 'Members' }} />
-      <Stack.Screen name="Contacts" component={ContactsScreen} options={{ title: 'Contacts' }} />
-      <Stack.Screen name="Venues" component={VenuesScreen} options={{ title: 'Venues' }} />
+      <Stack.Screen name="BandMembers" component={BandMembersScreen} options={{ title: 'Members', ...iosLargeTitle }} />
+      <Stack.Screen name="Contacts" component={ContactsScreen} options={{ title: 'Contacts', ...iosLargeTitle }} />
+      <Stack.Screen name="Venues" component={VenuesScreen} options={{ title: 'Venues', ...iosLargeTitle }} />
       <Stack.Screen name="VenueDetail" component={VenueDetailScreen} options={{ title: 'Venue' }} />
-      <Stack.Screen name="Announcements" component={AnnouncementsScreen} options={{ title: 'Announcements' }} />
-      <Stack.Screen name="Polls" component={PollsScreen} options={{ title: 'Polls' }} />
-      <Stack.Screen name="MedleyList" component={MedleyListScreen} options={{ title: 'Medleys' }} />
+      <Stack.Screen name="Announcements" component={AnnouncementsScreen} options={{ title: 'Announcements', ...iosLargeTitle }} />
+      <Stack.Screen name="Polls" component={PollsScreen} options={{ title: 'Polls', ...iosLargeTitle }} />
+      <Stack.Screen name="MedleyList" component={MedleyListScreen} options={{ title: 'Medleys', ...iosLargeTitle }} />
       <Stack.Screen name="MedleyDetail" component={MedleyDetailScreen} options={{ title: 'Medley' }} />
-      <Stack.Screen name="RecordingList" component={RecordingListScreen} options={{ title: 'Recordings' }} />
+      <Stack.Screen name="RecordingList" component={RecordingListScreen} options={{ title: 'Recordings', ...iosLargeTitle }} />
       <Stack.Screen name="RecordingDetail" component={RecordingDetailScreen} options={{ title: 'Recording' }} />
-      <Stack.Screen name="Timeline" component={TimelineScreen} options={{ title: 'Timeline' }} />
-      <Stack.Screen name="Achievements" component={AchievementsScreen} options={{ title: 'Achievements' }} />
-      <Stack.Screen name="Kitty" component={KittyScreen} options={{ title: 'Band Kitty' }} />
+      <Stack.Screen name="Timeline" component={TimelineScreen} options={{ title: 'Timeline', ...iosLargeTitle }} />
+      <Stack.Screen name="Achievements" component={AchievementsScreen} options={{ title: 'Achievements', ...iosLargeTitle }} />
+      <Stack.Screen name="Kitty" component={KittyScreen} options={{ title: 'Band Kitty', ...iosLargeTitle }} />
       <Stack.Screen name="SongIntelligence" component={SongIntelligenceScreen} options={{ title: 'Song Intelligence' }} />
-      <Stack.Screen name="PracticeDashboard" component={PracticeDashboardScreen} options={{ title: 'Practice' }} />
-      <Stack.Screen name="StagePlotList" component={StagePlotListScreen} options={{ title: 'Stage Plots' }} />
+      <Stack.Screen name="PracticeDashboard" component={PracticeDashboardScreen} options={{ title: 'Practice', ...iosLargeTitle }} />
+      <Stack.Screen name="StagePlotList" component={StagePlotListScreen} options={{ title: 'Stage Plots', ...iosLargeTitle }} />
       <Stack.Screen name="StagePlotEditor" component={StagePlotEditorScreen} options={{ title: 'Stage Plot' }} />
       <Stack.Screen name="LiveMode" component={LiveModeScreen} options={{ headerShown: false, animation: 'fade' }} />
       <Stack.Screen name="Lyrics" component={LyricsScreen} options={{ headerShown: false, animation: 'fade' }} />
 
       {/* Settings */}
-      <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
+      <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings', ...iosLargeTitle }} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile' }} />
       <Stack.Screen name="Security" component={SecurityScreen} options={{ title: 'Security' }} />
       <Stack.Screen name="Appearance" component={AppearanceScreen} options={{ title: 'Appearance' }} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notifications' }} />
-      <Stack.Screen name="WorkspaceMembers" component={WorkspaceMembersScreen} options={{ title: 'Members' }} />
+      <Stack.Screen name="WorkspaceMembers" component={WorkspaceMembersScreen} options={{ title: 'Members', ...iosLargeTitle }} />
       <Stack.Screen name="Invite" component={InviteScreen} options={{ title: 'Invite People' }} />
       <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} options={{ title: 'Blocked Users' }} />
       <Stack.Screen name="Upgrade" component={UpgradeScreen} options={{ title: 'Upgrade to Pro' }} />
@@ -159,10 +166,10 @@ export default function AppStack() {
 
       {/* Search, Pins & Channel Management */}
       <Stack.Screen name="Search" component={SearchScreen} options={{ title: 'Search' }} />
-      <Stack.Screen name="PinnedMessages" component={PinnedMessagesScreen} options={{ title: 'Pinned Messages' }} />
-      <Stack.Screen name="SavedMessages" component={SavedMessagesScreen} options={{ title: 'Saved Messages' }} />
-      <Stack.Screen name="MessagesTimeline" component={MessagesTimelineScreen} options={{ title: 'All Messages' }} />
-      <Stack.Screen name="Activity" component={ActivityScreen} options={{ title: 'Activity' }} />
+      <Stack.Screen name="PinnedMessages" component={PinnedMessagesScreen} options={{ title: 'Pinned Messages', ...iosLargeTitle }} />
+      <Stack.Screen name="SavedMessages" component={SavedMessagesScreen} options={{ title: 'Saved Messages', ...iosLargeTitle }} />
+      <Stack.Screen name="MessagesTimeline" component={MessagesTimelineScreen} options={{ title: 'All Messages', ...iosLargeTitle }} />
+      <Stack.Screen name="Activity" component={ActivityScreen} options={{ title: 'Activity', ...iosLargeTitle }} />
       <Stack.Screen name="ChannelSettings" component={ChannelSettingsScreen} options={{ title: 'Channel Settings' }} />
 
       {/* Share Extension */}

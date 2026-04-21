@@ -24,6 +24,7 @@ class NotificationService {
     this.expoPushToken = null;
     this.notificationListener = null;
     this.responseListener = null;
+    this.tokenRefreshListener = null;
     this.onNotificationTapped = null;
   }
 
@@ -59,13 +60,32 @@ class NotificationService {
       this.expoPushToken = tokenData.data;
 
       // Send token to server
-      try {
-        await api.request('/push/expo-token', {
-          method: 'POST',
-          body: JSON.stringify({ token: this.expoPushToken, platform: Platform.OS }),
+      await api.request('/push/expo-token', {
+        method: 'POST',
+        body: JSON.stringify({ token: this.expoPushToken, platform: Platform.OS }),
+      }).catch(err => console.warn('Push token registration failed:', err.message));
+
+      // Listen for device token refresh (e.g., after reinstall, token rotation)
+      // When the device token changes, re-fetch the Expo push token and update the server
+      if (!this.tokenRefreshListener) {
+        this.tokenRefreshListener = Notifications.addPushTokenListener(async () => {
+          try {
+            const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+            const tokenData = await Notifications.getExpoPushTokenAsync(
+              projectId ? { projectId } : {}
+            );
+            const newToken = tokenData.data;
+            if (newToken && newToken !== this.expoPushToken) {
+              this.expoPushToken = newToken;
+              await api.request('/push/expo-token', {
+                method: 'POST',
+                body: JSON.stringify({ token: newToken, platform: Platform.OS }),
+              });
+            }
+          } catch {
+            // Best-effort — register() will retry on next app launch
+          }
         });
-      } catch {
-        // Server may not have this endpoint yet
       }
 
       // Android notification channels
@@ -148,6 +168,9 @@ class NotificationService {
     if (this.responseListener) {
       this.responseListener.remove();
     }
+    if (this.tokenRefreshListener) {
+      this.tokenRefreshListener.remove();
+    }
   }
 
   /** Set the currently active channel (suppresses notifications for it) */
@@ -169,7 +192,7 @@ class NotificationService {
     }
   }
 
-  /** Dismiss delivered notifications for a specific channel */
+  /** Dismiss delivered notifications for a specific channel and update badge */
   async dismissChannelNotifications(channelId) {
     try {
       const delivered = await Notifications.getPresentedNotificationsAsync();
@@ -179,6 +202,9 @@ class NotificationService {
       await Promise.all(
         matching.map(n => Notifications.dismissNotificationAsync(n.request.identifier))
       );
+      // Update badge to reflect remaining notifications
+      const remaining = delivered.length - matching.length;
+      await Notifications.setBadgeCountAsync(Math.max(0, remaining));
     } catch {
       // Best-effort
     }

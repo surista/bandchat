@@ -21,6 +21,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import Constants from 'expo-constants';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
@@ -31,6 +32,7 @@ export default function SecurityScreen() {
   const { user, updateUser, logout, biometricEnabled, setBiometricEnabled } = useAuth()
   const { isTablet, contentMaxWidth } = useLayout();
   const { colors } = useTheme();
+  const headerHeight = useHeaderHeight();
 
   const hasPassword = user?.hasPassword !== false;
   const hasGoogle = !!user?.googleId;
@@ -57,7 +59,7 @@ export default function SecurityScreen() {
         if (hasFaceId) {
           setBiometricLabel('Face ID');
         } else if (hasFingerprint) {
-          setBiometricLabel(Platform.OS === 'ios' ? 'Touch ID' : 'Fingerprint');
+          setBiometricLabel(Platform.OS === 'ios' ? 'Touch ID' : 'Biometric Unlock');
         }
       } catch {
         // No biometrics available
@@ -212,7 +214,7 @@ export default function SecurityScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
         {/* Change Password */}
         {hasPassword && (
@@ -227,6 +229,8 @@ export default function SecurityScreen() {
                 onChangeText={setCurrentPassword}
                 secureTextEntry
                 autoCapitalize="none"
+                autoComplete="current-password"
+                textContentType="password"
                 accessibilityLabel="Current password"
               />
               <TextInput
@@ -237,6 +241,8 @@ export default function SecurityScreen() {
                 onChangeText={setNewPassword}
                 secureTextEntry
                 autoCapitalize="none"
+                autoComplete="new-password"
+                textContentType="newPassword"
                 accessibilityLabel="New password"
               />
               <TextInput
@@ -247,6 +253,8 @@ export default function SecurityScreen() {
                 onChangeText={setConfirmPassword}
                 secureTextEntry
                 autoCapitalize="none"
+                autoComplete="new-password"
+                textContentType="newPassword"
                 accessibilityLabel="Confirm new password"
               />
               <TouchableOpacity
@@ -258,9 +266,9 @@ export default function SecurityScreen() {
                 accessibilityLabel="Update password"
               >
                 {changingPassword ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.buttonText}>Update Password</Text>
+                  <Text style={[styles.buttonText, { color: colors.primaryText }]}>Update Password</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -428,8 +436,8 @@ export default function SecurityScreen() {
       </KeyboardAvoidingView>
 
       {/* Change Email Modal */}
-      <Modal visible={showEmailModal} transparent animationType="fade" onRequestClose={() => setShowEmailModal(false)}>
-        <View style={styles.modalOverlay}>
+      <Modal visible={showEmailModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowEmailModal(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Change Email</Text>
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
@@ -443,6 +451,8 @@ export default function SecurityScreen() {
               onChangeText={setNewEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
               autoFocus
               accessibilityLabel="New email address"
             />
@@ -454,6 +464,8 @@ export default function SecurityScreen() {
               onChangeText={setEmailPassword}
               secureTextEntry
               autoCapitalize="none"
+              autoComplete="current-password"
+              textContentType="password"
               accessibilityLabel="Current password for email change"
             />
             <View style={styles.modalActions}>
@@ -474,18 +486,18 @@ export default function SecurityScreen() {
                 accessibilityLabel="Send verification email"
               >
                 {changingEmail ? (
-                  <ActivityIndicator color="#ffffff" size="small" />
+                  <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>Send Verification</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>Send Verification</Text>
                 )}
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
       {/* Delete Account Modal */}
-      <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => { setShowDeleteModal(false); setDeletePassword(''); }}>
-        <View style={styles.modalOverlay}>
+      <Modal visible={showDeleteModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => { setShowDeleteModal(false); setDeletePassword(''); }}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.modalTitle, { color: '#ef4444' }]} accessibilityRole="header">Delete Account</Text>
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
@@ -500,6 +512,7 @@ export default function SecurityScreen() {
                 value={deletePassword}
                 onChangeText={setDeletePassword}
                 autoComplete="current-password"
+                textContentType="password"
                 accessibilityLabel="Password confirmation for account deletion"
               />
             )}
@@ -541,7 +554,7 @@ export default function SecurityScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

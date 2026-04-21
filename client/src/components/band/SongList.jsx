@@ -585,6 +585,14 @@ function SongList({ workspaceId, workspaceName, onSelectSong }) {
               ▦
             </button>
             <button
+              onClick={() => setViewMode('mini')}
+              className={`px-2.5 py-2 text-sm ${viewMode === 'mini' ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'}`}
+              title="Mini card view"
+              aria-label="Mini card view"
+            >
+              ▤
+            </button>
+            <button
               onClick={() => setViewMode('compact')}
               className={`px-2.5 py-2 text-sm ${viewMode === 'compact' ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'}`}
               title="Compact list view"
@@ -675,6 +683,65 @@ function SongList({ workspaceId, workspaceName, onSelectSong }) {
                 </button>
               </div>
             )}
+          </div>
+        ) : viewMode === 'mini' ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+            {filteredSongs.map(song => (
+              <div
+                key={song.id}
+                className="bg-[var(--color-bg-secondary)] rounded-md px-3 py-2.5 hover:bg-[var(--color-bg-tertiary)] transition-colors border border-[var(--color-border)] cursor-pointer group"
+                onClick={() => handleViewSong(song)}
+              >
+                <div className="flex items-start justify-between gap-1">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-[var(--color-text-primary)] truncate">{song.title}</div>
+                    {song.artist && (
+                      <div className="text-xs text-[var(--color-text-muted)] truncate">{song.artist}</div>
+                    )}
+                  </div>
+                  <div className="hidden sm:flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleEditSong(song); }}
+                      className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-xs"
+                      title="Edit"
+                      aria-label="Edit song"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); confirmDeleteSong(song.id); }}
+                      className="p-1 text-[var(--color-text-muted)] hover:text-red-400 text-xs"
+                      title="Delete"
+                      aria-label="Delete song"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1 mt-1.5 text-[10px]">
+                  {song.key && (
+                    <span className="px-1.5 py-0.5 rounded" style={{ color: 'var(--color-badge-key)', backgroundColor: 'color-mix(in srgb, var(--color-badge-key) 15%, transparent)' }}>
+                      {song.key}
+                    </span>
+                  )}
+                  {song.bpm && (
+                    <span className="px-1.5 py-0.5 rounded" style={{ color: 'var(--color-badge-bpm)', backgroundColor: 'color-mix(in srgb, var(--color-badge-bpm) 15%, transparent)' }}>
+                      {song.bpm}
+                    </span>
+                  )}
+                  {song.duration && (
+                    <span className="px-1.5 py-0.5 bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] rounded">
+                      {Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}
+                    </span>
+                  )}
+                  {song.hasAudio && (
+                    <span className="px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400">
+                      ♫
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         ) : viewMode === 'compact' ? (
           <div className="overflow-x-auto">
