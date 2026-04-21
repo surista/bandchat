@@ -6,6 +6,7 @@ import { useDatabase } from './DatabaseContext';
 import api from '../services/api';
 import { register as registerSocketSync, unregister as unregisterSocketSync } from '../services/socketSyncHandler';
 import { processQueue } from '../services/syncQueue';
+import notificationService from '../services/notifications';
 
 const SocketContext = createContext(null);
 
@@ -69,6 +70,12 @@ export function SocketProvider({ children }) {
           }
         })();
       }
+    });
+
+    // Listen for badge updates from server (when messages are marked as read)
+    // iOS HIG: Badge should update immediately when unread count changes
+    newSocket.on('badge:update', ({ count }) => {
+      notificationService.setBadgeCount(count);
     });
 
     newSocket.on('connect_error', async (socketError) => {

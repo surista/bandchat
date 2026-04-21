@@ -440,15 +440,8 @@ export default function ChannelListScreen({ navigation, route }) {
 
   const handleChannelPress = useCallback((channel, isDM) => {
     activeChannelRef.current = channel.id;
-    if (isDM) {
-      setDirectMessages(prev =>
-        prev.map(dm => dm.id === channel.id ? { ...dm, unreadCount: 0 } : dm)
-      );
-    } else {
-      setChannels(prev =>
-        prev.map(c => c.id === channel.id ? { ...c, unreadCount: 0 } : c)
-      );
-    }
+    // Don't optimistically clear unreadCount - let server be source of truth.
+    // ChannelScreen calls mark-as-read API → server emits badge:update → useFocusEffect refetches.
     const channelData = isDM
       ? { ...channel, displayName: getDMDisplayName(channel), isDM: true }
       : channel;

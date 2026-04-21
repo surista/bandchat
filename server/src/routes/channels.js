@@ -599,6 +599,27 @@ router.post('/:channelId/read', authenticate, isChannelMember, async (req, res) 
       }
     });
 
+    // Calculate new badge count and emit to user's devices
+    // iOS HIG: Badge must update immediately when user reads messages
+    try {
+      const result = await prisma.$queryRaw`
+        SELECT COUNT(m.id)::int AS count
+        FROM "ChannelMember" cm
+        JOIN "Message" m ON m."channelId" = cm."channelId"
+          AND m."createdAt" > cm."lastRead"
+          AND m."authorId" != cm."userId"
+          AND m."parentId" IS NULL
+        WHERE cm."userId" = ${req.user.id}
+          AND cm.muted = false
+      `;
+      const badgeCount = result[0]?.count || 0;
+      const io = req.app.get('io');
+      io.to(`user:${req.user.id}`).emit('badge:update', { count: badgeCount });
+    } catch (e) {
+      // Non-critical — badge will sync on next foreground
+      console.warn('Failed to emit badge update:', e.message);
+    }
+
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to mark as read' });

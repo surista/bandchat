@@ -183,7 +183,23 @@ class NotificationService {
     activeChannelId = null;
   }
 
-  /** Clear the app icon badge */
+  /**
+   * Set the app icon badge to a specific count.
+   * iOS HIG: Badge should always reflect actual actionable items.
+   * @param {number} count - The badge count to display (0 to clear)
+   */
+  async setBadgeCount(count) {
+    try {
+      await Notifications.setBadgeCountAsync(Math.max(0, count));
+    } catch {
+      // Best-effort
+    }
+  }
+
+  /**
+   * Clear the app icon badge (sets to 0).
+   * Use syncBadgeWithServer() instead when you want accurate counts.
+   */
   async clearBadge() {
     try {
       await Notifications.setBadgeCountAsync(0);
@@ -192,7 +208,29 @@ class NotificationService {
     }
   }
 
-  /** Dismiss delivered notifications for a specific channel and update badge */
+  /**
+   * Sync app icon badge with server's unread count.
+   * iOS HIG: On app foreground, badge should reflect actual server state.
+   * Call this when:
+   * - App comes to foreground
+   * - User marks messages as read
+   * - Socket emits badge update event
+   * @returns {Promise<number>} The synced badge count
+   */
+  async syncBadgeWithServer() {
+    try {
+      const response = await api.request('/push/unread-count');
+      const count = response?.count || 0;
+      await Notifications.setBadgeCountAsync(count);
+      return count;
+    } catch (err) {
+      console.warn('Failed to sync badge with server:', err.message);
+      // On error, don't change badge - stale is better than wrong
+      return -1;
+    }
+  }
+
+  /** Dismiss delivered notifications for a specific channel and sync badge with server */
   async dismissChannelNotifications(channelId) {
     try {
       const delivered = await Notifications.getPresentedNotificationsAsync();
@@ -202,9 +240,8 @@ class NotificationService {
       await Promise.all(
         matching.map(n => Notifications.dismissNotificationAsync(n.request.identifier))
       );
-      // Update badge to reflect remaining notifications
-      const remaining = delivered.length - matching.length;
-      await Notifications.setBadgeCountAsync(Math.max(0, remaining));
+      // Sync badge with server for accurate count (not just remaining notifications)
+      await this.syncBadgeWithServer();
     } catch {
       // Best-effort
     }

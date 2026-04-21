@@ -105,7 +105,8 @@ export default function WorkspaceListScreen({ navigation, route }) {
     <PressableRow
       style={[styles.workspaceItem, { backgroundColor: colors.bgSecondary }]}
       onPress={() => {
-        setWorkspaces(prev => prev.map(w => w.id === item.id ? { ...w, unreadCount: 0 } : w));
+        // Don't optimistically clear unreadCount - let server be source of truth.
+        // Counts update via: mark-as-read API, socket badge:update, useFocusEffect refetch.
         navigation.navigate('Workspace', { id: item.id, name: item.name });
       }}
       accessibilityRole="button"

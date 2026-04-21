@@ -177,6 +177,28 @@ router.post('/snooze', authenticate, apiLimiter, async (req, res) => {
   }
 });
 
+// Get total unread count for app badge synchronization
+// iOS HIG: Badge should always reflect actual server state
+router.get('/unread-count', authenticate, async (req, res) => {
+  try {
+    const result = await prisma.$queryRaw`
+      SELECT COUNT(m.id)::int AS count
+      FROM "ChannelMember" cm
+      JOIN "Message" m ON m."channelId" = cm."channelId"
+        AND m."createdAt" > cm."lastRead"
+        AND m."authorId" != cm."userId"
+        AND m."parentId" IS NULL
+      WHERE cm."userId" = ${req.user.id}
+        AND cm.muted = false
+    `;
+    const count = result[0]?.count || 0;
+    res.json({ count });
+  } catch (error) {
+    console.error('Get unread count error:', error);
+    res.status(500).json({ error: 'Failed to get unread count' });
+  }
+});
+
 // Get notification preferences for a workspace
 router.get('/preferences/:workspaceId', authenticate, async (req, res) => {
   try {

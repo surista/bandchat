@@ -150,7 +150,8 @@ function AppContent() {
     notificationService.listen(async (data) => {
       // Handle notification tap — navigate to workspace/channel if data provided
       if (data?.workspaceId && data?.channelId && navigationRef.current) {
-        notificationService.clearBadge();
+        // Sync badge with server after tapping notification (iOS HIG: badge = actual unread)
+        notificationService.syncBadgeWithServer();
         navigationRef.current.navigate('Workspace', { id: data.workspaceId, name: data.workspaceName || 'Workspace' });
         try {
           const channel = await api.getChannel(data.channelId);
@@ -164,10 +165,11 @@ function AppContent() {
       }
     });
 
-    // Clear badge and refresh widget when app comes to foreground
+    // Sync badge with server and refresh widget when app comes to foreground
+    // iOS HIG: Badge should always reflect actual server state, not just clear to 0
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
-        notificationService.clearBadge();
+        notificationService.syncBadgeWithServer();
         updateWidgetGigData();
       }
     });
