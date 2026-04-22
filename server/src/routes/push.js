@@ -2,6 +2,7 @@ import express from 'express';
 import webpush from 'web-push';
 import { Expo } from 'expo-server-sdk';
 import prisma from '../lib/prisma.js';
+import { getUnreadCount } from '../lib/unreadCount.js';
 import { authenticate } from '../middleware/auth.js';
 import { apiLimiter } from '../middleware/rateLimit.js';
 
@@ -181,17 +182,7 @@ router.post('/snooze', authenticate, apiLimiter, async (req, res) => {
 // iOS HIG: Badge should always reflect actual server state
 router.get('/unread-count', authenticate, async (req, res) => {
   try {
-    const result = await prisma.$queryRaw`
-      SELECT COUNT(m.id)::int AS count
-      FROM "ChannelMember" cm
-      JOIN "Message" m ON m."channelId" = cm."channelId"
-        AND m."createdAt" > cm."lastRead"
-        AND m."authorId" != cm."userId"
-        AND m."parentId" IS NULL
-      WHERE cm."userId" = ${req.user.id}
-        AND cm.muted = false
-    `;
-    const count = result[0]?.count || 0;
+    const count = await getUnreadCount(req.user.id);
     res.json({ count });
   } catch (error) {
     console.error('Get unread count error:', error);
@@ -380,24 +371,10 @@ export const sendPushToUser = async (userId, payload, options = {}) => {
       where: { userId }
     });
 
-    // Calculate total unread count for badge (single efficient query)
-    let badgeCount = 1;
-    try {
-      const result = await prisma.$queryRaw`
-        SELECT COUNT(m.id)::int AS count
-        FROM "ChannelMember" cm
-        JOIN "Message" m ON m."channelId" = cm."channelId"
-          AND m."createdAt" > cm."lastRead"
-          AND m."authorId" != cm."userId"
-          AND m."parentId" IS NULL
-        WHERE cm."userId" = ${userId}
-          AND cm.muted = false
-      `;
-      const count = result[0]?.count || 0;
-      if (count > 0) badgeCount = count;
-    } catch (e) {
-      console.error('Failed to calculate badge count:', e);
-    }
+    // Calculate total unread count for badge. Use the actual server value even
+    // if it's 0 — never default to a minimum of 1, or iOS will show a phantom
+    // badge after the user reads the message on another device.
+    const badgeCount = await getUnreadCount(userId);
 
     // Map notification category to Android notification channel ID
     const androidChannelId = {

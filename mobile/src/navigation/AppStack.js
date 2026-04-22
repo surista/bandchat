@@ -146,8 +146,19 @@ export default function AppStack() {
       <Stack.Screen name="PracticeDashboard" component={PracticeDashboardScreen} options={{ title: 'Practice', ...iosLargeTitle }} />
       <Stack.Screen name="StagePlotList" component={StagePlotListScreen} options={{ title: 'Stage Plots', ...iosLargeTitle }} />
       <Stack.Screen name="StagePlotEditor" component={StagePlotEditorScreen} options={{ title: 'Stage Plot' }} />
-      <Stack.Screen name="LiveMode" component={LiveModeScreen} options={{ headerShown: false, animation: 'fade' }} />
-      <Stack.Screen name="Lyrics" component={LyricsScreen} options={{ headerShown: false, animation: 'fade' }} />
+      {/* Live performance screens: fullScreenModal prevents accidental swipe-dismiss
+          during a song. gestureEnabled re-enables edge-swipe-back (headerShown:false
+          otherwise disables it on native-stack). */}
+      <Stack.Screen
+        name="LiveMode"
+        component={LiveModeScreen}
+        options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'fade', gestureEnabled: false }}
+      />
+      <Stack.Screen
+        name="Lyrics"
+        component={LyricsScreen}
+        options={{ headerShown: false, animation: 'fade', gestureEnabled: true }}
+      />
 
       {/* Settings */}
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings', ...iosLargeTitle }} />

@@ -183,7 +183,7 @@ export default function VenueDetailScreen({ navigation, route }) {
   const handlePickImage = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
+      allowsEditing: Platform.OS === 'ios',
       aspect: [16, 9],
       quality: 0.8,
     });

@@ -7,7 +7,6 @@ import {
   StatusBar,
   BackHandler,
   StyleSheet,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -102,18 +101,17 @@ export default function LyricsScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar hidden />
+      <StatusBar hidden animated />
 
       {/* Top bar */}
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity
           style={styles.closeButton}
           onPress={handleClose}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           accessibilityRole="button"
           accessibilityLabel="Close lyrics view"
         >
-          <Ionicons name="close" size={18} color="#ffffff" />
+          <Ionicons name="close" size={22} color="#ffffff" />
         </TouchableOpacity>
 
         <Text style={styles.titleText} numberOfLines={1}>{songTitle}</Text>
@@ -168,7 +166,6 @@ export default function LyricsScreen({ navigation, route }) {
           {
             fontSize,
             lineHeight: fontSize * 1.5,
-            fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
           },
         ]}>
           {lyrics}
@@ -194,9 +191,9 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',

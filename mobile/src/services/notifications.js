@@ -148,12 +148,18 @@ class NotificationService {
     });
   }
 
+  /**
+   * Unregister push tokens on logout.
+   * Sends DELETE with no token so the server purges ALL of this user's tokens
+   * (including rotated-but-still-valid ones that never got explicitly revoked).
+   * Prevents a logged-out user's pushes from ever landing on a device where a
+   * different user has since signed in.
+   */
   async unregister() {
-    if (!this.expoPushToken) return;
     try {
       await api.request('/push/expo-token', {
         method: 'DELETE',
-        body: JSON.stringify({ token: this.expoPushToken }),
+        body: JSON.stringify({}),
       });
     } catch {
       // Best-effort cleanup
@@ -230,7 +236,13 @@ class NotificationService {
     }
   }
 
-  /** Dismiss delivered notifications for a specific channel and sync badge with server */
+  /**
+   * Dismiss delivered notifications for a specific channel.
+   * The server emits a `badge:update` socket event after mark-read, which the
+   * SocketContext listener applies to the badge — we don't sync here to avoid
+   * racing with the server's own mark-read processing (which would return a
+   * stale count including the channel the user just opened).
+   */
   async dismissChannelNotifications(channelId) {
     try {
       const delivered = await Notifications.getPresentedNotificationsAsync();
@@ -240,8 +252,6 @@ class NotificationService {
       await Promise.all(
         matching.map(n => Notifications.dismissNotificationAsync(n.request.identifier))
       );
-      // Sync badge with server for accurate count (not just remaining notifications)
-      await this.syncBadgeWithServer();
     } catch {
       // Best-effort
     }

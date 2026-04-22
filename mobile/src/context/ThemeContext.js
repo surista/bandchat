@@ -395,6 +395,7 @@ export function ThemeProvider({ children }) {
       isLightHeader,
       primaryText,
       error: mode === 'dark' ? '#ef4444' : '#dc2626',
+      errorText: '#ffffff',
       success: mode === 'dark' ? '#22c55e' : '#16a34a',
       warning: mode === 'dark' ? '#eab308' : '#ca8a04',
     };

@@ -11,6 +11,7 @@ import { forceLeaveWorkspace } from '../socket/handlers.js';
 import { getEffectivePlan, getPlanLimits, serializePlanLimits } from '../lib/planLimits.js';
 import { logAudit } from '../lib/audit.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
+import { emitBadgeUpdate } from '../lib/unreadCount.js';
 
 const router = express.Router();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -190,6 +191,8 @@ router.post('/:workspaceId/read', authenticate, isWorkspaceMember, async (req, r
       },
       data: { lastRead: new Date() },
     });
+    // Emit badge update so mobile devices clear the app icon badge immediately
+    emitBadgeUpdate(req.app.get('io'), req.user.id);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to mark workspace as read' });

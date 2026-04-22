@@ -17,6 +17,10 @@ import { useLayout } from '../hooks/useLayout';
 
 const YT_REGEX = /(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/|m\.youtube\.com\/watch\?v=)([\w-]{11})/;
 
+// Long-press delay: iOS users expect a snappy ~250ms; Android Material guidance
+// is ~400ms to avoid triggering context menus during lazy scrolls.
+const LONG_PRESS_DELAY = Platform.OS === 'android' ? 400 : 250;
+
 function formatTimestamp(dateStr) {
   const date = new Date(dateStr);
   if (isToday(date)) return format(date, 'h:mm a');
@@ -260,7 +264,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
       <Pressable
         style={[styles.groupedContainer, { paddingTop: density.groupedPaddingTop, paddingBottom: density.groupedPaddingBottom }, isPending && styles.pending]}
         onLongPress={handleLongPress}
-        delayLongPress={250}
+        delayLongPress={LONG_PRESS_DELAY}
         accessibilityRole="button"
         accessibilityLabel={`Message: ${message.content || 'attachment'}`}
       >
@@ -298,7 +302,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
     <Pressable
       style={[styles.container, { paddingTop: density.containerPaddingTop, paddingBottom: density.containerPaddingBottom }, isPending && styles.pending]}
       onLongPress={handleLongPress}
-      delayLongPress={250}
+      delayLongPress={LONG_PRESS_DELAY}
       accessibilityRole="button"
       accessibilityLabel={`${displayName}: ${message.content || 'attachment'}`}
     >
@@ -709,7 +713,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 36,
     height: 36,
-    borderRadius: 6,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
@@ -718,7 +722,7 @@ const styles = StyleSheet.create({
   avatarImage: {
     width: 36,
     height: 36,
-    borderRadius: 6,
+    borderRadius: 18,
   },
   avatarText: {
     color: '#ffffff',

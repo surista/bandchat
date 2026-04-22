@@ -11,6 +11,7 @@ import ImageView from 'react-native-image-viewing';
 import * as MediaLibrary from 'expo-media-library';
 import { File, Directory, Paths } from 'expo-file-system/next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
   const [saving, setSaving] = useState(false);
@@ -61,14 +62,13 @@ function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
         onPress={() => handleSave(imageIndex)}
         disabled={saving}
         activeOpacity={0.7}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         accessibilityRole="button"
         accessibilityLabel="Save image to photo library"
       >
         {saving ? (
           <ActivityIndicator size="small" color="#ffffff" />
         ) : (
-          <Text style={styles.headerButtonText}>{'\u2B07'}</Text>
+          <Ionicons name="download-outline" size={22} color="#ffffff" />
         )}
       </TouchableOpacity>
       {imageList.length > 1 && (
@@ -78,11 +78,10 @@ function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
         style={styles.headerButton}
         onPress={onClose}
         activeOpacity={0.7}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         accessibilityRole="button"
         accessibilityLabel="Close image viewer"
       >
-        <Text style={styles.headerButtonText}>{'\u2715'}</Text>
+        <Ionicons name="close" size={22} color="#ffffff" />
       </TouchableOpacity>
     </View>
   ), [insets.top, saving, imageList.length, handleSave, onClose]);
@@ -123,11 +122,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  headerButtonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '600',
   },
   counter: {
     color: '#ffffff',

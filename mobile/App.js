@@ -8,11 +8,12 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// Support Dynamic Type / Android font scaling up to 1.8× (accessibility sizes)
+// Support Dynamic Type / Android font scaling up to 2.0× to cover Android's
+// highest accessibility levels (Pixel/Samsung) and iOS AX3/AX5 sizes.
 if (Text.defaultProps == null) Text.defaultProps = {};
-Text.defaultProps.maxFontSizeMultiplier = 1.8;
+Text.defaultProps.maxFontSizeMultiplier = 2.0;
 if (TextInput.defaultProps == null) TextInput.defaultProps = {};
-TextInput.defaultProps.maxFontSizeMultiplier = 1.8;
+TextInput.defaultProps.maxFontSizeMultiplier = 2.0;
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import * as NavigationBar from 'expo-navigation-bar';

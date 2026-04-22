@@ -524,22 +524,22 @@ export default function StagePlotEditorScreen({ navigation, route }) {
         <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
           <TouchableOpacity
             onPress={handlePrintExport}
-            style={[styles.headerButton, { backgroundColor: '#ea580c' }]}
+            style={[styles.headerButton, { backgroundColor: colors.primary, borderRadius: 6 }]}
             accessibilityLabel="Export as PDF"
           >
-            <Text style={styles.headerButtonText}>PDF</Text>
+            <Text style={[styles.headerButtonText, { color: colors.primaryText || '#ffffff' }]}>PDF</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setShowPalette(true)}
             style={styles.headerButton}
             accessibilityLabel="Add instrument"
           >
-            <Text style={styles.headerButtonText}>+ Add</Text>
+            <Text style={[styles.headerButtonText, { color: colors.primary }]}>+ Add</Text>
           </TouchableOpacity>
         </View>
       ),
     });
-  }, [navigation, title, handlePrintExport]);
+  }, [navigation, title, handlePrintExport, colors.primary, colors.primaryText]);
 
   // Auto-save data
   const scheduleAutoSave = useCallback((newItems, newBandName, newEventName) => {
@@ -821,7 +821,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   headerButtonText: {
-    color: '#16a34a',
     fontSize: 15,
     fontWeight: '600',
   },

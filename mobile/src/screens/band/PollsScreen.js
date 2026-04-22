@@ -424,7 +424,7 @@ export default function PollsScreen({ navigation, route }) {
 
       {/* Create Modal */}
       <Modal visible={showCreate} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowCreate(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Create Poll</Text>

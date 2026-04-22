@@ -8,7 +8,6 @@ import {
   StatusBar,
   BackHandler,
   StyleSheet,
-  Platform,
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -165,7 +164,7 @@ export default function LiveModeScreen({ navigation, route }) {
 
         {song?.lyrics ? (
           <ScrollView style={styles.lyricsScroll} contentContainerStyle={styles.lyricsContent}>
-            <Text style={[styles.lyricsText, { fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }]}>
+            <Text style={styles.lyricsText}>
               {song.lyrics}
             </Text>
           </ScrollView>
@@ -180,24 +179,22 @@ export default function LiveModeScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar hidden />
+      <StatusBar hidden animated />
 
       {/* Close button */}
       <TouchableOpacity
         style={[styles.closeButton, { top: insets.top + 10 }]}
         onPress={handleClose}
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         accessibilityRole="button"
         accessibilityLabel="Close live mode"
       >
-        <Ionicons name="close" size={20} color="#ffffff" />
+        <Ionicons name="close" size={22} color="#ffffff" />
       </TouchableOpacity>
 
       {/* Auto-advance toggle */}
       <TouchableOpacity
         style={[styles.autoButton, { top: insets.top + 10 }, autoAdvance && styles.autoButtonActive]}
         onPress={() => setAutoAdvance(prev => !prev)}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         accessibilityRole="button"
         accessibilityLabel={autoAdvance ? 'Disable auto-advance' : 'Enable auto-advance'}
       >
@@ -252,9 +249,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     zIndex: 10,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -263,9 +260,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 16,
     zIndex: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 16,
+    paddingHorizontal: 16,
+    minHeight: 44,
+    minWidth: 64,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.15)',
   },
   autoButtonActive: {
@@ -337,9 +337,9 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   lyricsText: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 15,
-    lineHeight: 22,
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 18,
+    lineHeight: 27,
   },
   noLyricsContainer: {
     flex: 1,

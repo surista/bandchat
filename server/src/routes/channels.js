@@ -4,6 +4,7 @@ import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
 import { forceLeaveRoom } from '../socket/handlers.js';
 import { logAudit } from '../lib/audit.js';
+import { emitBadgeUpdate } from '../lib/unreadCount.js';
 
 const router = express.Router();
 
@@ -554,6 +555,9 @@ router.put('/:channelId/mute', authenticate, isChannelMember, async (req, res) =
       data: { muted }
     });
 
+    // Badge count changes when a channel with unreads is muted/unmuted
+    emitBadgeUpdate(req.app.get('io'), req.user.id);
+
     res.json({ muted });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update mute setting' });
@@ -599,26 +603,8 @@ router.post('/:channelId/read', authenticate, isChannelMember, async (req, res) 
       }
     });
 
-    // Calculate new badge count and emit to user's devices
-    // iOS HIG: Badge must update immediately when user reads messages
-    try {
-      const result = await prisma.$queryRaw`
-        SELECT COUNT(m.id)::int AS count
-        FROM "ChannelMember" cm
-        JOIN "Message" m ON m."channelId" = cm."channelId"
-          AND m."createdAt" > cm."lastRead"
-          AND m."authorId" != cm."userId"
-          AND m."parentId" IS NULL
-        WHERE cm."userId" = ${req.user.id}
-          AND cm.muted = false
-      `;
-      const badgeCount = result[0]?.count || 0;
-      const io = req.app.get('io');
-      io.to(`user:${req.user.id}`).emit('badge:update', { count: badgeCount });
-    } catch (e) {
-      // Non-critical — badge will sync on next foreground
-      console.warn('Failed to emit badge update:', e.message);
-    }
+    // Emit badge update to user's devices (iOS HIG: badge must update immediately on read)
+    emitBadgeUpdate(req.app.get('io'), req.user.id);
 
     res.json({ success: true });
   } catch (error) {

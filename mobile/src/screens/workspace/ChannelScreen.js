@@ -1121,7 +1121,7 @@ export default function ChannelScreen({ navigation, route }) {
         animationType="fade"
         onRequestClose={() => setShowReportModal(false)}
       >
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior="padding">
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg || colors.bgSecondary }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Report Message</Text>
             <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
@@ -1148,13 +1148,13 @@ export default function ChannelScreen({ navigation, route }) {
                 <Text style={{ color: colors.textPrimary }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: '#dc2626', opacity: reportSubmitting ? 0.6 : 1 }]}
+                style={[styles.modalButton, { backgroundColor: colors.error || '#dc2626', opacity: reportSubmitting ? 0.6 : 1 }]}
                 onPress={handleSubmitReport}
                 disabled={reportSubmitting}
                 accessibilityRole="button"
                 accessibilityLabel={reportSubmitting ? 'Submitting report' : 'Submit report'}
               >
-                <Text style={{ color: '#fff', fontWeight: '600' }}>
+                <Text style={{ color: colors.errorText || '#fff', fontWeight: '600' }}>
                   {reportSubmitting ? 'Submitting...' : 'Report'}
                 </Text>
               </TouchableOpacity>

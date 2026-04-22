@@ -8,12 +8,18 @@ import { Audio } from 'expo-av';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
 import { formatDuration as formatRecordingDuration } from '../utils/formatDuration';
-import { mediumImpact, errorNotification } from '../utils/haptics';
+import { mediumImpact, errorNotification, warningNotification } from '../utils/haptics';
 import EmojiPicker from './EmojiPicker';
 import ActionSheet from './ActionSheet';
 import PressableRow from './PressableRow';
 
 const MAX_HEIGHT = 120;
+
+// Cap voice recordings at 5 minutes. At 30s remaining, a warning haptic fires;
+// at the cap the recording auto-stops so runaway recordings can't drain battery
+// or bloat storage. This matches iMessage / WhatsApp behavior.
+const MAX_RECORDING_SECONDS = 300;
+const RECORDING_WARNING_THRESHOLD = 30;
 
 export default function MessageInput({ onSend, onSendVoice, onTyping, editingMessage, onCancelEdit, onSendEdit, members = [], channels = [] }) {
   const { colors } = useTheme();
@@ -41,6 +47,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
   const [recordingCancelled, setRecordingCancelled] = useState(false);
   const recordingRef = useRef(null);
   const durationIntervalRef = useRef(null);
+  const stopRecordingRef = useRef(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const slideX = useRef(new Animated.Value(0)).current;
   const panStartX = useRef(0);
@@ -333,6 +340,9 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
       const result = await DocumentPicker.getDocumentAsync({
         type: ['application/pdf', 'application/zip', 'application/x-zip-compressed'],
         multiple: remaining > 1,
+        // Android 13+ SAF returns a content:// URI that FormData can't stream.
+        // Copying to cache first guarantees a real file path for upload.
+        copyToCacheDirectory: true,
       });
 
       if (!result.canceled && result.assets?.length > 0) {
@@ -399,9 +409,20 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
       setRecordingDuration(0);
       setRecordingCancelled(false);
 
-      // Start timer
+      // Start timer; warn at threshold and auto-stop at cap
       durationIntervalRef.current = setInterval(() => {
-        setRecordingDuration(prev => prev + 1);
+        setRecordingDuration(prev => {
+          const next = prev + 1;
+          const remaining = MAX_RECORDING_SECONDS - next;
+          if (remaining === RECORDING_WARNING_THRESHOLD) {
+            warningNotification();
+          }
+          if (next >= MAX_RECORDING_SECONDS) {
+            // Auto-send what we have when the cap is hit (ref avoids stale closure)
+            setTimeout(() => stopRecordingRef.current?.(), 0);
+          }
+          return next;
+        });
       }, 1000);
     } catch (err) {
       errorNotification();
@@ -446,6 +467,12 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
       setRecordingDuration(0);
     }
   }, [onSendVoice, onSend]);
+
+  // Expose the latest stopRecording to the timer interval inside startRecording,
+  // which needs to auto-stop when the cap is reached.
+  useEffect(() => {
+    stopRecordingRef.current = stopRecording;
+  }, [stopRecording]);
 
   const cancelRecording = useCallback(async () => {
     if (!recordingRef.current) return;
@@ -838,12 +865,12 @@ const styles = StyleSheet.create({
   },
   removeAttachment: {
     position: 'absolute',
-    top: -4,
-    right: -4,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    top: -6,
+    right: -6,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
     alignItems: 'center',
   },

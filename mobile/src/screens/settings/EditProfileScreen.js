@@ -38,7 +38,8 @@ export default function EditProfileScreen({ navigation }) {
   const handlePickAvatar = useCallback(async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
+      // allowsEditing triggers a buggy crop UI on Samsung/MIUI galleries — iOS only
+      allowsEditing: Platform.OS === 'ios',
       aspect: [1, 1],
       quality: 0.8,
     });

@@ -713,7 +713,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
       {/* Edit Details Modal */}
       <Modal visible={showEditDetails} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowEditDetails(false)}>
         <View style={styles.detailsOverlay}>
-          <KeyboardAvoidingView behavior="padding">
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <View style={[styles.detailsContent, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.detailsTitle, { color: colors.textPrimary }]} accessibilityRole="header">Edit Details</Text>
               <Text style={[styles.detailsLabel, { color: colors.textSecondary }]}>Name</Text>

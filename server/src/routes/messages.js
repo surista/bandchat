@@ -8,6 +8,7 @@ import { safeDecrementStorage } from './uploads.js';
 import { sendPushToUser } from './push.js';
 import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
 import { logAudit } from '../lib/audit.js';
+import { emitBadgeUpdate } from '../lib/unreadCount.js';
 
 // L7: Allowed attachment types and size limits for validation
 const ALLOWED_ATTACHMENT_TYPES = ['IMAGE', 'AUDIO', 'VIDEO', 'DOCUMENT'];
@@ -529,6 +530,28 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
       }
     }
 
+    // Emit badge:update to every channel member whose unread count changes
+    // (all unmuted members except the author). The push payload already carries
+    // a badge, but sockets are more reliable for foregrounded devices and ensure
+    // the badge is accurate even if the push is delayed, deduped, or suppressed.
+    if (!parentId) {
+      try {
+        const allMembers = await prisma.channelMember.findMany({
+          where: {
+            channelId: req.params.channelId,
+            muted: false,
+            userId: { not: req.user.id },
+          },
+          select: { userId: true },
+        });
+        for (const m of allMembers) {
+          emitBadgeUpdate(io, m.userId);
+        }
+      } catch (e) {
+        console.warn('Failed to emit badge updates after message create:', e.message);
+      }
+    }
+
     res.status(201).json(message);
   } catch (error) {
     console.error('Create message error:', error);
@@ -686,6 +709,23 @@ router.delete('/:messageId', authenticate, async (req, res) => {
       await safeDecrementStorage(message.channel.workspaceId, freedBytes).catch(() => {});
     }
 
+    // Capture which channel members had this message unread BEFORE deleting, so
+    // we can refresh their badges after. Only matters for top-level messages.
+    let membersWithUnread = [];
+    if (!message.parentId) {
+      try {
+        membersWithUnread = await prisma.channelMember.findMany({
+          where: {
+            channelId: message.channelId,
+            muted: false,
+            userId: { not: message.authorId },
+            lastRead: { lt: message.createdAt },
+          },
+          select: { userId: true },
+        });
+      } catch { /* best effort */ }
+    }
+
     await prisma.message.delete({
       where: { id: req.params.messageId }
     });
@@ -697,6 +737,11 @@ router.delete('/:messageId', authenticate, async (req, res) => {
       channelId: message.channelId,
       parentId: message.parentId
     });
+
+    // Refresh badges for anyone who had this as unread
+    for (const m of membersWithUnread) {
+      emitBadgeUpdate(io, m.userId);
+    }
 
     logAudit('message.deleted', { actorId: req.user.id, targetId: req.params.messageId });
 

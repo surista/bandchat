@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import NetInfo from '@react-native-community/netinfo';
+import { useTheme } from '../context/ThemeContext';
 
 export default function OfflineBanner() {
+  const { colors } = useTheme();
   const [isOffline, setIsOffline] = useState(false);
   const [visible, setVisible] = useState(false);
   const [slideAnim] = useState(() => new Animated.Value(-120));
@@ -20,15 +22,17 @@ export default function OfflineBanner() {
   useEffect(() => {
     if (isOffline) {
       setVisible(true);
-      Animated.timing(slideAnim, {
+      Animated.spring(slideAnim, {
         toValue: 0,
-        duration: 300,
+        damping: 18,
+        stiffness: 220,
+        mass: 1,
         useNativeDriver: true,
       }).start();
     } else {
       Animated.timing(slideAnim, {
         toValue: -120,
-        duration: 300,
+        duration: 250,
         useNativeDriver: true,
       }).start(({ finished }) => {
         if (finished) setVisible(false);
@@ -40,27 +44,32 @@ export default function OfflineBanner() {
 
   return (
     <Animated.View
-      style={[styles.banner, { paddingTop: insets.top + 8, transform: [{ translateY: slideAnim }] }]}
+      style={[
+        styles.banner,
+        {
+          backgroundColor: colors.error || '#ef4444',
+          paddingTop: insets.top + 8,
+          transform: [{ translateY: slideAnim }],
+        },
+      ]}
       accessibilityRole="alert"
       accessibilityLiveRegion="assertive"
       accessibilityLabel="No internet connection"
     >
-      <Text style={styles.text} maxFontSizeMultiplier={1.3}>No internet connection</Text>
+      <Text style={[styles.text, { color: colors.errorText || '#ffffff' }]} maxFontSizeMultiplier={1.3}>
+        No internet connection
+      </Text>
     </Animated.View>
   );
 }
 
-// Colors are intentionally hardcoded — red/white is semantically correct
-// for an error banner regardless of the active theme.
 const styles = StyleSheet.create({
   banner: {
-    backgroundColor: '#ef4444',
     paddingBottom: 8,
     paddingHorizontal: 16,
     alignItems: 'center',
   },
   text: {
-    color: '#ffffff',
     fontSize: 13,
     fontWeight: '600',
   },
