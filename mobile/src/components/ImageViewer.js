@@ -59,6 +59,18 @@ function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
     <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
       <TouchableOpacity
         style={styles.headerButton}
+        onPress={onClose}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Close image viewer"
+      >
+        <Ionicons name="close" size={22} color="#ffffff" />
+      </TouchableOpacity>
+      {imageList.length > 1 && (
+        <Text style={styles.counter}>{imageIndex + 1} / {imageList.length}</Text>
+      )}
+      <TouchableOpacity
+        style={styles.headerButton}
         onPress={() => handleSave(imageIndex)}
         disabled={saving}
         activeOpacity={0.7}
@@ -70,18 +82,6 @@ function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
         ) : (
           <Ionicons name="download-outline" size={22} color="#ffffff" />
         )}
-      </TouchableOpacity>
-      {imageList.length > 1 && (
-        <Text style={styles.counter}>{imageIndex + 1} / {imageList.length}</Text>
-      )}
-      <TouchableOpacity
-        style={styles.headerButton}
-        onPress={onClose}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityLabel="Close image viewer"
-      >
-        <Ionicons name="close" size={22} color="#ffffff" />
       </TouchableOpacity>
     </View>
   ), [insets.top, saving, imageList.length, handleSave, onClose]);

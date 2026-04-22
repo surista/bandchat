@@ -1,9 +1,10 @@
 import { memo, useState, useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from 'react';
-import { View, Text, TouchableOpacity, Pressable, Animated, Linking, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Animated, Linking, StyleSheet, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import Reanimated, { useAnimatedStyle, interpolate } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Reanimated, { useAnimatedStyle, interpolate, runOnJS } from 'react-native-reanimated';
 import { Audio, Video, ResizeMode } from 'expo-av';
 import { format, isToday, isYesterday } from 'date-fns';
 import { useTheme } from '../context/ThemeContext';
@@ -17,9 +18,10 @@ import { useLayout } from '../hooks/useLayout';
 
 const YT_REGEX = /(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/|m\.youtube\.com\/watch\?v=)([\w-]{11})/;
 
-// Long-press delay: iOS users expect a snappy ~250ms; Android Material guidance
-// is ~400ms to avoid triggering context menus during lazy scrolls.
-const LONG_PRESS_DELAY = Platform.OS === 'android' ? 400 : 250;
+// 250ms on both platforms. The Material guidance says ~500ms, but real users
+// experience that as "nothing happened" and lift — better to accept a few
+// accidental triggers during scroll than have the primary interaction feel dead.
+const LONG_PRESS_DELAY = 250;
 
 function formatTimestamp(dateStr) {
   const date = new Date(dateStr);
@@ -69,6 +71,24 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
   const handleLongPress = () => {
     if (!isPending && onLongPress) onLongPress(message);
   };
+
+  // Use gesture-handler's LongPress instead of Pressable's onLongPress. Pressable
+  // inside ReanimatedSwipeable never reliably fires long-press because the pan
+  // gesture intercepts the first-touch window and cancels the press. A GH gesture
+  // lives in the same gesture tree as the swipeable and cooperates by default.
+  const longPressGesture = useMemo(
+    () =>
+      Gesture.LongPress()
+        .minDuration(LONG_PRESS_DELAY)
+        .maxDistance(10)
+        .onStart(() => {
+          'worklet';
+          runOnJS(handleLongPress)();
+        }),
+    // handleLongPress closure changes only when onLongPress/isPending/message change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [onLongPress, isPending, message]
+  );
 
   // URL regex to match http/https URLs
   const URL_REGEX = /(https?:\/\/[^\s<>"\])}]+)/gi;
@@ -261,27 +281,27 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
         leftThreshold={30}
         rightThreshold={30}
       >
-      <Pressable
-        style={[styles.groupedContainer, { paddingTop: density.groupedPaddingTop, paddingBottom: density.groupedPaddingBottom }, isPending && styles.pending]}
-        onLongPress={handleLongPress}
-        delayLongPress={LONG_PRESS_DELAY}
-        accessibilityRole="button"
-        accessibilityLabel={`Message: ${message.content || 'attachment'}`}
-      >
-        <View style={{ width: density.groupedSpacerWidth }} />
-        <View style={styles.contentContainer}>
-          {message.content ? (
-            <Text style={[styles.content, { color: colors.textPrimary, fontSize: density.contentFontSize, lineHeight: density.contentLineHeight }]}>
-              {renderContent(message.content)}
-              {isEdited && <Text style={[styles.edited, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}> (edited)</Text>}
-            </Text>
-          ) : null}
-          <YouTubeThumbnail content={message.content} colors={colors} />
-          {message.content && !message.hidePreview && !YT_REGEX.test(message.content) ? <LinkPreview content={message.content} isOwn={isOwn} onDismiss={onTogglePreview ? () => onTogglePreview(message.id) : undefined} blockedDomains={blockedDomains} onLongPress={onLinkLongPress} /> : null}
-          {renderAttachments(message.attachments, onImagePress, attachmentWidth, attachmentHeight, handleLongPress)}
-          {renderReactions(message.reactions, colors, message.id, onReactionPress, onReactionLongPress)}
+      <GestureDetector gesture={longPressGesture}>
+        <View
+          style={[styles.groupedContainer, { paddingTop: density.groupedPaddingTop, paddingBottom: density.groupedPaddingBottom }, isPending && styles.pending]}
+          accessibilityRole="button"
+          accessibilityLabel={`Message: ${message.content || 'attachment'}`}
+        >
+          <View style={{ width: density.groupedSpacerWidth }} />
+          <View style={styles.contentContainer}>
+            {message.content ? (
+              <Text style={[styles.content, { color: colors.textPrimary, fontSize: density.contentFontSize, lineHeight: density.contentLineHeight }]}>
+                {renderContent(message.content)}
+                {isEdited && <Text style={[styles.edited, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}> (edited)</Text>}
+              </Text>
+            ) : null}
+            <YouTubeThumbnail content={message.content} colors={colors} />
+            {message.content && !message.hidePreview && !YT_REGEX.test(message.content) ? <LinkPreview content={message.content} isOwn={isOwn} onDismiss={onTogglePreview ? () => onTogglePreview(message.id) : undefined} blockedDomains={blockedDomains} onLongPress={onLinkLongPress} /> : null}
+            {renderAttachments(message.attachments, onImagePress, attachmentWidth, attachmentHeight, handleLongPress)}
+            {renderReactions(message.reactions, colors, message.id, onReactionPress, onReactionLongPress)}
+          </View>
         </View>
-      </Pressable>
+      </GestureDetector>
       </ReanimatedSwipeable>
     );
   }
@@ -299,10 +319,9 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
       leftThreshold={30}
       rightThreshold={30}
     >
-    <Pressable
+    <GestureDetector gesture={longPressGesture}>
+    <View
       style={[styles.container, { paddingTop: density.containerPaddingTop, paddingBottom: density.containerPaddingBottom }, isPending && styles.pending]}
-      onLongPress={handleLongPress}
-      delayLongPress={LONG_PRESS_DELAY}
       accessibilityRole="button"
       accessibilityLabel={`${displayName}: ${message.content || 'attachment'}`}
     >
@@ -352,7 +371,8 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
           </TouchableOpacity>
         )}
       </View>
-    </Pressable>
+    </View>
+    </GestureDetector>
     </ReanimatedSwipeable>
   );
 });
