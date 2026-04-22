@@ -397,11 +397,27 @@ export default function ChannelListScreen({ navigation, route }) {
       setWorkspace(prev => prev ? { ...prev, effectivePlan: data.effectivePlan, plan: data.plan, planLimits: data.planLimits } : prev);
     };
 
+    // Cross-device read sync: when the user reads a channel on another device
+    // (or the same device's ChannelScreen triggers mark-read), zero out the
+    // sidebar unread count here so the badge disappears immediately.
+    const handleChannelRead = ({ channelId }) => {
+      setChannels(prev => prev.map(c => c.id === channelId ? { ...c, unreadCount: 0 } : c));
+      setDirectMessages(prev => prev.map(dm => dm.id === channelId ? { ...dm, unreadCount: 0 } : dm));
+    };
+
+    const handleWorkspaceRead = ({ workspaceId: wsId }) => {
+      if (wsId !== workspaceId) return;
+      setChannels(prev => prev.map(c => ({ ...c, unreadCount: 0 })));
+      setDirectMessages(prev => prev.map(dm => ({ ...dm, unreadCount: 0 })));
+    };
+
     socket.on('channel:created', handleChannelCreated);
     socket.on('channel:deleted', handleChannelDeleted);
     socket.on('dm:created', handleDMCreated);
     socket.on('member:joined', handleMemberJoined);
     socket.on('member:removed', handleMemberRemoved);
+    socket.on('channel:read', handleChannelRead);
+    socket.on('workspace:read', handleWorkspaceRead);
     socket.on('message:new', handleNewMessage);
     socket.on('message:reply', handleReplyMessage);
     socket.on('connect', handleReconnect);
@@ -417,6 +433,8 @@ export default function ChannelListScreen({ navigation, route }) {
       socket.off('message:reply', handleReplyMessage);
       socket.off('connect', handleReconnect);
       socket.off('plan:updated', handlePlanUpdated);
+      socket.off('channel:read', handleChannelRead);
+      socket.off('workspace:read', handleWorkspaceRead);
     };
   }, [socket, workspaceId, user?.id, loadData, joinWorkspace, navigation]);
 
@@ -457,9 +475,13 @@ export default function ChannelListScreen({ navigation, route }) {
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       activeChannelRef.current = null;
+      // Refresh unread counts when returning from a channel. Without this,
+      // the sidebar badge on a channel the user just read keeps showing the
+      // old unread count until reconnect / 30s app-foreground / pull-to-refresh.
+      loadData();
     });
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, loadData]);
 
   const toggleGroup = useCallback((groupId) => {
     setCollapsedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));

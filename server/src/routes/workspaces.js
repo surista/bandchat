@@ -192,7 +192,10 @@ router.post('/:workspaceId/read', authenticate, isWorkspaceMember, async (req, r
       data: { lastRead: new Date() },
     });
     // Emit badge update so mobile devices clear the app icon badge immediately
-    emitBadgeUpdate(req.app.get('io'), req.user.id);
+    const io = req.app.get('io');
+    emitBadgeUpdate(io, req.user.id);
+    // Per-workspace read event so other devices can clear in-app sidebar counts
+    io.to(`user:${req.user.id}`).emit('workspace:read', { workspaceId: req.params.workspaceId });
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to mark workspace as read' });

@@ -604,7 +604,11 @@ router.post('/:channelId/read', authenticate, isChannelMember, async (req, res) 
     });
 
     // Emit badge update to user's devices (iOS HIG: badge must update immediately on read)
-    emitBadgeUpdate(req.app.get('io'), req.user.id);
+    const io = req.app.get('io');
+    emitBadgeUpdate(io, req.user.id);
+    // Also emit a per-channel read event so any other devices (e.g. mobile while
+    // reading on web) can clear that channel's in-app sidebar unread count live.
+    io.to(`user:${req.user.id}`).emit('channel:read', { channelId: req.params.channelId });
 
     res.json({ success: true });
   } catch (error) {
