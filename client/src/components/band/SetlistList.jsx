@@ -4,6 +4,7 @@ import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { escapeHtml } from '../../utils/escapeHtml';
 import { formatDuration } from '../../utils/formatDuration';
+import { computeSetlistDuration, formatSetlistDuration } from '../../utils/setlistDuration';
 import SetlistBuilder from './SetlistBuilder';
 import SongForm from './SongForm';
 import Modal from '../common/Modal';
@@ -416,15 +417,15 @@ function SetlistList({ workspaceId, workspaceName }) {
     }
   };
 
+  // Returns a string like "30:31 (32:16 w/ gaps)" — actual seconds summed
+  // plus the padded total (15s between songs). The two are shown side-by-side
+  // so band members can pick the right number for their planning.
   const calculateDuration = useCallback((setlistSongs) => {
-    const totalSeconds = setlistSongs.reduce((acc, ss) => {
-      if (ss.type === 'SET_BREAK') return acc + (ss.duration || 0);
-      if (ss.type === 'MC') return acc + (ss.duration || 60);
-      return acc + (ss.song?.duration || 0);
-    }, 0);
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-    return `${mins}:${String(secs).padStart(2, '0')}`;
+    const { actualSecs, paddedSecs } = computeSetlistDuration(setlistSongs);
+    const actualLabel = formatSetlistDuration(actualSecs);
+    const paddedLabel = formatSetlistDuration(paddedSecs);
+    if (paddedSecs === actualSecs) return actualLabel; // no songs, or single song
+    return `${actualLabel} (${paddedLabel} w/ gaps)`;
   }, []);
 
   const formatTime12h = useCallback((time24) => {
@@ -491,12 +492,8 @@ function SetlistList({ workspaceId, workspaceName }) {
     const songCount = setlistItems.filter(i => i.type !== 'MC' && i.type !== 'SET_BREAK').length;
     const totalDuration = calculateDuration(setlistItems);
 
-    // Calculate total seconds for time range
-    const totalSecs = setlistItems.reduce((acc, ss) => {
-      if (ss.type === 'SET_BREAK') return acc + (ss.duration || 0);
-      if (ss.type === 'MC') return acc + (ss.duration || 60);
-      return acc + (ss.song?.duration || 0);
-    }, 0);
+    // For time-range calculations, use padded duration (realistic gig runtime).
+    const { paddedSecs: totalSecs } = computeSetlistDuration(setlistItems);
 
     const addMinsToTime = (time24, minutes) => {
       if (!time24) return '';

@@ -55,6 +55,10 @@ const FAQ_SECTIONS = [
         q: 'What are slash commands?',
         a: 'Type / at the start of a message to share band items in chat. Available commands: /setlist, /song, /gig, and /poll. Select an item from the picker and it will appear as a rich card in the conversation.',
       },
+      {
+        q: 'How is the setlist length calculated?',
+        a: 'We show two numbers. "Actual" is the sum of each song\'s recorded duration — how long the songs would run back-to-back with no gaps. "With gaps" adds 15 seconds between each song to account for realistic transitions (tuning, banter, gear changes). The last song isn\'t padded because there\'s no transition after it. "With gaps" is what we use to compute the gig end time because it matches what a band actually takes on stage.',
+      },
     ],
   },
   {

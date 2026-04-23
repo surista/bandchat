@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import { formatDuration } from './formatDuration';
+import { computeSetlistDuration, formatSetlistDuration } from './setlistDuration';
 
 /**
  * Builds an HTML string for a setlist PDF/print export.
@@ -16,8 +17,12 @@ export function buildSetlistHTML(setlistName, items, options = {}) {
 
   const songItems = items.filter(i => i.type === 'SONG' || (!i.type && i.song));
   const totalSongs = songItems.length;
-  const totalSeconds = items.reduce((sum, i) => sum + (i.song?.duration || i.duration || 0), 0);
-  const totalDuration = formatDuration(totalSeconds) || '0:00';
+  const { actualSecs, paddedSecs } = computeSetlistDuration(items);
+  const totalActualLabel = formatSetlistDuration(actualSecs);
+  const totalPaddedLabel = formatSetlistDuration(paddedSecs);
+  const totalSummary = actualSecs === paddedSecs
+    ? totalActualLabel
+    : `${totalActualLabel} &bull; ${totalPaddedLabel} w/ gaps`;
 
   let songNumber = 0;
   let rowsHtml = '';
@@ -161,7 +166,7 @@ export function buildSetlistHTML(setlistName, items, options = {}) {
     </tbody>
   </table>
   <div class="footer">
-    ${totalSongs} songs &bull; ${totalDuration} total
+    ${totalSongs} songs &bull; ${totalSummary}
   </div>
 </body>
 </html>`;

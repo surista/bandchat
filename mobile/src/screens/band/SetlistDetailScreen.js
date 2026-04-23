@@ -17,6 +17,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
+import { computeSetlistDuration, formatSetlistDuration } from '../../utils/setlistDuration';
 import { buildSetlistHTML } from '../../utils/buildSetlistHTML';
 import { successNotification, mediumImpact } from '../../utils/haptics';
 import DraggableList from '../../components/DraggableList';
@@ -150,7 +151,10 @@ export default function SetlistDetailScreen({ navigation, route }) {
   const effectiveBreaks = firstContentIdx >= 0
     ? items.filter((s, i) => s.type === 'SET_BREAK' && i > firstContentIdx).length
     : 0;
-  const totalDuration = items.reduce((sum, s) => sum + (s.song?.duration || s.duration || 0), 0);
+  const { actualSecs: totalActualSecs, paddedSecs: totalPaddedSecs } = computeSetlistDuration(items);
+  // `totalDuration` kept for existing call sites that format a single number.
+  // It uses the padded total (realistic gig length with 15s transitions).
+  const totalDuration = totalPaddedSecs;
 
   // Reorder (arrow buttons - used in non-drag mode)
   const moveItem = useCallback(async (index, direction) => {
@@ -462,8 +466,13 @@ export default function SetlistDetailScreen({ navigation, route }) {
         {effectiveBreaks > 0 && (
           <Badge label={`${effectiveBreaks + 1} sets`} color={colors.badgeKey} bgColor={colors.badgeKeyBg} />
         )}
-        {totalDuration > 0 && (
-          <Badge label={formatDuration(totalDuration)} color={colors.badgeDuration} bgColor={colors.badgeDurationBg} />
+        {totalActualSecs > 0 && (
+          <>
+            <Badge label={formatSetlistDuration(totalActualSecs)} color={colors.badgeDuration} bgColor={colors.badgeDurationBg} />
+            {totalPaddedSecs !== totalActualSecs && (
+              <Badge label={`${formatSetlistDuration(totalPaddedSecs)} w/ gaps`} color={colors.badgeDuration} bgColor={colors.badgeDurationBg} />
+            )}
+          </>
         )}
         {setlist?.venue && (
           <Badge label={setlist.venue} color={colors.badgeVenue} bgColor="rgba(251,191,36,0.15)" />
