@@ -22,6 +22,7 @@ import ErrorState from '../../components/ErrorState';
 import useDebounce from '../../hooks/useDebounce';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
+import { computeSetlistDuration, formatSetlistDuration } from '../../utils/setlistDuration';
 import { buildSetlistHTML } from '../../utils/buildSetlistHTML';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -203,7 +204,7 @@ export default function SetlistListScreen({ navigation, route }) {
       ? allItems.filter((s, i) => s.type === 'SET_BREAK' && i > firstContentIdx).length
       : 0;
     const setCount = effectiveBreaks + 1;
-    const totalDuration = (item.songs || []).reduce((sum, s) => sum + (s.song?.duration || s.duration || 0), 0);
+    const { actualSecs: totalActualSecs, paddedSecs: totalPaddedSecs } = computeSetlistDuration(item.songs);
     const preview = songs.slice(0, 4).map((s, i) => s.song?.title || s.label || `Song ${i + 1}`);
     const remaining = songCount - preview.length;
 
@@ -230,7 +231,15 @@ export default function SetlistListScreen({ navigation, route }) {
         <View style={styles.badgeRow}>
           {songCount > 0 && <Badge label={`${songCount} songs`} color={colors.badgeBpm} bgColor={colors.badgeBpmBg} />}
           {effectiveBreaks > 0 && <Badge label={`${setCount} sets`} color={colors.badgeKey} bgColor={colors.badgeKeyBg} />}
-          {totalDuration > 0 && <Badge label={formatDuration(totalDuration)} color={colors.badgeDuration} bgColor={colors.badgeDurationBg} />}
+          {totalActualSecs > 0 && (
+            <Badge
+              label={totalPaddedSecs === totalActualSecs
+                ? formatSetlistDuration(totalActualSecs)
+                : `${formatSetlistDuration(totalActualSecs)} (${formatSetlistDuration(totalPaddedSecs)} w/ gaps)`}
+              color={colors.badgeDuration}
+              bgColor={colors.badgeDurationBg}
+            />
+          )}
         </View>
         {preview.length > 0 && (
           <View style={styles.previewList}>

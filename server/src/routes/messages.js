@@ -530,29 +530,34 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
       }
     }
 
-    // Emit badge:update to every channel member whose unread count changes
-    // (all unmuted members except the author). The push payload already carries
-    // a badge, but sockets are more reliable for foregrounded devices and ensure
-    // the badge is accurate even if the push is delayed, deduped, or suppressed.
-    if (!parentId) {
-      try {
-        const allMembers = await prisma.channelMember.findMany({
-          where: {
-            channelId: req.params.channelId,
-            muted: false,
-            userId: { not: req.user.id },
-          },
-          select: { userId: true },
-        });
-        for (const m of allMembers) {
-          emitBadgeUpdate(io, m.userId);
-        }
-      } catch (e) {
-        console.warn('Failed to emit badge updates after message create:', e.message);
-      }
-    }
-
     res.status(201).json(message);
+
+    // Fan out badge:update to every unmuted channel member whose unread count
+    // changed. Runs AFTER the response is sent so the client isn't blocked by
+    // N parallel COUNT queries in large channels.
+    //
+    // We fire-and-forget via setImmediate; emit errors are swallowed. The push
+    // payload also carries a badge value as a fallback for devices without an
+    // active socket, so even if this silently fails the badge converges.
+    if (!parentId) {
+      setImmediate(async () => {
+        try {
+          const allMembers = await prisma.channelMember.findMany({
+            where: {
+              channelId: req.params.channelId,
+              muted: false,
+              userId: { not: req.user.id },
+            },
+            select: { userId: true },
+          });
+          for (const m of allMembers) {
+            emitBadgeUpdate(io, m.userId);
+          }
+        } catch (e) {
+          console.warn('Failed to emit badge updates after message create:', e.message);
+        }
+      });
+    }
   } catch (error) {
     console.error('Create message error:', error);
     res.status(500).json({ error: 'Failed to create message' });
@@ -738,9 +743,14 @@ router.delete('/:messageId', authenticate, async (req, res) => {
       parentId: message.parentId
     });
 
-    // Refresh badges for anyone who had this as unread
-    for (const m of membersWithUnread) {
-      emitBadgeUpdate(io, m.userId);
+    // Refresh badges for anyone who had this as unread — fire-and-forget
+    // after the response so a large recipient list doesn't delay the client.
+    if (membersWithUnread.length > 0) {
+      setImmediate(() => {
+        for (const m of membersWithUnread) {
+          emitBadgeUpdate(io, m.userId);
+        }
+      });
     }
 
     logAudit('message.deleted', { actorId: req.user.id, targetId: req.params.messageId });

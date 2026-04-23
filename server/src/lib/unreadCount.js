@@ -13,6 +13,12 @@ import prisma from './prisma.js';
  * Used as the single source of truth for the iOS/Android app icon badge.
  * Must be kept in sync with the unread calculations in channels.js and workspaces.js.
  */
+/**
+ * Returns the count as an integer, or null on DB error. Callers that drive
+ * the iOS app icon badge should treat null as "don't change the badge" —
+ * silently returning 0 on error would actively CLEAR badges on devices
+ * that still have unreads during a transient outage.
+ */
 export async function getUnreadCount(userId) {
   try {
     const result = await prisma.$queryRaw`
@@ -30,7 +36,7 @@ export async function getUnreadCount(userId) {
     return result[0]?.count || 0;
   } catch (err) {
     console.warn('getUnreadCount failed:', err.message);
-    return 0;
+    return null;
   }
 }
 
@@ -50,6 +56,9 @@ export async function emitBadgeUpdate(io, userId) {
   if (!io || !userId) return;
   try {
     const count = await getUnreadCount(userId);
+    // Don't emit on DB error — we'd send the wrong number and overwrite a
+    // correct client-side badge with a spurious value.
+    if (count === null) return;
     io.to(`user:${userId}`).emit('badge:update', { count });
     return count;
   } catch (err) {

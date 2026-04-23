@@ -273,7 +273,14 @@ export default function ChannelListScreen({ navigation, route }) {
     return () => setActiveWorkspaceId(null);
   }, [setActiveWorkspaceId]);
 
+  // Guard against overlapping loadData() calls. Focus events can fire quickly
+  // (tap-in → tap-back), and the socket-driven `channel:read`/`workspace:read`
+  // events already keep unread counts accurate in-place — the focus refetch is
+  // a backup, not the primary path, so skip when another load is in flight.
+  const loadInFlightRef = useRef(false);
   const loadData = useCallback(async () => {
+    if (loadInFlightRef.current) return;
+    loadInFlightRef.current = true;
     try {
       const [ws, ch, groups, dms, gig] = await Promise.all([
         api.getWorkspace(workspaceId),
@@ -297,6 +304,7 @@ export default function ChannelListScreen({ navigation, route }) {
     } catch (err) {
       if (channels.length === 0) setLoadError('Could not load channels');
     } finally {
+      loadInFlightRef.current = false;
       setLoading(false);
       setRefreshing(false);
     }

@@ -183,6 +183,7 @@ router.post('/snooze', authenticate, apiLimiter, async (req, res) => {
 router.get('/unread-count', authenticate, async (req, res) => {
   try {
     const count = await getUnreadCount(req.user.id);
+    if (count === null) return res.status(503).json({ error: 'Unread count temporarily unavailable' });
     res.json({ count });
   } catch (error) {
     console.error('Get unread count error:', error);
@@ -373,7 +374,9 @@ export const sendPushToUser = async (userId, payload, options = {}) => {
 
     // Calculate total unread count for badge. Use the actual server value even
     // if it's 0 — never default to a minimum of 1, or iOS will show a phantom
-    // badge after the user reads the message on another device.
+    // badge after the user reads the message on another device. On DB error
+    // (null return), omit the badge field entirely so iOS leaves the badge
+    // alone rather than clearing it.
     const badgeCount = await getUnreadCount(userId);
 
     // Map notification category to Android notification channel ID
@@ -392,7 +395,7 @@ export const sendPushToUser = async (userId, payload, options = {}) => {
         sound: 'default',
         title: payload.title,
         body: payload.body,
-        badge: badgeCount,
+        ...(badgeCount !== null && { badge: badgeCount }),
         channelId: androidChannelId,
         priority: 'high',
         ...(payload.threadId && { threadId: payload.threadId }),
