@@ -39,6 +39,15 @@ export default function SetlistListScreen({ navigation, route }) {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
+  const [transitionPaddingSecs, setTransitionPaddingSecs] = useState(15);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getWorkspace(workspaceId)
+      .then(ws => { if (!cancelled && typeof ws?.transitionPaddingSecs === 'number') setTransitionPaddingSecs(ws.transitionPaddingSecs); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [workspaceId]);
 
   const filteredSetlists = useMemo(() => {
     if (!debouncedSearch.trim()) return setlists;
@@ -182,7 +191,7 @@ export default function SetlistListScreen({ navigation, route }) {
           console.error('Failed to fetch venue logo for setlist print:', e);
         }
       }
-      const html = buildSetlistHTML(selectedSetlist.name, items, { venueLogoUrl });
+      const html = buildSetlistHTML(selectedSetlist.name, items, { venueLogoUrl, transitionPaddingSecs });
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Export Setlist' });
     } catch (err) {
@@ -204,7 +213,8 @@ export default function SetlistListScreen({ navigation, route }) {
       ? allItems.filter((s, i) => s.type === 'SET_BREAK' && i > firstContentIdx).length
       : 0;
     const setCount = effectiveBreaks + 1;
-    const { actualSecs: totalActualSecs, paddedSecs: totalPaddedSecs } = computeSetlistDuration(item.songs);
+    const { actualSecs: totalActualSecs, paddedSecs: totalPaddedSecs, paddingSecs: itemPaddingSecs } = computeSetlistDuration(item.songs, transitionPaddingSecs);
+    const itemHasPadding = itemPaddingSecs > 0 && totalPaddedSecs !== totalActualSecs;
     const preview = songs.slice(0, 4).map((s, i) => s.song?.title || s.label || `Song ${i + 1}`);
     const remaining = songCount - preview.length;
 
@@ -233,9 +243,9 @@ export default function SetlistListScreen({ navigation, route }) {
           {effectiveBreaks > 0 && <Badge label={`${setCount} sets`} color={colors.badgeKey} bgColor={colors.badgeKeyBg} />}
           {totalActualSecs > 0 && (
             <Badge
-              label={totalPaddedSecs === totalActualSecs
-                ? formatSetlistDuration(totalActualSecs)
-                : `${formatSetlistDuration(totalActualSecs)} (${formatSetlistDuration(totalPaddedSecs)} w/ gaps)`}
+              label={itemHasPadding
+                ? `${formatSetlistDuration(totalActualSecs)} (${formatSetlistDuration(totalPaddedSecs)} w/ ${itemPaddingSecs}s gaps)`
+                : formatSetlistDuration(totalActualSecs)}
               color={colors.badgeDuration}
               bgColor={colors.badgeDurationBg}
             />

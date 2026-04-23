@@ -164,7 +164,7 @@ const PRO_ONLY_VIEWS = {
 /** Props that need extra data beyond workspaceId */
 const BAND_VIEW_EXTRA_PROPS = {
   songs: (ctx) => ({ workspaceName: ctx.workspace?.name }),
-  setlists: (ctx) => ({ workspaceName: ctx.workspace?.name }),
+  setlists: (ctx) => ({ workspaceName: ctx.workspace?.name, workspace: ctx.workspace }),
   calendar: (ctx) => ({ workspace: ctx.workspace }),
   availability: (ctx) => ({ workspace: ctx.workspace }),
   members: (ctx) => ({ workspace: ctx.workspace }),

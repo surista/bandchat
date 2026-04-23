@@ -3,9 +3,11 @@
  *
  * We report two numbers:
  *   - actualSecs:  sum of song/break/MC durations as-is. Accurate to the songs.
- *   - paddedSecs:  actualSecs + 15s between every pair of songs in the setlist.
- *                  This is the realistic gig length — bands need a few seconds
- *                  between songs for tuning, banter, and setup.
+ *   - paddedSecs:  actualSecs + Ns between every pair of songs in the setlist,
+ *                  where N is the workspace-configured transition padding
+ *                  (15s default). The padded total is the realistic gig length
+ *                  — bands need a few seconds between songs for tuning, banter,
+ *                  and gear changes.
  *
  * The last song of the setlist is NOT padded (no transition to pad *into*).
  * When multiple sets exist, songs inside a set do receive their trailing pad
@@ -13,7 +15,7 @@
  * very last song of the very last set does not.
  */
 
-export const TRANSITION_PADDING_SECS = 15;
+export const DEFAULT_TRANSITION_PADDING_SECS = 15;
 
 export function isSongItem(item) {
   return item?.type === 'SONG' || (!item?.type && item?.song);
@@ -29,17 +31,24 @@ export function getItemActualDuration(item) {
   return item.song?.duration || 0;
 }
 
+function resolvePadding(paddingSecs) {
+  if (paddingSecs === 0) return 0;
+  if (typeof paddingSecs === 'number' && paddingSecs > 0) return paddingSecs;
+  return DEFAULT_TRANSITION_PADDING_SECS;
+}
+
 /**
  * Compute actual and padded totals for a setlist (array of items).
- * Returns { actualSecs, paddedSecs, songCount }.
+ * Returns { actualSecs, paddedSecs, songCount, paddingSecs }.
  */
-export function computeSetlistDuration(items) {
+export function computeSetlistDuration(items, paddingSecs) {
+  const pad = resolvePadding(paddingSecs);
   const list = Array.isArray(items) ? items : [];
   const actualSecs = list.reduce((sum, it) => sum + getItemActualDuration(it), 0);
   const songCount = list.filter(isSongItem).length;
   const padCount = Math.max(0, songCount - 1);
-  const paddedSecs = actualSecs + padCount * TRANSITION_PADDING_SECS;
-  return { actualSecs, paddedSecs, songCount };
+  const paddedSecs = actualSecs + padCount * pad;
+  return { actualSecs, paddedSecs, songCount, paddingSecs: pad };
 }
 
 /**
@@ -47,13 +56,14 @@ export function computeSetlistDuration(items) {
  * All songs in a non-final set are padded (including the last, because it
  * transitions into the break). In the final set, the very last song is not.
  */
-export function computeSetDuration(items, { isFinalSet }) {
+export function computeSetDuration(items, { isFinalSet, paddingSecs }) {
+  const pad = resolvePadding(paddingSecs);
   const list = Array.isArray(items) ? items : [];
   const actualSecs = list.reduce((sum, it) => sum + getItemActualDuration(it), 0);
   const songCount = list.filter(isSongItem).length;
   const padCount = isFinalSet ? Math.max(0, songCount - 1) : songCount;
-  const paddedSecs = actualSecs + padCount * TRANSITION_PADDING_SECS;
-  return { actualSecs, paddedSecs, songCount };
+  const paddedSecs = actualSecs + padCount * pad;
+  return { actualSecs, paddedSecs, songCount, paddingSecs: pad };
 }
 
 /**

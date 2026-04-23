@@ -14,15 +14,16 @@ import { computeSetlistDuration, formatSetlistDuration } from './setlistDuration
 export function buildSetlistHTML(setlistName, items, options = {}) {
   const date = options.date || format(new Date(), 'EEEE, dd-MMM-yyyy');
   const venueLogoUrl = options.venueLogoUrl || null;
+  const paddingSecs = typeof options.transitionPaddingSecs === 'number' ? options.transitionPaddingSecs : 15;
 
   const songItems = items.filter(i => i.type === 'SONG' || (!i.type && i.song));
   const totalSongs = songItems.length;
-  const { actualSecs, paddedSecs } = computeSetlistDuration(items);
+  const { actualSecs, paddedSecs } = computeSetlistDuration(items, paddingSecs);
   const totalActualLabel = formatSetlistDuration(actualSecs);
   const totalPaddedLabel = formatSetlistDuration(paddedSecs);
   const totalSummary = actualSecs === paddedSecs
     ? totalActualLabel
-    : `${totalActualLabel} &bull; ${totalPaddedLabel} w/ gaps`;
+    : `${totalActualLabel} songs only &bull; ${totalPaddedLabel} w/ ${paddingSecs}s gaps`;
 
   let songNumber = 0;
   let rowsHtml = '';

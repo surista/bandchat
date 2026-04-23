@@ -124,7 +124,8 @@ const SetlistCard = memo(function SetlistCard({ setlist, onTap, onEdit, onRename
   );
 });
 
-function SetlistList({ workspaceId, workspaceName }) {
+function SetlistList({ workspaceId, workspaceName, workspace }) {
+  const transitionPaddingSecs = workspace?.transitionPaddingSecs;
   const toast = useToast();
   const [setlists, setSetlists] = useState([]);
   const [songs, setSongs] = useState([]);
@@ -421,12 +422,12 @@ function SetlistList({ workspaceId, workspaceName }) {
   // plus the padded total (15s between songs). The two are shown side-by-side
   // so band members can pick the right number for their planning.
   const calculateDuration = useCallback((setlistSongs) => {
-    const { actualSecs, paddedSecs } = computeSetlistDuration(setlistSongs);
+    const { actualSecs, paddedSecs, paddingSecs } = computeSetlistDuration(setlistSongs, transitionPaddingSecs);
     const actualLabel = formatSetlistDuration(actualSecs);
     const paddedLabel = formatSetlistDuration(paddedSecs);
-    if (paddedSecs === actualSecs) return actualLabel; // no songs, or single song
-    return `${actualLabel} (${paddedLabel} w/ gaps)`;
-  }, []);
+    if (paddedSecs === actualSecs) return actualLabel; // no songs / single song / padding=0
+    return `${actualLabel} (${paddedLabel} with ${paddingSecs}s gaps)`;
+  }, [transitionPaddingSecs]);
 
   const formatTime12h = useCallback((time24) => {
     if (!time24) return '';
@@ -493,7 +494,7 @@ function SetlistList({ workspaceId, workspaceName }) {
     const totalDuration = calculateDuration(setlistItems);
 
     // For time-range calculations, use padded duration (realistic gig runtime).
-    const { paddedSecs: totalSecs } = computeSetlistDuration(setlistItems);
+    const { paddedSecs: totalSecs } = computeSetlistDuration(setlistItems, transitionPaddingSecs);
 
     const addMinsToTime = (time24, minutes) => {
       if (!time24) return '';
@@ -757,6 +758,7 @@ function SetlistList({ workspaceId, workspaceName }) {
         setlist={editingSetlist}
         allSongs={songs}
         workspaceName={workspaceName}
+        transitionPaddingSecs={transitionPaddingSecs}
         onBack={() => {
           setShowBuilder(false);
           setEditingSetlist(null);

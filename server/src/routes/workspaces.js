@@ -340,7 +340,7 @@ router.get('/:workspaceId', authenticate, isWorkspaceMember, async (req, res) =>
 // Update workspace
 router.put('/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => {
   try {
-    const { name, currency, defaultEventType, defaultStartTime, defaultEndTime, defaultVenue, avatarUrl } = req.body;
+    const { name, currency, defaultEventType, defaultStartTime, defaultEndTime, defaultVenue, avatarUrl, transitionPaddingSecs } = req.body;
 
     if (name && name.trim().length > 100) {
       return res.status(400).json({ error: 'Workspace name must be 100 characters or less' });
@@ -372,6 +372,13 @@ router.put('/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => 
       return res.status(400).json({ error: 'Invalid avatar URL' });
     }
 
+    if (transitionPaddingSecs !== undefined) {
+      const n = Number(transitionPaddingSecs);
+      if (!Number.isInteger(n) || n < 0 || n > 300) {
+        return res.status(400).json({ error: 'Transition padding must be between 0 and 300 seconds' });
+      }
+    }
+
     const workspace = await prisma.workspace.update({
       where: { id: req.params.workspaceId },
       data: {
@@ -382,6 +389,7 @@ router.put('/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => 
         ...(defaultEndTime && { defaultEndTime }),
         ...(defaultVenue !== undefined && { defaultVenue: defaultVenue || null }),
         ...(avatarUrl !== undefined && { avatarUrl: avatarUrl || null }),
+        ...(transitionPaddingSecs !== undefined && { transitionPaddingSecs: Number(transitionPaddingSecs) }),
       }
     });
 

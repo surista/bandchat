@@ -189,6 +189,7 @@ function SetColumn({
   useShortNames,
   formatDuration,
   isFinalSet,
+  paddingSecs,
   onBreakDurationChange,
   timing,
   nextBreakItem,
@@ -201,9 +202,10 @@ function SetColumn({
   const setSongCount = set.items.filter(i => i.type !== 'MC' && i.type !== 'SET_BREAK').length;
   const setMcCount = set.items.filter(i => i.type === 'MC').length;
   const playableItems = set.items.filter(it => it.type !== 'SET_BREAK');
-  const { actualSecs: setActualSecs, paddedSecs: setPaddedSecs } = computeSetDuration(playableItems, { isFinalSet });
+  const { actualSecs: setActualSecs, paddedSecs: setPaddedSecs, paddingSecs: setPaddingSecs } = computeSetDuration(playableItems, { isFinalSet, paddingSecs });
   const setActualLabel = formatSetlistDuration(setActualSecs);
   const setPaddedLabel = formatSetlistDuration(setPaddedSecs);
+  const setHasPadding = setPaddingSecs > 0 && setPaddedSecs !== setActualSecs;
 
   return (
     <div className="flex flex-col bg-[var(--color-bg-secondary)] rounded-lg overflow-hidden border border-[var(--color-border)]">
@@ -220,14 +222,20 @@ function SetColumn({
               </div>
             )}
           </div>
-          <div className="text-right text-xs" title={`Actual ${setActualLabel} · With gaps ${setPaddedLabel}`}>
+          <div className="text-right text-xs" title={`Songs-only: ${setActualLabel}${setHasPadding ? ` · Incl. ${setPaddingSecs}s between songs: ${setPaddedLabel}` : ''}`}>
             <div className="text-[var(--color-text-secondary)]">
               {setSongCount} song{setSongCount !== 1 ? 's' : ''}
               {setMcCount > 0 && ` + ${setMcCount} MC`}
             </div>
             <div className="text-emerald-400 font-medium">
               {setPaddedLabel}
+              {setHasPadding && <span className="text-[10px] opacity-70 font-normal"> (+{setPaddingSecs}s gaps)</span>}
             </div>
+            {setHasPadding && (
+              <div className="text-[10px] text-[var(--color-text-muted)] opacity-70">
+                {setActualLabel} songs only
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -438,7 +446,7 @@ const BREAK_DURATION_OPTIONS = [
   { value: 3600, label: '60 min' },
 ];
 
-function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) {
+function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSecs, onBack, onUpdate }) {
   const toast = useToast();
   const [setlistItems, setSetlistItems] = useState(setlist.songs || []);
   const [searchQuery, setSearchQuery] = useState('');
@@ -622,14 +630,15 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
   };
 
   // Use actual song durations (no ceiling) and a separate padded total that
-  // accounts for 15s of transition time between songs. The padded total is
-  // what drives end-time calculations — it's the realistic gig length.
-  const { actualSecs, paddedSecs } = useMemo(
-    () => computeSetlistDuration(setlistItems),
-    [setlistItems]
+  // accounts for the workspace-configured transition time between songs. The
+  // padded total drives end-time calculations — realistic stage runtime.
+  const { actualSecs, paddedSecs, paddingSecs } = useMemo(
+    () => computeSetlistDuration(setlistItems, transitionPaddingSecs),
+    [setlistItems, transitionPaddingSecs]
   );
   const actualLabel = formatSetlistDuration(actualSecs);
   const paddedLabel = formatSetlistDuration(paddedSecs);
+  const hasPadding = paddingSecs > 0 && paddedSecs !== actualSecs;
   // `totalDuration` kept for downstream math (end time, per-set timings). Uses
   // padded so the end-time matches what the band will actually see on stage.
   const totalDuration = paddedSecs;
@@ -661,7 +670,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
         currentTime = addMinutesToTime(currentTime, (set.breakItem.duration || 0) / 60);
       }
 
-      const { paddedSecs: setPaddedSecs } = computeSetDuration(playableItems, { isFinalSet });
+      const { paddedSecs: setPaddedSecs } = computeSetDuration(playableItems, { isFinalSet, paddingSecs: transitionPaddingSecs });
 
       const actualStart = i > 0 ? roundUpTo5(currentTime) : currentTime;
       const setEnd = addMinutesToTime(actualStart, setPaddedSecs / 60);
@@ -925,7 +934,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
         </div>
         <div class="content">${setlistHtml}</div>
         <div class="footer">
-          <div class="stats">${songCount} songs &bull; ${actualLabel} actual &bull; ${paddedLabel} with gaps</div>
+          <div class="stats">${songCount} songs &bull; ${actualLabel} songs only${hasPadding ? ` &bull; ${paddedLabel} with ${paddingSecs}s gaps` : ''}</div>
         </div>
         <script>window.onload = function() { window.print(); };</script>
       </body>
@@ -1013,12 +1022,15 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
             >
               {useShortNames ? 'Short Names' : 'Full Titles'}
             </button>
-            <div className="text-right text-sm" title={`Actual ${actualLabel} · With gaps ${paddedLabel}`}>
+            <div className="text-right text-sm" title={`Songs-only: ${actualLabel}${hasPadding ? ` · With ${paddingSecs}s gaps: ${paddedLabel}` : ''}`}>
               <div className="text-[var(--color-text-primary)] font-medium">
                 {songCount} song{songCount !== 1 ? 's' : ''}
                 {mcCount > 0 && ` + ${mcCount} MC`}
               </div>
-              <div className="text-[var(--color-text-muted)]">{actualLabel} <span className="text-xs opacity-70">({paddedLabel} w/ gaps)</span></div>
+              <div className="text-[var(--color-text-muted)]">
+                {actualLabel}
+                {hasPadding && <span className="text-xs opacity-70"> ({paddedLabel} w/ {paddingSecs}s gaps)</span>}
+              </div>
             </div>
           </div>
           <div className="relative sm:hidden">
@@ -1068,12 +1080,12 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
             />
           </div>
           {startTime && endTime && (
-            <div className="px-3 py-1.5 bg-emerald-900/30 border border-emerald-700/50 rounded-full text-sm" title={`Actual ${actualLabel} · With gaps ${paddedLabel}`}>
+            <div className="px-3 py-1.5 bg-emerald-900/30 border border-emerald-700/50 rounded-full text-sm" title={`Songs-only: ${actualLabel}${hasPadding ? ` · Includes ${paddingSecs}s between songs` : ''}`}>
               <span className="text-emerald-300 font-medium">
                 {formatTime12h(startTime)} – {formatTime12h(endTime)}
               </span>
               <span className="text-[var(--color-text-muted)] ml-2">
-                ({paddedLabel})
+                ({paddedLabel}{hasPadding ? ` w/ ${paddingSecs}s gaps` : ''})
               </span>
             </div>
           )}
@@ -1133,6 +1145,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
                       useShortNames={useShortNames}
                       formatDuration={formatDuration}
                       isFinalSet={setIndex === sets.length - 1}
+                      paddingSecs={transitionPaddingSecs}
                       onBreakDurationChange={handleBreakDurationChange}
                       timing={setTimings?.[setIndex]}
                       nextBreakItem={sets[setIndex + 1]?.breakItem}
@@ -1188,15 +1201,20 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, onBack, onUpdate }) 
                       {formatTime12h(startTime)} – {formatTime12h(endTime)}
                     </span>
                   )}
-                  <div className="flex items-center gap-3" title="Actual: sum of song lengths. With gaps: +15s transitions between songs.">
+                  <div className="flex items-center gap-3" title={`Actual = sum of song durations. With gaps = adds ${paddingSecs}s after each song (tuning/banter/gear). Configure in Settings.`}>
                     <div className="flex items-baseline gap-1.5">
-                      <span className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide">Actual</span>
+                      <span className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide">Songs Only</span>
                       <span className="text-base font-semibold text-[var(--color-text-secondary)]">{actualLabel}</span>
                     </div>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide">With Gaps</span>
-                      <span className="text-xl font-bold text-emerald-400">{paddedLabel}</span>
-                    </div>
+                    {hasPadding && (
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide">+ {paddingSecs}s Gaps</span>
+                        <span className="text-xl font-bold text-emerald-400">{paddedLabel}</span>
+                      </div>
+                    )}
+                    {!hasPadding && paddingSecs === 0 && (
+                      <span className="text-xl font-bold text-emerald-400">{actualLabel}</span>
+                    )}
                   </div>
                 </div>
               </div>

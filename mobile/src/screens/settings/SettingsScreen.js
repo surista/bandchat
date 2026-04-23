@@ -93,6 +93,7 @@ export default function SettingsScreen({ navigation, route }) {
   const [wsStartTime, setWsStartTime] = useState('19:00');
   const [wsEndTime, setWsEndTime] = useState('21:00');
   const [wsVenue, setWsVenue] = useState('');
+  const [wsTransitionPadding, setWsTransitionPadding] = useState(15);
   const [savingDefaults, setSavingDefaults] = useState(false);
 
   useEffect(() => {
@@ -109,6 +110,7 @@ export default function SettingsScreen({ navigation, route }) {
         setWsStartTime(ws.defaultStartTime || '19:00');
         setWsEndTime(ws.defaultEndTime || '21:00');
         setWsVenue(ws.defaultVenue || '');
+        setWsTransitionPadding(typeof ws.transitionPaddingSecs === 'number' ? ws.transitionPaddingSecs : 15);
         setEffectivePlan(ws.effectivePlan || 'FREE');
       } catch {
         // Default to non-admin
@@ -199,6 +201,7 @@ export default function SettingsScreen({ navigation, route }) {
         defaultStartTime: wsStartTime,
         defaultEndTime: wsEndTime,
         defaultVenue: wsVenue || null,
+        transitionPaddingSecs: wsTransitionPadding,
       });
       successNotification();
       Alert.alert('Saved', 'Workspace defaults updated');
@@ -752,6 +755,30 @@ export default function SettingsScreen({ navigation, route }) {
               placeholderTextColor={colors.textSecondary}
               editable={!savingDefaults}
             />
+
+            {/* Transition padding between songs */}
+            <Text style={[styles.modalLabel, { color: colors.textSecondary, marginTop: 16 }]}>Transition Between Songs</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+              {[0, 10, 15, 20, 30, 45, 60].map(secs => (
+                <TouchableOpacity
+                  key={secs}
+                  style={[styles.chip, { backgroundColor: wsTransitionPadding === secs ? colors.primary : colors.bgTertiary }]}
+                  onPress={() => setWsTransitionPadding(secs)}
+                  disabled={savingDefaults}
+                  hitSlop={{ top: 6, bottom: 6 }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: wsTransitionPadding === secs }}
+                  accessibilityLabel={secs === 0 ? 'No padding' : `${secs} seconds between songs`}
+                >
+                  <Text style={[styles.chipText, { color: wsTransitionPadding === secs ? '#ffffff' : colors.textPrimary }]}>
+                    {secs === 0 ? 'None' : `${secs}s`}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 4 }}>
+              Added between songs in setlist totals for tuning and banter. The last song isn't padded.
+            </Text>
 
             <View style={styles.modalActions}>
               <TouchableOpacity

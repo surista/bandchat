@@ -57,7 +57,7 @@ const FAQ_SECTIONS = [
       },
       {
         q: 'How is the setlist length calculated?',
-        a: 'We show two numbers. "Actual" is the sum of each song\'s recorded duration — how long the songs would run back-to-back with no gaps. "With gaps" adds 15 seconds between each song to account for realistic transitions (tuning, banter, gear changes). The last song isn\'t padded because there\'s no transition after it. "With gaps" is what we use to compute the gig end time because it matches what a band actually takes on stage.',
+        a: 'We show two numbers. "Songs only" is the sum of each song\'s recorded duration — how long the songs would run back-to-back with zero gaps. "With gaps" adds a transition buffer between each song (15 seconds by default) to account for tuning, banter, and gear changes. The last song isn\'t padded because there\'s no transition after it. The "with gaps" number is used to compute the gig end time because it matches what a band actually takes on stage. Admins can change the transition duration (or disable padding entirely) in Workspace Settings → Workspace Defaults.',
       },
     ],
   },

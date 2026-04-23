@@ -105,6 +105,11 @@ model Workspace {
   defaultVenue     String?
   avatarUrl        String?
 
+  // Seconds of padding added after each song in setlist totals (0–300). Used
+  // by setlist duration helpers on both web + mobile. 15s default matches
+  // typical band transitions (tuning, banter, gear).
+  transitionPaddingSecs Int @default(15)
+
   // Subscription
   plan             String    @default("FREE") // "FREE" or "PRO"
   planSource       String? // "APPLE", "GOOGLE", "STRIPE", "MANUAL"

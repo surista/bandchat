@@ -94,6 +94,9 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
   const [wsStartTime, setWsStartTime] = useState(workspace?.defaultStartTime || '19:00');
   const [wsEndTime, setWsEndTime] = useState(workspace?.defaultEndTime || '21:00');
   const [wsVenue, setWsVenue] = useState(workspace?.defaultVenue || '');
+  const [wsTransitionPadding, setWsTransitionPadding] = useState(
+    typeof workspace?.transitionPaddingSecs === 'number' ? workspace.transitionPaddingSecs : 15
+  );
   const [wsDefaultsSaved, setWsDefaultsSaved] = useState(false);
   // Notification preferences
   const [notifPrefs, setNotifPrefs] = useState(null);
@@ -119,6 +122,9 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
       setWsStartTime(workspace?.defaultStartTime || '19:00');
       setWsEndTime(workspace?.defaultEndTime || '21:00');
       setWsVenue(workspace?.defaultVenue || '');
+      setWsTransitionPadding(
+        typeof workspace?.transitionPaddingSecs === 'number' ? workspace.transitionPaddingSecs : 15
+      );
       setWsDefaultsSaved(false);
     }
   }, [isOpen, user?.displayName, user?.avatarUrl, user?.bio]);
@@ -1414,6 +1420,25 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                           <label className="modal-label">Default Venue</label>
                           <input type="text" value={wsVenue} onChange={(e) => setWsVenue(e.target.value)} className="modal-input" placeholder="e.g., Ebisu Noah" />
                         </div>
+                        <div>
+                          <label className="modal-label">Transition Time Between Songs</label>
+                          <select
+                            value={wsTransitionPadding}
+                            onChange={(e) => setWsTransitionPadding(Number(e.target.value))}
+                            className="modal-input"
+                          >
+                            <option value={0}>No padding (pure song durations)</option>
+                            <option value={10}>10 seconds</option>
+                            <option value={15}>15 seconds (default)</option>
+                            <option value={20}>20 seconds</option>
+                            <option value={30}>30 seconds</option>
+                            <option value={45}>45 seconds</option>
+                            <option value={60}>60 seconds</option>
+                          </select>
+                          <div className="text-xs text-[var(--color-text-muted)] mt-1">
+                            Added between songs in setlist totals to account for tuning, banter, and gear changes. The last song of the gig isn't padded.
+                          </div>
+                        </div>
                         {wsDefaultsSaved && (
                           <div className="text-green-400 text-sm">Defaults saved.</div>
                         )}
@@ -1429,7 +1454,8 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                                 defaultEventType: wsEventType,
                                 defaultStartTime: wsStartTime,
                                 defaultEndTime: wsEndTime,
-                                defaultVenue: wsVenue
+                                defaultVenue: wsVenue,
+                                transitionPaddingSecs: wsTransitionPadding
                               });
                               setWsDefaultsSaved(true);
                               if (onRefreshWorkspace) onRefreshWorkspace();

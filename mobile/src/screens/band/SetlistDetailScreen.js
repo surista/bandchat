@@ -46,6 +46,17 @@ export default function SetlistDetailScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [editing, setEditing] = useState(startEditing || false);
+  const [transitionPaddingSecs, setTransitionPaddingSecs] = useState(15);
+
+  // Load workspace-level padding setting (15s default). Cached in ApiService
+  // so a second visit doesn't re-hit the server.
+  useEffect(() => {
+    let cancelled = false;
+    api.getWorkspace(workspaceId)
+      .then(ws => { if (!cancelled && typeof ws?.transitionPaddingSecs === 'number') setTransitionPaddingSecs(ws.transitionPaddingSecs); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [workspaceId]);
 
   // Song picker
   const [showSongPicker, setShowSongPicker] = useState(false);
@@ -105,7 +116,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
           console.error('Failed to fetch venue logo for setlist print:', e);
         }
       }
-      const html = buildSetlistHTML(setlist?.name || 'Setlist', setlist?.songs || [], { venueLogoUrl });
+      const html = buildSetlistHTML(setlist?.name || 'Setlist', setlist?.songs || [], { venueLogoUrl, transitionPaddingSecs });
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Export Setlist' });
     } catch (err) {
@@ -151,9 +162,10 @@ export default function SetlistDetailScreen({ navigation, route }) {
   const effectiveBreaks = firstContentIdx >= 0
     ? items.filter((s, i) => s.type === 'SET_BREAK' && i > firstContentIdx).length
     : 0;
-  const { actualSecs: totalActualSecs, paddedSecs: totalPaddedSecs } = computeSetlistDuration(items);
+  const { actualSecs: totalActualSecs, paddedSecs: totalPaddedSecs, paddingSecs: totalPaddingSecs } = computeSetlistDuration(items, transitionPaddingSecs);
+  const totalHasPadding = totalPaddingSecs > 0 && totalPaddedSecs !== totalActualSecs;
   // `totalDuration` kept for existing call sites that format a single number.
-  // It uses the padded total (realistic gig length with 15s transitions).
+  // It uses the padded total (realistic gig length with transitions).
   const totalDuration = totalPaddedSecs;
 
   // Reorder (arrow buttons - used in non-drag mode)
@@ -468,9 +480,9 @@ export default function SetlistDetailScreen({ navigation, route }) {
         )}
         {totalActualSecs > 0 && (
           <>
-            <Badge label={formatSetlistDuration(totalActualSecs)} color={colors.badgeDuration} bgColor={colors.badgeDurationBg} />
-            {totalPaddedSecs !== totalActualSecs && (
-              <Badge label={`${formatSetlistDuration(totalPaddedSecs)} w/ gaps`} color={colors.badgeDuration} bgColor={colors.badgeDurationBg} />
+            <Badge label={`${formatSetlistDuration(totalActualSecs)} songs`} color={colors.badgeDuration} bgColor={colors.badgeDurationBg} />
+            {totalHasPadding && (
+              <Badge label={`${formatSetlistDuration(totalPaddedSecs)} w/ ${totalPaddingSecs}s gaps`} color={colors.badgeDuration} bgColor={colors.badgeDurationBg} />
             )}
           </>
         )}
