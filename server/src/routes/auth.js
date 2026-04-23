@@ -186,7 +186,12 @@ const generateTokens = async (userId) => {
   const accessToken = jwt.sign(
     { userId },
     process.env.JWT_SECRET,
-    { expiresIn: '15m', algorithm: 'HS256' }
+    // 1 hour. Short enough that a stolen access token is useful for only a
+    // limited window (refresh token revocation is the real security boundary).
+    // Long enough that normal app usage doesn't refresh every few minutes,
+    // which reduces server load and shrinks the surface area for refresh-race
+    // bugs that log users out.
+    { expiresIn: '1h', algorithm: 'HS256' }
   );
 
   const refreshToken = jwt.sign(

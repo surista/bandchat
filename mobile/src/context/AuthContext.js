@@ -80,15 +80,16 @@ export function AuthProvider({ children }) {
             await configureRevenueCat(userData.id);
             updateWidgetGigData();
           } catch (fetchError) {
-            // Check if it's a network/timeout error (app started offline)
-            if (fetchError.type === 'NETWORK' || fetchError.type === 'TIMEOUT') {
-              // Keep tokens but mark as offline - user can retry later
-              setIsOffline(true);
-            } else {
-              // Auth error (token invalid) - clear tokens
+            // Only wipe the session on a definitive AUTH rejection. Network,
+            // timeout, or 5xx server errors must keep the tokens so the user
+            // isn't kicked back to login just because the API is having a
+            // bad moment — they'll retry automatically on next action.
+            if (fetchError.type === 'AUTH') {
               await api.clearTokens();
               setIsLocked(false);
               setError(fetchError.message);
+            } else {
+              setIsOffline(true);
             }
           }
         }
@@ -159,11 +160,12 @@ export function AuthProvider({ children }) {
       setIsOffline(false);
       await configureRevenueCat(userData.id);
     } catch (fetchError) {
-      if (fetchError.type === 'NETWORK' || fetchError.type === 'TIMEOUT') {
-        setIsOffline(true);
-      } else {
+      // Same rule as initAuth: only AUTH errors clear tokens.
+      if (fetchError.type === 'AUTH') {
         await api.clearTokens();
         setError(fetchError.message);
+      } else {
+        setIsOffline(true);
       }
     } finally {
       setLoading(false);

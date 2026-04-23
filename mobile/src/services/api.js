@@ -265,12 +265,7 @@ class ApiService {
 
   async ensureFreshToken() {
     if (this.refreshToken && this.isTokenExpiringSoon()) {
-      if (!this._refreshPromise) {
-        this._refreshPromise = this.refreshAccessToken().finally(() => {
-          this._refreshPromise = null;
-        });
-      }
-      await this._refreshPromise;
+      await this.refreshAccessToken();
     }
   }
 
@@ -300,12 +295,7 @@ class ApiService {
       }, timeout);
 
       if (response.status === 401 && this.refreshToken) {
-        if (!this._refreshPromise) {
-          this._refreshPromise = this.refreshAccessToken().finally(() => {
-            this._refreshPromise = null;
-          });
-        }
-        const refreshed = await this._refreshPromise;
+        const refreshed = await this.refreshAccessToken();
         if (refreshed) {
           headers['Authorization'] = `Bearer ${this.accessToken}`;
           const retryResponse = await fetchWithTimeout(url, { ...options, headers }, timeout);
@@ -383,48 +373,66 @@ class ApiService {
     return ErrorTypes.SERVER;
   }
 
+  /**
+   * Refresh the access token using the stored refresh token.
+   *
+   * Deduplication is centralized here so that every caller (request(),
+   * ensureFreshToken(), SocketContext, AuthContext AppState handler) shares
+   * a single in-flight refresh. Without this, two concurrent callers could
+   * both send the same refresh token; the first rotates it (deleting the old
+   * record server-side) and the second hits "Refresh token has been revoked"
+   * → clearTokens() → user is forced back to login. This race was the main
+   * cause of users being logged out on app resume.
+   */
   async refreshAccessToken() {
     if (!this.refreshToken) return false;
+    if (this._refreshPromise) return this._refreshPromise;
 
-    const MAX_RETRIES = 2;
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        const response = await fetchWithTimeout(`${API_URL}/auth/refresh`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken: this.refreshToken }),
-        }, 15000);
+    this._refreshPromise = (async () => {
+      const MAX_RETRIES = 2;
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const response = await fetchWithTimeout(`${API_URL}/auth/refresh`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken: this.refreshToken }),
+          }, 15000);
 
-        if (response.ok) {
-          const data = await response.json();
-          await this.setTokens(data.accessToken, data.refreshToken);
-          return true;
-        }
+          if (response.ok) {
+            const data = await response.json();
+            await this.setTokens(data.accessToken, data.refreshToken);
+            return true;
+          }
 
-        // Only clear tokens on definitive auth rejection (401/403)
-        // Server is telling us the refresh token is invalid/revoked
-        if (response.status === 401 || response.status === 403) {
-          await this.clearTokens();
+          // Only clear tokens on definitive auth rejection (401/403)
+          // Server is telling us the refresh token is invalid/revoked
+          if (response.status === 401 || response.status === 403) {
+            await this.clearTokens();
+            return false;
+          }
+
+          // Transient server errors (429, 500, 502, 503, 504) — retry
+          if (attempt < MAX_RETRIES) {
+            await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+            continue;
+          }
+          // Exhausted retries but tokens are still valid — keep them
+          return false;
+        } catch {
+          // Network error — retry with backoff, never clear tokens
+          if (attempt < MAX_RETRIES) {
+            await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+            continue;
+          }
           return false;
         }
-
-        // Transient server errors (429, 500, 502, 503, 504) — retry
-        if (attempt < MAX_RETRIES) {
-          await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
-          continue;
-        }
-        // Exhausted retries but tokens are still valid — keep them
-        return false;
-      } catch {
-        // Network error — retry with backoff, never clear tokens
-        if (attempt < MAX_RETRIES) {
-          await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
-          continue;
-        }
-        return false;
       }
-    }
-    return false;
+      return false;
+    })().finally(() => {
+      this._refreshPromise = null;
+    });
+
+    return this._refreshPromise;
   }
 
   // Auth
