@@ -247,22 +247,40 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
     }
   }, [hasMore, nextCursor, loadingMore, channel.id]);
 
-  // IntersectionObserver for infinite scroll
+  // IntersectionObserver for infinite scroll. Belt-and-suspenders: the observer
+  // is the primary trigger, but we also attach a scroll listener that fires
+  // loadMoreMessages when the user reaches the top of the container. The
+  // observer-only approach was unreliable in production — single-fire on
+  // initial entry, no retry on subsequent scroll-to-top events.
   useEffect(() => {
     const sentinel = sentinelRef.current;
     const container = messagesContainerRef.current;
-    if (!sentinel || !container) return;
+    if (!container) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loadingMore) {
-          loadMoreMessages();
-        }
-      },
-      { root: container, threshold: 0.1 }
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
+    let observer = null;
+    if (sentinel) {
+      observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting && hasMore && !loadingMore) {
+            loadMoreMessages();
+          }
+        },
+        { root: container, threshold: 0.1 }
+      );
+      observer.observe(sentinel);
+    }
+
+    const onScroll = () => {
+      if (container.scrollTop < 100 && hasMore && !loadingMore) {
+        loadMoreMessages();
+      }
+    };
+    container.addEventListener('scroll', onScroll, { passive: true });
+
+    return () => {
+      if (observer) observer.disconnect();
+      container.removeEventListener('scroll', onScroll);
+    };
   }, [hasMore, loadingMore, loadMoreMessages]);
 
   const loadPinnedMessages = async () => {
