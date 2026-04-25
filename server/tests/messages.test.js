@@ -269,4 +269,165 @@ describe('Messages API', () => {
       expect(res.status).toBe(200);
     });
   });
+
+  // ── Pagination ──
+  // Regression coverage for the 2026-04-25 incident, where scroll-up to load
+  // older messages had been silently broken since v1.05.77 (2026-03-24). The
+  // cursor validator rejected anything outside 20–30 chars as "Invalid cursor"
+  // — but Message IDs are 36-char UUIDs, so every paginated request returned
+  // 400. The client caught the error in a silent try/catch, no toast, no
+  // visible failure: it just looked like "channel only has the most recent 50
+  // messages." A single end-to-end pagination walk would have caught this.
+  describe('GET /api/messages/channel/:channelId — pagination', () => {
+    let pagAdmin;
+    let pagWorkspaceId;
+    let pagChannelId;
+    const SEED_COUNT = 65;
+    const PAGE_LIMIT = 50;
+    const seededIds = [];
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    beforeAll(async () => {
+      pagAdmin = await createTestUser({ displayName: 'Pagination Admin' });
+      const ws = await createTestWorkspace(pagAdmin.token, { name: 'Pagination Test WS' });
+      pagWorkspaceId = ws.id;
+
+      const channels = await request(app)
+        .get(`/api/channels/workspace/${pagWorkspaceId}`)
+        .set('Authorization', `Bearer ${pagAdmin.token}`);
+      pagChannelId = channels.body.find(c => c.name === 'general')?.id || channels.body[0]?.id;
+
+      // Seed 65 messages — enough to span > one page (50). Tiny delay between
+      // sends so createdAt stays strictly monotonic; the handler orders by
+      // createdAt desc and ties make pagination tests flaky.
+      for (let i = 0; i < SEED_COUNT; i++) {
+        const res = await request(app)
+          .post(`/api/messages/channel/${pagChannelId}`)
+          .set('Authorization', `Bearer ${pagAdmin.token}`)
+          .send({ content: `pag-seed-${i}` });
+        expect(res.status).toBe(201);
+        seededIds.push(res.body.id);
+        await new Promise(r => setTimeout(r, 2));
+      }
+    });
+
+    afterAll(async () => {
+      await cleanupWorkspace(pagWorkspaceId);
+      await cleanupUser(pagAdmin.user.id);
+    });
+
+    it('initial page returns latest LIMIT messages with hasMore=true and a UUID nextCursor', async () => {
+      const res = await request(app)
+        .get(`/api/messages/channel/${pagChannelId}?limit=${PAGE_LIMIT}`)
+        .set('Authorization', `Bearer ${pagAdmin.token}`);
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.messages)).toBe(true);
+      expect(res.body.messages).toHaveLength(PAGE_LIMIT);
+      expect(res.body.hasMore).toBe(true);
+      // Direct regression for the v1.05.77 defect: the cursor returned by the
+      // server MUST itself be a valid UUID so that the client can use it on
+      // the next request without the validator rejecting it.
+      expect(typeof res.body.nextCursor).toBe('string');
+      expect(res.body.nextCursor).toMatch(UUID_RE);
+    });
+
+    it('walking the cursor surfaces every seeded message exactly once across all pages', async () => {
+      // The original bug presented as "channel only ever shows ~50 messages."
+      // This test walks every page until hasMore=false and asserts that the
+      // union of returned IDs equals the full set of seeded IDs. If any cursor
+      // is rejected (400), or any page is dropped, or the walk loops, this
+      // fails — covering the full scroll-back integration path on the server.
+      const seen = new Set();
+      let cursor = null;
+      let pages = 0;
+      const MAX_PAGES = 10; // ceil(65/50)+1 = 3 expected; cap prevents loops
+
+      while (pages++ < MAX_PAGES) {
+        const url = `/api/messages/channel/${pagChannelId}?limit=${PAGE_LIMIT}` +
+          (cursor ? `&cursor=${encodeURIComponent(cursor)}` : '');
+        const res = await request(app)
+          .get(url)
+          .set('Authorization', `Bearer ${pagAdmin.token}`);
+
+        expect(res.status).toBe(200);
+        for (const m of res.body.messages) seen.add(m.id);
+
+        if (!res.body.hasMore) {
+          expect(res.body.nextCursor).toBeNull();
+          break;
+        }
+        expect(res.body.nextCursor).toMatch(UUID_RE);
+        cursor = res.body.nextCursor;
+      }
+
+      expect(seen.size).toBe(seededIds.length);
+      for (const id of seededIds) {
+        expect(seen.has(id)).toBe(true);
+      }
+    });
+
+    it('rejects a non-UUID cursor with 400', async () => {
+      const res = await request(app)
+        .get(`/api/messages/channel/${pagChannelId}?cursor=not-a-uuid`)
+        .set('Authorization', `Bearer ${pagAdmin.token}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/cursor/i);
+    });
+
+    it('accepts a cursor that is a valid UUID (does not reject by length)', async () => {
+      // Belt-and-suspenders: verify a freshly-issued nextCursor doesn't trip
+      // the validator on the very next request. The original bug was a length
+      // check 20–30 chars that rejected all 36-char UUIDs.
+      const first = await request(app)
+        .get(`/api/messages/channel/${pagChannelId}?limit=${PAGE_LIMIT}`)
+        .set('Authorization', `Bearer ${pagAdmin.token}`);
+      expect(first.status).toBe(200);
+      expect(first.body.nextCursor).toMatch(UUID_RE);
+
+      const second = await request(app)
+        .get(`/api/messages/channel/${pagChannelId}?limit=${PAGE_LIMIT}&cursor=${first.body.nextCursor}`)
+        .set('Authorization', `Bearer ${pagAdmin.token}`);
+      expect(second.status).toBe(200);
+    });
+
+    it('returns hasMore=false and nextCursor=null when channel has fewer than limit messages', async () => {
+      const ws2 = await createTestWorkspace(pagAdmin.token, { name: 'Small Pagination WS' });
+      const channels2 = await request(app)
+        .get(`/api/channels/workspace/${ws2.id}`)
+        .set('Authorization', `Bearer ${pagAdmin.token}`);
+      const ch2 = channels2.body.find(c => c.name === 'general')?.id || channels2.body[0]?.id;
+
+      for (let i = 0; i < 5; i++) {
+        await request(app)
+          .post(`/api/messages/channel/${ch2}`)
+          .set('Authorization', `Bearer ${pagAdmin.token}`)
+          .send({ content: `small-${i}` });
+      }
+
+      const res = await request(app)
+        .get(`/api/messages/channel/${ch2}?limit=${PAGE_LIMIT}`)
+        .set('Authorization', `Bearer ${pagAdmin.token}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.messages).toHaveLength(5);
+      expect(res.body.hasMore).toBe(false);
+      expect(res.body.nextCursor).toBeNull();
+
+      await cleanupWorkspace(ws2.id);
+    });
+
+    it('sets Cache-Control: no-store on every response (prevents 304 cache poisoning)', async () => {
+      // Regression for the 2026-04-25 incident: during a 429 storm the browser
+      // cached an empty `{messages:[],hasMore:false}` body with an ETag. Once
+      // cached, every subsequent request got 304 Not Modified and the client
+      // permanently believed the channel had no messages to load.
+      const res = await request(app)
+        .get(`/api/messages/channel/${pagChannelId}?limit=${PAGE_LIMIT}`)
+        .set('Authorization', `Bearer ${pagAdmin.token}`);
+      expect(res.status).toBe(200);
+      expect(res.headers['cache-control']).toMatch(/no-store/);
+    });
+  });
 });
