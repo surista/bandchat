@@ -16,6 +16,20 @@ const MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024; // 50MB (video max)
 
 const router = express.Router();
 
+// Disable HTTP caching on every response from this router. Messages mutate
+// constantly (creates, edits, deletes, reactions, pagination cursors) and
+// Express's default ETag-based 304 revalidation caused real damage here:
+// during the rate-limit incident on 2026-04-25, browsers cached empty
+// `{messages:[],hasMore:false}` bodies; subsequent server responses with the
+// same body got 304s, the client kept reading hasMore=false from cache,
+// the infinite-scroll sentinel never re-rendered, and pagination was stuck
+// at the most recent 50 messages until caches were manually cleared.
+// no-store ensures no layer (browser, SW, CDN) holds onto these responses.
+router.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
+
 // Reusable include for reactions
 const reactionsInclude = {
   reactions: {
