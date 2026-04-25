@@ -1,20 +1,38 @@
 import rateLimit from 'express-rate-limit';
+import jwt from 'jsonwebtoken';
 
 const isTest = process.env.NODE_ENV === 'test';
 const skipInTest = isTest ? () => true : undefined;
 
-// General API rate limit. Per-user when authenticated (req.user.id is populated
-// by the authenticate middleware on routes that need it; for anonymous endpoints
-// it falls back to IP). The cap is intentionally generous because chat use is
-// burst-heavy: a channel switch can fire 5–10 parallel reads, and the
-// per-action limiters (messageLimiter, searchLimiter, authLimiter) handle
-// abuse on the actually-expensive endpoints. OPTIONS preflights are skipped —
-// they're CORS housekeeping, not work, and counting them effectively halves
-// every user's budget.
+// Extract a stable per-user key from the JWT for rate limiting. The global
+// apiLimiter runs BEFORE per-route `authenticate` middleware, so req.user is
+// not yet populated; we have to crack the token ourselves. We verify the
+// signature so a malicious actor can't fabricate fresh tokens to get unlimited
+// buckets — only tokens issued by this server are honored. On failure (no
+// token, expired, invalid), fall back to req.ip.
+function userKey(req) {
+  try {
+    const auth = req.headers.authorization;
+    if (!auth || !auth.startsWith('Bearer ')) return req.ip;
+    const decoded = jwt.verify(auth.slice(7), process.env.JWT_SECRET, { algorithms: ['HS256'] });
+    return decoded.userId ? `u:${decoded.userId}` : req.ip;
+  } catch {
+    return req.ip;
+  }
+}
+
+// General API rate limit. Per-user via JWT decoded inline (this middleware
+// runs before per-route `authenticate`, so we can't read req.user — we crack
+// the token ourselves in `userKey`). The cap is intentionally generous
+// because chat use is burst-heavy: a channel switch fires 5–10 parallel reads,
+// and the per-action limiters (messageLimiter, searchLimiter, authLimiter)
+// handle abuse on the actually-expensive endpoints. OPTIONS preflights are
+// skipped — they're CORS housekeeping, not work, and counting them
+// effectively halves every user's budget.
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5000,
-  keyGenerator: (req) => req.user?.id || req.ip,
+  keyGenerator: userKey,
   skip: (req) => isTest || req.method === 'OPTIONS',
   message: { error: 'Too many requests, please try again later' },
   standardHeaders: true,
