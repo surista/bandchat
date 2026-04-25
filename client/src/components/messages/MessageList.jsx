@@ -630,22 +630,18 @@ function MessageList({
       onTouchCancel={messageLongPress.onTouchCancel}
     >
       {(() => {
-        // Cap rendered messages to avoid DOM bloat — show most recent 150
-        const MAX_RENDERED = 150;
-        const truncated = messages.length > MAX_RENDERED;
-        const visibleMessages = truncated ? messages.slice(messages.length - MAX_RENDERED) : messages;
+        // Render all loaded messages. The previous 150-message cap dropped the
+        // OLDEST messages from the DOM regardless of scroll direction, which
+        // silently broke scroll-up: paginated history would arrive in state
+        // but get sliced out before render. Modern browsers handle thousands
+        // of message nodes fine; if perf actually becomes a problem later,
+        // swap in a windowed virtualizer (react-window) that respects scroll
+        // position rather than a hard "keep latest N" slice.
+        const visibleMessages = messages;
         return (
           <>
-            {truncated && (
-              <div className="text-center py-3">
-                <span className="text-xs text-[var(--color-text-muted)]">
-                  Showing latest {MAX_RENDERED} of {messages.length} messages
-                </span>
-              </div>
-            )}
             {visibleMessages.map((message, index) => {
-              // Adjust index for date header checks against the full array
-              const fullIndex = truncated ? index + (messages.length - MAX_RENDERED) : index;
+              const fullIndex = index;
               return (
                 <div key={message.id}>
           {/* Date Header */}
