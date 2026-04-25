@@ -9,6 +9,7 @@ import { sendPushToUser } from './push.js';
 import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
 import { logAudit } from '../lib/audit.js';
 import { emitBadgeUpdate } from '../lib/unreadCount.js';
+import { isValidUUID } from '../lib/validators.js';
 
 // L7: Allowed attachment types and size limits for validation
 const ALLOWED_ATTACHMENT_TYPES = ['IMAGE', 'AUDIO', 'VIDEO', 'DOCUMENT'];
@@ -50,8 +51,12 @@ router.get('/channel/:channelId', authenticate, isChannelMember, async (req, res
     const { cursor, limit = 50 } = req.query;
     const take = Math.min(parseInt(limit) || 50, 100);
 
-    // Validate cursor format (must be a CUID if provided)
-    if (cursor && (typeof cursor !== 'string' || cursor.length < 20 || cursor.length > 30)) {
+    // Validate cursor format. Message IDs are UUIDs (36 chars) — the original
+    // length check (20–30) silently rejected every real cursor with 400, which
+    // is why scroll-up to load older messages had been broken since v1.05.77
+    // (2026-03-24). Symptom looked like "channel only ever shows the most
+    // recent 50 messages." Use the proper UUID validator now.
+    if (cursor && (typeof cursor !== 'string' || !isValidUUID(cursor))) {
       return res.status(400).json({ error: 'Invalid cursor' });
     }
 
