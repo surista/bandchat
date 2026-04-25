@@ -21,6 +21,9 @@ import prisma from './prisma.js';
  */
 export async function getUnreadCount(userId) {
   try {
+    // EXISTS guard on WorkspaceMember prevents orphan ChannelMember rows
+    // (user left workspace but their ChannelMember row wasn't cascaded) from
+    // inflating the badge count. See v1.05.78 for the cascade fix on leave.
     const result = await prisma.$queryRaw`
       SELECT COUNT(m.id)::int AS count
       FROM "ChannelMember" cm
@@ -32,6 +35,11 @@ export async function getUnreadCount(userId) {
         AND m."parentId" IS NULL
       WHERE cm."userId" = ${userId}
         AND cm.muted = false
+        AND EXISTS (
+          SELECT 1 FROM "WorkspaceMember" wm
+          WHERE wm."userId" = cm."userId"
+            AND wm."workspaceId" = c."workspaceId"
+        )
     `;
     return result[0]?.count || 0;
   } catch (err) {
