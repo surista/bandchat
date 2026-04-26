@@ -446,7 +446,7 @@ const BREAK_DURATION_OPTIONS = [
   { value: 3600, label: '60 min' },
 ];
 
-function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSecs, onBack, onUpdate }) {
+function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSecs, onBack, onUpdate, onSongUpdate }) {
   const toast = useToast();
   const [setlistItems, setSetlistItems] = useState(setlist.songs || []);
   const [searchQuery, setSearchQuery] = useState('');
@@ -732,8 +732,11 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSec
   };
 
   const handleSongClick = (item) => {
-    const fullSong = allSongs.find(s => s.id === item.song?.id) || item.song;
-    if (fullSong) setViewingSong(fullSong);
+    // Use item.song directly — the setlist API includes the full song object,
+    // and handleSongSave keeps it fresh after edits. Looking up via allSongs
+    // (the parent's prop) returned stale data after a save and made edits
+    // appear not to persist when re-opening the same song.
+    if (item.song) setViewingSong(item.song);
   };
 
   const handleSongSave = async (songData) => {
@@ -741,6 +744,9 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSec
     setSetlistItems(prev => prev.map(item =>
       item.song?.id === updated.id ? { ...item, song: updated } : item
     ));
+    // Notify parent so its allSongs / library list reflects the change too —
+    // avoids stale entries elsewhere in the workspace song UI.
+    if (onSongUpdate) onSongUpdate(updated);
     setViewingSong(null);
   };
 

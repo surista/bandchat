@@ -765,6 +765,7 @@ function SetlistList({ workspaceId, workspaceName, workspace }) {
           loadData();
         }}
         onUpdate={handleSetlistUpdated}
+        onSongUpdate={(updated) => setSongs(prev => prev.map(s => s.id === updated.id ? { ...s, ...updated } : s))}
       />
     );
   }
