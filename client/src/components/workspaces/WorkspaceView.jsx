@@ -883,7 +883,7 @@ function WorkspaceView() {
 
           {/* Thread Panel */}
           {selectedThread && (
-            <div className="w-full md:w-96 border-l border-gray-700 flex flex-col">
+            <div className="w-full md:w-96 border-l border-gray-700 flex flex-col min-h-0 h-full bg-[var(--color-bg-primary)]">
               <ThreadView
                 message={selectedThread}
                 channelId={selectedChannel?.id}
