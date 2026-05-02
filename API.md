@@ -55,9 +55,17 @@ Tokens are obtained from `/api/auth/login` or `/api/auth/google` and expire afte
 
 ## Rate Limiting
 
-- General API: 100 requests per 15 minutes per IP
-- Auth endpoints (login, signup): 5 requests per 15 minutes per IP
+- General API: 5000 requests per 15 minutes — keyed per authenticated user (JWT decoded inline) when the request carries a `Authorization: Bearer` header, otherwise by IP. CORS preflights (`OPTIONS`) are not counted.
+- Auth endpoints (login, signup, account changes): 10 attempts per 15 minutes
+- Verification / reset token endpoints: 10 attempts per 15 minutes
+- Refresh token endpoint: 10 attempts per minute
 - Message sending: 30 messages per minute per user
+- Message search / timeline / activity: 30 requests per minute per user
+- Data export: 5 requests per hour per user
+- Sync pull: 60 requests per minute
+- Public website forms (song requests, contact): 20 submissions per hour per IP
+
+When rate-limited, responses return HTTP 429 with `RateLimit-Limit` / `RateLimit-Remaining` / `RateLimit-Reset` headers (RFC draft-07 standard headers).
 
 ---
 

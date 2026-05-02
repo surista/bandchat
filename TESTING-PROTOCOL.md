@@ -732,6 +732,9 @@ Use these checklists when making changes. Test on **both web and Android** unles
 | M14 | Swipe to react | N/A | ☐ | Swipe left on message → thumbs up toggled |
 | M15 | Reply in thread | ☐ | ☐ | Click reply → thread panel opens → send reply → appears in thread |
 | M16 | Thread reply with formatting toolbar | ☐ | ☐ | Open thread → verify formatting toolbar appears in reply input |
+| M16a | Edit own reply in thread | ☐ | N/A | Hover own reply → ✏️ → edit → Enter → text updates inline + `(edited)` indicator (web; mobile uses message detail screen) |
+| M16b | Delete own reply in thread | ☐ | N/A | Hover own reply → 🗑️ → confirm → reply removed; other users see it disappear via socket |
+| M16c | Scroll-back through history (deep) | ☐ | ☐ | In a channel with >100 messages, scroll up to top → older pages load until oldest message reached (regression for v1.06.58 cursor bug + v1.06.60 DOM-cap bug) |
 | M17 | Pin message | ☐ | ☐ | Long-press → Pin → message appears in pinned messages panel |
 | M18 | Save message (bookmark) | ☐ | ☐ | Long-press → Save → appears in Saved Messages view |
 | M19 | Real-time delivery | ☐ | ☐ | Open same channel on two devices → send from one → appears on other within 2s |

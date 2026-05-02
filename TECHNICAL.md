@@ -514,13 +514,20 @@ prisma generate && prisma db push && node src/index.js
 | `isChannelMember` | Checks channel membership (public channels allow all workspace members) |
 
 ### Rate Limits
-| Scope | Limit | Window |
-|---|---|---|
-| General API | 1000 requests | 15 minutes |
-| Auth endpoints (login, signup, etc.) | 10 attempts | 15 minutes |
-| Token verification (email, password reset) | 10 attempts | 15 minutes |
-| Message creation | 30 messages | 1 minute |
-| Socket events | Varies per event | 1-10 seconds |
+| Scope | Limit | Window | Keyed by |
+|---|---|---|---|
+| General API (`/api/*`) | 5000 requests | 15 minutes | authenticated user (JWT) → fallback IP |
+| Auth endpoints (login, signup, etc.) | 10 attempts | 15 minutes | user / IP |
+| Token verification (email, password reset) | 10 attempts | 15 minutes | IP |
+| Refresh token | 10 attempts | 1 minute | IP |
+| Message creation | 30 messages | 1 minute | user |
+| Message search / timeline / activity | 30 requests | 1 minute | user |
+| Data export | 5 requests | 1 hour | user |
+| Sync pull | 60 requests | 1 minute | IP |
+| Public website forms | 20 submissions | 1 hour | IP |
+| Socket events | Varies per event | 1–10 seconds | socket |
+
+`apiLimiter` decodes the JWT inline (it runs before per-route `authenticate`, so `req.user` isn't yet populated). `OPTIONS` preflights are skipped from the count to avoid CORS doubling every user's effective budget. See `server/src/middleware/rateLimit.js` (`userKey` helper) for the keying logic.
 
 ### Security Features
 - Passwords hashed with bcrypt (12 rounds)

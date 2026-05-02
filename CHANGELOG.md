@@ -2,6 +2,60 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.63] - 2026-05-02
+
+### Added
+- **Edit + Delete in thread replies (web)** — Hover toolbar on a reply now shows ✏️ Edit and 🗑️ Delete for messages you authored. Inline textarea (Enter to save, Esc to cancel), `(edited)` indicator, `ConfirmDialog` before delete. Mirrors the channel message UX. Mobile already supported this via the message detail navigation pattern.
+
+## [1.06.62] - 2026-05-02
+
+### Fixed
+- **Thread panel layout broken on desktop** — Opening a thread exposed the body's white background and the channel column collapsed. Added `min-h-0`, `h-full`, and `bg-[var(--color-bg-primary)]` to the thread panel wrapper in `WorkspaceView.jsx` so the flex child properly constrains its internally-scrolling children. Mobile (`hidden md:flex` swap) was unaffected.
+
+## [1.06.61] - 2026-05-02
+
+### Fixed
+- **Setlist song edits appeared not to save** — Clicking a song in a setlist opens `SongForm`, but `handleSongClick` looked up the song from the parent's `allSongs` prop first. After save, `allSongs` stayed stale, so re-opening showed the old data and looked like the save had failed. The save *was* persisting; the lookup just shadowed it. `handleSongClick` now uses `item.song` directly (the setlist API includes the full song object), and `handleSongSave` propagates updates to the parent via a new `onSongUpdate` callback so `allSongs` and dependent UI stay in sync.
+
+## [1.06.60] - 2026-04-25
+
+### Fixed
+- **150-message DOM cap silently dropped paginated history** — `MessageList` capped rendered messages to the most recent 150 via `messages.slice(-150)`. Pagination prepends older messages to the array, but the slice always cut from the start, so anything past 150 was loaded into React state but never rendered. Caused pagination to appear to "stop" at 150 even on Pro workspaces with months of history. Cap removed. If perf becomes an issue at extreme scale, swap in proper windowed virtualization (`react-window` / `react-virtuoso`) — naive cap-from-end is worse than no cap because it actively breaks correctness.
+
+## [1.06.59] - 2026-04-25
+
+### Fixed
+- **Channel scroll-up failed to load older messages** — `ChannelView` relied solely on `IntersectionObserver` for the infinite-scroll trigger. The observer fires once when the sentinel enters the viewport and doesn't refire until it exits and re-enters; combined with v1.06.58's cursor-validator bug, a single failed pagination attempt locked the entire channel's scroll-back permanently. Added a `scroll` event listener that fires `loadMoreMessages` directly when `scrollTop < 100`, with the existing observer kept as a backup.
+
+## [1.06.58] - 2026-04-25
+
+### Fixed
+- **Cursor pagination broken for one month (latent since v1.05.77)** — A code review added `if (cursor.length < 20 || cursor.length > 30) return 400` to `GET /api/messages/channel/:channelId` on the false assumption that Message IDs were CUIDs. They're UUIDs (36 characters), so every cursor was rejected. The client's `loadMoreMessages` caught the 400 silently (no toast, no surfaced log), so users saw channels "stop" at 50 messages with no error. Replaced with `isValidUUID(cursor)` from `server/src/lib/validators.js`.
+
+### Added
+- **Pagination regression tests** — `server/tests/messages.test.js` gained a `describe('pagination')` block: initial-page semantics, full cursor walk surfacing every seeded message exactly once, invalid-cursor rejection, UUID-cursor acceptance (direct regression for the v1.05.77 defect), `hasMore=false`/`nextCursor=null` for small channels, `Cache-Control: no-store` header.
+
+## [1.06.57] - 2026-04-25
+
+### Fixed
+- **HTTP 304 cache poisoning on `/api/messages/*`** — Express's default `ETag` revalidation caused browsers (and the PWA Service Worker) to cache an empty `{messages:[],hasMore:false}` body during the rate-limit storm; subsequent server responses with the same body got 304 Not Modified and the client's `hasMore` stayed permanently `false`, locking pagination state until users manually cleared site data. A `router.use` middleware on `/api/messages/*` now sets `Cache-Control: no-store` on every response.
+
+## [1.06.56] - 2026-04-25
+
+### Fixed
+- **Rate-limiter per-user keying (real fix)** — v1.06.55 set `keyGenerator: (req) => req.user?.id || req.ip` on `apiLimiter`, but the limiter is mounted globally via `app.use('/api', apiLimiter)`, *before* per-route `authenticate`. `req.user` was always undefined at limiter time, so every authenticated user was still keyed by IP — just with a 5000 cap instead of 1000. The fix verifies and decodes the JWT inline in `keyGenerator` (reads `Authorization: Bearer <token>`, validates with `JWT_SECRET`/HS256, returns `u:<userId>` on success or `req.ip` on failure). Now genuinely per-authenticated-user.
+
+## [1.06.55] - 2026-04-25
+
+### Changed
+- **Rate-limiter shape revisit (incomplete — see v1.06.56)** — Bumped `apiLimiter` from 1000 → 5000 requests / 15 min, attempted per-user keying, added `skip: req.method === 'OPTIONS'` so CORS preflights stop counting toward the cap. The keying didn't actually take effect because of middleware ordering; v1.06.56 fixed that.
+
+## [1.06.54] - 2026-04-25
+
+### Fixed
+- **iOS app icon badge stuck at "10"** — The server-computed badge query introduced in v1.06.45 (`server/src/lib/unreadCount.js`) joined `ChannelMember → Channel → Workspace → Message` but never verified the user was still a `WorkspaceMember`. Three orphan `ChannelMember` rows from a workspace this user had left on 2026-03-14 (predating the cascade-cleanup added in v1.05.78) inflated the badge to 10 indefinitely. Added an `EXISTS (SELECT 1 FROM "WorkspaceMember" ...)` guard so orphan rows can never inflate the badge again, and deleted the three stale rows.
+- **Setlist break labels rendered as "Set 1, Set 1, Set 2"** — Web setlist PDF (`SetlistList.jsx`) preferred the stored `breakItem.label` over the computed index. A historical bug (commit `e5d56c8e`, 2026-01-18) had stored auto-generated labels with off-by-one numbering. Normalized 29 stale auto-generated `Set N` labels in the database (`UPDATE "SetlistSong" SET label = NULL WHERE type = 'SET_BREAK' AND label ~ '^\s*Set\s*\d+\s*$'`) so all renderers fall back to `setIndex + 1` and produce the correct "Set 1, Set 2, Set 3."
+
 ## [1.06.42] - 2026-04-18
 
 ### Fixed
