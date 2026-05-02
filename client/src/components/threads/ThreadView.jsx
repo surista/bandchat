@@ -13,11 +13,14 @@ import { formatFileSize } from '../../utils/format';
 import { MAX_IMAGE_SIZE, MAX_AUDIO_SIZE, isImageFile, isAudioFile } from '../../utils/fileValidation';
 import { buildMentionRegex } from '../../utils/parseMentions';
 import MemberProfile from '../common/MemberProfile';
+import ConfirmDialog from '../common/ConfirmDialog';
+import { useToast } from '../../context/ToastContext';
 import getInitial from '../../utils/getInitial';
 
 function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, members, onStartDM }) {
   const { user } = useAuth();
   const { socket } = useSocket();
+  const toast = useToast();
   const [replies, setReplies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [content, setContent] = useState('');
@@ -29,9 +32,13 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
   const [fileError, setFileError] = useState('');
   const [lightboxImage, setLightboxImage] = useState(null);
   const [profileUserId, setProfileUserId] = useState(null);
+  const [editingReplyId, setEditingReplyId] = useState(null);
+  const [editContent, setEditContent] = useState('');
+  const [deleteReplyId, setDeleteReplyId] = useState(null);
   const repliesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const replyTextareaRef = useRef(null);
+  const editTextareaRef = useRef(null);
   const contentRef = useRef('');
 
   const wrapReplySelection = useCallback((before, after) => {
@@ -200,6 +207,45 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
       await api.removeReaction(messageId, emoji);
     } catch (err) {
       console.error('Failed to remove reaction:', err);
+    }
+  };
+
+  const handleStartEditReply = (reply) => {
+    setEditingReplyId(reply.id);
+    setEditContent(reply.content);
+  };
+
+  const handleCancelEditReply = () => {
+    setEditingReplyId(null);
+    setEditContent('');
+  };
+
+  const handleSaveEditReply = async () => {
+    const trimmed = editContent.trim();
+    const original = replies.find(r => r.id === editingReplyId);
+    if (!trimmed || trimmed === original?.content) {
+      handleCancelEditReply();
+      return;
+    }
+    try {
+      const updated = await api.updateMessage(editingReplyId, trimmed);
+      setReplies(prev => prev.map(r => (r.id === updated.id ? updated : r)));
+    } catch (err) {
+      toast.error(err.message || 'Failed to edit message');
+      return;
+    }
+    handleCancelEditReply();
+  };
+
+  const handleDeleteReply = async () => {
+    const id = deleteReplyId;
+    setDeleteReplyId(null);
+    if (!id) return;
+    try {
+      await api.deleteMessage(id);
+      setReplies(prev => prev.filter(r => r.id !== id));
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete message');
     }
   };
 
@@ -443,9 +489,48 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
                       {formatTime(reply.createdAt)}
                     </span>
                   </div>
-                  <div className="text-[var(--color-text-secondary)] text-sm break-words whitespace-pre-wrap">
-                    {renderMentionContent(reply.content)}
-                  </div>
+                  {editingReplyId === reply.id ? (
+                    <div className="mt-1">
+                      <textarea
+                        ref={(el) => {
+                          editTextareaRef.current = el;
+                          if (el) {
+                            el.style.height = 'auto';
+                            el.style.height = el.scrollHeight + 'px';
+                          }
+                        }}
+                        value={editContent}
+                        onChange={(e) => {
+                          setEditContent(e.target.value);
+                          e.target.style.height = 'auto';
+                          e.target.style.height = e.target.scrollHeight + 'px';
+                        }}
+                        className="w-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded p-2 resize-vertical min-h-[2.5rem] text-sm"
+                        rows={1}
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSaveEditReply();
+                          }
+                          if (e.key === 'Escape') {
+                            handleCancelEditReply();
+                          }
+                        }}
+                      />
+                      <div className="flex gap-2 text-xs mt-1 justify-end">
+                        <button onClick={handleCancelEditReply} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">Cancel</button>
+                        <button onClick={handleSaveEditReply} className="text-slack-blue hover:underline">Save</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-[var(--color-text-secondary)] text-sm break-words whitespace-pre-wrap">
+                      {renderMentionContent(reply.content)}
+                      {reply.updatedAt && reply.createdAt && new Date(reply.updatedAt).getTime() - new Date(reply.createdAt).getTime() > 1000 && (
+                        <span className="text-xs text-[var(--color-text-muted)] ml-1">(edited)</span>
+                      )}
+                    </div>
+                  )}
                   {/* Attachments */}
                   {reply.attachments?.length > 0 && (
                     <div className="mt-2 space-y-2">
@@ -515,26 +600,49 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
                     onToggleReaction={(emoji, hasReacted) => handleToggleReaction(reply.id, emoji, hasReacted)}
                   />
                 </div>
-                {/* Reaction button for reply */}
-                <div className="absolute right-0 top-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {reactionPickerMessageId === reply.id && (
-                    <div className="absolute right-0 top-full mt-1 z-10">
-                      <ReactionPicker
-                        onSelect={(emoji) => handleAddReaction(reply.id, emoji)}
-                        onClose={() => setReactionPickerMessageId(null)}
-                      />
-                    </div>
-                  )}
-                  <button
-                    onClick={() => setReactionPickerMessageId(
-                      reactionPickerMessageId === reply.id ? null : reply.id
+                {/* Hover toolbar for reply: react, edit (own), delete (own) */}
+                {editingReplyId !== reply.id && (
+                  <div className="absolute right-0 top-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded">
+                    {reactionPickerMessageId === reply.id && (
+                      <div className="absolute right-0 top-full mt-1 z-10">
+                        <ReactionPicker
+                          onSelect={(emoji) => handleAddReaction(reply.id, emoji)}
+                          onClose={() => setReactionPickerMessageId(null)}
+                        />
+                      </div>
                     )}
-                    className="p-1 bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-secondary)] rounded border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-sm"
-                    title="Add reaction"
-                  >
-                    😀
-                  </button>
-                </div>
+                    <button
+                      onClick={() => setReactionPickerMessageId(
+                        reactionPickerMessageId === reply.id ? null : reply.id
+                      )}
+                      className="p-1 hover:bg-[var(--color-bg-secondary)] rounded text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-sm"
+                      title="Add reaction"
+                      aria-label="Add reaction"
+                    >
+                      😀
+                    </button>
+                    {reply.author?.id === user.id && (
+                      <>
+                        <button
+                          onClick={() => handleStartEditReply(reply)}
+                          className="p-1 hover:bg-[var(--color-bg-secondary)] rounded text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] text-sm"
+                          title="Edit"
+                          aria-label="Edit reply"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => setDeleteReplyId(reply.id)}
+                          className="p-1 hover:bg-[var(--color-bg-secondary)] rounded text-[var(--color-text-secondary)] hover:text-red-400 text-sm"
+                          title="Delete"
+                          aria-label="Delete reply"
+                        >
+                          🗑️
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
             <div ref={repliesEndRef} />
@@ -680,6 +788,16 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
           onStartDM={profileUserId !== user?.id ? onStartDM : null}
         />
       )}
+
+      <ConfirmDialog
+        isOpen={deleteReplyId !== null}
+        title="Delete Reply"
+        message="Are you sure you want to delete this reply? This cannot be undone."
+        confirmText="Delete"
+        confirmVariant="danger"
+        onConfirm={handleDeleteReply}
+        onCancel={() => setDeleteReplyId(null)}
+      />
     </div>
   );
 }
