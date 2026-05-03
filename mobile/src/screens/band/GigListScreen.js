@@ -408,7 +408,7 @@ export default function GigListScreen({ navigation, route }) {
         <View style={styles.gigContent}>
           {isOther && item._workspaceName && (
             <View style={[styles.workspaceBadge, { backgroundColor: '#6366f120' }]}>
-              <Text style={[styles.workspaceBadgeText, { color: '#6366f1' }]}>{item._workspaceName}</Text>
+              <Text style={[styles.workspaceBadgeText, { color: '#6366f1' }]} maxFontSizeMultiplier={1.2}>{item._workspaceName}</Text>
             </View>
           )}
           <View style={styles.gigHeaderRow}>
@@ -419,17 +419,17 @@ export default function GigListScreen({ navigation, route }) {
                 isCancelled && styles.cancelledText,
               ]}
               numberOfLines={1}
-            >
+            maxFontSizeMultiplier={1.6}>
               {item.isLocked && <><Ionicons name="lock-closed" size={12} color="#64748b" />{' '}</>}
               {item.title}
             </Text>
             <View style={[styles.typeBadge, { backgroundColor: typeColor + '25' }]}>
-              <Text style={[styles.typeBadgeText, { color: typeColor }]}>{item.type}</Text>
+              <Text style={[styles.typeBadgeText, { color: typeColor }]} maxFontSizeMultiplier={1.2}>{item.type}</Text>
             </View>
           </View>
 
           <View style={styles.dateRow}>
-            <Text style={[styles.gigDate, { color: colors.textSecondary }]}>
+            <Text style={[styles.gigDate, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
               {item.date ? formatGigDate(item.date, item.endDate) : 'No date'}
               {displayTime ? ` \u00B7 ${displayTime}` : ''}
             </Text>
@@ -445,7 +445,7 @@ export default function GigListScreen({ navigation, route }) {
                 accessibilityLabel={`Set availability: ${statusInfo?.label || 'Not set'}`}
                 accessibilityHint="Tap to cycle availability status"
               >
-                <Text style={[styles.availabilityText, { color: statusInfo?.color || colors.textSecondary }]}>
+                <Text style={[styles.availabilityText, { color: statusInfo?.color || colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
                   {statusInfo ? <><Ionicons name={statusInfo.iconName} size={14} color={statusInfo.color} /> {statusInfo.label}</> : '+ Avail'}
                 </Text>
               </TouchableOpacity>
@@ -454,24 +454,24 @@ export default function GigListScreen({ navigation, route }) {
 
           {(isCompleted || isCancelled) && (
             <View style={[styles.statusBadge, { backgroundColor: (STATUS_COLORS[item.status] || '#6b7280') + '20' }]}>
-              <Text style={[styles.statusText, { color: STATUS_COLORS[item.status] }]}>
+              <Text style={[styles.statusText, { color: STATUS_COLORS[item.status] }]} maxFontSizeMultiplier={1.5}>
                 {isCompleted ? 'Done' : 'Cancelled'}
               </Text>
             </View>
           )}
 
           {item.venue ? (
-            <Text style={[styles.gigVenue, { color: colors.textSecondary }]} numberOfLines={1}>
+            <Text style={[styles.gigVenue, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={1.5}>
               <Ionicons name="location-outline" size={13} color={colors.textSecondary} /> {item.venue}{item.address ? ` \u00B7 ${item.address}` : ''}
             </Text>
           ) : null}
 
           {Number(item.pay) > 0 ? (
-            <Text style={styles.gigPay}>{currencySymbol}{Number(item.pay).toLocaleString()}</Text>
+            <Text style={styles.gigPay} maxFontSizeMultiplier={1.5}>{currencySymbol}{Number(item.pay).toLocaleString()}</Text>
           ) : null}
 
           {setlistNames.length > 0 ? (
-            <Text style={[styles.gigSetlists, { color: colors.textSecondary }]} numberOfLines={1}>
+            <Text style={[styles.gigSetlists, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={1.5}>
               <Ionicons name="musical-notes-outline" size={13} color={colors.textSecondary} /> {setlistNames.join(' \u2192 ')}
             </Text>
           ) : null}
@@ -480,7 +480,7 @@ export default function GigListScreen({ navigation, route }) {
             <Text
               style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}
               accessibilityLabel={`${item._count.comments} comment${item._count.comments === 1 ? '' : 's'}`}
-            >
+            maxFontSizeMultiplier={1.5}>
               <Ionicons name="chatbubble-outline" size={12} color={colors.textSecondary} /> {item._count.comments} {item._count.comments === 1 ? 'comment' : 'comments'}
             </Text>
           ) : null}
@@ -499,7 +499,7 @@ export default function GigListScreen({ navigation, route }) {
                 return indicators.map(({ icon, color, label }) => (
                   <View key={label} style={[styles.mediaChip, { backgroundColor: color + '15' }]}>
                     <Ionicons name={icon} size={12} color={color} />
-                    <Text style={[styles.mediaChipText, { color }]}>{label}</Text>
+                    <Text style={[styles.mediaChipText, { color }]} maxFontSizeMultiplier={1.2}>{label}</Text>
                   </View>
                 ));
               })()}
@@ -512,7 +512,7 @@ export default function GigListScreen({ navigation, route }) {
 
   const renderSectionHeader = useCallback(({ section }) => (
     <View style={[styles.monthHeader, { borderBottomColor: colors.border }]}>
-      <Text style={[styles.monthText, { color: section.title === 'PAST' ? colors.textSecondary : colors.primary }]} accessibilityRole="header">{section.title}</Text>
+      <Text style={[styles.monthText, { color: section.title === 'PAST' ? colors.textSecondary : colors.primary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>{section.title}</Text>
     </View>
   ), [colors]);
 
@@ -566,7 +566,7 @@ export default function GigListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel={`Filter: ${f.label}${active ? ', selected' : ''}`}
             >
-              <Text style={[styles.filterChipText, { color: active ? colors.primaryText : colors.textSecondary }]}>
+              <Text style={[styles.filterChipText, { color: active ? colors.primaryText : colors.textSecondary }]} maxFontSizeMultiplier={1.2}>
                 {f.label}
               </Text>
             </TouchableOpacity>
@@ -583,7 +583,7 @@ export default function GigListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel={`All Bands${showAllBands ? ', selected' : ''}`}
         >
-          <Text style={[styles.filterChipText, { color: showAllBands ? colors.primaryText : colors.textSecondary }]}>
+          <Text style={[styles.filterChipText, { color: showAllBands ? colors.primaryText : colors.textSecondary }]} maxFontSizeMultiplier={1.2}>
             All Bands
           </Text>
         </TouchableOpacity>
@@ -609,8 +609,8 @@ export default function GigListScreen({ navigation, route }) {
         ListEmptyComponent={
           <View style={styles.centered}>
             <Ionicons name="calendar-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No events scheduled</Text>
-            <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>No events scheduled</Text>
+            <Text style={[styles.emptyHint, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
               Tap + to add a gig or rehearsal
             </Text>
             <TouchableOpacity
@@ -619,7 +619,7 @@ export default function GigListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Create event"
             >
-              <Text style={[styles.emptyButtonText, { color: colors.primaryText }]}>+ Create Event</Text>
+              <Text style={[styles.emptyButtonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>+ Create Event</Text>
             </TouchableOpacity>
           </View>
         }
@@ -636,12 +636,12 @@ export default function GigListScreen({ navigation, route }) {
         >
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.actionTitle, { color: colors.textPrimary }]}>Subscribe to Calendar</Text>
-            <Text style={[styles.calendarDesc, { color: colors.textSecondary }]}>
+            <Text style={[styles.actionTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>Subscribe to Calendar</Text>
+            <Text style={[styles.calendarDesc, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
               Add this URL to your calendar app to stay in sync with all band events.
             </Text>
             <View style={[styles.calendarUrlBox, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}>
-              <Text style={[styles.calendarUrlText, { color: colors.textPrimary }]} numberOfLines={2} selectable>
+              <Text style={[styles.calendarUrlText, { color: colors.textPrimary }]} numberOfLines={2} selectable maxFontSizeMultiplier={1.5}>
                 {calendarUrl}
               </Text>
             </View>
@@ -655,7 +655,7 @@ export default function GigListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Copy calendar URL"
             >
-              <Text style={styles.calendarActionButtonText}>Copy URL</Text>
+              <Text style={[styles.calendarActionButtonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>Copy URL</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.calendarActionButton, { backgroundColor: colors.bgTertiary, marginTop: 8 }]}
@@ -668,7 +668,7 @@ export default function GigListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Open in calendar app"
             >
-              <Text style={[styles.calendarActionButtonText, { color: colors.primary }]}>Open in Calendar</Text>
+              <Text style={[styles.calendarActionButtonText, { color: colors.primary }]} maxFontSizeMultiplier={1.5}>Open in Calendar</Text>
             </TouchableOpacity>
             <PressableRow
               style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
@@ -676,7 +676,7 @@ export default function GigListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Close"
             >
-              <Text style={[styles.actionText, { color: colors.textSecondary }]}>Close</Text>
+              <Text style={[styles.actionText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Close</Text>
             </PressableRow>
           </View>
         </TouchableOpacity>
@@ -693,7 +693,7 @@ export default function GigListScreen({ navigation, route }) {
         >
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+            <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.6}>
               {selectedGig?.isLocked && <><Ionicons name="lock-closed" size={14} color={colors.textSecondary} />{' '}</>}
               {selectedGig?.title}
             </Text>
@@ -709,11 +709,11 @@ export default function GigListScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Edit event"
               >
-                <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
+                <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Edit</Text>
               </PressableRow>
             )}
             <PressableRow style={styles.actionItem} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate event">
-              <Text style={[styles.actionText, { color: colors.textPrimary }]}>Duplicate</Text>
+              <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Duplicate</Text>
             </PressableRow>
             {selectedGig?.date && (
               <PressableRow
@@ -727,22 +727,22 @@ export default function GigListScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Set availability for this date"
               >
-                <Text style={[styles.actionText, { color: colors.primary }]}>Set Availability</Text>
+                <Text style={[styles.actionText, { color: colors.primary }]} maxFontSizeMultiplier={1.5}>Set Availability</Text>
               </PressableRow>
             )}
             {selectedGig?.status === 'SCHEDULED' && (isAdmin || !selectedGig?.isLocked) && (
               <PressableRow style={styles.actionItem} onPress={handleComplete} accessibilityRole="button" accessibilityLabel="Mark event as complete">
-                <Text style={[styles.actionText, { color: '#22c55e' }]}><Ionicons name="checkmark-circle" size={16} color="#22c55e" /> Mark Complete</Text>
+                <Text style={[styles.actionText, { color: '#22c55e' }]} maxFontSizeMultiplier={1.5}><Ionicons name="checkmark-circle" size={16} color="#22c55e" /> Mark Complete</Text>
               </PressableRow>
             )}
             {(isAdmin || !selectedGig?.isLocked) && (
               <PressableRow style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete event">
-                <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
+                <Text style={[styles.actionText, { color: '#ef4444' }]} maxFontSizeMultiplier={1.5}>Delete</Text>
               </PressableRow>
             )}
             {selectedGig?.isLocked && !isAdmin && (
               <View style={styles.actionItem}>
-                <Text style={[styles.actionText, { color: colors.textSecondary }]}>This event is locked by an admin</Text>
+                <Text style={[styles.actionText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>This event is locked by an admin</Text>
               </View>
             )}
             <PressableRow
@@ -751,7 +751,7 @@ export default function GigListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
-              <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
+              <Text style={[styles.actionText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
             </PressableRow>
           </View>
         </TouchableOpacity>
@@ -768,8 +768,8 @@ export default function GigListScreen({ navigation, route }) {
         >
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.actionTitle, { color: colors.textPrimary }]}>Set Availability</Text>
-            <Text style={[styles.availabilityDateLabel, { color: colors.textSecondary }]}>
+            <Text style={[styles.actionTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>Set Availability</Text>
+            <Text style={[styles.availabilityDateLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
               {availabilityDate ? format(parseISO(availabilityDate), 'EEEE, dd-MMM-yyyy') : ''}
             </Text>
             <PressableRow
@@ -778,7 +778,7 @@ export default function GigListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Set as available"
             >
-              <Text style={[styles.availabilityOptionText, { color: '#22c55e' }]}><Ionicons name="checkmark-circle" size={16} color="#22c55e" /> Available</Text>
+              <Text style={[styles.availabilityOptionText, { color: '#22c55e' }]} maxFontSizeMultiplier={1.5}><Ionicons name="checkmark-circle" size={16} color="#22c55e" /> Available</Text>
             </PressableRow>
             <PressableRow
               style={[styles.availabilityOption, { backgroundColor: '#eab30820' }]}
@@ -786,7 +786,7 @@ export default function GigListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Set as maybe"
             >
-              <Text style={[styles.availabilityOptionText, { color: '#eab308' }]}><Ionicons name="help-circle-outline" size={16} color="#eab308" /> Maybe</Text>
+              <Text style={[styles.availabilityOptionText, { color: '#eab308' }]} maxFontSizeMultiplier={1.5}><Ionicons name="help-circle-outline" size={16} color="#eab308" /> Maybe</Text>
             </PressableRow>
             <PressableRow
               style={[styles.availabilityOption, { backgroundColor: '#ef444420' }]}
@@ -794,7 +794,7 @@ export default function GigListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Set as unavailable"
             >
-              <Text style={[styles.availabilityOptionText, { color: '#ef4444' }]}><Ionicons name="close-circle-outline" size={16} color="#ef4444" /> Unavailable</Text>
+              <Text style={[styles.availabilityOptionText, { color: '#ef4444' }]} maxFontSizeMultiplier={1.5}><Ionicons name="close-circle-outline" size={16} color="#ef4444" /> Unavailable</Text>
             </PressableRow>
             {availability[availabilityDate] && (
               <PressableRow
@@ -803,7 +803,7 @@ export default function GigListScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Clear availability"
               >
-                <Text style={[styles.availabilityOptionText, { color: colors.textSecondary }]}>Clear</Text>
+                <Text style={[styles.availabilityOptionText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Clear</Text>
               </PressableRow>
             )}
             <PressableRow
@@ -812,7 +812,7 @@ export default function GigListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
-              <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
+              <Text style={[styles.actionText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
             </PressableRow>
           </View>
         </TouchableOpacity>

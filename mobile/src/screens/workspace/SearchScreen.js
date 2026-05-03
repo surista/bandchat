@@ -136,7 +136,7 @@ export default function SearchScreen({ navigation, route }) {
   // Highlight search terms in text
   const renderHighlightedText = useCallback((text, colors) => {
     if (!query.trim() || !text) {
-      return <Text style={[styles.resultContent, { color: colors.textPrimary }]}>{text}</Text>;
+      return <Text style={[styles.resultContent, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>{text}</Text>;
     }
 
     const q = query.trim().toLowerCase();
@@ -160,16 +160,16 @@ export default function SearchScreen({ navigation, route }) {
     }
 
     if (parts.length === 0) {
-      return <Text style={[styles.resultContent, { color: colors.textPrimary }]}>{text}</Text>;
+      return <Text style={[styles.resultContent, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>{text}</Text>;
     }
 
     return (
-      <Text style={[styles.resultContent, { color: colors.textPrimary }]} numberOfLines={2}>
+      <Text style={[styles.resultContent, { color: colors.textPrimary }]} numberOfLines={2} maxFontSizeMultiplier={1.5}>
         {parts.map((part, i) => (
           <Text
             key={i}
             style={part.highlight ? [styles.highlight, { backgroundColor: colors.primary + '33' }] : undefined}
-          >
+          maxFontSizeMultiplier={1.5}>
             {part.text}
           </Text>
         ))}
@@ -192,15 +192,15 @@ export default function SearchScreen({ navigation, route }) {
       >
         <View style={styles.resultHeader}>
           <View style={[styles.channelBadge, { backgroundColor: colors.bgTertiary }]}>
-            <Text style={[styles.channelBadgeText, { color: colors.textSecondary }]}>
+            <Text style={[styles.channelBadgeText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>
               {channel?.isPrivate ? <Ionicons name="lock-closed" size={11} color={colors.textSecondary} /> : null}{channel?.isPrivate ? ' ' : '# '}{channelName}
             </Text>
           </View>
-          <Text style={[styles.resultTimestamp, { color: colors.textSecondary }]}>
+          <Text style={[styles.resultTimestamp, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>
             {formatTimestamp(item.createdAt)}
           </Text>
         </View>
-        <Text style={[styles.resultAuthor, { color: colors.textSecondary }]}>
+        <Text style={[styles.resultAuthor, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
           {item.author?.displayName || 'Unknown'}
         </Text>
         {renderHighlightedText(item.content, colors)}
@@ -233,7 +233,7 @@ export default function SearchScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel="Clear search"
           >
-            <Text style={[styles.clearButton, { color: colors.textSecondary }]}>{'\u2715'}</Text>
+            <Text style={[styles.clearButton, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>{'\u2715'}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -262,7 +262,7 @@ export default function SearchScreen({ navigation, route }) {
                 <Text style={[
                   styles.filterChipText,
                   { color: isActive ? colors.primaryText : colors.textSecondary },
-                ]}>
+                ]} maxFontSizeMultiplier={1.2}>
                   {item.id ? `# ${item.name}` : item.name}
                 </Text>
               </TouchableOpacity>
@@ -295,7 +295,7 @@ export default function SearchScreen({ navigation, route }) {
                 <Text style={[
                   styles.filterChipText,
                   { color: isActive ? colors.primaryText : colors.textSecondary },
-                ]}>
+                ]} maxFontSizeMultiplier={1.2}>
                   {item.user?.displayName || 'Unknown'}
                 </Text>
               </TouchableOpacity>
@@ -312,19 +312,19 @@ export default function SearchScreen({ navigation, route }) {
       ) : !searched ? (
         <View style={styles.centerContainer}>
           <Ionicons name="search" size={48} color={colors.textSecondary} style={{ marginBottom: 16 }} />
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
             Search messages
           </Text>
-          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
             Find messages across all channels
           </Text>
         </View>
       ) : results.length === 0 ? (
         <View style={styles.centerContainer}>
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
             No results found
           </Text>
-          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
             Try a different search term
           </Text>
         </View>

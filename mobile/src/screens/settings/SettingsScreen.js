@@ -53,8 +53,8 @@ function SettingsRow({ icon, label, subtitle, onPress, color, colors, showArrow 
         <Ionicons name={icon} size={20} color={color || colors.textSecondary} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={[styles.rowLabel, { color: color || colors.textPrimary }]}>{label}</Text>
-        {subtitle ? <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>{subtitle}</Text> : null}
+        <Text style={[styles.rowLabel, { color: color || colors.textPrimary }]} maxFontSizeMultiplier={1.5}>{label}</Text>
+        {subtitle ? <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={1.6}>{subtitle}</Text> : null}
       </View>
       {showArrow && (
         <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
@@ -65,7 +65,7 @@ function SettingsRow({ icon, label, subtitle, onPress, color, colors, showArrow 
 
 function SectionHeader({ title, colors }) {
   return (
-    <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">{title}</Text>
+    <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header" maxFontSizeMultiplier={1.5}>{title}</Text>
   );
 }
 
@@ -278,14 +278,14 @@ export default function SettingsScreen({ navigation, route }) {
             <Image source={{ uri: user.avatarUrl }} style={styles.avatarImg} accessibilityLabel={`${user?.displayName || 'User'} avatar`} />
           ) : (
             <View style={[styles.avatarImg, { backgroundColor: colors.primary }]}>
-              <Text style={styles.avatarText}>{getInitial(user?.displayName)}</Text>
+              <Text style={styles.avatarText} maxFontSizeMultiplier={1.2}>{getInitial(user?.displayName)}</Text>
             </View>
           )}
           <View style={styles.userInfo}>
-            <Text style={[styles.userName, { color: colors.textPrimary }]}>
+            <Text style={[styles.userName, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>
               {user?.displayName || 'User'}
             </Text>
-            <Text style={[styles.userEmail, { color: colors.textSecondary }]}>
+            <Text style={[styles.userEmail, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
               {user?.email || ''}
             </Text>
           </View>
@@ -426,7 +426,7 @@ export default function SettingsScreen({ navigation, route }) {
                       <ActivityIndicator size="small" color={colors.primary} />
                     ) : (
                       <>
-                        <Text style={[styles.wsAvatarInitial, { color: colors.textSecondary }, wsAvatarUrl && styles.avatarFallback]}>
+                        <Text style={[styles.wsAvatarInitial, { color: colors.textSecondary }, wsAvatarUrl && styles.avatarFallback]} maxFontSizeMultiplier={1.5}>
                           {workspaceName.charAt(0).toUpperCase()}
                         </Text>
                         {wsAvatarUrl && (
@@ -436,8 +436,8 @@ export default function SettingsScreen({ navigation, route }) {
                     )}
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.rowLabel, { color: colors.textPrimary }]}>Workspace Avatar</Text>
-                    <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]}>
+                    <Text style={[styles.rowLabel, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Workspace Avatar</Text>
+                    <Text style={[styles.rowSubtitle, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.6}>
                       {wsAvatarUrl ? 'Tap to change or remove' : 'Tap to upload a logo'}
                     </Text>
                   </View>
@@ -583,7 +583,7 @@ export default function SettingsScreen({ navigation, route }) {
           />
         </View>
 
-        <Text style={[styles.version, { color: colors.textSecondary }]} accessibilityRole="text">
+        <Text style={[styles.version, { color: colors.textSecondary }]} accessibilityRole="text" maxFontSizeMultiplier={1.5}>
           BandChat v{Constants.expoConfig?.version || '1.0.0'}
         </Text>
       </ScrollView>
@@ -592,7 +592,7 @@ export default function SettingsScreen({ navigation, route }) {
       <Modal visible={showRenameModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowRenameModal(false)}>
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Rename Workspace</Text>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>Rename Workspace</Text>
             <TextInput
               style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
               value={renameText}
@@ -614,7 +614,7 @@ export default function SettingsScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Cancel"
               >
-                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: '#22c55e' }, (!renameText.trim() || renameText.trim() === workspaceName) && { opacity: 0.5 }]}
@@ -623,7 +623,7 @@ export default function SettingsScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Save new name"
               >
-                <Text style={[styles.modalButtonText, { color: colors.primaryText }]}>{renaming ? 'Saving...' : 'Save'}</Text>
+                <Text style={[styles.modalButtonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>{renaming ? 'Saving...' : 'Save'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -634,8 +634,8 @@ export default function SettingsScreen({ navigation, route }) {
       <Modal visible={showDeleteModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowDeleteModal(false)}>
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Delete Workspace</Text>
-            <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>Delete Workspace</Text>
+            <Text style={[styles.modalDesc, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
               This will permanently delete "{workspaceName}" and all its data. Type the workspace name to confirm:
             </Text>
             <TextInput
@@ -655,7 +655,7 @@ export default function SettingsScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Cancel"
               >
-                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: '#ef4444' }, deleteConfirmText.trim() !== workspaceName && { opacity: 0.5 }]}
@@ -667,7 +667,7 @@ export default function SettingsScreen({ navigation, route }) {
                 {deleting ? (
                   <ActivityIndicator color="#ffffff" size="small" />
                 ) : (
-                  <Text style={styles.modalButtonTextWhite}>Delete</Text>
+                  <Text style={styles.modalButtonTextWhite} maxFontSizeMultiplier={1.5}>Delete</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -679,10 +679,10 @@ export default function SettingsScreen({ navigation, route }) {
       <Modal visible={showDefaultsModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowDefaultsModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Workspace Defaults</Text>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>Workspace Defaults</Text>
 
             {/* Currency */}
-            <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Currency</Text>
+            <Text style={[styles.modalLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Currency</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
               {CURRENCIES.map(cur => (
                 <TouchableOpacity
@@ -695,13 +695,13 @@ export default function SettingsScreen({ navigation, route }) {
                   accessibilityState={{ selected: wsCurrency === cur }}
                   accessibilityLabel={`${cur} currency`}
                 >
-                  <Text style={[styles.chipText, { color: wsCurrency === cur ? '#ffffff' : colors.textPrimary }]}>{cur}</Text>
+                  <Text style={[styles.chipText, { color: wsCurrency === cur ? '#ffffff' : colors.textPrimary }]} maxFontSizeMultiplier={1.2}>{cur}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
 
             {/* Event Type */}
-            <Text style={[styles.modalLabel, { color: colors.textSecondary, marginTop: 16 }]}>Default Event Type</Text>
+            <Text style={[styles.modalLabel, { color: colors.textSecondary, marginTop: 16 }]} maxFontSizeMultiplier={1.5}>Default Event Type</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
               {EVENT_TYPES.map(et => (
                 <TouchableOpacity
@@ -714,7 +714,7 @@ export default function SettingsScreen({ navigation, route }) {
                   accessibilityState={{ selected: wsEventType === et.value }}
                   accessibilityLabel={`${et.label} event type`}
                 >
-                  <Text style={[styles.chipText, { color: wsEventType === et.value ? '#ffffff' : colors.textPrimary }]}>{et.label}</Text>
+                  <Text style={[styles.chipText, { color: wsEventType === et.value ? '#ffffff' : colors.textPrimary }]} maxFontSizeMultiplier={1.2}>{et.label}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -722,7 +722,7 @@ export default function SettingsScreen({ navigation, route }) {
             {/* Default Times */}
             <View style={styles.timeRow}>
               <View style={styles.timeCol}>
-                <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Start Time</Text>
+                <Text style={[styles.modalLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Start Time</Text>
                 <TextInput
                   style={[styles.timeInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
                   value={wsStartTime}
@@ -733,7 +733,7 @@ export default function SettingsScreen({ navigation, route }) {
                 />
               </View>
               <View style={styles.timeCol}>
-                <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>End Time</Text>
+                <Text style={[styles.modalLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>End Time</Text>
                 <TextInput
                   style={[styles.timeInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
                   value={wsEndTime}
@@ -746,7 +746,7 @@ export default function SettingsScreen({ navigation, route }) {
             </View>
 
             {/* Default Venue */}
-            <Text style={[styles.modalLabel, { color: colors.textSecondary, marginTop: 8 }]}>Default Venue</Text>
+            <Text style={[styles.modalLabel, { color: colors.textSecondary, marginTop: 8 }]} maxFontSizeMultiplier={1.5}>Default Venue</Text>
             <TextInput
               style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
               value={wsVenue}
@@ -757,7 +757,7 @@ export default function SettingsScreen({ navigation, route }) {
             />
 
             {/* Transition padding between songs */}
-            <Text style={[styles.modalLabel, { color: colors.textSecondary, marginTop: 16 }]}>Transition Between Songs</Text>
+            <Text style={[styles.modalLabel, { color: colors.textSecondary, marginTop: 16 }]} maxFontSizeMultiplier={1.5}>Transition Between Songs</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
               {[0, 10, 15, 20, 30, 45, 60].map(secs => (
                 <TouchableOpacity
@@ -770,13 +770,13 @@ export default function SettingsScreen({ navigation, route }) {
                   accessibilityState={{ selected: wsTransitionPadding === secs }}
                   accessibilityLabel={secs === 0 ? 'No padding' : `${secs} seconds between songs`}
                 >
-                  <Text style={[styles.chipText, { color: wsTransitionPadding === secs ? '#ffffff' : colors.textPrimary }]}>
+                  <Text style={[styles.chipText, { color: wsTransitionPadding === secs ? '#ffffff' : colors.textPrimary }]} maxFontSizeMultiplier={1.2}>
                     {secs === 0 ? 'None' : `${secs}s`}
                   </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
-            <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 4 }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 4 }} maxFontSizeMultiplier={1.5}>
               Added between songs in setlist totals for tuning and banter. The last song isn't padded.
             </Text>
 
@@ -786,7 +786,7 @@ export default function SettingsScreen({ navigation, route }) {
                 onPress={() => setShowDefaultsModal(false)}
                 disabled={savingDefaults}
               >
-                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: colors.primary }]}
@@ -796,7 +796,7 @@ export default function SettingsScreen({ navigation, route }) {
                 {savingDefaults ? (
                   <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>Save</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>Save</Text>
                 )}
               </TouchableOpacity>
             </View>

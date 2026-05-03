@@ -89,7 +89,7 @@ function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwn
                 accessibilityRole="button"
                 accessibilityLabel={`React with ${emoji}`}
               >
-                <Text style={styles.quickReactionEmoji}>{emoji}</Text>
+                <Text style={styles.quickReactionEmoji} maxFontSizeMultiplier={1.2}>{emoji}</Text>
               </Pressable>
             ))}
             <Pressable
@@ -103,7 +103,7 @@ function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwn
               accessibilityRole="button"
               accessibilityLabel="Open full emoji picker"
             >
-              <Text style={styles.quickReactionPlus}>+</Text>
+              <Text style={styles.quickReactionPlus} maxFontSizeMultiplier={1.5}>+</Text>
             </Pressable>
           </View>
 
@@ -131,7 +131,7 @@ function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwn
                   styles.actionLabel,
                   { color: action.destructive ? '#EF4444' : colors.textPrimary },
                 ]}
-              >
+              maxFontSizeMultiplier={1.2}>
                 {action.label}
               </Text>
             </PressableRow>
@@ -143,7 +143,7 @@ function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwn
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
-              <Text style={[styles.cancelText, { color: colors.textPrimary }]}>Cancel</Text>
+              <Text style={[styles.cancelText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
             </PressableRow>
           )}
         </Pressable>

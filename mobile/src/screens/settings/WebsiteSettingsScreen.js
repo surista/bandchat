@@ -264,7 +264,7 @@ export default function WebsiteSettingsScreen({ route }) {
               )}
               <View style={styles.actionRow}>
                 <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.primary }]} onPress={() => Linking.openURL(websiteData.websiteUrl)} accessibilityLabel="View website">
-                  <Text style={styles.actionBtnText}>View Site</Text>
+                  <Text style={[styles.actionBtnText, { color: colors.primaryText }]}>View Site</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.bgTertiary }]} onPress={handleSync} disabled={syncing} accessibilityLabel="Sync website">
                   <Text style={[styles.actionBtnText, { color: colors.textPrimary }]}>{syncing ? 'Syncing...' : 'Sync Now'}</Text>

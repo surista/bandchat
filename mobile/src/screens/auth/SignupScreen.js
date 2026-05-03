@@ -117,8 +117,8 @@ export default function SignupScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.textPrimary }]} accessibilityRole="header">BandChat</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            <Text style={[styles.title, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>BandChat</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.6}>
               Create your account
             </Text>
           </View>
@@ -126,11 +126,11 @@ export default function SignupScreen({ navigation }) {
           <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
             {error ? (
               <View style={[styles.errorBox, { borderColor: colors.error }]} accessibilityLiveRegion="polite">
-                <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+                <Text style={[styles.errorText, { color: colors.error }]} maxFontSizeMultiplier={1.5}>{error}</Text>
               </View>
             ) : null}
 
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Display Name</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.6}>Display Name</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
               placeholder="Your name"
@@ -144,7 +144,7 @@ export default function SignupScreen({ navigation }) {
               accessibilityLabel="Display name"
             />
 
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Email</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.6}>Email</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
               placeholder="you@example.com"
@@ -160,7 +160,7 @@ export default function SignupScreen({ navigation }) {
               accessibilityLabel="Email address"
             />
 
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Password</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.6}>Password</Text>
             <View style={styles.passwordWrapper}>
               <TextInput
                 style={[styles.input, styles.passwordInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
@@ -181,13 +181,13 @@ export default function SignupScreen({ navigation }) {
                 accessibilityRole="button"
                 accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
               >
-                <Text style={[styles.showHideText, { color: colors.textSecondary }]}>
+                <Text style={[styles.showHideText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
                   {showPassword ? 'Hide' : 'Show'}
                 </Text>
               </TouchableOpacity>
             </View>
 
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Confirm Password</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.6}>Confirm Password</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
               placeholder="Repeat password"
@@ -214,19 +214,19 @@ export default function SignupScreen({ navigation }) {
               <View style={[styles.checkbox, { borderColor: colors.border, backgroundColor: agreedToTerms ? colors.primary : 'transparent' }]}>
                 {agreedToTerms && <Ionicons name="checkmark" size={14} color={colors.primaryText} />}
               </View>
-              <Text style={[styles.termsText, { color: colors.textSecondary }]}>
+              <Text style={[styles.termsText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
                 I agree to the{' '}
                 <Text
                   style={{ color: colors.primary }}
                   onPress={() => Linking.openURL(`${APP_BASE_URL}/terms`)}
-                >
+                maxFontSizeMultiplier={1.5}>
                   Terms of Service
                 </Text>
                 {' '}and{' '}
                 <Text
                   style={{ color: colors.primary }}
                   onPress={() => Linking.openURL(`${APP_BASE_URL}/privacy`)}
-                >
+                maxFontSizeMultiplier={1.5}>
                   Privacy Policy
                 </Text>
               </Text>
@@ -243,7 +243,7 @@ export default function SignupScreen({ navigation }) {
               {loading ? (
                 <ActivityIndicator color={colors.primaryText} size="small" />
               ) : (
-                <Text style={[styles.buttonText, { color: colors.primaryText }]}>Create Account</Text>
+                <Text style={[styles.buttonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>Create Account</Text>
               )}
             </PressableRow>
 
@@ -253,15 +253,15 @@ export default function SignupScreen({ navigation }) {
               accessibilityRole="button"
               accessibilityLabel="Go to sign in"
             >
-              <Text style={[styles.linkText, { color: colors.textSecondary }]}>
+              <Text style={[styles.linkText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
                 Already have an account?{' '}
-                <Text style={{ color: colors.primary, fontWeight: '600' }}>Sign In</Text>
+                <Text style={{ color: colors.primary, fontWeight: '600' }} maxFontSizeMultiplier={1.5}>Sign In</Text>
               </Text>
             </TouchableOpacity>
 
             <View style={styles.divider}>
               <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-              <Text style={[styles.dividerText, { color: colors.textSecondary }]}>or</Text>
+              <Text style={[styles.dividerText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>or</Text>
               <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
             </View>
 
@@ -271,7 +271,7 @@ export default function SignupScreen({ navigation }) {
               accessibilityRole="button"
               accessibilityLabel="Sign up with Google"
             >
-              <Text style={[styles.socialButtonText, { color: colors.textPrimary }]}>
+              <Text style={[styles.socialButtonText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>
                 Sign up with Google
               </Text>
             </TouchableOpacity>
@@ -290,18 +290,18 @@ export default function SignupScreen({ navigation }) {
           <View style={styles.footer}>
             <View style={styles.footerLinks}>
               <TouchableOpacity onPress={() => Linking.openURL(`${APP_BASE_URL}/privacy`)} accessibilityRole="link" accessibilityLabel="Privacy Policy">
-                <Text style={[styles.footerLink, { color: colors.textSecondary }]}>Privacy</Text>
+                <Text style={[styles.footerLink, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Privacy</Text>
               </TouchableOpacity>
-              <Text style={[styles.footerDot, { color: colors.textSecondary }]}>{'\u00B7'}</Text>
+              <Text style={[styles.footerDot, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>{'\u00B7'}</Text>
               <TouchableOpacity onPress={() => Linking.openURL(`${APP_BASE_URL}/terms`)} accessibilityRole="link" accessibilityLabel="Terms of Service">
-                <Text style={[styles.footerLink, { color: colors.textSecondary }]}>Terms</Text>
+                <Text style={[styles.footerLink, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Terms</Text>
               </TouchableOpacity>
-              <Text style={[styles.footerDot, { color: colors.textSecondary }]}>{'\u00B7'}</Text>
+              <Text style={[styles.footerDot, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>{'\u00B7'}</Text>
               <TouchableOpacity onPress={() => Linking.openURL(`${APP_BASE_URL}/support`)} accessibilityRole="link" accessibilityLabel="Support">
-                <Text style={[styles.footerLink, { color: colors.textSecondary }]}>Support</Text>
+                <Text style={[styles.footerLink, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Support</Text>
               </TouchableOpacity>
             </View>
-            <Text style={[styles.footerVersion, { color: colors.textSecondary }]}>
+            <Text style={[styles.footerVersion, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
               v{Constants.expoConfig?.version || '1.0.0'}
             </Text>
           </View>

@@ -32,7 +32,7 @@ import { SkeletonList } from '../../components/SkeletonLoader';
 function Badge({ label, color, bgColor }) {
   return (
     <View style={[styles.badge, { backgroundColor: bgColor }]}>
-      <Text style={[styles.badgeText, { color }]}>{label}</Text>
+      <Text style={[styles.badgeText, { color }]} maxFontSizeMultiplier={1.2}>{label}</Text>
     </View>
   );
 }
@@ -146,7 +146,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel={editing ? 'Done editing' : 'Edit setlist'}
           >
-            <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>
+            <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }} maxFontSizeMultiplier={1.5}>
               {editing ? 'Done' : 'Edit'}
             </Text>
           </TouchableOpacity>
@@ -345,7 +345,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
         setHeader = (
           <View style={styles.setHeaderRow}>
             <View style={[styles.setHeaderLine, { backgroundColor: colors.border }]} />
-            <Text style={[styles.setHeaderText, { color: colors.primary }]}>Set {setNumber}</Text>
+            <Text style={[styles.setHeaderText, { color: colors.primary }]} maxFontSizeMultiplier={1.5}>Set {setNumber}</Text>
             <View style={[styles.setHeaderLine, { backgroundColor: colors.border }]} />
           </View>
         );
@@ -355,12 +355,12 @@ export default function SetlistDetailScreen({ navigation, route }) {
     if (item.type === 'SET_BREAK') {
       return (
         <View style={[styles.setBreakRow, { borderColor: colors.border }]}>
-          <Text style={[styles.setBreakText, { color: colors.textSecondary }]}>
+          <Text style={[styles.setBreakText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
             {item.label || 'Break'}
           </Text>
           {editing && (
             <TouchableOpacity onPress={() => removeItem(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={`Remove ${item.label || 'break'}`}>
-              <Text style={styles.removeText}>{'\u2715'}</Text>
+              <Text style={styles.removeText} maxFontSizeMultiplier={1.5}>{'\u2715'}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -374,18 +374,18 @@ export default function SetlistDetailScreen({ navigation, route }) {
           <View style={[styles.itemRow, { backgroundColor: colors.bgSecondary }]}>
             <Ionicons name="mic-outline" size={16} color={colors.textSecondary} style={styles.mcIcon} />
             <View style={styles.itemContent}>
-              <Text style={[styles.mcLabel, { color: colors.textSecondary }]}>
+              <Text style={[styles.mcLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
                 {item.label || 'MC'}
               </Text>
             </View>
             {item.duration ? (
-              <Text style={[styles.itemDuration, { color: colors.textSecondary }]}>
+              <Text style={[styles.itemDuration, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>
                 {formatDuration(item.duration)}
               </Text>
             ) : null}
             {editing && (
               <TouchableOpacity onPress={() => removeItem(item)} style={styles.removeButton} accessibilityRole="button" accessibilityLabel="Remove MC">
-                <Text style={styles.removeText}>{'\u2715'}</Text>
+                <Text style={styles.removeText} maxFontSizeMultiplier={1.5}>{'\u2715'}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -403,13 +403,13 @@ export default function SetlistDetailScreen({ navigation, route }) {
 
     const songRow = (
       <View style={[styles.itemRow, { backgroundColor: colors.bgSecondary }]} accessible accessibilityLabel={`${songNumber}. ${item.song?.title || 'Unknown'}${item.song?.artist ? ` by ${item.song.artist}` : ''}`} accessibilityHint={editing ? 'Drag to reorder' : 'Tap to view song details'}>
-        <Text style={[styles.songNumber, { color: colors.textSecondary }]}>{songNumber}</Text>
+        <Text style={[styles.songNumber, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>{songNumber}</Text>
         <View style={styles.itemContent}>
-          <Text style={[styles.songTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+          <Text style={[styles.songTitle, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.6}>
             {item.song?.title || 'Unknown'}
           </Text>
           {item.song?.artist ? (
-            <Text style={[styles.songArtist, { color: colors.textSecondary }]} numberOfLines={1}>
+            <Text style={[styles.songArtist, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={1.5}>
               {item.song.artist}
             </Text>
           ) : null}
@@ -418,13 +418,13 @@ export default function SetlistDetailScreen({ navigation, route }) {
           <Badge label={item.song.key} color={colors.badgeKey} bgColor={colors.badgeKeyBg} />
         ) : null}
         {item.song?.duration ? (
-          <Text style={[styles.itemDuration, { color: colors.textSecondary }]}>
+          <Text style={[styles.itemDuration, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>
             {formatDuration(item.song.duration)}
           </Text>
         ) : null}
         {editing ? (
           <TouchableOpacity onPress={() => removeItem(item)} style={styles.removeButton} accessibilityRole="button" accessibilityLabel={`Remove ${item.song?.title || 'song'}`}>
-            <Text style={styles.removeText}>{'\u2715'}</Text>
+            <Text style={styles.removeText} maxFontSizeMultiplier={1.5}>{'\u2715'}</Text>
           </TouchableOpacity>
         ) : (
           <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} style={{ opacity: 0.4, marginLeft: 4 }} />
@@ -491,7 +491,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
         )}
         {editing && (
           <TouchableOpacity onPress={openEditDetails} accessibilityRole="button" accessibilityLabel="Edit setlist details">
-            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>Edit Details</Text>
+            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }} maxFontSizeMultiplier={1.5}>Edit Details</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -505,7 +505,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Start live mode"
         >
-          <Text style={styles.liveModeButtonText}>Live Mode</Text>
+          <Text style={styles.liveModeButtonText} maxFontSizeMultiplier={1.5}>Live Mode</Text>
         </TouchableOpacity>
       )}
 
@@ -513,10 +513,10 @@ export default function SetlistDetailScreen({ navigation, route }) {
       {(performers.length > 0 || editing) && (
         <View style={styles.performersSection}>
           <View style={styles.performersHeader}>
-            <Text style={[styles.performersLabel, { color: colors.textSecondary }]}>Performers</Text>
+            <Text style={[styles.performersLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Performers</Text>
             {editing && (
               <TouchableOpacity onPress={openPerformerPicker} accessibilityRole="button" accessibilityLabel={performers.length > 0 ? 'Edit performers' : 'Add performers'}>
-                <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>
+                <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }} maxFontSizeMultiplier={1.5}>
                   {performers.length > 0 ? 'Edit' : '+ Add'}
                 </Text>
               </TouchableOpacity>
@@ -526,14 +526,14 @@ export default function SetlistDetailScreen({ navigation, route }) {
             <View style={styles.performerChips}>
               {performers.map(p => (
                 <View key={p.bandMemberId || p.id} style={[styles.performerChip, { backgroundColor: colors.bgSecondary }]}>
-                  <Text style={[styles.performerName, { color: colors.textPrimary }]}>
+                  <Text style={[styles.performerName, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>
                     {p.bandMember?.name || p.name || 'Unknown'}
                   </Text>
                 </View>
               ))}
             </View>
           ) : editing ? (
-            <Text style={[styles.noPerformers, { color: colors.textSecondary }]}>No performers assigned</Text>
+            <Text style={[styles.noPerformers, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>No performers assigned</Text>
           ) : null}
         </View>
       )}
@@ -543,7 +543,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
         <ScrollView contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
           {items.length === 0 ? (
             <View style={styles.centered}>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
                 No songs in this setlist
               </Text>
             </View>
@@ -566,10 +566,10 @@ export default function SetlistDetailScreen({ navigation, route }) {
           ListEmptyComponent={
             <View style={styles.centered}>
               <Ionicons name="list-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
                 No songs in this setlist
               </Text>
-              <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
+              <Text style={[styles.emptyHint, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
                 Switch to edit mode to add songs
               </Text>
               <TouchableOpacity
@@ -578,7 +578,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Add song to setlist"
               >
-                <Text style={[styles.emptyButtonText, { color: colors.primaryText }]}>+ Add Song</Text>
+                <Text style={[styles.emptyButtonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>+ Add Song</Text>
               </TouchableOpacity>
             </View>
           }
@@ -589,13 +589,13 @@ export default function SetlistDetailScreen({ navigation, route }) {
       {editing && (
         <View style={[styles.editToolbar, { backgroundColor: colors.bgSecondary, borderTopColor: colors.border, paddingBottom: insets.bottom + 10 }]}>
           <TouchableOpacity style={[styles.toolbarButton, { backgroundColor: colors.primary }]} onPress={openSongPicker} accessibilityRole="button" accessibilityLabel="Add song" accessibilityHint="Add a song to this setlist">
-            <Text style={styles.toolbarButtonText}>+ Song</Text>
+            <Text style={[styles.toolbarButtonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>+ Song</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.toolbarButton, { backgroundColor: colors.bgTertiary }]} onPress={addSetBreak} accessibilityRole="button" accessibilityLabel="Add set break" accessibilityHint="Add a set break">
-            <Text style={[styles.toolbarButtonTextDark, { color: colors.textPrimary }]}>+ Set Break</Text>
+            <Text style={[styles.toolbarButtonTextDark, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>+ Set Break</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.toolbarButton, { backgroundColor: colors.bgTertiary }]} onPress={addMC} accessibilityRole="button" accessibilityLabel="Add MC">
-            <Text style={[styles.toolbarButtonTextDark, { color: colors.textPrimary }]}>+ MC</Text>
+            <Text style={[styles.toolbarButtonTextDark, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>+ MC</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -605,9 +605,9 @@ export default function SetlistDetailScreen({ navigation, route }) {
         <SafeAreaView style={[styles.pickerContainer, { backgroundColor: colors.bgPrimary }]}>
           <View style={[styles.pickerHeader, { backgroundColor: colors.bgSecondary }]}>
             <TouchableOpacity onPress={() => setShowSongPicker(false)} accessibilityRole="button" accessibilityLabel="Cancel adding song">
-              <Text style={{ color: colors.primary, fontSize: 16 }}>Cancel</Text>
+              <Text style={{ color: colors.primary, fontSize: 16 }} maxFontSizeMultiplier={1.5}>Cancel</Text>
             </TouchableOpacity>
-            <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Add Song</Text>
+            <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>Add Song</Text>
             <View style={{ width: 60 }} />
           </View>
           <TextInput
@@ -639,11 +639,11 @@ export default function SetlistDetailScreen({ navigation, route }) {
                   accessibilityLabel={`Add ${item.title}${item.artist ? ` by ${item.artist}` : ''}`}
                 >
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.pickerSongTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                    <Text style={[styles.pickerSongTitle, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.6}>
                       {item.title}
                     </Text>
                     {item.artist ? (
-                      <Text style={[styles.pickerSongArtist, { color: colors.textSecondary }]} numberOfLines={1}>
+                      <Text style={[styles.pickerSongArtist, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={1.5}>
                         {item.artist}
                       </Text>
                     ) : null}
@@ -652,14 +652,14 @@ export default function SetlistDetailScreen({ navigation, route }) {
                     <Badge label={item.key} color={colors.badgeKey} bgColor={colors.badgeKeyBg} />
                   ) : null}
                   {item.duration ? (
-                    <Text style={[styles.pickerDuration, { color: colors.textSecondary }]}>
+                    <Text style={[styles.pickerDuration, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>
                       {formatDuration(item.duration)}
                     </Text>
                   ) : null}
                 </PressableRow>
               )}
               ListEmptyComponent={
-                <Text style={[styles.emptyText, { color: colors.textSecondary, textAlign: 'center', marginTop: 40 }]}>
+                <Text style={[styles.emptyText, { color: colors.textSecondary, textAlign: 'center', marginTop: 40 }]} maxFontSizeMultiplier={1.5}>
                   {songSearch ? 'No matching songs' : 'All songs already added'}
                 </Text>
               }
@@ -672,7 +672,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
       <Modal visible={showPerformerPicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowPerformerPicker(false)}>
         <View style={styles.detailsOverlay}>
           <View style={[styles.detailsContent, { backgroundColor: colors.modalBg }]}>
-            <Text style={[styles.detailsTitle, { color: colors.textPrimary }]} accessibilityRole="header">Select Performers</Text>
+            <Text style={[styles.detailsTitle, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>Select Performers</Text>
             <ScrollView style={{ maxHeight: 300 }}>
               {bandMembers.map(member => {
                 const selected = selectedPerformerIds.includes(member.id);
@@ -685,11 +685,11 @@ export default function SetlistDetailScreen({ navigation, route }) {
                     accessibilityLabel={`${member.name}${selected ? ', selected' : ''}`}
                   >
                     <View style={[styles.performerCheckbox, { borderColor: colors.border, backgroundColor: selected ? colors.primary : 'transparent' }]}>
-                      {selected && <Text style={[styles.performerCheckmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
+                      {selected && <Text style={[styles.performerCheckmark, { color: colors.primaryText }]} maxFontSizeMultiplier={1.2}>{'\u2713'}</Text>}
                     </View>
-                    <Text style={[styles.performerPickerName, { color: colors.textPrimary }]}>{member.name}</Text>
+                    <Text style={[styles.performerPickerName, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>{member.name}</Text>
                     {member.instruments && member.instruments.length > 0 && (
-                      <Text style={[styles.performerInstrument, { color: colors.textSecondary }]}>
+                      <Text style={[styles.performerInstrument, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
                         {member.instruments.join(', ')}
                       </Text>
                     )}
@@ -697,7 +697,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
                 );
               })}
               {bandMembers.length === 0 && (
-                <Text style={[styles.noPerformers, { color: colors.textSecondary, textAlign: 'center', paddingVertical: 20 }]}>
+                <Text style={[styles.noPerformers, { color: colors.textSecondary, textAlign: 'center', paddingVertical: 20 }]} maxFontSizeMultiplier={1.5}>
                   No band members found
                 </Text>
               )}
@@ -709,7 +709,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Cancel"
               >
-                <Text style={[styles.detailsButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+                <Text style={[styles.detailsButtonText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.detailsButton, { backgroundColor: colors.primary }, savingPerformers && { opacity: 0.5 }]}
@@ -721,7 +721,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
                 {savingPerformers ? (
                   <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={[styles.detailsButtonTextWhite, { color: colors.primaryText }]}>Save</Text>
+                  <Text style={[styles.detailsButtonTextWhite, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>Save</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -734,8 +734,8 @@ export default function SetlistDetailScreen({ navigation, route }) {
         <View style={styles.detailsOverlay}>
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <View style={[styles.detailsContent, { backgroundColor: colors.modalBg }]}>
-              <Text style={[styles.detailsTitle, { color: colors.textPrimary }]} accessibilityRole="header">Edit Details</Text>
-              <Text style={[styles.detailsLabel, { color: colors.textSecondary }]}>Name</Text>
+              <Text style={[styles.detailsTitle, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>Edit Details</Text>
+              <Text style={[styles.detailsLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Name</Text>
               <TextInput
                 style={[styles.detailsInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
                 value={editName}
@@ -743,7 +743,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
                 autoFocus
                 accessibilityLabel="Setlist name"
               />
-              <Text style={[styles.detailsLabel, { color: colors.textSecondary }]}>Venue</Text>
+              <Text style={[styles.detailsLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Venue</Text>
               <TextInput
                 style={[styles.detailsInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
                 value={editVenue}
@@ -759,7 +759,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
                   accessibilityRole="button"
                   accessibilityLabel="Cancel"
                 >
-                  <Text style={[styles.detailsButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+                  <Text style={[styles.detailsButtonText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.detailsButton, { backgroundColor: colors.primary }, savingDetails && { opacity: 0.5 }]}
@@ -771,7 +771,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
                   {savingDetails ? (
                     <ActivityIndicator color={colors.primaryText} size="small" />
                   ) : (
-                    <Text style={[styles.detailsButtonTextWhite, { color: colors.primaryText }]}>Save</Text>
+                    <Text style={[styles.detailsButtonTextWhite, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>Save</Text>
                   )}
                 </TouchableOpacity>
               </View>

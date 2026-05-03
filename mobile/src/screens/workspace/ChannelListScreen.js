@@ -217,12 +217,12 @@ export default function ChannelListScreen({ navigation, route }) {
             {workspace?.avatarUrl ? (
               <Image source={{ uri: workspace.avatarUrl }} style={{ width: '100%', height: '100%' }} />
             ) : (
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+              <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 14 }} maxFontSizeMultiplier={1.5}>
                 {workspaceName?.charAt(0).toUpperCase() || '?'}
               </Text>
             )}
           </View>
-          <Text style={{ color: colors.textPrimary, fontWeight: '600', fontSize: 17 }} numberOfLines={1}>
+          <Text style={{ color: colors.textPrimary, fontWeight: '600', fontSize: 17 }} numberOfLines={1} maxFontSizeMultiplier={1.5}>
             {workspaceName}
           </Text>
           <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
@@ -772,7 +772,7 @@ export default function ChannelListScreen({ navigation, route }) {
           accessibilityHint="Open section"
         >
           <Ionicons name={item.icon} size={18} color={colors.channelListText} style={styles.bandCategoryIcon} />
-          <Text style={[styles.bandCategoryLabel, { color: colors.channelListText }]}>{item.label}</Text>
+          <Text style={[styles.bandCategoryLabel, { color: colors.channelListText }]} maxFontSizeMultiplier={1.5}>{item.label}</Text>
           <Ionicons name={isCollapsed ? 'chevron-forward' : 'chevron-down'} size={14} color={colors.channelListText} style={styles.bandCategoryArrow} />
         </TouchableOpacity>
       );
@@ -788,11 +788,11 @@ export default function ChannelListScreen({ navigation, route }) {
           accessibilityHint="Open section"
         >
           <Ionicons name={item.icon} size={16} color={colors.channelListTextBold} style={styles.bandItemIcon} />
-          <Text style={[styles.bandItemLabel, { color: colors.channelListTextBold }]}>{item.label}</Text>
+          <Text style={[styles.bandItemLabel, { color: colors.channelListTextBold }]} maxFontSizeMultiplier={1.5}>{item.label}</Text>
           {PRO_ONLY_FEATURES.includes(item.key) && workspace?.effectivePlan !== 'PRO' && (
-            <Text style={[styles.bandItemArrow, { color: colors.channelListText, marginRight: 4 }]}>PRO</Text>
+            <Text style={[styles.bandItemArrow, { color: colors.channelListText, marginRight: 4 }]} maxFontSizeMultiplier={1.2}>PRO</Text>
           )}
-          <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
+          <Text style={[styles.bandItemArrow, { color: colors.channelListText }]} maxFontSizeMultiplier={1.2}>{'\u203A'}</Text>
         </TouchableOpacity>
       );
     }
@@ -839,11 +839,11 @@ export default function ChannelListScreen({ navigation, route }) {
           disabled={!isCollapsible}
         >
           {isCollapsible && (
-            <Text style={[styles.collapseIcon, { color: colors.channelListText }]}>
+            <Text style={[styles.collapseIcon, { color: colors.channelListText }]} maxFontSizeMultiplier={1.2}>
               {isCollapsed ? '\u25B6' : '\u25BC'}
             </Text>
           )}
-          <Text style={[styles.sectionTitle, { color: colors.channelListText }]} accessibilityRole="header">
+          <Text style={[styles.sectionTitle, { color: colors.channelListText }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>
             {section.title}
           </Text>
         </TouchableOpacity>
@@ -857,7 +857,7 @@ export default function ChannelListScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Create section"
               >
-                <Text style={[styles.addIcon, { color: colors.channelListText }]}>{'\uD83D\uDCC1'}</Text>
+                <Text style={[styles.addIcon, { color: colors.channelListText }]} maxFontSizeMultiplier={1.2}>{'\uD83D\uDCC1'}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -865,7 +865,7 @@ export default function ChannelListScreen({ navigation, route }) {
               onPress={() => setShowCreateChannel(true)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={[styles.addIcon, { color: colors.channelListText }]}>+</Text>
+              <Text style={[styles.addIcon, { color: colors.channelListText }]} maxFontSizeMultiplier={1.2}>+</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -875,7 +875,7 @@ export default function ChannelListScreen({ navigation, route }) {
             onPress={openNewDM}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={[styles.addIcon, { color: colors.channelListText }]}>+</Text>
+            <Text style={[styles.addIcon, { color: colors.channelListText }]} maxFontSizeMultiplier={1.2}>+</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -913,10 +913,10 @@ export default function ChannelListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel={`Quick links, ${collapsedQuickLinks ? 'collapsed' : 'expanded'}`}
         >
-          <Text style={[styles.collapseIcon, { color: colors.channelListText }]}>
+          <Text style={[styles.collapseIcon, { color: colors.channelListText }]} maxFontSizeMultiplier={1.2}>
             {collapsedQuickLinks ? '\u25B6' : '\u25BC'}
           </Text>
-          <Text style={[styles.sectionTitle, { color: colors.channelListText }]}>Quick Links</Text>
+          <Text style={[styles.sectionTitle, { color: colors.channelListText }]} maxFontSizeMultiplier={1.6}>Quick Links</Text>
         </TouchableOpacity>
         {!collapsedQuickLinks && (
           <>
@@ -940,12 +940,12 @@ export default function ChannelListScreen({ navigation, route }) {
                     size={14}
                     color={nextGig.type === 'GIG' ? '#22c55e' : nextGig.type === 'REHEARSAL' ? '#3b82f6' : '#a855f7'}
                   />
-                  <Text style={[styles.nextGigTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                  <Text style={[styles.nextGigTitle, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.6}>
                     {nextGig.title}
                   </Text>
                 </View>
                 <View style={styles.nextGigRow}>
-                  <Text style={[styles.nextGigMeta, { color: colors.textSecondary }]}>
+                  <Text style={[styles.nextGigMeta, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
                     {new Date(nextGig.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                     {(() => {
                       const gigDate = new Date(nextGig.date);
@@ -960,7 +960,7 @@ export default function ChannelListScreen({ navigation, route }) {
                   </Text>
                 </View>
                 {nextGig.notes ? (
-                  <Text style={[styles.nextGigNotes, { color: colors.textSecondary }]} numberOfLines={1}>
+                  <Text style={[styles.nextGigNotes, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={1.6}>
                     {nextGig.notes}
                   </Text>
                 ) : null}
@@ -974,8 +974,8 @@ export default function ChannelListScreen({ navigation, route }) {
               accessibilityLabel="Calendar"
             >
               <Ionicons name="calendar-outline" size={16} color={colors.channelListTextBold} />
-              <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]}>Calendar</Text>
-              <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
+              <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]} maxFontSizeMultiplier={1.5}>Calendar</Text>
+              <Text style={[styles.bandItemArrow, { color: colors.channelListText }]} maxFontSizeMultiplier={1.2}>{'\u203A'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.calendarShortcut}
@@ -985,8 +985,8 @@ export default function ChannelListScreen({ navigation, route }) {
               accessibilityLabel="Saved Messages"
             >
               <Ionicons name="bookmark-outline" size={16} color={colors.channelListTextBold} />
-              <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]}>Saved Messages</Text>
-              <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
+              <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]} maxFontSizeMultiplier={1.5}>Saved Messages</Text>
+              <Text style={[styles.bandItemArrow, { color: colors.channelListText }]} maxFontSizeMultiplier={1.2}>{'\u203A'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.calendarShortcut}
@@ -996,8 +996,8 @@ export default function ChannelListScreen({ navigation, route }) {
               accessibilityLabel="All Messages"
             >
               <Ionicons name="chatbubbles-outline" size={16} color={colors.channelListTextBold} />
-              <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]}>All Messages</Text>
-              <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
+              <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]} maxFontSizeMultiplier={1.5}>All Messages</Text>
+              <Text style={[styles.bandItemArrow, { color: colors.channelListText }]} maxFontSizeMultiplier={1.2}>{'\u203A'}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.calendarShortcut}
@@ -1007,8 +1007,8 @@ export default function ChannelListScreen({ navigation, route }) {
               accessibilityLabel="Activity"
             >
               <Ionicons name="notifications-outline" size={16} color={colors.channelListTextBold} />
-              <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]}>Activity</Text>
-              <Text style={[styles.bandItemArrow, { color: colors.channelListText }]}>{'\u203A'}</Text>
+              <Text style={[styles.calendarShortcutLabel, { color: colors.channelListTextBold }]} maxFontSizeMultiplier={1.5}>Activity</Text>
+              <Text style={[styles.bandItemArrow, { color: colors.channelListText }]} maxFontSizeMultiplier={1.2}>{'\u203A'}</Text>
             </TouchableOpacity>
           </>
         )}
@@ -1035,8 +1035,8 @@ export default function ChannelListScreen({ navigation, route }) {
       <Modal visible={showCreateChannel} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowCreateChannel(false)}>
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Create Channel</Text>
-            <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Channel Name</Text>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>Create Channel</Text>
+            <Text style={[styles.modalLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Channel Name</Text>
             <TextInput
               style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
               placeholder="e.g., gig-planning"
@@ -1053,9 +1053,9 @@ export default function ChannelListScreen({ navigation, route }) {
               activeOpacity={0.6}
             >
               <View style={[styles.checkbox, { borderColor: colors.border }, newChannelPrivate && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
-                {newChannelPrivate && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
+                {newChannelPrivate && <Text style={[styles.checkmark, { color: colors.primaryText }]} maxFontSizeMultiplier={1.2}>{'\u2713'}</Text>}
               </View>
-              <Text style={[styles.checkboxLabel, { color: colors.textPrimary }]}>Private channel</Text>
+              <Text style={[styles.checkboxLabel, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Private channel</Text>
             </TouchableOpacity>
             <View style={styles.modalActions}>
               <TouchableOpacity
@@ -1063,7 +1063,7 @@ export default function ChannelListScreen({ navigation, route }) {
                 onPress={() => { setShowCreateChannel(false); setNewChannelName(''); }}
                 disabled={creating}
               >
-                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: colors.primary }]}
@@ -1073,7 +1073,7 @@ export default function ChannelListScreen({ navigation, route }) {
                 {creating ? (
                   <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>Create</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>Create</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -1085,8 +1085,8 @@ export default function ChannelListScreen({ navigation, route }) {
       <Modal visible={showNewDM} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowNewDM(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>New Message</Text>
-            <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Select members</Text>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>New Message</Text>
+            <Text style={[styles.modalLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Select members</Text>
             <FlatList
               data={members}
               keyExtractor={(item) => item.userId}
@@ -1100,15 +1100,15 @@ export default function ChannelListScreen({ navigation, route }) {
                     activeOpacity={0.6}
                   >
                     <View style={[styles.memberAvatar, { backgroundColor: colors.primary }]}>
-                      <Text style={styles.memberAvatarText}>
+                      <Text style={[styles.memberAvatarText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.2}>
                         {(item.user?.displayName || '?').charAt(0).toUpperCase()}
                       </Text>
                     </View>
-                    <Text style={[styles.memberName, { color: colors.textPrimary }]}>
+                    <Text style={[styles.memberName, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>
                       {item.user?.displayName || 'Unknown'}
                     </Text>
                     {selected && (
-                      <Text style={[styles.selectedCheck, { color: colors.primary }]}>{'\u2713'}</Text>
+                      <Text style={[styles.selectedCheck, { color: colors.primary }]} maxFontSizeMultiplier={1.2}>{'\u2713'}</Text>
                     )}
                   </TouchableOpacity>
                 );
@@ -1123,7 +1123,7 @@ export default function ChannelListScreen({ navigation, route }) {
                 onPress={() => { setShowNewDM(false); setSelectedMemberIds([]); }}
                 disabled={creating}
               >
-                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: colors.primary }]}
@@ -1133,7 +1133,7 @@ export default function ChannelListScreen({ navigation, route }) {
                 {creating ? (
                   <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>Start</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>Start</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -1148,14 +1148,14 @@ export default function ChannelListScreen({ navigation, route }) {
           onPress={() => setShowChannelActions(false)}
         >
           <Pressable style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} onPress={() => {}}>
-            <Text style={[styles.actionSheetTitle, { color: colors.textPrimary }]}>
+            <Text style={[styles.actionSheetTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>
               #{selectedChannel?.name}
             </Text>
             <TouchableOpacity
               style={styles.actionItem}
               onPress={handleToggleStar}
             >
-              <Text style={[styles.actionText, { color: colors.textPrimary }]}>
+              <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>
                 {selectedChannel?.starred ? 'Unstar Channel' : 'Star Channel'}
               </Text>
             </TouchableOpacity>
@@ -1163,7 +1163,7 @@ export default function ChannelListScreen({ navigation, route }) {
               style={[styles.actionItem, styles.cancelAction, { borderTopColor: colors.border }]}
               onPress={() => setShowChannelActions(false)}
             >
-              <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
+              <Text style={[styles.actionText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -1176,26 +1176,26 @@ export default function ChannelListScreen({ navigation, route }) {
           onPress={() => setShowGroupActions(false)}
         >
           <Pressable style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} onPress={() => {}}>
-            <Text style={[styles.actionSheetTitle, { color: colors.textPrimary }]}>
+            <Text style={[styles.actionSheetTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>
               {selectedGroup?.name}
             </Text>
             <TouchableOpacity
               style={styles.actionItem}
               onPress={openGroupRenameModal}
             >
-              <Text style={[styles.actionText, { color: colors.textPrimary }]}>Rename Section</Text>
+              <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Rename Section</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionItem}
               onPress={handleDeleteGroup}
             >
-              <Text style={[styles.actionText, { color: colors.error }]}>Delete Section</Text>
+              <Text style={[styles.actionText, { color: colors.error }]} maxFontSizeMultiplier={1.5}>Delete Section</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionItem, styles.cancelAction, { borderTopColor: colors.border }]}
               onPress={() => setShowGroupActions(false)}
             >
-              <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
+              <Text style={[styles.actionText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -1205,10 +1205,10 @@ export default function ChannelListScreen({ navigation, route }) {
       <Modal visible={showGroupModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowGroupModal(false)}>
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>
               {editingGroup ? 'Rename Section' : 'New Section'}
             </Text>
-            <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Section Name</Text>
+            <Text style={[styles.modalLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Section Name</Text>
             <TextInput
               style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
               placeholder="e.g., Projects"
@@ -1225,7 +1225,7 @@ export default function ChannelListScreen({ navigation, route }) {
                 onPress={() => { setShowGroupModal(false); setGroupName(''); setEditingGroup(null); }}
                 disabled={savingGroup}
               >
-                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: colors.primary }]}
@@ -1235,7 +1235,7 @@ export default function ChannelListScreen({ navigation, route }) {
                 {savingGroup ? (
                   <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>{editingGroup ? 'Save' : 'Create'}</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>{editingGroup ? 'Save' : 'Create'}</Text>
                 )}
               </TouchableOpacity>
             </View>

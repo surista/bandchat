@@ -242,7 +242,7 @@ export default function OnboardingWizardScreen({ navigation }) {
       <Text
         style={[styles.progressLabel, { color: colors.textSecondary }]}
         accessibilityLabel={`Step ${currentStepIndex + 1} of ${STEPS.length}, ${STEP_LABELS[step]}`}
-      >
+      maxFontSizeMultiplier={1.5}>
         Step {currentStepIndex + 1} of {STEPS.length} — {STEP_LABELS[step]}
       </Text>
     </View>
@@ -252,8 +252,8 @@ export default function OnboardingWizardScreen({ navigation }) {
     <View style={styles.stepContent}>
       <View style={styles.stepHero}>
         <Ionicons name="musical-notes-outline" size={64} color={colors.primary} />
-        <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>Name your workspace</Text>
-        <Text style={[styles.stepSubtitle, { color: colors.textSecondary }]}>This is usually your band name.</Text>
+        <Text style={[styles.stepTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>Name your workspace</Text>
+        <Text style={[styles.stepSubtitle, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.6}>This is usually your band name.</Text>
       </View>
       <TextInput
         style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
@@ -267,7 +267,7 @@ export default function OnboardingWizardScreen({ navigation }) {
         onSubmitEditing={handleCreateWorkspace}
         accessibilityLabel="Workspace name"
       />
-      <Text style={[styles.charCount, { color: colors.textSecondary }]}>{workspaceName.length} / 50</Text>
+      <Text style={[styles.charCount, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>{workspaceName.length} / 50</Text>
       <PressableRow
         style={[
           styles.footerButton,
@@ -282,7 +282,7 @@ export default function OnboardingWizardScreen({ navigation }) {
         {loading ? (
           <ActivityIndicator color={colors.primaryText} size="small" />
         ) : (
-          <Text style={[styles.nextButtonText, { color: colors.primaryText }]}>Create Workspace</Text>
+          <Text style={[styles.nextButtonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>Create Workspace</Text>
         )}
       </PressableRow>
     </View>
@@ -290,8 +290,8 @@ export default function OnboardingWizardScreen({ navigation }) {
 
   const renderChannelsStep = () => (
     <View style={styles.stepContent}>
-      <Text style={[styles.stepTitleSmall, { color: colors.textPrimary }]}>Set up your channels</Text>
-      <Text style={[styles.stepSubtitle, { color: colors.textSecondary, marginBottom: 16 }]}>
+      <Text style={[styles.stepTitleSmall, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>Set up your channels</Text>
+      <Text style={[styles.stepSubtitle, { color: colors.textSecondary, marginBottom: 16 }]} maxFontSizeMultiplier={1.6}>
         Channels are where your band communicates. We've suggested a few to get started.
       </Text>
 
@@ -306,16 +306,16 @@ export default function OnboardingWizardScreen({ navigation }) {
           />
           <View style={styles.channelInfo}>
             <View style={styles.channelNameRow}>
-              <Text style={[styles.channelHash, { color: colors.textSecondary }]}>#</Text>
-              <Text style={[styles.channelName, { color: colors.textPrimary }]}>{ch.name}</Text>
+              <Text style={[styles.channelHash, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>#</Text>
+              <Text style={[styles.channelName, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>{ch.name}</Text>
               {ch.isDefault && (
                 <View style={[styles.defaultBadge, { backgroundColor: colors.bgTertiary }]}>
-                  <Text style={[styles.defaultBadgeText, { color: colors.textSecondary }]}>default</Text>
+                  <Text style={[styles.defaultBadgeText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>default</Text>
                 </View>
               )}
             </View>
             {ch.description ? (
-              <Text style={[styles.channelDesc, { color: colors.textSecondary }]} numberOfLines={1}>{ch.description}</Text>
+              <Text style={[styles.channelDesc, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={1.5}>{ch.description}</Text>
             ) : null}
           </View>
           {ch.isCustom && (
@@ -353,7 +353,7 @@ export default function OnboardingWizardScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel="Add channel"
         >
-          <Text style={[styles.addButtonText, { color: colors.textPrimary }]}>Add</Text>
+          <Text style={[styles.addButtonText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Add</Text>
         </PressableRow>
       </View>
     </View>
@@ -361,16 +361,16 @@ export default function OnboardingWizardScreen({ navigation }) {
 
   const renderInviteStep = () => (
     <View style={styles.stepContent}>
-      <Text style={[styles.stepTitleSmall, { color: colors.textPrimary }]}>Invite your bandmates</Text>
-      <Text style={[styles.stepSubtitle, { color: colors.textSecondary, marginBottom: 16 }]}>
+      <Text style={[styles.stepTitleSmall, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>Invite your bandmates</Text>
+      <Text style={[styles.stepSubtitle, { color: colors.textSecondary, marginBottom: 16 }]} maxFontSizeMultiplier={1.6}>
         Share the invite link or send email invitations.
       </Text>
 
       {/* Share section */}
       <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
-        <Text style={[styles.cardLabel, { color: colors.textPrimary }]}>Invite Link</Text>
+        <Text style={[styles.cardLabel, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Invite Link</Text>
         <View style={[styles.linkBox, { backgroundColor: colors.bgTertiary }]}>
-          <Text style={[styles.linkText, { color: colors.textPrimary }]} numberOfLines={1} selectable>
+          <Text style={[styles.linkText, { color: colors.textPrimary }]} numberOfLines={1} selectable maxFontSizeMultiplier={1.5}>
             {inviteUrl}
           </Text>
         </View>
@@ -382,7 +382,7 @@ export default function OnboardingWizardScreen({ navigation }) {
             accessibilityLabel="Copy invite link"
           >
             <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={18} color={copied ? '#22c55e' : colors.textPrimary} />
-            <Text style={[styles.shareButtonText, { color: copied ? '#22c55e' : colors.textPrimary }]}>
+            <Text style={[styles.shareButtonText, { color: copied ? '#22c55e' : colors.textPrimary }]} maxFontSizeMultiplier={1.5}>
               {copied ? 'Copied!' : 'Copy'}
             </Text>
           </PressableRow>
@@ -393,15 +393,15 @@ export default function OnboardingWizardScreen({ navigation }) {
             accessibilityLabel="Share invite link"
           >
             <Ionicons name="share-outline" size={18} color={colors.primaryText} />
-            <Text style={[styles.shareButtonText, { color: colors.primaryText }]}>Share</Text>
+            <Text style={[styles.shareButtonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>Share</Text>
           </PressableRow>
         </View>
-        <Text style={[styles.linkHint, { color: colors.textSecondary }]}>This invite link expires in 24 hours.</Text>
+        <Text style={[styles.linkHint, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>This invite link expires in 24 hours.</Text>
       </View>
 
       {/* Email section */}
       <View style={[styles.card, { backgroundColor: colors.bgSecondary, marginTop: 12 }]}>
-        <Text style={[styles.cardLabel, { color: colors.textPrimary }]}>Send Email Invites</Text>
+        <Text style={[styles.cardLabel, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Send Email Invites</Text>
         <View style={styles.emailRow}>
           <TextInput
             style={[styles.emailInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
@@ -427,15 +427,15 @@ export default function OnboardingWizardScreen({ navigation }) {
             {emailLoading ? (
               <ActivityIndicator size="small" color={colors.primaryText} />
             ) : (
-              <Text style={[styles.sendButtonText, { color: colors.primaryText }]}>Send</Text>
+              <Text style={[styles.sendButtonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>Send</Text>
             )}
           </PressableRow>
         </View>
-        {emailError ? <Text style={styles.emailError}>{emailError}</Text> : null}
+        {emailError ? <Text style={styles.emailError} maxFontSizeMultiplier={1.5}>{emailError}</Text> : null}
         {emailsSent.map(email => (
           <View key={email} style={styles.sentRow}>
             <Ionicons name="checkmark-circle" size={16} color="#22c55e" />
-            <Text style={[styles.sentEmail, { color: colors.textSecondary }]}>{email}</Text>
+            <Text style={[styles.sentEmail, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>{email}</Text>
           </View>
         ))}
       </View>
@@ -445,21 +445,21 @@ export default function OnboardingWizardScreen({ navigation }) {
   const renderDoneStep = () => (
     <View style={[styles.stepContent, styles.stepHero]}>
       <Ionicons name="checkmark-circle" size={72} color="#22c55e" />
-      <Text style={[styles.stepTitle, { color: colors.textPrimary, marginTop: 16 }]}>You're all set!</Text>
-      <Text style={[styles.stepSubtitle, { color: colors.textSecondary, marginBottom: 24 }]}>Your workspace is ready to go.</Text>
+      <Text style={[styles.stepTitle, { color: colors.textPrimary, marginTop: 16 }]} maxFontSizeMultiplier={1.6}>You're all set!</Text>
+      <Text style={[styles.stepSubtitle, { color: colors.textSecondary, marginBottom: 24 }]} maxFontSizeMultiplier={1.6}>Your workspace is ready to go.</Text>
 
       <View style={[styles.summaryCard, { backgroundColor: colors.bgSecondary }]}>
         <View style={[styles.summaryRow, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Workspace</Text>
-          <Text style={[styles.summaryValue, { color: colors.textPrimary }]}>{workspace?.name}</Text>
+          <Text style={[styles.summaryLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Workspace</Text>
+          <Text style={[styles.summaryValue, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>{workspace?.name}</Text>
         </View>
         <View style={[styles.summaryRow, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Channels</Text>
-          <Text style={[styles.summaryValue, { color: colors.textPrimary }]}>{channelCount}</Text>
+          <Text style={[styles.summaryLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Channels</Text>
+          <Text style={[styles.summaryValue, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>{channelCount}</Text>
         </View>
         <View style={[styles.summaryRow, { borderBottomWidth: 0 }]}>
-          <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Invites sent</Text>
-          <Text style={[styles.summaryValue, { color: colors.textPrimary }]}>{emailsSent.length}</Text>
+          <Text style={[styles.summaryLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Invites sent</Text>
+          <Text style={[styles.summaryValue, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>{emailsSent.length}</Text>
         </View>
       </View>
     </View>
@@ -530,7 +530,7 @@ export default function OnboardingWizardScreen({ navigation }) {
           ) : (
             <View style={styles.headerButton} />
           )}
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Create Workspace</Text>
+          <Text style={[styles.headerTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>Create Workspace</Text>
           <PressableRow
             onPress={handleClose}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -554,7 +554,7 @@ export default function OnboardingWizardScreen({ navigation }) {
         >
           {error && (
             <View style={styles.errorBanner}>
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={styles.errorText} maxFontSizeMultiplier={1.5}>{error}</Text>
               <PressableRow
                 onPress={() => setError(null)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -578,7 +578,7 @@ export default function OnboardingWizardScreen({ navigation }) {
               accessibilityRole="button"
               accessibilityLabel="Skip this step"
             >
-              <Text style={[styles.footerButtonText, { color: colors.textPrimary }]}>Skip</Text>
+              <Text style={[styles.footerButtonText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Skip</Text>
             </PressableRow>
           )}
           <PressableRow
@@ -597,7 +597,7 @@ export default function OnboardingWizardScreen({ navigation }) {
             {loading ? (
               <ActivityIndicator size="small" color={colors.primaryText} />
             ) : (
-              <Text style={[styles.nextButtonText, { color: colors.primaryText }]}>{nextLabel()}</Text>
+              <Text style={[styles.nextButtonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>{nextLabel()}</Text>
             )}
           </PressableRow>
         </View>}

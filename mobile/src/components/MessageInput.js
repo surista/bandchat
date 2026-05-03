@@ -514,7 +514,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
       {/* Edit mode banner */}
       {editingMessage && (
         <View style={[styles.editBanner, { backgroundColor: colors.bgTertiary }]}>
-          <Text style={[styles.editBannerText, { color: colors.primary }]}>Editing message</Text>
+          <Text style={[styles.editBannerText, { color: colors.primary }]} maxFontSizeMultiplier={1.5}>Editing message</Text>
           <TouchableOpacity onPress={handleCancelEdit} accessibilityRole="button" accessibilityLabel="Cancel editing" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ padding: 8 }}>
             <Ionicons name="close" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -537,11 +537,11 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
                 { transform: [{ scale: pulseAnim }] },
               ]}
             />
-            <Text style={[styles.recordingTimer, { color: colors.textPrimary }]}>
+            <Text style={[styles.recordingTimer, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>
               {formatDuration(recordingDuration)}
             </Text>
           </View>
-          <Text style={[styles.slideToCancel, { color: recordingCancelled ? '#EF4444' : colors.textSecondary }]}>
+          <Text style={[styles.slideToCancel, { color: recordingCancelled ? '#EF4444' : colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
             {recordingCancelled ? 'Release to cancel' : '\u2190 Slide to cancel'}
           </Text>
         </Animated.View>
@@ -584,10 +584,10 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
                   <Image source={{ uri: item.avatarUrl }} style={styles.mentionAvatar} />
                 ) : (
                   <View style={[styles.mentionAvatarFallback, { backgroundColor: colors.primary }]}>
-                    <Text style={styles.mentionAvatarText}>{(item.displayName || '?')[0].toUpperCase()}</Text>
+                    <Text style={[styles.mentionAvatarText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.2}>{(item.displayName || '?')[0].toUpperCase()}</Text>
                   </View>
                 )}
-                <Text style={[styles.mentionName, { color: colors.textPrimary }]}>{item.displayName}</Text>
+                <Text style={[styles.mentionName, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>{item.displayName}</Text>
               </TouchableOpacity>
             )}
           />
@@ -608,8 +608,8 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
                 accessibilityRole="button"
                 accessibilityLabel={`Channel ${item.name}`}
               >
-                <Text style={[styles.channelHashIcon, { color: colors.textSecondary }]}>#</Text>
-                <Text style={[styles.mentionName, { color: colors.textPrimary }]}>{item.name}</Text>
+                <Text style={[styles.channelHashIcon, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>#</Text>
+                <Text style={[styles.mentionName, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>{item.name}</Text>
               </TouchableOpacity>
             )}
           />
@@ -674,7 +674,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
                 accessibilityRole="button"
                 accessibilityLabel={editingMessage ? 'Save edit' : 'Send message'}
               >
-                <Ionicons name={editingMessage ? 'checkmark' : 'arrow-up'} size={20} color={canSend ? '#ffffff' : colors.textSecondary} />
+                <Ionicons name={editingMessage ? 'checkmark' : 'arrow-up'} size={20} color={canSend ? colors.primaryText : colors.textSecondary} />
               </PressableRow>
             )}
           </View>
@@ -717,7 +717,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
               accessibilityRole="button"
               accessibilityLabel="Bold"
             >
-              <Text style={[styles.toolbarTextBold, { color: colors.textSecondary }]}>B</Text>
+              <Text style={[styles.toolbarTextBold, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>B</Text>
             </PressableRow>
             <PressableRow
               style={styles.toolbarButton}
@@ -726,7 +726,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
               accessibilityRole="button"
               accessibilityLabel="Italic"
             >
-              <Text style={[styles.toolbarTextItalic, { color: colors.textSecondary }]}>I</Text>
+              <Text style={[styles.toolbarTextItalic, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>I</Text>
             </PressableRow>
             <PressableRow
               style={styles.toolbarButton}
@@ -735,7 +735,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
               accessibilityRole="button"
               accessibilityLabel="Strikethrough"
             >
-              <Text style={[styles.toolbarTextStrike, { color: colors.textSecondary }]}>S</Text>
+              <Text style={[styles.toolbarTextStrike, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>S</Text>
             </PressableRow>
             <PressableRow
               style={styles.toolbarButton}

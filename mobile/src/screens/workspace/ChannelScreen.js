@@ -71,21 +71,21 @@ const MessageRow = memo(function MessageRow({
   return (
     <View>
       {seenByText ? (
-        <Text style={[styles.seenByText, { color: colors.textSecondary }]}>
+        <Text style={[styles.seenByText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
           {seenByText}
         </Text>
       ) : null}
       {showUnreadDivider ? (
         <View style={styles.unreadDivider}>
           <View style={styles.unreadLine} />
-          <Text style={styles.unreadText}>New messages</Text>
+          <Text style={styles.unreadText} maxFontSizeMultiplier={1.5}>New messages</Text>
           <View style={styles.unreadLine} />
         </View>
       ) : null}
       {showDate ? (
         <View style={styles.dateSeparator}>
           <View style={[styles.dateLine, { backgroundColor: colors.border }]} />
-          <Text style={[styles.dateText, { color: colors.textSecondary, backgroundColor: colors.bgPrimary }]}>
+          <Text style={[styles.dateText, { color: colors.textSecondary, backgroundColor: colors.bgPrimary }]} maxFontSizeMultiplier={1.2}>
             {dateLabel}
           </Text>
           <View style={[styles.dateLine, { backgroundColor: colors.border }]} />
@@ -837,7 +837,7 @@ export default function ChannelScreen({ navigation, route }) {
         <View style={[styles.splitHeader, { backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
           <View style={styles.splitHeaderTitleRow}>
             {!channel.isDM && channel.isPrivate && <Ionicons name="lock-closed" size={14} color={colors.headerText} style={{ marginRight: 6 }} />}
-            <Text style={[styles.splitHeaderTitle, { color: colors.headerText }]} numberOfLines={1}>
+            <Text style={[styles.splitHeaderTitle, { color: colors.headerText }]} numberOfLines={1} maxFontSizeMultiplier={1.6}>
               {channel.isDM
                 ? (channel.displayName || 'Direct Message')
                 : (channel.isPrivate ? channel.name : `#${channel.name}`)}
@@ -879,15 +879,15 @@ export default function ChannelScreen({ navigation, route }) {
           >
             <Ionicons name={setlistExpanded ? 'chevron-down' : 'chevron-forward'} size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
             <Ionicons name="list-outline" size={14} color={colors.textSecondary} />
-            <Text style={[styles.setlistName, { color: colors.textPrimary }]}>{pinnedSetlist.name}</Text>
-            <Text style={[styles.setlistCount, { color: colors.textSecondary }]}>{pinnedSetlist._count?.songs || 0} songs</Text>
+            <Text style={[styles.setlistName, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>{pinnedSetlist.name}</Text>
+            <Text style={[styles.setlistCount, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>{pinnedSetlist._count?.songs || 0} songs</Text>
           </TouchableOpacity>
           {setlistExpanded && (
             <ScrollView style={styles.setlistScroll}>
               {!setlistSongs ? (
-                <Text style={[styles.setlistMsg, { color: colors.textSecondary }]}>Loading...</Text>
+                <Text style={[styles.setlistMsg, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Loading...</Text>
               ) : setlistSongs.length === 0 ? (
-                <Text style={[styles.setlistMsg, { color: colors.textSecondary }]}>No songs in this setlist</Text>
+                <Text style={[styles.setlistMsg, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>No songs in this setlist</Text>
               ) : (
                 (() => {
                   let setNumber = 1;
@@ -907,21 +907,21 @@ export default function ChannelScreen({ navigation, route }) {
                       <View key={ss.id}>
                         {showSetHeader && (
                           <View style={styles.setlistSetHeader}>
-                            <Text style={[styles.setlistSetLabel, { color: colors.badgeSet }]}>Set {setNumber}</Text>
+                            <Text style={[styles.setlistSetLabel, { color: colors.badgeSet }]} maxFontSizeMultiplier={1.2}>Set {setNumber}</Text>
                           </View>
                         )}
                         <View style={styles.setlistSongRow}>
-                          <Text style={[styles.setlistSongIndex, { color: colors.textSecondary }]}>{songIndex}</Text>
+                          <Text style={[styles.setlistSongIndex, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>{songIndex}</Text>
                           {ss.type === 'MC' ? (
-                            <Text style={[styles.setlistMcText, { color: colors.badgeMc }]}>{ss.label || 'MC Break'}</Text>
+                            <Text style={[styles.setlistMcText, { color: colors.badgeMc }]} maxFontSizeMultiplier={1.2}>{ss.label || 'MC Break'}</Text>
                           ) : ss.song ? (
                             <View style={styles.setlistSongInfo}>
-                              <Text style={[styles.setlistSongTitle, { color: colors.textPrimary }]} numberOfLines={1}>{ss.song.shortName || ss.song.title}</Text>
-                              {ss.song.key ? <Text style={[styles.setlistKeyText, { color: colors.badgeKey }]}>{ss.song.key}</Text> : null}
-                              {ss.song.bpm ? <Text style={[styles.setlistBpmText, { color: colors.badgeBpm }]}>{ss.song.bpm}</Text> : null}
+                              <Text style={[styles.setlistSongTitle, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.6}>{ss.song.shortName || ss.song.title}</Text>
+                              {ss.song.key ? <Text style={[styles.setlistKeyText, { color: colors.badgeKey }]} maxFontSizeMultiplier={1.2}>{ss.song.key}</Text> : null}
+                              {ss.song.bpm ? <Text style={[styles.setlistBpmText, { color: colors.badgeBpm }]} maxFontSizeMultiplier={1.2}>{ss.song.bpm}</Text> : null}
                             </View>
                           ) : (
-                            <Text style={[styles.setlistUnknown, { color: colors.textSecondary }]}>{ss.label || 'Unknown'}</Text>
+                            <Text style={[styles.setlistUnknown, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>{ss.label || 'Unknown'}</Text>
                           )}
                         </View>
                       </View>
@@ -936,7 +936,7 @@ export default function ChannelScreen({ navigation, route }) {
       {!loading && messages.length === 0 ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
           <Ionicons name="chatbubble-outline" size={40} color={colors.textSecondary} style={{ marginBottom: 8 }} />
-          <Text style={{ color: colors.textSecondary, fontSize: 16, textAlign: 'center' }}>No messages yet. Say something!</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 16, textAlign: 'center' }} maxFontSizeMultiplier={1.5}>No messages yet. Say something!</Text>
         </View>
       ) : (
       <FlatList
@@ -965,14 +965,14 @@ export default function ChannelScreen({ navigation, route }) {
       {uploadProgress !== null && (
         <View style={[styles.uploadBar, { backgroundColor: colors.bgSecondary }]}>
           <View style={[styles.uploadProgress, { backgroundColor: colors.primary, width: `${Math.round(uploadProgress * 100)}%` }]} />
-          <Text style={[styles.uploadText, { color: colors.textSecondary }]}>
+          <Text style={[styles.uploadText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
             Uploading... {Math.round(uploadProgress * 100)}%
           </Text>
         </View>
       )}
       {typingText && (
         <View style={[styles.typingBar, { backgroundColor: colors.bgSecondary }]}>
-          <Text style={[styles.typingText, { color: colors.textSecondary }]}>
+          <Text style={[styles.typingText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
             {typingText}
           </Text>
         </View>
@@ -1123,8 +1123,8 @@ export default function ChannelScreen({ navigation, route }) {
       >
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg || colors.bgSecondary }]}>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Report Message</Text>
-            <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>Report Message</Text>
+            <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.6}>
               Why are you reporting this message?
             </Text>
             <TextInput
@@ -1145,7 +1145,7 @@ export default function ChannelScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Cancel report"
               >
-                <Text style={{ color: colors.textPrimary }}>Cancel</Text>
+                <Text style={{ color: colors.textPrimary }} maxFontSizeMultiplier={1.5}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: colors.error || '#dc2626', opacity: reportSubmitting ? 0.6 : 1 }]}
@@ -1154,7 +1154,7 @@ export default function ChannelScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel={reportSubmitting ? 'Submitting report' : 'Submit report'}
               >
-                <Text style={{ color: colors.errorText || '#fff', fontWeight: '600' }}>
+                <Text style={{ color: colors.errorText || '#fff', fontWeight: '600' }} maxFontSizeMultiplier={1.5}>
                   {reportSubmitting ? 'Submitting...' : 'Report'}
                 </Text>
               </TouchableOpacity>

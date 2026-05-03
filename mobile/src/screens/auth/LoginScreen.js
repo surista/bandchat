@@ -105,8 +105,8 @@ export default function LoginScreen({ navigation }) {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.textPrimary }]} accessibilityRole="header">BandChat</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            <Text style={[styles.title, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>BandChat</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.6}>
               Sign in to your workspace
             </Text>
           </View>
@@ -114,11 +114,11 @@ export default function LoginScreen({ navigation }) {
           <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
             {error ? (
               <View style={styles.errorBox} accessibilityLiveRegion="polite">
-                <Text style={styles.errorText}>{error}</Text>
+                <Text style={styles.errorText} maxFontSizeMultiplier={1.5}>{error}</Text>
               </View>
             ) : null}
 
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Email</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.6}>Email</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
               placeholder="you@example.com"
@@ -134,7 +134,7 @@ export default function LoginScreen({ navigation }) {
               accessibilityLabel="Email address"
             />
 
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Password</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.6}>Password</Text>
             <View style={styles.passwordWrapper}>
               <TextInput
                 style={[styles.input, styles.passwordInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
@@ -157,7 +157,7 @@ export default function LoginScreen({ navigation }) {
                 accessibilityRole="button"
                 accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
               >
-                <Text style={[styles.showHideText, { color: colors.textSecondary }]}>
+                <Text style={[styles.showHideText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
                   {showPassword ? 'Hide' : 'Show'}
                 </Text>
               </TouchableOpacity>
@@ -174,7 +174,7 @@ export default function LoginScreen({ navigation }) {
               {loading ? (
                 <ActivityIndicator color={colors.primaryText} size="small" />
               ) : (
-                <Text style={[styles.buttonText, { color: colors.primaryText }]}>Sign In</Text>
+                <Text style={[styles.buttonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>Sign In</Text>
               )}
             </PressableRow>
 
@@ -184,7 +184,7 @@ export default function LoginScreen({ navigation }) {
               accessibilityRole="button"
               accessibilityLabel="Forgot password"
             >
-              <Text style={[styles.linkText, { color: colors.primary }]}>Forgot password?</Text>
+              <Text style={[styles.linkText, { color: colors.primary }]} maxFontSizeMultiplier={1.5}>Forgot password?</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -193,15 +193,15 @@ export default function LoginScreen({ navigation }) {
               accessibilityRole="button"
               accessibilityLabel="Go to sign up"
             >
-              <Text style={[styles.linkText, { color: colors.textSecondary }]}>
+              <Text style={[styles.linkText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
                 Don't have an account?{' '}
-                <Text style={{ color: colors.primary, fontWeight: '600' }}>Sign Up</Text>
+                <Text style={{ color: colors.primary, fontWeight: '600' }} maxFontSizeMultiplier={1.5}>Sign Up</Text>
               </Text>
             </TouchableOpacity>
 
             <View style={styles.divider}>
               <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-              <Text style={[styles.dividerText, { color: colors.textSecondary }]}>or</Text>
+              <Text style={[styles.dividerText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>or</Text>
               <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
             </View>
 
@@ -211,7 +211,7 @@ export default function LoginScreen({ navigation }) {
               accessibilityRole="button"
               accessibilityLabel="Sign in with Google"
             >
-              <Text style={[styles.socialButtonText, { color: colors.textPrimary }]}>
+              <Text style={[styles.socialButtonText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>
                 Sign in with Google
               </Text>
             </TouchableOpacity>
@@ -230,18 +230,18 @@ export default function LoginScreen({ navigation }) {
           <View style={styles.footer}>
             <View style={styles.footerLinks}>
               <TouchableOpacity onPress={() => Linking.openURL(`${APP_BASE_URL}/privacy`)} accessibilityRole="link" accessibilityLabel="Privacy Policy">
-                <Text style={[styles.footerLink, { color: colors.textSecondary }]}>Privacy</Text>
+                <Text style={[styles.footerLink, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Privacy</Text>
               </TouchableOpacity>
-              <Text style={[styles.footerDot, { color: colors.textSecondary }]}>{'\u00B7'}</Text>
+              <Text style={[styles.footerDot, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>{'\u00B7'}</Text>
               <TouchableOpacity onPress={() => Linking.openURL(`${APP_BASE_URL}/terms`)} accessibilityRole="link" accessibilityLabel="Terms of Service">
-                <Text style={[styles.footerLink, { color: colors.textSecondary }]}>Terms</Text>
+                <Text style={[styles.footerLink, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Terms</Text>
               </TouchableOpacity>
-              <Text style={[styles.footerDot, { color: colors.textSecondary }]}>{'\u00B7'}</Text>
+              <Text style={[styles.footerDot, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>{'\u00B7'}</Text>
               <TouchableOpacity onPress={() => Linking.openURL(`${APP_BASE_URL}/support`)} accessibilityRole="link" accessibilityLabel="Support">
-                <Text style={[styles.footerLink, { color: colors.textSecondary }]}>Support</Text>
+                <Text style={[styles.footerLink, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Support</Text>
               </TouchableOpacity>
             </View>
-            <Text style={[styles.footerVersion, { color: colors.textSecondary }]}>
+            <Text style={[styles.footerVersion, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
               v{Constants.expoConfig?.version || '1.0.0'}
             </Text>
           </View>

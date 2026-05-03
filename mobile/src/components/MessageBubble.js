@@ -107,7 +107,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
       if (j + 2 < parts.length) {
         if (parts[j + 1]) result.push(parts[j + 1]);
         result.push(
-          <Text key={`${keyPrefix}-m${j}`} style={{ color: colors.primary, fontWeight: '600' }}>
+          <Text key={`${keyPrefix}-m${j}`} style={{ color: colors.primary, fontWeight: '600' }} maxFontSizeMultiplier={1.5}>
             @{parts[j + 2]}
           </Text>
         );
@@ -142,7 +142,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
               key={`${keyPrefix}-ch${i}-${k}`}
               style={{ color: colors.primary, fontWeight: '600' }}
               onPress={() => matchedChannel && onChannelPress?.(matchedChannel)}
-            >
+            maxFontSizeMultiplier={1.5}>
               #{chName}
             </Text>
           );
@@ -175,16 +175,16 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
 
         if (mdPart.startsWith('`') && mdPart.endsWith('`') && mdPart.length > 2) {
           result.push(
-            <Text key={k} style={{ fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 14, backgroundColor: 'rgba(128,128,128,0.15)', borderRadius: 3 }}>
+            <Text key={k} style={{ fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 14, backgroundColor: 'rgba(128,128,128,0.15)', borderRadius: 3 }} maxFontSizeMultiplier={1.5}>
               {mdPart.slice(1, -1)}
             </Text>
           );
         } else if (mdPart.startsWith('**') && mdPart.endsWith('**') && mdPart.length > 4) {
-          result.push(<Text key={k} style={{ fontWeight: '700' }}>{mdPart.slice(2, -2)}</Text>);
+          result.push(<Text key={k} style={{ fontWeight: '700' }} maxFontSizeMultiplier={1.5}>{mdPart.slice(2, -2)}</Text>);
         } else if (mdPart.startsWith('*') && mdPart.endsWith('*') && mdPart.length > 2) {
-          result.push(<Text key={k} style={{ fontStyle: 'italic' }}>{mdPart.slice(1, -1)}</Text>);
+          result.push(<Text key={k} style={{ fontStyle: 'italic' }} maxFontSizeMultiplier={1.5}>{mdPart.slice(1, -1)}</Text>);
         } else if (mdPart.startsWith('~~') && mdPart.endsWith('~~') && mdPart.length > 4) {
-          result.push(<Text key={k} style={{ textDecorationLine: 'line-through', opacity: 0.7 }}>{mdPart.slice(2, -2)}</Text>);
+          result.push(<Text key={k} style={{ textDecorationLine: 'line-through', opacity: 0.7 }} maxFontSizeMultiplier={1.5}>{mdPart.slice(2, -2)}</Text>);
         } else {
           result.push(mdPart);
         }
@@ -217,7 +217,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
               key={`url-${i}`}
               style={{ color: colors.primary, textDecorationLine: 'underline' }}
               onPress={() => Linking.openURL(part).catch(() => {})}
-            >
+            maxFontSizeMultiplier={1.5}>
               {part}
             </Text>
           );
@@ -290,7 +290,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
           <View style={{ width: density.groupedSpacerWidth }} />
           <View style={styles.contentContainer}>
             {message.content ? (
-              <Text style={[styles.content, { color: colors.textPrimary, fontSize: density.contentFontSize, lineHeight: density.contentLineHeight }]}>
+              <Text style={[styles.content, { color: colors.textPrimary, fontSize: density.contentFontSize, lineHeight: density.contentLineHeight }]} maxFontSizeMultiplier={1.6}>
                 {renderContent(message.content)}
                 {isEdited && <Text style={[styles.edited, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}> (edited)</Text>}
               </Text>
@@ -341,12 +341,12 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
             onError={() => setAvatarError(true)}
           />
         ) : (
-          <Text style={[styles.avatarText, { fontSize: density.avatarSize * 0.42 }]}>{initial}</Text>
+          <Text style={[styles.avatarText, { fontSize: density.avatarSize * 0.42 }]} maxFontSizeMultiplier={1.2}>{initial}</Text>
         )}
       </TouchableOpacity>
       <View style={styles.contentContainer}>
         <View style={styles.header}>
-          <Text style={[styles.authorName, { color: colors.textPrimary, fontSize: density.authorFontSize }]}>
+          <Text style={[styles.authorName, { color: colors.textPrimary, fontSize: density.authorFontSize }]} maxFontSizeMultiplier={1.6}>
             {displayName}
           </Text>
           <Text style={[styles.timestamp, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>
@@ -354,7 +354,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
           </Text>
         </View>
         {message.content ? (
-          <Text style={[styles.content, { color: colors.textPrimary, fontSize: density.contentFontSize, lineHeight: density.contentLineHeight }]}>
+          <Text style={[styles.content, { color: colors.textPrimary, fontSize: density.contentFontSize, lineHeight: density.contentLineHeight }]} maxFontSizeMultiplier={1.6}>
             {renderContent(message.content)}
             {isEdited && <Text style={[styles.edited, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}> (edited)</Text>}
           </Text>
@@ -403,7 +403,7 @@ function YouTubeThumbnail({ content, colors }) {
       />
       <View style={ytStyles.playOverlay}>
         <View style={ytStyles.playButton}>
-          <Text style={ytStyles.playIcon}>{'\u25B6'}</Text>
+          <Text style={ytStyles.playIcon} maxFontSizeMultiplier={1.5}>{'\u25B6'}</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -517,7 +517,7 @@ function DocumentAttachment({ url, filename }) {
       accessibilityRole="link"
     >
       <Ionicons name="document-outline" size={20} color={colors.primary} style={{ marginRight: 8 }} />
-      <Text style={{ color: colors.primary, fontSize: 14, flex: 1 }} numberOfLines={1}>{filename}</Text>
+      <Text style={{ color: colors.primary, fontSize: 14, flex: 1 }} numberOfLines={1} maxFontSizeMultiplier={1.5}>{filename}</Text>
     </TouchableOpacity>
   );
 }
@@ -655,7 +655,7 @@ function renderReactions(reactions, colors, messageId, onReactionPress, onReacti
           accessibilityLabel={`${emoji} reaction, ${count} ${count === 1 ? 'person' : 'people'}. Long press to see who reacted.`}
           accessibilityHint="Long press to see who reacted"
         >
-          {CUSTOM_EMOJI[emoji] ? renderCustomEmoji(emoji, 16) : <Text style={styles.reactionEmoji}>{emoji}</Text>}
+          {CUSTOM_EMOJI[emoji] ? renderCustomEmoji(emoji, 16) : <Text style={styles.reactionEmoji} maxFontSizeMultiplier={1.2}>{emoji}</Text>}
           <Text style={[styles.reactionCount, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>{count}</Text>
         </TouchableOpacity>
       ))}

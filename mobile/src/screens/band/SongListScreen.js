@@ -39,7 +39,7 @@ const SORT_OPTIONS = [
 function Badge({ label, color, bgColor }) {
   return (
     <View style={[styles.badge, { backgroundColor: bgColor }]}>
-      <Text style={[styles.badgeText, { color }]}>{label}</Text>
+      <Text style={[styles.badgeText, { color }]} maxFontSizeMultiplier={1.2}>{label}</Text>
     </View>
   );
 }
@@ -322,24 +322,24 @@ export default function SongListScreen({ navigation, route }) {
           accessibilityLabel={`${index + 1}. ${item.title}${item.artist ? ` by ${item.artist}` : ''}${item.key ? `, key of ${item.key}` : ''}${item.bpm ? `, ${item.bpm} BPM` : ''}${item.duration ? `, ${formatDuration(item.duration)}` : ''}`}
           accessibilityHint="Tap for details, long press for options"
         >
-          <Text style={[styles.compactNum, { color: colors.textSecondary }]}>{index + 1}</Text>
+          <Text style={[styles.compactNum, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>{index + 1}</Text>
           <View style={styles.compactInfo}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Text style={[styles.compactTitle, { color: colors.textPrimary, flex: 1 }]} numberOfLines={1}>
+              <Text style={[styles.compactTitle, { color: colors.textPrimary, flex: 1 }]} numberOfLines={1} maxFontSizeMultiplier={1.6}>
                 {item.title}
               </Text>
               {item.hasAudio ? <Ionicons name="musical-notes-outline" size={14} color={colors.textSecondary} /> : null}
             </View>
             {item.artist ? (
-              <Text style={[styles.compactArtist, { color: colors.textSecondary }]} numberOfLines={1}>
+              <Text style={[styles.compactArtist, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={1.5}>
                 {item.artist}
               </Text>
             ) : null}
           </View>
           <View style={styles.compactMeta}>
-            {item.key ? <Text style={[styles.compactMetaText, { color: colors.badgeKey }]}>{item.key}</Text> : null}
-            {item.bpm ? <Text style={[styles.compactMetaText, { color: colors.badgeBpm }]}>{item.bpm}</Text> : null}
-            {item.duration ? <Text style={[styles.compactMetaText, { color: colors.textSecondary }]}>{formatDuration(item.duration)}</Text> : null}
+            {item.key ? <Text style={[styles.compactMetaText, { color: colors.badgeKey }]} maxFontSizeMultiplier={1.2}>{item.key}</Text> : null}
+            {item.bpm ? <Text style={[styles.compactMetaText, { color: colors.badgeBpm }]} maxFontSizeMultiplier={1.2}>{item.bpm}</Text> : null}
+            {item.duration ? <Text style={[styles.compactMetaText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>{formatDuration(item.duration)}</Text> : null}
           </View>
           <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} style={{ opacity: 0.4, marginLeft: 4 }} />
         </PressableRow>
@@ -356,16 +356,16 @@ export default function SongListScreen({ navigation, route }) {
         accessibilityLabel={`${item.title}${item.artist ? ` by ${item.artist}` : ''}`}
         accessibilityHint="Tap for details, long press for options"
       >
-        <Text style={[styles.songTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+        <Text style={[styles.songTitle, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.6}>
           {item.title}
         </Text>
         {item.artist ? (
-          <Text style={[styles.songArtist, { color: colors.textSecondary }]} numberOfLines={1}>
+          <Text style={[styles.songArtist, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={1.5}>
             {item.artist}
           </Text>
         ) : null}
         {item.shortName ? (
-          <Text style={[styles.songShortName, { color: colors.textSecondary }]} numberOfLines={1}>
+          <Text style={[styles.songShortName, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={1.5}>
             aka "{item.shortName}"
           </Text>
         ) : null}
@@ -376,12 +376,12 @@ export default function SongListScreen({ navigation, route }) {
           {item.hasAudio ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
               <Ionicons name="musical-notes-outline" size={12} color={colors.textSecondary} />
-              <Text style={{ fontSize: 11, color: colors.textSecondary }}>Audio</Text>
+              <Text style={{ fontSize: 11, color: colors.textSecondary }} maxFontSizeMultiplier={1.5}>Audio</Text>
             </View>
           ) : null}
         </View>
         {item._count?.setlistSongs > 0 ? (
-          <Text style={[styles.setlistCount, { color: colors.textSecondary }]}>
+          <Text style={[styles.setlistCount, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>
             In {item._count.setlistSongs} setlist{item._count.setlistSongs !== 1 ? 's' : ''}
           </Text>
         ) : null}
@@ -390,13 +390,13 @@ export default function SongListScreen({ navigation, route }) {
           if (stat?.lastPracticedAt) {
             const days = Math.floor((Date.now() - new Date(stat.lastPracticedAt).getTime()) / (1000 * 60 * 60 * 24));
             return (
-              <Text style={[styles.practiceInfo, { color: colors.textSecondary }]}>
+              <Text style={[styles.practiceInfo, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
                 {days === 0 ? 'Practiced today' : `Practiced ${days}d ago`}
               </Text>
             );
           }
           return (
-            <Text style={[styles.practiceInfo, { color: colors.textSecondary, opacity: 0.6 }]}>
+            <Text style={[styles.practiceInfo, { color: colors.textSecondary, opacity: 0.6 }]} maxFontSizeMultiplier={1.5}>
               Never practiced
             </Text>
           );
@@ -444,7 +444,7 @@ export default function SongListScreen({ navigation, route }) {
           accessibilityLabel={`Sort by ${SORT_OPTIONS.find(o => o.key === sortBy)?.label}`}
           accessibilityHint="Change sort order"
         >
-          <Text style={[styles.sortButtonText, { color: colors.textSecondary }]}>
+          <Text style={[styles.sortButtonText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
             {SORT_OPTIONS.find(o => o.key === sortBy)?.label}
           </Text>
         </TouchableOpacity>
@@ -519,12 +519,12 @@ export default function SongListScreen({ navigation, route }) {
         ListEmptyComponent={
           <View style={styles.centered}>
             <Ionicons name="musical-notes-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
               {search ? 'No matching songs' : 'No songs yet'}
             </Text>
             {!search && (
               <>
-                <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
+                <Text style={[styles.emptyHint, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
                   Tap + to add songs or use bulk import
                 </Text>
                 <TouchableOpacity
@@ -533,7 +533,7 @@ export default function SongListScreen({ navigation, route }) {
                   accessibilityRole="button"
                   accessibilityLabel="Add song"
                 >
-                  <Text style={[styles.emptyButtonText, { color: colors.primaryText }]}>+ Add Song</Text>
+                  <Text style={[styles.emptyButtonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>+ Add Song</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -551,7 +551,7 @@ export default function SongListScreen({ navigation, route }) {
           accessibilityLabel="Dismiss sort options"
         >
           <View style={[styles.sortModalContent, { backgroundColor: colors.modalBg }]}>
-            <Text style={[styles.sortModalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Sort by</Text>
+            <Text style={[styles.sortModalTitle, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>Sort by</Text>
             {SORT_OPTIONS.map(opt => (
               <TouchableOpacity
                 key={opt.key}
@@ -561,7 +561,7 @@ export default function SongListScreen({ navigation, route }) {
                 accessibilityState={{ checked: sortBy === opt.key }}
                 accessibilityLabel={`Sort by ${opt.label}`}
               >
-                <Text style={[styles.sortOptionText, { color: colors.textPrimary }]}>{opt.label}</Text>
+                <Text style={[styles.sortOptionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>{opt.label}</Text>
                 {sortBy === opt.key && <Ionicons name="checkmark" size={20} color={colors.primary} />}
               </TouchableOpacity>
             ))}
@@ -573,7 +573,7 @@ export default function SongListScreen({ navigation, route }) {
       {enriching && (
         <View style={styles.enrichingOverlay}>
           <ActivityIndicator size="large" color="#ffffff" />
-          <Text style={styles.enrichingText}>Fetching metadata...</Text>
+          <Text style={styles.enrichingText} maxFontSizeMultiplier={1.5}>Fetching metadata...</Text>
         </View>
       )}
 
@@ -599,10 +599,10 @@ export default function SongListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Bulk import songs"
             >
-              <Text style={[styles.actionText, { color: colors.textPrimary }]}>Bulk Import</Text>
+              <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Bulk Import</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionItem} onPress={handleEnrich} accessibilityRole="button" accessibilityLabel="Fetch missing metadata">
-              <Text style={[styles.actionText, { color: colors.textPrimary }]}>Fetch Missing Data</Text>
+              <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Fetch Missing Data</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionItem, filteredSongs.length === 0 && { opacity: 0.4 }]}
@@ -611,7 +611,7 @@ export default function SongListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Share song list as PDF"
             >
-              <Text style={[styles.actionText, { color: colors.textPrimary }]}>Share as PDF</Text>
+              <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Share as PDF</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionItem, styles.actionCancel]}
@@ -619,7 +619,7 @@ export default function SongListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
-              <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
+              <Text style={[styles.actionText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -630,31 +630,31 @@ export default function SongListScreen({ navigation, route }) {
         <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
           <View style={[styles.bulkHeader, { backgroundColor: colors.bgSecondary }]}>
             <TouchableOpacity onPress={() => setShowBulkImport(false)} accessibilityRole="button" accessibilityLabel="Cancel bulk import">
-              <Text style={{ color: colors.primary, fontSize: 16 }}>Cancel</Text>
+              <Text style={{ color: colors.primary, fontSize: 16 }} maxFontSizeMultiplier={1.5}>Cancel</Text>
             </TouchableOpacity>
-            <Text style={[styles.bulkTitle, { color: colors.textPrimary }]} accessibilityRole="header">Bulk Import</Text>
+            <Text style={[styles.bulkTitle, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>Bulk Import</Text>
             <View style={{ width: 60 }} />
           </View>
 
           {importResult ? (
             <ScrollView contentContainerStyle={styles.bulkContent}>
-              <Text style={[styles.bulkResultTitle, { color: colors.textPrimary }]}>Import Complete</Text>
+              <Text style={[styles.bulkResultTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>Import Complete</Text>
               <View style={[styles.bulkResultCard, { backgroundColor: colors.bgSecondary }]}>
-                <Text style={[styles.bulkResultLine, { color: '#22c55e' }]}>
+                <Text style={[styles.bulkResultLine, { color: '#22c55e' }]} maxFontSizeMultiplier={1.5}>
                   Created: {importResult.created?.length || 0}
                 </Text>
                 {(importResult.skipped?.length || 0) > 0 && (
-                  <Text style={[styles.bulkResultLine, { color: '#eab308' }]}>
+                  <Text style={[styles.bulkResultLine, { color: '#eab308' }]} maxFontSizeMultiplier={1.5}>
                     Skipped (duplicates): {importResult.skipped.length}
                   </Text>
                 )}
                 {(importResult.errors?.length || 0) > 0 && (
-                  <Text style={[styles.bulkResultLine, { color: '#ef4444' }]}>
+                  <Text style={[styles.bulkResultLine, { color: '#ef4444' }]} maxFontSizeMultiplier={1.5}>
                     Errors: {importResult.errors.length}
                   </Text>
                 )}
                 {importResult.metadataMatches > 0 && (
-                  <Text style={[styles.bulkResultLine, { color: colors.badgeBpm }]}>
+                  <Text style={[styles.bulkResultLine, { color: colors.badgeBpm }]} maxFontSizeMultiplier={1.2}>
                     Metadata found: {importResult.metadataMatches}
                   </Text>
                 )}
@@ -665,12 +665,12 @@ export default function SongListScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Done"
               >
-                <Text style={styles.bulkButtonText}>Done</Text>
+                <Text style={[styles.bulkButtonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>Done</Text>
               </TouchableOpacity>
             </ScrollView>
           ) : (
             <ScrollView contentContainerStyle={styles.bulkContent} keyboardShouldPersistTaps="handled">
-              <Text style={[styles.bulkHint, { color: colors.textSecondary }]}>
+              <Text style={[styles.bulkHint, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
                 Paste your song list below, one per line.{'\n'}Format: Title - Artist
               </Text>
               <TextInput
@@ -685,7 +685,7 @@ export default function SongListScreen({ navigation, route }) {
                 accessibilityLabel="Song list, one per line"
               />
               {bulkText.trim() ? (
-                <Text style={[styles.bulkCount, { color: colors.primary }]}>
+                <Text style={[styles.bulkCount, { color: colors.primary }]} maxFontSizeMultiplier={1.5}>
                   {parsedSongs.length} song{parsedSongs.length !== 1 ? 's' : ''} detected
                 </Text>
               ) : null}
@@ -697,9 +697,9 @@ export default function SongListScreen({ navigation, route }) {
                 accessibilityLabel={`Auto-fetch metadata${fetchMetadata ? ', enabled' : ', disabled'}`}
               >
                 <View style={[styles.checkbox, { borderColor: colors.border, backgroundColor: fetchMetadata ? colors.primary : 'transparent' }]}>
-                  {fetchMetadata && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
+                  {fetchMetadata && <Text style={[styles.checkmark, { color: colors.primaryText }]} maxFontSizeMultiplier={1.2}>{'\u2713'}</Text>}
                 </View>
-                <Text style={[styles.metadataLabel, { color: colors.textPrimary }]}>
+                <Text style={[styles.metadataLabel, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>
                   Auto-fetch metadata (BPM, key, duration)
                 </Text>
               </TouchableOpacity>
@@ -713,7 +713,7 @@ export default function SongListScreen({ navigation, route }) {
                 {importing ? (
                   <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={[styles.bulkButtonText, { color: colors.primaryText }]}>Import {parsedSongs.length} Song{parsedSongs.length !== 1 ? 's' : ''}</Text>
+                  <Text style={[styles.bulkButtonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>Import {parsedSongs.length} Song{parsedSongs.length !== 1 ? 's' : ''}</Text>
                 )}
               </TouchableOpacity>
             </ScrollView>
@@ -732,7 +732,7 @@ export default function SongListScreen({ navigation, route }) {
         >
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+            <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.6}>
               {selectedSong?.title}
             </Text>
             <TouchableOpacity
@@ -745,10 +745,10 @@ export default function SongListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Edit song"
             >
-              <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
+              <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete song">
-              <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
+              <Text style={[styles.actionText, { color: '#ef4444' }]} maxFontSizeMultiplier={1.5}>Delete</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionItem, styles.actionCancel]}
@@ -756,7 +756,7 @@ export default function SongListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
-              <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
+              <Text style={[styles.actionText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

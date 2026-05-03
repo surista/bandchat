@@ -228,11 +228,11 @@ export default function SetlistListScreen({ navigation, route }) {
         accessibilityRole="button"
         accessibilityLabel={`${item.name}${songCount > 0 ? `, ${songCount} songs` : ''}. Long press for options`}
       >
-        <Text style={[styles.setlistName, { color: colors.textPrimary }]} numberOfLines={1}>
+        <Text style={[styles.setlistName, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.5}>
           {item.name}
         </Text>
         {(item.performedAt || item.venue) && (
-          <Text style={[styles.setlistMeta, { color: colors.textSecondary }]} numberOfLines={1}>
+          <Text style={[styles.setlistMeta, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={1.5}>
             {item.performedAt ? format(new Date(item.performedAt), 'dd-MMM-yyyy') : ''}
             {item.performedAt && item.venue ? ' \u00B7 ' : ''}
             {item.venue || ''}
@@ -254,12 +254,12 @@ export default function SetlistListScreen({ navigation, route }) {
         {preview.length > 0 && (
           <View style={styles.previewList}>
             {preview.map((title, i) => (
-              <Text key={i} style={[styles.previewItem, { color: colors.textSecondary }]} numberOfLines={1}>
+              <Text key={i} style={[styles.previewItem, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={1.5}>
                 {i + 1}. {title}
               </Text>
             ))}
             {remaining > 0 && (
-              <Text style={[styles.previewMore, { color: colors.textSecondary }]}>
+              <Text style={[styles.previewMore, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
                 +{remaining} more...
               </Text>
             )}
@@ -319,9 +319,9 @@ export default function SetlistListScreen({ navigation, route }) {
         ListEmptyComponent={
           <View style={styles.centered}>
             <Ionicons name="list-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{search ? 'No matching setlists' : 'No setlists yet'}</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>{search ? 'No matching setlists' : 'No setlists yet'}</Text>
             {!search && (
-              <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
+              <Text style={[styles.emptyHint, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
                 Tap + to create your first setlist
               </Text>
             )}
@@ -333,8 +333,8 @@ export default function SetlistListScreen({ navigation, route }) {
       <Modal visible={showCreate} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowCreate(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">New Setlist</Text>
-            <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Name *</Text>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>New Setlist</Text>
+            <Text style={[styles.modalLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Name *</Text>
             <TextInput
               style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
               value={newName}
@@ -344,7 +344,7 @@ export default function SetlistListScreen({ navigation, route }) {
               autoFocus
               accessibilityLabel="Setlist name"
             />
-            <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Description</Text>
+            <Text style={[styles.modalLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Description</Text>
             <TextInput
               style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
               value={newDescription}
@@ -355,7 +355,7 @@ export default function SetlistListScreen({ navigation, route }) {
             />
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Date</Text>
+                <Text style={[styles.modalLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Date</Text>
                 <TextInput
                   style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
                   value={newDate}
@@ -366,7 +366,7 @@ export default function SetlistListScreen({ navigation, route }) {
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Venue</Text>
+                <Text style={[styles.modalLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Venue</Text>
                 <TextInput
                   style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
                   value={newVenue}
@@ -385,7 +385,7 @@ export default function SetlistListScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Cancel"
               >
-                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]}>Cancel</Text>
+                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, { backgroundColor: colors.primary }]}
@@ -397,7 +397,7 @@ export default function SetlistListScreen({ navigation, route }) {
                 {creating ? (
                   <ActivityIndicator color={colors.primaryText} size="small" />
                 ) : (
-                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]}>Create</Text>
+                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>Create</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -416,7 +416,7 @@ export default function SetlistListScreen({ navigation, route }) {
         >
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+            <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.6}>
               {selectedSetlist?.name}
             </Text>
             <PressableRow
@@ -429,16 +429,16 @@ export default function SetlistListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Edit setlist"
             >
-              <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
+              <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Edit</Text>
             </PressableRow>
             <PressableRow style={styles.actionItem} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate setlist">
-              <Text style={[styles.actionText, { color: colors.textPrimary }]}>Duplicate</Text>
+              <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Duplicate</Text>
             </PressableRow>
             <PressableRow style={styles.actionItem} onPress={handleExportPDF} accessibilityRole="button" accessibilityLabel="Export setlist as PDF">
-              <Text style={[styles.actionText, { color: colors.textPrimary }]}>Export PDF</Text>
+              <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Export PDF</Text>
             </PressableRow>
             <PressableRow style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete setlist">
-              <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
+              <Text style={[styles.actionText, { color: '#ef4444' }]} maxFontSizeMultiplier={1.5}>Delete</Text>
             </PressableRow>
             <PressableRow
               style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
@@ -446,7 +446,7 @@ export default function SetlistListScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
-              <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
+              <Text style={[styles.actionText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
             </PressableRow>
           </View>
         </TouchableOpacity>
