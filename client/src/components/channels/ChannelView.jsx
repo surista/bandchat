@@ -220,9 +220,16 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
 
   const [loadingMore, setLoadingMore] = useState(false);
   const sentinelRef = useRef(null);
+  // Synchronous in-flight guard. `loadingMore` is React state and `setState`
+  // is async — fast scrolls can fire 2–5 scroll/observer callbacks before
+  // React commits the `true`, all passing the `!loadingMore` check and firing
+  // duplicate fetches with the same cursor. The ref flips synchronously so
+  // only the first wins.
+  const loadingMoreRef = useRef(false);
 
   const loadMoreMessages = useCallback(async () => {
-    if (!hasMore || !nextCursor || loadingMore) return;
+    if (!hasMore || !nextCursor || loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
     setLoadingMore(true);
 
     const container = messagesContainerRef.current;
@@ -230,7 +237,13 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
 
     try {
       const data = await api.getMessages(channel.id, nextCursor);
-      setMessages(prev => [...data.messages, ...prev]);
+      setMessages(prev => {
+        // Defensive de-dupe: even with the ref guard, a server retry or out-of-order
+        // socket arrival could attempt to insert an id we already have.
+        const existing = new Set(prev.map(m => m.id));
+        const fresh = data.messages.filter(m => !existing.has(m.id));
+        return [...fresh, ...prev];
+      });
       setHasMore(data.hasMore);
       setNextCursor(data.nextCursor);
 
@@ -243,9 +256,10 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
     } catch (err) {
       console.error('Failed to load more messages:', err);
     } finally {
+      loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [hasMore, nextCursor, loadingMore, channel.id]);
+  }, [hasMore, nextCursor, channel.id]);
 
   // IntersectionObserver for infinite scroll. Belt-and-suspenders: the observer
   // is the primary trigger, but we also attach a scroll listener that fires
@@ -261,7 +275,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
     if (sentinel) {
       observer = new IntersectionObserver(
         (entries) => {
-          if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          if (entries[0].isIntersecting && hasMore && !loadingMoreRef.current) {
             loadMoreMessages();
           }
         },
@@ -271,7 +285,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
     }
 
     const onScroll = () => {
-      if (container.scrollTop < 100 && hasMore && !loadingMore) {
+      if (container.scrollTop < 100 && hasMore && !loadingMoreRef.current) {
         loadMoreMessages();
       }
     };
@@ -281,7 +295,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       if (observer) observer.disconnect();
       container.removeEventListener('scroll', onScroll);
     };
-  }, [hasMore, loadingMore, loadMoreMessages]);
+  }, [hasMore, loadMoreMessages]);
 
   const loadPinnedMessages = async () => {
     try {

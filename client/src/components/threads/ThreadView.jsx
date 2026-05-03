@@ -586,7 +586,7 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
                                   </svg>
                                 </button>
                               </div>
-                              <audio src={att.url} controls preload="metadata" className="w-full" />
+                              <audio src={att.url} controls preload="none" className="w-full" />
                             </div>
                           )}
                         </div>
