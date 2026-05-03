@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Purchases from 'react-native-purchases';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
 import { APP_BASE_URL } from '../../utils/constants';
 import { useLayout } from '../../hooks/useLayout';
@@ -48,6 +49,7 @@ const PRO_FEATURES = [
 
 export default function UpgradeScreen({ route }) {
   const { colors } = useTheme();
+  const toast = useToast();
   const { isTablet, contentMaxWidth } = useLayout();
   const { workspaceId } = route.params;
 
@@ -140,7 +142,7 @@ export default function UpgradeScreen({ route }) {
         // Sync the activated plan to the BandChat server
         await api.activatePurchase(workspaceId);
         await loadPlan();
-        Alert.alert('Welcome to Pro!', 'All features are now unlocked for this workspace.');
+        toast.success('Welcome to Pro! All features unlocked for this workspace.');
       } else {
         Alert.alert('Purchase Issue', 'Purchase completed but Pro entitlement was not found. Please restore purchases or contact support.');
       }
@@ -172,7 +174,7 @@ export default function UpgradeScreen({ route }) {
         // Sync restored plan to the server
         await api.activatePurchase(workspaceId);
         await loadPlan();
-        Alert.alert('Restored', 'Your Pro plan has been restored.');
+        toast.success('Your Pro plan has been restored');
       } else {
         Alert.alert('No Active Subscription', 'No active Pro subscription was found for this Apple ID / Google account.');
       }

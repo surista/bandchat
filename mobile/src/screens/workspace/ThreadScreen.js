@@ -371,7 +371,7 @@ export default function ThreadScreen({ navigation, route }) {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.bgPrimary, paddingBottom: Platform.OS === 'android' ? keyboardHeight : 0 }, isTablet && styles.tabletContainer]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
       <View style={[styles.chatContainer, isTablet && { maxWidth: contentMaxWidth }]}>

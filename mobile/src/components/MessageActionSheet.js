@@ -2,7 +2,6 @@ import { memo } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   Modal,
   StyleSheet,
   Pressable,
@@ -78,26 +77,34 @@ function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwn
           {/* Quick Reaction Row */}
           <View style={[styles.quickReactionRow, { borderBottomColor: colors.border }]}>
             {QUICK_EMOJIS.map((emoji) => (
-              <TouchableOpacity
+              <Pressable
                 key={emoji}
-                style={[styles.quickReactionButton, { backgroundColor: colors.bgTertiary }]}
+                style={({ pressed }) => [
+                  styles.quickReactionButton,
+                  { backgroundColor: colors.bgTertiary },
+                  pressed && Platform.OS === 'ios' && { opacity: 0.6 },
+                ]}
                 onPress={() => handleQuickReaction(emoji)}
-                activeOpacity={0.6}
+                android_ripple={{ color: colors.border, borderless: false }}
                 accessibilityRole="button"
                 accessibilityLabel={`React with ${emoji}`}
               >
                 <Text style={styles.quickReactionEmoji}>{emoji}</Text>
-              </TouchableOpacity>
+              </Pressable>
             ))}
-            <TouchableOpacity
-              style={[styles.quickReactionButton, { backgroundColor: colors.bgTertiary }]}
+            <Pressable
+              style={({ pressed }) => [
+                styles.quickReactionButton,
+                { backgroundColor: colors.bgTertiary },
+                pressed && Platform.OS === 'ios' && { opacity: 0.6 },
+              ]}
               onPress={handleOpenFullPicker}
-              activeOpacity={0.6}
+              android_ripple={{ color: colors.border, borderless: false }}
               accessibilityRole="button"
               accessibilityLabel="Open full emoji picker"
             >
               <Text style={styles.quickReactionPlus}>+</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {filteredActions.map((action, i) => (

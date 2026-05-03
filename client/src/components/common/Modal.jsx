@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 /**
  * Reusable modal base component with portal, ARIA, focus trapping, and ESC/backdrop close.
  */
-function Modal({ isOpen, onClose, title, maxWidth = 'max-w-md', children, className = '', ariaLabelledBy }) {
+function Modal({ isOpen, onClose, title, maxWidth = 'max-w-md', children, className = '', ariaLabelledBy, ariaDescribedBy }) {
   const titleId = useId();
   const modalRef = useRef(null);
   const previouslyFocused = useRef(null);
@@ -63,6 +63,7 @@ function Modal({ isOpen, onClose, title, maxWidth = 'max-w-md', children, classN
       role="dialog"
       aria-modal="true"
       aria-labelledby={ariaLabelledBy || titleId}
+      aria-describedby={ariaDescribedBy}
       onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
     >
       <div ref={modalRef} className={`modal-content ${maxWidth} ${className}`}>

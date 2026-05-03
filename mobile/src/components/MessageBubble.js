@@ -848,10 +848,10 @@ const styles = StyleSheet.create({
   reactionBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     borderRadius: 12,
-    minHeight: 32,
+    minHeight: 44,
   },
   reactionEmoji: {
     fontSize: 14,

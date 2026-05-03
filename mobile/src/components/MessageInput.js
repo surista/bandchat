@@ -8,7 +8,7 @@ import { Audio } from 'expo-av';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
 import { formatDuration as formatRecordingDuration } from '../utils/formatDuration';
-import { mediumImpact, errorNotification, warningNotification } from '../utils/haptics';
+import { mediumImpact, errorNotification, warningNotification, selectionFeedback } from '../utils/haptics';
 import EmojiPicker from './EmojiPicker';
 import ActionSheet from './ActionSheet';
 import PressableRow from './PressableRow';
@@ -247,6 +247,11 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
   const handleSend = useCallback(() => {
     const trimmed = text.trim();
     if (!trimmed && attachments.length === 0) return;
+
+    // Subtle feedback on successful send (matches voice-message UX which fires
+    // mediumImpact on start). iMessage-style selection feedback rather than
+    // impact since send is a routine, not a heavy, action.
+    selectionFeedback();
 
     if (editingMessage) {
       if (trimmed && onSendEdit) onSendEdit(editingMessage.id, trimmed);
@@ -645,10 +650,15 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
                 style={[styles.sendButton, { backgroundColor: colors.bgTertiary }]}
                 onLongPress={startRecording}
                 delayLongPress={200}
-                onPress={() => startRecording()}
+                // No onPress: a tap was previously starting recording, which
+                // is a UX trap (intent ambiguity with the typing input next
+                // to it). WhatsApp/iMessage use long-press only and surface
+                // a tooltip on first tap. We just go long-press only.
+                onPress={() => warningNotification()}
                 borderless
                 accessibilityRole="button"
                 accessibilityLabel="Record voice message"
+                accessibilityHint="Long press to start recording"
               >
                 <Ionicons name="mic" size={20} color={colors.textSecondary} />
               </PressableRow>

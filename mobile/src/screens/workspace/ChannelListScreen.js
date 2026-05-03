@@ -1496,8 +1496,9 @@ const styles = StyleSheet.create({
   bandItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 13,
+    paddingVertical: 14,
     paddingHorizontal: 28,
+    minHeight: 48,
   },
   bandItemIcon: {
     fontSize: 16,
@@ -1561,8 +1562,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical: 14,
     gap: 8,
+    minHeight: 48,
   },
   calendarShortcutIcon: {
     fontSize: 16,

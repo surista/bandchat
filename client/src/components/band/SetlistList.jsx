@@ -42,10 +42,10 @@ const SetlistCard = memo(function SetlistCard({ setlist, onTap, onEdit, onRename
           )}
         </div>
         <div className="hidden sm:flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]" title="Edit Songs">✏️</button>
-          <button onClick={(e) => { e.stopPropagation(); onRename(); }} className="p-1 text-[var(--color-text-muted)] hover:text-yellow-400" title="Rename">✍️</button>
-          <button onClick={(e) => { e.stopPropagation(); onDuplicate(); }} className="p-1 text-[var(--color-text-muted)] hover:text-blue-400" title="Copy">📋</button>
-          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1 text-[var(--color-text-muted)] hover:text-red-400" title="Delete">🗑️</button>
+          <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]" title="Edit Songs" aria-label="Edit songs">✏️</button>
+          <button onClick={(e) => { e.stopPropagation(); onRename(); }} className="p-1 text-[var(--color-text-muted)] hover:text-yellow-400" title="Rename" aria-label="Rename setlist">✍️</button>
+          <button onClick={(e) => { e.stopPropagation(); onDuplicate(); }} className="p-1 text-[var(--color-text-muted)] hover:text-blue-400" title="Copy" aria-label="Duplicate setlist">📋</button>
+          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1 text-[var(--color-text-muted)] hover:text-red-400" title="Delete" aria-label="Delete setlist">🗑️</button>
         </div>
         <ActionDropdown actions={[
           { label: 'Edit Songs', icon: '✏️', onClick: onEdit },

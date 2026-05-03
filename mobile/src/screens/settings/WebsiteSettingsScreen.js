@@ -20,6 +20,7 @@ import { prepareImageForUpload } from '../../utils/prepareImageUpload';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import { useLayout } from '../../hooks/useLayout';
 import { successNotification } from '../../utils/haptics';
 import api from '../../services/api';
@@ -41,6 +42,7 @@ const THEMES = [
 export default function WebsiteSettingsScreen({ route }) {
   const { workspaceId, workspaceName } = route.params;
   const { colors } = useTheme();
+  const toast = useToast();
   const { isTablet, contentMaxWidth } = useLayout();
   const headerHeight = useHeaderHeight();
 
@@ -188,7 +190,7 @@ export default function WebsiteSettingsScreen({ route }) {
     try {
       await api.updateWebsiteConfig(workspaceId, getConfig());
       successNotification();
-      Alert.alert('Saved', 'Website config saved');
+      toast.success('Website config saved');
       await loadWebsite();
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to save config');
@@ -202,7 +204,7 @@ export default function WebsiteSettingsScreen({ route }) {
       await api.updateWebsiteConfig(workspaceId, getConfig());
       await api.deployWebsite(workspaceId);
       successNotification();
-      Alert.alert('Success', 'Website deployed!');
+      toast.success('Website deployed!');
       await loadWebsite();
     } catch (err) {
       Alert.alert('Error', err.message || 'Deployment failed');
@@ -214,7 +216,7 @@ export default function WebsiteSettingsScreen({ route }) {
     try {
       await api.syncWebsite(workspaceId);
       successNotification();
-      Alert.alert('Synced', 'Website will rebuild shortly');
+      toast.success('Website will rebuild shortly');
     } catch (err) {
       Alert.alert('Error', err.message || 'Sync failed');
     } finally { setSyncing(false); }
@@ -226,7 +228,7 @@ export default function WebsiteSettingsScreen({ route }) {
       { text: 'Delete', style: 'destructive', onPress: async () => {
         try {
           await api.deleteWebsite(workspaceId);
-          Alert.alert('Deleted', 'Website has been removed');
+          toast.success('Website has been removed');
           await loadWebsite();
         } catch (err) { Alert.alert('Error', err.message || 'Failed to delete'); }
       }},
@@ -245,7 +247,7 @@ export default function WebsiteSettingsScreen({ route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
           {/* Status card */}
           {isDeployed && (

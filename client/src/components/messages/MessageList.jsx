@@ -658,10 +658,10 @@ function MessageList({
 
           {/* Unread Divider */}
           {fullIndex === firstUnreadIndex && (
-            <div className="unread-divider flex items-center my-3">
-              <div className="flex-1 border-t border-red-500" />
+            <div className="unread-divider flex items-center my-3" role="separator" aria-label="New messages below">
+              <div className="flex-1 border-t border-red-500" aria-hidden="true" />
               <span className="px-3 text-xs text-red-500 font-semibold">New messages</span>
-              <div className="flex-1 border-t border-red-500" />
+              <div className="flex-1 border-t border-red-500" aria-hidden="true" />
             </div>
           )}
 
@@ -902,6 +902,11 @@ function MessageList({
                       ? 'text-slack-blue font-bold'
                       : 'text-gray-500'
                   }`}
+                  aria-label={
+                    message.unreadReplies > 0
+                      ? `${message.unreadReplies} unread ${message.unreadReplies === 1 ? 'reply' : 'replies'}, open thread`
+                      : `${message._count.replies} ${message._count.replies === 1 ? 'reply' : 'replies'}, open thread`
+                  }
                 >
                   <span>
                     {message.unreadReplies > 0
@@ -909,7 +914,7 @@ function MessageList({
                       : `${message._count.replies} ${message._count.replies === 1 ? 'reply' : 'replies'}`
                     }
                   </span>
-                  <span className="text-gray-400">→</span>
+                  <span className="text-gray-400" aria-hidden="true">→</span>
                 </button>
               )}
 

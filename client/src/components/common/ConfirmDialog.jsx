@@ -46,7 +46,13 @@ function ConfirmDialog({
     : 'btn bg-green-600 hover:bg-green-700 text-white';
 
   return (
-    <Modal isOpen={isOpen} onClose={onCancel} maxWidth="max-w-sm" ariaLabelledBy="confirm-dialog-title">
+    <Modal
+      isOpen={isOpen}
+      onClose={onCancel}
+      maxWidth="max-w-sm"
+      ariaLabelledBy="confirm-dialog-title"
+      ariaDescribedBy="confirm-dialog-message"
+    >
       <div className="p-6">
         <h3
           id="confirm-dialog-title"
@@ -55,6 +61,7 @@ function ConfirmDialog({
           {title}
         </h3>
         <p
+          id="confirm-dialog-message"
           className="text-[var(--color-text-secondary)] mb-6"
         >
           {message}
@@ -74,6 +81,7 @@ function ConfirmDialog({
             ref={confirmButtonRef}
             onClick={onConfirm}
             disabled={loading}
+            aria-busy={loading || undefined}
             className={`${confirmButtonClass} min-h-[44px] px-4`}
           >
             {loading ? 'Loading...' : confirmText}

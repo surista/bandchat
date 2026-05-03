@@ -6,7 +6,7 @@ import { File, Directory, Paths } from 'expo-file-system/next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { mediumImpact, successNotification, errorNotification } from '../utils/haptics';
+import { mediumImpact, successNotification, errorNotification, selectionFeedback } from '../utils/haptics';
 import api from '../services/api';
 import { APP_BASE_URL } from '../utils/constants';
 
@@ -133,6 +133,7 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
 
   const handleAddReaction = useCallback(async (emoji) => {
     if (!actionMessage) return;
+    selectionFeedback();
     try {
       const hasReacted = actionMessage.reactions?.some(
         r => r.emoji === emoji && r.userId === user?.id
@@ -162,6 +163,7 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
   }, []);
 
   const handleReactionPress = useCallback(async (messageId, emoji) => {
+    selectionFeedback();
     try {
       const msg = findMessage?.(messageId);
       const hasReacted = msg?.reactions?.some(r => r.emoji === emoji && r.userId === user?.id);
