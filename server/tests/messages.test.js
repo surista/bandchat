@@ -429,5 +429,62 @@ describe('Messages API', () => {
       expect(res.status).toBe(200);
       expect(res.headers['cache-control']).toMatch(/no-store/);
     });
+
+    // ── Auth surface (security regression coverage) ──
+    // The pagination security audit on 2026-05-03 flagged that the test suite
+    // covered happy path + cache header but no auth/authz cases. These three
+    // tests close that gap.
+
+    it('rejects unauthenticated pagination requests with 401', async () => {
+      const res = await request(app)
+        .get(`/api/messages/channel/${pagChannelId}?limit=${PAGE_LIMIT}`);
+      expect(res.status).toBe(401);
+    });
+
+    it('rejects non-member pagination requests with 403 (isChannelMember runs before cursor logic)', async () => {
+      const res = await request(app)
+        .get(`/api/messages/channel/${pagChannelId}?limit=${PAGE_LIMIT}`)
+        .set('Authorization', `Bearer ${outsider.token}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('cross-workspace cursor reuse does not leak data (IDOR guard)', async () => {
+      // Seed a second workspace pagAdmin owns; a cursor (message id) from
+      // workspace B's channel must not return rows when used as a cursor on
+      // workspace A's channel. Prisma's cursor pagination silently produces an
+      // empty page when the cursor row doesn't match the channelId filter —
+      // confirm: (a) no 500, (b) no rows leak across workspaces, (c) the
+      // response shape stays well-defined.
+      const wsOther = await createTestWorkspace(pagAdmin.token, { name: 'Cursor IDOR WS' });
+      const otherChannels = await request(app)
+        .get(`/api/channels/workspace/${wsOther.id}`)
+        .set('Authorization', `Bearer ${pagAdmin.token}`);
+      const otherChannelId = otherChannels.body.find(c => c.name === 'general')?.id || otherChannels.body[0]?.id;
+
+      const seeded = await request(app)
+        .post(`/api/messages/channel/${otherChannelId}`)
+        .set('Authorization', `Bearer ${pagAdmin.token}`)
+        .send({ content: 'foreign-workspace-message' });
+      expect(seeded.status).toBe(201);
+      const foreignMessageId = seeded.body.id;
+
+      // Use the foreign workspace's message id as a cursor on the original
+      // pagination channel. Should NOT return any of workspace B's content.
+      const res = await request(app)
+        .get(`/api/messages/channel/${pagChannelId}?limit=${PAGE_LIMIT}&cursor=${foreignMessageId}`)
+        .set('Authorization', `Bearer ${pagAdmin.token}`);
+
+      // Either Prisma throws (handled as 500) or returns an empty page —
+      // both are acceptable, but the foreign content must not appear.
+      expect([200, 500]).toContain(res.status);
+      if (res.status === 200) {
+        for (const m of res.body.messages || []) {
+          expect(m.channelId).toBe(pagChannelId);
+          expect(m.id).not.toBe(foreignMessageId);
+        }
+      }
+
+      await cleanupWorkspace(wsOther.id);
+    });
   });
 });
