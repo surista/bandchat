@@ -429,7 +429,8 @@ function MessageList({
     const timer = setTimeout(() => {
       const el = document.querySelector(`[data-message-id="${highlightMessageId}"]`);
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
         setHighlightedId(highlightMessageId);
         setTimeout(() => setHighlightedId(null), 2000);
       } else {

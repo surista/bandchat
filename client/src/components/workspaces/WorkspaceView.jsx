@@ -792,7 +792,7 @@ function WorkspaceView() {
       />
 
       {/* Main Content */}
-      <div ref={swipeRef} id="main-content" className="flex-1 flex flex-col pb-16 md:pb-0 min-h-0">
+      <div ref={swipeRef} id="main-content" role="main" aria-label="Workspace content" className="flex-1 flex flex-col pb-16 md:pb-0 min-h-0">
         {/* Mobile Header */}
         <div className="md:hidden flex items-center gap-3 p-3 border-b border-gray-700 bg-gray-900 safe-area-top">
           <button

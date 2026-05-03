@@ -259,7 +259,10 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
 
   const scrollToBottom = () => {
     setTimeout(() => {
-      repliesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      // Respect prefers-reduced-motion: CSS @media query suppresses CSS
+      // animations but JS-driven scrollIntoView ignores it without this guard.
+      const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      repliesEndRef.current?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
     }, 100);
   };
 
@@ -375,13 +378,20 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
   };
 
   return (
-    <div ref={swipeRef} className="flex flex-col h-full bg-[var(--color-bg-secondary)]">
+    <aside
+      ref={swipeRef}
+      role="complementary"
+      aria-label="Thread"
+      className="flex flex-col h-full bg-[var(--color-bg-secondary)]"
+    >
       {/* Header */}
       <div className="h-14 border-b border-[var(--color-border)] px-4 flex items-center justify-between">
-        <h3 className="text-[var(--color-text-primary)] font-semibold">Thread</h3>
+        <h2 className="text-[var(--color-text-primary)] font-semibold">Thread</h2>
         <button
           onClick={onClose}
           className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors text-xl"
+          aria-label="Close thread"
+          title="Close thread"
         >
           ×
         </button>
@@ -393,6 +403,15 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
           <div
             className={`w-9 h-9 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white font-medium ${message.author?.id ? 'cursor-pointer hover:opacity-80' : ''}`}
             onClick={() => message.author?.id && setProfileUserId(message.author.id)}
+            role={message.author?.id ? 'button' : undefined}
+            tabIndex={message.author?.id ? 0 : undefined}
+            onKeyDown={(e) => {
+              if (message.author?.id && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                setProfileUserId(message.author.id);
+              }
+            }}
+            aria-label={message.author?.id ? `View profile of ${message.author.displayName || 'user'}` : undefined}
           >
             {(() => {
               const avatarSrc = message.author?.avatarUrl || (message.author?.id && memberAvatarMap.get(message.author.id));
@@ -408,6 +427,14 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
               <span
                 className={`font-semibold text-[var(--color-text-primary)] ${message.author?.id ? 'cursor-pointer hover:underline' : ''}`}
                 onClick={() => message.author?.id && setProfileUserId(message.author.id)}
+                role={message.author?.id ? 'button' : undefined}
+                tabIndex={message.author?.id ? 0 : undefined}
+                onKeyDown={(e) => {
+                  if (message.author?.id && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault();
+                    setProfileUserId(message.author.id);
+                  }
+                }}
               >
                 {message.author?.displayName || message.removedUserName || 'Deleted User'}
               </span>
@@ -444,6 +471,7 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
             )}
             className="p-1.5 bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-secondary)] rounded border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
             title="Add reaction"
+            aria-label="Add reaction"
           >
             😀
           </button>
@@ -467,6 +495,15 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
                 <div
                   className={`w-8 h-8 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white text-sm font-medium ${reply.author?.id ? 'cursor-pointer hover:opacity-80' : ''}`}
                   onClick={() => reply.author?.id && setProfileUserId(reply.author.id)}
+                  role={reply.author?.id ? 'button' : undefined}
+                  tabIndex={reply.author?.id ? 0 : undefined}
+                  onKeyDown={(e) => {
+                    if (reply.author?.id && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault();
+                      setProfileUserId(reply.author.id);
+                    }
+                  }}
+                  aria-label={reply.author?.id ? `View profile of ${reply.author.displayName || 'user'}` : undefined}
                 >
                   {(() => {
                     const avatarSrc = reply.author?.avatarUrl || (reply.author?.id && memberAvatarMap.get(reply.author.id));
@@ -482,6 +519,14 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
                     <span
                       className={`font-semibold text-[var(--color-text-primary)] text-sm ${reply.author?.id ? 'cursor-pointer hover:underline' : ''}`}
                       onClick={() => reply.author?.id && setProfileUserId(reply.author.id)}
+                      role={reply.author?.id ? 'button' : undefined}
+                      tabIndex={reply.author?.id ? 0 : undefined}
+                      onKeyDown={(e) => {
+                        if (reply.author?.id && (e.key === 'Enter' || e.key === ' ')) {
+                          e.preventDefault();
+                          setProfileUserId(reply.author.id);
+                        }
+                      }}
                     >
                       {reply.author?.displayName || reply.removedUserName || 'Deleted User'}
                     </span>
@@ -798,7 +843,7 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
         onConfirm={handleDeleteReply}
         onCancel={() => setDeleteReplyId(null)}
       />
-    </div>
+    </aside>
   );
 }
 
