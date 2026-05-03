@@ -502,7 +502,8 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
     // Use requestAnimationFrame to ensure DOM is updated
     requestAnimationFrame(() => {
       if (messagesContainerRef.current) {
-        if (instant) {
+        const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        if (instant || reduced) {
           messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
         } else {
           messagesContainerRef.current.scrollTo({

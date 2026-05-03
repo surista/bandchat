@@ -563,7 +563,10 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
                           }
                         }}
                       />
-                      <div className="flex gap-2 text-xs mt-1 justify-end">
+                      <div className="flex items-center text-xs mt-1 gap-2">
+                        <span className="text-[var(--color-text-muted)] flex-1">
+                          <kbd className="px-1 bg-[var(--color-bg-tertiary)] rounded">Enter</kbd> save · <kbd className="px-1 bg-[var(--color-bg-tertiary)] rounded">Esc</kbd> cancel
+                        </span>
                         <button onClick={handleCancelEditReply} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">Cancel</button>
                         <button onClick={handleSaveEditReply} className="text-slack-blue hover:underline">Save</button>
                       </div>

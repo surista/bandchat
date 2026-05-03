@@ -273,6 +273,23 @@ function WorkspaceView() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Esc closes the search modal (it's a fullscreen <div role=dialog>, not a
+  // <Modal>, so it doesn't get the Modal component's built-in Esc handler).
+  useEffect(() => {
+    if (!showSearch) return;
+    const onEsc = (e) => {
+      if (e.key === 'Escape') {
+        setShowSearch(false);
+        setSearchQuery('');
+        setSearchResults([]);
+        setSearchChannelFilter('');
+        setSearchAuthorFilter('');
+      }
+    };
+    window.addEventListener('keydown', onEsc);
+    return () => window.removeEventListener('keydown', onEsc);
+  }, [showSearch]);
+
   useEffect(() => {
     if (socket) {
       joinWorkspace(workspaceId);
@@ -1092,7 +1109,7 @@ function WorkspaceView() {
 
       {/* Search Modal */}
       {showSearch && (
-        <div className="fixed inset-0 bg-gray-900 z-50 flex flex-col pb-16 md:pb-0 safe-area-top">
+        <div role="dialog" aria-modal="true" aria-label="Search messages" className="fixed inset-0 bg-gray-900 z-50 flex flex-col pb-16 md:pb-0 safe-area-top">
           <div className="p-3 border-b border-gray-700 space-y-3">
             <div className="flex items-center gap-3">
               <button
@@ -1104,23 +1121,27 @@ function WorkspaceView() {
                   setSearchAuthorFilter('');
                 }}
                 className="p-2 text-gray-300 hover:text-white"
+                aria-label="Close search"
+                title="Close search"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
-              <form onSubmit={handleSearch} className="flex-1 flex">
+              <form onSubmit={handleSearch} className="flex-1 flex" role="search">
                 <input
-                  type="text"
+                  type="search"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search messages..."
+                  aria-label="Search messages"
                   className="flex-1 bg-gray-800 text-white px-4 py-2 rounded-l-lg outline-none"
                   autoFocus
                 />
                 <button
                   type="submit"
                   disabled={searchLoading}
+                  aria-busy={searchLoading || undefined}
                   className="bg-slack-blue text-white px-4 py-2 rounded-r-lg disabled:opacity-50"
                 >
                   {searchLoading ? 'Searching...' : 'Search'}
