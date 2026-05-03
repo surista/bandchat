@@ -2,6 +2,62 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.69] - 2026-05-04
+
+### Improved
+- **MessageBubble: 7 TouchableOpacity → Pressable + Android ripple** — Avatar tap, thread-reply count, YouTube thumbnail, image/audio/document attachments, and reaction badges now use `Pressable` with `android_ripple` for proper Material feedback. iOS opacity feedback preserved via `style={({pressed}) => ...}`. Outer wrappers stay inside the existing `GestureDetector` + `ReanimatedSwipeable` so swipe-to-reply / swipe-to-react gestures keep working.
+
+### Documentation
+- **CLAUDE.md TODO for `React.memo` extraction on MessageList rows** — Highest-value remaining web perf fix (eliminates the 5,000-row re-render storm on every reaction). Documented as a focused future PR with extraction plan; not safe to land alongside other refactors because of the ~30 closure dependencies and risk to the most-used component.
+
+## [1.06.68] - 2026-05-03
+
+### Improved
+- **Dynamic Type support across the mobile app (361 props added)** — `maxFontSizeMultiplier` added to `<Text>` components in 15 files (auth/settings/workspace/band/messaging surfaces). Heuristic: 1.2 for badges/timestamps/counts/icons (tight layouts), 1.6 for headers/body/message content (reading), 1.5 elsewhere (default). Layouts now hold at AX5 instead of breaking.
+- **Theme-bypass cleanup (8 substitutions across 6 files)** — Hardcoded `'#fff'` replaced with `colors.primaryText` where the text wasn't sitting on a saturated brand-color background. Sites: `MessageInput` send icon + mention-avatar initial; `ChannelListScreen` workspace + member avatars; `GigList` Copy URL; `SongList` Done; `SetlistDetail` "+ Song"; `WebsiteSettings` View Site. Intentional on-primary contrast on saturated brand colors and semi-transparent overlays kept verbatim.
+
+## [1.06.67] - 2026-05-02
+
+### Improved
+- **Band screens: TouchableOpacity → PressableRow (69 sites across 15 files)** — Setlist/gig/song/poll/recording/announcement/medley/member/stage-plot/venue/kitty list rows, cards, action-sheet items, and picker rows now use `PressableRow` for proper Android Material ripple. Icon-only header buttons with `hitSlop`, FAB icons, and modal backdrops stay as `TouchableOpacity` (correct shape for those patterns). Brings the band-views surface area to parity with CLAUDE.md's PressableRow standard. `MessageBubble.js` migration deferred to v1.06.69 due to gesture-handler complexity.
+
+## [1.06.66] - 2026-05-02
+
+### Improved
+- **iOS hit targets** — `MessageBubble.reactionBadge` 32 → 44pt (HIG min). `ChannelListScreen` `bandItem` and `calendarShortcut` rows 36-39 → 48pt `minHeight`.
+- **Haptic feedback consistency** — `selectionFeedback()` on every send (was silent) and on every reaction toggle (was inconsistent: voice-message start fired `mediumImpact` but reactions and send were silent). iMessage-style subtle pattern, not heavy impact.
+- **Mic button: long-press only** — Tap path was a UX trap (accidental tap-to-record next to the typing input). Tap now fires `warningNotification` + an `accessibilityHint` directing to long-press.
+- **`Alert.alert(success)` → `toast.success`** — `WebsiteSettingsScreen` (4 sites) + `UpgradeScreen` (2 sites). Alerts are reserved for conditions requiring acknowledgment; success messages should be transient toasts.
+- **`MessageActionSheet` quick-reaction emoji row** — `TouchableOpacity` → `Pressable` with `android_ripple` to match the action rows below it (which already used `PressableRow`).
+
+### Fixed
+- **Android `KeyboardAvoidingView` no-op fixed across 18 screens** — `behavior={Platform.OS === 'ios' ? 'padding' : undefined}` changed to `... : 'height'`. `undefined` was a no-op on Android — the keyboard could cover inputs on auth/settings/workspace screens. Files: `ForgotPassword`, `Signup`, `Login`, `EditProfile`, `WebsiteSettings`, `Invite`, `Security`, `GigDetail` (×2), `Timeline`, `RecordingDetail`, `MedleyDetail`, `SongDetail`, `VenueDetail`, `Kitty`, `ChannelSettings`, `Thread`, `Search`, `RecordingList`.
+
+### Improved (web a11y)
+- **Reply-count link unread state announced** — Was color-only (`text-slack-blue font-bold` vs `text-gray-500`); now `aria-label` includes "N unread replies" so screen readers convey the state too.
+- **Unread-messages divider** — gets `role="separator" aria-label="New messages below"` so screen readers hear the boundary.
+- **`SetlistList` toolbar emoji buttons** — `aria-label` on ✏️/✍️/📋/🗑️ (was `title`-only, NVDA default doesn't read `title`).
+- **`Modal` supports `ariaDescribedBy`** — `ConfirmDialog` wires the message text through it; the confirm button now gets `aria-busy={loading}` while the action is in flight.
+- **(untagged followups)** Search modal now `role="dialog" aria-modal="true"` with `aria-label="Search messages"`, search input properly labelled, Esc handler added (Modal-pattern parity), search button `aria-busy`. `ThreadView` edit textarea now shows visible "Enter save · Esc cancel" keybinding hint. `ChannelView.scrollToBottom` respects `prefers-reduced-motion`.
+
+### Tests
+- **Pagination auth/IDOR coverage** — `server/tests/messages.test.js` gains 3 cases: unauthenticated → 401, non-member → 403 (proves `isChannelMember` runs before cursor logic), and cross-workspace cursor reuse → no leak (Prisma's `cursor: { id }` with `channelId` filter silently produces an empty page when the cursor row doesn't match). Closes the test gaps from the 2026-05-03 security audit.
+
+## [1.06.65] - 2026-05-03
+
+### Improved (web a11y)
+- **ThreadView landmarks + focus** — Root is now `<aside role="complementary" aria-label="Thread">`. Close button (`×`) and parent reaction button get `aria-label`. H3 → H2 (no H3 without H2 in the panel).
+- **Avatars + display-name spans keyboard-accessible** — `role="button"`, `tabIndex`, `Enter`/`Space` handler, `aria-label`. Keyboard users can now open the member profile from any avatar/name in ThreadView (previously mouse-only).
+- **`<main>` landmark** on `WorkspaceView`'s content column.
+- **`prefers-reduced-motion` honored in JS-driven scrolls** — `ThreadView.scrollToBottom`, `MessageList` highlight scroll. CSS animations were already gated; JS scrolls weren't.
+- **Color contrast (one CSS variable bump fixes dozens of components)** — `--color-text-muted` from `#6b7280` (~4.0:1 on `bg-tertiary` `#374151`, fails AA) → `#9ca3af` (~5.4:1, passes). Affects every "muted" label, hover toolbar, edited indicator across the app.
+
+## [1.06.64] - 2026-05-03
+
+### Fixed
+- **Pagination duplicate-fetch race** — Fast scroll could fire 2-5 `loadMoreMessages()` calls before React committed `setLoadingMore(true)`, all passing the `!loadingMore` check. Replaced with synchronous `loadingMoreRef.current` flag set/cleared synchronously around the await. Plus defensive de-dupe in the prepend so a duplicate from any race condition, server retry, or out-of-order socket event can't surface twice.
+- **`<video>` and `<audio preload="metadata">` → `preload="none"`** — Off-screen attachments were eagerly fetching metadata on initial render. Bandwidth and memory hit in music-heavy workspaces with many audio messages.
+
 ## [1.06.63] - 2026-05-02
 
 ### Added
