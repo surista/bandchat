@@ -13,6 +13,7 @@ import { useAuth } from '../../context/AuthContext';
 import { mediumImpact, successNotification } from '../../utils/haptics';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
+import PressableRow from '../../components/PressableRow';
 import api from '../../services/api';
 import ActionSheet from '../../components/ActionSheet';
 import { format } from 'date-fns';
@@ -102,12 +103,11 @@ export default function StagePlotListScreen({ navigation, route }) {
   const renderItem = useCallback(({ item }) => {
     const creatorName = item.createdBy?.displayName || item.removedCreatorName || 'Unknown';
     return (
-      <TouchableOpacity
+      <PressableRow
         style={[styles.plotItem, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
         onPress={() => navigation.navigate('StagePlotEditor', { plotId: item.id, workspaceId })}
         onLongPress={() => handleLongPress(item)}
         delayLongPress={250}
-        activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={`Stage plot: ${item.title}`}
       >
@@ -128,7 +128,7 @@ export default function StagePlotListScreen({ navigation, route }) {
           )}
         </View>
         <Text style={[styles.plotArrow, { color: colors.textSecondary }]}>{'\u203A'}</Text>
-      </TouchableOpacity>
+      </PressableRow>
     );
   }, [colors, navigation, workspaceId, handleLongPress]);
 

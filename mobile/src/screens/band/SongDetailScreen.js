@@ -26,6 +26,7 @@ import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
 import { useLayout } from '../../hooks/useLayout';
 import ErrorState from '../../components/ErrorState';
+import PressableRow from '../../components/PressableRow';
 
 const KEY_ROOTS = ['C', 'C#/Db', 'D', 'D#/Eb', 'E', 'F', 'F#/Gb', 'G', 'G#/Ab', 'A', 'A#/Bb', 'B'];
 const KEY_SUFFIXES = ['major', 'minor'];
@@ -458,7 +459,7 @@ export default function SongDetailScreen({ navigation, route }) {
     return (
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
       >
         <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
@@ -502,7 +503,7 @@ export default function SongDetailScreen({ navigation, route }) {
           <View style={styles.row}>
             <View style={styles.rowField}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>Key</Text>
-              <TouchableOpacity
+              <PressableRow
                 style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
                 onPress={() => setShowKeyPicker(true)}
                 accessibilityRole="button"
@@ -511,7 +512,7 @@ export default function SongDetailScreen({ navigation, route }) {
                 <Text style={{ color: key ? colors.textPrimary : colors.textSecondary, fontSize: 15 }}>
                   {key || 'Select key'}
                 </Text>
-              </TouchableOpacity>
+              </PressableRow>
             </View>
             <View style={styles.rowField}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>BPM</Text>
@@ -653,20 +654,20 @@ export default function SongDetailScreen({ navigation, route }) {
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowKeyPicker(false)} accessibilityRole="button" accessibilityLabel="Dismiss key picker">
             <View style={[styles.keyPickerContent, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.keyPickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Select Key</Text>
-              <TouchableOpacity
+              <PressableRow
                 style={[styles.keyOption, !key && { backgroundColor: colors.bgTertiary }]}
                 onPress={() => { setKey(''); setShowKeyPicker(false); }}
                 accessibilityRole="button"
                 accessibilityLabel="No key"
               >
                 <Text style={[styles.keyOptionText, { color: colors.textSecondary }]}>None</Text>
-              </TouchableOpacity>
+              </PressableRow>
               <FlatList
                 data={KEY_ROOTS.flatMap(root => KEY_SUFFIXES.map(suffix => `${root} ${suffix}`))}
                 keyExtractor={(item) => item}
                 numColumns={2}
                 renderItem={({ item }) => (
-                  <TouchableOpacity
+                  <PressableRow
                     style={[styles.keyOption, styles.keyOptionGrid, key === item && { backgroundColor: colors.bgTertiary }]}
                     onPress={() => { setKey(item); setShowKeyPicker(false); }}
                     accessibilityRole="button"
@@ -674,7 +675,7 @@ export default function SongDetailScreen({ navigation, route }) {
                   >
                     <Text style={[styles.keyOptionText, { color: colors.textPrimary }]}>{item}</Text>
                     {key === item && <Text style={{ color: colors.primary, marginLeft: 4 }}>{'\u2713'}</Text>}
-                  </TouchableOpacity>
+                  </PressableRow>
                 )}
                 style={{ maxHeight: 400 }}
               />

@@ -22,6 +22,7 @@ import formatDate from '../../utils/formatDate';
 import api from '../../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
+import PressableRow from '../../components/PressableRow';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import useDebounce from '../../hooks/useDebounce';
 import { useLayout } from '../../hooks/useLayout';
@@ -86,10 +87,9 @@ function InlineAudioPlayer({ url, colors }) {
   }, [sound]);
 
   return (
-    <TouchableOpacity
+    <PressableRow
       style={[styles.audioPlayer, { backgroundColor: colors.bgTertiary }]}
       onPress={toggle}
-      activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityLabel={playing ? "Pause" : "Play"}
     >
@@ -103,7 +103,7 @@ function InlineAudioPlayer({ url, colors }) {
       <Text style={[styles.audioPlayerText, { color: colors.textSecondary }]}>
         {playing ? 'Playing...' : 'Tap to play'}
       </Text>
-    </TouchableOpacity>
+    </PressableRow>
   );
 }
 
@@ -220,12 +220,11 @@ export default function RecordingListScreen({ navigation, route }) {
   }, [selectedRecording]);
 
   const renderRecording = useCallback(({ item }) => (
-    <TouchableOpacity
+    <PressableRow
       style={[styles.card, { backgroundColor: colors.bgSecondary }]}
       onPress={() => navigation.navigate('RecordingDetail', { recordingId: item.id, workspaceId })}
       onLongPress={() => handleLongPress(item)}
       delayLongPress={400}
-      activeOpacity={0.7}
       accessibilityRole="button"
       accessibilityLabel={`${item.title}. Long press for options`}
     >
@@ -256,7 +255,7 @@ export default function RecordingListScreen({ navigation, route }) {
       {item.type === 'audio' && item.fileUrl ? (
         <InlineAudioPlayer url={item.fileUrl} colors={colors} />
       ) : null}
-    </TouchableOpacity>
+    </PressableRow>
   ), [colors, navigation, workspaceId, handleLongPress]);
 
   if (loading) {
@@ -282,7 +281,7 @@ export default function RecordingListScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
       <View style={[styles.searchBar, { borderBottomColor: colors.border }]}>
         <TextInput
           style={[styles.searchInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary }]}
@@ -416,17 +415,17 @@ export default function RecordingListScreen({ navigation, route }) {
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
               {selectedRecording?.title}
             </Text>
-            <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete recording">
+            <PressableRow style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete recording">
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedRecording(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
+            </PressableRow>
           </View>
         </TouchableOpacity>
       </Modal>

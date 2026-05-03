@@ -15,6 +15,7 @@ import {
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useTheme } from '../../context/ThemeContext';
 import Badge from '../../components/Badge';
+import PressableRow from '../../components/PressableRow';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
 import { useLayout } from '../../hooks/useLayout';
@@ -193,7 +194,7 @@ export default function MedleyDetailScreen({ navigation, route }) {
     return (
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
       >
         <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
@@ -288,11 +289,10 @@ export default function MedleyDetailScreen({ navigation, route }) {
             </Text>
           ) : (
             availableSongs.map(song => (
-              <TouchableOpacity
+              <PressableRow
                 key={song.id}
                 style={[styles.availableSongRow, { backgroundColor: colors.bgSecondary }]}
                 onPress={() => addSong(song)}
-                activeOpacity={0.6}
                 accessibilityRole="button"
                 accessibilityLabel={`Add ${song.title}`}
               >
@@ -312,7 +312,7 @@ export default function MedleyDetailScreen({ navigation, route }) {
                   </Text>
                 ) : null}
                 <Text style={[styles.addIcon, { color: colors.primary }]}>+</Text>
-              </TouchableOpacity>
+              </PressableRow>
             ))
           )}
 

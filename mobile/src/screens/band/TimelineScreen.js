@@ -22,6 +22,7 @@ import { useHeaderHeight } from '@react-navigation/elements';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import ErrorState from '../../components/ErrorState';
+import PressableRow from '../../components/PressableRow';
 import useDebounce from '../../hooks/useDebounce';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
@@ -312,11 +313,10 @@ export default function TimelineScreen({ navigation, route }) {
     }
 
     return (
-      <TouchableOpacity
+      <PressableRow
         style={[styles.eventCard, { backgroundColor: colors.bgSecondary }]}
         onLongPress={() => handleLongPress(item)}
         delayLongPress={400}
-        activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={`${item.title}, ${formatEventDate(item.eventDate)}. Long press for options`}
       >
@@ -341,7 +341,7 @@ export default function TimelineScreen({ navigation, route }) {
             Added by {item.createdBy?.displayName || item.removedCreatorName || 'Deleted User'}
           </Text>
         ) : null}
-      </TouchableOpacity>
+      </PressableRow>
     );
   }, [colors, handleLongPress]);
 
@@ -367,7 +367,7 @@ export default function TimelineScreen({ navigation, route }) {
     return (
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
       >
         <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
@@ -376,7 +376,7 @@ export default function TimelineScreen({ navigation, route }) {
           </Text>
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Event Type</Text>
-          <TouchableOpacity
+          <PressableRow
             style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
             onPress={() => setShowTypePicker(true)}
             accessibilityRole="button"
@@ -384,7 +384,7 @@ export default function TimelineScreen({ navigation, route }) {
           >
             <Text style={{ fontSize: 16, marginRight: 8 }}>{getEventIcon(formEventType)}</Text>
             <Text style={{ color: colors.textPrimary, fontSize: 15 }}>{getEventLabel(formEventType)}</Text>
-          </TouchableOpacity>
+          </PressableRow>
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Date</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateShortcuts} contentContainerStyle={styles.dateShortcutsContent}>
@@ -406,7 +406,7 @@ export default function TimelineScreen({ navigation, route }) {
               </TouchableOpacity>
             ))}
           </ScrollView>
-          <TouchableOpacity
+          <PressableRow
             style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
             onPress={() => setShowDatePicker(true)}
             accessibilityRole="button"
@@ -415,7 +415,7 @@ export default function TimelineScreen({ navigation, route }) {
             <Text style={{ color: colors.textPrimary, fontSize: 15 }}>
               {format(formDate, 'EEEE, dd-MMM-yyyy')}
             </Text>
-          </TouchableOpacity>
+          </PressableRow>
 
           {showDatePicker && (
             <DateTimePicker
@@ -493,7 +493,7 @@ export default function TimelineScreen({ navigation, route }) {
             <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Event Type</Text>
               {EVENT_TYPES.map(t => (
-                <TouchableOpacity
+                <PressableRow
                   key={t.key}
                   style={[styles.pickerOption, formEventType === t.key && { backgroundColor: colors.bgTertiary }]}
                   onPress={() => { setFormEventType(t.key); setShowTypePicker(false); }}
@@ -503,7 +503,7 @@ export default function TimelineScreen({ navigation, route }) {
                   <Text style={{ fontSize: 18, marginRight: 10 }}>{t.icon}</Text>
                   <Text style={[styles.pickerOptionText, { color: colors.textPrimary }]}>{t.label}</Text>
                   {formEventType === t.key && <Text style={{ color: colors.primary, marginLeft: 'auto' }}>{'\u2713'}</Text>}
-                </TouchableOpacity>
+                </PressableRow>
               ))}
             </View>
           </TouchableOpacity>
@@ -596,7 +596,7 @@ export default function TimelineScreen({ navigation, route }) {
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
               {selectedEvent?.title}
             </Text>
-            <TouchableOpacity
+            <PressableRow
               style={styles.actionItem}
               onPress={() => {
                 setShowActions(false);
@@ -607,18 +607,18 @@ export default function TimelineScreen({ navigation, route }) {
               accessibilityLabel="Edit event"
             >
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete event">
+            </PressableRow>
+            <PressableRow style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete event">
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedEvent(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
+            </PressableRow>
           </View>
         </TouchableOpacity>
       </Modal>

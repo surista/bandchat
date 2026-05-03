@@ -24,6 +24,7 @@ import api from '../../services/api';
 import { getLocalGigs, upsertGigs, deleteLocalGig } from '../../services/database';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
+import PressableRow from '../../components/PressableRow';
 import { useLayout } from '../../hooks/useLayout';
 import getCurrencySymbol from '../../utils/getCurrencySymbol';
 import { TYPE_COLORS, STATUS_COLORS } from '../../utils/constants';
@@ -384,7 +385,7 @@ export default function GigListScreen({ navigation, route }) {
     const statusInfo = myStatus ? AVAILABILITY_STATUS[myStatus] : null;
 
     return (
-      <TouchableOpacity
+      <PressableRow
         style={[
           styles.gigCard,
           { backgroundColor: colors.bgSecondary },
@@ -398,7 +399,6 @@ export default function GigListScreen({ navigation, route }) {
           if (!isOther) { mediumImpact(); setSelectedGig(item); setShowActions(true); }
         }}
         delayLongPress={400}
-        activeOpacity={isOther ? 1 : 0.7}
         accessibilityRole="button"
         accessibilityLabel={`${item.title}, ${item.date ? formatGigDate(item.date, item.endDate) : 'No date'}${item.venue ? `, at ${item.venue}` : ''}`}
         accessibilityHint="View event details"
@@ -506,7 +506,7 @@ export default function GigListScreen({ navigation, route }) {
             </View>
           ) : null}
         </View>
-      </TouchableOpacity>
+      </PressableRow>
     );
   }, [colors, navigation, workspaceId, availability, cycleAvailability]);
 
@@ -670,14 +670,14 @@ export default function GigListScreen({ navigation, route }) {
             >
               <Text style={[styles.calendarActionButtonText, { color: colors.primary }]}>Open in Calendar</Text>
             </TouchableOpacity>
-            <TouchableOpacity
+            <PressableRow
               style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => setShowCalendarModal(false)}
               accessibilityRole="button"
               accessibilityLabel="Close"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Close</Text>
-            </TouchableOpacity>
+            </PressableRow>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -699,7 +699,7 @@ export default function GigListScreen({ navigation, route }) {
             </Text>
             {/* Only show Edit/Delete if user is admin OR gig is not locked */}
             {(isAdmin || !selectedGig?.isLocked) && (
-              <TouchableOpacity
+              <PressableRow
                 style={styles.actionItem}
                 onPress={() => {
                   setShowActions(false);
@@ -710,13 +710,13 @@ export default function GigListScreen({ navigation, route }) {
                 accessibilityLabel="Edit event"
               >
                 <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
-              </TouchableOpacity>
+              </PressableRow>
             )}
-            <TouchableOpacity style={styles.actionItem} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate event">
+            <PressableRow style={styles.actionItem} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate event">
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Duplicate</Text>
-            </TouchableOpacity>
+            </PressableRow>
             {selectedGig?.date && (
-              <TouchableOpacity
+              <PressableRow
                 style={styles.actionItem}
                 onPress={() => {
                   setShowActions(false);
@@ -728,31 +728,31 @@ export default function GigListScreen({ navigation, route }) {
                 accessibilityLabel="Set availability for this date"
               >
                 <Text style={[styles.actionText, { color: colors.primary }]}>Set Availability</Text>
-              </TouchableOpacity>
+              </PressableRow>
             )}
             {selectedGig?.status === 'SCHEDULED' && (isAdmin || !selectedGig?.isLocked) && (
-              <TouchableOpacity style={styles.actionItem} onPress={handleComplete} accessibilityRole="button" accessibilityLabel="Mark event as complete">
+              <PressableRow style={styles.actionItem} onPress={handleComplete} accessibilityRole="button" accessibilityLabel="Mark event as complete">
                 <Text style={[styles.actionText, { color: '#22c55e' }]}><Ionicons name="checkmark-circle" size={16} color="#22c55e" /> Mark Complete</Text>
-              </TouchableOpacity>
+              </PressableRow>
             )}
             {(isAdmin || !selectedGig?.isLocked) && (
-              <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete event">
+              <PressableRow style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete event">
                 <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
-              </TouchableOpacity>
+              </PressableRow>
             )}
             {selectedGig?.isLocked && !isAdmin && (
               <View style={styles.actionItem}>
                 <Text style={[styles.actionText, { color: colors.textSecondary }]}>This event is locked by an admin</Text>
               </View>
             )}
-            <TouchableOpacity
+            <PressableRow
               style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedGig(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
+            </PressableRow>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -772,48 +772,48 @@ export default function GigListScreen({ navigation, route }) {
             <Text style={[styles.availabilityDateLabel, { color: colors.textSecondary }]}>
               {availabilityDate ? format(parseISO(availabilityDate), 'EEEE, dd-MMM-yyyy') : ''}
             </Text>
-            <TouchableOpacity
+            <PressableRow
               style={[styles.availabilityOption, { backgroundColor: '#22c55e20' }]}
               onPress={() => handleSetAvailability('AVAILABLE')}
               accessibilityRole="button"
               accessibilityLabel="Set as available"
             >
               <Text style={[styles.availabilityOptionText, { color: '#22c55e' }]}><Ionicons name="checkmark-circle" size={16} color="#22c55e" /> Available</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={[styles.availabilityOption, { backgroundColor: '#eab30820' }]}
               onPress={() => handleSetAvailability('MAYBE')}
               accessibilityRole="button"
               accessibilityLabel="Set as maybe"
             >
               <Text style={[styles.availabilityOptionText, { color: '#eab308' }]}><Ionicons name="help-circle-outline" size={16} color="#eab308" /> Maybe</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={[styles.availabilityOption, { backgroundColor: '#ef444420' }]}
               onPress={() => handleSetAvailability('UNAVAILABLE')}
               accessibilityRole="button"
               accessibilityLabel="Set as unavailable"
             >
               <Text style={[styles.availabilityOptionText, { color: '#ef4444' }]}><Ionicons name="close-circle-outline" size={16} color="#ef4444" /> Unavailable</Text>
-            </TouchableOpacity>
+            </PressableRow>
             {availability[availabilityDate] && (
-              <TouchableOpacity
+              <PressableRow
                 style={[styles.availabilityOption, { backgroundColor: colors.bgTertiary }]}
                 onPress={() => handleSetAvailability('CLEAR')}
                 accessibilityRole="button"
                 accessibilityLabel="Clear availability"
               >
                 <Text style={[styles.availabilityOptionText, { color: colors.textSecondary }]}>Clear</Text>
-              </TouchableOpacity>
+              </PressableRow>
             )}
-            <TouchableOpacity
+            <PressableRow
               style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowAvailabilityModal(false); setAvailabilityDate(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
+            </PressableRow>
           </View>
         </TouchableOpacity>
       </Modal>

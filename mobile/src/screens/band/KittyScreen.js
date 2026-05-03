@@ -21,6 +21,7 @@ import { useTheme } from '../../context/ThemeContext';
 import ActionSheet from '../../components/ActionSheet';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
+import PressableRow from '../../components/PressableRow';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import formatDate from '../../utils/formatDate';
 import api from '../../services/api';
@@ -312,11 +313,10 @@ export default function KittyScreen({ navigation, route }) {
     const info = getTypeInfo(item.type);
     const isExpense = item.type === 'EXPENSE';
     return (
-      <TouchableOpacity
+      <PressableRow
         style={[styles.txCard, { backgroundColor: colors.bgSecondary }]}
         onLongPress={() => handleLongPress(item)}
         delayLongPress={400}
-        activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={`${item.description}, ${isExpense ? 'expense' : 'income'} ${formatAmount(item.amount, currency)}. Long press for options`}
       >
@@ -346,7 +346,7 @@ export default function KittyScreen({ navigation, route }) {
             </Text>
           )}
         </View>
-      </TouchableOpacity>
+      </PressableRow>
     );
   }, [colors, currency, handleLongPress, runningBalanceMap]);
 
@@ -375,7 +375,7 @@ export default function KittyScreen({ navigation, route }) {
     return (
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
       >
         <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
@@ -384,7 +384,7 @@ export default function KittyScreen({ navigation, route }) {
           </Text>
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Type</Text>
-          <TouchableOpacity
+          <PressableRow
             style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
             onPress={() => setShowTypePicker(true)}
             accessibilityRole="button"
@@ -392,12 +392,12 @@ export default function KittyScreen({ navigation, route }) {
           >
             <Ionicons name={getTypeInfo(txType).icon} size={16} color={colors.textPrimary} style={{ marginRight: 8 }} />
             <Text style={{ color: colors.textPrimary, fontSize: 15 }}>{getTypeInfo(txType).label}</Text>
-          </TouchableOpacity>
+          </PressableRow>
 
           {txType === 'EXPENSE' && (
             <>
               <Text style={[styles.label, { color: colors.textSecondary }]}>Category</Text>
-              <TouchableOpacity
+              <PressableRow
                 style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
                 onPress={() => setShowCategoryPicker(true)}
                 accessibilityRole="button"
@@ -406,7 +406,7 @@ export default function KittyScreen({ navigation, route }) {
                 <Text style={{ color: txCategory ? colors.textPrimary : colors.textSecondary, fontSize: 15 }}>
                   {txCategory ? EXPENSE_CATEGORIES.find(c => c.key === txCategory)?.label || txCategory : 'Select category'}
                 </Text>
-              </TouchableOpacity>
+              </PressableRow>
             </>
           )}
 
@@ -463,7 +463,7 @@ export default function KittyScreen({ navigation, route }) {
             <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Transaction Type</Text>
               {TRANSACTION_TYPES.map(t => (
-                <TouchableOpacity
+                <PressableRow
                   key={t.key}
                   style={[styles.pickerOption, txType === t.key && { backgroundColor: colors.bgTertiary }]}
                   onPress={() => { setTxType(t.key); setShowTypePicker(false); }}
@@ -473,7 +473,7 @@ export default function KittyScreen({ navigation, route }) {
                   <Ionicons name={t.icon} size={18} color={colors.textPrimary} style={{ marginRight: 10 }} />
                   <Text style={[styles.pickerOptionText, { color: colors.textPrimary }]}>{t.label}</Text>
                   {txType === t.key && <Ionicons name="checkmark" size={20} color={colors.primary} style={{ marginLeft: 'auto' }} />}
-                </TouchableOpacity>
+                </PressableRow>
               ))}
             </View>
           </TouchableOpacity>
@@ -485,7 +485,7 @@ export default function KittyScreen({ navigation, route }) {
             <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Expense Category</Text>
               {EXPENSE_CATEGORIES.map(c => (
-                <TouchableOpacity
+                <PressableRow
                   key={c.key}
                   style={[styles.pickerOption, txCategory === c.key && { backgroundColor: colors.bgTertiary }]}
                   onPress={() => { setTxCategory(c.key); setShowCategoryPicker(false); }}
@@ -494,7 +494,7 @@ export default function KittyScreen({ navigation, route }) {
                 >
                   <Text style={[styles.pickerOptionText, { color: colors.textPrimary }]}>{c.label}</Text>
                   {txCategory === c.key && <Ionicons name="checkmark" size={20} color={colors.primary} />}
-                </TouchableOpacity>
+                </PressableRow>
               ))}
             </View>
           </TouchableOpacity>

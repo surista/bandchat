@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useTheme } from '../../context/ThemeContext';
 import formatDate from '../../utils/formatDate';
+import PressableRow from '../../components/PressableRow';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
 
@@ -341,7 +342,7 @@ export default function RecordingDetailScreen({ navigation, route }) {
     return (
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
       >
         <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
@@ -368,7 +369,7 @@ export default function RecordingDetailScreen({ navigation, route }) {
           />
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Link to Song</Text>
-          <TouchableOpacity
+          <PressableRow
             style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
             onPress={() => setShowSongPicker(true)}
             accessibilityRole="button"
@@ -377,13 +378,13 @@ export default function RecordingDetailScreen({ navigation, route }) {
             <Text style={{ color: selectedSong ? colors.textPrimary : colors.textSecondary, fontSize: 15 }}>
               {selectedSong ? selectedSong.title : 'Select song (optional)'}
             </Text>
-          </TouchableOpacity>
+          </PressableRow>
 
           {/* File picker - only for new recordings */}
           {isNew && (
             <>
               <Text style={[styles.label, { color: colors.textSecondary }]}>File *</Text>
-              <TouchableOpacity
+              <PressableRow
                 style={[styles.filePickerButton, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
                 onPress={pickFile}
                 accessibilityRole="button"
@@ -392,7 +393,7 @@ export default function RecordingDetailScreen({ navigation, route }) {
                 <Text style={{ color: fileName ? colors.textPrimary : colors.textSecondary, fontSize: 15 }}>
                   {fileName || 'Pick audio or video file'}
                 </Text>
-              </TouchableOpacity>
+              </PressableRow>
             </>
           )}
 
@@ -441,20 +442,20 @@ export default function RecordingDetailScreen({ navigation, route }) {
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowSongPicker(false)} accessibilityRole="button" accessibilityLabel="Close song picker">
             <View style={[styles.pickerContent, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 20) + 20 }]}>
               <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Select Song</Text>
-              <TouchableOpacity
+              <PressableRow
                 style={[styles.pickerOption, !songId && { backgroundColor: colors.bgTertiary }]}
                 onPress={() => { setSongId(null); setSelectedSong(null); setShowSongPicker(false); }}
                 accessibilityRole="button"
                 accessibilityLabel="None"
               >
                 <Text style={[styles.pickerOptionText, { color: colors.textSecondary }]}>None</Text>
-              </TouchableOpacity>
+              </PressableRow>
               <FlatList
                 data={songs}
                 keyExtractor={(item) => item.id}
                 style={{ maxHeight: 350 }}
                 renderItem={({ item }) => (
-                  <TouchableOpacity
+                  <PressableRow
                     style={[styles.pickerOption, songId === item.id && { backgroundColor: colors.bgTertiary }]}
                     onPress={() => { setSongId(item.id); setSelectedSong(item); setShowSongPicker(false); }}
                     accessibilityRole="button"
@@ -465,7 +466,7 @@ export default function RecordingDetailScreen({ navigation, route }) {
                       <Text style={[styles.pickerOptionSub, { color: colors.textSecondary }]}>{item.artist}</Text>
                     ) : null}
                     {songId === item.id && <Text style={{ color: colors.primary }}>{'\u2713'}</Text>}
-                  </TouchableOpacity>
+                  </PressableRow>
                 )}
               />
             </View>

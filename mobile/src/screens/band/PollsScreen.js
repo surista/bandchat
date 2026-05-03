@@ -22,6 +22,7 @@ import { SkeletonList } from '../../components/SkeletonLoader';
 import { successNotification } from '../../utils/haptics';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
+import PressableRow from '../../components/PressableRow';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
 
@@ -243,11 +244,10 @@ export default function PollsScreen({ navigation, route }) {
     const isVoting = voting[poll.id];
 
     return (
-      <TouchableOpacity
+      <PressableRow
         style={[styles.pollCard, { backgroundColor: colors.bgSecondary }, poll.isClosed && styles.closedCard]}
         onLongPress={() => { setSelectedPoll(poll); setShowActions(true); }}
         delayLongPress={400}
-        activeOpacity={0.9}
         accessibilityRole="button"
         accessibilityLabel={`Poll: ${poll.question}. Long press for options`}
       >
@@ -310,7 +310,7 @@ export default function PollsScreen({ navigation, route }) {
 
             // Voting view
             return (
-              <TouchableOpacity
+              <PressableRow
                 key={opt.id}
                 style={[
                   styles.voteOption,
@@ -318,7 +318,6 @@ export default function PollsScreen({ navigation, route }) {
                   isSelected && { borderColor: colors.primary, borderWidth: 1 },
                 ]}
                 onPress={() => toggleSelection(poll.id, opt.id, poll.allowMultiple)}
-                activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel={`${opt.text}${isSelected ? ", selected" : ""}`}
               >
@@ -326,7 +325,7 @@ export default function PollsScreen({ navigation, route }) {
                   {isSelected && <Text style={[styles.voteCheck, { color: colors.primaryText }]}>{'\u2713'}</Text>}
                 </View>
                 <Text style={[styles.voteText, { color: colors.textPrimary }]}>{opt.text}</Text>
-              </TouchableOpacity>
+              </PressableRow>
             );
           })}
         </View>
@@ -355,7 +354,7 @@ export default function PollsScreen({ navigation, route }) {
             {poll.totalVotes} total {poll.totalVotes === 1 ? 'vote' : 'votes'}
           </Text>
         )}
-      </TouchableOpacity>
+      </PressableRow>
     );
   }, [colors, user?.id, selections, voting, toggleSelection, handleVote]);
 
@@ -383,10 +382,9 @@ export default function PollsScreen({ navigation, route }) {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       {/* Show closed toggle */}
-      <TouchableOpacity
+      <PressableRow
         style={[styles.toggleRow, { backgroundColor: colors.bgSecondary }]}
         onPress={() => setShowClosed(prev => !prev)}
-        activeOpacity={0.6}
         accessibilityRole="button"
         accessibilityLabel={`Show closed polls, ${showClosed ? "checked" : "unchecked"}`}
       >
@@ -394,7 +392,7 @@ export default function PollsScreen({ navigation, route }) {
           {showClosed && <Text style={[styles.toggleCheckmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
         </View>
         <Text style={[styles.toggleLabel, { color: colors.textPrimary }]}>Show closed polls</Text>
-      </TouchableOpacity>
+      </PressableRow>
 
       <FlatList
         data={polls}
@@ -544,21 +542,21 @@ export default function PollsScreen({ navigation, route }) {
               {selectedPoll?.question}
             </Text>
             {selectedPoll && !selectedPoll.isClosed && (
-              <TouchableOpacity style={styles.actionItem} onPress={handleClosePoll} accessibilityRole="button" accessibilityLabel="Close poll">
+              <PressableRow style={styles.actionItem} onPress={handleClosePoll} accessibilityRole="button" accessibilityLabel="Close poll">
                 <Text style={[styles.actionText, { color: colors.textPrimary }]}>Close Poll</Text>
-              </TouchableOpacity>
+              </PressableRow>
             )}
-            <TouchableOpacity style={styles.actionItem} onPress={handleDeletePoll} accessibilityRole="button" accessibilityLabel="Delete poll">
+            <PressableRow style={styles.actionItem} onPress={handleDeletePoll} accessibilityRole="button" accessibilityLabel="Delete poll">
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedPoll(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
+            </PressableRow>
           </View>
         </TouchableOpacity>
       </Modal>

@@ -21,6 +21,7 @@ import { useAuth } from '../../context/AuthContext';
 import ActionSheet from '../../components/ActionSheet';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
+import PressableRow from '../../components/PressableRow';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
@@ -220,11 +221,10 @@ export default function AnnouncementsScreen({ navigation, route }) {
     const authorName = item.createdBy?.displayName || item.removedCreatorName || 'Deleted User';
 
     return (
-      <TouchableOpacity
+      <PressableRow
         style={[styles.annCard, { backgroundColor: colors.bgSecondary }]}
         onLongPress={() => { setSelectedAnnouncement(item); setShowActions(true); }}
         delayLongPress={400}
-        activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={`Announcement: ${item.title}. Long press for options`}
       >
@@ -262,7 +262,7 @@ export default function AnnouncementsScreen({ navigation, route }) {
             </TouchableOpacity>
           )}
         </View>
-      </TouchableOpacity>
+      </PressableRow>
     );
   }, [colors, handleAcknowledge]);
 
@@ -376,10 +376,9 @@ export default function AnnouncementsScreen({ navigation, route }) {
                 })}
               </View>
 
-              <TouchableOpacity
+              <PressableRow
                 style={styles.checkboxRow}
                 onPress={() => setIsPinned(prev => !prev)}
-                activeOpacity={0.6}
                 accessibilityRole="button"
                 accessibilityLabel={`Pin and require acknowledgment, ${isPinned ? 'checked' : 'unchecked'}`}
               >
@@ -387,7 +386,7 @@ export default function AnnouncementsScreen({ navigation, route }) {
                   {isPinned && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
                 </View>
                 <Text style={[styles.checkboxLabel, { color: colors.textPrimary }]}>Pin & require acknowledgment</Text>
-              </TouchableOpacity>
+              </PressableRow>
             </ScrollView>
 
             <View style={styles.modalActions}>

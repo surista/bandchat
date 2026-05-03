@@ -22,6 +22,7 @@ import { useAuth } from '../../context/AuthContext';
 import useDebounce from '../../hooks/useDebounce';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
+import PressableRow from '../../components/PressableRow';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
@@ -284,12 +285,11 @@ export default function BandMembersScreen({ navigation, route }) {
     const instruments = getInstruments(item);
     const dateRange = getDateRange(item);
     return (
-      <TouchableOpacity
+      <PressableRow
         style={[styles.memberCard, { backgroundColor: colors.bgSecondary }]}
         onPress={() => handleMemberPress(item)}
         onLongPress={isAdmin ? () => { setSelectedMember(item); setShowActions(true); } : undefined}
         delayLongPress={400}
-        activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={`${item.name}${item.linkedUserId ? '. Tap to view profile' : ''}${isAdmin ? '. Long press for options' : ''}`}
       >
@@ -318,7 +318,7 @@ export default function BandMembersScreen({ navigation, route }) {
             </View>
           )}
         </View>
-      </TouchableOpacity>
+      </PressableRow>
     );
   }, [colors, handleMemberPress, isAdmin]);
 
@@ -458,10 +458,9 @@ export default function BandMembersScreen({ navigation, route }) {
                 })}
               </View>
 
-              <TouchableOpacity
+              <PressableRow
                 style={styles.checkboxRow}
                 onPress={() => setIsGuest(prev => !prev)}
-                activeOpacity={0.6}
                 accessibilityRole="button"
                 accessibilityLabel={`Guest musician, ${isGuest ? 'checked' : 'unchecked'}`}
               >
@@ -469,7 +468,7 @@ export default function BandMembersScreen({ navigation, route }) {
                   {isGuest && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
                 </View>
                 <Text style={[styles.checkboxLabel, { color: colors.textPrimary }]}>Guest musician</Text>
-              </TouchableOpacity>
+              </PressableRow>
 
               <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Notes</Text>
               <TextInput
@@ -527,22 +526,22 @@ export default function BandMembersScreen({ navigation, route }) {
             </Text>
             {isAdmin && (
               <>
-                <TouchableOpacity style={styles.actionItem} onPress={() => openEditModal(selectedMember)} accessibilityRole="button" accessibilityLabel="Edit member">
+                <PressableRow style={styles.actionItem} onPress={() => openEditModal(selectedMember)} accessibilityRole="button" accessibilityLabel="Edit member">
                   <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete member">
+                </PressableRow>
+                <PressableRow style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete member">
                   <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
-                </TouchableOpacity>
+                </PressableRow>
               </>
             )}
-            <TouchableOpacity
+            <PressableRow
               style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedMember(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
+            </PressableRow>
           </View>
         </TouchableOpacity>
       </Modal>

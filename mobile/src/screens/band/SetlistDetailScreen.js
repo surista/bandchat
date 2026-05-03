@@ -26,6 +26,7 @@ import * as Sharing from 'expo-sharing';
 import { useLayout } from '../../hooks/useLayout';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
+import PressableRow from '../../components/PressableRow';
 import { SkeletonList } from '../../components/SkeletonLoader';
 
 function Badge({ label, color, bgColor }) {
@@ -435,12 +436,11 @@ export default function SetlistDetailScreen({ navigation, route }) {
       <>
         {!isDragItem && setHeader}
         {editing ? songRow : (
-          <TouchableOpacity
-            activeOpacity={0.6}
+          <PressableRow
             onPress={() => item.song?.id && navigation.navigate('SongDetail', { songId: item.song.id, workspaceId })}
           >
             {songRow}
-          </TouchableOpacity>
+          </PressableRow>
         )}
       </>
     );
@@ -632,10 +632,9 @@ export default function SetlistDetailScreen({ navigation, route }) {
               windowSize={10}
               removeClippedSubviews={Platform.OS === 'android'}
               renderItem={({ item }) => (
-                <TouchableOpacity
+                <PressableRow
                   style={[styles.pickerItem, { borderBottomColor: colors.border }]}
                   onPress={() => addSong(item)}
-                  activeOpacity={0.6}
                   accessibilityRole="button"
                   accessibilityLabel={`Add ${item.title}${item.artist ? ` by ${item.artist}` : ''}`}
                 >
@@ -657,7 +656,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
                       {formatDuration(item.duration)}
                     </Text>
                   ) : null}
-                </TouchableOpacity>
+                </PressableRow>
               )}
               ListEmptyComponent={
                 <Text style={[styles.emptyText, { color: colors.textSecondary, textAlign: 'center', marginTop: 40 }]}>
@@ -678,11 +677,10 @@ export default function SetlistDetailScreen({ navigation, route }) {
               {bandMembers.map(member => {
                 const selected = selectedPerformerIds.includes(member.id);
                 return (
-                  <TouchableOpacity
+                  <PressableRow
                     key={member.id}
                     style={[styles.performerPickerRow, selected && { backgroundColor: colors.bgTertiary }]}
                     onPress={() => togglePerformer(member.id)}
-                    activeOpacity={0.6}
                     accessibilityRole="button"
                     accessibilityLabel={`${member.name}${selected ? ', selected' : ''}`}
                   >
@@ -695,7 +693,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
                         {member.instruments.join(', ')}
                       </Text>
                     )}
-                  </TouchableOpacity>
+                  </PressableRow>
                 );
               })}
               {bandMembers.length === 0 && (

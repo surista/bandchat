@@ -26,6 +26,7 @@ import { successNotification, mediumImpact } from '../../utils/haptics';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
 import ErrorState from '../../components/ErrorState';
+import PressableRow from '../../components/PressableRow';
 import { SkeletonList } from '../../components/SkeletonLoader';
 
 export default function VenueDetailScreen({ navigation, route }) {
@@ -272,7 +273,7 @@ export default function VenueDetailScreen({ navigation, route }) {
     return (
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
       >
         <ScrollView
@@ -475,60 +476,56 @@ export default function VenueDetailScreen({ navigation, route }) {
 
       {/* Address with map link */}
       {venue?.address && (
-        <TouchableOpacity
+        <PressableRow
           style={styles.infoRow}
           onPress={openMaps}
-          activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel="Show on map"
         >
           <Ionicons name="navigate-outline" size={18} color={colors.primary} />
           <Text style={[styles.infoTextLink, { color: colors.primary }]}>{venue.address}</Text>
           <Ionicons name="open-outline" size={14} color={colors.primary} />
-        </TouchableOpacity>
+        </PressableRow>
       )}
 
       {/* Phone */}
       {venue?.phone && (
-        <TouchableOpacity
+        <PressableRow
           style={styles.infoRow}
           onPress={() => openLink('phone', venue.phone)}
-          activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel={`Call ${venue.phone}`}
         >
           <Ionicons name="call-outline" size={18} color={colors.primary} />
           <Text style={[styles.infoTextLink, { color: colors.primary }]}>{venue.phone}</Text>
-        </TouchableOpacity>
+        </PressableRow>
       )}
 
       {/* Email */}
       {venue?.email && (
-        <TouchableOpacity
+        <PressableRow
           style={styles.infoRow}
           onPress={() => openLink('email', venue.email)}
-          activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel={`Email ${venue.email}`}
         >
           <Ionicons name="mail-outline" size={18} color={colors.primary} />
           <Text style={[styles.infoTextLink, { color: colors.primary }]}>{venue.email}</Text>
-        </TouchableOpacity>
+        </PressableRow>
       )}
 
       {/* Website */}
       {venue?.website && (
-        <TouchableOpacity
+        <PressableRow
           style={styles.infoRow}
           onPress={() => openLink('website', venue.website)}
-          activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel={`Open website ${venue.website}`}
         >
           <Ionicons name="globe-outline" size={18} color={colors.primary} />
           <Text style={[styles.infoTextLink, { color: colors.primary }]} numberOfLines={1}>{venue.website}</Text>
           <Ionicons name="open-outline" size={14} color={colors.primary} />
-        </TouchableOpacity>
+        </PressableRow>
       )}
 
       {/* Notes */}
@@ -541,16 +538,15 @@ export default function VenueDetailScreen({ navigation, route }) {
 
       {/* Show on Map button */}
       {(venue?.address || venue?.city) && (
-        <TouchableOpacity
+        <PressableRow
           style={[styles.actionButton, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
           onPress={openMaps}
-          activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel="Show on map"
         >
           <Ionicons name="map-outline" size={18} color={colors.primary} />
           <Text style={[styles.actionButtonText, { color: colors.primary }]}>Show on Map</Text>
-        </TouchableOpacity>
+        </PressableRow>
       )}
 
       {/* Gigs at this venue */}
@@ -572,16 +568,15 @@ export default function VenueDetailScreen({ navigation, route }) {
 
       {/* Delete button */}
       {canEdit && !isNew && (
-        <TouchableOpacity
+        <PressableRow
           style={[styles.deleteButton, { borderColor: '#ef4444' }]}
           onPress={handleDelete}
-          activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel="Delete venue"
         >
           <Ionicons name="trash-outline" size={18} color="#ef4444" />
           <Text style={styles.deleteButtonText}>Delete Venue</Text>
-        </TouchableOpacity>
+        </PressableRow>
       )}
     </ScrollView>
   );

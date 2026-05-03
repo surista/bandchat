@@ -19,6 +19,7 @@ import { SkeletonList } from '../../components/SkeletonLoader';
 import { successNotification } from '../../utils/haptics';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
+import PressableRow from '../../components/PressableRow';
 import useDebounce from '../../hooks/useDebounce';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
@@ -219,12 +220,11 @@ export default function SetlistListScreen({ navigation, route }) {
     const remaining = songCount - preview.length;
 
     return (
-      <TouchableOpacity
+      <PressableRow
         style={[styles.setlistCard, { backgroundColor: colors.bgSecondary }]}
         onPress={() => navigation.navigate('SetlistDetail', { setlistId: item.id, workspaceId })}
         onLongPress={() => { setSelectedSetlist(item); setShowActions(true); }}
         delayLongPress={400}
-        activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={`${item.name}${songCount > 0 ? `, ${songCount} songs` : ''}. Long press for options`}
       >
@@ -265,7 +265,7 @@ export default function SetlistListScreen({ navigation, route }) {
             )}
           </View>
         )}
-      </TouchableOpacity>
+      </PressableRow>
     );
   }, [colors, navigation, workspaceId]);
 
@@ -419,7 +419,7 @@ export default function SetlistListScreen({ navigation, route }) {
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
               {selectedSetlist?.name}
             </Text>
-            <TouchableOpacity
+            <PressableRow
               style={styles.actionItem}
               onPress={() => {
                 setShowActions(false);
@@ -430,24 +430,24 @@ export default function SetlistListScreen({ navigation, route }) {
               accessibilityLabel="Edit setlist"
             >
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate setlist">
+            </PressableRow>
+            <PressableRow style={styles.actionItem} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate setlist">
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Duplicate</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem} onPress={handleExportPDF} accessibilityRole="button" accessibilityLabel="Export setlist as PDF">
+            </PressableRow>
+            <PressableRow style={styles.actionItem} onPress={handleExportPDF} accessibilityRole="button" accessibilityLabel="Export setlist as PDF">
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Export PDF</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete setlist">
+            </PressableRow>
+            <PressableRow style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete setlist">
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedSetlist(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
+            </PressableRow>
           </View>
         </TouchableOpacity>
       </Modal>

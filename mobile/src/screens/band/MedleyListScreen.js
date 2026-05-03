@@ -15,6 +15,7 @@ import { useTheme } from '../../context/ThemeContext';
 import Badge from '../../components/Badge';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
+import PressableRow from '../../components/PressableRow';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
 import { useLayout } from '../../hooks/useLayout';
@@ -133,12 +134,11 @@ export default function MedleyListScreen({ navigation, route }) {
     const isExpanded = expandedId === item.id;
 
     return (
-      <TouchableOpacity
+      <PressableRow
         style={[styles.card, { backgroundColor: colors.bgSecondary }]}
         onPress={() => setExpandedId(isExpanded ? null : item.id)}
         onLongPress={() => handleLongPress(item)}
         delayLongPress={400}
-        activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={`${item.name}, ${songCount} songs. Long press for options`}
       >
@@ -192,7 +192,7 @@ export default function MedleyListScreen({ navigation, route }) {
             ))}
           </View>
         )}
-      </TouchableOpacity>
+      </PressableRow>
     );
   }, [colors, expandedId, handleLongPress, getSongList, getTotalDuration]);
 
@@ -259,7 +259,7 @@ export default function MedleyListScreen({ navigation, route }) {
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
               {selectedMedley?.name}
             </Text>
-            <TouchableOpacity
+            <PressableRow
               style={styles.actionItem}
               onPress={() => {
                 setShowActions(false);
@@ -270,18 +270,18 @@ export default function MedleyListScreen({ navigation, route }) {
               accessibilityLabel="Edit medley"
             >
               <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete medley">
+            </PressableRow>
+            <PressableRow style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete medley">
               <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
               onPress={() => { setShowActions(false); setSelectedMedley(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
+            </PressableRow>
           </View>
         </TouchableOpacity>
       </Modal>
