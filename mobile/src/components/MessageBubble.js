@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from 'react';
-import { View, Text, TouchableOpacity, Animated, Linking, StyleSheet, Platform } from 'react-native';
+import { View, Text, Pressable, Animated, Linking, StyleSheet, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -325,10 +325,14 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
       accessibilityRole="button"
       accessibilityLabel={`${displayName}: ${message.content || 'attachment'}`}
     >
-      <TouchableOpacity
-        style={[styles.avatar, { backgroundColor: avatarColor, width: density.avatarSize, height: density.avatarSize }]}
+      <Pressable
+        style={({ pressed }) => [
+          styles.avatar,
+          { backgroundColor: avatarColor, width: density.avatarSize, height: density.avatarSize },
+          pressed && Platform.OS === 'ios' && author.id && onAvatarPress && { opacity: 0.6 },
+        ]}
         onPress={() => author.id && onAvatarPress?.(author)}
-        activeOpacity={author.id && onAvatarPress ? 0.6 : 1}
+        android_ripple={author.id && onAvatarPress ? { color: 'rgba(255,255,255,0.2)', borderless: true } : null}
         disabled={!author.id || !onAvatarPress}
         accessibilityRole="button"
         accessibilityLabel={`View ${displayName} profile`}
@@ -343,7 +347,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
         ) : (
           <Text style={[styles.avatarText, { fontSize: density.avatarSize * 0.42 }]} maxFontSizeMultiplier={1.2}>{initial}</Text>
         )}
-      </TouchableOpacity>
+      </Pressable>
       <View style={styles.contentContainer}>
         <View style={styles.header}>
           <Text style={[styles.authorName, { color: colors.textPrimary, fontSize: density.authorFontSize }]} maxFontSizeMultiplier={1.6}>
@@ -364,11 +368,20 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
         {renderAttachments(message.attachments, onImagePress, attachmentWidth, attachmentHeight, handleLongPress)}
         {renderReactions(message.reactions, colors, message.id, onReactionPress, onReactionLongPress)}
         {message._count?.replies > 0 && (
-          <TouchableOpacity onPress={() => onReplyPress?.(message)} activeOpacity={0.6} style={{ minHeight: 44, justifyContent: 'center' }} accessibilityRole="button" accessibilityLabel={`${message._count.replies} ${message._count.replies === 1 ? 'reply' : 'replies'}, view thread`}>
+          <Pressable
+            onPress={() => onReplyPress?.(message)}
+            style={({ pressed }) => [
+              { minHeight: 44, justifyContent: 'center' },
+              pressed && Platform.OS === 'ios' && { opacity: 0.6 },
+            ]}
+            android_ripple={{ color: colors.border, borderless: true }}
+            accessibilityRole="button"
+            accessibilityLabel={`${message._count.replies} ${message._count.replies === 1 ? 'reply' : 'replies'}, view thread`}
+          >
             <Text style={[styles.replyCount, { color: colors.primary }]} maxFontSizeMultiplier={1.3}>
               {message._count.replies} {message._count.replies === 1 ? 'reply' : 'replies'}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
       </View>
     </View>
@@ -390,11 +403,16 @@ function YouTubeThumbnail({ content, colors }) {
   if (ytEmbeds.length === 0) return null;
 
   return ytEmbeds.map(({ videoId, url }) => (
-    <TouchableOpacity
+    <Pressable
       key={videoId}
-      style={ytStyles.container}
+      style={({ pressed }) => [
+        ytStyles.container,
+        pressed && Platform.OS === 'ios' && { opacity: 0.8 },
+      ]}
       onPress={() => Linking.openURL(url).catch(() => {})}
-      activeOpacity={0.8}
+      android_ripple={{ color: 'rgba(255,255,255,0.15)' }}
+      accessibilityRole="link"
+      accessibilityLabel="Open YouTube video"
     >
       <Image
         source={{ uri: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` }}
@@ -406,7 +424,7 @@ function YouTubeThumbnail({ content, colors }) {
           <Text style={ytStyles.playIcon} maxFontSizeMultiplier={1.5}>{'\u25B6'}</Text>
         </View>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   ));
 }
 
@@ -449,12 +467,13 @@ function renderAttachments(attachments, onImagePress, imgWidth, imgHeight, onLon
       {attachments.filter(att => att.url).map(att => {
         if (att.type === 'IMAGE') {
           return (
-            <TouchableOpacity
+            <Pressable
               key={att.id}
               onPress={() => onImagePress?.(att.url)}
               onLongPress={onLongPressImage}
               delayLongPress={400}
-              activeOpacity={0.8}
+              style={({ pressed }) => [pressed && Platform.OS === 'ios' && { opacity: 0.8 }]}
+              android_ripple={{ color: 'rgba(255,255,255,0.15)' }}
               accessibilityRole="button"
               accessibilityLabel="View attached image"
             >
@@ -464,7 +483,7 @@ function renderAttachments(attachments, onImagePress, imgWidth, imgHeight, onLon
                 contentFit="cover"
                 accessibilityLabel="Attached image"
               />
-            </TouchableOpacity>
+            </Pressable>
           );
         }
         if (att.type === 'VIDEO') {
@@ -510,15 +529,19 @@ function generateWaveformBars(count) {
 function DocumentAttachment({ url, filename }) {
   const { colors } = useTheme();
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={() => Linking.openURL(url)}
-      style={{ flexDirection: 'row', alignItems: 'center', padding: 8, marginTop: 4, borderRadius: 8, backgroundColor: colors.bgTertiary }}
+      style={({ pressed }) => [
+        { flexDirection: 'row', alignItems: 'center', padding: 8, marginTop: 4, borderRadius: 8, backgroundColor: colors.bgTertiary },
+        pressed && Platform.OS === 'ios' && { opacity: 0.7 },
+      ]}
+      android_ripple={{ color: colors.border }}
       accessibilityLabel={`Document: ${filename}`}
       accessibilityRole="link"
     >
       <Ionicons name="document-outline" size={20} color={colors.primary} style={{ marginRight: 8 }} />
       <Text style={{ color: colors.primary, fontSize: 14, flex: 1 }} numberOfLines={1} maxFontSizeMultiplier={1.5}>{filename}</Text>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -586,10 +609,14 @@ function AudioAttachment({ url, filename }) {
   const displayPosition = position > 0 ? formatDurationMmSs(position) : '0:00';
 
   return (
-    <TouchableOpacity
-      style={[styles.audioContainer, { backgroundColor: colors.bgTertiary }]}
+    <Pressable
+      style={({ pressed }) => [
+        styles.audioContainer,
+        { backgroundColor: colors.bgTertiary },
+        pressed && Platform.OS === 'ios' && { opacity: 0.7 },
+      ]}
       onPress={togglePlay}
-      activeOpacity={0.7}
+      android_ripple={{ color: colors.border }}
       accessibilityRole="button"
       accessibilityLabel={`${playing ? 'Pause' : 'Play'} audio ${filename || ''}, duration ${displayDuration}`}
     >
@@ -627,7 +654,7 @@ function AudioAttachment({ url, filename }) {
           ) : null}
         </View>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -643,21 +670,25 @@ function renderReactions(reactions, colors, messageId, onReactionPress, onReacti
   return (
     <View style={styles.reactionsRow}>
       {Object.entries(grouped).map(([emoji, count]) => (
-        <TouchableOpacity
+        <Pressable
           key={emoji}
-          style={[styles.reactionBadge, { backgroundColor: colors.bgTertiary }]}
+          style={({ pressed }) => [
+            styles.reactionBadge,
+            { backgroundColor: colors.bgTertiary },
+            pressed && Platform.OS === 'ios' && { opacity: 0.6 },
+          ]}
           onPress={() => onReactionPress?.(messageId, emoji)}
           onLongPress={() => onReactionLongPress?.(reactions, emoji)}
           delayLongPress={300}
           hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-          activeOpacity={0.6}
+          android_ripple={{ color: colors.border, borderless: true }}
           accessibilityRole="button"
           accessibilityLabel={`${emoji} reaction, ${count} ${count === 1 ? 'person' : 'people'}. Long press to see who reacted.`}
           accessibilityHint="Long press to see who reacted"
         >
           {CUSTOM_EMOJI[emoji] ? renderCustomEmoji(emoji, 16) : <Text style={styles.reactionEmoji} maxFontSizeMultiplier={1.2}>{emoji}</Text>}
           <Text style={[styles.reactionCount, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>{count}</Text>
-        </TouchableOpacity>
+        </Pressable>
       ))}
     </View>
   );
