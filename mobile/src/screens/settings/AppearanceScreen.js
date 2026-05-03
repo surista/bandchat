@@ -64,7 +64,7 @@ export default function AppearanceScreen({ route }) {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
         {/* Mode Toggle */}
-        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>MODE</Text>
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">MODE</Text>
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
           <View style={styles.modeRow}>
             <Text style={[styles.modeLabel, { color: colors.textPrimary }]}>Dark Mode</Text>
@@ -81,7 +81,7 @@ export default function AppearanceScreen({ route }) {
         {/* Per-band theme toggle */}
         {workspaceId && (
           <>
-            <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>BAND THEME</Text>
+            <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">BAND THEME</Text>
             <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
               <View style={styles.modeRow}>
                 <View style={{ flex: 1, marginRight: 12 }}>
@@ -107,7 +107,7 @@ export default function AppearanceScreen({ route }) {
         )}
 
         {/* Theme Grid */}
-        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">
           {workspaceId && hasCustomTheme ? 'CHOOSE THEME' : 'THEME'}
         </Text>
         <View style={styles.grid} accessibilityRole="radiogroup" accessibilityLabel="Theme selector">

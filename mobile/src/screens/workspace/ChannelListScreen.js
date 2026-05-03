@@ -916,7 +916,7 @@ export default function ChannelListScreen({ navigation, route }) {
           <Text style={[styles.collapseIcon, { color: colors.channelListText }]} maxFontSizeMultiplier={1.2}>
             {collapsedQuickLinks ? '\u25B6' : '\u25BC'}
           </Text>
-          <Text style={[styles.sectionTitle, { color: colors.channelListText }]} maxFontSizeMultiplier={1.6}>Quick Links</Text>
+          <Text style={[styles.sectionTitle, { color: colors.channelListText }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>Quick Links</Text>
         </TouchableOpacity>
         {!collapsedQuickLinks && (
           <>

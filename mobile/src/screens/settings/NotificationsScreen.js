@@ -125,7 +125,7 @@ export default function NotificationsScreen({ route }) {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
         {/* Status */}
-        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>STATUS</Text>
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">STATUS</Text>
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
           <View style={styles.statusRow}>
             <Text style={[styles.statusLabel, { color: colors.textPrimary }]}>Notifications</Text>
@@ -140,7 +140,7 @@ export default function NotificationsScreen({ route }) {
         {/* Notification Preferences */}
         {workspaceId && prefs && (
           <>
-            <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>NOTIFICATION CATEGORIES</Text>
+            <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">NOTIFICATION CATEGORIES</Text>
             <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
               {PREF_CATEGORIES.map((cat, index) => (
                 <View
@@ -165,7 +165,7 @@ export default function NotificationsScreen({ route }) {
         )}
 
         {/* Snooze Options */}
-        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>SNOOZE NOTIFICATIONS</Text>
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">SNOOZE NOTIFICATIONS</Text>
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
           {SNOOZE_OPTIONS.map((option, index) => (
             <PressableRow
