@@ -49,8 +49,9 @@ const BAND_CATEGORIES = [
     key: 'band-gigs', label: 'Gigs', icon: 'calendar-outline',
     items: [
       { id: 'band-calendar', key: 'calendar', label: 'Calendar', icon: 'calendar-outline' },
-      { id: 'band-stats', key: 'stats', label: 'Stats', icon: 'stats-chart-outline' },
       { id: 'band-stage-plots', key: 'stageplots', label: 'Stage Plots', icon: 'map-outline' },
+      { id: 'band-archive', key: 'archive', label: 'Gig Archive', icon: 'images-outline' },
+      { id: 'band-stats', key: 'stats', label: 'Stats', icon: 'stats-chart-outline' },
       { id: 'band-venues', key: 'venues', label: 'Venues', icon: 'location-outline' },
     ],
   },
@@ -645,7 +646,7 @@ export default function ChannelListScreen({ navigation, route }) {
     setSelectedChannel(null);
   }, [selectedChannel]);
 
-  const PRO_ONLY_FEATURES = ['kitty', 'stats', 'intelligence', 'practice', 'timeline', 'achievements'];
+  const PRO_ONLY_FEATURES = ['kitty', 'stats', 'intelligence', 'practice', 'timeline', 'achievements', 'archive'];
 
   const handleBandItemPress = useCallback((key) => {
     // Gate pro-only features
@@ -672,11 +673,17 @@ export default function ChannelListScreen({ navigation, route }) {
       practice: 'PracticeDashboard',
       stageplots: 'StagePlotList',
       venues: 'Venues',
+      archive: 'GigArchive',
     };
     const params = { workspaceId };
     if (key === 'songs') params.workspaceName = workspace?.name;
+    if (key === 'archive') {
+      params.workspaceName = workspace?.name;
+      params.currency = workspace?.currency;
+      params.effectivePlan = workspace?.effectivePlan;
+    }
     navigation.navigate(screenMap[key], params);
-  }, [navigation, workspaceId, workspace?.effectivePlan, workspace?.name]);
+  }, [navigation, workspaceId, workspace?.effectivePlan, workspace?.name, workspace?.currency]);
 
   // Organize channels into groups
   const sections = useMemo(() => {

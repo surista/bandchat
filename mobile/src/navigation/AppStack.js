@@ -13,6 +13,7 @@ import SetlistDetailScreen from '../screens/band/SetlistDetailScreen';
 import GigListScreen from '../screens/band/GigListScreen';
 import GigDetailScreen from '../screens/band/GigDetailScreen';
 import GigGalleryScreen from '../screens/band/GigGalleryScreen';
+import GigArchiveScreen from '../screens/band/GigArchiveScreen';
 import StatsScreen from '../screens/band/StatsScreen';
 import BandMembersScreen from '../screens/band/BandMembersScreen';
 import ContactsScreen from '../screens/band/ContactsScreen';
@@ -128,6 +129,7 @@ export default function AppStack() {
       <Stack.Screen name="GigList" component={GigListScreen} options={{ title: 'Calendar', ...iosLargeTitle }} />
       <Stack.Screen name="GigDetail" component={GigDetailScreen} options={{ title: 'Event' }} />
       <Stack.Screen name="GigGallery" component={GigGalleryScreen} options={({ route }) => ({ title: route.params?.gigTitle ? `${route.params.gigTitle} - Gallery` : 'Gallery' })} />
+      <Stack.Screen name="GigArchive" component={GigArchiveScreen} options={{ title: 'Gig Archive', ...iosLargeTitle }} />
       <Stack.Screen name="Stats" component={StatsScreen} options={{ title: 'Stats' }} />
       <Stack.Screen name="BandMembers" component={BandMembersScreen} options={{ title: 'Members', ...iosLargeTitle }} />
       <Stack.Screen name="Contacts" component={ContactsScreen} options={{ title: 'Contacts', ...iosLargeTitle }} />
