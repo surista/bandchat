@@ -2,6 +2,11 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.71] - 2026-05-05
+
+### Improved
+- **MessageList: extract `MessageRow` + `React.memo`** — Previously every socket event (a single emoji reaction by anyone) caused a full MessageList re-render, and since rows were inline JSX inside a giant IIFE there was no memoization boundary. At 5,000 messages that's a 100-200ms layout/style storm on every reaction. `MessageRow` is now a memoized component at module scope; per-row primitives (`isEditing`, `isHighlighted`, `isReactionPickerOpen`, `isPinned`, `isSaved`, `showSeenBy`, `seenByCount`, `showDateHeader`, `showUnreadDivider`, `editContent` only when editing) are passed inline; everything else (handlers + reference data) is bundled into a memoized `ctx` object. Stabilized handlers via `useCallback` and an `editingIdRef` so `handleSaveEdit` can read the current id without depending on `messages`. Net effect: a single reaction in a 5,000-message channel re-renders **1 row instead of 5,000**. Also: removed the dead `[editContent]` dep on `insertEditLinePrefix` (function reads `editContentRef.current`, not `editContent`) which was busting the ctx memo on every keystroke.
+
 ## [1.06.70] - 2026-05-05
 
 ### Added
