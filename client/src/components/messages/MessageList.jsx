@@ -3,7 +3,7 @@
  * Handles message rendering, editing, reactions, and thread navigation.
  */
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
 import { format, isToday, isYesterday } from 'date-fns';
 import ReactionDisplay from './ReactionDisplay';
 import ReactionPicker from './ReactionPicker';
@@ -367,6 +367,277 @@ const MessageContent = React.memo(({ content, message, onOpenLightbox, members, 
 });
 MessageContent.displayName = 'MessageContent';
 
+// Module-scope formatters (don't capture closure state, free of re-creation
+// cost and safe to use inside MessageRow without coupling).
+function formatMessageTimeImpl(date) {
+  return format(new Date(date), 'h:mm a');
+}
+
+function formatDateHeaderImpl(date) {
+  const d = new Date(date);
+  if (isToday(d)) return 'Today';
+  if (isYesterday(d)) return 'Yesterday';
+  return format(d, 'EEEE, dd-MMM-yyyy');
+}
+
+/**
+ * Memoized message row. Receives a stable `ctx` containing handlers/data
+ * + per-row primitives (booleans, current edit content). Default shallow
+ * comparison: when `message` reference is unchanged AND none of the per-row
+ * primitives changed AND `ctx` reference is the same, the row skips
+ * re-rendering entirely. The parent (MessageList → ChannelView) updates
+ * messages with `prev.map(m => m.id === id ? {...m, ...} : m)`, so unchanged
+ * rows keep their object reference and the memo bypass kicks in.
+ *
+ * Net effect: a single reaction in a 5,000-message channel re-renders 1 row
+ * instead of 5,000.
+ */
+const MessageRow = memo(function MessageRow({
+  message, showDateHeader, showUnreadDivider,
+  isEditing, isHighlighted, isReactionPickerOpen, isPinned, isSaved,
+  showSeenBy, seenByCount, editContent, ctx,
+}) {
+  const {
+    members, channels, blockedDomains, memberAvatarMap, workspaceId, currentUser,
+    onAvatarClick, onOpenThread, onAddToLibrary, onTogglePreview, onSelectChannel,
+    onPinMessage, onUnpinMessage, onSaveMessage, onUnsaveMessage,
+    setMsgContextMenu, setDeleteMessageId, setReactionPickerMessageId,
+    handleStartEdit, handleToggleReaction, handleReactionSelect, openLightbox,
+    editTextareaRef, setEditContent, handleSaveEdit, handleCancelEdit,
+    wrapEditSelection, insertEditLinePrefix,
+  } = ctx;
+
+  return (
+    <div>
+      {showDateHeader && (
+        <div className="flex items-center my-4">
+          <div className="flex-1 border-t border-[var(--color-border)]" />
+          <span className="px-4 text-xs text-[var(--color-text-muted)] font-medium">
+            {formatDateHeaderImpl(message.createdAt)}
+          </span>
+          <div className="flex-1 border-t border-[var(--color-border)]" />
+        </div>
+      )}
+
+      {showUnreadDivider && (
+        <div className="unread-divider flex items-center my-3" role="separator" aria-label="New messages below">
+          <div className="flex-1 border-t border-red-500" aria-hidden="true" />
+          <span className="px-3 text-xs text-red-500 font-semibold">New messages</span>
+          <div className="flex-1 border-t border-red-500" aria-hidden="true" />
+        </div>
+      )}
+
+      <div
+        data-message-id={message.id}
+        className={`group flex gap-3 py-2 hover:bg-[var(--color-bg-tertiary)]/30 rounded px-2 -mx-2 relative ${message.pending ? 'opacity-60' : ''} ${isHighlighted ? 'msg-highlight' : ''}`}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          const previewEl = e.target.closest('[data-preview-url]');
+          const linkEl = e.target.closest('a[href^="http"]');
+          const linkUrl = previewEl?.dataset?.previewUrl || linkEl?.href || null;
+          setMsgContextMenu({ messageId: message.id, x: e.clientX, y: e.clientY, linkUrl });
+        }}
+      >
+        <div
+          className={`w-9 h-9 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white font-medium ${message.author?.id && onAvatarClick ? 'cursor-pointer hover:opacity-80' : ''}`}
+          onClick={() => message.author?.id && onAvatarClick?.(message.author.id)}
+        >
+          {(() => {
+            const avatarSrc = message.author?.avatarUrl || (message.author?.id && memberAvatarMap.get(message.author.id));
+            return avatarSrc ? (
+              <img src={avatarSrc} alt={message.author?.displayName || message.removedUserName || 'Deleted User'} className="w-full h-full rounded object-cover" />
+            ) : (
+              (message.author?.displayName || message.removedUserName || 'Deleted User').charAt(0).toUpperCase()
+            );
+          })()}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2">
+            <span
+              className={`font-semibold text-[var(--color-text-primary)] ${message.author?.id && onAvatarClick ? 'cursor-pointer hover:underline' : ''}`}
+              onClick={() => message.author?.id && onAvatarClick?.(message.author.id)}
+            >
+              {message.author?.displayName || message.removedUserName || 'Deleted User'}
+            </span>
+            <span className="text-xs text-[var(--color-text-muted)]">
+              {formatMessageTimeImpl(message.createdAt)}
+            </span>
+            {message.pending && <span className="text-xs text-gray-500">(sending...)</span>}
+            {!message.pending && message.updatedAt !== message.createdAt && (
+              <span className="text-xs text-gray-500">(edited)</span>
+            )}
+          </div>
+
+          {isEditing ? (
+            <div className="mt-1">
+              <textarea
+                ref={(el) => {
+                  editTextareaRef.current = el;
+                  if (el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+                }}
+                value={editContent ?? ''}
+                onChange={(e) => {
+                  setEditContent(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = e.target.scrollHeight + 'px';
+                }}
+                className="w-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-t p-2 resize-vertical min-h-[2.5rem]"
+                rows={1}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit(); }
+                  if (e.key === 'Escape') { handleCancelEdit(); }
+                  if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+                    if (e.key === 'b') { e.preventDefault(); wrapEditSelection('**'); }
+                    if (e.key === 'i') { e.preventDefault(); wrapEditSelection('*'); }
+                    if (e.key === 'e') { e.preventDefault(); wrapEditSelection('`'); }
+                  }
+                  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'X') { e.preventDefault(); wrapEditSelection('~~'); }
+                }}
+              />
+              <div className="flex items-center justify-between bg-[var(--color-bg-tertiary)] rounded-b px-2 py-1 border-t border-[var(--color-border)]">
+                <div className="hidden md:flex items-center gap-0.5">
+                  <button type="button" onClick={() => wrapEditSelection('**')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Bold (Ctrl+B)"><span className="font-bold text-xs w-5 h-5 flex items-center justify-center">B</span></button>
+                  <button type="button" onClick={() => wrapEditSelection('*')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Italic (Ctrl+I)"><span className="italic text-xs w-5 h-5 flex items-center justify-center">I</span></button>
+                  <button type="button" onClick={() => wrapEditSelection('~~')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Strikethrough (Ctrl+Shift+X)"><span className="line-through text-xs w-5 h-5 flex items-center justify-center">S</span></button>
+                  <button type="button" onClick={() => wrapEditSelection('`')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Code (Ctrl+E)"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg></button>
+                  <button type="button" onClick={() => wrapEditSelection('```\n', '\n```')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Code block"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M4 12h16M4 17h10" /></svg></button>
+                  <button type="button" onClick={() => insertEditLinePrefix('> ')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Quote"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg></button>
+                  <button type="button" onClick={() => insertEditLinePrefix('- ')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Bullet list"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /><circle cx="2" cy="6" r="1" fill="currentColor" /><circle cx="2" cy="12" r="1" fill="currentColor" /><circle cx="2" cy="18" r="1" fill="currentColor" /></svg></button>
+                </div>
+                <div className="flex gap-2 text-xs ml-auto">
+                  <button onClick={handleCancelEdit} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">Cancel</button>
+                  <button onClick={handleSaveEdit} className="text-slack-blue hover:underline">Save</button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="message-content text-[var(--color-text-secondary)] break-words whitespace-pre-wrap">
+              <MessageContent content={message.content} message={message} onOpenLightbox={openLightbox} members={members} onAddToLibrary={onAddToLibrary} workspaceId={workspaceId} isOwn={message.author?.id === currentUser?.id} onTogglePreview={onTogglePreview} blockedDomains={blockedDomains} channels={channels} onSelectChannel={onSelectChannel} />
+            </div>
+          )}
+
+          {message.attachments?.length > 0 && (
+            <div className="mt-2 space-y-2">
+              {message.attachments.map((att) => (
+                <div key={att.id}>
+                  {att.type === 'IMAGE' && (
+                    <div className="relative inline-block group/img">
+                      <img src={att.thumbnailUrl || att.url} alt={att.filename} className="max-w-full md:max-w-md max-h-80 rounded cursor-pointer" loading="lazy" onClick={() => openLightbox(message, att.url)} />
+                      <div className="absolute bottom-2 right-2 opacity-100 sm:opacity-0 sm:group-hover/img:opacity-100 transition-opacity flex gap-1">
+                        <button onClick={(e) => { e.stopPropagation(); handleDownload(att.url, att.filename); }} className="bg-gray-900/80 text-white px-3 py-2 sm:px-2 sm:py-1 rounded text-sm sm:text-xs hover:bg-gray-900 flex items-center gap-1 min-h-[36px] sm:min-h-0" title="Download" aria-label={`Download ${att.filename}`}>
+                          <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                          Download
+                        </button>
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1">{att.filename}</div>
+                    </div>
+                  )}
+                  {att.type === 'VIDEO' && (
+                    <video src={att.url} controls playsInline preload="none" className="max-w-full md:max-w-md rounded" />
+                  )}
+                  {att.type === 'AUDIO' && (
+                    <div className="bg-[var(--color-bg-tertiary)] rounded-lg p-3 max-w-full md:max-w-md">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 bg-[var(--color-bg-secondary)] rounded flex items-center justify-center flex-shrink-0">
+                          <svg className="w-5 h-5 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm text-[var(--color-text-primary)] truncate">{att.filename}</div>
+                          {att.size && (<div className="text-xs text-[var(--color-text-muted)]">{(att.size / (1024 * 1024)).toFixed(1)} MB</div>)}
+                        </div>
+                        <button onClick={() => handleDownload(att.url, att.filename)} className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors" title="Download">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                        </button>
+                      </div>
+                      <audio src={att.url} controls preload="none" className="w-full" />
+                    </div>
+                  )}
+                  {att.type === 'DOCUMENT' && (
+                    <a href={att.url} target="_blank" rel="noopener noreferrer" className="text-slack-blue hover:underline">{att.filename}</a>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <ReactionDisplay
+            reactions={message.reactions}
+            currentUserId={currentUser.id}
+            onToggleReaction={(emoji, hasReacted) => handleToggleReaction(message.id, emoji, hasReacted)}
+          />
+
+          {message._count?.replies > 0 && (
+            <button
+              onClick={() => onOpenThread(message)}
+              className={`mt-2 text-sm hover:underline flex items-center gap-1 ${message.unreadReplies > 0 ? 'text-slack-blue font-bold' : 'text-gray-500'}`}
+              aria-label={message.unreadReplies > 0
+                ? `${message.unreadReplies} unread ${message.unreadReplies === 1 ? 'reply' : 'replies'}, open thread`
+                : `${message._count.replies} ${message._count.replies === 1 ? 'reply' : 'replies'}, open thread`}
+            >
+              <span>
+                {message.unreadReplies > 0
+                  ? `${message.unreadReplies} new ${message.unreadReplies === 1 ? 'reply' : 'replies'}`
+                  : `${message._count.replies} ${message._count.replies === 1 ? 'reply' : 'replies'}`}
+              </span>
+              <span className="text-gray-400" aria-hidden="true">→</span>
+            </button>
+          )}
+
+          {showSeenBy && (
+            <div className="mt-1 text-xs text-[var(--color-text-muted)]">Seen by {seenByCount}</div>
+          )}
+        </div>
+
+        <button
+          className="absolute right-2 top-2 text-gray-500 hover:text-gray-300 transition-opacity opacity-0 group-hover:opacity-0 focus:opacity-100 hidden sm:block text-sm p-1"
+          onClick={(e) => { e.stopPropagation(); setMsgContextMenu({ messageId: message.id, x: e.clientX, y: e.clientY }); }}
+          aria-label="Message actions"
+          tabIndex={0}
+        >...</button>
+
+        <div className={`absolute right-2 -top-3 z-10 transition-opacity hidden sm:block ${isReactionPickerOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus-within:opacity-100'}`}>
+          {isReactionPickerOpen && (
+            <div className="absolute right-0 bottom-full mb-1 z-10">
+              <ReactionPicker
+                onSelect={(emoji) => handleReactionSelect(message.id, emoji)}
+                onClose={() => setReactionPickerMessageId(null)}
+              />
+            </div>
+          )}
+          <div className="flex items-center gap-1 bg-[var(--color-bg-tertiary)] rounded border border-[var(--color-border)]">
+            <button onClick={(e) => { e.stopPropagation(); setReactionPickerMessageId(isReactionPickerOpen ? null : message.id); }} className="p-2 sm:p-1.5 hover:bg-[var(--color-bg-secondary)] rounded text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] min-w-[36px] sm:min-w-0" title="Add reaction" aria-label="Add reaction">😀</button>
+            <button onClick={(e) => { e.stopPropagation(); onOpenThread(message); }} className="p-2 sm:p-1.5 hover:bg-[var(--color-bg-secondary)] rounded text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] min-w-[36px] sm:min-w-0" title="Reply in thread" aria-label="Reply in thread">💬</button>
+            {onPinMessage && onUnpinMessage && (
+              <button
+                onClick={(e) => { e.stopPropagation(); if (isPinned) onUnpinMessage(message.id); else onPinMessage(message.id); }}
+                className={`p-2 sm:p-1.5 hover:bg-[var(--color-bg-secondary)] rounded min-w-[36px] sm:min-w-0 ${isPinned ? 'text-yellow-400' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
+                title={isPinned ? 'Unpin message' : 'Pin message'}
+                aria-label={isPinned ? 'Unpin message' : 'Pin message'}
+              >📌</button>
+            )}
+            {onSaveMessage && onUnsaveMessage && (
+              <button
+                onClick={(e) => { e.stopPropagation(); if (isSaved) onUnsaveMessage(message.id); else onSaveMessage(message.id); }}
+                className={`p-2 sm:p-1.5 hover:bg-[var(--color-bg-secondary)] rounded min-w-[36px] sm:min-w-0 ${isSaved ? 'text-blue-400' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}`}
+                title={isSaved ? 'Unsave message' : 'Save message'}
+                aria-label={isSaved ? 'Unsave message' : 'Save message'}
+              >🔖</button>
+            )}
+            {message.author?.id === currentUser.id && (
+              <>
+                <button onClick={(e) => { e.stopPropagation(); handleStartEdit(message); }} className="p-2 sm:p-1.5 hover:bg-[var(--color-bg-secondary)] rounded text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] min-w-[36px] sm:min-w-0" title="Edit" aria-label="Edit message">✏️</button>
+                <button onClick={(e) => { e.stopPropagation(); setDeleteMessageId(message.id); }} className="p-2 sm:p-1.5 hover:bg-[var(--color-bg-secondary)] rounded text-[var(--color-text-secondary)] hover:text-red-400 min-w-[36px] sm:min-w-0" title="Delete" aria-label="Delete message">🗑️</button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 /**
  * Renders a list of messages with date headers, reactions, and action buttons.
  *
@@ -408,7 +679,7 @@ function MessageList({
   const [editContent, setEditContentState] = useState('');
   const editTextareaRef = useRef(null);
   const editContentRef = useRef('');
-  const setEditContent = (val) => { editContentRef.current = val; setEditContentState(val); };
+  // setEditContent is defined below (useCallback) so it's stable across renders.
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState(null);
   const [deleteMessageId, setDeleteMessageId] = useState(null); // For delete confirmation dialog
   const [reportMessageId, setReportMessageId] = useState(null); // For report dialog
@@ -490,49 +761,52 @@ function MessageList({
     return images;
   };
 
-  const openLightbox = (message, src) => {
+  const openLightbox = useCallback((message, src) => {
     const images = getMessageImages(message);
     const index = images.findIndex(img => img.src === src);
     setLightboxData({ images, index: Math.max(0, index) });
-  };
+  }, []);
 
-  const formatMessageTime = (date) => {
-    const d = new Date(date);
-    return format(d, 'h:mm a');
-  };
+  // formatMessageTime / formatDateHeader / shouldShowDateHeader were moved to
+  // module scope (formatMessageTimeImpl, formatDateHeaderImpl) and inlined into
+  // messages.map below — they don't capture closure state, so keeping them on
+  // the function instance was needless re-creation cost.
 
-  const formatDateHeader = (date) => {
-    const d = new Date(date);
-    if (isToday(d)) return 'Today';
-    if (isYesterday(d)) return 'Yesterday';
-    return format(d, 'EEEE, dd-MMM-yyyy');
-  };
+  // Mirror editingId in a ref so memoized handlers can read its current value
+  // without listing it as a useCallback dep (which would defeat memoization).
+  const editingIdRef = useRef(null);
+  useEffect(() => { editingIdRef.current = editingId; }, [editingId]);
 
-  const shouldShowDateHeader = (message, index) => {
-    if (index === 0) return true;
-    const prevMessage = messages[index - 1];
-    const prevDate = new Date(prevMessage.createdAt).toDateString();
-    const currDate = new Date(message.createdAt).toDateString();
-    return prevDate !== currDate;
-  };
+  // Stable setEditContent: avoids changing reference every render which would
+  // break the ctx memo for MessageRow.
+  const setEditContent = useCallback((val) => {
+    editContentRef.current = val;
+    setEditContentState(val);
+  }, []);
 
-  const handleStartEdit = (message) => {
+  const handleStartEdit = useCallback((message) => {
     setEditingId(message.id);
+    editingIdRef.current = message.id;
     setEditContent(message.content);
-  };
+  }, [setEditContent]);
 
-  const handleSaveEdit = async () => {
-    if (editContent.trim() && editContent !== messages.find(m => m.id === editingId)?.content) {
-      await onEditMessage(editingId, editContent);
+  const handleSaveEdit = useCallback(async () => {
+    const id = editingIdRef.current;
+    const content = editContentRef.current;
+    if (!id) return;
+    if (content?.trim()) {
+      await onEditMessage(id, content);
     }
     setEditingId(null);
+    editingIdRef.current = null;
     setEditContent('');
-  };
+  }, [onEditMessage, setEditContent]);
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setEditingId(null);
+    editingIdRef.current = null;
     setEditContent('');
-  };
+  }, [setEditContent]);
 
   const wrapEditSelection = useCallback((before, after) => {
     const ta = editTextareaRef.current;
@@ -561,21 +835,24 @@ function MessageList({
     const lineStart = content.lastIndexOf('\n', start - 1) + 1;
     setEditContent(content.slice(0, lineStart) + prefix + content.slice(lineStart));
     setTimeout(() => { ta.focus(); ta.setSelectionRange(start + prefix.length, start + prefix.length); }, 0);
-  }, [editContent]);
+  }, [setEditContent]);
+  // Note: previously listed [editContent] which busted the ctx memo on every
+  // keystroke (every-row re-render). The function reads editContentRef.current,
+  // not editContent, so the dep was both wrong and harmful for memoization.
 
-  const handleToggleReaction = (messageId, emoji, hasReacted) => {
+  const handleToggleReaction = useCallback((messageId, emoji, hasReacted) => {
     hapticLight();
     if (hasReacted) {
       onRemoveReaction(messageId, emoji);
     } else {
       onAddReaction(messageId, emoji);
     }
-  };
+  }, [onAddReaction, onRemoveReaction]);
 
-  const handleReactionSelect = (messageId, emoji) => {
+  const handleReactionSelect = useCallback((messageId, emoji) => {
     onAddReaction(messageId, emoji);
     setReactionPickerMessageId(null);
-  };
+  }, [onAddReaction]);
 
   const handleCopyText = useCallback((messageId) => {
     const message = messages.find(m => m.id === messageId);
@@ -610,6 +887,49 @@ function MessageList({
     },
   });
 
+  // Stable per-render context bundle passed to every MessageRow. By packaging
+  // all the handlers + reference data into one memoized object, MessageRow's
+  // React.memo only has to do a shallow compare on `ctx` (one ref check)
+  // instead of 25+ individual props. Result: when a single message changes
+  // (e.g. someone adds a reaction), only that message's row re-renders;
+  // all 4,999 others short-circuit because their props are identical.
+  const ctx = useMemo(() => ({
+    members,
+    channels,
+    blockedDomains,
+    memberAvatarMap,
+    workspaceId,
+    currentUser,
+    onAvatarClick,
+    onOpenThread,
+    onAddToLibrary,
+    onTogglePreview,
+    onSelectChannel,
+    onPinMessage,
+    onUnpinMessage,
+    onSaveMessage,
+    onUnsaveMessage,
+    setMsgContextMenu,
+    setDeleteMessageId,
+    setReactionPickerMessageId,
+    handleStartEdit,
+    handleToggleReaction,
+    handleReactionSelect,
+    openLightbox,
+    editTextareaRef,
+    setEditContent,
+    handleSaveEdit,
+    handleCancelEdit,
+    wrapEditSelection,
+    insertEditLinePrefix,
+  }), [
+    members, channels, blockedDomains, memberAvatarMap, workspaceId, currentUser,
+    onAvatarClick, onOpenThread, onAddToLibrary, onTogglePreview, onSelectChannel,
+    onPinMessage, onUnpinMessage, onSaveMessage, onUnsaveMessage,
+    handleStartEdit, handleToggleReaction, handleReactionSelect, openLightbox,
+    setEditContent, handleSaveEdit, handleCancelEdit, wrapEditSelection, insertEditLinePrefix,
+  ]);
+
   if (messages.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-gray-400 p-8">
@@ -630,422 +950,23 @@ function MessageList({
       onTouchEnd={messageLongPress.onTouchEnd}
       onTouchCancel={messageLongPress.onTouchCancel}
     >
-      {(() => {
-        // Render all loaded messages. The previous 150-message cap dropped the
-        // OLDEST messages from the DOM regardless of scroll direction, which
-        // silently broke scroll-up: paginated history would arrive in state
-        // but get sliced out before render. Modern browsers handle thousands
-        // of message nodes fine; if perf actually becomes a problem later,
-        // swap in a windowed virtualizer (react-window) that respects scroll
-        // position rather than a hard "keep latest N" slice.
-        const visibleMessages = messages;
-        return (
-          <>
-            {visibleMessages.map((message, index) => {
-              const fullIndex = index;
-              return (
-                <div key={message.id}>
-          {/* Date Header */}
-          {shouldShowDateHeader(message, fullIndex) && (
-            <div className="flex items-center my-4">
-              <div className="flex-1 border-t border-[var(--color-border)]" />
-              <span className="px-4 text-xs text-[var(--color-text-muted)] font-medium">
-                {formatDateHeader(message.createdAt)}
-              </span>
-              <div className="flex-1 border-t border-[var(--color-border)]" />
-            </div>
-          )}
-
-          {/* Unread Divider */}
-          {fullIndex === firstUnreadIndex && (
-            <div className="unread-divider flex items-center my-3" role="separator" aria-label="New messages below">
-              <div className="flex-1 border-t border-red-500" aria-hidden="true" />
-              <span className="px-3 text-xs text-red-500 font-semibold">New messages</span>
-              <div className="flex-1 border-t border-red-500" aria-hidden="true" />
-            </div>
-          )}
-
-          {/* Message */}
-          <div
-            data-message-id={message.id}
-            className={`group flex gap-3 py-2 hover:bg-[var(--color-bg-tertiary)]/30 rounded px-2 -mx-2 relative ${message.pending ? 'opacity-60' : ''} ${highlightedId === message.id ? 'msg-highlight' : ''}`}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              // Detect if right-clicked on a link or link preview
-              const previewEl = e.target.closest('[data-preview-url]');
-              const linkEl = e.target.closest('a[href^="http"]');
-              const linkUrl = previewEl?.dataset?.previewUrl || linkEl?.href || null;
-              setMsgContextMenu({ messageId: message.id, x: e.clientX, y: e.clientY, linkUrl });
-            }}
-          >
-            {/* Avatar */}
-            <div
-              className={`w-9 h-9 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white font-medium ${message.author?.id && onAvatarClick ? 'cursor-pointer hover:opacity-80' : ''}`}
-              onClick={() => message.author?.id && onAvatarClick?.(message.author.id)}
-            >
-              {(() => {
-                const avatarSrc = message.author?.avatarUrl || (message.author?.id && memberAvatarMap.get(message.author.id));
-                return avatarSrc ? (
-                  <img
-                    src={avatarSrc}
-                    alt={message.author?.displayName || message.removedUserName || 'Deleted User'}
-                    className="w-full h-full rounded object-cover"
-                  />
-                ) : (
-                  (message.author?.displayName || message.removedUserName || 'Deleted User').charAt(0).toUpperCase()
-                );
-              })()}
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-baseline gap-2">
-                <span
-                  className={`font-semibold text-[var(--color-text-primary)] ${message.author?.id && onAvatarClick ? 'cursor-pointer hover:underline' : ''}`}
-                  onClick={() => message.author?.id && onAvatarClick?.(message.author.id)}
-                >
-                  {message.author?.displayName || message.removedUserName || 'Deleted User'}
-                </span>
-                <span className="text-xs text-[var(--color-text-muted)]">
-                  {formatMessageTime(message.createdAt)}
-                </span>
-                {message.pending && (
-                  <span className="text-xs text-gray-500">(sending...)</span>
-                )}
-                {!message.pending && message.updatedAt !== message.createdAt && (
-                  <span className="text-xs text-gray-500">(edited)</span>
-                )}
-              </div>
-
-              {editingId === message.id ? (
-                <div className="mt-1">
-                  <textarea
-                    ref={(el) => {
-                      editTextareaRef.current = el;
-                      if (el) {
-                        el.style.height = 'auto';
-                        el.style.height = el.scrollHeight + 'px';
-                      }
-                    }}
-                    value={editContent}
-                    onChange={(e) => {
-                      setEditContent(e.target.value);
-                      e.target.style.height = 'auto';
-                      e.target.style.height = e.target.scrollHeight + 'px';
-                    }}
-                    className="w-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-t p-2 resize-vertical min-h-[2.5rem]"
-                    rows={1}
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSaveEdit();
-                      }
-                      if (e.key === 'Escape') {
-                        handleCancelEdit();
-                      }
-                      if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
-                        if (e.key === 'b') { e.preventDefault(); wrapEditSelection('**'); }
-                        if (e.key === 'i') { e.preventDefault(); wrapEditSelection('*'); }
-                        if (e.key === 'e') { e.preventDefault(); wrapEditSelection('`'); }
-                      }
-                      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'X') {
-                        e.preventDefault(); wrapEditSelection('~~');
-                      }
-                    }}
-                  />
-                  <div className="flex items-center justify-between bg-[var(--color-bg-tertiary)] rounded-b px-2 py-1 border-t border-[var(--color-border)]">
-                    <div className="hidden md:flex items-center gap-0.5">
-                      <button type="button" onClick={() => wrapEditSelection('**')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Bold (Ctrl+B)">
-                        <span className="font-bold text-xs w-5 h-5 flex items-center justify-center">B</span>
-                      </button>
-                      <button type="button" onClick={() => wrapEditSelection('*')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Italic (Ctrl+I)">
-                        <span className="italic text-xs w-5 h-5 flex items-center justify-center">I</span>
-                      </button>
-                      <button type="button" onClick={() => wrapEditSelection('~~')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Strikethrough (Ctrl+Shift+X)">
-                        <span className="line-through text-xs w-5 h-5 flex items-center justify-center">S</span>
-                      </button>
-                      <button type="button" onClick={() => wrapEditSelection('`')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Code (Ctrl+E)">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
-                      </button>
-                      <button type="button" onClick={() => wrapEditSelection('```\n', '\n```')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Code block">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M4 12h16M4 17h10" /></svg>
-                      </button>
-                      <button type="button" onClick={() => insertEditLinePrefix('> ')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Quote">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                      </button>
-                      <button type="button" onClick={() => insertEditLinePrefix('- ')} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors rounded hover:bg-[var(--color-bg-secondary)]" title="Bullet list">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /><circle cx="2" cy="6" r="1" fill="currentColor" /><circle cx="2" cy="12" r="1" fill="currentColor" /><circle cx="2" cy="18" r="1" fill="currentColor" /></svg>
-                      </button>
-                    </div>
-                    <div className="flex gap-2 text-xs ml-auto">
-                      <button
-                        onClick={handleCancelEdit}
-                        className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleSaveEdit}
-                        className="text-slack-blue hover:underline"
-                      >
-                        Save
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="message-content text-[var(--color-text-secondary)] break-words whitespace-pre-wrap">
-                  <MessageContent content={message.content} message={message} onOpenLightbox={openLightbox} members={members} onAddToLibrary={onAddToLibrary} workspaceId={workspaceId} isOwn={message.author?.id === currentUser?.id} onTogglePreview={onTogglePreview} blockedDomains={blockedDomains} channels={channels} onSelectChannel={onSelectChannel} />
-                </div>
-              )}
-
-              {/* Attachments */}
-              {message.attachments?.length > 0 && (
-                <div className="mt-2 space-y-2">
-                  {message.attachments.map((att) => (
-                    <div key={att.id}>
-                      {att.type === 'IMAGE' && (
-                        <div className="relative inline-block group/img">
-                          <img
-                            src={att.thumbnailUrl || att.url}
-                            alt={att.filename}
-                            className="max-w-full md:max-w-md max-h-80 rounded cursor-pointer"
-                            loading="lazy"
-                            onClick={() => openLightbox(message, att.url)}
-                          />
-                          {/* Download button - always visible on mobile, hover on desktop */}
-                          <div className="absolute bottom-2 right-2 opacity-100 sm:opacity-0 sm:group-hover/img:opacity-100 transition-opacity flex gap-1">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDownload(att.url, att.filename);
-                              }}
-                              className="bg-gray-900/80 text-white px-3 py-2 sm:px-2 sm:py-1 rounded text-sm sm:text-xs hover:bg-gray-900 flex items-center gap-1 min-h-[36px] sm:min-h-0"
-                              title="Download"
-                              aria-label={`Download ${att.filename}`}
-                            >
-                              <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                              </svg>
-                              Download
-                            </button>
-                          </div>
-                          <div className="text-xs text-gray-400 mt-1">{att.filename}</div>
-                        </div>
-                      )}
-                      {att.type === 'VIDEO' && (
-                        <video src={att.url} controls playsInline preload="none" className="max-w-full md:max-w-md rounded" />
-                      )}
-                      {att.type === 'AUDIO' && (
-                        <div className="bg-[var(--color-bg-tertiary)] rounded-lg p-3 max-w-full md:max-w-md">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 bg-[var(--color-bg-secondary)] rounded flex items-center justify-center flex-shrink-0">
-                              <svg className="w-5 h-5 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                              </svg>
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="text-sm text-[var(--color-text-primary)] truncate">{att.filename}</div>
-                              {att.size && (
-                                <div className="text-xs text-[var(--color-text-muted)]">
-                                  {(att.size / (1024 * 1024)).toFixed(1)} MB
-                                </div>
-                              )}
-                            </div>
-                            <button
-                              onClick={() => handleDownload(att.url, att.filename)}
-                              className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-                              title="Download"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                              </svg>
-                            </button>
-                          </div>
-                          <audio
-                            src={att.url}
-                            controls
-                            preload="none"
-                            className="w-full"
-                          />
-                        </div>
-                      )}
-                      {att.type === 'DOCUMENT' && (
-                        <a
-                          href={att.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-slack-blue hover:underline"
-                        >
-                          {att.filename}
-                        </a>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Reactions */}
-              <ReactionDisplay
-                reactions={message.reactions}
-                currentUserId={currentUser.id}
-                onToggleReaction={(emoji, hasReacted) => handleToggleReaction(message.id, emoji, hasReacted)}
-              />
-
-              {/* Thread indicator */}
-              {message._count?.replies > 0 && (
-                <button
-                  onClick={() => onOpenThread(message)}
-                  className={`mt-2 text-sm hover:underline flex items-center gap-1 ${
-                    message.unreadReplies > 0
-                      ? 'text-slack-blue font-bold'
-                      : 'text-gray-500'
-                  }`}
-                  aria-label={
-                    message.unreadReplies > 0
-                      ? `${message.unreadReplies} unread ${message.unreadReplies === 1 ? 'reply' : 'replies'}, open thread`
-                      : `${message._count.replies} ${message._count.replies === 1 ? 'reply' : 'replies'}, open thread`
-                  }
-                >
-                  <span>
-                    {message.unreadReplies > 0
-                      ? `${message.unreadReplies} new ${message.unreadReplies === 1 ? 'reply' : 'replies'}`
-                      : `${message._count.replies} ${message._count.replies === 1 ? 'reply' : 'replies'}`
-                    }
-                  </span>
-                  <span className="text-gray-400" aria-hidden="true">→</span>
-                </button>
-              )}
-
-              {/* Seen by indicator */}
-              {message.id === seenByMessageId && seenByCount > 0 && (
-                <div className="mt-1 text-xs text-[var(--color-text-muted)]">
-                  Seen by {seenByCount}
-                </div>
-              )}
-            </div>
-
-            {/* Always-visible more button for keyboard/non-hover users */}
-            <button
-              className="absolute right-2 top-2 text-gray-500 hover:text-gray-300 transition-opacity opacity-0 group-hover:opacity-0 focus:opacity-100 hidden sm:block text-sm p-1"
-              onClick={(e) => {
-                e.stopPropagation();
-                setMsgContextMenu({ messageId: message.id, x: e.clientX, y: e.clientY });
-              }}
-              aria-label="Message actions"
-              tabIndex={0}
-            >
-              ...
-            </button>
-            {/* Actions - visible on hover (desktop only), hidden on mobile (use long-press context menu) */}
-            <div className={`absolute right-2 -top-3 z-10 transition-opacity hidden sm:block ${reactionPickerMessageId === message.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus-within:opacity-100'}`}>
-              {reactionPickerMessageId === message.id && (
-                <div className="absolute right-0 bottom-full mb-1 z-10">
-                  <ReactionPicker
-                    onSelect={(emoji) => handleReactionSelect(message.id, emoji)}
-                    onClose={() => setReactionPickerMessageId(null)}
-                  />
-                </div>
-              )}
-              <div className="flex items-center gap-1 bg-[var(--color-bg-tertiary)] rounded border border-[var(--color-border)]">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setReactionPickerMessageId(
-                      reactionPickerMessageId === message.id ? null : message.id
-                    );
-                  }}
-                  className="p-2 sm:p-1.5 hover:bg-[var(--color-bg-secondary)] rounded text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] min-w-[36px] sm:min-w-0"
-                  title="Add reaction"
-                  aria-label="Add reaction"
-                >
-                  😀
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenThread(message);
-                  }}
-                  className="p-2 sm:p-1.5 hover:bg-[var(--color-bg-secondary)] rounded text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] min-w-[36px] sm:min-w-0"
-                  title="Reply in thread"
-                  aria-label="Reply in thread"
-                >
-                  💬
-                </button>
-                {onPinMessage && onUnpinMessage && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (pinnedMessageIds?.has(message.id)) {
-                        onUnpinMessage(message.id);
-                      } else {
-                        onPinMessage(message.id);
-                      }
-                    }}
-                    className={`p-2 sm:p-1.5 hover:bg-[var(--color-bg-secondary)] rounded min-w-[36px] sm:min-w-0 ${
-                      pinnedMessageIds?.has(message.id) ? 'text-yellow-400' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-                    }`}
-                    title={pinnedMessageIds?.has(message.id) ? 'Unpin message' : 'Pin message'}
-                    aria-label={pinnedMessageIds?.has(message.id) ? 'Unpin message' : 'Pin message'}
-                  >
-                    📌
-                  </button>
-                )}
-                {onSaveMessage && onUnsaveMessage && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (savedMessageIds?.has(message.id)) {
-                        onUnsaveMessage(message.id);
-                      } else {
-                        onSaveMessage(message.id);
-                      }
-                    }}
-                    className={`p-2 sm:p-1.5 hover:bg-[var(--color-bg-secondary)] rounded min-w-[36px] sm:min-w-0 ${
-                      savedMessageIds?.has(message.id) ? 'text-blue-400' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-                    }`}
-                    title={savedMessageIds?.has(message.id) ? 'Unsave message' : 'Save message'}
-                    aria-label={savedMessageIds?.has(message.id) ? 'Unsave message' : 'Save message'}
-                  >
-                    🔖
-                  </button>
-                )}
-                {message.author?.id === currentUser.id && (
-                  <>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStartEdit(message);
-                      }}
-                      className="p-2 sm:p-1.5 hover:bg-[var(--color-bg-secondary)] rounded text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] min-w-[36px] sm:min-w-0"
-                      title="Edit"
-                      aria-label="Edit message"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteMessageId(message.id);
-                      }}
-                      className="p-2 sm:p-1.5 hover:bg-[var(--color-bg-secondary)] rounded text-[var(--color-text-secondary)] hover:text-red-400 min-w-[36px] sm:min-w-0"
-                      title="Delete"
-                      aria-label="Delete message"
-                    >
-                      🗑️
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-              );
-            })}
-          </>
-        );
-      })()}
+      {messages.map((message, index) => (
+        <MessageRow
+          key={message.id}
+          message={message}
+          showDateHeader={index === 0 || new Date(messages[index - 1].createdAt).toDateString() !== new Date(message.createdAt).toDateString()}
+          showUnreadDivider={index === firstUnreadIndex}
+          isEditing={editingId === message.id}
+          isHighlighted={highlightedId === message.id}
+          isReactionPickerOpen={reactionPickerMessageId === message.id}
+          isPinned={!!pinnedMessageIds?.has(message.id)}
+          isSaved={!!savedMessageIds?.has(message.id)}
+          showSeenBy={message.id === seenByMessageId && seenByCount > 0}
+          seenByCount={seenByCount}
+          editContent={editingId === message.id ? editContent : undefined}
+          ctx={ctx}
+        />
+      ))}
     </div>
 
     <ConfirmDialog
