@@ -2,6 +2,13 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.72] - 2026-05-05
+
+### Documentation
+- README mobile screen + component counts refreshed (44 → 55 screens, 15 → 18 components) to reflect current state including v1.06.70's Gig Archive screen and recent additions.
+- CLAUDE.md screen count updated to 55. Feature-Parity Summary refreshed for May 2026: Messaging now 100% (full thread reply edit/delete on both platforms after v1.06.63), Gigs/Calendar bumped to 95% with Gig Archive parity (mobile v1.06.70).
+- CLAUDE.md `MessageList` row-memoization note updated from "TODO" to "shipped v1.06.71" with maintenance guidance: anything new the row uses must go through `ctx` + useCallback or it'll silently bust the memo.
+
 ## [1.06.71] - 2026-05-05
 
 ### Improved

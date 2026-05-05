@@ -110,7 +110,7 @@ bandchat/
 │   └── package.json
 ├── mobile/                     # Expo/React Native mobile app
 │   ├── src/
-│   │   ├── screens/            # 54 screens organized by feature
+│   │   ├── screens/            # 55 screens organized by feature
 │   │   ├── components/         # 18 shared: ActionSheet, Badge, DraggableList, EmojiPicker, MessageBubble, PressableRow, etc.
 │   │   ├── context/            # AuthContext, SocketContext, ThemeContext, ToastContext
 │   │   ├── services/           # ApiService (~1700 lines, with in-memory TTL cache)
@@ -377,14 +377,14 @@ All communication and reference features work on both:
 - Settings, profile, themes, data export
 - Push notifications, Practice Dashboard
 
-#### Feature Parity Summary (March 2026)
+#### Feature Parity Summary (May 2026)
 
 | Area | Parity | Notes |
 |------|--------|-------|
-| Messaging | 99% | Full parity — pinned messages, saved messages, link previews, reactions, swipe gestures (mobile) |
+| Messaging | 100% | Pinned, saved, link previews, reactions, swipe gestures (mobile), thread reply edit/delete on both (web v1.06.63) |
 | Songs | 90% | Web has Song Suggestions; both have bulk import |
 | Setlists | 85% | Web has advanced drag-drop; mobile has print/share |
-| Gigs/Calendar | 90% | Web has month view; mobile has iCal subscribe |
+| Gigs/Calendar | 95% | Web has month view; mobile has iCal subscribe; Gig Archive now on both (mobile v1.06.70) |
 | Members | 95% | Excellent parity |
 | Settings | 85% | Mobile has more granular security options |
 

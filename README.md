@@ -76,7 +76,7 @@ A real-time communication and management app for bands. Think Slack, but built s
 React single-page app deployed as a static site on Vercel. 64 components across 9 directories.
 
 ### Mobile App (iOS & Android)
-Native mobile app built with Expo/React Native. 44 screens and 15 shared components covering all features including offline support, haptic feedback, push notifications, swipe gestures (reply/react), and app icon quick actions.
+Native mobile app built with Expo/React Native. 55 screens and 18 shared components covering all features including offline support, haptic feedback, push notifications, swipe gestures (reply/react), Gig Archive, and app icon quick actions.
 
 ## Tech Stack
 
@@ -204,8 +204,8 @@ bandchat/
 │   └── package.json
 ├── mobile/                     # Expo/React Native mobile app
 │   ├── src/
-│   │   ├── screens/            # 44 screens
-│   │   ├── components/         # 15 shared components
+│   │   ├── screens/            # 55 screens
+│   │   ├── components/         # 18 shared components
 │   │   ├── context/            # 4 contexts: Auth, Socket, Theme, Toast
 │   │   ├── services/           # ApiService (~1400 lines)
 │   │   └── utils/              # 9 utilities
