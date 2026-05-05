@@ -147,7 +147,7 @@ export default function InviteScreen({ route }) {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
         {/* Invite Code */}
-        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>INVITE CODE</Text>
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">INVITE CODE</Text>
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
           <View style={[styles.codeBox, { backgroundColor: colors.bgTertiary }]}>
             <Text style={[styles.codeText, { color: colors.textPrimary }]}>
@@ -205,7 +205,7 @@ export default function InviteScreen({ route }) {
         </View>
 
         {/* Email Invite */}
-        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>EMAIL INVITE</Text>
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">EMAIL INVITE</Text>
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
           <TextInput
             style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}

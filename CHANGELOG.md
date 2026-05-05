@@ -2,6 +2,14 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.70] - 2026-05-05
+
+### Added
+- **Mobile Gig Archive screen (web parity)** — New band-view screen at Band → Gigs → Gig Archive (Pro-only, matching web). Card list of gigs+setlists merged on the same timeline as the web Gig Archive: setlists auto-link to matching gigs by `setlistId` or by date+venue/title fallback; standalone gigs become their own entries; sorted by date desc. Each card shows title + date, song-count + duration + pay badges, up to 5 performer avatars (initials or imageUrl) with overflow chip, first 3 song titles + "+N more...", and up to 4 media thumbnails (image/youtube/video/audio/link) — tapping the media row opens the existing `GigGalleryScreen`. Filter tabs: All / Past / Upcoming with live counts. Tablet uses `contentMaxWidth` for centered single-column layout. Read-only browse view in v1; add-gig / edit-performers / drag-drop upload deferred to a follow-up since the existing `GigDetailScreen` already covers per-gig edits.
+
+### Improved
+- **Mobile a11y: section labels** — `accessibilityRole="header"` added to remaining settings-screen section labels (`InviteScreen` 2 sites, `WebsiteSettingsScreen` 6 sites). Combined with the AppearanceScreen / NotificationsScreen / ChannelListScreen Quick Links pass from earlier, settings landmarks are now consistently announced to screen readers.
+
 ## [1.06.69] - 2026-05-04
 
 ### Improved

@@ -297,7 +297,7 @@ export default function WebsiteSettingsScreen({ route }) {
           )}
 
           {/* Band Identity */}
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>BAND IDENTITY</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">BAND IDENTITY</Text>
           <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
             <Text style={[styles.label, { color: colors.textSecondary }]}>Band Name *</Text>
             <TextInput style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]} value={bandName} onChangeText={setBandName} placeholder="Your band name" placeholderTextColor={colors.textSecondary} maxLength={500} />
@@ -326,7 +326,7 @@ export default function WebsiteSettingsScreen({ route }) {
 
           {/* Branding */}
           {/* Template / Genre */}
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>DESIGN TEMPLATE</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">DESIGN TEMPLATE</Text>
           <Text style={[{ color: colors.textSecondary, fontSize: 12, marginBottom: 8, marginLeft: 4 }]}>Choose a style that fits your band's vibe</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
             {THEMES.map((t) => (
@@ -353,7 +353,7 @@ export default function WebsiteSettingsScreen({ route }) {
             ))}
           </View>
 
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>BRANDING</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">BRANDING</Text>
           <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
             <View style={styles.row}>
               <View style={{ flex: 1 }}>
@@ -438,7 +438,7 @@ export default function WebsiteSettingsScreen({ route }) {
           </View>
 
           {/* Contact & Social */}
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>CONTACT & SOCIAL</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">CONTACT & SOCIAL</Text>
           <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
             <Text style={[styles.label, { color: colors.textSecondary }]}>Contact Email</Text>
             <TextInput style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]} value={contactEmail} onChangeText={setContactEmail} placeholder="bookings@yourband.com" placeholderTextColor={colors.textSecondary} keyboardType="email-address" autoCapitalize="none" maxLength={500} />
@@ -456,7 +456,7 @@ export default function WebsiteSettingsScreen({ route }) {
           </View>
 
           {/* Features */}
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>WEBSITE PAGES</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">WEBSITE PAGES</Text>
           <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
             {[
               ['Songs', showSongs, setShowSongs],
@@ -476,7 +476,7 @@ export default function WebsiteSettingsScreen({ route }) {
           </View>
 
           {/* SEO */}
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>SEO</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">SEO</Text>
           <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
             <Text style={[styles.label, { color: colors.textSecondary }]}>Page Title</Text>
             <TextInput style={[styles.input, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]} value={seoTitle} onChangeText={setSeoTitle} placeholder={`${bandName || 'Your Band'} | Official Website`} placeholderTextColor={colors.textSecondary} maxLength={200} />
