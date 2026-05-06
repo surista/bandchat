@@ -9,6 +9,7 @@ A real-time communication and management app for bands. Think Slack, but built s
 - **Direct Messages** — Private 1-on-1 and group conversations
 - **Threads** — Reply to specific messages in-line
 - **Reactions** — Emoji reactions on messages
+- **Mentions** — `@user` for individuals, `@channel`/`@here`/`@everyone` to notify everyone in a channel (with send-confirm to prevent accidental fan-out)
 - **File Sharing** — Upload images (15MB, iPhone HEIC photos transcoded to JPEG on-device), audio (30MB), video (50MB), PDFs, Guitar Pro, and ZIPs via Cloudflare R2 with auto-generated thumbnails. Up to 5 attachments per message.
 - **Voice Messages** — Record and send audio messages
 - **Link Previews** — Automatic rich previews for shared URLs (dismissible by author, with SSRF protection)
