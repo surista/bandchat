@@ -2,6 +2,16 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.73] - 2026-05-07
+
+### Added
+- **Group mentions: `@channel` / `@here` / `@everyone`** — Notify everyone in a channel from a single message. Server-side push fan-out already worked, but the feature was undiscoverable; the client UX is now wired up on both web and mobile:
+  - **Autocomplete:** Group mentions appear at the top of the @-suggestions list (above per-user matches) with a description like "Notify everyone in this channel". Filter narrows by prefix (`@ch` → channel only). Web supports keyboard nav (↑/↓/Enter/Tab/Esc); mobile uses tap.
+  - **Rendering:** Group mentions render with a distinct warning-yellow pill (`text-yellow-400 bg-yellow-500/20` on web, `#f59e0b` on mobile) so the broadcast nature is visually obvious in the message list, in threads, and in mobile bubbles. Per-user mentions keep the existing blue/primary styling.
+  - **Send confirmation:** Sending a message with `@channel`/`@here`/`@everyone` shows a confirmation prompt — `ConfirmDialog` on web, native `Alert.alert` on mobile — preventing accidental fan-out. Edits skip the confirm because the server doesn't re-fire push on message updates.
+  - All three behave identically on the server (notify every non-muted channel member, sender excluded). `@here` is not yet "online-only" — that's a future refinement.
+  - `parseMentions.js` (shared between client and mobile) now exports `GROUP_MENTIONS`, `buildGroupMentionRegex()`, and `containsGroupMention(text)`. New regex is case-insensitive and uses `\b` so `@channels` (plural) and email-style `user@channel.com` don't trigger broadcast. New tests cover both edge cases.
+
 ## [1.06.72] - 2026-05-05
 
 ### Documentation

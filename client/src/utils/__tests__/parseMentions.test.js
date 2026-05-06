@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildMentionRegex, buildChannelRegex } from '../parseMentions';
+import { buildMentionRegex, buildChannelRegex, buildGroupMentionRegex, containsGroupMention, GROUP_MENTIONS } from '../parseMentions';
 
 describe('buildMentionRegex', () => {
   const members = [
@@ -111,5 +111,40 @@ describe('buildChannelRegex', () => {
 
   it('returns null for channels without names', () => {
     expect(buildChannelRegex([{}, { name: null }])).toBeNull();
+  });
+});
+
+describe('group mentions', () => {
+  it('exposes the canonical names', () => {
+    expect(GROUP_MENTIONS).toEqual(['channel', 'here', 'everyone']);
+  });
+
+  it('detects @channel/@here/@everyone (case-insensitive)', () => {
+    expect(containsGroupMention('hey @channel meeting at 4')).toBe(true);
+    expect(containsGroupMention('@here please ack')).toBe(true);
+    expect(containsGroupMention('@EVERYONE party time')).toBe(true);
+    expect(containsGroupMention('hello @Alice')).toBe(false);
+    expect(containsGroupMention('email me at user@channel.com')).toBe(false);
+  });
+
+  it('does not match partial words', () => {
+    // @channels (plural) and @everyones must NOT trigger broadcast
+    expect(containsGroupMention('@channels new vibes')).toBe(false);
+    expect(containsGroupMention('@everyoneishere')).toBe(false);
+  });
+
+  it('handles empty/null input safely', () => {
+    expect(containsGroupMention('')).toBe(false);
+    expect(containsGroupMention(null)).toBe(false);
+    expect(containsGroupMention(undefined)).toBe(false);
+  });
+
+  it('returns a fresh regex each call (lastIndex reset)', () => {
+    const r1 = buildGroupMentionRegex();
+    const r2 = buildGroupMentionRegex();
+    expect(r1).not.toBe(r2);
+    // Each instance should match independently
+    expect(r1.test('@here')).toBe(true);
+    expect(r2.test('@here')).toBe(true);
   });
 });

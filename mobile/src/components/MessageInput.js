@@ -9,11 +9,20 @@ import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
 import { formatDuration as formatRecordingDuration } from '../utils/formatDuration';
 import { mediumImpact, errorNotification, warningNotification, selectionFeedback } from '../utils/haptics';
+import { containsGroupMention } from '../utils/parseMentions';
 import EmojiPicker from './EmojiPicker';
 import ActionSheet from './ActionSheet';
 import PressableRow from './PressableRow';
 
 const MAX_HEIGHT = 120;
+
+// Group-mention suggestions appear at the top of the @-autocomplete list.
+// All three notify the entire channel server-side (see server/src/routes/messages.js).
+const GROUP_MENTION_OPTIONS = [
+  { name: 'channel', desc: 'Notify everyone in this channel' },
+  { name: 'here', desc: 'Notify everyone in this channel' },
+  { name: 'everyone', desc: 'Notify everyone in this channel' },
+];
 
 // Cap voice recordings at 5 minutes. At 30s remaining, a warning haptic fires;
 // at the cap the recording auto-stops so runaway recordings can't drain battery
@@ -123,6 +132,19 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
       .filter(u => u.displayName?.toLowerCase().includes(lower))
       .slice(0, 8);
   }, [members, showMentions, mentionFilter]);
+
+  // Combined mention suggestions — group mentions (@channel/@here/@everyone) on top, members below.
+  // Each row gets a stable string id so the FlatList keyExtractor doesn't collide
+  // between the two sources (a user UUID will never start with "g-").
+  const mentionSuggestions = useMemo(() => {
+    if (!showMentions) return [];
+    const lower = (mentionFilter || '').toLowerCase();
+    const groupMatches = GROUP_MENTION_OPTIONS
+      .filter(g => !lower || g.name.startsWith(lower))
+      .map(g => ({ kind: 'group', id: `g-${g.name}`, name: g.name, desc: g.desc }));
+    const memberMatches = filteredMembers.map(u => ({ kind: 'user', id: u.id, user: u }));
+    return [...groupMatches, ...memberMatches];
+  }, [filteredMembers, showMentions, mentionFilter]);
 
   const filteredChannels = useMemo(() => {
     if (!showChannels) return [];
@@ -244,10 +266,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
     setTimeout(() => inputRef.current?.focus(), 50);
   }, [text]);
 
-  const handleSend = useCallback(() => {
-    const trimmed = text.trim();
-    if (!trimmed && attachments.length === 0) return;
-
+  const performSend = useCallback((trimmed) => {
     // Subtle feedback on successful send (matches voice-message UX which fires
     // mediumImpact on start). iMessage-style selection feedback rather than
     // impact since send is a routine, not a heavy, action.
@@ -269,7 +288,28 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
       typingTimeoutRef.current = null;
     }
     if (onTyping) onTyping(false);
-  }, [text, attachments, onSend, onTyping, editingMessage, onSendEdit]);
+  }, [attachments, onSend, onTyping, editingMessage, onSendEdit]);
+
+  const handleSend = useCallback(() => {
+    const trimmed = text.trim();
+    if (!trimmed && attachments.length === 0) return;
+
+    // Confirm before broadcasting via @channel/@here/@everyone. Edits skip this
+    // because the server doesn't re-fire push notifications on message updates.
+    if (!editingMessage && containsGroupMention(trimmed)) {
+      Alert.alert(
+        'Notify everyone?',
+        'All members of this channel will get a push notification.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Notify everyone', onPress: () => performSend(trimmed) },
+        ]
+      );
+      return;
+    }
+
+    performSend(trimmed);
+  }, [text, attachments.length, editingMessage, performSend]);
 
   const handleContentSizeChange = useCallback((e) => {
     const height = e.nativeEvent.contentSize.height;
@@ -566,30 +606,51 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
         </View>
       )}
 
-      {/* Mention autocomplete dropdown */}
-      {showMentions && filteredMembers.length > 0 && !isRecording && (
+      {/* Mention autocomplete dropdown — group mentions (@channel/@here/@everyone) shown first, then members */}
+      {showMentions && mentionSuggestions.length > 0 && !isRecording && (
         <View style={[styles.mentionList, { backgroundColor: colors.bgTertiary, borderBottomColor: colors.border }]}>
           <FlatList
-            data={filteredMembers}
+            data={mentionSuggestions}
             keyExtractor={(item) => item.id}
             keyboardShouldPersistTaps="always"
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[styles.mentionItem, { borderBottomColor: colors.border }]}
-                onPress={() => insertMention(item.displayName)}
-                accessibilityRole="button"
-                accessibilityLabel={`Mention ${item.displayName}`}
-              >
-                {item.avatarUrl ? (
-                  <Image source={{ uri: item.avatarUrl }} style={styles.mentionAvatar} />
-                ) : (
-                  <View style={[styles.mentionAvatarFallback, { backgroundColor: colors.primary }]}>
-                    <Text style={[styles.mentionAvatarText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.2}>{(item.displayName || '?')[0].toUpperCase()}</Text>
-                  </View>
-                )}
-                <Text style={[styles.mentionName, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>{item.displayName}</Text>
-              </TouchableOpacity>
-            )}
+            renderItem={({ item }) => {
+              if (item.kind === 'group') {
+                return (
+                  <TouchableOpacity
+                    style={[styles.mentionItem, { borderBottomColor: colors.border }]}
+                    onPress={() => insertMention(item.name)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Notify everyone with @${item.name}`}
+                  >
+                    <View style={styles.groupMentionIcon}>
+                      <Text style={styles.groupMentionAt} maxFontSizeMultiplier={1.2}>@</Text>
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={[styles.mentionName, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>@{item.name}</Text>
+                      <Text style={[styles.groupMentionDesc, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5} numberOfLines={1}>{item.desc}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              }
+              const u = item.user;
+              return (
+                <TouchableOpacity
+                  style={[styles.mentionItem, { borderBottomColor: colors.border }]}
+                  onPress={() => insertMention(u.displayName)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Mention ${u.displayName}`}
+                >
+                  {u.avatarUrl ? (
+                    <Image source={{ uri: u.avatarUrl }} style={styles.mentionAvatar} />
+                  ) : (
+                    <View style={[styles.mentionAvatarFallback, { backgroundColor: colors.primary }]}>
+                      <Text style={[styles.mentionAvatarText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.2}>{(u.displayName || '?')[0].toUpperCase()}</Text>
+                    </View>
+                  )}
+                  <Text style={[styles.mentionName, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>{u.displayName}</Text>
+                </TouchableOpacity>
+              );
+            }}
           />
         </View>
       )}
@@ -933,6 +994,24 @@ const styles = StyleSheet.create({
     marginRight: 10,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  groupMentionIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    marginRight: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+  },
+  groupMentionAt: {
+    color: '#f59e0b',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  groupMentionDesc: {
+    fontSize: 12,
+    marginTop: 1,
   },
   mentionAvatarText: {
     color: '#ffffff',

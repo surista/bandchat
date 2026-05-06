@@ -20,8 +20,8 @@
         "appleTeamId": "N7TWCNBX6C"
       },
       "android": {
-        "serviceAccountKeyPath": "../bandchat-9c58fe04f08f.json",
-        "track": "alpha"
+        "serviceAccountKeyPath": "../bandchat-b529ed8384c5.json",
+        "track": "production"
       }
     }
   }

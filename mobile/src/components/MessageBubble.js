@@ -12,7 +12,7 @@ import { lightImpact } from '../utils/haptics';
 import LinkPreview from './LinkPreview';
 import getAvatarColor from '../utils/getAvatarColor';
 import { CUSTOM_EMOJI, renderCustomEmoji } from './EmojiPicker';
-import { buildMentionRegex, buildChannelRegex } from '../utils/parseMentions';
+import { buildMentionRegex, buildChannelRegex, buildGroupMentionRegex } from '../utils/parseMentions';
 import { isSafeUrl } from '../utils/urlSafety';
 import { useLayout } from '../hooks/useLayout';
 
@@ -95,22 +95,54 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
 
   /**
    * Render a text segment with @mention highlighting.
+   * Group mentions (@channel/@here/@everyone) get a distinct warning-tinted style
+   * so the broadcast nature is visually obvious.
    */
   const renderMentions = (text, keyPrefix) => {
     if (!text) return null;
-    const mentionRegex = buildMentionRegex(members || []);
-    if (!mentionRegex) return text;
-    const parts = text.split(mentionRegex);
-    const result = [];
-    for (let j = 0; j < parts.length; j += 3) {
-      if (parts[j]) result.push(parts[j]);
-      if (j + 2 < parts.length) {
-        if (parts[j + 1]) result.push(parts[j + 1]);
-        result.push(
-          <Text key={`${keyPrefix}-m${j}`} style={{ color: colors.primary, fontWeight: '600' }} maxFontSizeMultiplier={1.5}>
-            @{parts[j + 2]}
+
+    // First: pull out @channel/@here/@everyone group mentions
+    const groupRegex = buildGroupMentionRegex();
+    const groupParts = text.split(groupRegex);
+    const afterGroup = [];
+    for (let g = 0; g < groupParts.length; g += 3) {
+      if (groupParts[g]) afterGroup.push(groupParts[g]);
+      if (g + 2 < groupParts.length) {
+        if (groupParts[g + 1]) afterGroup.push(groupParts[g + 1]);
+        afterGroup.push(
+          <Text
+            key={`${keyPrefix}-g${g}`}
+            style={{ color: '#f59e0b', fontWeight: '700' }}
+            maxFontSizeMultiplier={1.5}
+          >
+            @{groupParts[g + 2].toLowerCase()}
           </Text>
         );
+      }
+    }
+
+    // Then: per-user @mentions on remaining text fragments
+    const mentionRegex = buildMentionRegex(members || []);
+    if (!mentionRegex) return afterGroup;
+
+    const result = [];
+    for (let f = 0; f < afterGroup.length; f++) {
+      const frag = afterGroup[f];
+      if (typeof frag !== 'string') {
+        result.push(frag);
+        continue;
+      }
+      const parts = frag.split(mentionRegex);
+      for (let j = 0; j < parts.length; j += 3) {
+        if (parts[j]) result.push(parts[j]);
+        if (j + 2 < parts.length) {
+          if (parts[j + 1]) result.push(parts[j + 1]);
+          result.push(
+            <Text key={`${keyPrefix}-m${f}-${j}`} style={{ color: colors.primary, fontWeight: '600' }} maxFontSizeMultiplier={1.5}>
+              @{parts[j + 2]}
+            </Text>
+          );
+        }
       }
     }
     return result;

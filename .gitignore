@@ -48,6 +48,10 @@ client/android/capacitor-cordova-android-plugins/
 # Expo
 mobile/.expo/
 
+# Local EAS build artifacts (large binaries, not for repo)
+mobile/build-*.ipa
+mobile/build-*.aab
+
 # Local files (not for repo)
 Slack_export/
 BandChat_Cost_Analysis.docx

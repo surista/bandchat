@@ -11,7 +11,7 @@ import useSwipeGesture from '../../hooks/useSwipeGesture';
 import { handleDownload } from '../../utils/download';
 import { formatFileSize } from '../../utils/format';
 import { MAX_IMAGE_SIZE, MAX_AUDIO_SIZE, isImageFile, isAudioFile } from '../../utils/fileValidation';
-import { buildMentionRegex } from '../../utils/parseMentions';
+import { buildMentionRegex, buildGroupMentionRegex } from '../../utils/parseMentions';
 import MemberProfile from '../common/MemberProfile';
 import ConfirmDialog from '../common/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
@@ -359,19 +359,45 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
 
   const renderMentionContent = (text) => {
     if (!text) return null;
-    const mentionRegex = buildMentionRegex(members || []);
-    if (!mentionRegex) return text;
-    const parts = text.split(mentionRegex);
-    const result = [];
-    for (let j = 0; j < parts.length; j += 3) {
-      if (parts[j]) result.push(parts[j]);
-      if (j + 2 < parts.length) {
-        if (parts[j + 1]) result.push(parts[j + 1]);
-        result.push(
-          <span key={j} className="bg-blue-900 text-blue-300 px-1 rounded">
-            @{parts[j + 2]}
+
+    // First: pull out @channel/@here/@everyone group mentions
+    const groupRegex = buildGroupMentionRegex();
+    const groupParts = text.split(groupRegex);
+    const afterGroup = [];
+    for (let g = 0; g < groupParts.length; g += 3) {
+      if (groupParts[g]) afterGroup.push(groupParts[g]);
+      if (g + 2 < groupParts.length) {
+        if (groupParts[g + 1]) afterGroup.push(groupParts[g + 1]);
+        afterGroup.push(
+          <span key={`g${g}`} className="bg-yellow-500/20 text-yellow-400 px-1 rounded font-medium">
+            @{groupParts[g + 2].toLowerCase()}
           </span>
         );
+      }
+    }
+
+    // Then: per-user @mentions on remaining text fragments
+    const mentionRegex = buildMentionRegex(members || []);
+    if (!mentionRegex) return afterGroup;
+
+    const result = [];
+    for (let f = 0; f < afterGroup.length; f++) {
+      const frag = afterGroup[f];
+      if (typeof frag !== 'string') {
+        result.push(frag);
+        continue;
+      }
+      const parts = frag.split(mentionRegex);
+      for (let j = 0; j < parts.length; j += 3) {
+        if (parts[j]) result.push(parts[j]);
+        if (j + 2 < parts.length) {
+          if (parts[j + 1]) result.push(parts[j + 1]);
+          result.push(
+            <span key={`m${f}-${j}`} className="bg-blue-900 text-blue-300 px-1 rounded">
+              @{parts[j + 2]}
+            </span>
+          );
+        }
       }
     }
     return result;

@@ -8,6 +8,8 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { hapticLight } from '../../services/haptic';
 import { formatFileSize } from '../../utils/format';
 import { MAX_IMAGE_SIZE, MAX_AUDIO_SIZE, MAX_VIDEO_SIZE, MAX_DOCUMENT_SIZE, ALLOWED_IMAGE_TYPES, ALLOWED_AUDIO_TYPES, ALLOWED_VIDEO_TYPES, isImageFile, isAudioFile, isVideoFile, isDocumentFile } from '../../utils/fileValidation';
+import { containsGroupMention } from '../../utils/parseMentions';
+import ConfirmDialog from '../common/ConfirmDialog';
 
 
 /**
@@ -24,6 +26,14 @@ const SLASH_COMMANDS = [
   { command: '/gig', label: 'Share a gig', icon: '🎤' },
   { command: '/song', label: 'Share a song', icon: '🎵' },
   { command: '/poll', label: 'Create a poll', icon: '📊' },
+];
+
+// Group-mention suggestions appear at the top of the @-autocomplete list.
+// All three notify the entire channel server-side (see server/src/routes/messages.js).
+const GROUP_MENTION_OPTIONS = [
+  { name: 'channel', desc: 'Notify everyone in this channel' },
+  { name: 'here', desc: 'Notify everyone in this channel' },
+  { name: 'everyone', desc: 'Notify everyone in this channel' },
 ];
 
 function MessageInput({ channelName, onSend, onTyping, members = [], disabled = false, workspaceId, onSlashCommand, channels = [] }) {
@@ -43,6 +53,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
   const [channelFilter, setChannelFilter] = useState('');
   const [channelStart, setChannelStart] = useState(-1);
   const [channelIndex, setChannelIndex] = useState(0);
+  const [showGroupMentionConfirm, setShowGroupMentionConfirm] = useState(false);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const onSendRef = useRef(onSend);
@@ -57,9 +68,20 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
   const durationIntervalRef = useRef(null);
 
   // Filter members based on mention filter
-  const filteredMembers = members.filter(m =>
+  const filteredMembersOnly = members.filter(m =>
     m.user.displayName.toLowerCase().includes(mentionFilter.toLowerCase())
   ).slice(0, 6);
+
+  // Group mentions matched by prefix on the filter
+  const filteredGroupMentions = GROUP_MENTION_OPTIONS.filter(g =>
+    g.name.startsWith(mentionFilter.toLowerCase())
+  );
+
+  // Combined suggestion list — group mentions first, members below
+  const mentionSuggestions = [
+    ...filteredGroupMentions.map(g => ({ kind: 'group', name: g.name, desc: g.desc })),
+    ...filteredMembersOnly.map(m => ({ kind: 'user', user: m.user, role: m.role })),
+  ];
 
   // Filter slash commands
   const filteredSlashCommands = SLASH_COMMANDS.filter(c =>
@@ -201,17 +223,14 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
     }
   }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if ((!content.trim() && selectedFiles.length === 0) || sending) return;
-
+  const doSend = useCallback(async () => {
     setSending(true);
     setError('');
     setShowMentions(false);
     setShowChannels(false);
     hapticLight();
     try {
-      await onSend(content.trim(), selectedFiles);
+      await onSendRef.current(content.trim(), selectedFiles);
       setContent('');
       // Revoke blob URLs before clearing previews
       previews.forEach(p => {
@@ -225,6 +244,19 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
       setSending(false);
       setTimeout(() => textareaRef.current?.focus(), 0);
     }
+  }, [content, selectedFiles, previews]);
+
+  const handleSubmit = (e) => {
+    if (e?.preventDefault) e.preventDefault();
+    if ((!content.trim() && selectedFiles.length === 0) || sending) return;
+
+    // Confirm before broadcasting via @channel/@here/@everyone
+    if (containsGroupMention(content)) {
+      setShowGroupMentionConfirm(true);
+      return;
+    }
+
+    doSend();
   };
 
   const insertMention = (displayName) => {
@@ -319,20 +351,21 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
     }
 
     // Handle mention dropdown navigation
-    if (showMentions && filteredMembers.length > 0) {
+    if (showMentions && mentionSuggestions.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setMentionIndex(prev => (prev + 1) % filteredMembers.length);
+        setMentionIndex(prev => (prev + 1) % mentionSuggestions.length);
         return;
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setMentionIndex(prev => (prev - 1 + filteredMembers.length) % filteredMembers.length);
+        setMentionIndex(prev => (prev - 1 + mentionSuggestions.length) % mentionSuggestions.length);
         return;
       }
       if (e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault();
-        insertMention(filteredMembers[mentionIndex].user.displayName);
+        const sel = mentionSuggestions[mentionIndex];
+        insertMention(sel.kind === 'group' ? sel.name : sel.user.displayName);
         return;
       }
       if (e.key === 'Escape') {
@@ -693,33 +726,58 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
           </div>
         )}
 
-        {/* @Mention dropdown */}
-        {showMentions && filteredMembers.length > 0 && (
+        {/* @Mention dropdown — group mentions (@channel/@here/@everyone) shown first, then members */}
+        {showMentions && mentionSuggestions.length > 0 && (
           <div
-            className="absolute bottom-full left-0 mb-1 w-64 bg-[var(--color-bg-secondary)] rounded-lg shadow-lg border border-[var(--color-border)] py-1 max-h-48 overflow-y-auto z-50"
+            className="absolute bottom-full left-0 mb-1 w-72 bg-[var(--color-bg-secondary)] rounded-lg shadow-lg border border-[var(--color-border)] py-1 max-h-64 overflow-y-auto z-50"
             role="listbox"
             id="mention-listbox"
           >
-            {filteredMembers.map((member, idx) => (
-              <button
-                key={member.user.id}
-                type="button"
-                role="option"
-                aria-selected={idx === mentionIndex}
-                onClick={() => insertMention(member.user.displayName)}
-                className={`w-full px-3 py-2 text-left flex items-center gap-2 ${
-                  idx === mentionIndex ? 'bg-blue-600' : 'hover:bg-[var(--color-bg-tertiary)]'
-                }`}
-              >
-                <div className="w-6 h-6 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center text-xs text-[var(--color-text-primary)]">
-                  {member.user.displayName.charAt(0).toUpperCase()}
-                </div>
-                <span className="text-[var(--color-text-primary)]">{member.user.displayName}</span>
-                {member.role === 'ADMIN' && (
-                  <span className="text-xs text-[var(--color-text-muted)]">admin</span>
-                )}
-              </button>
-            ))}
+            {mentionSuggestions.map((sel, idx) => {
+              const isActive = idx === mentionIndex;
+              if (sel.kind === 'group') {
+                return (
+                  <button
+                    key={`group-${sel.name}`}
+                    type="button"
+                    role="option"
+                    aria-selected={isActive}
+                    onClick={() => insertMention(sel.name)}
+                    className={`w-full px-3 py-2 text-left flex items-center gap-2 ${
+                      isActive ? 'bg-blue-600' : 'hover:bg-[var(--color-bg-tertiary)]'
+                    }`}
+                  >
+                    <div className="w-6 h-6 rounded-full bg-yellow-500/20 text-yellow-400 flex items-center justify-center text-xs font-bold">
+                      @
+                    </div>
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-[var(--color-text-primary)] font-medium">@{sel.name}</span>
+                      <span className="text-xs text-[var(--color-text-muted)] truncate">{sel.desc}</span>
+                    </div>
+                  </button>
+                );
+              }
+              return (
+                <button
+                  key={sel.user.id}
+                  type="button"
+                  role="option"
+                  aria-selected={isActive}
+                  onClick={() => insertMention(sel.user.displayName)}
+                  className={`w-full px-3 py-2 text-left flex items-center gap-2 ${
+                    isActive ? 'bg-blue-600' : 'hover:bg-[var(--color-bg-tertiary)]'
+                  }`}
+                >
+                  <div className="w-6 h-6 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center text-xs text-[var(--color-text-primary)]">
+                    {sel.user.displayName.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-[var(--color-text-primary)]">{sel.user.displayName}</span>
+                  {sel.role === 'ADMIN' && (
+                    <span className="text-xs text-[var(--color-text-muted)]">admin</span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -856,6 +914,21 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
         <kbd className="bg-[var(--color-bg-tertiary)] px-1 rounded">Ctrl+B</kbd> bold{' · '}
         <kbd className="bg-[var(--color-bg-tertiary)] px-1 rounded">Ctrl+I</kbd> italic
       </p>
+
+      <ConfirmDialog
+        isOpen={showGroupMentionConfirm}
+        title={`Notify everyone in #${channelName}?`}
+        message="All members of this channel will get a push notification."
+        confirmText="Notify everyone"
+        cancelText="Cancel"
+        confirmVariant="primary"
+        onConfirm={() => {
+          setShowGroupMentionConfirm(false);
+          doSend();
+        }}
+        onCancel={() => setShowGroupMentionConfirm(false)}
+        loading={sending}
+      />
     </form>
   );
 }

@@ -16,7 +16,7 @@ import { hapticLight } from '../../services/haptic';
 import LinkPreviewCard from './LinkPreviewCard';
 import { useToast } from '../../context/ToastContext';
 import { handleDownload } from '../../utils/download';
-import { buildMentionRegex, buildChannelRegex } from '../../utils/parseMentions';
+import { buildMentionRegex, buildChannelRegex, buildGroupMentionRegex } from '../../utils/parseMentions';
 import api from '../../services/api';
 import EmbedCard from './EmbedCard';
 import '../../../styles/markdown.css';
@@ -216,21 +216,45 @@ function processTextInner(text, segKey, message, onOpenLightbox, members, onAddT
       return renderUrlPart(part, `${segKey}-${i}`, message, onOpenLightbox, onAddToLibrary, isOwn, onTogglePreview, blockedDomains);
     }
 
-    // Apply @mentions then inline markdown on remaining text
+    // First: pull out @channel/@here/@everyone group mentions (rendered as a warning-tinted pill)
+    const groupRegex = buildGroupMentionRegex();
+    const groupParts = part.split(groupRegex);
+    const afterGroup = [];
+
+    for (let g = 0; g < groupParts.length; g += 3) {
+      const txt = groupParts[g];
+      if (txt) afterGroup.push(txt);
+      if (g + 2 < groupParts.length) {
+        const ws = groupParts[g + 1];
+        const name = groupParts[g + 2];
+        if (ws) afterGroup.push(ws);
+        afterGroup.push(
+          <span key={`${segKey}-${i}-g${g}`} className="bg-yellow-500/20 text-yellow-400 px-1 rounded font-medium">@{name.toLowerCase()}</span>
+        );
+      }
+    }
+
+    // Then: per-user @mentions on remaining text fragments
     const mentionRegex = buildMentionRegex(members || []) || /(^|[\s])@(\w+)/g;
-    const mentionParts = part.split(mentionRegex);
     const afterMentions = [];
 
-    for (let j = 0; j < mentionParts.length; j += 3) {
-      const txt = mentionParts[j];
-      if (txt) afterMentions.push(txt);
-      if (j + 2 < mentionParts.length) {
-        const ws = mentionParts[j + 1];
-        const name = mentionParts[j + 2];
-        if (ws) afterMentions.push(ws);
-        afterMentions.push(
-          <span key={`${segKey}-${i}-m${j}`} className="bg-blue-900 text-blue-300 px-1 rounded">@{name}</span>
-        );
+    for (const frag of afterGroup) {
+      if (typeof frag !== 'string') {
+        afterMentions.push(frag);
+        continue;
+      }
+      const mentionParts = frag.split(mentionRegex);
+      for (let j = 0; j < mentionParts.length; j += 3) {
+        const txt = mentionParts[j];
+        if (txt) afterMentions.push(txt);
+        if (j + 2 < mentionParts.length) {
+          const ws = mentionParts[j + 1];
+          const name = mentionParts[j + 2];
+          if (ws) afterMentions.push(ws);
+          afterMentions.push(
+            <span key={`${segKey}-${i}-m${j}-${afterMentions.length}`} className="bg-blue-900 text-blue-300 px-1 rounded">@{name}</span>
+          );
+        }
       }
     }
 

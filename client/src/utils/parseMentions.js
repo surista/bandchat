@@ -44,3 +44,27 @@ export function buildChannelRegex(channels) {
   const escaped = unique.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
   return new RegExp(`(^|[\\s])#(${escaped.join('|')})(?=[\\s.,!?;:)\\]}]|$)`, 'g');
 }
+
+/**
+ * Group mention names. All three behave identically server-side
+ * (notify every non-muted channel member, sender excluded).
+ */
+export const GROUP_MENTIONS = ['channel', 'here', 'everyone'];
+
+/**
+ * Regex matching @channel, @here, @everyone (case-insensitive).
+ * Capture groups: 1=whitespace-or-empty (start of string), 2=name.
+ * Use new RegExp instances or reset .lastIndex before each test/split — the
+ * /g flag means lastIndex persists across calls.
+ */
+export function buildGroupMentionRegex() {
+  return new RegExp(`(^|[\\s])@(${GROUP_MENTIONS.join('|')})\\b`, 'gi');
+}
+
+/**
+ * Returns true if the text contains any group mention (@channel, @here, @everyone).
+ */
+export function containsGroupMention(text) {
+  if (!text) return false;
+  return buildGroupMentionRegex().test(text);
+}
