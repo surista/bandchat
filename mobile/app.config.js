@@ -5,7 +5,7 @@ export default {
     name: 'BandChat',
     slug: 'bandchat',
     scheme: 'bandchat',
-    version: '1.06.73',
+    version: '1.06.74',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
@@ -23,7 +23,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.bandchat.mobile',
-      buildNumber: '10673',
+      buildNumber: '10674',
       associatedDomains: ['applinks:bandchat.vercel.app'],
       entitlements: {
         'com.apple.security.application-groups': ['group.com.bandchat.manager.mobile'],
@@ -50,7 +50,7 @@ export default {
     android: {
       package: 'com.bandchat.mobile',
       softwareKeyboardLayoutMode: 'resize',
-      versionCode: 10673,
+      versionCode: 10674,
       allowBackup: false,
       predictiveBackGestureEnabled: true,
       adaptiveIcon: {
@@ -130,6 +130,13 @@ export default {
       'expo-media-library',
       'expo-quick-actions',
       'expo-apple-authentication',
+      [
+        'expo-video',
+        {
+          supportsBackgroundPlayback: false,
+          supportsPictureInPicture: true,
+        },
+      ],
       [
         'expo-share-intent',
         {

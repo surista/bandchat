@@ -532,63 +532,68 @@ export default function GigListScreen({ navigation, route }) {
     );
   }
 
+  // Filter chips as the SectionList header so the SectionList is the only
+  // top-level scrollable. Keeps iOS large-title content-inset binding stable —
+  // when filters lived in a sibling ScrollView, iOS's auto-inset attached to
+  // the wrong view and the first row scrolled back under the nav bar on release.
+  const ListHeader = (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.filterRow}
+      style={styles.filterScroll}
+    >
+      {TYPE_FILTERS.map(f => {
+        const active = f.key === 'all' ? typeFilters.size === 0 : typeFilters.has(f.key);
+        return (
+          <TouchableOpacity
+            key={f.key}
+            style={[
+              styles.filterChip,
+              { backgroundColor: active ? colors.primary : colors.bgTertiary },
+            ]}
+            onPress={() => {
+              if (f.key === 'all') {
+                setTypeFilters(new Set());
+              } else {
+                setTypeFilters(prev => {
+                  const next = new Set(prev);
+                  if (next.has(f.key)) next.delete(f.key);
+                  else next.add(f.key);
+                  return next;
+                });
+              }
+            }}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Filter: ${f.label}${active ? ', selected' : ''}`}
+          >
+            <Text style={[styles.filterChipText, { color: active ? colors.primaryText : colors.textSecondary }]} maxFontSizeMultiplier={1.2}>
+              {f.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+      <View style={[styles.filterDivider, { backgroundColor: colors.border }]} />
+      <TouchableOpacity
+        style={[
+          styles.filterChip,
+          { backgroundColor: showAllBands ? '#6366f1' : colors.bgTertiary },
+        ]}
+        onPress={() => setShowAllBands(prev => !prev)}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`All Bands${showAllBands ? ', selected' : ''}`}
+      >
+        <Text style={[styles.filterChipText, { color: showAllBands ? colors.primaryText : colors.textSecondary }]} maxFontSizeMultiplier={1.2}>
+          All Bands
+        </Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-      {/* Filter chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterRow}
-        style={styles.filterScroll}
-      >
-        {TYPE_FILTERS.map(f => {
-          const active = f.key === 'all' ? typeFilters.size === 0 : typeFilters.has(f.key);
-          return (
-            <TouchableOpacity
-              key={f.key}
-              style={[
-                styles.filterChip,
-                { backgroundColor: active ? colors.primary : colors.bgTertiary },
-              ]}
-              onPress={() => {
-                if (f.key === 'all') {
-                  setTypeFilters(new Set());
-                } else {
-                  setTypeFilters(prev => {
-                    const next = new Set(prev);
-                    if (next.has(f.key)) next.delete(f.key);
-                    else next.add(f.key);
-                    return next;
-                  });
-                }
-              }}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel={`Filter: ${f.label}${active ? ', selected' : ''}`}
-            >
-              <Text style={[styles.filterChipText, { color: active ? colors.primaryText : colors.textSecondary }]} maxFontSizeMultiplier={1.2}>
-                {f.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-        <View style={[styles.filterDivider, { backgroundColor: colors.border }]} />
-        <TouchableOpacity
-          style={[
-            styles.filterChip,
-            { backgroundColor: showAllBands ? '#6366f1' : colors.bgTertiary },
-          ]}
-          onPress={() => setShowAllBands(prev => !prev)}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-          accessibilityLabel={`All Bands${showAllBands ? ', selected' : ''}`}
-        >
-          <Text style={[styles.filterChipText, { color: showAllBands ? colors.primaryText : colors.textSecondary }]} maxFontSizeMultiplier={1.2}>
-            All Bands
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
@@ -597,6 +602,8 @@ export default function GigListScreen({ navigation, route }) {
         stickySectionHeadersEnabled={false}
         removeClippedSubviews={Platform.OS === 'android'}
         windowSize={10}
+        contentInsetAdjustmentBehavior="automatic"
+        ListHeaderComponent={ListHeader}
         contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl

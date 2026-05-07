@@ -5,7 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Reanimated, { useAnimatedStyle, interpolate, runOnJS } from 'react-native-reanimated';
-import { Audio, Video, ResizeMode } from 'expo-av';
+import { Audio } from 'expo-av';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { format, isToday, isYesterday } from 'date-fns';
 import { useTheme } from '../context/ThemeContext';
 import { lightImpact } from '../utils/haptics';
@@ -534,14 +535,21 @@ function renderAttachments(attachments, onImagePress, imgWidth, imgHeight, onLon
 }
 
 function VideoAttachment({ url }) {
+  // expo-video replaces deprecated expo-av Video. Native controls (fullscreen,
+  // AirPlay/PiP, scrubber) are first-class and reliable; the legacy expo-av
+  // Video had broken fullscreen/AirPlay buttons on SDK 54+.
+  const player = useVideoPlayer(url, (p) => {
+    p.loop = false;
+  });
   return (
     <View style={styles.videoContainer}>
-      <Video
-        source={{ uri: url }}
+      <VideoView
+        player={player}
         style={styles.videoPlayer}
-        useNativeControls
-        resizeMode={ResizeMode.CONTAIN}
-        isLooping={false}
+        contentFit="contain"
+        nativeControls
+        allowsFullscreen
+        allowsPictureInPicture
       />
     </View>
   );

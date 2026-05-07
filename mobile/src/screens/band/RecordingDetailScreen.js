@@ -13,7 +13,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { Audio, Video, ResizeMode } from 'expo-av';
+import { Audio } from 'expo-av';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import * as DocumentPicker from 'expo-document-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
@@ -22,6 +23,26 @@ import formatDate from '../../utils/formatDate';
 import PressableRow from '../../components/PressableRow';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
+
+// Wraps expo-video's VideoView so the useVideoPlayer hook is called only when
+// a video URL is actually present (parent renders this conditionally).
+// Native controls bring back working fullscreen + AirPlay/PiP that the legacy
+// expo-av Video lost on SDK 54.
+function VideoRecordingPlayer({ url, style }) {
+  const player = useVideoPlayer(url, (p) => {
+    p.loop = false;
+  });
+  return (
+    <VideoView
+      player={player}
+      style={style}
+      contentFit="contain"
+      nativeControls
+      allowsFullscreen
+      allowsPictureInPicture
+    />
+  );
+}
 
 function TypeBadge({ type }) {
   const isAudio = type === 'audio';
@@ -494,12 +515,7 @@ export default function RecordingDetailScreen({ navigation, route }) {
       ) : null}
 
       {recording.type === 'video' && recording.fileUrl ? (
-        <Video
-          source={{ uri: recording.fileUrl }}
-          style={styles.videoPlayer}
-          useNativeControls
-          resizeMode={ResizeMode.CONTAIN}
-        />
+        <VideoRecordingPlayer url={recording.fileUrl} style={styles.videoPlayer} />
       ) : null}
 
       {/* Linked song */}

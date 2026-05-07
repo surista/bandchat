@@ -2,6 +2,12 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.74] - 2026-05-07
+
+### Fixed
+- **Mobile Calendar: first row hidden under nav header (critical)** — In `GigListScreen` the filter chips lived in a sibling `ScrollView` above the `SectionList`. With `headerLargeTitle: true` on iOS, that meant *two* scroll views existed at the same level and iOS's auto-content-inset bound to the wrong one. The result: the first row was tucked under the navigation bar; pulling down revealed it momentarily, then it snapped back on release. Fix: filter chips are now the SectionList's `ListHeaderComponent` (so the SectionList is the unambiguous primary scrollable) and `contentInsetAdjustmentBehavior="automatic"` is set, matching the working pattern in `GigArchiveScreen`.
+- **Mobile Video player: fullscreen / AirPlay buttons inert, scrubber inconsistent (critical)** — Inline videos used the deprecated `Video` component from `expo-av`, whose native-controls overlay is broken on Expo SDK 54+ (fullscreen and AirPlay/cast taps did nothing; play/seek state desynced). Migrated `MessageBubble.VideoAttachment` and `RecordingDetailScreen` to `expo-video`'s `VideoView` + `useVideoPlayer`, with `nativeControls`, `allowsFullscreen`, and `allowsPictureInPicture` enabled. Added the `expo-video` config plugin (`supportsPictureInPicture: true`) so PiP is registered with iOS. `Audio` from `expo-av` is unchanged — it's not deprecated and still works fine for voice messages and audio playback.
+
 ## [1.06.73] - 2026-05-07
 
 ### Added
