@@ -207,7 +207,7 @@ const structuralColors = {
     bgSecondary: '#1f2937',
     bgTertiary: '#374151',
     textPrimary: '#ffffff',
-    textSecondary: '#9ca3af',
+    textSecondary: '#d1d5db', // gray-300 — bumped from gray-400 for WCAG AA on bgTertiary (3.8:1 → 6.1:1)
     border: '#374151',
     badgeKey: '#c084fc',      // purple — key badges
     badgeKeyBg: 'rgba(192,132,252,0.15)',

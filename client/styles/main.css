@@ -34,10 +34,10 @@
   --color-bg-tertiary: #374151;
   --color-text-primary: #ffffff;
   --color-text-secondary: #d1d5db;
-  /* Bumped 2026-05-03: was #6b7280 which gave ~4.0:1 on bg-tertiary #374151 —
-     fails WCAG AA. #9ca3af gives ~5.4:1. Affects every "muted" label, hover
-     toolbar, edited-indicator etc. across the app. */
-  --color-text-muted: #9ca3af;
+  /* Re-bumped 2026-05-09: #9ca3af on bg-tertiary #374151 is 3.8:1 (fails AA).
+     #b8c0cc gives ~5.0:1 across bgPrimary/Secondary/Tertiary. Affects every
+     "muted" label, hover toolbar, edited-indicator etc. across the app. */
+  --color-text-muted: #b8c0cc;
   --color-border: #374151;
   --color-bg-hover: rgba(255, 255, 255, 0.06);
   /* Z-index scale */

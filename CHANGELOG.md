@@ -2,6 +2,19 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.76] - 2026-05-09
+
+### Code review — Tier 1 (critical, every-user impact)
+
+#### Fixed
+- **Dark-mode contrast (WCAG AA)** — `textSecondary: '#9ca3af'` on `bgTertiary: '#374151'` was 3.8:1, below the 4.5:1 AA threshold. Bumped to `#d1d5db` in both web (`client/src/context/ThemeContext.jsx`) and mobile (`mobile/src/context/ThemeContext.js`) — now ~6.1:1 on tertiary, even better on the more common bgPrimary/bgSecondary surfaces. Also bumped `--color-text-muted` in `client/styles/main.css` from `#9ca3af` to `#b8c0cc` for the same reason. Light-mode values unchanged (already passing).
+
+#### Improved
+- **Server: thread-unread query batched** — `GET /messages` previously issued one `prisma.message.count` per thread for users with custom thread-read timestamps (parallel, but still N round-trips on a chatty channel). Replaced with a single `findMany` against the earliest read time across all threads, with per-thread tallying in JS. For users tracking many threads this collapses N+1 queries into one, removing a noticeable latency component on initial channel load.
+
+### Notes
+- Performance audit flagged ThemeContext as missing memoization — verified false; both web and mobile already memoize `contextValue` and all callbacks correctly. No change made.
+
 ## [1.06.75] - 2026-05-09
 
 ### Fixed

@@ -156,24 +156,31 @@ router.get('/channel/:channelId', authenticate, isChannelMember, async (req, res
         });
       }
 
-      // For threads with custom per-thread read timestamps, query each one
-      // (N is typically small - only threads where user has a custom read position)
+      // For threads with custom per-thread read timestamps: one query for all,
+      // tally per-parent in JS against each thread's specific read time.
+      // (Previously: N parallel point queries, one per thread. For users with
+      // many custom thread positions on a chatty channel this was the bulk of
+      // the message-load latency.)
       if (threadsWithCustomRead.length > 0) {
-        const customCounts = await Promise.all(
-          threadsWithCustomRead.map(async (parentId) => {
-            const count = await prisma.message.count({
-              where: {
-                parentId,
-                authorId: { not: req.user.id },
-                createdAt: { gt: threadReadMap[parentId] }
-              }
-            });
-            return { parentId, count };
-          })
+        const earliestRead = new Date(
+          Math.min(...threadsWithCustomRead.map(id => new Date(threadReadMap[id]).getTime()))
         );
-
-        customCounts.forEach(row => {
-          unreadMap[row.parentId] = row.count || 0;
+        const candidateReplies = await prisma.message.findMany({
+          where: {
+            parentId: { in: threadsWithCustomRead },
+            authorId: { not: req.user.id },
+            createdAt: { gt: earliestRead }
+          },
+          select: { parentId: true, createdAt: true }
+        });
+        const counts = {};
+        for (const r of candidateReplies) {
+          if (new Date(r.createdAt) > new Date(threadReadMap[r.parentId])) {
+            counts[r.parentId] = (counts[r.parentId] || 0) + 1;
+          }
+        }
+        threadsWithCustomRead.forEach(id => {
+          unreadMap[id] = counts[id] || 0;
         });
       }
     }
