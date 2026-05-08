@@ -59,11 +59,13 @@ class NotificationService {
       );
       this.expoPushToken = tokenData.data;
 
-      // Send token to server
+      // Send token to server. Logged on failure so a 401 (running before auth
+      // is restored) or 5xx is visible — AuthContext's user-id useEffect retries
+      // when auth state lands.
       await api.request('/push/expo-token', {
         method: 'POST',
         body: JSON.stringify({ token: this.expoPushToken, platform: Platform.OS }),
-      }).catch(err => console.warn('Push token registration failed:', err.message));
+      }).catch(err => console.warn('[push] token POST failed:', err?.message));
 
       // Listen for device token refresh (e.g., after reinstall, token rotation)
       // When the device token changes, re-fetch the Expo push token and update the server
@@ -125,8 +127,10 @@ class NotificationService {
       }
 
       return this.expoPushToken;
-    } catch {
-      // Expected to fail in development — silently skip
+    } catch (err) {
+      // Don't swallow: some failure modes (Expo project misconfig, no FCM
+      // credentials on Android) are silent in dev but break prod notifications.
+      console.warn('[push] register failed:', err?.message);
       return null;
     }
   }

@@ -168,9 +168,14 @@ function AppContent() {
 
     // Sync badge with server and refresh widget when app comes to foreground
     // iOS HIG: Badge should always reflect actual server state, not just clear to 0
+    // Also re-run push registration as self-healing: if the user revoked
+    // notification permission in OS Settings, or if a previous register()
+    // failed (network blip, server outage), this catches it on next foreground.
+    // register() is idempotent — server upserts by token.
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         notificationService.syncBadgeWithServer();
+        notificationService.register().catch(() => {});
         updateWidgetGigData();
       }
     });

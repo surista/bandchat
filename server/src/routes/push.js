@@ -409,27 +409,68 @@ export const sendPushToUser = async (userId, payload, options = {}) => {
 
     const expoNotifications = (async () => {
       if (expoMessages.length === 0) return;
+      const stats = { tokens: expoMessages.length, sent: 0, failed: 0, removed: 0 };
       const chunks = expo.chunkPushNotifications(expoMessages);
+
       for (const chunk of chunks) {
-        try {
-          const receipts = await expo.sendPushNotificationsAsync(chunk);
-          // Clean up invalid/expired tokens
-          for (let i = 0; i < receipts.length; i++) {
-            const receipt = receipts[i];
-            if (receipt.status === 'error') {
-              const errorType = receipt.details?.error;
-              if (errorType === 'DeviceNotRegistered' || errorType === 'InvalidCredentials') {
-                const badToken = chunk[i].to;
-                await prisma.expoPushToken.deleteMany({
-                  where: { token: badToken }
-                }).catch(err => console.warn('Failed to remove invalid Expo token:', err.message));
-              }
+        // One retry on transient network errors. Non-transient errors
+        // (programmer mistakes, malformed messages) are not worth retrying;
+        // device-level errors come back inside a 'ok' response as per-ticket
+        // error details and are handled below.
+        let tickets = null;
+        let lastErr = null;
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            tickets = await expo.sendPushNotificationsAsync(chunk);
+            break;
+          } catch (err) {
+            lastErr = err;
+            const transient =
+              err?.code === 'ETIMEDOUT' ||
+              err?.code === 'ECONNRESET' ||
+              err?.code === 'ENOTFOUND' ||
+              err?.code === 'ENETUNREACH' ||
+              /fetch failed|network|socket hang up/i.test(err?.message || '');
+            if (transient && attempt === 0) {
+              await new Promise(r => setTimeout(r, 800));
+              continue;
+            }
+            break;
+          }
+        }
+        if (!tickets) {
+          stats.failed += chunk.length;
+          console.error(`[push] chunk send failed userId=${userId}:`, lastErr?.message || lastErr);
+          continue;
+        }
+
+        // Clean up invalid/expired tokens (per-ticket error handling)
+        for (let i = 0; i < tickets.length; i++) {
+          const ticket = tickets[i];
+          if (ticket.status === 'ok') {
+            stats.sent++;
+          } else if (ticket.status === 'error') {
+            stats.failed++;
+            const errorType = ticket.details?.error;
+            if (errorType === 'DeviceNotRegistered' || errorType === 'InvalidCredentials') {
+              const badToken = chunk[i].to;
+              stats.removed++;
+              await prisma.expoPushToken.deleteMany({
+                where: { token: badToken }
+              }).catch(err => console.warn('[push] failed to remove invalid Expo token:', err.message));
+            } else {
+              console.warn(`[push] ticket error userId=${userId} type=${errorType || 'unknown'} msg=${ticket.message}`);
             }
           }
-        } catch (err) {
-          console.error('Expo push send error:', err);
         }
       }
+
+      // Single summary line per user-send so we can grep prod logs for the
+      // success/failure ratio when triaging "notifications are flaky" reports.
+      console.log(
+        `[push] expo userId=${userId} category=${options.category || 'default'} ` +
+        `tokens=${stats.tokens} sent=${stats.sent} failed=${stats.failed} removed=${stats.removed}`
+      );
     })();
 
     await Promise.all([...webNotifications, expoNotifications]);

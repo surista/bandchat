@@ -2,6 +2,18 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.75] - 2026-05-09
+
+### Fixed
+- **Mobile push notifications: sporadic delivery (critical)** — Root cause: `notificationService.register()` ran from `App.js`'s mount-time `useEffect`, which fires *before* `AuthContext` finishes restoring the session from secure storage. The POST to `/push/expo-token` therefore had no auth header and 401'd silently — the error was swallowed. Whether registration succeeded depended on a race between session restore and the mount effect, which is exactly what users experienced as "sporadic." Re-logins after logout had the same problem in reverse: `unregister()` cleared the server token, but nothing re-registered until the next cold launch.
+
+  **Fixes:**
+  - **Hook registration into auth lifecycle** — `AuthContext` now runs `notificationService.register()` whenever `user?.id` becomes truthy (covers session restore, login, signup, Google/Apple OAuth, and re-login after logout). The mount-time call in `App.js` stays as a fast-path for already-authenticated cold starts; both are idempotent (server upserts by token).
+  - **Self-heal on foreground** — `App.js`'s `AppState 'active'` handler now calls `register()` alongside the badge sync, so a previously failed registration (network blip, server outage) is recovered the next time the user comes back to the app.
+  - **Surface real errors instead of swallowing** — `register()` no longer silently returns `null` on exception; logs `[push] register failed: ...` so misconfigurations (Expo project mismatch, missing FCM credentials) are visible in dev/prod logs.
+  - **Server: chunk-level retry on transient errors** — `sendPushToUser` now retries each Expo chunk once on transient network errors (`ETIMEDOUT`, `ECONNRESET`, `ENOTFOUND`, `ENETUNREACH`, "fetch failed", "socket hang up") with a 800ms backoff. Non-transient errors (programmer mistakes) skip the retry; device-level errors come back as per-ticket details and trigger the existing `DeviceNotRegistered` / `InvalidCredentials` token cleanup.
+  - **Server: structured per-send logging** — Single summary line per user-send: `[push] expo userId=… category=… tokens=N sent=N failed=N removed=N`. Grep-able when triaging "my notification didn't arrive" reports. Per-ticket non-cleanup errors get their own warning line so we can see e.g. `MessageRateExceeded` if Apple/Google start throttling.
+
 ## [1.06.74] - 2026-05-07
 
 ### Fixed
