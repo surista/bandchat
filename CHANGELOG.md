@@ -2,6 +2,18 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.81] - 2026-05-09
+
+### Reverted
+- **v1.06.75's mobile push-registration timing changes** — Confirmed via on-device test that v1.06.74 (App Store) works flawlessly while v1.06.75 (TestFlight) is severely degraded: auth takes ages, workspace selection spins forever, channel taps either hang on a spinner or don't register at all, and tap responsiveness across the app is inconsistent. The only material mobile diff between v1.06.74 → v1.06.75 was adding `notificationService.register()` to two new lifecycle hooks (the `AppState 'active'` foreground handler in `App.js` and a `useEffect` on `user?.id` in `AuthContext.js`). Both reverted; mobile is now functionally identical to v1.06.74.
+- **Server-side push improvements (chunk retry + structured logging) are kept** — they live on Railway and are independent of this revert.
+
+### Why
+The "sporadic notifications" issue v1.06.75 was meant to fix is real (registration races against session restore at app mount), but the chosen fix interacts badly with `expo-notifications`' native behavior on physical devices in a way I can't fully diagnose from code alone. Symptoms suggest repeated `register()` calls saturate the JS thread or block on a serialized native bridge call. We need to revisit with a smaller, on-device-tested change — not retry the same approach blind.
+
+### Lessons / process
+- v1.06.75 was committed → built → submitted without anyone running the build on a real device first. The bug was visible on launch — would have been caught in 30 seconds of manual testing. Future mobile changes that touch app-lifecycle hooks (AuthContext, App.js, AppState handlers) must be smoke-tested on a real device before submission.
+
 ## [1.06.80] - 2026-05-09
 
 ### Tests — green across the board

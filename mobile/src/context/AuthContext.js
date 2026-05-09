@@ -149,19 +149,12 @@ export function AuthProvider({ children }) {
     return () => subscription.remove();
   }, [biometricEnabled]);
 
-  // Register for push notifications whenever a user becomes authenticated.
-  // **This is the load-bearing call site, not App.js's mount-time register().**
-  // App.js mounts BEFORE session restore completes, so its register() runs
-  // without an auth header and the POST 401s silently. By tying registration
-  // to user-id presence we cover: fresh installs, session restores, re-logins
-  // after logout (where unregister() cleared the token), and account switches.
-  useEffect(() => {
-    if (user?.id) {
-      notificationService.register().catch(err => {
-        console.warn('[push] register on auth change failed:', err?.message);
-      });
-    }
-  }, [user?.id]);
+  // (Removed in v1.06.81: a register-on-user-id-change useEffect added in
+  // v1.06.75 caused severe device-level UI lag — auth, workspace switch, and
+  // channel taps all stalled on spinners. Reverted to v1.06.74's mount-only
+  // registration in App.js. The "sporadic notifications" race condition that
+  // motivated the change still exists; needs a different fix that's verified
+  // on a real device before shipping.)
 
   // Retry auth when coming back online
   const retryAuth = useCallback(async () => {
