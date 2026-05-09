@@ -2,6 +2,20 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.82] - 2026-05-09
+
+### Added
+- **Mobile build/submit npm scripts** — Four new scripts in `mobile/package.json`:
+  - `npm run build:ios` — local EAS build (no cloud quota)
+  - `npm run build:android` — local EAS build with `ANDROID_HOME` inlined as a fallback so it works from any shell
+  - `npm run submit:ios` — auto-picks the most recent `build-*.ipa` and submits to App Store Connect
+  - `npm run submit:android` — auto-picks the most recent `build-*.aab` and submits to Play Store
+  - `--auto-submit` is intentionally NOT used because EAS doesn't support it with `--local` builds; the workflow is always `build` then `submit`.
+
+### Note on version line
+- v1.06.81 in TestFlight / Play Store production track is the **hotfix branch** (`hotfix/v1.06.81-revert-push-timing`) — built from v1.06.74's exact commit with only the version number bumped, to roll back v1.06.75's broken push-register timing. Confirmed working on device by user.
+- The `v1.06.81` commit on `main` (`8e9fdfc7`) carries the same revert *plus* Tier 1–5 review work; it was never built/submitted. To ship Tier 1–5 we need a fresh build from `main` at `v1.06.82+` after on-device smoke-testing.
+
 ## [1.06.81] - 2026-05-09
 
 ### Reverted
