@@ -2,7 +2,6 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import WorkspaceList from './components/workspaces/WorkspaceList';
-import WorkspaceView from './components/workspaces/WorkspaceView';
 import UpdatePrompt from './components/common/UpdatePrompt';
 
 // Lazy-loaded pages (only loaded when navigating to their routes)
@@ -25,6 +24,11 @@ function lazyRetry(importFn) {
   );
 }
 
+// WorkspaceView is the largest component in the app (full chat surface, sidebar,
+// 80+ subroutes). Lazy-loading it shrinks the initial home/auth route bundles
+// significantly — a logged-out user hitting /login no longer downloads the
+// entire chat client.
+const WorkspaceView = lazyRetry(() => import('./components/workspaces/WorkspaceView'));
 const Login = lazyRetry(() => import('./components/auth/Login'));
 const Signup = lazyRetry(() => import('./components/auth/Signup'));
 const ForgotPassword = lazyRetry(() => import('./components/auth/ForgotPassword'));
@@ -85,11 +89,21 @@ function App() {
   return (
     <>
       <UpdatePrompt />
+      {/* WCAG 2.4.1: skip link lets keyboard users bypass repetitive navigation.
+          Hidden until focused (sr-only -> focus:not-sr-only), then pinned at the
+          top-left of the viewport so it's discoverable on first Tab. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[9999] focus:bg-blue-600 focus:text-white focus:px-3 focus:py-2 focus:rounded focus:shadow-lg focus:outline focus:outline-2 focus:outline-white"
+      >
+        Skip to main content
+      </a>
       <Suspense fallback={
         <div className="min-h-screen bg-slack-purple flex items-center justify-center">
           <div className="text-white text-xl">Loading...</div>
         </div>
       }>
+      <main id="main-content" tabIndex={-1}>
       <Routes>
       <Route
         path="/login"
@@ -151,6 +165,7 @@ function App() {
         element={<HomeRoute />}
       />
     </Routes>
+    </main>
     </Suspense>
     </>
   );

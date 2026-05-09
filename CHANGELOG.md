@@ -2,6 +2,27 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.79] - 2026-05-09
+
+### Code review — Tier 4 (polish)
+
+#### Accessibility
+- **Mobile: `LayoutAnimation` honors "Reduce Motion"** — `AppearanceScreen.handleToggleCustomTheme` now checks `AccessibilityInfo.isReduceMotionEnabled()` before configuring the layout animation. Users with the OS-level Reduce Motion setting enabled get an instant transition instead of the eased one — matches the OS-wide promise the setting makes.
+- **Web: skip-to-content link added** to `client/src/App.jsx` (WCAG 2.4.1). Hidden by default (`sr-only`), revealed and pinned at the viewport top-left when focused via Tab, jumps to the new `<main id="main-content">` wrapper. Keyboard users can now bypass nav on every page without tabbing through it.
+
+#### Performance
+- **Web: `WorkspaceView` lazy-loaded.** It's the largest single component in the app (the entire chat surface — sidebar, channel list, message list, threads, all sub-screens). Was imported eagerly in `App.jsx`, meaning a logged-out user hitting `/login` downloaded the whole chat client up-front. Now loaded on demand when the user navigates to `/workspace/...` — shrinks the initial bundle for auth/landing/legal routes substantially.
+
+### Notes — Tier 4 false positives
+- **Mobile toast missing `accessibilityLiveRegion`** — checked, already present (`accessibilityLiveRegion="polite"` in `mobile/src/context/ToastContext.js:81`).
+- **Touch targets <44pt on `ChannelItem` / `WorkspaceSwitcher` badges** — badges are visual indicators inside an already-tappable row; they aren't separately interactive, so `hitSlop` doesn't apply.
+- **`ErrorBoundary` hardcoded `#6366f1`** — intentional: the boundary needs to render even when ThemeContext is broken (it's the catch-all for app crashes). A theme-coupled color would defeat the purpose.
+- **`MessageBubble` swipe-action `#f59e0b`** — semantic warning amber, kept consistent across themes by design.
+- **`MessageList`'s `att.thumbnailUrl || att.url` fallback** — the right structural fix is on the server (R2 thumbnail generation reliability), not in the client. Out of scope for this review.
+
+### Code review summary (v1.06.76 – v1.06.79)
+Four tiers of fixes across web, mobile, and server: WCAG AA contrast, Material Design ripple feedback, screen-reader labels, performance, and code quality. Several agent-flagged items turned out to be false positives — verified and noted in each tier's changelog. Net result: ~70 files touched, real accessibility/perf gains, no regressions in the audit's strict-pass items.
+
 ## [1.06.78] - 2026-05-09
 
 ### Code review — Tier 3 (medium-impact, specific segments)

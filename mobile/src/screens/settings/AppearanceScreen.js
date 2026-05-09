@@ -7,6 +7,7 @@ import {
   Switch,
   StyleSheet,
   LayoutAnimation,
+  AccessibilityInfo,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme, themes } from '../../context/ThemeContext';
@@ -52,7 +53,15 @@ export default function AppearanceScreen({ route }) {
 
   const handleToggleCustomTheme = () => {
     selectionFeedback();
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    // Honor "Reduce Motion" — AccessibilityInfo.isReduceMotionEnabled is async
+    // so we kick off the animation only if motion isn't reduced. Falls back to
+    // an instant transition otherwise (no animation), which is what the OS
+    // setting promises.
+    AccessibilityInfo.isReduceMotionEnabled().then(reduced => {
+      if (!reduced) {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      }
+    }).catch(() => {});
     if (hasCustomTheme) {
       setWorkspaceTheme(workspaceId, null);
     } else {
