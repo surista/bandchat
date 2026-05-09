@@ -22,6 +22,18 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: jest.fn(() => ({ top: 44, bottom: 34, left: 0, right: 0 })),
 }));
 
+// @expo/vector-icons ships ESM/JSX that the default Jest transform doesn't
+// process — without a mock the require('../ToastContext') chain fails to parse.
+jest.mock('@expo/vector-icons', () => ({
+  Ionicons: 'Ionicons',
+}));
+
+// ToastContext also pulls in ThemeContext which uses MMKV/AsyncStorage paths
+// not relevant to this contract test — provide a minimal stub.
+jest.mock('../ThemeContext', () => ({
+  useTheme: jest.fn(() => ({ mode: 'dark', colors: {} })),
+}));
+
 const React = require('react');
 
 describe('ToastContext module', () => {

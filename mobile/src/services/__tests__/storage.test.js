@@ -53,14 +53,26 @@ describe('storage (SecureStore)', () => {
       expect(SecureStore.setItemAsync).toHaveBeenCalledWith('accessToken', 'abc');
     });
 
-    test('returns false and tracks error on failure', async () => {
+    test('falls back to AsyncStorage when SecureStore fails', async () => {
+      // Real failure mode: SecureStore unavailable on this device. The fallback
+      // means tokens still persist via AsyncStorage so the user isn't kicked
+      // back to login on every cold start.
       SecureStore.setItemAsync.mockRejectedValueOnce(new Error('Storage full'));
+      AsyncStorage.setItem.mockResolvedValueOnce();
       const result = await storage.setItem('accessToken', 'abc');
-      expect(result).toBe(false);
+      expect(result).toBe(true);
+      expect(AsyncStorage.setItem).toHaveBeenCalled();
       expect(storage._lastError).toMatchObject({
         operation: 'set',
         key: 'accessToken',
       });
+    });
+
+    test('returns false only when both stores fail', async () => {
+      SecureStore.setItemAsync.mockRejectedValueOnce(new Error('Storage full'));
+      AsyncStorage.setItem.mockRejectedValueOnce(new Error('No space'));
+      const result = await storage.setItem('accessToken', 'abc');
+      expect(result).toBe(false);
     });
   });
 
@@ -71,8 +83,19 @@ describe('storage (SecureStore)', () => {
       expect(result).toBe(true);
     });
 
-    test('returns false on failure', async () => {
+    test('returns true if AsyncStorage cleanup succeeds even when SecureStore fails', async () => {
+      // removeItem must clear the fallback copy too, so partial success (one
+      // store succeeds) is still useful — we want both copies gone.
       SecureStore.deleteItemAsync.mockRejectedValueOnce(new Error('fail'));
+      AsyncStorage.removeItem.mockResolvedValueOnce();
+      const result = await storage.removeItem('refreshToken');
+      expect(result).toBe(true);
+      expect(AsyncStorage.removeItem).toHaveBeenCalled();
+    });
+
+    test('returns false only when both stores fail', async () => {
+      SecureStore.deleteItemAsync.mockRejectedValueOnce(new Error('fail'));
+      AsyncStorage.removeItem.mockRejectedValueOnce(new Error('fail'));
       const result = await storage.removeItem('refreshToken');
       expect(result).toBe(false);
     });

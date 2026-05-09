@@ -2,6 +2,38 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.80] - 2026-05-09
+
+### Tests — green across the board
+Ran the full test suite for the second-pass review. Mobile was 165/174 with 9 failures from outdated tests + a code/test mismatch; fixed all of them (now 176/176). Web passes 251/251. Server tests need a local Postgres test DB so they're not run here, but server logic touched in v1.06.76 (thread-read query) and v1.06.75 (push retry) is straightforward enough to be covered by the existing committed test files when CI picks them up.
+
+#### Fixed
+- **`utils/formatDuration.js`** — Returned `''` for falsy input; tests asserted `null`. Changed to `null` (more idiomatic JS — null = "no value", '' = "the empty string value"). All callers already guard with `?:` or `||`, so behavior at call sites is unchanged.
+- **`services/__tests__/storage.test.js`** — Tests were written before the `AsyncStorage` fallback was added to `setItem`/`removeItem`. Old tests asserted `false` on SecureStore failure, but the function now legitimately falls back to AsyncStorage and returns `true` if the fallback succeeds. Replaced each with two tests: one for the fallback-success path, one for the both-stores-fail path.
+- **`context/__tests__/ToastContext.test.js`** — Missing mocks for `@expo/vector-icons` and `./ThemeContext` caused the `require('../ToastContext')` chain to fail at parse time. Added stub mocks for both.
+
+### Code review — second pass (post-Tier-1-4)
+Spawned a fresh **security audit** (13 categories) and **robustness/edge-case audit** (10 categories) that explicitly included a regression check on the v1.06.76–v1.06.79 changes. Top findings, with verification:
+
+#### Security agent's claims
+- **`/api/push/vapid-key` unauthenticated** — by design. The VAPID *public* key is meant to be readable by any client that wants to subscribe; it's the *private* key that's secret (and is never exposed). False positive.
+- **Reaction route lacks rate limiter** — already covered by the global `apiLimiter` mounted at `app.use('/api', apiLimiter)` (5000 req/15min/user, per CLAUDE.md). Not unbounded; bounded at the platform level. False positive.
+- **CSRF via `sameSite: 'none'` refresh cookie** — required for the cross-origin Railway deployment. Mitigated in practice because all state-changing endpoints take JSON bodies (CORS preflight blocks naive `<form>` cross-site submission) and require the `Authorization` Bearer header (which a CSRF attacker can't forge from a third-party page). Acknowledged residual risk on rare GET-with-side-effects routes; nothing critical found.
+- **Admin login brute-force** — agent speculated without finding the actual route. Not verified. Skipped.
+- **Concurrent invite-link race** — real but low-stakes for a band-management app (worst case: a 1-use invite admits 2 people if they click within ~50ms). Not exploitable for security; UX edge case at most. Logged for a future fix.
+
+#### Robustness agent's claims
+- **`WorkspaceView.jsx:502,506` first-channel crash** — agent confirmed the guard already exists. False positive.
+- **GigForm timezone handling** — real but a large redesign; out of scope for this review. Logged.
+- **Message stuck in "Sending..." on socket drop** — real UX gap. Logged for a follow-up; out of scope here.
+- **GigArchive setlist-name regex parsing** — string parsing of free-form names is best-effort by design.
+
+#### Regression check on v1.06.76 – v1.06.79
+Agent specifically reviewed: theme-color contrast bumps, server thread-read query rewrite, `formatDate` module-scope move, `WorkspaceView` lazy-load, `SetlistList` div→button, `AccessibilityInfo.isReduceMotionEnabled`, the TouchableOpacity → PressableRow sweep. **No regressions identified.**
+
+### Net
+176/176 mobile + 251/251 web tests green. Audit's flagged items were mostly false positives (already-mitigated, by-design) or out-of-scope follow-ups; the few real issues are noted in this entry rather than silently filed away.
+
 ## [1.06.79] - 2026-05-09
 
 ### Code review — Tier 4 (polish)

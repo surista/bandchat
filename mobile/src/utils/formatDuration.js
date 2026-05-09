@@ -1,6 +1,9 @@
-// For song durations (m:ss format)
+// For song durations (m:ss format). Returns null for falsy input so callers
+// can use `??` / `||` to provide a placeholder; previously returned '' which
+// the tests assert against null and which can render as an empty cell that
+// looks like a layout bug. All callers already guard with `?:` or `||`.
 export function formatDuration(seconds) {
-  if (!seconds) return '';
+  if (!seconds) return null;
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, '0')}`;
