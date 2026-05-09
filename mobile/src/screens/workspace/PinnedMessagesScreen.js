@@ -102,7 +102,7 @@ export default function PinnedMessagesScreen({ navigation, route }) {
       <View style={[styles.pinCard, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}>
         <View style={styles.pinHeader}>
           {msg.author?.avatarUrl ? (
-            <Image source={{ uri: msg.author.avatarUrl }} style={styles.avatar} />
+            <Image source={{ uri: msg.author.avatarUrl }} style={styles.avatar} accessibilityLabel={`${msg.author.displayName || 'User'} avatar`} />
           ) : (
             <View style={[styles.avatarFallback, { backgroundColor: colors.primary }]}>
               <Text style={styles.avatarInitial}>

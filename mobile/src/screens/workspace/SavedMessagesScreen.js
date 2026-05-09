@@ -66,7 +66,7 @@ export default function SavedMessagesScreen({ navigation, route }) {
         <View style={styles.header}>
           <View style={styles.authorRow}>
             {msg.author?.avatarUrl ? (
-              <Image source={{ uri: msg.author.avatarUrl }} style={styles.avatar} />
+              <Image source={{ uri: msg.author.avatarUrl }} style={styles.avatar} accessibilityLabel={`${msg.author.displayName || 'User'} avatar`} />
             ) : (
               <View style={[styles.avatarFallback, { backgroundColor: '#16a34a' }]}>
                 <Text style={styles.avatarText}>{msg.author?.displayName?.[0] || '?'}</Text>
@@ -103,6 +103,7 @@ export default function SavedMessagesScreen({ navigation, route }) {
                   source={{ uri: att.thumbnailUrl || att.url }}
                   style={styles.attachmentImage}
                   contentFit="cover"
+                  accessibilityLabel={att.filename ? `Image attachment: ${att.filename}` : 'Image attachment'}
                 />
               ) : (
                 <Text key={att.id} style={[styles.attachmentFile, { color: colors.textSecondary }]}>

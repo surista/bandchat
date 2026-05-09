@@ -12,10 +12,12 @@ import * as MediaLibrary from 'expo-media-library';
 import { File, Directory, Paths } from 'expo-file-system/next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useToast } from '../context/ToastContext';
 
 function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
   const [saving, setSaving] = useState(false);
   const insets = useSafeAreaInsets();
+  const toast = useToast();
 
   // Support both single image and gallery mode
   const imageList = useMemo(() => {
@@ -45,13 +47,13 @@ function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
       }
       const file = await File.downloadFileAsync(url, new Directory(Paths.cache), { idempotent: true });
       await MediaLibrary.saveToLibraryAsync(file.uri);
-      Alert.alert('Saved', 'Image saved to your photo library.');
+      toast.success('Image saved to your photo library');
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to save image.');
     } finally {
       setSaving(false);
     }
-  }, [imageList]);
+  }, [imageList, toast]);
 
   const [currentIdx, setCurrentIdx] = useState(initialIndex);
 

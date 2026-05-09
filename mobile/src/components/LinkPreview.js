@@ -131,6 +131,7 @@ function LinkPreview({ content, isOwn, onDismiss, onLongPress, blockedDomains })
             source={{ uri: preview.image }}
             style={styles.thumbnail}
             contentFit="cover"
+            accessible={false}
           />
         )}
       </TouchableOpacity>

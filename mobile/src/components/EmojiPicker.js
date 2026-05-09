@@ -24,7 +24,7 @@ export const CUSTOM_EMOJI = {
 export function renderCustomEmoji(emoji, size = 18) {
   const custom = CUSTOM_EMOJI[emoji];
   if (custom) {
-    return <Image source={custom.source} style={{ width: size, height: size, borderRadius: 3 }} />;
+    return <Image source={custom.source} style={{ width: size, height: size, borderRadius: 3 }} accessible={false} />;
   }
   return null;
 }
@@ -143,9 +143,9 @@ function EmojiPicker({ visible, onClose, onSelect }) {
                   accessibilityLabel={`Select ${custom?.alt || emoji}`}
                 >
                   {custom ? (
-                    <Image source={custom.source} style={{ width: 28, height: 28, borderRadius: 4 }} />
+                    <Image source={custom.source} style={{ width: 28, height: 28, borderRadius: 4 }} accessible={false} />
                   ) : (
-                    <Text style={styles.emoji} maxFontSizeMultiplier={1.0}>{emoji}</Text>
+                    <Text style={styles.emoji} maxFontSizeMultiplier={1.3}>{emoji}</Text>
                   )}
                 </PressableRow>
               );

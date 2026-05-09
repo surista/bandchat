@@ -2,6 +2,21 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.77] - 2026-05-09
+
+### Code review — Tier 2 (high-impact, common-case)
+
+#### Accessibility
+- **Mobile: 38 `<Image>` components audited.** 7 got descriptive labels (`accessibilityLabel="Profile photo of <name>"`, `"Gig photo"`, etc.) on settings, gig, venue, pinned-messages, saved-messages, and share-receive screens. 20 marked decorative (`accessible={false}`) where the parent Pressable already provides the label — avoids duplicate VoiceOver/TalkBack readout. 11 already had labels and were left alone.
+- **Web: 14 icon-only formatting buttons** in `MessageInput.jsx` (compose toolbar) and `MessageList.jsx` (edit toolbar) had only `title=` (mouse hover, invisible to screen readers). Added `aria-label="Bold"`, `"Italic"`, etc. alongside the existing `title` so keyboard-only and screen-reader users hear meaningful names.
+- **`maxFontSizeMultiplier={1.0}` blockers:** raised to `1.3` on emoji picker glyphs, channel/workspace unread badges, and DM avatar initials. `1.0` completely disables Dynamic Type scaling for those elements.
+
+#### Android UX
+- **12 success-only `Alert.alert` calls → toasts** across 11 files (settings, gigs, songs, timeline, security, invites, image viewer). Material Design / Android UX expects transient toasts for success feedback, not modal dialogs the user has to dismiss. Errors, destructive confirmations, multi-button choices, permission prompts, and limit warnings all stay as `Alert.alert` (correctly modal). ~221 Alert calls audited; ~209 stay (categorized: errors, multi-button confirms, validation, permissions, instructional).
+
+#### Performance
+- **`AllMessages` / `ActivityFeed`: `formatRelativeDate` moved to module scope.** Was redefined inside the function body and called from `.map(items)`, allocating a new closure per item per render. Now a stable function reference; eliminates 50–100 closure allocations per render on the activity feed.
+
 ## [1.06.76] - 2026-05-09
 
 ### Code review — Tier 1 (critical, every-user impact)

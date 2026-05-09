@@ -295,7 +295,7 @@ export default function GigArchiveScreen({ navigation, route }) {
                 ]}
               >
                 {member.imageUrl ? (
-                  <Image source={{ uri: member.imageUrl }} style={styles.avatarImage} />
+                  <Image source={{ uri: member.imageUrl }} style={styles.avatarImage} accessibilityLabel={`${member.name} avatar`} />
                 ) : (
                   <Text style={[styles.avatarInitial, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.2}>
                     {getInitial(member.name)}
@@ -351,7 +351,7 @@ export default function GigArchiveScreen({ navigation, route }) {
             {displayMedia.map((m) => (
               <View key={m.id} style={[styles.mediaThumb, { backgroundColor: colors.bgTertiary }]}>
                 {m.type === 'image' && m.url ? (
-                  <Image source={{ uri: m.url }} style={styles.mediaThumbImage} contentFit="cover" />
+                  <Image source={{ uri: m.url }} style={styles.mediaThumbImage} contentFit="cover" accessible={false} />
                 ) : m.type === 'youtube' ? (
                   <View style={styles.ytBadge}>
                     <Ionicons name="logo-youtube" size={16} color="#ef4444" />

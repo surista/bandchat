@@ -295,7 +295,7 @@ export default function BandMembersScreen({ navigation, route }) {
       >
         <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
           {(item.imageUrl || item.linkedUser?.avatarUrl) ? (
-            <Image source={{ uri: item.imageUrl || item.linkedUser.avatarUrl }} style={styles.avatarImage} />
+            <Image source={{ uri: item.imageUrl || item.linkedUser.avatarUrl }} style={styles.avatarImage} accessible={false} />
           ) : (
             <Text style={styles.avatarText}>{getInitial(item.name)}</Text>
           )}

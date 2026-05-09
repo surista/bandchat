@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import { successNotification, selectionFeedback, mediumImpact } from '../../utils/haptics';
 import api from '../../services/api';
@@ -48,6 +49,7 @@ export default function SongListScreen({ navigation, route }) {
   const { workspaceId, workspaceName } = route.params;
   const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
+  const toast = useToast();
 
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -222,10 +224,7 @@ export default function SongListScreen({ navigation, route }) {
     setEnriching(true);
     try {
       const result = await api.enrichSongs(workspaceId);
-      Alert.alert(
-        'Metadata Updated',
-        `Updated ${result.updated || 0} of ${result.processed || 0} songs.`
-      );
+      toast.success(`Updated ${result.updated || 0} of ${result.processed || 0} songs`);
       loadSongs();
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to fetch metadata');

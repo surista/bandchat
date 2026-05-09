@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import { mediumImpact, successNotification } from '../../utils/haptics';
 import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
@@ -27,6 +28,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
   const { user } = useAuth()
   const { isTablet, contentMaxWidth } = useLayout();
   const { colors } = useTheme();
+  const toast = useToast();
 
   const [members, setMembers] = useState([]);
   const [blockedIds, setBlockedIds] = useState(new Set());
@@ -145,7 +147,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
     try {
       await api.adminResetPassword(workspaceId, selectedMember.userId, newPassword, adminPassword);
       successNotification();
-      Alert.alert('Success', 'Password reset. User has been logged out of all devices.');
+      toast.success('Password reset. User has been logged out of all devices.');
       setShowPasswordReset(false);
       clearPasswordFields();
       setSelectedMember(null);

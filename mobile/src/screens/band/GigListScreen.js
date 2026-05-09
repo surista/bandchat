@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import { mediumImpact, successNotification, errorNotification } from '../../utils/haptics';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import api from '../../services/api';
@@ -94,6 +95,7 @@ export default function GigListScreen({ navigation, route }) {
   const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
   const { user } = useAuth();
+  const toast = useToast();
 
   const [gigs, setGigs] = useState([]);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -657,7 +659,7 @@ export default function GigListScreen({ navigation, route }) {
               onPress={async () => {
                 await Clipboard.setStringAsync(calendarUrl);
                 mediumImpact();
-                Alert.alert('Copied', 'Calendar URL copied to clipboard');
+                toast.success('Calendar URL copied');
               }}
               accessibilityRole="button"
               accessibilityLabel="Copy calendar URL"

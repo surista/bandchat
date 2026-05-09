@@ -451,6 +451,7 @@ function YouTubeThumbnail({ content, colors }) {
         source={{ uri: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` }}
         style={ytStyles.thumbnail}
         contentFit="cover"
+        accessible={false}
       />
       <View style={ytStyles.playOverlay}>
         <View style={ytStyles.playButton}>

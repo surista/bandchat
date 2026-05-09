@@ -593,7 +593,7 @@ export default function GigDetailScreen({ navigation, route }) {
       });
 
       successNotification();
-      Alert.alert('Added', `"${gig.title}" has been added to your calendar.`);
+      toast.success(`"${gig.title}" added to your calendar`);
     } catch (err) {
       Alert.alert('Error', 'Failed to add event to calendar.');
     }
@@ -1445,7 +1445,7 @@ export default function GigDetailScreen({ navigation, route }) {
                 accessibilityLabel={item.type === 'video' ? 'Video thumbnail' : 'Photo thumbnail'}
               >
                 {item.type === 'image' ? (
-                  <Image source={{ uri: item.url }} style={styles.mediaThumbnailImage} contentFit="cover" />
+                  <Image source={{ uri: item.url }} style={styles.mediaThumbnailImage} contentFit="cover" accessible={false} />
                 ) : item.type === 'video' ? (
                   <View style={[styles.mediaThumbnailImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bgTertiary }]}>
                     <View style={styles.videoOverlay}>

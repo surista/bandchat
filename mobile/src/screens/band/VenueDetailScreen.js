@@ -373,7 +373,7 @@ export default function VenueDetailScreen({ navigation, route }) {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             {imageUrl ? (
               <View style={{ position: 'relative' }}>
-                <Image source={{ uri: imageUrl }} style={{ width: 64, height: 64, borderRadius: 8 }} />
+                <Image source={{ uri: imageUrl }} style={{ width: 64, height: 64, borderRadius: 8 }} accessibilityLabel="Venue image preview" />
                 <TouchableOpacity
                   onPress={() => setImageUrl('')}
                   style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: 11, backgroundColor: '#dc2626', alignItems: 'center', justifyContent: 'center' }}

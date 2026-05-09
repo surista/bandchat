@@ -21,6 +21,7 @@ import { useHeaderHeight } from '@react-navigation/elements';
 import { Audio } from 'expo-av';
 import * as DocumentPicker from 'expo-document-picker';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import Badge from '../../components/Badge';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
@@ -183,6 +184,7 @@ export default function SongDetailScreen({ navigation, route }) {
   const isNew = !songId;
   const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
+  const toast = useToast();
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
 
@@ -370,7 +372,7 @@ export default function SongDetailScreen({ navigation, route }) {
       setShowPracticeModal(false);
       setPracticeDuration('30');
       setPracticeNotes('');
-      Alert.alert('Logged', 'Practice session logged!');
+      toast.success('Practice session logged');
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to log practice');
     } finally {

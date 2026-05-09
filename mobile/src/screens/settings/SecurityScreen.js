@@ -24,6 +24,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
 import { errorNotification } from '../../utils/haptics';
 import { useLayout } from '../../hooks/useLayout';
@@ -32,6 +33,7 @@ export default function SecurityScreen() {
   const { user, updateUser, logout, biometricEnabled, setBiometricEnabled } = useAuth()
   const { isTablet, contentMaxWidth } = useLayout();
   const { colors } = useTheme();
+  const toast = useToast();
   const headerHeight = useHeaderHeight();
 
   const hasPassword = user?.hasPassword !== false;
@@ -85,7 +87,7 @@ export default function SecurityScreen() {
       if (!idToken) throw new Error('No ID token received from Google');
       const data = await api.linkGoogle(idToken);
       updateUser(data.user);
-      Alert.alert('Success', 'Google account linked successfully');
+      toast.success('Google account linked');
     } catch (error) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) return;
       if (error.code === statusCodes.IN_PROGRESS) return;
@@ -106,7 +108,7 @@ export default function SecurityScreen() {
       });
       const data = await api.linkApple(credential.identityToken);
       updateUser(data.user);
-      Alert.alert('Success', 'Apple account linked successfully');
+      toast.success('Apple account linked');
     } catch (error) {
       if (error.code === 'ERR_REQUEST_CANCELED') return;
       Alert.alert('Error', error.message || 'Failed to link Apple account');
@@ -173,7 +175,7 @@ export default function SecurityScreen() {
     setChangingPassword(true);
     try {
       await api.changePassword(currentPassword, newPassword);
-      Alert.alert('Success', 'Password changed successfully');
+      toast.success('Password changed');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');

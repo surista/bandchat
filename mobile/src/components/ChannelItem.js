@@ -14,7 +14,7 @@ function ChannelItem({ channel, isDM, dmMembers, onPress, onLongPress, unreadCou
       const initial = name.charAt(0).toUpperCase();
       return (
         <View style={[styles.dmAvatar, { backgroundColor: getAvatarColor(name) }]}>
-          <Text style={styles.dmAvatarText} maxFontSizeMultiplier={1.0}>{initial}</Text>
+          <Text style={styles.dmAvatarText} maxFontSizeMultiplier={1.3}>{initial}</Text>
         </View>
       );
     }
@@ -64,7 +64,7 @@ function ChannelItem({ channel, isDM, dmMembers, onPress, onLongPress, unreadCou
       )}
       {hasUnread && (
         <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-          <Text style={styles.badgeText} maxFontSizeMultiplier={1.0}>
+          <Text style={styles.badgeText} maxFontSizeMultiplier={1.3}>
             {unreadCount > 99 ? '99+' : unreadCount}
           </Text>
         </View>

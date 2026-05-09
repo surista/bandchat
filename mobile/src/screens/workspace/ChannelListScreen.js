@@ -216,7 +216,7 @@ export default function ChannelListScreen({ navigation, route }) {
             overflow: 'hidden',
           }}>
             {workspace?.avatarUrl ? (
-              <Image source={{ uri: workspace.avatarUrl }} style={{ width: '100%', height: '100%' }} />
+              <Image source={{ uri: workspace.avatarUrl }} style={{ width: '100%', height: '100%' }} accessible={false} />
             ) : (
               <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 14 }} maxFontSizeMultiplier={1.5}>
                 {workspaceName?.charAt(0).toUpperCase() || '?'}

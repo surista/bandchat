@@ -173,6 +173,7 @@ export default function ShareReceiveScreen({ navigation }) {
             source={{ uri: file.path }}
             style={styles.previewImage}
             contentFit="cover"
+            accessibilityLabel={`Selected file ${index + 1}`}
           />
         ))}
       </ScrollView>

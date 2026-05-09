@@ -17,6 +17,7 @@ import { useHeaderHeight } from '@react-navigation/elements';
 import * as Clipboard from 'expo-clipboard';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import ErrorState from '../../components/ErrorState';
 import api from '../../services/api';
 import formatDate from '../../utils/formatDate';
@@ -27,6 +28,7 @@ export default function InviteScreen({ route }) {
   const { user } = useAuth()
   const { isTablet, contentMaxWidth } = useLayout();
   const { colors } = useTheme();
+  const toast = useToast();
   const headerHeight = useHeaderHeight();
 
   const [inviteData, setInviteData] = useState(null);
@@ -110,7 +112,7 @@ export default function InviteScreen({ route }) {
     setSending(true);
     try {
       await api.sendInviteEmail(workspaceId, trimmed);
-      Alert.alert('Sent', `Invitation sent to ${trimmed}`);
+      toast.success(`Invitation sent to ${trimmed}`);
       setEmail('');
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to send invitation');

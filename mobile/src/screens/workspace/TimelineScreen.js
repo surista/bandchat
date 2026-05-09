@@ -158,7 +158,7 @@ export default function TimelineScreen({ navigation, route }) {
         <View style={styles.header}>
           <View style={styles.authorRow}>
             {msg.author?.avatarUrl ? (
-              <Image source={{ uri: msg.author.avatarUrl }} style={styles.avatar} />
+              <Image source={{ uri: msg.author.avatarUrl }} style={styles.avatar} accessible={false} />
             ) : (
               <View style={[styles.avatarFallback, { backgroundColor: '#16a34a' }]}>
                 <Text style={styles.avatarText}>{msg.author?.displayName?.[0] || '?'}</Text>
@@ -200,6 +200,7 @@ export default function TimelineScreen({ navigation, route }) {
                   source={{ uri: att.thumbnailUrl || att.url }}
                   style={styles.attachmentImage}
                   contentFit="cover"
+                  accessible={false}
                 />
               ) : (
                 <Text key={att.id} style={[styles.attachmentFile, { color: colors.textSecondary }]}>

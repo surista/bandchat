@@ -58,7 +58,7 @@ function WorkspaceSwitcher({ visible, currentWorkspace, workspaces = [], onSelec
             <View style={styles.workspaceRow}>
               <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
                 {currentWorkspace?.avatarUrl ? (
-                  <Image source={{ uri: currentWorkspace.avatarUrl }} style={styles.avatarImage} />
+                  <Image source={{ uri: currentWorkspace.avatarUrl }} style={styles.avatarImage} accessible={false} />
                 ) : (
                   <Text style={styles.avatarText}>
                     {currentWorkspace?.name?.charAt(0).toUpperCase() || '?'}
@@ -90,7 +90,7 @@ function WorkspaceSwitcher({ visible, currentWorkspace, workspaces = [], onSelec
                 >
                   <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
                     {workspace.avatarUrl ? (
-                      <Image source={{ uri: workspace.avatarUrl }} style={styles.avatarImage} />
+                      <Image source={{ uri: workspace.avatarUrl }} style={styles.avatarImage} accessible={false} />
                     ) : (
                       <Text style={styles.avatarText}>
                         {workspace.name.charAt(0).toUpperCase()}
@@ -107,7 +107,7 @@ function WorkspaceSwitcher({ visible, currentWorkspace, workspaces = [], onSelec
                   </View>
                   {workspace.unreadCount > 0 && (
                     <View style={[styles.badge, { backgroundColor: colors.error }]}>
-                      <Text style={styles.badgeText} maxFontSizeMultiplier={1.0}>
+                      <Text style={styles.badgeText} maxFontSizeMultiplier={1.3}>
                         {workspace.unreadCount > 99 ? '99+' : workspace.unreadCount}
                       </Text>
                     </View>

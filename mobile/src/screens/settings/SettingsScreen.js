@@ -26,6 +26,7 @@ import { prepareImageForUpload } from '../../utils/prepareImageUpload';
 import { successNotification, errorNotification, selectionFeedback } from '../../utils/haptics';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
 import { APP_BASE_URL } from '../../utils/constants';
@@ -74,6 +75,7 @@ export default function SettingsScreen({ navigation, route }) {
   const { user, logout } = useAuth()
   const { isTablet, contentMaxWidth } = useLayout();
   const { colors, messageDensity, setMessageDensity } = useTheme();
+  const toast = useToast();
   const [isAdmin, setIsAdmin] = useState(false);
   const [workspaceName, setWorkspaceName] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -204,7 +206,7 @@ export default function SettingsScreen({ navigation, route }) {
         transitionPaddingSecs: wsTransitionPadding,
       });
       successNotification();
-      Alert.alert('Saved', 'Workspace defaults updated');
+      toast.success('Workspace defaults updated');
       setShowDefaultsModal(false);
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to save defaults');

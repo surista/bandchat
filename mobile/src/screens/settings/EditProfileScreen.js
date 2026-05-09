@@ -120,7 +120,7 @@ export default function EditProfileScreen({ navigation }) {
             {uploadingAvatar ? (
               <ActivityIndicator color={colors.primaryText} />
             ) : user?.avatarUrl ? (
-              <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} />
+              <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} accessible={false} />
             ) : (
               <Text style={[styles.avatarText, { color: colors.primaryText }]}>{getInitial(user?.displayName)}</Text>
             )}

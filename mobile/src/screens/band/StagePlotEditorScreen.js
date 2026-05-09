@@ -224,7 +224,7 @@ function InstrumentSvg({ type, size = 48 }) {
         </Svg>
       );
     case 'drums':
-      return <Image source={INSTRUMENT_IMAGES['drums']} style={{ width: s, height: s }} resizeMode="contain" />;
+      return <Image source={INSTRUMENT_IMAGES['drums']} style={{ width: s, height: s }} resizeMode="contain" accessible={false} />;
     case 'piano':
       return (
         <Svg width={s} height={s} viewBox="0 0 64 64">
@@ -251,9 +251,9 @@ function InstrumentSvg({ type, size = 48 }) {
         </Svg>
       );
     case 'electric-guitar':
-      return <Image source={INSTRUMENT_IMAGES['electric-guitar']} style={{ width: s, height: s }} resizeMode="contain" />;
+      return <Image source={INSTRUMENT_IMAGES['electric-guitar']} style={{ width: s, height: s }} resizeMode="contain" accessible={false} />;
     case 'acoustic-guitar':
-      return <Image source={INSTRUMENT_IMAGES['acoustic-guitar']} style={{ width: s, height: s }} resizeMode="contain" />;
+      return <Image source={INSTRUMENT_IMAGES['acoustic-guitar']} style={{ width: s, height: s }} resizeMode="contain" accessible={false} />;
     case 'guitar-stand':
       return (
         <Svg width={s} height={s} viewBox="0 0 64 64">
@@ -267,7 +267,7 @@ function InstrumentSvg({ type, size = 48 }) {
         </Svg>
       );
     case 'bass-guitar':
-      return <Image source={INSTRUMENT_IMAGES['bass-guitar']} style={{ width: s, height: s }} resizeMode="contain" />;
+      return <Image source={INSTRUMENT_IMAGES['bass-guitar']} style={{ width: s, height: s }} resizeMode="contain" accessible={false} />;
     case 'keyboard-stand':
       return (
         <Svg width={s} height={s} viewBox="0 0 64 64">

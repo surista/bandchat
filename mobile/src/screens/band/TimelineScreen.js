@@ -21,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import ErrorState from '../../components/ErrorState';
 import PressableRow from '../../components/PressableRow';
 import useDebounce from '../../hooks/useDebounce';
@@ -61,6 +62,7 @@ export default function TimelineScreen({ navigation, route }) {
   const { user } = useAuth()
   const { isTablet, contentMaxWidth } = useLayout();
   const { colors, mode } = useTheme();
+  const toast = useToast();
   const headerHeight = useHeaderHeight();
 
   const [events, setEvents] = useState([]);
@@ -257,7 +259,7 @@ export default function TimelineScreen({ navigation, route }) {
             setGenerating(true);
             try {
               const result = await api.generateTimeline(workspaceId);
-              Alert.alert('Done', `${result.created || 0} events generated`);
+              toast.success(`${result.created || 0} events generated`);
               loadData();
             } catch (err) {
               Alert.alert('Error', err.message || 'Failed to generate timeline');
@@ -283,7 +285,7 @@ export default function TimelineScreen({ navigation, route }) {
             setGenerating(true);
             try {
               const result = await api.regenerateTimeline(workspaceId);
-              Alert.alert('Done', `${result.deleted || 0} removed, ${result.created || 0} created`);
+              toast.success(`${result.deleted || 0} removed, ${result.created || 0} created`);
               loadData();
             } catch (err) {
               Alert.alert('Error', err.message || 'Failed to regenerate timeline');

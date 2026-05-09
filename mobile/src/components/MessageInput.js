@@ -641,7 +641,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
                   accessibilityLabel={`Mention ${u.displayName}`}
                 >
                   {u.avatarUrl ? (
-                    <Image source={{ uri: u.avatarUrl }} style={styles.mentionAvatar} />
+                    <Image source={{ uri: u.avatarUrl }} style={styles.mentionAvatar} accessible={false} />
                   ) : (
                     <View style={[styles.mentionAvatarFallback, { backgroundColor: colors.primary }]}>
                       <Text style={[styles.mentionAvatarText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.2}>{(u.displayName || '?')[0].toUpperCase()}</Text>

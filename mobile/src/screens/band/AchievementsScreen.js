@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import formatDate from '../../utils/formatDate';
 import api from '../../services/api';
 import ErrorState from '../../components/ErrorState';
@@ -43,6 +44,7 @@ export default function AchievementsScreen({ navigation, route }) {
   const { workspaceId } = route.params;
   const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
+  const toast = useToast();
 
   const [definitions, setDefinitions] = useState([]);
   const [bandAchievements, setBandAchievements] = useState([]);
@@ -116,7 +118,7 @@ export default function AchievementsScreen({ navigation, route }) {
         setNewAchievements(result.newAchievements);
         loadData();
       } else {
-        Alert.alert('Up to Date', 'No new achievements - keep playing!');
+        toast.info('No new achievements - keep playing!');
       }
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to check achievements');
