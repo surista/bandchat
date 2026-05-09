@@ -1241,13 +1241,11 @@ function SetlistList({ workspaceId, workspaceName, workspace }) {
                     songNum++;
                     const song = item.song;
                     return (
-                      <div
+                      <button
                         key={item.id}
-                        className="flex items-center gap-3 py-2 hover:bg-[var(--color-bg-tertiary)]/50 rounded px-2 -mx-2 cursor-pointer"
+                        type="button"
+                        className="flex items-center gap-3 py-2 hover:bg-[var(--color-bg-tertiary)]/50 rounded px-2 -mx-2 cursor-pointer w-full text-left bg-transparent border-0"
                         onClick={() => song?.id && setViewingSong(song)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => { if (e.key === 'Enter' && song?.id) setViewingSong(song); }}
                       >
                         <span className="w-8 text-right text-[var(--color-text-muted)]">{songNum}.</span>
                         <div className="flex-1 min-w-0">
@@ -1267,7 +1265,7 @@ function SetlistList({ workspaceId, workspaceName, workspace }) {
                             <span>{Math.floor(song.duration / 60)}:{String(song.duration % 60).padStart(2, '0')}</span>
                           )}
                         </div>
-                      </div>
+                      </button>
                     );
                   });
                 })()}

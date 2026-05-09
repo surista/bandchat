@@ -2,6 +2,36 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.78] - 2026-05-09
+
+### Code review — Tier 3 (medium-impact, specific segments)
+
+#### Android — TouchableOpacity → PressableRow / Pressable+ripple
+Material Design ripple feedback now lands consistently on the band screens. Replaced ~61 `TouchableOpacity` instances across 5 files:
+
+- **`GigDetailScreen.js`** — 30 to `PressableRow` (form pickers, date shortcuts, lock toggle, venue/setlist link rows, attachment rows, gig action buttons), 2 to `Pressable`+ripple (small chip-style toggles, "View All" link).
+- **`SongListScreen.js`** — 13 to `PressableRow` (sort, more menu, action sheet items, bulk import), 4 to `Pressable`+ripple (segmented view-mode buttons, header cancel).
+- **`SongDetailScreen.js`** — 8 to `PressableRow` (form Save/Cancel/Delete, link rows, practice modal), 6 to `Pressable`+ripple (audio play/pause/scrub icons, attachment chips).
+- **`SetlistDetailScreen.js`** — 8 to `PressableRow` (Live Mode, Add Song, toolbar buttons, performer modal, edit-details modal), 3 to `Pressable`+ripple (inline edit links, song picker cancel).
+- **`StagePlotEditorScreen.js`** — 2 to `PressableRow` (palette section header, palette item card).
+
+Skipped where conversion would break behavior:
+- `headerRight`/`headerLeft` buttons in `navigation.setOptions` (system-controlled context).
+- Modal overlay backdrops with `activeOpacity={1}` (the overlay is a tap-target, not a button).
+- Items inside `DraggableList` and other gesture-handler contexts (would conflict with the pan gesture).
+
+#### Accessibility (web)
+- **`SetlistList.jsx:1244` — `<div role="button">` → `<button>`** for setlist song rows. Adds proper semantic HTML (browser-native keyboard handling, screen-reader role) and removes the manual `tabIndex={0}` / `onKeyDown` ENTER plumbing. Tailwind classes adjusted to neutralize default browser button styles (`bg-transparent border-0 text-left w-full`).
+- `MemberHoverCard.jsx`'s `<div role="button">` was the other flagged site, but it turns out the component is dead code (no imports anywhere in the repo). Left as-is; flagging for cleanup.
+
+### Notes — false positives in the audit
+The Tier 3 audit also flagged several items that turned out to be already correct or intentional design:
+- `SafeAreaView` on `LyricsScreen` / `LiveModeScreen` — these are deliberately immersive (status bar hidden, full-screen lyrics / on-stage live mode). Manual inset handling is correct here.
+- `ChannelScreen` already uses `useSafeAreaInsets()` correctly.
+- Hardcoded greens/reds/yellows in `UpgradeScreen` / `WebsiteSettingsScreen` / `EditProfileScreen` are *semantic* status colors (success / error / warning) — those should NOT track the workspace theme.
+- `Switch` components in `AppearanceScreen` and `NotificationsScreen` already have `accessibilityLabel`.
+- `server/src/routes/gigs.js:261` already has `take: 500` on the deep `findMany` — flagged as "no take", which was wrong.
+
 ## [1.06.77] - 2026-05-09
 
 ### Code review — Tier 2 (high-impact, common-case)

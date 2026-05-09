@@ -29,6 +29,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { lightImpact, mediumImpact, successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import ActionSheet from '../../components/ActionSheet';
+import PressableRow from '../../components/PressableRow';
 
 // ─── Instrument image assets ───
 const INSTRUMENT_IMAGES = {
@@ -747,10 +748,9 @@ export default function StagePlotEditorScreen({ navigation, route }) {
                 const isCollapsed = collapsedSections[section.label];
                 return (
                   <View key={section.label}>
-                    <TouchableOpacity
+                    <PressableRow
                       style={[styles.paletteSectionHeader, { borderTopColor: colors.border }]}
                       onPress={() => setCollapsedSections(prev => ({ ...prev, [section.label]: !prev[section.label] }))}
-                      activeOpacity={0.7}
                       accessibilityRole="button"
                       accessibilityLabel={`${section.label} section, ${isCollapsed ? 'collapsed' : 'expanded'}`}
                     >
@@ -760,21 +760,20 @@ export default function StagePlotEditorScreen({ navigation, route }) {
                       <Text style={[styles.paletteSectionLabel, { color: colors.textSecondary }]}>
                         {section.label}
                       </Text>
-                    </TouchableOpacity>
+                    </PressableRow>
                     {!isCollapsed && (
                       <View style={styles.paletteGrid}>
                         {section.items.map(type => (
-                          <TouchableOpacity
+                          <PressableRow
                             key={type}
                             style={[styles.paletteItem, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
                             onPress={() => addItem(type)}
-                            activeOpacity={0.7}
                             accessibilityRole="button"
                             accessibilityLabel={`Add ${LABEL_MAP[type]} to stage`}
                           >
                             <InstrumentSvg type={type} size={40} />
                             <Text style={[styles.paletteItemLabel, { color: colors.textPrimary }]}>{LABEL_MAP[type]}</Text>
-                          </TouchableOpacity>
+                          </PressableRow>
                         ))}
                       </View>
                     )}

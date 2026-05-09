@@ -6,6 +6,7 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
+  Pressable,
   Modal,
   FlatList,
   Alert,
@@ -113,9 +114,10 @@ function SongAudioPlayer({ url, filename, colors }) {
 
   return (
     <View style={[songAudioStyles.container, { backgroundColor: colors.bgTertiary }]}>
-      <TouchableOpacity
+      <Pressable
         onPress={togglePlay}
-        activeOpacity={0.7}
+        android_ripple={{ color: 'rgba(128,128,128,0.2)', borderless: true }}
+        style={({ pressed }) => [pressed && Platform.OS === 'ios' && { opacity: 0.7 }]}
         disabled={loading}
         accessibilityRole="button"
         accessibilityLabel={`${playing ? 'Pause' : 'Play'} ${filename}`}
@@ -126,13 +128,12 @@ function SongAudioPlayer({ url, filename, colors }) {
         ) : (
           <Ionicons name={playing ? 'pause-circle' : 'play-circle'} size={32} color={colors.primary} />
         )}
-      </TouchableOpacity>
+      </Pressable>
       <View style={songAudioStyles.info}>
         <Text style={[songAudioStyles.filename, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.3}>{filename}</Text>
-        <TouchableOpacity
+        <Pressable
           ref={progressBarRef}
           onPress={handleScrub}
-          activeOpacity={0.8}
           style={[songAudioStyles.progressTouchArea]}
           accessibilityRole="adjustable"
           accessibilityLabel={`Playback position ${fmt(position)} of ${fmt(duration)}`}
@@ -143,7 +144,7 @@ function SongAudioPlayer({ url, filename, colors }) {
               <View style={[songAudioStyles.scrubHandle, { left: `${progress * 100}%`, backgroundColor: colors.primary }]} />
             )}
           </View>
-        </TouchableOpacity>
+        </Pressable>
         <View style={songAudioStyles.timeRow}>
           <Text style={[songAudioStyles.time, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>
             {fmt(position)}
@@ -620,7 +621,7 @@ export default function SongDetailScreen({ navigation, route }) {
 
           {/* Actions */}
           <View style={styles.formActions}>
-            <TouchableOpacity
+            <PressableRow
               style={[styles.formButton, { backgroundColor: colors.bgTertiary }]}
               onPress={handleCancel}
               disabled={saving}
@@ -628,8 +629,8 @@ export default function SongDetailScreen({ navigation, route }) {
               accessibilityLabel="Cancel"
             >
               <Text style={[styles.formButtonText, { color: colors.textPrimary }]}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={[styles.formButton, { backgroundColor: colors.primary }]}
               onPress={handleSave}
               disabled={saving || !title.trim()}
@@ -641,13 +642,13 @@ export default function SongDetailScreen({ navigation, route }) {
               ) : (
                 <Text style={[styles.formButtonTextWhite, { color: colors.primaryText }]}>{isNew ? 'Create' : 'Save'}</Text>
               )}
-            </TouchableOpacity>
+            </PressableRow>
           </View>
 
           {!isNew && (
-            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete song">
+            <PressableRow style={styles.deleteButton} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete song">
               <Text style={styles.deleteButtonText}>Delete Song</Text>
-            </TouchableOpacity>
+            </PressableRow>
           )}
         </ScrollView>
 
@@ -713,14 +714,14 @@ export default function SongDetailScreen({ navigation, route }) {
       {(song?.youtubeUrl || song?.spotifyUrl) && (
         <View style={styles.linksRow}>
           {song.youtubeUrl ? (
-            <TouchableOpacity style={styles.linkButton} onPress={() => isSafeUrl(song.youtubeUrl) && Linking.openURL(song.youtubeUrl)} accessibilityRole="button" accessibilityLabel="Open on YouTube">
+            <PressableRow style={styles.linkButton} onPress={() => isSafeUrl(song.youtubeUrl) && Linking.openURL(song.youtubeUrl)} accessibilityRole="button" accessibilityLabel="Open on YouTube">
               <Text style={styles.youtubeLink}>YouTube</Text>
-            </TouchableOpacity>
+            </PressableRow>
           ) : null}
           {song.spotifyUrl ? (
-            <TouchableOpacity style={styles.linkButton} onPress={() => isSafeUrl(song.spotifyUrl) && Linking.openURL(song.spotifyUrl)} accessibilityRole="button" accessibilityLabel="Open on Spotify">
+            <PressableRow style={styles.linkButton} onPress={() => isSafeUrl(song.spotifyUrl) && Linking.openURL(song.spotifyUrl)} accessibilityRole="button" accessibilityLabel="Open on Spotify">
               <Text style={styles.spotifyLink}>Spotify</Text>
-            </TouchableOpacity>
+            </PressableRow>
           ) : null}
         </View>
       )}
@@ -738,14 +739,16 @@ export default function SongDetailScreen({ navigation, route }) {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.textSecondary, marginBottom: 0 }]} accessibilityRole="header">Lyrics / Chord Chart</Text>
-            <TouchableOpacity
+            <Pressable
               onPress={() => navigation.navigate('Lyrics', { lyrics: song.lyrics, songTitle: song.title, duration: song.duration })}
+              android_ripple={{ color: 'rgba(128,128,128,0.2)', borderless: true }}
+              style={({ pressed }) => [pressed && Platform.OS === 'ios' && { opacity: 0.7 }]}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
               accessibilityLabel="View lyrics full screen"
             >
               <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>Full Screen</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
           <Text style={[styles.sectionText, styles.monoText, { color: colors.textPrimary, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }]}>
             {song.lyrics}
@@ -768,9 +771,11 @@ export default function SongDetailScreen({ navigation, route }) {
             <Text style={[styles.sectionTitle, { color: colors.textSecondary, marginBottom: 0 }]} accessibilityRole="header">
               Attachments{attachments.length > 0 ? ` (${attachments.length})` : ''}
             </Text>
-            <TouchableOpacity
+            <Pressable
               onPress={handleAddAttachment}
               disabled={uploadingAttachment}
+              android_ripple={{ color: 'rgba(128,128,128,0.2)', borderless: true }}
+              style={({ pressed }) => [pressed && Platform.OS === 'ios' && { opacity: 0.7 }]}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
               accessibilityLabel="Add attachment"
@@ -780,7 +785,7 @@ export default function SongDetailScreen({ navigation, route }) {
               ) : (
                 <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
               )}
-            </TouchableOpacity>
+            </Pressable>
           </View>
           {attachments.length === 0 ? (
             <Text style={{ color: colors.textSecondary, fontSize: 13, fontStyle: 'italic' }} maxFontSizeMultiplier={1.3}>
@@ -792,15 +797,16 @@ export default function SongDetailScreen({ navigation, route }) {
                 att.type?.startsWith('audio') ? (
                   <View key={att.id}>
                     <SongAudioPlayer url={att.url} filename={att.filename} colors={colors} />
-                    <TouchableOpacity
+                    <Pressable
                       onPress={() => handleDeleteAttachment(att)}
-                      style={{ position: 'absolute', top: 4, right: 4 }}
+                      android_ripple={{ color: 'rgba(128,128,128,0.2)', borderless: true }}
+                      style={({ pressed }) => [{ position: 'absolute', top: 4, right: 4 }, pressed && Platform.OS === 'ios' && { opacity: 0.7 }]}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       accessibilityRole="button"
                       accessibilityLabel={`Delete ${att.filename}`}
                     >
                       <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                 ) : (
                   <View key={att.id} style={[songAudioStyles.container, { backgroundColor: colors.bgTertiary }]}>
@@ -809,7 +815,7 @@ export default function SongDetailScreen({ navigation, route }) {
                       size={22}
                       color={colors.textSecondary}
                     />
-                    <TouchableOpacity
+                    <PressableRow
                       style={{ flex: 1 }}
                       onPress={() => Linking.openURL(att.url)}
                       accessibilityRole="link"
@@ -819,15 +825,17 @@ export default function SongDetailScreen({ navigation, route }) {
                       {att.size > 0 && (
                         <Text style={[songAudioStyles.time, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>{(att.size / 1024).toFixed(0)} KB</Text>
                       )}
-                    </TouchableOpacity>
-                    <TouchableOpacity
+                    </PressableRow>
+                    <Pressable
                       onPress={() => handleDeleteAttachment(att)}
+                      android_ripple={{ color: 'rgba(128,128,128,0.2)', borderless: true }}
+                      style={({ pressed }) => [pressed && Platform.OS === 'ios' && { opacity: 0.7 }]}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       accessibilityRole="button"
                       accessibilityLabel={`Delete ${att.filename}`}
                     >
                       <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
-                    </TouchableOpacity>
+                    </Pressable>
                   </View>
                 )
               ))}
@@ -845,14 +853,14 @@ export default function SongDetailScreen({ navigation, route }) {
       </View>
 
       {/* Log Practice Button */}
-      <TouchableOpacity
+      <PressableRow
         style={[styles.practiceButton, { backgroundColor: colors.primary }]}
         onPress={() => setShowPracticeModal(true)}
         accessibilityRole="button"
         accessibilityLabel="Log practice session"
       >
         <Text style={[styles.practiceButtonText, { color: colors.primaryText }]}>Log Practice</Text>
-      </TouchableOpacity>
+      </PressableRow>
 
       {/* Practice Modal */}
       <Modal visible={showPracticeModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowPracticeModal(false)}>
@@ -887,7 +895,7 @@ export default function SongDetailScreen({ navigation, route }) {
             />
 
             <View style={styles.practiceModalActions}>
-              <TouchableOpacity
+              <PressableRow
                 style={[styles.formButton, { backgroundColor: colors.bgTertiary }]}
                 onPress={() => setShowPracticeModal(false)}
                 disabled={loggingPractice}
@@ -895,8 +903,8 @@ export default function SongDetailScreen({ navigation, route }) {
                 accessibilityLabel="Cancel"
               >
                 <Text style={[styles.formButtonText, { color: colors.textPrimary }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </PressableRow>
+              <PressableRow
                 style={[styles.formButton, { backgroundColor: colors.primary }]}
                 onPress={handleLogPractice}
                 disabled={loggingPractice || !practiceDuration.trim()}
@@ -908,7 +916,7 @@ export default function SongDetailScreen({ navigation, route }) {
                 ) : (
                   <Text style={[styles.formButtonTextWhite, { color: colors.primaryText }]}>Save</Text>
                 )}
-              </TouchableOpacity>
+              </PressableRow>
             </View>
           </View>
         </TouchableOpacity>

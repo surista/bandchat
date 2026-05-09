@@ -5,6 +5,7 @@ import {
   FlatList,
   TextInput,
   TouchableOpacity,
+  Pressable,
   Modal,
   Alert,
   ActivityIndicator,
@@ -490,23 +491,28 @@ export default function SetlistDetailScreen({ navigation, route }) {
           <Badge label={setlist.venue} color={colors.badgeVenue} bgColor="rgba(251,191,36,0.15)" />
         )}
         {editing && (
-          <TouchableOpacity onPress={openEditDetails} accessibilityRole="button" accessibilityLabel="Edit setlist details">
+          <Pressable
+            onPress={openEditDetails}
+            android_ripple={{ color: 'rgba(128,128,128,0.2)', borderless: true }}
+            style={({ pressed }) => [pressed && Platform.OS === 'ios' && { opacity: 0.7 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Edit setlist details"
+          >
             <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }} maxFontSizeMultiplier={1.5}>Edit Details</Text>
-          </TouchableOpacity>
+          </Pressable>
         )}
       </View>
 
       {/* Live Mode button */}
       {!editing && items.length > 0 && (
-        <TouchableOpacity
+        <PressableRow
           style={styles.liveModeButton}
           onPress={() => navigation.navigate('LiveMode', { setlistItems: items, setlistName: setlist?.name || 'Setlist' })}
-          activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel="Start live mode"
         >
           <Text style={styles.liveModeButtonText} maxFontSizeMultiplier={1.5}>Live Mode</Text>
-        </TouchableOpacity>
+        </PressableRow>
       )}
 
       {/* Performers */}
@@ -515,11 +521,17 @@ export default function SetlistDetailScreen({ navigation, route }) {
           <View style={styles.performersHeader}>
             <Text style={[styles.performersLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Performers</Text>
             {editing && (
-              <TouchableOpacity onPress={openPerformerPicker} accessibilityRole="button" accessibilityLabel={performers.length > 0 ? 'Edit performers' : 'Add performers'}>
+              <Pressable
+                onPress={openPerformerPicker}
+                android_ripple={{ color: 'rgba(128,128,128,0.2)', borderless: true }}
+                style={({ pressed }) => [pressed && Platform.OS === 'ios' && { opacity: 0.7 }]}
+                accessibilityRole="button"
+                accessibilityLabel={performers.length > 0 ? 'Edit performers' : 'Add performers'}
+              >
                 <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }} maxFontSizeMultiplier={1.5}>
                   {performers.length > 0 ? 'Edit' : '+ Add'}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             )}
           </View>
           {performers.length > 0 ? (
@@ -572,14 +584,14 @@ export default function SetlistDetailScreen({ navigation, route }) {
               <Text style={[styles.emptyHint, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
                 Switch to edit mode to add songs
               </Text>
-              <TouchableOpacity
+              <PressableRow
                 style={[styles.emptyButton, { backgroundColor: colors.primary }]}
                 onPress={() => { setEditing(true); openSongPicker(); }}
                 accessibilityRole="button"
                 accessibilityLabel="Add song to setlist"
               >
                 <Text style={[styles.emptyButtonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>+ Add Song</Text>
-              </TouchableOpacity>
+              </PressableRow>
             </View>
           }
         />
@@ -588,15 +600,15 @@ export default function SetlistDetailScreen({ navigation, route }) {
       {/* Edit mode toolbar */}
       {editing && (
         <View style={[styles.editToolbar, { backgroundColor: colors.bgSecondary, borderTopColor: colors.border, paddingBottom: insets.bottom + 10 }]}>
-          <TouchableOpacity style={[styles.toolbarButton, { backgroundColor: colors.primary }]} onPress={openSongPicker} accessibilityRole="button" accessibilityLabel="Add song" accessibilityHint="Add a song to this setlist">
+          <PressableRow style={[styles.toolbarButton, { backgroundColor: colors.primary }]} onPress={openSongPicker} accessibilityRole="button" accessibilityLabel="Add song" accessibilityHint="Add a song to this setlist">
             <Text style={[styles.toolbarButtonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>+ Song</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.toolbarButton, { backgroundColor: colors.bgTertiary }]} onPress={addSetBreak} accessibilityRole="button" accessibilityLabel="Add set break" accessibilityHint="Add a set break">
+          </PressableRow>
+          <PressableRow style={[styles.toolbarButton, { backgroundColor: colors.bgTertiary }]} onPress={addSetBreak} accessibilityRole="button" accessibilityLabel="Add set break" accessibilityHint="Add a set break">
             <Text style={[styles.toolbarButtonTextDark, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>+ Set Break</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.toolbarButton, { backgroundColor: colors.bgTertiary }]} onPress={addMC} accessibilityRole="button" accessibilityLabel="Add MC">
+          </PressableRow>
+          <PressableRow style={[styles.toolbarButton, { backgroundColor: colors.bgTertiary }]} onPress={addMC} accessibilityRole="button" accessibilityLabel="Add MC">
             <Text style={[styles.toolbarButtonTextDark, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>+ MC</Text>
-          </TouchableOpacity>
+          </PressableRow>
         </View>
       )}
 
@@ -604,9 +616,15 @@ export default function SetlistDetailScreen({ navigation, route }) {
       <Modal visible={showSongPicker} animationType="slide" onRequestClose={() => setShowSongPicker(false)}>
         <SafeAreaView style={[styles.pickerContainer, { backgroundColor: colors.bgPrimary }]}>
           <View style={[styles.pickerHeader, { backgroundColor: colors.bgSecondary }]}>
-            <TouchableOpacity onPress={() => setShowSongPicker(false)} accessibilityRole="button" accessibilityLabel="Cancel adding song">
+            <Pressable
+              onPress={() => setShowSongPicker(false)}
+              android_ripple={{ color: 'rgba(128,128,128,0.2)', borderless: true }}
+              style={({ pressed }) => [pressed && Platform.OS === 'ios' && { opacity: 0.7 }]}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel adding song"
+            >
               <Text style={{ color: colors.primary, fontSize: 16 }} maxFontSizeMultiplier={1.5}>Cancel</Text>
-            </TouchableOpacity>
+            </Pressable>
             <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>Add Song</Text>
             <View style={{ width: 60 }} />
           </View>
@@ -703,15 +721,15 @@ export default function SetlistDetailScreen({ navigation, route }) {
               )}
             </ScrollView>
             <View style={styles.detailsActions}>
-              <TouchableOpacity
+              <PressableRow
                 style={[styles.detailsButton, { backgroundColor: colors.bgTertiary }]}
                 onPress={() => setShowPerformerPicker(false)}
                 accessibilityRole="button"
                 accessibilityLabel="Cancel"
               >
                 <Text style={[styles.detailsButtonText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </PressableRow>
+              <PressableRow
                 style={[styles.detailsButton, { backgroundColor: colors.primary }, savingPerformers && { opacity: 0.5 }]}
                 onPress={savePerformers}
                 disabled={savingPerformers}
@@ -723,7 +741,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
                 ) : (
                   <Text style={[styles.detailsButtonTextWhite, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>Save</Text>
                 )}
-              </TouchableOpacity>
+              </PressableRow>
             </View>
           </View>
         </View>
@@ -753,15 +771,15 @@ export default function SetlistDetailScreen({ navigation, route }) {
                 accessibilityLabel="Venue name"
               />
               <View style={styles.detailsActions}>
-                <TouchableOpacity
+                <PressableRow
                   style={[styles.detailsButton, { backgroundColor: colors.bgTertiary }]}
                   onPress={() => setShowEditDetails(false)}
                   accessibilityRole="button"
                   accessibilityLabel="Cancel"
                 >
                   <Text style={[styles.detailsButtonText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
+                </PressableRow>
+                <PressableRow
                   style={[styles.detailsButton, { backgroundColor: colors.primary }, savingDetails && { opacity: 0.5 }]}
                   onPress={saveDetails}
                   disabled={savingDetails}
@@ -773,7 +791,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
                   ) : (
                     <Text style={[styles.detailsButtonTextWhite, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>Save</Text>
                   )}
-                </TouchableOpacity>
+                </PressableRow>
               </View>
             </View>
           </KeyboardAvoidingView>

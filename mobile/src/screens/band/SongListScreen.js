@@ -6,6 +6,7 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
+  Pressable,
   Modal,
   Alert,
   ActivityIndicator,
@@ -435,10 +436,9 @@ export default function SongListScreen({ navigation, route }) {
             accessibilityLabel="Search songs"
           />
         )}
-        <TouchableOpacity
+        <PressableRow
           style={[styles.sortButton, { backgroundColor: colors.bgTertiary }]}
           onPress={() => setShowSortModal(true)}
-          activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel={`Sort by ${SORT_OPTIONS.find(o => o.key === sortBy)?.label}`}
           accessibilityHint="Change sort order"
@@ -446,10 +446,15 @@ export default function SongListScreen({ navigation, route }) {
           <Text style={[styles.sortButtonText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
             {SORT_OPTIONS.find(o => o.key === sortBy)?.label}
           </Text>
-        </TouchableOpacity>
+        </PressableRow>
         <View style={[styles.segmentedControl, { backgroundColor: colors.bgTertiary }]} accessibilityRole="tabbar">
-          <TouchableOpacity
-            style={[styles.segmentButton, viewMode === 'cards' && { backgroundColor: colors.primary }]}
+          <Pressable
+            style={({ pressed }) => [
+              styles.segmentButton,
+              viewMode === 'cards' && { backgroundColor: colors.primary },
+              pressed && Platform.OS === 'ios' && { opacity: 0.7 },
+            ]}
+            android_ripple={{ color: 'rgba(128,128,128,0.2)' }}
             onPress={() => {
               if (viewMode !== 'cards') {
                 selectionFeedback();
@@ -457,15 +462,19 @@ export default function SongListScreen({ navigation, route }) {
                 setViewMode('cards');
               }
             }}
-            activeOpacity={0.7}
             accessibilityRole="tab"
             accessibilityLabel="Card view"
             accessibilityState={{ selected: viewMode === 'cards' }}
           >
             <Ionicons name="grid-outline" size={16} color={viewMode === 'cards' ? colors.primaryText : colors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.segmentButton, viewMode === 'mini' && { backgroundColor: colors.primary }]}
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [
+              styles.segmentButton,
+              viewMode === 'mini' && { backgroundColor: colors.primary },
+              pressed && Platform.OS === 'ios' && { opacity: 0.7 },
+            ]}
+            android_ripple={{ color: 'rgba(128,128,128,0.2)' }}
             onPress={() => {
               if (viewMode !== 'mini') {
                 selectionFeedback();
@@ -473,15 +482,19 @@ export default function SongListScreen({ navigation, route }) {
                 setViewMode('mini');
               }
             }}
-            activeOpacity={0.7}
             accessibilityRole="tab"
             accessibilityLabel="Mini card view"
             accessibilityState={{ selected: viewMode === 'mini' }}
           >
             <Ionicons name="apps-outline" size={16} color={viewMode === 'mini' ? colors.primaryText : colors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.segmentButton, viewMode === 'compact' && { backgroundColor: colors.primary }]}
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [
+              styles.segmentButton,
+              viewMode === 'compact' && { backgroundColor: colors.primary },
+              pressed && Platform.OS === 'ios' && { opacity: 0.7 },
+            ]}
+            android_ripple={{ color: 'rgba(128,128,128,0.2)' }}
             onPress={() => {
               if (viewMode !== 'compact') {
                 selectionFeedback();
@@ -489,13 +502,12 @@ export default function SongListScreen({ navigation, route }) {
                 setViewMode('compact');
               }
             }}
-            activeOpacity={0.7}
             accessibilityRole="tab"
             accessibilityLabel="List view"
             accessibilityState={{ selected: viewMode === 'compact' }}
           >
             <Ionicons name="list-outline" size={16} color={viewMode === 'compact' ? colors.primaryText : colors.textSecondary} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </View>
 
@@ -526,14 +538,14 @@ export default function SongListScreen({ navigation, route }) {
                 <Text style={[styles.emptyHint, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
                   Tap + to add songs or use bulk import
                 </Text>
-                <TouchableOpacity
+                <PressableRow
                   style={[styles.emptyButton, { backgroundColor: colors.primary }]}
                   onPress={() => navigation.navigate('SongDetail', { workspaceId })}
                   accessibilityRole="button"
                   accessibilityLabel="Add song"
                 >
                   <Text style={[styles.emptyButtonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>+ Add Song</Text>
-                </TouchableOpacity>
+                </PressableRow>
               </>
             )}
           </View>
@@ -552,7 +564,7 @@ export default function SongListScreen({ navigation, route }) {
           <View style={[styles.sortModalContent, { backgroundColor: colors.modalBg }]}>
             <Text style={[styles.sortModalTitle, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>Sort by</Text>
             {SORT_OPTIONS.map(opt => (
-              <TouchableOpacity
+              <PressableRow
                 key={opt.key}
                 style={[styles.sortOption, sortBy === opt.key && { backgroundColor: colors.bgTertiary }]}
                 onPress={() => { selectionFeedback(); setSortBy(opt.key); setShowSortModal(false); }}
@@ -562,7 +574,7 @@ export default function SongListScreen({ navigation, route }) {
               >
                 <Text style={[styles.sortOptionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>{opt.label}</Text>
                 {sortBy === opt.key && <Ionicons name="checkmark" size={20} color={colors.primary} />}
-              </TouchableOpacity>
+              </PressableRow>
             ))}
           </View>
         </TouchableOpacity>
@@ -587,7 +599,7 @@ export default function SongListScreen({ navigation, route }) {
         >
           <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
-            <TouchableOpacity
+            <PressableRow
               style={styles.actionItem}
               onPress={() => {
                 setShowMoreMenu(false);
@@ -599,11 +611,11 @@ export default function SongListScreen({ navigation, route }) {
               accessibilityLabel="Bulk import songs"
             >
               <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Bulk Import</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem} onPress={handleEnrich} accessibilityRole="button" accessibilityLabel="Fetch missing metadata">
+            </PressableRow>
+            <PressableRow style={styles.actionItem} onPress={handleEnrich} accessibilityRole="button" accessibilityLabel="Fetch missing metadata">
               <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Fetch Missing Data</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={[styles.actionItem, filteredSongs.length === 0 && { opacity: 0.4 }]}
               onPress={filteredSongs.length > 0 ? handlePrintSongs : undefined}
               disabled={filteredSongs.length === 0}
@@ -611,15 +623,15 @@ export default function SongListScreen({ navigation, route }) {
               accessibilityLabel="Share song list as PDF"
             >
               <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Share as PDF</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={[styles.actionItem, styles.actionCancel]}
               onPress={() => setShowMoreMenu(false)}
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
-            </TouchableOpacity>
+            </PressableRow>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -628,9 +640,15 @@ export default function SongListScreen({ navigation, route }) {
       <Modal visible={showBulkImport} animationType="slide" onRequestClose={() => setShowBulkImport(false)}>
         <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
           <View style={[styles.bulkHeader, { backgroundColor: colors.bgSecondary }]}>
-            <TouchableOpacity onPress={() => setShowBulkImport(false)} accessibilityRole="button" accessibilityLabel="Cancel bulk import">
+            <Pressable
+              onPress={() => setShowBulkImport(false)}
+              android_ripple={{ color: 'rgba(128,128,128,0.2)', borderless: true }}
+              style={({ pressed }) => [pressed && Platform.OS === 'ios' && { opacity: 0.7 }]}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel bulk import"
+            >
               <Text style={{ color: colors.primary, fontSize: 16 }} maxFontSizeMultiplier={1.5}>Cancel</Text>
-            </TouchableOpacity>
+            </Pressable>
             <Text style={[styles.bulkTitle, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>Bulk Import</Text>
             <View style={{ width: 60 }} />
           </View>
@@ -658,14 +676,14 @@ export default function SongListScreen({ navigation, route }) {
                   </Text>
                 )}
               </View>
-              <TouchableOpacity
+              <PressableRow
                 style={[styles.bulkButton, { backgroundColor: colors.primary }]}
                 onPress={() => setShowBulkImport(false)}
                 accessibilityRole="button"
                 accessibilityLabel="Done"
               >
                 <Text style={[styles.bulkButtonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>Done</Text>
-              </TouchableOpacity>
+              </PressableRow>
             </ScrollView>
           ) : (
             <ScrollView contentContainerStyle={styles.bulkContent} keyboardShouldPersistTaps="handled">
@@ -688,10 +706,9 @@ export default function SongListScreen({ navigation, route }) {
                   {parsedSongs.length} song{parsedSongs.length !== 1 ? 's' : ''} detected
                 </Text>
               ) : null}
-              <TouchableOpacity
+              <PressableRow
                 style={styles.metadataToggle}
                 onPress={() => setFetchMetadata(prev => !prev)}
-                activeOpacity={0.6}
                 accessibilityRole="button"
                 accessibilityLabel={`Auto-fetch metadata${fetchMetadata ? ', enabled' : ', disabled'}`}
               >
@@ -701,8 +718,8 @@ export default function SongListScreen({ navigation, route }) {
                 <Text style={[styles.metadataLabel, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>
                   Auto-fetch metadata (BPM, key, duration)
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </PressableRow>
+              <PressableRow
                 style={[styles.bulkButton, { backgroundColor: colors.primary }, (importing || parsedSongs.length === 0) && { opacity: 0.5 }]}
                 onPress={handleBulkImport}
                 disabled={importing || parsedSongs.length === 0}
@@ -714,7 +731,7 @@ export default function SongListScreen({ navigation, route }) {
                 ) : (
                   <Text style={[styles.bulkButtonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>Import {parsedSongs.length} Song{parsedSongs.length !== 1 ? 's' : ''}</Text>
                 )}
-              </TouchableOpacity>
+              </PressableRow>
             </ScrollView>
           )}
         </SafeAreaView>
@@ -734,7 +751,7 @@ export default function SongListScreen({ navigation, route }) {
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.6}>
               {selectedSong?.title}
             </Text>
-            <TouchableOpacity
+            <PressableRow
               style={styles.actionItem}
               onPress={() => {
                 setShowActions(false);
@@ -745,18 +762,18 @@ export default function SongListScreen({ navigation, route }) {
               accessibilityLabel="Edit song"
             >
               <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete song">
+            </PressableRow>
+            <PressableRow style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete song">
               <Text style={[styles.actionText, { color: '#ef4444' }]} maxFontSizeMultiplier={1.5}>Delete</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={[styles.actionItem, styles.actionCancel]}
               onPress={() => { setShowActions(false); setSelectedSong(null); }}
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
               <Text style={[styles.actionText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
-            </TouchableOpacity>
+            </PressableRow>
           </View>
         </TouchableOpacity>
       </Modal>

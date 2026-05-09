@@ -744,7 +744,7 @@ export default function GigDetailScreen({ navigation, route }) {
           {fieldErrors.title && <Text style={styles.fieldError}>{fieldErrors.title}</Text>}
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Type</Text>
-          <TouchableOpacity
+          <PressableRow
             style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
             onPress={() => setShowTypePicker(true)}
             accessibilityRole="button"
@@ -752,12 +752,12 @@ export default function GigDetailScreen({ navigation, route }) {
           >
             <View style={[styles.typeDot, { backgroundColor: TYPE_COLORS[type] }]} />
             <Text style={{ color: colors.textPrimary, fontSize: 15 }}>{type}</Text>
-          </TouchableOpacity>
+          </PressableRow>
 
           {!isNew && (
             <>
               <Text style={[styles.label, { color: colors.textSecondary }]}>Status</Text>
-              <TouchableOpacity
+              <PressableRow
                 style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
                 onPress={() => setShowStatusPicker(true)}
                 accessibilityRole="button"
@@ -765,7 +765,7 @@ export default function GigDetailScreen({ navigation, route }) {
               >
                 <View style={[styles.typeDot, { backgroundColor: STATUS_COLORS[status] }]} />
                 <Text style={{ color: colors.textPrimary, fontSize: 15 }}>{status}</Text>
-              </TouchableOpacity>
+              </PressableRow>
             </>
           )}
 
@@ -777,19 +777,18 @@ export default function GigDetailScreen({ navigation, route }) {
               { label: 'This Weekend', getDate: () => { const d = new Date(); const day = d.getDay(); d.setDate(d.getDate() + (day === 0 ? 0 : 6 - day)); return d; } },
               { label: 'Next Week', getDate: () => { const d = new Date(); d.setDate(d.getDate() + (8 - d.getDay())); return d; } },
             ].map(shortcut => (
-              <TouchableOpacity
+              <PressableRow
                 key={shortcut.label}
                 style={[styles.dateChip, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
                 onPress={() => setDate(shortcut.getDate())}
-                activeOpacity={0.7}
                 accessibilityRole="button"
                 accessibilityLabel={`Set date to ${shortcut.label}`}
               >
                 <Text style={[styles.dateChipText, { color: colors.textPrimary }]}>{shortcut.label}</Text>
-              </TouchableOpacity>
+              </PressableRow>
             ))}
           </ScrollView>
-          <TouchableOpacity
+          <PressableRow
             style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
             onPress={() => setShowDatePicker(true)}
             accessibilityRole="button"
@@ -798,7 +797,7 @@ export default function GigDetailScreen({ navigation, route }) {
             <Text style={{ color: colors.textPrimary, fontSize: 15 }}>
               {format(date, 'EEEE, dd-MMM-yyyy')}
             </Text>
-          </TouchableOpacity>
+          </PressableRow>
 
           {showDatePicker && (
             <DateTimePicker
@@ -810,7 +809,7 @@ export default function GigDetailScreen({ navigation, route }) {
             />
           )}
 
-          <TouchableOpacity
+          <PressableRow
             style={styles.multiDayToggle}
             onPress={() => {
               const next = !multiDay;
@@ -822,7 +821,6 @@ export default function GigDetailScreen({ navigation, route }) {
                 setEndDate(tomorrow);
               }
             }}
-            activeOpacity={0.7}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: multiDay }}
             accessibilityLabel="Multi-day event"
@@ -831,12 +829,12 @@ export default function GigDetailScreen({ navigation, route }) {
               {multiDay && <Ionicons name="checkmark" size={14} color={colors.primaryText} />}
             </View>
             <Text style={{ color: colors.textSecondary, fontSize: 14 }}>Multi-day event</Text>
-          </TouchableOpacity>
+          </PressableRow>
 
           {multiDay && (
             <>
               <Text style={[styles.label, { color: colors.textSecondary }]}>End Date</Text>
-              <TouchableOpacity
+              <PressableRow
                 style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
                 onPress={() => setShowEndDatePicker(true)}
                 accessibilityRole="button"
@@ -845,7 +843,7 @@ export default function GigDetailScreen({ navigation, route }) {
                 <Text style={{ color: colors.textPrimary, fontSize: 15 }}>
                   {endDate ? format(endDate, 'EEEE, dd-MMM-yyyy') : 'Select end date'}
                 </Text>
-              </TouchableOpacity>
+              </PressableRow>
 
               {showEndDatePicker && (
                 <DateTimePicker
@@ -863,7 +861,7 @@ export default function GigDetailScreen({ navigation, route }) {
           <View style={styles.row}>
             <View style={styles.rowField}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>Start Time</Text>
-              <TouchableOpacity
+              <PressableRow
                 style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }]}
                 onPress={() => setShowTimePicker('start')}
                 onLongPress={startTime ? () => { setStartTime(''); selectionFeedback(); } : undefined}
@@ -875,14 +873,14 @@ export default function GigDetailScreen({ navigation, route }) {
                   {startTime || 'Set time'}
                 </Text>
                 {startTime ? <Ionicons name="close-circle" size={16} color={colors.textSecondary} /> : null}
-              </TouchableOpacity>
+              </PressableRow>
               {showTimePicker === 'start' && (
                 <DateTimePicker value={timeStringToDate(startTime)} mode="time" display={Platform.OS === 'ios' ? 'compact' : 'default'} minuteInterval={5} onChange={handleTimeChange('start', setStartTime)} />
               )}
             </View>
             <View style={styles.rowField}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>End Time</Text>
-              <TouchableOpacity
+              <PressableRow
                 style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }]}
                 onPress={() => setShowTimePicker('end')}
                 onLongPress={endTime ? () => { setEndTime(''); selectionFeedback(); } : undefined}
@@ -894,7 +892,7 @@ export default function GigDetailScreen({ navigation, route }) {
                   {endTime || 'Set time'}
                 </Text>
                 {endTime ? <Ionicons name="close-circle" size={16} color={colors.textSecondary} /> : null}
-              </TouchableOpacity>
+              </PressableRow>
               {showTimePicker === 'end' && (
                 <DateTimePicker value={timeStringToDate(endTime)} mode="time" display={Platform.OS === 'ios' ? 'compact' : 'default'} minuteInterval={5} onChange={handleTimeChange('end', setEndTime)} />
               )}
@@ -906,7 +904,7 @@ export default function GigDetailScreen({ navigation, route }) {
             <View style={styles.row}>
               <View style={[styles.rowField, { flex: 1 }]}>
                 <Text style={[styles.label, { color: colors.textSecondary, fontSize: 12 }]}>Sound Check</Text>
-                <TouchableOpacity
+                <PressableRow
                   style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }]}
                   onPress={() => setShowTimePicker('soundCheck')}
                   onLongPress={soundCheckTime ? () => { setSoundCheckTime(''); selectionFeedback(); } : undefined}
@@ -918,14 +916,14 @@ export default function GigDetailScreen({ navigation, route }) {
                     {soundCheckTime || 'Set'}
                   </Text>
                   {soundCheckTime ? <Ionicons name="close-circle" size={14} color={colors.textSecondary} /> : null}
-                </TouchableOpacity>
+                </PressableRow>
                 {showTimePicker === 'soundCheck' && (
                   <DateTimePicker value={timeStringToDate(soundCheckTime)} mode="time" display={Platform.OS === 'ios' ? 'compact' : 'default'} minuteInterval={5} onChange={handleTimeChange('soundCheck', setSoundCheckTime)} />
                 )}
               </View>
               <View style={[styles.rowField, { flex: 1 }]}>
                 <Text style={[styles.label, { color: colors.textSecondary, fontSize: 12 }]}>Doors</Text>
-                <TouchableOpacity
+                <PressableRow
                   style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }]}
                   onPress={() => setShowTimePicker('doors')}
                   onLongPress={eventStartTime ? () => { setEventStartTime(''); selectionFeedback(); } : undefined}
@@ -937,14 +935,14 @@ export default function GigDetailScreen({ navigation, route }) {
                     {eventStartTime || 'Set'}
                   </Text>
                   {eventStartTime ? <Ionicons name="close-circle" size={14} color={colors.textSecondary} /> : null}
-                </TouchableOpacity>
+                </PressableRow>
                 {showTimePicker === 'doors' && (
                   <DateTimePicker value={timeStringToDate(eventStartTime)} mode="time" display={Platform.OS === 'ios' ? 'compact' : 'default'} minuteInterval={5} onChange={handleTimeChange('doors', setEventStartTime)} />
                 )}
               </View>
               <View style={[styles.rowField, { flex: 1 }]}>
                 <Text style={[styles.label, { color: colors.textSecondary, fontSize: 12 }]}>Stage</Text>
-                <TouchableOpacity
+                <PressableRow
                   style={[styles.input, { backgroundColor: colors.bgTertiary, borderColor: colors.border, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }]}
                   onPress={() => setShowTimePicker('stage')}
                   onLongPress={performanceStartTime ? () => { setPerformanceStartTime(''); selectionFeedback(); } : undefined}
@@ -956,7 +954,7 @@ export default function GigDetailScreen({ navigation, route }) {
                     {performanceStartTime || 'Set'}
                   </Text>
                   {performanceStartTime ? <Ionicons name="close-circle" size={14} color={colors.textSecondary} /> : null}
-                </TouchableOpacity>
+                </PressableRow>
                 {showTimePicker === 'stage' && (
                   <DateTimePicker value={timeStringToDate(performanceStartTime)} mode="time" display={Platform.OS === 'ios' ? 'compact' : 'default'} minuteInterval={5} onChange={handleTimeChange('stage', setPerformanceStartTime)} />
                 )}
@@ -966,7 +964,7 @@ export default function GigDetailScreen({ navigation, route }) {
 
           <Text style={[styles.label, { color: colors.textSecondary }]}>Venue</Text>
           {venuesList.length > 0 && !customVenue ? (
-            <TouchableOpacity
+            <PressableRow
               style={[styles.input, styles.pickerInput, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
               onPress={() => setShowVenuePicker(true)}
               accessibilityRole="button"
@@ -977,7 +975,7 @@ export default function GigDetailScreen({ navigation, route }) {
                 {venue || 'Select a venue...'}
               </Text>
               <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
-            </TouchableOpacity>
+            </PressableRow>
           ) : (
             <>
               <TextInput
@@ -989,7 +987,7 @@ export default function GigDetailScreen({ navigation, route }) {
                 accessibilityLabel="Venue name"
               />
               {venuesList.length > 0 && (
-                <TouchableOpacity
+                <PressableRow
                   onPress={() => { setCustomVenue(false); setVenue(''); setAddress(''); setSelectedVenueId(null); }}
                   style={styles.switchVenueMode}
                   accessibilityRole="button"
@@ -997,7 +995,7 @@ export default function GigDetailScreen({ navigation, route }) {
                 >
                   <Ionicons name="list-outline" size={14} color={colors.primary} />
                   <Text style={[styles.switchVenueModeText, { color: colors.primary }]}>Choose from saved venues</Text>
-                </TouchableOpacity>
+                </PressableRow>
               )}
             </>
           )}
@@ -1050,10 +1048,9 @@ export default function GigDetailScreen({ navigation, route }) {
           />
 
           {isAdmin && (
-            <TouchableOpacity
+            <PressableRow
               style={styles.checkboxRow}
               onPress={() => setIsLocked(prev => !prev)}
-              activeOpacity={0.6}
               accessibilityRole="button"
               accessibilityLabel={`Lock event, ${isLocked ? 'checked' : 'unchecked'}`}
             >
@@ -1061,11 +1058,11 @@ export default function GigDetailScreen({ navigation, route }) {
                 {isLocked && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'\u2713'}</Text>}
               </View>
               <Text style={[styles.checkboxLabel, { color: colors.textPrimary }]}>Lock event (prevents member edits)</Text>
-            </TouchableOpacity>
+            </PressableRow>
           )}
 
           <View style={styles.formActions}>
-            <TouchableOpacity
+            <PressableRow
               style={[styles.formButton, { backgroundColor: colors.bgTertiary }]}
               onPress={handleCancel}
               disabled={saving}
@@ -1073,8 +1070,8 @@ export default function GigDetailScreen({ navigation, route }) {
               accessibilityLabel="Cancel"
             >
               <Text style={[styles.formButtonText, { color: colors.textPrimary }]}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableRow>
+            <PressableRow
               style={[styles.formButton, { backgroundColor: colors.primary }]}
               onPress={handleSave}
               disabled={saving || !title.trim()}
@@ -1086,13 +1083,13 @@ export default function GigDetailScreen({ navigation, route }) {
               ) : (
                 <Text style={[styles.formButtonTextWhite, { color: colors.primaryText }]}>{isNew ? 'Create' : 'Save'}</Text>
               )}
-            </TouchableOpacity>
+            </PressableRow>
           </View>
 
           {!isNew && (
-            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete event">
+            <PressableRow style={styles.deleteButton} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete event">
               <Text style={styles.deleteButtonText}>Delete Event</Text>
-            </TouchableOpacity>
+            </PressableRow>
           )}
         </ScrollView>
 
@@ -1102,7 +1099,7 @@ export default function GigDetailScreen({ navigation, route }) {
             <View style={[styles.pickerModal, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.pickerModalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Event Type</Text>
               {GIG_TYPES.map(t => (
-                <TouchableOpacity
+                <PressableRow
                   key={t}
                   style={[styles.pickerOption, type === t && { backgroundColor: colors.bgTertiary }]}
                   onPress={() => { setType(t); setShowTypePicker(false); }}
@@ -1112,7 +1109,7 @@ export default function GigDetailScreen({ navigation, route }) {
                   <View style={[styles.typeDot, { backgroundColor: TYPE_COLORS[t] }]} />
                   <Text style={[styles.pickerOptionText, { color: colors.textPrimary }]}>{t}</Text>
                   {type === t && <Text style={{ color: colors.primary, marginLeft: 'auto' }}>{'\u2713'}</Text>}
-                </TouchableOpacity>
+                </PressableRow>
               ))}
             </View>
           </TouchableOpacity>
@@ -1124,7 +1121,7 @@ export default function GigDetailScreen({ navigation, route }) {
             <View style={[styles.pickerModal, { backgroundColor: colors.modalBg }]}>
               <Text style={[styles.pickerModalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Status</Text>
               {GIG_STATUSES.map(s => (
-                <TouchableOpacity
+                <PressableRow
                   key={s}
                   style={[styles.pickerOption, status === s && { backgroundColor: colors.bgTertiary }]}
                   onPress={() => { setStatus(s); setShowStatusPicker(false); }}
@@ -1134,7 +1131,7 @@ export default function GigDetailScreen({ navigation, route }) {
                   <View style={[styles.typeDot, { backgroundColor: STATUS_COLORS[s] }]} />
                   <Text style={[styles.pickerOptionText, { color: colors.textPrimary }]}>{s}</Text>
                   {status === s && <Text style={{ color: colors.primary, marginLeft: 'auto' }}>{'\u2713'}</Text>}
-                </TouchableOpacity>
+                </PressableRow>
               ))}
             </View>
           </TouchableOpacity>
@@ -1265,11 +1262,11 @@ export default function GigDetailScreen({ navigation, route }) {
 
       {/* Venue */}
       {(gig?.venue || gig?.address) && (
-        <TouchableOpacity style={styles.viewSection} onPress={openMaps} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Open venue in maps">
+        <PressableRow style={styles.viewSection} onPress={openMaps} accessibilityRole="button" accessibilityLabel="Open venue in maps">
           <Text style={[styles.viewLabel, { color: colors.textSecondary }]}>Venue</Text>
           {gig.venue && <Text style={[styles.viewValue, { color: colors.textPrimary }]}>{gig.venue}</Text>}
           {gig.address && <Text style={[styles.viewValueSecondary, { color: colors.primary }]}>{gig.address} {'\u2197'}</Text>}
-        </TouchableOpacity>
+        </PressableRow>
       )}
 
       {/* Pay */}
@@ -1285,7 +1282,7 @@ export default function GigDetailScreen({ navigation, route }) {
         <View style={styles.viewSection}>
           <Text style={[styles.viewLabel, { color: colors.textSecondary }]}>Setlists</Text>
           {setlistItems.map(gs => (
-            <TouchableOpacity
+            <PressableRow
               key={gs.id}
               style={[styles.setlistLink, { backgroundColor: colors.bgSecondary }]}
               onPress={() => {
@@ -1293,14 +1290,13 @@ export default function GigDetailScreen({ navigation, route }) {
                   navigation.navigate('SetlistDetail', { setlistId: gs.setlist.id, workspaceId });
                 }
               }}
-              activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel={`View setlist: ${gs.setlist?.name || 'Untitled Setlist'}`}
             >
               <Text style={[styles.setlistLinkText, { color: colors.primary }]}>
                 {gs.setlist?.name || 'Untitled Setlist'}
               </Text>
-            </TouchableOpacity>
+            </PressableRow>
           ))}
         </View>
       )}
@@ -1345,9 +1341,14 @@ export default function GigDetailScreen({ navigation, route }) {
                 {[0, 15, 30, 45, 60, 90, 120].map(m => {
                   const selected = (gig.myPaddingBefore || 0) === m;
                   return (
-                    <TouchableOpacity
+                    <Pressable
                       key={m}
-                      style={[styles.paddingChip, selected && { backgroundColor: colors.primary }]}
+                      style={({ pressed }) => [
+                        styles.paddingChip,
+                        selected && { backgroundColor: colors.primary },
+                        pressed && Platform.OS === 'ios' && { opacity: 0.7 },
+                      ]}
+                      android_ripple={{ color: 'rgba(128,128,128,0.2)' }}
                       onPress={() => {
                         selectionFeedback();
                         const prev = gig.myPaddingBefore || 0;
@@ -1364,7 +1365,7 @@ export default function GigDetailScreen({ navigation, route }) {
                       <Text style={[styles.paddingChipText, { color: selected ? colors.primaryText : colors.textSecondary }]}>
                         {m === 0 ? 'None' : `${m}m`}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   );
                 })}
               </View>
@@ -1375,9 +1376,14 @@ export default function GigDetailScreen({ navigation, route }) {
                 {[0, 15, 30, 45, 60, 90, 120].map(m => {
                   const selected = (gig.myPaddingAfter || 0) === m;
                   return (
-                    <TouchableOpacity
+                    <Pressable
                       key={m}
-                      style={[styles.paddingChip, selected && { backgroundColor: colors.primary }]}
+                      style={({ pressed }) => [
+                        styles.paddingChip,
+                        selected && { backgroundColor: colors.primary },
+                        pressed && Platform.OS === 'ios' && { opacity: 0.7 },
+                      ]}
+                      android_ripple={{ color: 'rgba(128,128,128,0.2)' }}
                       onPress={() => {
                         selectionFeedback();
                         const prev = gig.myPaddingAfter || 0;
@@ -1394,7 +1400,7 @@ export default function GigDetailScreen({ navigation, route }) {
                       <Text style={[styles.paddingChipText, { color: selected ? colors.primaryText : colors.textSecondary }]}>
                         {m === 0 ? 'None' : `${m}m`}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   );
                 })}
               </View>
@@ -1416,13 +1422,15 @@ export default function GigDetailScreen({ navigation, route }) {
         <View style={styles.mediaSectionHeader}>
           <Text style={[styles.viewLabel, { color: colors.textSecondary }]}>Attachments</Text>
           {gigMedia.length > 6 && (
-            <TouchableOpacity
+            <Pressable
               onPress={() => navigation.navigate('GigGallery', { gigId, gigTitle: gig?.title })}
+              android_ripple={{ color: 'rgba(128,128,128,0.2)' }}
+              style={({ pressed }) => [pressed && Platform.OS === 'ios' && { opacity: 0.7 }]}
               accessibilityRole="button"
               accessibilityLabel="View all photos and videos"
             >
               <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>View All {'\u2192'}</Text>
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
         {gigMedia.length > 0 ? (
@@ -1433,14 +1441,13 @@ export default function GigDetailScreen({ navigation, route }) {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.mediaStrip}
             renderItem={({ item }) => (
-              <TouchableOpacity
+              <PressableRow
                 style={[styles.mediaThumbnail, { backgroundColor: colors.bgTertiary }]}
                 onPress={() => {
                   if (item.type === 'image') {
                     navigation.navigate('GigGallery', { gigId, gigTitle: gig?.title });
                   }
                 }}
-                activeOpacity={0.8}
                 accessibilityRole="button"
                 accessibilityLabel={item.type === 'video' ? 'Video thumbnail' : 'Photo thumbnail'}
               >
@@ -1461,15 +1468,14 @@ export default function GigDetailScreen({ navigation, route }) {
                     <Ionicons name="link-outline" size={20} color={colors.textSecondary} />
                   </View>
                 )}
-              </TouchableOpacity>
+              </PressableRow>
             )}
           />
         ) : null}
-        <TouchableOpacity
+        <PressableRow
           style={[styles.addPhotosButton, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
           onPress={handleAddPhotos}
           disabled={uploadingMedia}
-          activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel="Add photos or videos"
         >
@@ -1478,12 +1484,11 @@ export default function GigDetailScreen({ navigation, route }) {
           ) : (
             <Text style={[styles.addPhotosText, { color: colors.primary }]}>+ Add Photos</Text>
           )}
-        </TouchableOpacity>
-        <TouchableOpacity
+        </PressableRow>
+        <PressableRow
           style={[styles.addPhotosButton, { backgroundColor: colors.bgSecondary, borderColor: colors.border, marginTop: 8 }]}
           onPress={handleAddAudio}
           disabled={uploadingMedia}
-          activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel="Add audio recording"
         >
@@ -1492,16 +1497,15 @@ export default function GigDetailScreen({ navigation, route }) {
           ) : (
             <Text style={[styles.addPhotosText, { color: colors.primary }]}>+ Add Audio</Text>
           )}
-        </TouchableOpacity>
-        <TouchableOpacity
+        </PressableRow>
+        <PressableRow
           style={[styles.addPhotosButton, { backgroundColor: colors.bgSecondary, borderColor: colors.border, marginTop: 8 }]}
           onPress={() => setShowAddLink(!showAddLink)}
-          activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel="Add YouTube link or URL"
         >
           <Text style={[styles.addPhotosText, { color: colors.primary }]}>+ Add Link / YouTube</Text>
-        </TouchableOpacity>
+        </PressableRow>
         {showAddLink && (
           <View style={[styles.addLinkRow, { borderColor: colors.border }]}>
             <TextInput
@@ -1517,14 +1521,13 @@ export default function GigDetailScreen({ navigation, route }) {
               onSubmitEditing={handleAddLink}
               autoFocus
             />
-            <TouchableOpacity
+            <PressableRow
               style={[styles.addLinkButton, { backgroundColor: linkUrl.trim() ? '#16a34a' : colors.bgTertiary }]}
               onPress={handleAddLink}
               disabled={!linkUrl.trim()}
-              activeOpacity={0.7}
             >
               <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>Add</Text>
-            </TouchableOpacity>
+            </PressableRow>
           </View>
         )}
       </View>
@@ -1626,19 +1629,18 @@ export default function GigDetailScreen({ navigation, route }) {
       </View>
 
       {/* Add to Calendar */}
-      <TouchableOpacity
+      <PressableRow
         style={[styles.calendarButton, { backgroundColor: colors.bgSecondary, borderColor: colors.border }]}
         onPress={addToCalendar}
-        activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel="Add to calendar"
       >
         <Text style={[styles.calendarButtonText, { color: colors.primary }]}>Add to Calendar</Text>
-      </TouchableOpacity>
+      </PressableRow>
 
       {/* Mark Complete */}
       {gig?.status === 'SCHEDULED' && (
-        <TouchableOpacity
+        <PressableRow
           style={[styles.completeButton, { backgroundColor: '#22c55e' }]}
           accessibilityRole="button"
           accessibilityLabel="Mark event as complete"
@@ -1660,10 +1662,9 @@ export default function GigDetailScreen({ navigation, route }) {
               },
             ]);
           }}
-          activeOpacity={0.7}
         >
           <Text style={styles.completeButtonText}>{'\u2713'} Mark Complete</Text>
-        </TouchableOpacity>
+        </PressableRow>
       )}
     </ScrollView>
     <ActionSheet
