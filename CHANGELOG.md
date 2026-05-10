@@ -2,6 +2,24 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.83] - 2026-05-10
+
+### Added
+- **Web split view (two channels/views side-by-side)** — Open Calendar + a chat channel side-by-side, or All-Messages + a channel, etc. Two ways to enable:
+  - **"Split right" button** (top-right of the content area, desktop only) — pins the *current* view to a new right pane and clears the left so you pick a fresh left from the sidebar
+  - **Right-click any channel in the sidebar → "Open in split right"** — adds an item to the existing channel context menu, doesn't disturb the left pane
+  - Drag the divider between panes to resize (clamped to 25–75% so neither pane collapses); width persists per workspace in localStorage
+  - **Close button (X)** in the right-pane header to collapse back to single-pane
+  - State persists per workspace: `splitRight:${workspaceId}` (selection) and `splitWidth:${workspaceId}` (percent)
+  - **Below 1024px width (`lg:` breakpoint) the split is hidden but state is preserved** — it reappears when the window grows back. Mobile out of scope intentionally (separate UX problem).
+  - **Thread panel takes priority** — opening a thread on the left pane temporarily hides the right pane (the right area shows the thread instead). Closing the thread restores the split.
+  - **Right pane is "view-only" for v1** — internal navigation (clicking a member's name to start a DM, clicking a #channel reference, etc.) routes to the **left pane**. This avoids ambiguous "where does this open" semantics. The right pane changes only when you explicitly close it or open something new in split.
+
+### Implementation notes
+- Lives entirely in `client/src/components/workspaces/WorkspaceView.jsx` + a single new prop (`onOpenInSplit`) on `Sidebar.jsx`. Zero changes to `ChannelView`, band view components, or the server.
+- The divider drag uses document-level `mousemove`/`mouseup` listeners (so the drag continues if the cursor briefly leaves the divider). Body `cursor` and `userSelect` are pinned during drag so the cursor doesn't flicker over text.
+- `resolveSplitSelection()` is defined just before the render block (not as a `useCallback` at the top) because it depends on handlers declared further down the component — putting it earlier would TDZ on those refs.
+
 ## [1.06.82] - 2026-05-09
 
 ### Added

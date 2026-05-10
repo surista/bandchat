@@ -227,6 +227,19 @@ function WorkspaceView() {
   const [isResizing, setIsResizing] = useState(false);
   const sidebarWidthRef = useRef(sidebarWidth);
   const lastRefreshRef = useRef(0);
+
+  // Split-view state (web only — second pane on the right of the main pane).
+  // splitRight is { type: 'channel'|'view', channelId?, view? } or null.
+  const [splitRight, setSplitRight] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(`splitRight:${workspaceId}`) || 'null'); }
+    catch { return null; }
+  });
+  const [splitWidth, setSplitWidth] = useState(() => {
+    const saved = parseFloat(localStorage.getItem(`splitWidth:${workspaceId}`) || '50');
+    return isFinite(saved) && saved >= 25 && saved <= 75 ? saved : 50;
+  });
+  const [isResizingSplit, setIsResizingSplit] = useState(false);
+  const splitContainerRef = useRef(null);
   const swipeRef = useSwipeGesture({
     onSwipeRight: () => setSidebarOpen(true),
     edgeOnly: true,
@@ -471,6 +484,67 @@ function WorkspaceView() {
       localStorage.setItem(`selectedChannel:${workspaceId}`, selectedChannel.id);
     }
   }, [selectedChannel, workspaceId]);
+
+  // Persist split-view state per workspace
+  useEffect(() => {
+    if (splitRight) localStorage.setItem(`splitRight:${workspaceId}`, JSON.stringify(splitRight));
+    else localStorage.removeItem(`splitRight:${workspaceId}`);
+  }, [splitRight, workspaceId]);
+  useEffect(() => {
+    localStorage.setItem(`splitWidth:${workspaceId}`, String(splitWidth));
+  }, [splitWidth, workspaceId]);
+
+  // Drag handler for the resizable divider between the two panes.
+  // Listens at the document level so the drag continues even if the cursor
+  // briefly leaves the divider element. Body cursor + userSelect are pinned
+  // during the drag so the cursor doesn't flicker over text content.
+  useEffect(() => {
+    if (!isResizingSplit) return;
+    const onMove = (e) => {
+      if (!splitContainerRef.current) return;
+      const rect = splitContainerRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const pct = (x / rect.width) * 100;
+      setSplitWidth(Math.min(75, Math.max(25, pct)));
+    };
+    const onUp = () => setIsResizingSplit(false);
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    const prevCursor = document.body.style.cursor;
+    const prevSelect = document.body.style.userSelect;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    return () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = prevCursor;
+      document.body.style.userSelect = prevSelect;
+    };
+  }, [isResizingSplit]);
+
+  // "Open in split right" handler used by Sidebar context menu and the
+  // top-right "split" button. Sets the right pane and leaves the left alone.
+  const handleOpenInSplit = useCallback((selection) => {
+    setSplitRight(selection);
+  }, []);
+
+  // Pin the CURRENT view to the right pane and clear the left so the user
+  // picks a new left from the sidebar. Used by the "Split right" button.
+  const handleSplitCurrent = useCallback(() => {
+    let current = null;
+    if (activeBandView) current = { type: 'view', view: activeBandView };
+    else if (selectedChannel) current = { type: 'channel', channelId: selectedChannel.id };
+    if (!current) return;
+    setSplitRight(current);
+    setActiveBandView(null);
+    setSelectedChannel(null);
+    setSelectedThread(null);
+  }, [activeBandView, selectedChannel]);
+
+  // resolveSplitSelection() is defined just before the render block — it
+  // depends on handleUpdateUnread / handleOpenSearch / handleStartDM / isAdmin
+  // which aren't declared until later in this component (TDZ would crash if we
+  // referenced them up here in a useCallback dep array).
 
   const loadWorkspace = async () => {
     try {
@@ -752,6 +826,98 @@ function WorkspaceView() {
 
   const isAdmin = workspace.members?.find(m => m.user.id === user?.id)?.role === 'ADMIN';
 
+  // Resolve a stored split-pane selection into { label, render } for the
+  // right-pane header + body. Defined inline (not useCallback) because it
+  // references handlers declared above this point — putting it earlier in the
+  // file would TDZ on those refs. Re-creates each render but the right pane
+  // re-renders rarely so the cost is negligible.
+  const resolveSplitSelection = (selection) => {
+    if (!selection) return { label: '', render: () => null };
+    if (selection.type === 'view') {
+      const view = selection.view;
+      const label = BAND_VIEW_TITLES[view] || view;
+      const Component = BAND_VIEW_COMPONENTS[view];
+      const isLocked = PRO_ONLY_VIEWS[view] && workspace?.effectivePlan !== 'PRO';
+      return {
+        label,
+        render: () => {
+          if (!Component) return null;
+          if (isLocked) {
+            return (
+              <UpgradePrompt
+                feature={PRO_ONLY_VIEWS[view].feature}
+                description={PRO_ONLY_VIEWS[view].description}
+              />
+            );
+          }
+          // Right-pane view-internal channel-clicks route to the LEFT pane —
+          // user keeps their reference view (e.g. All Messages) on the right
+          // and the chat they jump into on the left where they're focused.
+          const extraProps = BAND_VIEW_EXTRA_PROPS[view]?.({
+            workspace,
+            isAdmin,
+            onSelectChannel: (chId) => {
+              const ch = channels.find(c => c.id === chId) || directMessages.find(d => d.id === chId);
+              if (ch) { setSelectedChannel(ch); setActiveBandView(null); }
+            },
+          }) || {};
+          return (
+            <Suspense fallback={<div className="flex-1 flex items-center justify-center"><Skeleton type="channel" /></div>}>
+              <Component workspaceId={workspaceId} {...extraProps} />
+            </Suspense>
+          );
+        },
+      };
+    }
+    if (selection.type === 'channel') {
+      const ch = channels.find(c => c.id === selection.channelId) || directMessages.find(d => d.id === selection.channelId);
+      if (!ch) {
+        return {
+          label: 'Channel unavailable',
+          render: () => (
+            <div className="flex-1 flex items-center justify-center text-gray-400">
+              This channel isn&apos;t available anymore.
+            </div>
+          ),
+        };
+      }
+      const label = ch.isDirect
+        ? ch.otherMembers?.map(m => m.displayName).join(', ') || 'Direct Message'
+        : `# ${ch.name}`;
+      return {
+        label,
+        render: () => (
+          <ChannelView
+            key={`split-${ch.id}`}
+            channel={ch}
+            workspace={workspace}
+            // Right pane is view-only for v1: thread/library/DM actions route
+            // to the left pane so we don't have ambiguous "where does this open"
+            // semantics. Closing the split is the user's escape hatch.
+            onOpenThread={() => {}}
+            onUpdateUnread={handleUpdateUnread}
+            openThreadId={null}
+            onOpenSearch={handleOpenSearch}
+            onStartDM={handleStartDM}
+            onMuteChannel={(channelId, muted) => {
+              setChannels(prev => prev.map(c => c.id === channelId ? { ...c, muted } : c));
+              setDirectMessages(prev => prev.map(dm => dm.id === channelId ? { ...dm, muted } : dm));
+            }}
+            onAddToLibrary={() => {}}
+            channels={channels}
+            onSelectChannel={(c) => {
+              // Internal navigation lands in the LEFT pane (e.g. clicking a
+              // #channel-reference in a message in the right pane).
+              setSelectedChannel(c);
+              setActiveBandView(null);
+            }}
+          />
+        ),
+      };
+    }
+    return { label: '', render: () => null };
+  };
+
   return (
     <div className="h-screen-safe flex bg-gray-900">
       {/* Mobile sidebar backdrop */}
@@ -805,6 +971,7 @@ function WorkspaceView() {
             setSelectedChannel(prev => prev ? { ...prev, starred } : prev);
           }
         }}
+        onOpenInSplit={handleOpenInSplit}
         allWorkspaces={allWorkspaces}
       />
 
@@ -841,10 +1008,29 @@ function WorkspaceView() {
           </button>
         </div>
 
-        {/* Content area */}
-        <div className="flex-1 flex min-h-0">
-          {/* Channel View or Band View */}
-          <div className={`flex-1 flex flex-col min-h-0 ${selectedThread ? 'hidden md:flex' : ''}`}>
+        {/* Content area. The split-view divider lives directly inside this row.
+            Opening a thread takes priority over the split-view right pane —
+            the right area can only show one of them. */}
+        <div ref={splitContainerRef} data-split-container className="flex-1 flex min-h-0 relative">
+          {/* "Split current view to right" floating button — desktop only,
+              hidden when a split is already active or when no view is open. */}
+          {!splitRight && !selectedThread && (selectedChannel || activeBandView) && (
+            <button
+              onClick={handleSplitCurrent}
+              className="hidden lg:flex absolute top-2 right-2 z-20 items-center gap-1 px-2 py-1 rounded text-xs bg-[var(--color-bg-secondary)]/90 backdrop-blur text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]"
+              title="Pin this view to a right pane and pick a new view for the left pane"
+              aria-label="Open in split view"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 4v16M4 4h16v16H4z" /></svg>
+              Split right
+            </button>
+          )}
+
+          {/* Channel View or Band View — LEFT PANE */}
+          <div
+            style={splitRight && !selectedThread ? { flexBasis: `${splitWidth}%`, flexGrow: 0, flexShrink: 0 } : undefined}
+            className={`flex flex-col min-h-0 min-w-0 ${selectedThread ? 'hidden md:flex flex-1' : (splitRight ? 'flex' : 'flex-1 flex')}`}
+          >
             {activeBandView ? (
               PRO_ONLY_VIEWS[activeBandView] && workspace?.effectivePlan !== 'PRO' ? (
                 <UpgradePrompt
@@ -897,6 +1083,50 @@ function WorkspaceView() {
               </div>
             )}
           </div>
+
+          {/* Split-view DIVIDER + RIGHT PANE — desktop only (lg+), and only
+              when no thread is open (thread takes priority for the right
+              area). Below lg breakpoint the split is hidden but state is
+              preserved, so it reappears when the window grows. */}
+          {splitRight && !selectedThread && (() => {
+            const split = resolveSplitSelection(splitRight);
+            return (
+              <>
+                <div
+                  onMouseDown={(e) => { e.preventDefault(); setIsResizingSplit(true); }}
+                  className="hidden lg:flex w-1 cursor-col-resize bg-[var(--color-border)] hover:bg-[var(--color-primary)]/50 transition-colors flex-shrink-0"
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label="Resize split view"
+                />
+                <div
+                  style={{ flexBasis: `${100 - splitWidth}%`, flexGrow: 0, flexShrink: 0 }}
+                  className="hidden lg:flex flex-col min-h-0 min-w-0 bg-[var(--color-bg-primary)]"
+                >
+                  {/* Right-pane header: small title bar + close X */}
+                  <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+                    <span className="text-[10px] font-semibold tracking-wider text-[var(--color-text-muted)]">SPLIT</span>
+                    <span className="text-sm text-[var(--color-text-primary)] truncate flex-1" title={split.label}>
+                      {split.label}
+                    </span>
+                    <button
+                      onClick={() => setSplitRight(null)}
+                      className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] rounded"
+                      title="Close split view"
+                      aria-label="Close split view"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="flex-1 flex flex-col min-h-0 min-w-0">
+                    {split.render()}
+                  </div>
+                </div>
+              </>
+            );
+          })()}
 
           {/* Thread Panel */}
           {selectedThread && (

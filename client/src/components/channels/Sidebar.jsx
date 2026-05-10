@@ -193,6 +193,7 @@ function Sidebar({
   onRefreshWorkspace,
   onMuteChannel,
   onStarChannel,
+  onOpenInSplit,
   allWorkspaces = []
 }) {
   const navigate = useNavigate();
@@ -1378,6 +1379,14 @@ function Sidebar({
         position={contextMenu || { x: 0, y: 0 }}
         onClose={closeContextMenu}
         items={[
+          ...(contextMenu?.type === 'channel' && onOpenInSplit ? [{
+            label: 'Open in split right',
+            icon: '⫶',
+            onClick: () => {
+              onOpenInSplit({ type: 'channel', channelId: contextMenu.id });
+              closeContextMenu();
+            }
+          }] : []),
           ...(contextMenu?.type === 'channel' ? [{
             label: contextMenu?.starred ? 'Unstar channel' : 'Star channel',
             icon: contextMenu?.starred ? '★' : '☆',
