@@ -29,7 +29,7 @@ import { useToast } from '../../context/ToastContext';
  * @param {function} props.onOpenThread - Callback when user clicks to open a thread
  * @param {function} props.onUpdateUnread - Callback to update unread count (called with 0 on channel select)
  */
-function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThreadId, onOpenSearch, onStartDM, onMuteChannel, onAddToLibrary, channels, onSelectChannel }) {
+function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThreadId, onOpenSearch, onStartDM, onMuteChannel, onAddToLibrary, channels, onSelectChannel, onSplitRight }) {
   const { user } = useAuth();
   const { socket, joinChannel, leaveChannel, startTyping, stopTyping, presenceMap } = useSocket();
   const isOnline = useOnlineStatus();
@@ -855,6 +855,18 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
             </svg>
           </button>
+          {onSplitRight && (
+            <button
+              onClick={onSplitRight}
+              className="p-2.5 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hidden lg:block"
+              title="Open in split view (pin this channel to the right pane)"
+              aria-label="Open in split view"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 4v16M4 4h16v16H4z" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 

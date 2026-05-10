@@ -1012,9 +1012,11 @@ function WorkspaceView() {
             Opening a thread takes priority over the split-view right pane —
             the right area can only show one of them. */}
         <div ref={splitContainerRef} data-split-container className="flex-1 flex min-h-0 relative">
-          {/* "Split current view to right" floating button — desktop only,
-              hidden when a split is already active or when no view is open. */}
-          {!splitRight && !selectedThread && (selectedChannel || activeBandView) && (
+          {/* "Split current view to right" floating button — desktop only.
+              ChannelView renders its own Split button in its header (so it
+              sits next to Pin/Members/Setlist instead of overlapping them),
+              so we only show this floating button for band views. */}
+          {!splitRight && !selectedThread && activeBandView && !selectedChannel && (
             <button
               onClick={handleSplitCurrent}
               className="hidden lg:flex absolute top-2 right-2 z-20 items-center gap-1 px-2 py-1 rounded text-xs bg-[var(--color-bg-secondary)]/90 backdrop-blur text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] border border-[var(--color-border)]"
@@ -1058,6 +1060,7 @@ function WorkspaceView() {
                 openThreadId={selectedThread?.id || null}
                 onOpenSearch={handleOpenSearch}
                 onStartDM={handleStartDM}
+                onSplitRight={!splitRight ? handleSplitCurrent : undefined}
                 onMuteChannel={(channelId, muted) => {
                   setChannels(prev => prev.map(c => c.id === channelId ? { ...c, muted } : c));
                   setDirectMessages(prev => prev.map(dm => dm.id === channelId ? { ...dm, muted } : dm));

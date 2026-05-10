@@ -2,6 +2,13 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.84] - 2026-05-10
+
+### Fixed
+- **Split-view button overlapping channel header buttons** — The floating "Split right" button introduced in v1.06.83 sat at the top-right corner of the content area, which is exactly where `ChannelView`'s action buttons live (Pin Setlist, Members, Pinned Messages, Search). The Split button was visually covering them.
+  - **Channels**: the Split button now lives *inside* `ChannelView`'s existing button row (next to Members), via a new `onSplitRight` prop. No more overlap.
+  - **Band views** (Calendar, All Messages, Songs, etc.): keep using the floating top-right button — band views don't have the same crowded action bar so there's nothing to overlap there.
+
 ## [1.06.83] - 2026-05-10
 
 ### Added
