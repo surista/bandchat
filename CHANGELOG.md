@@ -2,6 +2,25 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.87] - 2026-05-11
+
+### Documentation
+- **README**: feature list updated with Split View (web), Public Show Pages, and Booking Inbox. Model count bumped to 55. Web component-count note + mobile-vs-web parity note for the new web-only features.
+- **CLAUDE.md**: Platform-Specific Features table now lists Split View, Show Pages, and Booking Inbox under "Desktop/Web Only" with rationale. Feature Parity Summary refreshed (`Gigs/Calendar` row now mentions Show Pages + Booking Inbox; new `Split View` row marked web-only by design). Schema count bumped to 55.
+
+### Mobile release prep
+This is the version that the next mobile build/submit cycle will ship. Mobile-side changes accumulated since the v1.06.81 hotfix that's currently on TestFlight/Play production:
+
+| Version | Mobile change |
+|---|---|
+| v1.06.76 | Dark-mode contrast bump (`textSecondary` → `#d1d5db`) in `mobile/src/context/ThemeContext.js` |
+| v1.06.77 | `maxFontSizeMultiplier` 1.0 → 1.3 on emoji glyphs, channel/workspace unread badges, DM avatar initials; ~7 descriptive `accessibilityLabel`s on `<Image>`, ~20 marked decorative; 12 success-only `Alert.alert` → `useToast` toasts |
+| v1.06.78 | ~61 `TouchableOpacity` → `PressableRow`/`Pressable+ripple` across `GigDetailScreen`, `SongListScreen`, `SongDetailScreen`, `SetlistDetailScreen`, `StagePlotEditorScreen` |
+| v1.06.79 | `AppearanceScreen` `LayoutAnimation` now honors `AccessibilityInfo.isReduceMotionEnabled()` |
+| v1.06.80 | `utils/formatDuration.js` returns `null` (not `''`) for falsy input; `services/storage.js` test fixes |
+
+None of these touch app-lifecycle hooks or notification timing (the v1.06.75 regression class). Risk is bounded to component-swap regressions on band screens — `PressableRow` is a pre-existing component used widely elsewhere, so the conversion sweep is mechanically safe but worth a smoke-test pass on each affected screen post-install.
+
 ## [1.06.86] - 2026-05-11
 
 ### Added — Booking Inbox (Feature #3 of 3)

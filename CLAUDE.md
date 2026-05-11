@@ -128,7 +128,7 @@ bandchat/
 │   │   ├── scripts/            # CLI utilities: import-slack, seed-test-workspace, generate-slack-mapping, etc.
 │   │   └── lib/                # 7 modules: prisma (with soft-delete middleware), storage (R2), validateUrl, validators, planLimits, revenuecat, icsParser
 │   ├── prisma/
-│   │   └── schema.prisma       # Database schema (54 models, 8 enums)
+│   │   └── schema.prisma       # Database schema (55 models, 8 enums)
 │   └── package.json
 ├── CLAUDE.md                   # AI assistant instructions (this file)
 ├── CHANGELOG.md                # Version history
@@ -154,7 +154,7 @@ bandchat/
 
 **Server:**
 - Express 4 / Node.js
-- Prisma ORM with PostgreSQL (54 models, 8 enums)
+- Prisma ORM with PostgreSQL (55 models, 8 enums)
 - Socket.IO (real-time messaging)
 - JWT Authentication (access tokens + httpOnly cookie refresh tokens)
 - Cloudflare R2 (file uploads via @aws-sdk/client-s3, with magic byte validation and MIME-based extensions)
@@ -165,7 +165,7 @@ bandchat/
 - JWT secret strength validation at startup
 - Socket.IO hardening (maxHttpBufferSize, payload validation, connection limiting, room eviction)
 
-### Database Schema (54 models)
+### Database Schema (55 models)
 
 **Core:** User, RefreshToken, Workspace, WorkspaceMember, Channel, ChannelGroup, ChannelMember
 **Messaging:** Message, Attachment, Reaction, ThreadRead, PinnedMessage, SavedMessage, PushSubscription, ExpoPushToken, Mention
@@ -349,6 +349,9 @@ These features work better with a keyboard, mouse, or larger screen:
 |---------|-----------|-------------|
 | **Audio Analyzer** | CPU-intensive WASM (Essentia.js), needs file system access | SongDetailScreen shows hint |
 | **Slack Import Wizard** | One-time admin task, requires uploading large ZIP files | SettingsScreen shows hint |
+| **Split View** (v1.06.83) | Needs ≥1024px width; right-click + drag-resize are mouse-first | Hidden below `lg:` breakpoint |
+| **Public Show Pages** (v1.06.85) | Public URL at `/show/<gigId>` — fans access via browser | Toggle is web-only; mobile users can share the link manually |
+| **Booking Inbox** (v1.06.86) | Public form at `/book/<slug>` + admin inbox table | Admins manage from web; the form itself is browser-accessible from anywhere |
 
 #### Mobile Only
 These features leverage native device capabilities:
@@ -381,12 +384,13 @@ All communication and reference features work on both:
 
 | Area | Parity | Notes |
 |------|--------|-------|
-| Messaging | 100% | Pinned, saved, link previews, reactions, swipe gestures (mobile), thread reply edit/delete on both (web v1.06.63) |
+| Messaging | 100% | Pinned, saved, link previews, reactions, swipe gestures (mobile), thread reply edit/delete on both (web v1.06.63), group mentions both (v1.06.73) |
 | Songs | 90% | Web has Song Suggestions; both have bulk import |
 | Setlists | 85% | Web has advanced drag-drop; mobile has print/share |
-| Gigs/Calendar | 95% | Web has month view; mobile has iCal subscribe; Gig Archive now on both (mobile v1.06.70) |
+| Gigs/Calendar | 95% | Web has month view + public Show Pages + Booking Inbox (web only by design); mobile has iCal subscribe; Gig Archive both |
 | Members | 95% | Excellent parity |
 | Settings | 85% | Mobile has more granular security options |
+| Split View | web-only | Two views side-by-side with resizable divider, on ≥1024px screens |
 
 #### Implementation Notes
 - Desktop-only features show hints on mobile directing users to the web app

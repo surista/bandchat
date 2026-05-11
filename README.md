@@ -21,6 +21,7 @@ A real-time communication and management app for bands. Think Slack, but built s
 - **Announcements** — Pin important messages with optional expiry and acknowledgment tracking
 - **Polls** — Create polls for band decisions
 - **Photo Gallery** — Browse all shared images in a channel
+- **Split View (web)** — Open two views side-by-side (e.g. Calendar + a chat channel). Right-click a channel for "Open in split right", or use the in-channel split button. Drag the divider to resize.
 
 ### Band Management
 - **Songs** — Track your repertoire with title, artist, key, BPM, duration, lyrics, YouTube/Spotify links, notes, and bulk import with async metadata enrichment (iTunes, Spotify, Deezer, YouTube, SongBPM)
@@ -40,6 +41,8 @@ A real-time communication and management app for bands. Think Slack, but built s
 - **Band Kitty** — Shared band finances tracking (gig pay, expenses, fees)
 - **Recordings** — Track recordings linked to songs
 - **Timeline** — Band history timeline with milestones and achievements
+- **Public Show Pages** — Mark a gig as public to get a shareable URL at `/show/<gigId>`. Fans see the setlist (titles + artists only — keys/BPM/notes stripped), gig date/venue, and photos from the gig gallery.
+- **Booking Inbox** — Each band gets a public booking-request form at `/book/<slug>`. Promoters and venues fill it out; submissions land in a workspace-level admin inbox with New/Responded/Archived tabs. Rate-limited to 20/h/IP.
 
 ### User & Workspace Features
 - **Google Sign-In** — Quick authentication with Google OAuth
@@ -74,10 +77,10 @@ A real-time communication and management app for bands. Think Slack, but built s
 ## Platforms
 
 ### Web Client
-React single-page app deployed as a static site on Vercel. 64 components across 9 directories.
+React single-page app deployed as a static site on Vercel. 66+ components across 10 directories (including new `public/` directory for `/show/` and `/book/` pages).
 
 ### Mobile App (iOS & Android)
-Native mobile app built with Expo/React Native. 55 screens and 18 shared components covering all features including offline support, haptic feedback, push notifications, swipe gestures (reply/react), Gig Archive, and app icon quick actions.
+Native mobile app built with Expo/React Native. 55 screens and 18 shared components covering all features including offline support, haptic feedback, push notifications, swipe gestures (reply/react), Gig Archive, and app icon quick actions. Show Pages + Booking Inbox are web-only for now; mobile users can still share the URLs externally.
 
 ## Tech Stack
 
@@ -97,7 +100,7 @@ Native mobile app built with Expo/React Native. 55 screens and 18 shared compone
 
 ### Server
 - Node.js / Express 4
-- Prisma ORM with PostgreSQL (45 models, 8 enums)
+- Prisma ORM with PostgreSQL (55 models, 8 enums)
 - Socket.IO (real-time messaging)
 - JWT Authentication (access tokens + httpOnly cookie refresh tokens with rotation and reuse detection)
 - Cloudflare R2 (file uploads with magic byte validation, MIME-based extensions, server-side thumbnails via Sharp)
@@ -223,7 +226,7 @@ bandchat/
 │   │   ├── scripts/            # 6 CLI utilities
 │   │   └── lib/                # 7 modules: prisma, storage, validators, planLimits, etc.
 │   ├── prisma/
-│   │   └── schema.prisma       # 45 models, 8 enums
+│   │   └── schema.prisma       # 55 models, 8 enums
 │   └── package.json
 ├── CLAUDE.md                   # AI assistant instructions
 ├── CHANGELOG.md                # Version history
