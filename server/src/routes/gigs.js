@@ -926,7 +926,7 @@ router.get('/:gigId', authenticate, async (req, res) => {
 // Update a gig
 router.put('/:gigId', authenticate, async (req, res) => {
   try {
-    const { title, type, date, endDate, soundCheckTime, eventStartTime, performanceStartTime, venue, address, notes, pay, status, setlistId, setlistIds, isLocked, isPersonal, bandMemberIds, venueId } = req.body;
+    const { title, type, date, endDate, soundCheckTime, eventStartTime, performanceStartTime, venue, address, notes, pay, status, setlistId, setlistIds, isLocked, isPersonal, isPublic, bandMemberIds, venueId } = req.body;
 
     // Get the existing gig and check permissions
     const existingGig = await prisma.gig.findUnique({
@@ -1080,7 +1080,9 @@ router.put('/:gigId', authenticate, async (req, res) => {
         // Only admins can toggle isLocked
         ...(isAdmin && isLocked !== undefined && { isLocked }),
         // Creator or admin can toggle isPersonal
-        ...((isCreator || isAdmin) && isPersonal !== undefined && { isPersonal })
+        ...((isCreator || isAdmin) && isPersonal !== undefined && { isPersonal }),
+        // Creator or admin can toggle isPublic (show page on /show/:gigId)
+        ...((isCreator || isAdmin) && isPublic !== undefined && { isPublic })
       },
       include: {
         createdBy: {

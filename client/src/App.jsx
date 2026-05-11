@@ -39,6 +39,7 @@ const PrivacyPolicy = lazyRetry(() => import('./components/legal/PrivacyPolicy')
 const TermsOfService = lazyRetry(() => import('./components/legal/TermsOfService'));
 const Support = lazyRetry(() => import('./components/legal/Support'));
 const LandingPage = lazyRetry(() => import('./components/landing/LandingPage'));
+const ShowPage = lazyRetry(() => import('./components/public/ShowPage'));
 
 function PrivateRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -144,6 +145,7 @@ function App() {
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfService />} />
       <Route path="/support" element={<Support />} />
+      <Route path="/show/:gigId" element={<ShowPage />} />
       <Route
         path="/join/:inviteCode"
         element={

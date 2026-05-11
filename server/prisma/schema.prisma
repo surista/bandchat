@@ -486,6 +486,7 @@ model Gig {
   status               GigStatus @default(SCHEDULED)
   isLocked             Boolean   @default(false) // Admin-only: non-admins cannot edit/delete
   isPersonal           Boolean   @default(false) // Personal entry: only visible to creator
+  isPublic             Boolean   @default(false) // Public show page: shareable URL at /show/:gigId
   setlistId            String? // Legacy single setlist - kept for backward compatibility
   workspaceId          String
   createdById          String?

@@ -263,7 +263,8 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
     pay: gig?.pay || '',
     status: gig?.status || 'SCHEDULED',
     isLocked: gig?.isLocked || false,
-    isPersonal: gig?.isPersonal || false
+    isPersonal: gig?.isPersonal || false,
+    isPublic: gig?.isPublic || false
   });
 
   // Time dropdown visibility
@@ -600,6 +601,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
         status: formData.status,
         isLocked: formData.isLocked,
         isPersonal: formData.isPersonal,
+        isPublic: formData.isPublic,
       };
 
       // Handle setlist assignment (always use setlistIds array)
@@ -1681,6 +1683,56 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                     <div>
                       <span className="text-[var(--color-text-primary)]">Lock event</span>
                       <p className="text-xs text-[var(--color-text-muted)]">Only admins can edit or delete</p>
+                    </div>
+                  </label>
+                )}
+
+                {/* Public Show Page — creator or admin can toggle. Exposes the
+                    gig at /show/:gigId for anyone with the URL (no auth). */}
+                {(isCreator || isAdmin) && (
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isPublic}
+                      onChange={(e) => handleChange('isPublic', e.target.checked)}
+                      className="rounded bg-[var(--color-bg-tertiary)] border-[var(--color-border)] text-green-500 focus:ring-green-500"
+                    />
+                    <div className="flex-1">
+                      <span className="text-[var(--color-text-primary)]">Public show page</span>
+                      <p className="text-xs text-[var(--color-text-muted)]">
+                        Anyone with the link can see the setlist + photos. Setlist songs show
+                        only title and artist — no keys, BPM, or notes.
+                      </p>
+                      {gig?.id && formData.isPublic && gig?.isPublic && (
+                        <div className="mt-2 flex items-center gap-2 flex-wrap">
+                          <code className="text-xs px-2 py-1 bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-primary)] break-all">
+                            {window.location.origin}/show/{gig.id}
+                          </code>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              navigator.clipboard.writeText(`${window.location.origin}/show/${gig.id}`);
+                            }}
+                            className="text-xs px-2 py-1 rounded bg-[var(--color-primary)] text-white hover:opacity-90"
+                          >
+                            Copy link
+                          </button>
+                          <a
+                            href={`/show/${gig.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs px-2 py-1 rounded bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] hover:bg-[var(--color-border)]"
+                          >
+                            Preview ↗
+                          </a>
+                        </div>
+                      )}
+                      {gig?.id && formData.isPublic && !gig?.isPublic && (
+                        <p className="text-xs text-[var(--color-text-muted)] mt-1 italic">
+                          Save to activate the public link.
+                        </p>
+                      )}
                     </div>
                   </label>
                 )}

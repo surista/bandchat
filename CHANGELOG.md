@@ -2,6 +2,22 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.85] - 2026-05-11
+
+### Added — Public Show Pages (Feature #1 of 3)
+Bands can now share a public, fan-facing page for any completed gig.
+
+- **Schema**: new `Gig.isPublic` boolean (default `false`). One field, applied by the production server's `db push` on next deploy. No data migration needed.
+- **Server**: `GET /api/public/shows/:gigId` — unauthenticated route. Returns 404 unless the gig exists *and* `isPublic = true`. Response is sanitized: band name, gig title/date/venue, setlist items (titles + artists only — keys, BPMs, notes, attachments all stripped), and gig-gallery media (images/videos/YouTube links). No member IDs, no internal status, no workspace IDs. Rate-limited via the existing global `apiLimiter` (IP fallback for anonymous).
+- **Server**: existing `PUT /api/gigs/:gigId` now accepts `isPublic` in the body. Allowed only for the gig creator or a workspace admin (same gate as `isPersonal`).
+- **Web**: new public route `/show/:gigId` → `client/src/components/public/ShowPage.jsx`. Lazy-loaded. Renders the show page with a "Copy link" button. 404-style fallback for non-public/non-existent gigs that leaks nothing about whether the gig exists internally.
+- **Web**: in the existing `GigForm` visibility section (next to "Personal entry" and "Lock event"), a new "Public show page" toggle. When enabled on a saved gig, the form shows the full URL, a copy button, and a preview link.
+- **Mobile**: no changes for v1 — bands can toggle from web, mobile users can still share the link manually if they paste it. Mobile toggle UI is a follow-up so we don't need a mobile-build cycle to ship the feature.
+
+### Notes
+- The privacy boundary is deliberately conservative: a public show page exposes only what a fan would see at the gig itself (which song was played and any photos the band uploaded to the gig gallery). Internal song details — keys, BPM, attachments, lyrics, notes — never cross the boundary.
+- Show pages are intended for completed gigs, but there's no status filter on the server side yet — bands can technically expose an upcoming gig's setlist this way (useful for tour preview pages). Status filtering can be added later if needed.
+
 ## [1.06.84] - 2026-05-10
 
 ### Fixed

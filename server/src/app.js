@@ -40,6 +40,7 @@ import subscriptionRoutes from './routes/subscriptions.js';
 import syncRoutes from './routes/sync.js';
 import venueRoutes from './routes/venues.js';
 import websiteRoutes from './routes/website.js';
+import showsRoutes from './routes/shows.js';
 import adminRoutes from './routes/admin.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
@@ -175,6 +176,8 @@ export function createApp() {
   app.use('/api/sync', syncRoutes);
   app.use('/api/venues', venueRoutes);
   app.use('/api/website', websiteRoutes);
+  // Public show pages — no auth, rate-limited by global apiLimiter (IP fallback)
+  app.use('/api/public/shows', showsRoutes);
   app.use('/api/admin', adminRoutes);
 
   // Health check
