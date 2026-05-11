@@ -41,6 +41,7 @@ import syncRoutes from './routes/sync.js';
 import venueRoutes from './routes/venues.js';
 import websiteRoutes from './routes/website.js';
 import showsRoutes from './routes/shows.js';
+import bookingRequestsRoutes from './routes/bookingRequests.js';
 import adminRoutes from './routes/admin.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
@@ -178,6 +179,9 @@ export function createApp() {
   app.use('/api/website', websiteRoutes);
   // Public show pages — no auth, rate-limited by global apiLimiter (IP fallback)
   app.use('/api/public/shows', showsRoutes);
+  // Booking requests — has both public form-submission routes (rate-limited
+  // per IP via publicFormLimiter inside) and admin-only management routes.
+  app.use('/api/bookings', bookingRequestsRoutes);
   app.use('/api/admin', adminRoutes);
 
   // Health check

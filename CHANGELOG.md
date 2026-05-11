@@ -2,6 +2,22 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.86] - 2026-05-11
+
+### Added — Booking Inbox (Feature #3 of 3)
+Each band gets a public booking-request form at `bandchat.app/book/<slug>`. Promoters and venues fill it out; submissions land in a workspace-level admin inbox.
+
+- **Schema**: new `BookingRequest` model (requesterName/email/phone, venueName, eventDate, feeOffer free-form, message, status: `new`/`responded`/`archived`, respondedAt/respondedById). Back-refs added on `Workspace` and `User`. Indexed by `(workspaceId, status, createdAt)` for fast tab-filtered lists.
+- **Server — public**: `GET /api/bookings/public/:slug` returns just `{ bandName, avatarUrl }` so the form can show a header (no workspaceId leaked). `POST /api/bookings/public/:slug` accepts submissions, validates length + email format both client and server side, rate-limited via `publicFormLimiter` (20/h/IP).
+- **Server — admin**: `GET /api/bookings/workspace/:workspaceId` (admin-only) lists with status filter, `PUT /api/bookings/:id` updates status, `DELETE /api/bookings/:id` removes.
+- **Web — public form**: new lazy route `/book/:slug` → `BookingForm.jsx`. Mobile-first layout, native `<input type="email">`/`type="tel">`/`type="date">` for OS-native input UIs, success and error states. 404-style fallback that doesn't leak workspace existence.
+- **Web — admin inbox**: new band view "Booking Inbox" (sidebar → Gigs → Booking Inbox). Lists requests by tab (New / Responded / Archived). Each row: requester contact info (mailto/tel links), event details, message, response metadata if responded. Actions: Mark as responded / Archive / Reopen / Delete. Banner at top shows the public form URL with Copy + Preview.
+- **Mobile**: no changes for v1. Admins manage from web; mobile users see no booking-related UI until a future enhancement.
+
+### Notes
+- Bands without a `Workspace.slug` set don't have a public form URL — the inbox view shows a banner prompting them to set one. Adding a slug enables the booking form automatically (no separate opt-in toggle yet — kept simple for v1).
+- Booking Inbox is currently visible in the sidebar to *all* workspace members, but the server enforces admin-only access on the list/edit/delete endpoints. Non-admins clicking the menu item will see a 403. Sidebar admin-gating is a follow-up.
+
 ## [1.06.85] - 2026-05-11
 
 ### Added — Public Show Pages (Feature #1 of 3)

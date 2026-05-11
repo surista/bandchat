@@ -88,6 +88,7 @@ const AllMessages = lazyRetry(() => import('../messages/AllMessages'));
 const ActivityFeed = lazyRetry(() => import('../messages/ActivityFeed'));
 const StagePlotCreator = lazyRetry(() => import('../band/StagePlotCreator'));
 const VenueList = lazyRetry(() => import('../band/VenueList'));
+const BookingInbox = lazyRetry(() => import('../band/BookingInbox'));
 
 /** Safe search-highlight renderer — no dangerouslySetInnerHTML */
 function HighlightedText({ text, query }) {
@@ -123,6 +124,7 @@ const BAND_VIEW_TITLES = {
   saved: 'Saved Messages',
   'stage-plots': 'Stage Plots',
   venues: 'Venues',
+  bookings: 'Booking Inbox',
 };
 
 /** Lookup for band view components */
@@ -149,6 +151,7 @@ const BAND_VIEW_COMPONENTS = {
   activity: ActivityFeed,
   'stage-plots': StagePlotCreator,
   venues: VenueList,
+  bookings: BookingInbox,
 };
 
 /** Band views that require a Pro plan */
@@ -175,6 +178,7 @@ const BAND_VIEW_EXTRA_PROPS = {
   'all-messages': (ctx) => ({ onSelectChannel: ctx.onSelectChannel }),
   activity: (ctx) => ({ onSelectChannel: ctx.onSelectChannel }),
   venues: (ctx) => ({ workspace: ctx.workspace, isAdmin: ctx.isAdmin }),
+  bookings: (ctx) => ({ workspace: ctx.workspace }),
 };
 
 /** Views that should use bandViewKey as key prop */

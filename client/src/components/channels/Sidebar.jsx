@@ -1029,6 +1029,7 @@ function Sidebar({
                   { id: 'venues', label: 'Venues', icon: '📍' },
                   { id: 'stage-plots', label: 'Stage Plots', icon: '🎤' },
                   { id: 'archive', label: 'Gig Archive', icon: '📸' },
+                  { id: 'bookings', label: 'Booking Inbox', icon: '📬' },
                   { id: 'stats', label: 'Stats', icon: '📊' },
                 ]
               },

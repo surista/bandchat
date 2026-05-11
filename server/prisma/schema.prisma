@@ -65,6 +65,7 @@ model User {
   venues             Venue[]
   AuditLog           AuditLog[]
   mentions           Mention[]
+  bookingsResponded  BookingRequest[]             @relation("BookingRequestResponders")
 
   @@index([isSystemAdmin])
   @@index([authProvider])
@@ -152,6 +153,7 @@ model Workspace {
   auditLogs          AuditLog[]
   songRequests       SongRequest[]
   contactSubmissions ContactSubmission[]
+  bookingRequests    BookingRequest[]
 
   @@index([deletedAt])
 }
@@ -1090,6 +1092,32 @@ model ContactSubmission {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, createdAt])
+}
+
+/// Public booking-request inbox. Promoters/venues fill out a form at
+/// /book/:slug; submissions land here and the band's admins see them in
+/// a workspace-level Booking Inbox view. Status workflow: new → responded
+/// → archived. Fee is free-form ("$500", "negotiable", "TBD") not Decimal
+/// because most real inquiries don't come in with a concrete number.
+model BookingRequest {
+  id             String    @id @default(uuid())
+  workspaceId    String
+  requesterName  String
+  requesterEmail String
+  requesterPhone String?
+  venueName      String?
+  eventDate      DateTime?
+  feeOffer       String?
+  message        String
+  status         String    @default("new") // 'new' | 'responded' | 'archived'
+  respondedAt    DateTime?
+  respondedById  String?
+  createdAt      DateTime  @default(now())
+
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  respondedBy  User?     @relation("BookingRequestResponders", fields: [respondedById], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, status, createdAt])
 }
 
 model AuditLog {
