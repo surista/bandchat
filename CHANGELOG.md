@@ -2,6 +2,18 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.88] - 2026-05-13
+
+### Fixed
+- **Mobile Gig Gallery: YouTube videos showed as generic link icons and were unresponsive to taps** — Two bugs in `mobile/src/screens/band/GigGalleryScreen.js`:
+  1. The tap handler only opened the image lightbox for `type === 'image'` items; videos, YouTube links, and external links silently swallowed taps with no action.
+  2. The render only branched on `image` vs `video` — `youtube` and `link` types both fell through to a nondescript link icon over a gray tile.
+
+  Fixes:
+  - **YouTube tiles now render the actual YouTube thumbnail** (`img.youtube.com/vi/<id>/hqdefault.jpg`) with a play-button overlay, matching the message-bubble pattern from `MessageBubble.js`. Older `type: 'link'` rows that happen to be YouTube URLs are also detected and rendered this way (back-compat for legacy data).
+  - **Tapping any non-image tile** now calls `Linking.openURL(item.url)` — opens YouTube in the app, video files in the browser/native player, external links in Safari/Chrome.
+  - Accessibility labels now report the correct kind (`'YouTube video'`, `'Video'`, `'Link'`, `'Photo'`) instead of always `Photo` or `Video`.
+
 ## [1.06.87] - 2026-05-11
 
 ### Documentation

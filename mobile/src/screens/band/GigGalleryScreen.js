@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   StyleSheet,
   useWindowDimensions,
+  Linking,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +21,16 @@ import ErrorState from '../../components/ErrorState';
 
 const GAP = 2;
 const TABLET_BREAKPOINT = 768;
+
+// Matches youtube.com/watch?v=, youtube.com/shorts/, and youtu.be/ short links.
+// 11-char video ID is the standard YouTube format.
+const YOUTUBE_REGEX = /(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/|m\.youtube\.com\/watch\?v=)([\w-]{11})/;
+
+function youTubeThumb(url) {
+  if (!url) return null;
+  const m = url.match(YOUTUBE_REGEX);
+  return m ? `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg` : null;
+}
 
 export default function GigGalleryScreen({ route }) {
   const { gigId, gigTitle } = route.params;
@@ -52,28 +63,44 @@ export default function GigGalleryScreen({ route }) {
     loadMedia();
   }, [loadMedia]);
 
-  const handleImagePress = useCallback((item) => {
+  const handleItemPress = useCallback((item) => {
     if (item.type === 'image') {
       setViewerImage(item.url);
       setViewerVisible(true);
+      return;
+    }
+    // video / youtube / link → open the URL externally (YouTube app, browser,
+    // photos for a video file URL, etc.). Previously only image taps did
+    // anything; everything else looked broken because the gallery cell
+    // silently swallowed the tap.
+    if (item.url) {
+      Linking.openURL(item.url).catch(() => {});
     }
   }, []);
 
   const renderItem = useCallback(({ item }) => {
-    const isVideo = item.type === 'video';
     const isImage = item.type === 'image';
+    const isVideo = item.type === 'video';
+    // 'youtube' is the canonical type, but be tolerant of older 'link' rows
+    // that happen to be YouTube URLs — render them with the YouTube thumbnail
+    // so they don't show up as nondescript link icons in the grid.
+    const ytThumb = (item.type === 'youtube' || item.type === 'link') ? youTubeThumb(item.url) : null;
+    const isYouTube = !!ytThumb;
+
     const uploaderName = item.uploadedBy?.displayName || 'Unknown';
     const uploadDate = item.createdAt
       ? format(parseISO(item.createdAt), 'dd-MMM')
       : '';
 
+    const kindLabel = isImage ? 'Photo' : isYouTube ? 'YouTube video' : isVideo ? 'Video' : 'Link';
+
     return (
       <TouchableOpacity
         style={[styles.gridItem, { width: itemSize, height: itemSize }]}
-        onPress={() => handleImagePress(item)}
+        onPress={() => handleItemPress(item)}
         activeOpacity={0.8}
         accessibilityRole="button"
-        accessibilityLabel={`${isVideo ? 'Video' : 'Photo'}${item.caption ? `: ${item.caption}` : ''} by ${uploaderName}`}
+        accessibilityLabel={`${kindLabel}${item.caption ? `: ${item.caption}` : ''} by ${uploaderName}`}
       >
         {isImage ? (
           <Image
@@ -82,6 +109,20 @@ export default function GigGalleryScreen({ route }) {
             contentFit="cover"
             accessibilityLabel={item.caption || 'Gig photo'}
           />
+        ) : isYouTube ? (
+          <View style={styles.thumbnail}>
+            <Image
+              source={{ uri: ytThumb }}
+              style={styles.thumbnail}
+              contentFit="cover"
+              accessibilityLabel={item.caption || 'YouTube video thumbnail'}
+            />
+            <View style={styles.playOverlay} pointerEvents="none">
+              <View style={styles.playIconContainer}>
+                <Text style={styles.playIcon}>{'▶'}</Text>
+              </View>
+            </View>
+          </View>
         ) : isVideo ? (
           <View style={[styles.thumbnail, styles.videoPlaceholder, { backgroundColor: colors.bgTertiary }]}>
             <View style={styles.playIconContainer}>
@@ -104,7 +145,7 @@ export default function GigGalleryScreen({ route }) {
         </View>
       </TouchableOpacity>
     );
-  }, [itemSize, colors, handleImagePress]);
+  }, [itemSize, colors, handleItemPress]);
 
   if (loading) {
     return (
@@ -171,6 +212,16 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   videoPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Absolute-positioned play-button overlay on top of a YouTube thumbnail.
+  playOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
   },
