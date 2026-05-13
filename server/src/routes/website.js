@@ -481,13 +481,33 @@ router.get('/api/:workspaceId/data', async (req, res) => {
       return res.status(404).json({ error: 'Workspace not found' });
     }
 
+    // Apply the advanced-customizations kill switch. When the band flips
+    // useCustomizations to false from the BandChat Settings → Website tab,
+    // strip the `customizations` sub-object from the deployed-site payload.
+    // The data is preserved server-side (it's still in websiteConfig in the
+    // DB) so flipping back ON restores everything without re-entry.
+    const config = workspace.websiteConfig || {};
+    const useCustomizations = config.useCustomizations === true;
+    const safeConfig = useCustomizations
+      ? config
+      : { ...config, customizations: undefined };
+
+    // Tier 2: Auto-pull first image from each gig's media as a convenience
+    // `posterUrl`. Templates that want "show a poster for this gig" can read
+    // gig.posterUrl directly instead of re-implementing the lookup. Falls
+    // back to null if the gig has no image media.
+    const enrichedGigs = gigs.map((g) => {
+      const firstImage = g.media?.find((m) => m.type === 'image');
+      return { ...g, posterUrl: firstImage?.url || null };
+    });
+
     res.json({
       workspace: {
         name: workspace.name,
         slug: workspace.slug,
-        config: workspace.websiteConfig,
+        config: safeConfig,
       },
-      gigs,
+      gigs: enrichedGigs,
       songs,
       setlists,
       bandMembers,

@@ -2,6 +2,30 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.90] - 2026-05-14
+
+### Added — Advanced Website Customizations (Phase 1a + 1b)
+Bands can now embed YouTube videos and add custom links on their deployed website, with a safety toggle that reverts to plain BandChat sync if anything breaks. Per-gig posters auto-render from the existing GigMedia gallery.
+
+#### Phase 1a — Customization layer with kill switch
+- **`websiteConfig.useCustomizations` boolean** — defaults `false` (existing workspaces are unaffected). Controls whether the customization layer is rendered on the deployed site.
+- **`websiteConfig.customizations.youtubeUrls: string[]`** — full YouTube URLs. Each renders as an embedded video on the site.
+- **`websiteConfig.customizations.customLinks: { label, url }[]`** — generic "links in bio" array for Bandcamp, merch stores, press kits, etc.
+- **Server (`/api/website/api/:workspaceId/data`)**: when `useCustomizations === false`, the `customizations` sub-object is stripped from the response. **The data is preserved in the DB** — flipping the toggle back on restores everything without re-entry. The kill switch is fail-safe by design.
+- **UI (`client/src/components/channels/WebsiteTab.jsx`)**: new "Advanced Customizations" section with an Active/Paused toggle, YouTube URL editor (add/remove/edit), custom-links editor, and a prominent **"⚠ Revert to plain BandChat sync"** button. Revert flips the kill switch, saves, and triggers a rebuild — non-destructive.
+- **Paused-banner UX**: if customizations exist but the toggle is off, a yellow banner reminds the band that their data is saved but won't appear on the deployed site.
+
+#### Phase 1b — Gig posters from existing GigMedia
+- **Server data response**: each gig now includes `posterUrl` — derived from the first `image`-type item in `gig.media`. Falls back to `null` if no image. Templates can render `gig.posterUrl` directly instead of re-deriving the lookup themselves.
+- **Zero band action needed** — bands who upload photos to gigs in BandChat get gig posters on their website automatically. This isn't gated by `useCustomizations` (it's a pure sync improvement, not an opt-in customization).
+
+#### Template repo follow-up (out of scope here)
+The deployed-site template repos need a follow-up release to actually render `customizations.youtubeUrls`, `customizations.customLinks`, and `gig.posterUrl`. Until then, the new fields are stored and exposed via the data endpoint but won't appear on deployed sites. The BandChat-side change is forward-compatible: existing template versions ignore unknown fields.
+
+#### Deferred (Tier 3 + Tier 4)
+- Tier 3 (content blocks — drag-drop ordered sections) — defer until there's demand. The kill switch + customization scaffolding here is the foundation for it.
+- Tier 4 (custom domains) — a separate change adding `websiteCustomDomain` + Vercel API integration. Will come in its own commit.
+
 ## [1.06.89] - 2026-05-14
 
 ### Fixed

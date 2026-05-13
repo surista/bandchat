@@ -69,8 +69,18 @@ export default function WebsiteTab({ workspace }) {
   const [seoTitle, setSeoTitle] = useState('');
   const [seoDescription, setSeoDescription] = useState('');
 
+  // Advanced customizations — gated by useCustomizations as a safety toggle.
+  // When false, the server strips `customizations` from the deployed-site
+  // data response, restoring the "stock BandChat sync" experience without
+  // discarding what the band typed in. Default false until they explicitly
+  // turn it on (so existing workspaces don't suddenly render new sections).
+  const [useCustomizations, setUseCustomizations] = useState(false);
+  const [youtubeUrls, setYoutubeUrls] = useState([]);
+  const [customLinks, setCustomLinks] = useState([]);
+
   const [configDirty, setConfigDirty] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
+  const [reverting, setReverting] = useState(false);
 
   useEffect(() => {
     loadWebsite();
@@ -122,6 +132,10 @@ export default function WebsiteTab({ workspace }) {
         // SEO
         setSeoTitle(c.seo?.title || '');
         setSeoDescription(c.seo?.description || '');
+        // Advanced customizations
+        setUseCustomizations(c.useCustomizations === true);
+        setYoutubeUrls(Array.isArray(c.customizations?.youtubeUrls) ? c.customizations.youtubeUrls : []);
+        setCustomLinks(Array.isArray(c.customizations?.customLinks) ? c.customizations.customLinks : []);
       } else {
         setBandName(workspace.name || '');
       }
@@ -194,6 +208,15 @@ export default function WebsiteTab({ workspace }) {
         title: seoTitle.trim() || `${bandName.trim()} | Official Website`,
         description: seoDescription.trim() || description.trim(),
       },
+      // Advanced customization layer. Preserved even when the kill switch
+      // is off, so flipping back on restores everything the band entered.
+      useCustomizations,
+      customizations: {
+        youtubeUrls: youtubeUrls.filter((u) => u && u.trim()).map((u) => u.trim()),
+        customLinks: customLinks
+          .filter((l) => l && l.label?.trim() && l.url?.trim())
+          .map((l) => ({ label: l.label.trim(), url: l.url.trim() })),
+      },
     };
   }
 
@@ -232,6 +255,40 @@ export default function WebsiteTab({ workspace }) {
       toast.error(err.message || 'Deployment failed');
     } finally {
       setDeploying(false);
+    }
+  }
+
+  // Panic-button revert: flip the kill switch, save, trigger a sync so the
+  // deployed site rebuilds without the advanced customization layer. Data is
+  // preserved on the band's side — flipping back ON restores everything.
+  async function handleRevertCustomizations() {
+    if (!window.confirm(
+      'Revert to plain BandChat sync? Your customization data (YouTube videos, custom links) will be preserved and can be turned back on later. The deployed site will rebuild without these sections.'
+    )) {
+      return;
+    }
+    setReverting(true);
+    try {
+      // Compute config with useCustomizations forced false — don't wait for
+      // setState to flush before calling getConfig() (it would still use
+      // the old value due to React's batched setState).
+      const reverted = { ...getConfig(), useCustomizations: false };
+      await api.updateWebsiteConfig(workspace.id, reverted);
+      setUseCustomizations(false);
+      // If the site is currently deployed, kick a rebuild. Otherwise just
+      // saving is enough — the next deploy will pick up the new flag.
+      if (websiteData?.websiteEnabled) {
+        await api.syncWebsite(workspace.id).catch(() => {
+          /* Sync failure is non-fatal — the config is saved; band can
+             manually retry from the recovery banner if status went to error. */
+        });
+      }
+      toast.success('Reverted to plain BandChat sync. Site is rebuilding.');
+      await loadWebsite();
+    } catch (err) {
+      toast.error(err.message || 'Failed to revert');
+    } finally {
+      setReverting(false);
     }
   }
 
@@ -811,6 +868,149 @@ export default function WebsiteTab({ workspace }) {
               <input type="text" value={seoDescription} onChange={dirty(setSeoDescription)} className="modal-input w-full" placeholder="Brief description for search engines" maxLength={300} />
             </div>
           </div>
+        </div>
+
+        {/* Advanced Customizations — gated by the useCustomizations kill
+            switch. When OFF, none of these fields render on the deployed
+            site; data is preserved so flipping back ON restores everything. */}
+        <div className="border-t border-[var(--color-modal-border)] pt-6">
+          <div className="flex items-start justify-between mb-3 gap-3 flex-wrap">
+            <div>
+              <h4 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">Advanced Customizations</h4>
+              <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                Optional. Embed YouTube videos and add custom links beyond what BandChat syncs automatically.
+              </p>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useCustomizations}
+                onChange={(e) => { setUseCustomizations(e.target.checked); setConfigDirty(true); }}
+                className="rounded bg-[var(--color-bg-tertiary)] border-[var(--color-border)] text-[var(--color-primary)]"
+              />
+              <span className="text-sm text-[var(--color-text-primary)]">
+                {useCustomizations ? 'Active' : 'Paused'}
+              </span>
+            </label>
+          </div>
+
+          {!useCustomizations && (youtubeUrls.length > 0 || customLinks.length > 0) && (
+            <div className="bg-yellow-900/20 border border-yellow-600/40 rounded p-3 text-xs text-yellow-200 mb-3">
+              Customizations are paused. Your YouTube videos and custom links are saved but won&apos;t appear on the deployed site. Re-enable the toggle above to restore them.
+            </div>
+          )}
+
+          {useCustomizations && (
+            <div className="space-y-5">
+              {/* YouTube videos */}
+              <div>
+                <label className="text-sm text-[var(--color-text-muted)] mb-1 block">
+                  YouTube videos <span className="text-[var(--color-text-muted)]">(paste full URLs)</span>
+                </label>
+                {youtubeUrls.map((url, i) => (
+                  <div key={i} className="flex gap-2 mb-2">
+                    <input
+                      type="url"
+                      value={url}
+                      onChange={(e) => {
+                        const next = [...youtubeUrls];
+                        next[i] = e.target.value;
+                        setYoutubeUrls(next);
+                        setConfigDirty(true);
+                      }}
+                      className="modal-input flex-1"
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      maxLength={500}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setYoutubeUrls(youtubeUrls.filter((_, idx) => idx !== i)); setConfigDirty(true); }}
+                      className="btn bg-red-600/20 text-red-400 hover:bg-red-600/30 px-3"
+                      aria-label="Remove YouTube URL"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => { setYoutubeUrls([...youtubeUrls, '']); setConfigDirty(true); }}
+                  className="text-sm text-[var(--color-primary)] hover:underline"
+                >
+                  + Add YouTube video
+                </button>
+              </div>
+
+              {/* Custom links */}
+              <div>
+                <label className="text-sm text-[var(--color-text-muted)] mb-1 block">
+                  Custom links <span className="text-[var(--color-text-muted)]">(e.g. Bandcamp, merch store, press kit)</span>
+                </label>
+                {customLinks.map((link, i) => (
+                  <div key={i} className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={link.label || ''}
+                      onChange={(e) => {
+                        const next = [...customLinks];
+                        next[i] = { ...next[i], label: e.target.value };
+                        setCustomLinks(next);
+                        setConfigDirty(true);
+                      }}
+                      className="modal-input w-32"
+                      placeholder="Label"
+                      maxLength={60}
+                    />
+                    <input
+                      type="url"
+                      value={link.url || ''}
+                      onChange={(e) => {
+                        const next = [...customLinks];
+                        next[i] = { ...next[i], url: e.target.value };
+                        setCustomLinks(next);
+                        setConfigDirty(true);
+                      }}
+                      className="modal-input flex-1"
+                      placeholder="https://..."
+                      maxLength={500}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setCustomLinks(customLinks.filter((_, idx) => idx !== i)); setConfigDirty(true); }}
+                      className="btn bg-red-600/20 text-red-400 hover:bg-red-600/30 px-3"
+                      aria-label="Remove link"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => { setCustomLinks([...customLinks, { label: '', url: '' }]); setConfigDirty(true); }}
+                  className="text-sm text-[var(--color-primary)] hover:underline"
+                >
+                  + Add custom link
+                </button>
+              </div>
+
+              {/* Revert (panic button) */}
+              {websiteData?.websiteConfig?.useCustomizations && (
+                <div className="border-t border-[var(--color-modal-border)] pt-4">
+                  <button
+                    type="button"
+                    onClick={handleRevertCustomizations}
+                    disabled={reverting}
+                    className="text-sm text-yellow-400 hover:text-yellow-300 disabled:opacity-50"
+                  >
+                    {reverting ? 'Reverting…' : '⚠ Revert to plain BandChat sync'}
+                  </button>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                    Pauses customizations and rebuilds the site without YouTube videos or custom links. Your data is preserved.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     );
