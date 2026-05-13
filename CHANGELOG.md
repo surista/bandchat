@@ -2,6 +2,18 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.89] - 2026-05-14
+
+### Fixed
+- **Website tab: workspaces stuck at `status='error'` had no Sync option** — When a website deploy failed late in the pipeline, the workspace was left with `websiteEnabled: true` (infrastructure provisioned, often even `websiteUrl` set) but `websiteStatus: 'error'`. The Website tab gated its "Sync Now" button behind `isDeployed = websiteEnabled && status === 'active'`, so users had no recovery path except a full redeploy. Reported for the Frozen Assets workspace.
+
+  **Server-side, the `/sync` endpoint only requires `websiteEnabled: true`** + an existing deploy hook (`server/src/routes/website.js:255-279`) — so Sync was always a valid recovery for these workspaces, just not surfaced in the UI.
+
+  Fixes:
+  - New `isErrorWithInfra` branch in `client/src/components/channels/WebsiteTab.jsx`: when `websiteStatus === 'error'` AND `websiteEnabled` is true, render a recovery panel with **Sync Now** and **Retry Deploy** buttons side-by-side, plus the current URL (if any) so the user can check whether the site is actually live with stale data.
+  - The bottom "Deploy Website" button is hidden when the recovery panel is showing, to avoid duplicating the CTA.
+  - Initial-deploy failures (where no infrastructure exists yet) keep the original simple error banner — Sync isn't a valid path there.
+
 ## [1.06.88] - 2026-05-13
 
 ### Fixed

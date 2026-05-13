@@ -272,6 +272,13 @@ export default function WebsiteTab({ workspace }) {
 
   const isDeployed = websiteData?.websiteEnabled && websiteData?.websiteStatus === 'active';
   const isDeployingStatus = websiteData?.websiteStatus === 'deploying';
+  // "Errored but already provisioned" — a deploy got far enough to create
+  // Vercel infrastructure (so websiteEnabled stuck at true + we usually have
+  // a websiteUrl) but the final step failed. The server's /sync endpoint
+  // gates only on `websiteEnabled`, so Sync is a valid recovery path here;
+  // the original UI hid it behind status==='active' and stranded these
+  // workspaces with no way forward except a heavyweight full re-deploy.
+  const isErrorWithInfra = websiteData?.websiteStatus === 'error' && websiteData?.websiteEnabled;
 
   // Deployed state
   if (isDeployed) {
@@ -384,22 +391,67 @@ export default function WebsiteTab({ workspace }) {
         </div>
       )}
 
-      {websiteData?.websiteStatus === 'error' && (
+      {/* Recovery banner — a previous deploy errored out but the Vercel
+          project + repo are likely still provisioned (websiteEnabled stays
+          true through an error). The current site URL may still be live with
+          stale data; Sync triggers a rebuild via the existing deploy hook.
+          This is the lighter recovery path versus a full redeploy. */}
+      {isErrorWithInfra && (
+        <div className="bg-red-900/30 border border-red-600/50 rounded-lg p-4 space-y-3">
+          <p className="text-red-300 text-sm">
+            The last deploy failed. The site infrastructure is still in place
+            — try Sync first to rebuild from current data. If that doesn&apos;t
+            help, Retry Deploy will re-run the full deploy pipeline.
+          </p>
+          {websiteData?.websiteUrl && (
+            <p className="text-xs text-[var(--color-text-muted)]">
+              Current URL:{' '}
+              <a href={websiteData.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] hover:underline break-all">
+                {websiteData.websiteUrl}
+              </a>
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className="btn bg-[var(--color-primary)] hover:opacity-90 text-white min-h-[40px] px-4 text-sm"
+            >
+              {syncing ? 'Syncing...' : 'Sync Now'}
+            </button>
+            <button
+              onClick={handleDeploy}
+              disabled={deploying || !bandName.trim()}
+              className="btn btn-secondary min-h-[40px] px-4 text-sm"
+            >
+              {deploying ? 'Deploying...' : 'Retry Deploy'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Plain error banner — used when status is 'error' but no infrastructure
+          exists yet (initial deploy failed before creating the Vercel project). */}
+      {websiteData?.websiteStatus === 'error' && !isErrorWithInfra && (
         <div className="bg-red-900/30 border border-red-600/50 rounded-lg p-4">
-          <span className="text-red-300 text-sm">Something went wrong. We couldn't deploy your website. This is usually temporary.</span>
+          <span className="text-red-300 text-sm">Something went wrong. We couldn&apos;t deploy your website. This is usually temporary.</span>
         </div>
       )}
 
       {renderConfigForm()}
 
       <div className="flex gap-3">
-        <button
-          onClick={handleDeploy}
-          disabled={deploying || !bandName.trim()}
-          className="btn bg-green-600 hover:bg-green-700 text-white min-h-[44px] px-6"
-        >
-          {deploying ? 'Deploying...' : websiteData?.websiteConfig ? 'Deploy Website' : 'Create & Deploy Website'}
-        </button>
+        {/* When the recovery banner is showing, its buttons are the primary
+            CTA — hide the bottom row's Deploy button to avoid duplicating it. */}
+        {!isErrorWithInfra && (
+          <button
+            onClick={handleDeploy}
+            disabled={deploying || !bandName.trim()}
+            className="btn bg-green-600 hover:bg-green-700 text-white min-h-[44px] px-6"
+          >
+            {deploying ? 'Deploying...' : websiteData?.websiteConfig ? 'Deploy Website' : 'Create & Deploy Website'}
+          </button>
+        )}
         {websiteData?.websiteEnabled && (
           <button
             onClick={() => setDeleteOpen(true)}
