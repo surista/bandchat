@@ -1749,6 +1749,16 @@ class ApiService {
   async getWebsiteStatus(workspaceId) {
     return this.request(`/website/${workspaceId}/status`);
   }
+
+  async getWebsiteTemplateVersion(workspaceId) {
+    return this.request(`/website/${workspaceId}/template-version`);
+  }
+
+  async upgradeWebsiteTemplate(workspaceId) {
+    return this.request(`/website/${workspaceId}/upgrade-template`, {
+      method: 'POST',
+    });
+  }
 }
 
 export const api = new ApiService();

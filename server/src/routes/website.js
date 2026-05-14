@@ -32,6 +32,9 @@ import {
   deleteGithubRepo,
   generateApiToken,
   verifyApiToken,
+  upgradeTemplate,
+  getTemplateVersion,
+  getBandRepoTemplateVersion,
 } from '../services/websiteDeployment.js';
 
 const router = express.Router();
@@ -248,6 +251,76 @@ router.post('/:workspaceId/deploy', authenticate, isWorkspaceAdmin, deployLimite
   } catch (error) {
     console.error('Website deploy error:', error);
     res.status(500).json({ error: error.message || 'Deployment failed' });
+  }
+});
+
+// GET /:workspaceId/template-version — return the band's current template
+// version (from their repo's package.json) + the latest available template
+// version (from the upstream template repo). Used by the UI to surface an
+// "Upgrade available" hint and the Upgrade Template button.
+router.get('/:workspaceId/template-version', authenticate, isWorkspaceAdmin, async (req, res) => {
+  try {
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: req.params.workspaceId },
+      select: { websiteRepoName: true, websiteEnabled: true },
+    });
+    if (!workspace?.websiteEnabled || !workspace.websiteRepoName) {
+      return res.json({ band: null, latest: null });
+    }
+    const [band, latest] = await Promise.all([
+      getBandRepoTemplateVersion(workspace.websiteRepoName).catch(() => null),
+      getTemplateVersion().catch(() => null),
+    ]);
+    res.json({ band, latest });
+  } catch (error) {
+    console.error('Get template version error:', error);
+    res.status(500).json({ error: 'Failed to read template version' });
+  }
+});
+
+// POST /:workspaceId/upgrade-template — copy latest template source files
+// into the band's repo (preserving site.config.js, uploaded images, synced
+// data, etc.) and trigger a rebuild. Admin only, rate-limited via the
+// existing deployLimiter since this involves many GitHub API calls.
+router.post('/:workspaceId/upgrade-template', authenticate, isWorkspaceAdmin, deployLimiter, async (req, res) => {
+  try {
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: req.params.workspaceId },
+      select: {
+        websiteRepoName: true,
+        websiteEnabled: true,
+        websiteDeployHook: true,
+        websiteVercelId: true,
+      },
+    });
+    if (!workspace?.websiteEnabled || !workspace.websiteRepoName) {
+      return res.status(400).json({ error: 'Website not deployed — nothing to upgrade' });
+    }
+
+    const summary = await upgradeTemplate(workspace.websiteRepoName);
+
+    // Trigger a rebuild so the band's site picks up the new template source.
+    if (workspace.websiteDeployHook) {
+      await triggerDeploy(workspace.websiteDeployHook).catch((err) => {
+        console.warn(`[upgrade-template] deploy hook failed: ${err.message}`);
+      });
+    } else if (workspace.websiteVercelId && workspace.websiteRepoName) {
+      await createDeployment(workspace.websiteVercelId, workspace.websiteRepoName).catch((err) => {
+        console.warn(`[upgrade-template] createDeployment failed: ${err.message}`);
+      });
+    }
+
+    // Mark the site as deploying — Vercel build will finish async. UI shows
+    // a "rebuilding" state until next status check or refresh.
+    await prisma.workspace.update({
+      where: { id: req.params.workspaceId },
+      data: { websiteStatus: 'active', websiteDeployedAt: new Date() },
+    }).catch(() => {});
+
+    res.json({ message: 'Template upgraded — site rebuilding', ...summary });
+  } catch (error) {
+    console.error('Upgrade template error:', error);
+    res.status(500).json({ error: error.message || 'Upgrade failed' });
   }
 });
 

@@ -82,9 +82,50 @@ export default function WebsiteTab({ workspace }) {
   const [savingConfig, setSavingConfig] = useState(false);
   const [reverting, setReverting] = useState(false);
 
+  // Template version tracking — for the "Upgrade Template" affordance.
+  // A band's repo is cloned from the template at the moment of creation
+  // and has no Git relationship to upstream, so it doesn't pick up template
+  // updates from sync alone. We fetch both versions to decide whether to
+  // show the upgrade button.
+  const [templateVersion, setTemplateVersion] = useState({ band: null, latest: null });
+  const [upgrading, setUpgrading] = useState(false);
+
   useEffect(() => {
     loadWebsite();
   }, [workspace?.id]);
+
+  // Pull template version info once the website is loaded — needs the repo
+  // to exist for the band-side lookup. Best-effort: silently leave both
+  // null on failure, the upgrade UI then doesn't appear.
+  useEffect(() => {
+    if (!workspace?.id || !websiteData?.websiteEnabled) return;
+    api.getWebsiteTemplateVersion(workspace.id)
+      .then(setTemplateVersion)
+      .catch(() => setTemplateVersion({ band: null, latest: null }));
+  }, [workspace?.id, websiteData?.websiteEnabled]);
+
+  async function handleUpgradeTemplate() {
+    if (!window.confirm(
+      `Upgrade your site's template source from v${templateVersion.band || '?'} to v${templateVersion.latest || '?'}? ` +
+      'This copies the latest template files into your site\'s repo and triggers a rebuild. ' +
+      'Your config, uploaded images, and synced data are preserved.'
+    )) return;
+    setUpgrading(true);
+    try {
+      const result = await api.upgradeWebsiteTemplate(workspace.id);
+      toast.success(
+        `Template upgraded — ${result.filesUpdated} files updated, ${result.filesCreated} added. Site is rebuilding.`
+      );
+      // Refresh the version display
+      const v = await api.getWebsiteTemplateVersion(workspace.id).catch(() => null);
+      if (v) setTemplateVersion(v);
+      await loadWebsite();
+    } catch (err) {
+      toast.error(err.message || 'Template upgrade failed');
+    } finally {
+      setUpgrading(false);
+    }
+  }
 
   async function loadWebsite() {
     if (!workspace?.id) return;
@@ -368,6 +409,32 @@ export default function WebsiteTab({ workspace }) {
             <p className="text-xs text-[var(--color-text-muted)] mt-2">
               Last deployed: {new Date(websiteData.websiteDeployedAt).toLocaleString()}
             </p>
+          )}
+          {/* Template version + upgrade affordance. Each band's repo is a
+              point-in-time clone of the template, so Sync alone doesn't pull
+              new template features. When `latest > band`, surface the
+              Upgrade Template button. */}
+          {templateVersion.band && (
+            <div className="mt-3 pt-3 border-t border-[var(--color-modal-border)] flex items-center gap-3 flex-wrap">
+              <span className="text-xs text-[var(--color-text-muted)]">
+                Template: <code className="text-[var(--color-text-secondary)]">v{templateVersion.band}</code>
+                {templateVersion.latest && templateVersion.latest !== templateVersion.band && (
+                  <span className="text-yellow-400"> → upgrade available: v{templateVersion.latest}</span>
+                )}
+                {templateVersion.latest && templateVersion.latest === templateVersion.band && (
+                  <span className="text-green-400"> · up to date</span>
+                )}
+              </span>
+              {templateVersion.latest && templateVersion.latest !== templateVersion.band && (
+                <button
+                  onClick={handleUpgradeTemplate}
+                  disabled={upgrading}
+                  className="text-xs px-3 py-1.5 rounded bg-yellow-600/20 text-yellow-300 hover:bg-yellow-600/30 disabled:opacity-50"
+                >
+                  {upgrading ? 'Upgrading…' : 'Upgrade Template'}
+                </button>
+              )}
+            </div>
           )}
         </div>
 

@@ -2,6 +2,24 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.94] - 2026-05-14
+
+### Added — Template upgrade for existing band sites
+Each band's deployed-site repo is a one-time clone of the template (via GitHub's "generate from template" API) and has no Git relationship to upstream. So template improvements like the v1.3.1 customizations renderers don't propagate to existing bands via Sync — only freshly created bands get them. Reported by user when another workspace's site was stuck at template v1.3.0 despite Frozen Assets being on v1.3.1.
+
+- **Server `getTemplateVersion()` + `getBandRepoTemplateVersion(repoName)`** (`websiteDeployment.js`): read `package.json` from the template repo and the band's repo, respectively. Used to compare versions and surface an "Upgrade available" hint.
+- **Server `upgradeTemplate(bandRepoName)`** (`websiteDeployment.js`): walks the template's HEAD tree, fetches each blob's content, and PUTs it into the band's repo via the GitHub Contents API. Skips band-specific paths (`site.config.js`, `public/data/`, `public/images/logos+site+members+gigs/`, `package-lock.json`, `CHANGELOG.md`, `.env*`, `backups/`) so the band's identity, uploaded images, and synced JSON data are preserved. Falls back to `main` ref if `master` doesn't exist. Returns `{ filesUpdated, filesCreated, filesSkipped }` summary.
+- **Server routes** (`server/src/routes/website.js`):
+  - `GET /:workspaceId/template-version` — returns `{ band, latest }` for the UI
+  - `POST /:workspaceId/upgrade-template` — admin only, rate-limited via `deployLimiter`, calls `upgradeTemplate` then triggers a deploy
+- **UI** (`client/src/components/channels/WebsiteTab.jsx`): the status card on a deployed site now shows the current template version + an "upgrade available: vX.Y.Z" hint when the band is behind. Click **Upgrade Template** to run the copy + rebuild flow. Confirmation prompt explains what's preserved.
+
+### How to upgrade your existing band sites
+For each workspace stuck on an older template:
+1. Settings → Website (must be deployed and healthy — i.e., not in the errored-with-infra recovery state)
+2. Look for "Template: v1.3.0 → upgrade available: v1.3.1" under the URL
+3. Click **Upgrade Template**, confirm, wait for the rebuild (~60s)
+
 ## [1.06.93] - 2026-05-14
 
 ### Fixed

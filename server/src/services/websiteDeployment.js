@@ -107,6 +107,213 @@ export async function writeSiteConfig(repoName, config) {
 }
 
 /**
+ * Read the template version (from its package.json) so the UI can show a
+ * "Upgrade available: vX.Y.Z" hint when the band's repo is on an older one.
+ */
+export async function getTemplateVersion() {
+  const res = await fetch(
+    `https://api.github.com/repos/${WEBSITE_GITHUB_ORG}/${WEBSITE_TEMPLATE_REPO}/contents/package.json`,
+    { headers: githubHeaders() }
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  try {
+    const pkg = JSON.parse(Buffer.from(data.content, 'base64').toString('utf-8'));
+    return pkg.version || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Read the band's repo template version (from its package.json) — used to
+ * compare against `getTemplateVersion()` for the UI's "upgrade available" hint.
+ */
+export async function getBandRepoTemplateVersion(repoName) {
+  const res = await fetch(
+    `https://api.github.com/repos/${WEBSITE_GITHUB_ORG}/${repoName}/contents/package.json`,
+    { headers: githubHeaders() }
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  try {
+    const pkg = JSON.parse(Buffer.from(data.content, 'base64').toString('utf-8'));
+    return pkg.version || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Band-specific paths that must NOT be overwritten when copying template
+ * source into a band's repo. Their `site.config.js` carries the band's
+ * identity, `public/data/` is synced JSON, `public/images/logos+site/` is
+ * the band's uploaded assets, etc. Everything else is template source code
+ * that should track the upstream template repo.
+ */
+const BAND_SPECIFIC_PATHS = [
+  'site.config.js',
+  'package-lock.json',
+  'CHANGELOG.md',
+  '.env',
+  '.env.local',
+  '.env.example',
+  'backups/',
+];
+
+const BAND_SPECIFIC_PREFIXES = [
+  'public/data/',
+  'public/images/logos/',
+  'public/images/site/',
+  'public/images/members/',
+  'public/images/gigs/',
+  'backups/',
+  'node_modules/',
+  'dist/',
+  '.next/',
+];
+
+function isBandSpecific(path) {
+  if (BAND_SPECIFIC_PATHS.includes(path)) return true;
+  return BAND_SPECIFIC_PREFIXES.some(prefix => path.startsWith(prefix));
+}
+
+/**
+ * Pull the latest template source into a band's existing repo.
+ *
+ * Each band's repo is a one-time clone from the template (via GitHub's
+ * "generate from template" API), so it has no Git relationship to upstream.
+ * To get template improvements (like new components, bug fixes, etc.) into
+ * an existing band site, we have to manually copy each file via the GitHub
+ * Contents API, preserving the band's per-site files (site.config.js,
+ * uploaded images, synced data).
+ *
+ * Returns `{ filesUpdated, filesCreated, filesSkipped }` summary.
+ *
+ * Caller should trigger a sync/deploy after this so Vercel rebuilds with
+ * the new template source.
+ */
+export async function upgradeTemplate(bandRepoName) {
+  const owner = WEBSITE_GITHUB_ORG;
+
+  // 1. Get the template repo's HEAD tree (recursive — every file at HEAD).
+  const refRes = await fetch(
+    `https://api.github.com/repos/${owner}/${WEBSITE_TEMPLATE_REPO}/git/refs/heads/master`,
+    { headers: githubHeaders() }
+  );
+  if (!refRes.ok) {
+    // Some template repos use 'main' instead of 'master'
+    const mainRes = await fetch(
+      `https://api.github.com/repos/${owner}/${WEBSITE_TEMPLATE_REPO}/git/refs/heads/main`,
+      { headers: githubHeaders() }
+    );
+    if (!mainRes.ok) {
+      throw new Error('Could not resolve template repo HEAD ref (tried master + main)');
+    }
+    refRes.body = mainRes.body;
+    Object.assign(refRes, { ok: true });
+  }
+  const refData = refRes.ok ? await refRes.json() : null;
+  const headSha = refData?.object?.sha;
+  if (!headSha) throw new Error('Template repo HEAD ref returned no SHA');
+
+  const commitRes = await fetch(
+    `https://api.github.com/repos/${owner}/${WEBSITE_TEMPLATE_REPO}/git/commits/${headSha}`,
+    { headers: githubHeaders() }
+  );
+  if (!commitRes.ok) throw new Error('Failed to fetch template HEAD commit');
+  const { tree: { sha: treeSha } } = await commitRes.json();
+
+  const treeRes = await fetch(
+    `https://api.github.com/repos/${owner}/${WEBSITE_TEMPLATE_REPO}/git/trees/${treeSha}?recursive=1`,
+    { headers: githubHeaders() }
+  );
+  if (!treeRes.ok) throw new Error('Failed to fetch template tree');
+  const { tree, truncated } = await treeRes.json();
+  if (truncated) {
+    // The repo has more files than GitHub returns in one shot. We'd need
+    // pagination via the Git Trees API. Unlikely for a website template but
+    // worth being explicit if it ever happens.
+    console.warn('[upgradeTemplate] template tree was truncated — some files may not be copied');
+  }
+
+  // 2. Filter to copyable files (template source only; skip band-specific).
+  const filesToCopy = tree.filter(item => item.type === 'blob' && !isBandSpecific(item.path));
+
+  // 3. For each, fetch content from template and write to band repo. We use
+  // the Contents API per-file (one PUT each, creates a commit) for simplicity
+  // — could batch via Git Tree API but the latency win isn't worth the
+  // complexity for ~50 files. Skip the write if content is byte-identical.
+  let filesUpdated = 0;
+  let filesCreated = 0;
+  let filesSkipped = 0;
+
+  for (const file of filesToCopy) {
+    // Fetch template blob (base64-encoded)
+    const blobRes = await fetch(
+      `https://api.github.com/repos/${owner}/${WEBSITE_TEMPLATE_REPO}/git/blobs/${file.sha}`,
+      { headers: githubHeaders() }
+    );
+    if (!blobRes.ok) {
+      console.warn(`[upgradeTemplate] failed to fetch template blob ${file.path}`);
+      continue;
+    }
+    const blob = await blobRes.json();
+    const templateContent = blob.content; // base64
+
+    // Check what (if anything) the band repo has at this path. We need the
+    // current SHA to update (PUT requires it for existing files); 404 means
+    // we'll create the file fresh.
+    const existingRes = await fetch(
+      `https://api.github.com/repos/${owner}/${bandRepoName}/contents/${encodeURIComponent(file.path)}`,
+      { headers: githubHeaders() }
+    );
+    let existingSha = null;
+    let existingContent = null;
+    if (existingRes.ok) {
+      const existing = await existingRes.json();
+      existingSha = existing.sha;
+      existingContent = existing.content?.replace(/\n/g, '');
+    } else if (existingRes.status !== 404) {
+      console.warn(`[upgradeTemplate] failed to fetch band file ${file.path}: ${existingRes.status}`);
+      continue;
+    }
+
+    // Skip if byte-identical (GitHub returns content with newlines; compare normalized).
+    const normalizedTemplate = templateContent.replace(/\n/g, '');
+    if (existingContent && existingContent === normalizedTemplate) {
+      filesSkipped++;
+      continue;
+    }
+
+    const putBody = {
+      message: `Template upgrade: ${file.path}`,
+      content: normalizedTemplate,
+      ...(existingSha ? { sha: existingSha } : {}),
+    };
+
+    const putRes = await fetch(
+      `https://api.github.com/repos/${owner}/${bandRepoName}/contents/${encodeURIComponent(file.path)}`,
+      {
+        method: 'PUT',
+        headers: githubHeaders(),
+        body: JSON.stringify(putBody),
+      }
+    );
+    if (!putRes.ok) {
+      const err = await putRes.json().catch(() => ({}));
+      console.warn(`[upgradeTemplate] PUT failed for ${file.path}: ${err.message || putRes.statusText}`);
+      continue;
+    }
+
+    if (existingSha) filesUpdated++;
+    else filesCreated++;
+  }
+
+  return { filesUpdated, filesCreated, filesSkipped, totalConsidered: filesToCopy.length };
+}
+
+/**
  * Create a Vercel project linked to the GitHub repo.
  */
 export async function createVercelProject(repoName, bandSlug) {
