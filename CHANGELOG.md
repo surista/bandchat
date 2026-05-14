@@ -2,6 +2,27 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.92] - 2026-05-14
+
+### Fixed
+Reported by user editing Frozen Assets in the errored-but-provisioned state: changing fields (e.g. Meta Description, toggling Active in Advanced Customizations) didn't persist on refresh. Two compounding bugs:
+
+1. **Save Config button was hidden** in any state other than "deployed & healthy" — including the errored-with-infra recovery state. Users had no way to persist edits without a full rebuild. Edits sat in component state, then `loadWebsite()` on refresh re-fetched DB state and showed the old values.
+2. **Sync didn't push the latest config to GitHub** before triggering the rebuild. Even when config was saved to the DB, the next Sync re-built from whatever `site.config.js` was already in the band's repo.
+
+#### Client fixes (`client/src/components/channels/WebsiteTab.jsx`)
+- **Save Config button is now always visible** when `websiteEnabled` is true. Sits in the bottom button row alongside Deploy / Sync / Delete.
+- **"Unsaved changes" indicator** shows next to the buttons when `configDirty` is true.
+- **`handleSync` now saves config before triggering the rebuild** — Sync becomes "save my current state + rebuild," matching user mental model.
+
+#### Server fix (`server/src/routes/website.js`)
+- **`POST /sync` now writes `site.config.js` to the band's GitHub repo** before triggering the Vercel deploy hook. Non-fatal if the GitHub write fails — the rebuild still happens with whatever's in the repo (no regression vs. previous behavior).
+
+## [1.06.91] - 2026-05-14
+
+### Marker
+Version bump only — no code changes. Released after v1.06.90 customizations + template v1.3.1 to mark the release point.
+
 ## [1.06.90] - 2026-05-14
 
 ### Added — Advanced Website Customizations (Phase 1a + 1b)
