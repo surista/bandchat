@@ -2,6 +2,19 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.95] - 2026-05-15
+
+### Added — Per-template font pairings + band-level override
+Until now, every Design Template (Rock, Grunge, Pop, Jazz, Covers, Country, Metal, Electronic) used the same Oswald + Inter typography from the template repo — only colors differed. User feedback after picking the Grunge template: "not sure I'm a fan of this font - this is the 'Grunge' template." Right — Oswald is the wrong vibe for a grunge site.
+
+- **Template repo (`bandchat-website-template` v1.3.2)** — 8 opinionated font pairings defined in `vite.config.js` (`FONT_PAIRS`): `classic` (Oswald + Inter), `grunge` (Anton + Special Elite), `playful` (Poppins), `editorial` (Playfair Display + Lora), `clean` (Bebas Neue + Inter), `warm` (Cabin + Merriweather), `tight` (Black Ops One + Roboto Condensed), `futuristic` (Orbitron + Space Grotesk). Each `theme.template` maps to a sensible default via `TEMPLATE_DEFAULT_FONT_PAIR`. Google Fonts loading moved out of `index.html` into the dynamically-generated theme CSS — new deploys only load the fonts they actually use.
+- **BandChat side** (`client/src/components/channels/WebsiteTab.jsx`):
+  - New **Font Pairing** dropdown under Design Template. Default option shows the template's auto-picked pair ("Default for template (Grunge Typewriter)") so users see *what* they'd get if they leave it untouched. Override with one of the 8 named pairs.
+  - Persists to `site.config.js` as `theme.fontPair: 'grunge' | ...` (or omitted to use the template default).
+
+### Migration
+Existing band sites stay on Oswald + Inter until the band clicks **Upgrade Template** (v1.06.94) to copy the new `vite.config.js` + `index.html` into their repo. After upgrade, the Grunge template will look different — that's the whole point.
+
 ## [1.06.94] - 2026-05-14
 
 ### Added — Template upgrade for existing band sites

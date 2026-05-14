@@ -23,6 +23,28 @@ const THEMES = [
   { id: 'classical', label: 'Classical', bg: '#fdfcf9', accent: '#1a1a1a', accent2: '#9e8a5e', desc: 'Elegant & refined', light: true },
 ];
 
+// Keep in sync with FONT_PAIRS / TEMPLATE_DEFAULT_FONT_PAIR in bandchat-website-template/vite.config.js.
+const FONT_PAIR_LABELS = {
+  classic: 'Classic Rock',
+  grunge: 'Grunge Typewriter',
+  playful: 'Playful Pop',
+  editorial: 'Editorial Serif',
+  clean: 'Clean Modern',
+  warm: 'Warm & Honest',
+  tight: 'Aggressive Stencil',
+  futuristic: 'Futuristic',
+};
+const TEMPLATE_FONT_DEFAULTS = {
+  rock: 'classic',
+  grunge: 'grunge',
+  pop: 'playful',
+  jazz: 'editorial',
+  covers: 'clean',
+  country: 'warm',
+  metal: 'tight',
+  electronic: 'futuristic',
+};
+
 export default function WebsiteTab({ workspace }) {
   const toast = useToast();
   const [loading, setLoading] = useState(true);
@@ -43,6 +65,9 @@ export default function WebsiteTab({ workspace }) {
   const [contactEmail, setContactEmail] = useState('');
   // Template/genre
   const [template, setTemplate] = useState('covers');
+  // Font pair — optional override. Empty string = "use the template's default
+  // pairing" (template repo's vite.config.js resolves via TEMPLATE_DEFAULT_FONT_PAIR).
+  const [fontPair, setFontPair] = useState('');
   // Branding
   const [primaryColor, setPrimaryColor] = useState('#ff3250');
   const [secondaryColor, setSecondaryColor] = useState('#ffc800');
@@ -143,6 +168,7 @@ export default function WebsiteTab({ workspace }) {
         setFounded(c.founded || c.band?.founded || '');
         setContactEmail(c.contactEmail || c.emails?.info || '');
         setTemplate(c.template || c.theme?.template || 'covers');
+        setFontPair(c.theme?.fontPair || '');
         setPrimaryColor(c.theme?.primaryAccent || c.primaryColor || '#ff3250');
         setSecondaryColor(c.theme?.secondaryAccent || c.secondaryColor || '#ffc800');
         setLogoUrl(c.images?.logo || '');
@@ -226,6 +252,10 @@ export default function WebsiteTab({ workspace }) {
         template,
         primaryAccent: primaryColor,
         secondaryAccent: secondaryColor,
+        // Empty = inherit template's default font pair. Keep undefined (not
+        // empty string) when omitted so it round-trips cleanly with omitted
+        // server values; the template-side resolveFontPair handles both.
+        fontPair: fontPair || undefined,
       },
       images: {
         logo: logoUrl || null,
@@ -738,6 +768,28 @@ export default function WebsiteTab({ workspace }) {
                 <span className={`text-xs block mt-0.5 ${t.light ? 'text-gray-500' : 'text-gray-400'}`}>{t.desc}</span>
               </button>
             ))}
+          </div>
+
+          <div className="mt-4">
+            <label className="text-sm text-[var(--color-text-muted)] mb-1 block">Font Pairing</label>
+            <select
+              value={fontPair}
+              onChange={(e) => { setFontPair(e.target.value); setConfigDirty(true); }}
+              className="modal-input w-full sm:w-80"
+            >
+              <option value="">Default for template ({FONT_PAIR_LABELS[TEMPLATE_FONT_DEFAULTS[template] || 'classic']})</option>
+              <option value="classic">Classic Rock — Oswald + Inter</option>
+              <option value="grunge">Grunge Typewriter — Anton + Special Elite</option>
+              <option value="playful">Playful Pop — Poppins</option>
+              <option value="editorial">Editorial Serif — Playfair Display + Lora</option>
+              <option value="clean">Clean Modern — Bebas Neue + Inter</option>
+              <option value="warm">Warm & Honest — Cabin + Merriweather</option>
+              <option value="tight">Aggressive Stencil — Black Ops One + Roboto Condensed</option>
+              <option value="futuristic">Futuristic — Orbitron + Space Grotesk</option>
+            </select>
+            <p className="text-xs text-[var(--color-text-muted)] mt-1">
+              Override the typography for this site. Defaults are picked per template.
+            </p>
           </div>
         </div>
 
