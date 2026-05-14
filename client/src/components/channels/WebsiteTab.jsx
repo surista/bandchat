@@ -295,6 +295,14 @@ export default function WebsiteTab({ workspace }) {
   async function handleSync() {
     setSyncing(true);
     try {
+      // Save any pending form edits before triggering the rebuild so the
+      // deployed site reflects the user's current state, not what was last
+      // saved. Server-side, /sync now pushes the latest config to GitHub
+      // before triggering the deploy hook (so the rebuild picks it up).
+      if (bandName.trim()) {
+        await api.updateWebsiteConfig(workspace.id, getConfig());
+        setConfigDirty(false);
+      }
       await api.syncWebsite(workspace.id);
       toast.success('Sync triggered — site will rebuild shortly');
     } catch (err) {
@@ -497,9 +505,25 @@ export default function WebsiteTab({ workspace }) {
 
       {renderConfigForm()}
 
-      <div className="flex gap-3">
-        {/* When the recovery banner is showing, its buttons are the primary
-            CTA — hide the bottom row's Deploy button to avoid duplicating it. */}
+      <div className="flex gap-3 flex-wrap items-center">
+        {/* Save Config is always available when a website exists — it was
+            previously only rendered in the "deployed and healthy" view, so
+            workspaces in the errored-but-provisioned state had no path to
+            persist form edits without triggering a full deploy. Form-level
+            changes (band name, meta description, etc.) now save without a
+            rebuild; Sync/Deploy still trigger the rebuild and use the latest
+            saved config. */}
+        {websiteData?.websiteEnabled && (
+          <button
+            onClick={handleSaveConfig}
+            disabled={savingConfig || !bandName.trim()}
+            className="btn bg-[var(--color-primary)] hover:opacity-90 text-white min-h-[44px] px-4"
+          >
+            {savingConfig ? 'Saving…' : configDirty ? 'Save Changes' : 'Save Config'}
+          </button>
+        )}
+        {/* When the recovery banner is showing, its Sync/Retry are the primary
+            CTAs — hide the bottom row's Deploy button to avoid duplicating it. */}
         {!isErrorWithInfra && (
           <button
             onClick={handleDeploy}
@@ -509,10 +533,13 @@ export default function WebsiteTab({ workspace }) {
             {deploying ? 'Deploying...' : websiteData?.websiteConfig ? 'Deploy Website' : 'Create & Deploy Website'}
           </button>
         )}
+        {configDirty && (
+          <span className="text-xs text-yellow-400">Unsaved changes</span>
+        )}
         {websiteData?.websiteEnabled && (
           <button
             onClick={() => setDeleteOpen(true)}
-            className="btn bg-red-600/20 text-red-400 hover:bg-red-600/30 min-h-[44px] px-4"
+            className="btn bg-red-600/20 text-red-400 hover:bg-red-600/30 min-h-[44px] px-4 ml-auto"
           >
             Delete Website
           </button>

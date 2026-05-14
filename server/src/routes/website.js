@@ -251,16 +251,40 @@ router.post('/:workspaceId/deploy', authenticate, isWorkspaceAdmin, deployLimite
   }
 });
 
-// POST /:workspaceId/sync — trigger rebuild via deploy hook (admin)
+// POST /:workspaceId/sync — push latest config to GitHub repo + trigger
+// Vercel rebuild via deploy hook. Admin only.
+//
+// Previously this only triggered the rebuild without writing site.config.js
+// to the band's repo first — which meant changes saved in the BandChat UI
+// (via PUT /config) sat in the DB but never reached the deployed site until
+// the next full Deploy. Now Sync = "push my current config + rebuild," which
+// matches the user's mental model.
 router.post('/:workspaceId/sync', authenticate, isWorkspaceAdmin, async (req, res) => {
   try {
     const workspace = await prisma.workspace.findUnique({
       where: { id: req.params.workspaceId },
-      select: { websiteEnabled: true, websiteDeployHook: true, websiteVercelId: true, websiteRepoName: true },
+      select: {
+        websiteEnabled: true,
+        websiteDeployHook: true,
+        websiteVercelId: true,
+        websiteRepoName: true,
+        websiteConfig: true,
+      },
     });
 
     if (!workspace?.websiteEnabled) {
       return res.status(400).json({ error: 'Website not deployed' });
+    }
+
+    // Push latest config to the band's GitHub repo so the rebuild picks it up.
+    // Non-fatal if it fails — the rebuild will still happen with whatever's in
+    // the repo, which is no worse than the old behavior.
+    if (workspace.websiteRepoName && workspace.websiteConfig) {
+      try {
+        await writeSiteConfig(workspace.websiteRepoName, workspace.websiteConfig);
+      } catch (err) {
+        console.warn(`[website-sync] writeSiteConfig failed for ${req.params.workspaceId}:`, err.message);
+      }
     }
 
     if (workspace.websiteDeployHook) {
