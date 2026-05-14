@@ -287,15 +287,34 @@ router.post('/:workspaceId/sync', authenticate, isWorkspaceAdmin, async (req, re
       }
     }
 
+    let triggered = false;
     if (workspace.websiteDeployHook) {
       await triggerDeploy(workspace.websiteDeployHook);
+      triggered = true;
     } else if (workspace.websiteVercelId && workspace.websiteRepoName) {
       // Fallback: trigger via deployment API
       await createDeployment(workspace.websiteVercelId, workspace.websiteRepoName);
+      triggered = true;
     } else {
       return res.status(400).json({ error: 'No deploy hook or project configured' });
     }
-    res.json({ message: 'Sync triggered' });
+
+    // Optimistically clear the stuck 'error' state so the BandChat UI shows
+    // the site as healthy after a successful sync trigger. Vercel does the
+    // actual build async — if it fails, the user will notice on the site
+    // itself and can retry. Previously this field never updated on sync, so
+    // a workspace that errored once would forever show the red banner even
+    // though Sync was happily rebuilding the site behind the scenes.
+    if (triggered) {
+      await prisma.workspace.update({
+        where: { id: req.params.workspaceId },
+        data: { websiteStatus: 'active', websiteDeployedAt: new Date() },
+      }).catch((err) => {
+        console.warn(`[website-sync] status update failed for ${req.params.workspaceId}:`, err.message);
+      });
+    }
+
+    res.json({ message: 'Sync triggered', status: 'active' });
   } catch (error) {
     console.error('Website sync error:', error);
     res.status(500).json({ error: 'Sync failed' });

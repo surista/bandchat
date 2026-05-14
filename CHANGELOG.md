@@ -2,6 +2,11 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.93] - 2026-05-14
+
+### Fixed
+- **`websiteStatus` stuck at `'error'` after successful Sync** — Reported on Frozen Assets: hitting Sync didn't clear the red "last deploy failed" banner even though Vercel was happily rebuilding the site each time. Root cause: `POST /api/website/:workspaceId/sync` triggered the rebuild but never updated `websiteStatus` — only the full Deploy flow did that. So a workspace that errored once was forever stuck in the recovery banner even when subsequent syncs worked. **Fix:** `/sync` now optimistically marks `websiteStatus: 'active'` and refreshes `websiteDeployedAt` after a successful trigger. Vercel does the actual build async — if it fails, the user notices on the site itself and can retry.
+
 ## [1.06.92] - 2026-05-14
 
 ### Fixed
