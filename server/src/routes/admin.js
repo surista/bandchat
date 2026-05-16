@@ -509,6 +509,11 @@ router.post('/backups', async (req, res) => {
     // Run cleanup after backup
     const cleanup = await cleanupOldBackups();
 
+    logAudit('admin.backup.created', {
+      actorId: req.user.id,
+      metadata: { key: result.key, size: result.size, cleanupDeleted: cleanup?.deleted ?? 0 },
+    });
+
     res.json({ ...result, cleanup });
   } catch (error) {
     console.error('Backup error:', error);
@@ -595,15 +600,32 @@ router.post('/backups/restore', async (req, res) => {
     restoreInProgress = true;
     console.log(`DATABASE RESTORE initiated by ${req.user.email} from backup: ${key}`);
 
+    // Log the initiation BEFORE the restore — if the restore corrupts the audit
+    // table or never completes, we still have a record that someone tried.
+    logAudit('admin.backup.restore.initiated', {
+      actorId: req.user.id,
+      metadata: { key, actorEmail: req.user.email },
+    });
+
     const result = await restoreFromBackup(key, (stage, detail) => {
       console.log(`Restore [${stage}]: ${detail}`);
     });
 
     console.log(`DATABASE RESTORE complete. Safety backup: ${result.safetyBackupKey}`);
+
+    logAudit('admin.backup.restore.completed', {
+      actorId: req.user.id,
+      metadata: { key, safetyBackupKey: result.safetyBackupKey, stats: result.stats },
+    });
+
     res.json(result);
   } catch (error) {
     console.error('Database restore error:', error);
     console.error('Restore details:', error.message);
+    logAudit('admin.backup.restore.failed', {
+      actorId: req.user.id,
+      metadata: { key: req.body?.key, error: error.message },
+    });
     res.status(500).json({ error: 'Restore failed' });
   } finally {
     restoreInProgress = false;

@@ -2,6 +2,39 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.96] - 2026-05-17
+
+### Added — Live booking inbox + storage/error infrastructure
+Pulled the loose threads identified in a full code review. No user-visible features; foundational improvements that prevent classes of bugs.
+
+#### Real-time booking inbox notifications
+- **`server/src/routes/bookingRequests.js`** — public form submissions now emit `bookingRequest:new` to each workspace admin's `user:${id}` socket room. Admins see the inbox count tick up immediately instead of needing a refresh. Fire-and-forget: a socket failure doesn't fail the public form submission. Closes the only TODO comment in the codebase.
+
+#### Backup observability
+- **`server/src/routes/admin.js`** — `POST /api/admin/backups` and the entire restore lifecycle (initiated / completed / failed) now record `AuditLog` entries via `logAudit()`. The "initiated" event fires *before* the restore runs so there's a record even if the restore corrupts the audit table or never returns. Restore endpoint itself was already solid (RESTORE DATABASE confirmation phrase, `restoreInProgress` lock, automatic safety backup before overwrite).
+
+#### Error-handling infrastructure
+- **`server/src/lib/apiError.js` (new)** — `ApiError` class carrying `status`, optional `code`, optional `details`; plus `asyncHandler(fn)` wrapper that funnels rejected promises into Express's error middleware. New routes can `throw new ApiError(404, 'Not found', { code: 'NOT_FOUND' })` instead of writing repetitive try / console.error / res.status() blocks.
+- **`server/src/app.js`** — global error handler now recognizes `ApiError` (uses its status, includes `code`/`details` in the body), and 4xx errors aren't logged at error level. Every error response now includes the `requestId` so support can correlate user reports to server logs. Existing routes' `res.status(500)` patterns keep working unchanged — this is strictly additive, no 35-route migration churn.
+
+#### Validation
+- **`server/src/lib/validators.js`** — added `TEXT_LIMITS` (NAME, TITLE, LABEL, URL, SHORT_TEXT, LONG_TEXT, MESSAGE_BODY, LYRICS) plus `checkText()` and `validateTextFields()` helpers so new routes use uniform caps instead of per-route magic numbers.
+- **`server/src/routes/stagePlots.js`** — the one real validation gap found across all 35 route modules: stage plot titles had no length cap. Now uses `checkText(title, 'Title', TEXT_LIMITS.TITLE, { required: true, minTrim: 1 })`. All other text-accepting routes audited and confirmed to already enforce caps.
+
+#### Safe storage wrappers (web)
+- **`client/src/services/storage.js` (new)** — wraps localStorage. Swallows `QuotaExceededError` (Safari private mode), corrupted JSON, and storage-disabled environments. Returns sensible defaults instead of throwing. Surface: `getString` / `setString` / `getNumber` / `setNumber` / `getBool` / `setBool` / `getJSON` / `setJSON` / `remove` / `isAvailable`.
+- **Migrated worst-offending call sites** — `WorkspaceView.jsx` (8 sites: bandView, selectedChannel, sidebarWidth, splitRight, splitWidth) and `Sidebar.jsx` (collapsedGroups + collapsedSections). Safari private mode users who previously got React error-boundary screen blanks when persisting UI preferences now degrade silently to "your preference didn't save."
+
+#### Safe storage wrappers (mobile)
+- **`mobile/src/services/storage.js`** — added `getUiState` / `setUiState` / `getUiString` / `setUiString` / `removeUiState` for non-sensitive per-screen state (JSON-encoded, AsyncStorage-backed, never throws). Sits alongside the existing SecureStore-backed token helpers.
+- **`mobile/src/screens/workspace/ChannelListScreen.js`** — all 9 direct `AsyncStorage` call sites migrated (6 collapsed-state keys + lastWorkspaceId/Name); direct `AsyncStorage` import removed. Eliminates the inconsistent `.catch(() => {})` chains for the same operation.
+
+### Notes on what *wasn't* done
+- Backup restore endpoint already existed; only audit logging was missing.
+- Validation coverage was already comprehensive across all 35 routes; only stagePlots needed a fix.
+- No existing routes were migrated to ApiError/asyncHandler — strictly additive infrastructure.
+- Storage migration limited to the worst-offending files; remaining call sites convert opportunistically when those files are touched for other reasons.
+
 ## [1.06.95] - 2026-05-15
 
 ### Added — Per-template font pairings + band-level override

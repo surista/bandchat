@@ -20,7 +20,7 @@ import { Image } from 'expo-image';
 import { mediumImpact, successNotification, errorNotification } from '../../utils/haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUiState, setUiState, setUiString } from '../../services/storage';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
@@ -125,27 +125,24 @@ export default function ChannelListScreen({ navigation, route }) {
   const [editingGroup, setEditingGroup] = useState(null);
   const [savingGroup, setSavingGroup] = useState(false);
 
-  // Load persisted collapse state
+  // Load persisted collapse state. getUiState falls back to null on missing/
+  // corrupted/storage-error, so we only setState when there's real data.
   useEffect(() => {
     const load = async () => {
-      try {
-        const [savedGroups, savedBand, savedBandCats, savedDMs, savedQuickLinks, savedStarred] = await Promise.all([
-          AsyncStorage.getItem(`collapsedGroups:${workspaceId}`),
-          AsyncStorage.getItem(`collapsedBand:${workspaceId}`),
-          AsyncStorage.getItem(`collapsedBandCats:${workspaceId}`),
-          AsyncStorage.getItem(`collapsedDMs:${workspaceId}`),
-          AsyncStorage.getItem(`collapsedQuickLinks:${workspaceId}`),
-          AsyncStorage.getItem(`collapsedStarred:${workspaceId}`),
-        ]);
-        if (savedGroups) setCollapsedGroups(JSON.parse(savedGroups));
-        if (savedBand) setCollapsedBand(JSON.parse(savedBand));
-        if (savedBandCats) setCollapsedBandCats(JSON.parse(savedBandCats));
-        if (savedDMs) setCollapsedDMs(JSON.parse(savedDMs));
-        if (savedQuickLinks) setCollapsedQuickLinks(JSON.parse(savedQuickLinks));
-        if (savedStarred) setCollapsedStarred(JSON.parse(savedStarred));
-      } catch (e) {
-        console.error('Failed to load collapsed section state:', e);
-      }
+      const [savedGroups, savedBand, savedBandCats, savedDMs, savedQuickLinks, savedStarred] = await Promise.all([
+        getUiState(`collapsedGroups:${workspaceId}`),
+        getUiState(`collapsedBand:${workspaceId}`),
+        getUiState(`collapsedBandCats:${workspaceId}`),
+        getUiState(`collapsedDMs:${workspaceId}`),
+        getUiState(`collapsedQuickLinks:${workspaceId}`),
+        getUiState(`collapsedStarred:${workspaceId}`),
+      ]);
+      if (savedGroups) setCollapsedGroups(savedGroups);
+      if (savedBand) setCollapsedBand(savedBand);
+      if (savedBandCats) setCollapsedBandCats(savedBandCats);
+      if (savedDMs) setCollapsedDMs(savedDMs);
+      if (savedQuickLinks) setCollapsedQuickLinks(savedQuickLinks);
+      if (savedStarred) setCollapsedStarred(savedStarred);
     };
     load();
   }, [workspaceId]);
@@ -155,25 +152,13 @@ export default function ChannelListScreen({ navigation, route }) {
     api.getWorkspaces().then(setAllWorkspaces).catch(console.error);
   }, [showWorkspaceSwitcher]);
 
-  // Persist collapse state on change
-  useEffect(() => {
-    AsyncStorage.setItem(`collapsedGroups:${workspaceId}`, JSON.stringify(collapsedGroups)).catch(() => {});
-  }, [collapsedGroups, workspaceId]);
-  useEffect(() => {
-    AsyncStorage.setItem(`collapsedBand:${workspaceId}`, JSON.stringify(collapsedBand)).catch(() => {});
-  }, [collapsedBand, workspaceId]);
-  useEffect(() => {
-    AsyncStorage.setItem(`collapsedBandCats:${workspaceId}`, JSON.stringify(collapsedBandCats)).catch(() => {});
-  }, [collapsedBandCats, workspaceId]);
-  useEffect(() => {
-    AsyncStorage.setItem(`collapsedDMs:${workspaceId}`, JSON.stringify(collapsedDMs)).catch(() => {});
-  }, [collapsedDMs, workspaceId]);
-  useEffect(() => {
-    AsyncStorage.setItem(`collapsedQuickLinks:${workspaceId}`, JSON.stringify(collapsedQuickLinks)).catch(() => {});
-  }, [collapsedQuickLinks, workspaceId]);
-  useEffect(() => {
-    AsyncStorage.setItem(`collapsedStarred:${workspaceId}`, JSON.stringify(collapsedStarred)).catch(() => {});
-  }, [collapsedStarred, workspaceId]);
+  // Persist collapse state on change. setUiState is no-throw.
+  useEffect(() => { setUiState(`collapsedGroups:${workspaceId}`, collapsedGroups); }, [collapsedGroups, workspaceId]);
+  useEffect(() => { setUiState(`collapsedBand:${workspaceId}`, collapsedBand); }, [collapsedBand, workspaceId]);
+  useEffect(() => { setUiState(`collapsedBandCats:${workspaceId}`, collapsedBandCats); }, [collapsedBandCats, workspaceId]);
+  useEffect(() => { setUiState(`collapsedDMs:${workspaceId}`, collapsedDMs); }, [collapsedDMs, workspaceId]);
+  useEffect(() => { setUiState(`collapsedQuickLinks:${workspaceId}`, collapsedQuickLinks); }, [collapsedQuickLinks, workspaceId]);
+  useEffect(() => { setUiState(`collapsedStarred:${workspaceId}`, collapsedStarred); }, [collapsedStarred, workspaceId]);
 
   // Create channel modal
   const [showCreateChannel, setShowCreateChannel] = useState(false);
@@ -315,8 +300,8 @@ export default function ChannelListScreen({ navigation, route }) {
     loadData();
     joinWorkspace(workspaceId);
     // Persist last workspace for quick actions
-    AsyncStorage.setItem('lastWorkspaceId', workspaceId);
-    if (workspaceName) AsyncStorage.setItem('lastWorkspaceName', workspaceName);
+    setUiString('lastWorkspaceId', workspaceId);
+    if (workspaceName) setUiString('lastWorkspaceName', workspaceName);
   }, [loadData, joinWorkspace, workspaceId, workspaceName]);
 
   // Refresh data when app returns to foreground

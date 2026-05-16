@@ -46,6 +46,7 @@ import adminRoutes from './routes/admin.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { requestIdMiddleware } from './middleware/requestId.js';
 import { isValidUUID } from './lib/validators.js';
+import { ApiError } from './lib/apiError.js';
 
 export function createApp() {
   const app = express();
@@ -189,8 +190,26 @@ export function createApp() {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  // Global error handler (must be after all routes)
+  // Global error handler (must be after all routes).
+  //
+  // - ApiError (from lib/apiError.js) carries its own status + optional code,
+  //   so a new route can `throw new ApiError(404, 'Not found', { code: 'NOT_FOUND' })`
+  //   and get the right HTTP response without writing a try/catch.
+  // - Everything else (legacy thrown Errors, async leaks) falls through to a
+  //   generic 500 with the request ID — same behavior as before, plus the ID
+  //   in the body so the client can quote it back when reporting issues.
   app.use((err, req, res, next) => {
+    if (err instanceof ApiError) {
+      // Client errors (4xx) are logged at info level — they're expected
+      // (bad input, missing resources). Only 5xx is unexpected.
+      if (err.status >= 500) {
+        console.error(`[${req.id}] ApiError ${err.status} on ${req.method} ${req.path}:`, err);
+      }
+      const body = { error: err.message, requestId: req.id };
+      if (err.code) body.code = err.code;
+      if (err.details) body.details = err.details;
+      return res.status(err.status).json(body);
+    }
     console.error(`[${req.id}] Unhandled error on ${req.method} ${req.path}:`, err);
     res.status(500).json({ error: 'Internal server error', requestId: req.id });
   });

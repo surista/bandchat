@@ -87,12 +87,38 @@ router.post('/public/:slug', publicFormLimiter, async (req, res) => {
         feeOffer: (feeOffer || '').trim() || null,
         message: message.trim(),
       },
-      select: { id: true, createdAt: true },
+      select: { id: true, createdAt: true, status: true, requesterName: true, venueName: true, eventDate: true },
     });
 
-    // TODO: emit a workspace-level socket event so admins see the inbox count
-    // tick up in real time. Skipped for v1 to keep the change small — admins
-    // see the new request on next page load / refresh.
+    // Notify workspace admins so their inbox count updates live. Emit per-user
+    // so non-admin members in the workspace room aren't burdened with events
+    // they can't act on. Fire-and-forget: a socket failure must not fail the
+    // public form submission.
+    try {
+      const io = req.app.get('io');
+      if (io) {
+        const admins = await prisma.workspaceMember.findMany({
+          where: { workspaceId: workspace.id, role: 'ADMIN' },
+          select: { userId: true },
+        });
+        const payload = {
+          workspaceId: workspace.id,
+          request: {
+            id: created.id,
+            createdAt: created.createdAt,
+            status: created.status,
+            requesterName: created.requesterName,
+            venueName: created.venueName,
+            eventDate: created.eventDate,
+          },
+        };
+        for (const a of admins) {
+          io.to(`user:${a.userId}`).emit('bookingRequest:new', payload);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to emit bookingRequest:new socket event:', e.message);
+    }
 
     res.status(201).json({ ok: true, id: created.id });
   } catch (error) {

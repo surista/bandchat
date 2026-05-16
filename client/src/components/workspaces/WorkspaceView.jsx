@@ -3,6 +3,7 @@ import { useParams, useNavigate, Routes, Route } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import api from '../../services/api';
+import { storage } from '../../services/storage';
 import { updateBadge, clearBadge } from '../../services/badge';
 import Sidebar from '../channels/Sidebar';
 import ChannelView from '../channels/ChannelView';
@@ -213,34 +214,25 @@ function WorkspaceView() {
   const [searchAuthorFilter, setSearchAuthorFilter] = useState('');
   const [directMessages, setDirectMessages] = useState([]);
   const [allWorkspaces, setAllWorkspaces] = useState([]);
-  const [activeBandView, setActiveBandView] = useState(() => {
-    const saved = localStorage.getItem(`bandView:${workspaceId}`);
-    return saved || null;
-  });
+  const [activeBandView, setActiveBandView] = useState(() => storage.getString(`bandView:${workspaceId}`));
   const [bandViewKey, setBandViewKey] = useState(0);
   const [pendingChannelId, setPendingChannelId] = useState(() => {
     // Prioritize channel ID from URL query param (from copy-link)
     const urlChannelId = new URLSearchParams(window.location.search).get('channel');
     if (urlChannelId) return urlChannelId;
-    return localStorage.getItem(`selectedChannel:${workspaceId}`) || null;
+    return storage.getString(`selectedChannel:${workspaceId}`);
   });
-  const [sidebarWidth, setSidebarWidth] = useState(() => {
-    const saved = localStorage.getItem('sidebarWidth');
-    return saved ? parseInt(saved, 10) : 256;
-  });
+  const [sidebarWidth, setSidebarWidth] = useState(() => storage.getNumber('sidebarWidth', 256));
   const [isResizing, setIsResizing] = useState(false);
   const sidebarWidthRef = useRef(sidebarWidth);
   const lastRefreshRef = useRef(0);
 
   // Split-view state (web only — second pane on the right of the main pane).
   // splitRight is { type: 'channel'|'view', channelId?, view? } or null.
-  const [splitRight, setSplitRight] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(`splitRight:${workspaceId}`) || 'null'); }
-    catch { return null; }
-  });
+  const [splitRight, setSplitRight] = useState(() => storage.getJSON(`splitRight:${workspaceId}`));
   const [splitWidth, setSplitWidth] = useState(() => {
-    const saved = parseFloat(localStorage.getItem(`splitWidth:${workspaceId}`) || '50');
-    return isFinite(saved) && saved >= 25 && saved <= 75 ? saved : 50;
+    const saved = storage.getNumber(`splitWidth:${workspaceId}`, 50);
+    return saved >= 25 && saved <= 75 ? saved : 50;
   });
   const [isResizingSplit, setIsResizingSplit] = useState(false);
   const splitContainerRef = useRef(null);
@@ -274,7 +266,7 @@ function WorkspaceView() {
     if (urlChannelId) {
       setPendingChannelId(urlChannelId);
     } else {
-      setPendingChannelId(localStorage.getItem(`selectedChannel:${workspaceId}`) || null);
+      setPendingChannelId(storage.getString(`selectedChannel:${workspaceId}`));
     }
   }, [workspaceId]);
 
@@ -403,7 +395,7 @@ function WorkspaceView() {
     const handleMouseUp = () => {
       if (isResizing) {
         setIsResizing(false);
-        localStorage.setItem('sidebarWidth', sidebarWidthRef.current.toString());
+        storage.setNumber('sidebarWidth', sidebarWidthRef.current);
       }
     };
 
@@ -473,29 +465,29 @@ function WorkspaceView() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [refreshWorkspaceData]);
 
-  // Persist activeBandView to localStorage
+  // Persist activeBandView
   useEffect(() => {
     if (activeBandView) {
-      localStorage.setItem(`bandView:${workspaceId}`, activeBandView);
+      storage.setString(`bandView:${workspaceId}`, activeBandView);
     } else {
-      localStorage.removeItem(`bandView:${workspaceId}`);
+      storage.remove(`bandView:${workspaceId}`);
     }
   }, [activeBandView, workspaceId]);
 
-  // Persist selectedChannel to localStorage
+  // Persist selectedChannel
   useEffect(() => {
     if (selectedChannel?.id) {
-      localStorage.setItem(`selectedChannel:${workspaceId}`, selectedChannel.id);
+      storage.setString(`selectedChannel:${workspaceId}`, selectedChannel.id);
     }
   }, [selectedChannel, workspaceId]);
 
   // Persist split-view state per workspace
   useEffect(() => {
-    if (splitRight) localStorage.setItem(`splitRight:${workspaceId}`, JSON.stringify(splitRight));
-    else localStorage.removeItem(`splitRight:${workspaceId}`);
+    if (splitRight) storage.setJSON(`splitRight:${workspaceId}`, splitRight);
+    else storage.remove(`splitRight:${workspaceId}`);
   }, [splitRight, workspaceId]);
   useEffect(() => {
-    localStorage.setItem(`splitWidth:${workspaceId}`, String(splitWidth));
+    storage.setNumber(`splitWidth:${workspaceId}`, splitWidth);
   }, [splitWidth, workspaceId]);
 
   // Drag handler for the resizable divider between the two panes.

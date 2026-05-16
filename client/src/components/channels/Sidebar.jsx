@@ -28,6 +28,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { pushService } from '../../services/push';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
+import { storage } from '../../services/storage';
 import useIsAdmin from '../../hooks/useIsAdmin';
 import MemberProfile from '../common/MemberProfile';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -210,18 +211,8 @@ function Sidebar({
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [snoozedUntil, setSnoozedUntil] = useState(null);
   const [snoozeMenuOpen, setSnoozeMenuOpen] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState(() => {
-    try {
-      const saved = localStorage.getItem(`collapsedGroups:${workspace.id}`);
-      return saved ? JSON.parse(saved) : {};
-    } catch { return {}; }
-  });
-  const [collapsedSections, setCollapsedSections] = useState(() => {
-    try {
-      const saved = localStorage.getItem(`collapsedSections:${workspace.id}`);
-      return saved ? JSON.parse(saved) : {};
-    } catch { return {}; }
-  });
+  const [collapsedGroups, setCollapsedGroups] = useState(() => storage.getJSON(`collapsedGroups:${workspace.id}`, {}));
+  const [collapsedSections, setCollapsedSections] = useState(() => storage.getJSON(`collapsedSections:${workspace.id}`, {}));
   const [showSettings, setShowSettings] = useState(false);
   // Member profile
   const [showProfileUserId, setShowProfileUserId] = useState(null);
@@ -236,11 +227,11 @@ function Sidebar({
   const [nextGig, setNextGig] = useState(null);
 
   useEffect(() => {
-    localStorage.setItem(`collapsedGroups:${workspace.id}`, JSON.stringify(collapsedGroups));
+    storage.setJSON(`collapsedGroups:${workspace.id}`, collapsedGroups);
   }, [collapsedGroups, workspace.id]);
 
   useEffect(() => {
-    localStorage.setItem(`collapsedSections:${workspace.id}`, JSON.stringify(collapsedSections));
+    storage.setJSON(`collapsedSections:${workspace.id}`, collapsedSections);
   }, [collapsedSections, workspace.id]);
 
 

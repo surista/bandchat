@@ -131,3 +131,69 @@ export async function removeFromOfflineQueue(tempId) {
     console.error('Failed to remove message from offline queue:', e);
   }
 }
+
+// ─── UI state helpers ───────────────────────────────────────────────────────
+//
+// Non-sensitive per-screen state (collapsed groups, scroll positions, blocked
+// preview domains, last-workspace cache). Every operation swallows errors and
+// returns a safe default — a transient AsyncStorage failure must never crash
+// a screen that's only trying to persist a UI preference.
+//
+// Tokens stay on SecureStore via the `storage` default export above. Anything
+// non-sensitive that previously called `AsyncStorage.getItem`/`setItem`
+// directly should move here.
+
+/**
+ * Read a JSON-encoded UI state value. Returns `fallback` if the key is missing,
+ * the JSON is corrupted, or AsyncStorage fails.
+ */
+export async function getUiState(key, fallback = null) {
+  try {
+    const v = await AsyncStorage.getItem(key);
+    if (v === null) return fallback;
+    try { return JSON.parse(v); }
+    catch { return fallback; }
+  } catch {
+    return fallback;
+  }
+}
+
+/** Write a JSON-encoded UI state value. Returns true on success. Never throws. */
+export async function setUiState(key, value) {
+  try {
+    await AsyncStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Read a raw string UI state value. */
+export async function getUiString(key, fallback = null) {
+  try {
+    const v = await AsyncStorage.getItem(key);
+    return v === null ? fallback : v;
+  } catch {
+    return fallback;
+  }
+}
+
+/** Write a raw string UI state value. Never throws. */
+export async function setUiString(key, value) {
+  try {
+    await AsyncStorage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Remove a UI state key. Never throws. */
+export async function removeUiState(key) {
+  try {
+    await AsyncStorage.removeItem(key);
+    return true;
+  } catch {
+    return false;
+  }
+}

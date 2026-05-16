@@ -3,6 +3,7 @@ import { authenticate } from '../middleware/auth.js';
 import { isWorkspaceMember } from '../middleware/auth.js';
 import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma from '../lib/prisma.js';
+import { checkText, TEXT_LIMITS } from '../lib/validators.js';
 
 const router = express.Router();
 
@@ -73,9 +74,8 @@ router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMemb
   try {
     const { title, data, gigId } = req.body;
 
-    if (!title || !title.trim()) {
-      return res.status(400).json({ error: 'Title is required' });
-    }
+    const titleErr = checkText(title, 'Title', TEXT_LIMITS.TITLE, { required: true, minTrim: 1 });
+    if (titleErr) return res.status(400).json({ error: titleErr });
 
     if (data && JSON.stringify(data).length > 100000) {
       return res.status(400).json({ error: 'Stage plot data too large (max 100KB)' });
@@ -140,6 +140,11 @@ router.put('/:id', authenticate, apiLimiter, async (req, res) => {
     }
 
     const { title, data, gigId } = req.body;
+
+    if (title !== undefined) {
+      const titleErr = checkText(title, 'Title', TEXT_LIMITS.TITLE, { required: true, minTrim: 1 });
+      if (titleErr) return res.status(400).json({ error: titleErr });
+    }
 
     if (data && JSON.stringify(data).length > 100000) {
       return res.status(400).json({ error: 'Stage plot data too large (max 100KB)' });
