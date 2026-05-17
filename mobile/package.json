@@ -19,7 +19,9 @@
     "build:ios": "eas build --platform ios --profile production --local --non-interactive",
     "build:android": "ANDROID_HOME=\"${ANDROID_HOME:-/opt/homebrew/share/android-commandlinetools}\" ANDROID_SDK_ROOT=\"${ANDROID_SDK_ROOT:-/opt/homebrew/share/android-commandlinetools}\" eas build --platform android --profile production --local --non-interactive",
     "submit:ios": "eas submit --platform ios --profile production --path \"$(ls -t build-*.ipa 2>/dev/null | head -1)\" --non-interactive",
-    "submit:android": "eas submit --platform android --profile production --path \"$(ls -t build-*.aab 2>/dev/null | head -1)\" --non-interactive"
+    "submit:android": "eas submit --platform android --profile production --path \"$(ls -t build-*.aab 2>/dev/null | head -1)\" --non-interactive",
+    "deploy:ios": "npm run build:ios && npm run submit:ios",
+    "deploy:android": "npm run build:android && npm run submit:android"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
