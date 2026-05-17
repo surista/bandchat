@@ -2,6 +2,33 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.97] - 2026-05-18
+
+### Added — Personal song notes + Word setlist export (web only)
+Requested by user: a way to annotate songs in a setlist with private reminders ("drop D tuning", "don't forget to retune") that show up on their printed/exported sheet without affecting the band-wide setlist content. Plus Word export as a peer to the existing PDF export — opens directly in Microsoft Word.
+
+#### Personal notes
+- **New `SetlistSongNote` model** (`server/prisma/schema.prisma`) keyed on `(userId, setlistSongId)`. Cascade-deletes when the setlist song or user is removed. Indexed on both columns for fast lookups.
+- **New routes** (`server/src/routes/setlists.js`):
+  - `GET /api/setlists/:setlistId/my-notes` — returns `{ [setlistSongId]: { content, updatedAt } }` for the current user only.
+  - `PUT /api/setlists/songs/:setlistSongId/my-note` — upserts the current user's note. Empty content deletes the row, so saving an empty input clears the note (no separate DELETE needed).
+- **Inline editor in `SetlistBuilder`** — small italic input under each song in the setlist view. Visible only to the current user. Debounced 800ms save with optimistic local state. Placeholder reads "📝 your private note (e.g. drop D tuning) — saved only for you" so the privacy is clear without a UI label. Implemented in both the single-column and multi-column layouts.
+- **Notes flow through to exports** — PDF (Print) and Word both fetch the user's notes and render them as small italic lines under the song name.
+
+#### Word export
+- **New `📝 Word` button** alongside the existing 🖨️ Print in both `SetlistBuilder` and `SetlistList` views (also added to the per-setlist context menu).
+- **Implementation:** `client/src/utils/setlistExport.js` (new). Generates HTML with a UTF-8 BOM and serves it as `application/msword`. Word opens it transparently as a native document. No external library — keeps the bundle lean (the standard `docx` library would have added ~100KB+ for what amounts to a static one-page document).
+- **One HTML builder for both Print and Word** — the only difference is the output mechanism (popup + `window.print()` vs. blob download). Layout, fonts, columns, set timings, notes — all identical.
+
+#### Refactor
+The same setlist-export HTML was previously duplicated across `SetlistBuilder.handlePrint` (~200 lines) and `SetlistList.handlePrintSetlist` (~280 lines), with small drift between them. Both now delegate to `setlistExport.js`. `SetlistList.jsx` shrank by ~240 lines; `SetlistBuilder.jsx` print logic shrank by ~190 lines.
+
+#### Platform parity
+Web-only this version per user request. The server-side model + endpoints exist, so a mobile follow-up only needs UI work — notes already persist and would surface on next mobile build's exports. Tracked as platform parity gap in CLAUDE.md.
+
+#### Schema migration
+Railway runs `prisma db push` on every deploy (per `server/package.json` `start` script), so the new `SetlistSongNote` table lands automatically on next deploy. No manual migration step needed.
+
 ## [1.06.96] - 2026-05-17
 
 ### Added — Live booking inbox + storage/error infrastructure

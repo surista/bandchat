@@ -128,7 +128,7 @@ bandchat/
 │   │   ├── scripts/            # CLI utilities: import-slack, seed-test-workspace, generate-slack-mapping, etc.
 │   │   └── lib/                # 7 modules: prisma (with soft-delete middleware), storage (R2), validateUrl, validators, planLimits, revenuecat, icsParser
 │   ├── prisma/
-│   │   └── schema.prisma       # Database schema (55 models, 8 enums)
+│   │   └── schema.prisma       # Database schema (56 models, 8 enums)
 │   └── package.json
 ├── CLAUDE.md                   # AI assistant instructions (this file)
 ├── CHANGELOG.md                # Version history
@@ -154,7 +154,7 @@ bandchat/
 
 **Server:**
 - Express 4 / Node.js
-- Prisma ORM with PostgreSQL (55 models, 8 enums)
+- Prisma ORM with PostgreSQL (56 models, 8 enums)
 - Socket.IO (real-time messaging)
 - JWT Authentication (access tokens + httpOnly cookie refresh tokens)
 - Cloudflare R2 (file uploads via @aws-sdk/client-s3, with magic byte validation and MIME-based extensions)
@@ -165,11 +165,11 @@ bandchat/
 - JWT secret strength validation at startup
 - Socket.IO hardening (maxHttpBufferSize, payload validation, connection limiting, room eviction)
 
-### Database Schema (55 models)
+### Database Schema (56 models)
 
 **Core:** User, RefreshToken, Workspace, WorkspaceMember, Channel, ChannelGroup, ChannelMember
 **Messaging:** Message, Attachment, Reaction, ThreadRead, PinnedMessage, SavedMessage, PushSubscription, ExpoPushToken, Mention
-**Music:** Song, SongAttachment, Setlist, SetlistSong, SetlistPerformer, Medley, MedleySong, Recording
+**Music:** Song, SongAttachment, Setlist, SetlistSong, SetlistSongNote (per-user personal annotations on a setlist song), SetlistPerformer, Medley, MedleySong, Recording
 **Gigs:** Gig, GigAttendee, GigSetlist, GigMedia, GigSong, GigComment
 **People:** BandMember, InstrumentStint, MemberAvailability, Contact, BlockedUser, Venue
 **Community:** Announcement, AnnouncementAcknowledgment, Poll, PollOption, PollVote, TimelineEvent
@@ -329,6 +329,7 @@ BandChat has two distinct admin concepts:
 - **Persistent UI state must go through the storage wrappers, not raw `localStorage`/`AsyncStorage`.** Web: `import { storage } from 'services/storage'` — exposes `getString`/`setString`/`getNumber`/`setNumber`/`getBool`/`setBool`/`getJSON`/`setJSON`/`remove`. Mobile: `import { getUiState, setUiState, getUiString, setUiString, removeUiState } from 'services/storage'`. Both swallow errors and return safe defaults — required because Safari private mode throws `QuotaExceededError` on `setItem` and a single unwrapped throw blanks the screen via the error boundary. Mobile `services/storage.js` also exports a `storage` default for SecureStore-backed auth tokens with AsyncStorage fallback — that one is for tokens only, not UI state.
 - **New server routes should prefer `ApiError` + `asyncHandler`** from `server/src/lib/apiError.js`. Throw `new ApiError(404, 'Not found', { code: 'NOT_FOUND' })` instead of writing `try / console.error / res.status().json()` blocks. The global error handler in `app.js` formats it, includes `requestId` in the body, and only logs 5xx at error level. Existing routes' try/catch patterns still work — there is no migration in progress, this is for new code.
 - **Free-form text validation:** use `checkText(value, label, max, { required, minTrim })` and `TEXT_LIMITS` (NAME/TITLE/LABEL/URL/SHORT_TEXT/LONG_TEXT/MESSAGE_BODY/LYRICS) from `server/src/lib/validators.js` instead of inlining magic numbers. Most routes are already covered with per-field caps — only `stagePlots.js` was missing one as of v1.06.96.
+- **Setlist exports** (PDF + Word, web only): shared HTML builder at `client/src/utils/setlistExport.js` — `buildSetlistHtml()` / `printSetlist()` / `exportSetlistAsWord()`. Both Print and Word use the same HTML; only the output mechanism differs (popup + `window.print()` vs. `Blob` download with `application/msword`). Pass `notes` (a `{ [setlistSongId]: { content } }` map) to include per-user personal annotations. The notes themselves live in `SetlistSongNote` server-side and are fetched via `api.getMySetlistNotes(setlistId)`. No `docx` library required — Word opens HTML-with-BOM transparently.
 
 ### Web + Mobile Parity
 

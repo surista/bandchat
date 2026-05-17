@@ -5,6 +5,7 @@ import prisma, { USER_SELECT_BRIEF } from '../lib/prisma.js';
 import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
 import { triggerWebsiteSync } from '../services/websiteDeployment.js';
 import { logAudit } from '../lib/audit.js';
+import { checkText, TEXT_LIMITS } from '../lib/validators.js';
 
 const router = express.Router();
 
@@ -1170,6 +1171,94 @@ router.put('/:setlistId/performers', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Update setlist performers error:', error);
     res.status(500).json({ error: 'Failed to update performers' });
+  }
+});
+
+// ─── Per-user personal notes on setlist songs ─────────────────────────────
+//
+// Notes are scoped to the (user, setlistSong) pair. Only the author can
+// read or write their own notes. Used to carry reminders like "drop D
+// tuning" or "don't forget to retune" onto the user's PDF/Word export
+// without affecting the band-wide setlist content.
+
+// GET /api/setlists/:setlistId/my-notes
+// Returns { [setlistSongId]: { content, updatedAt } } for the current user.
+router.get('/:setlistId/my-notes', authenticate, async (req, res) => {
+  try {
+    const setlist = await prisma.setlist.findUnique({
+      where: { id: req.params.setlistId },
+      select: { id: true, workspaceId: true },
+    });
+    if (!setlist) return res.status(404).json({ error: 'Setlist not found' });
+
+    const member = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: setlist.workspaceId } },
+    });
+    if (!member) return res.status(403).json({ error: 'Not a workspace member' });
+
+    const notes = await prisma.setlistSongNote.findMany({
+      where: {
+        userId: req.user.id,
+        setlistSong: { setlistId: setlist.id },
+      },
+      select: { setlistSongId: true, content: true, updatedAt: true },
+    });
+
+    const byId = {};
+    for (const n of notes) {
+      byId[n.setlistSongId] = { content: n.content, updatedAt: n.updatedAt };
+    }
+    res.json(byId);
+  } catch (error) {
+    console.error('Get setlist my-notes error:', error);
+    res.status(500).json({ error: 'Failed to load notes' });
+  }
+});
+
+// PUT /api/setlists/songs/:setlistSongId/my-note
+// Upserts the current user's note on this setlist song. Empty content
+// deletes the row (treating empty save as "remove my note").
+router.put('/songs/:setlistSongId/my-note', authenticate, async (req, res) => {
+  try {
+    const { content } = req.body;
+
+    if (content !== undefined && content !== null) {
+      const err = checkText(content, 'Note', TEXT_LIMITS.SHORT_TEXT);
+      if (err) return res.status(400).json({ error: err });
+    }
+
+    const setlistSong = await prisma.setlistSong.findUnique({
+      where: { id: req.params.setlistSongId },
+      select: { id: true, setlist: { select: { workspaceId: true } } },
+    });
+    if (!setlistSong) return res.status(404).json({ error: 'Setlist song not found' });
+
+    const member = await prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId: req.user.id, workspaceId: setlistSong.setlist.workspaceId } },
+    });
+    if (!member) return res.status(403).json({ error: 'Not a workspace member' });
+
+    const trimmed = typeof content === 'string' ? content.trim() : '';
+
+    if (!trimmed) {
+      // Empty save = remove the note entirely. deleteMany so missing rows
+      // are a no-op (not a 404).
+      await prisma.setlistSongNote.deleteMany({
+        where: { userId: req.user.id, setlistSongId: setlistSong.id },
+      });
+      return res.json({ setlistSongId: setlistSong.id, content: '', updatedAt: null });
+    }
+
+    const note = await prisma.setlistSongNote.upsert({
+      where: { userId_setlistSongId: { userId: req.user.id, setlistSongId: setlistSong.id } },
+      create: { userId: req.user.id, setlistSongId: setlistSong.id, content: trimmed },
+      update: { content: trimmed },
+      select: { setlistSongId: true, content: true, updatedAt: true },
+    });
+    res.json(note);
+  } catch (error) {
+    console.error('Upsert setlist song note error:', error);
+    res.status(500).json({ error: 'Failed to save note' });
   }
 });
 

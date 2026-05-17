@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback, memo } from 'react';
 import { format } from 'date-fns';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
-import { escapeHtml } from '../../utils/escapeHtml';
 import { formatDuration } from '../../utils/formatDuration';
 import { computeSetlistDuration, formatSetlistDuration } from '../../utils/setlistDuration';
+import { printSetlist, exportSetlistAsWord } from '../../utils/setlistExport';
 import SetlistBuilder from './SetlistBuilder';
 import SongForm from './SongForm';
 import Modal from '../common/Modal';
@@ -465,15 +465,10 @@ function SetlistList({ workspaceId, workspaceName, workspace }) {
     setRenameName(setlist.name);
   }, []);
 
-  // Print/PDF export function for any setlist
-  const handlePrintSetlist = async (setlist) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      toast.warning('Please allow popups for this site to print the setlist');
-      return;
-    }
-
-    // Look up venue logo if setlist has a venue name
+  // Resolve venue logo + current user's personal notes for export. Used by
+  // both Print and Word handlers below. Notes are fetched fresh on each
+  // export so newly-edited notes from the SetlistBuilder are reflected.
+  const resolveExportOpts = async (setlist) => {
     let venueLogoUrl = null;
     if (setlist.venue && workspaceId) {
       try {
@@ -481,267 +476,36 @@ function SetlistList({ workspaceId, workspaceName, workspace }) {
         const match = venues.find(v => v.name === setlist.venue);
         if (match?.imageUrl) venueLogoUrl = match.imageUrl;
       } catch (e) {
-        console.error('Failed to fetch venue logo for setlist print:', e);
+        console.error('Failed to fetch venue logo for setlist export:', e);
       }
     }
-
-    const dateStr = setlist.performedAt
-      ? format(new Date(setlist.performedAt), 'EEEE, dd-MMM-yyyy')
-      : format(new Date(), 'EEEE, dd-MMM-yyyy');
-
-    const setlistItems = setlist.songs || [];
-    const songCount = setlistItems.filter(i => i.type !== 'MC' && i.type !== 'SET_BREAK').length;
-    const totalDuration = calculateDuration(setlistItems);
-
-    // For time-range calculations, use padded duration (realistic gig runtime).
-    const { paddedSecs: totalSecs } = computeSetlistDuration(setlistItems, transitionPaddingSecs);
-
-    const addMinsToTime = (time24, minutes) => {
-      if (!time24) return '';
-      const [h, m] = time24.split(':').map(Number);
-      const totalMins = Math.round(h * 60 + m + minutes);
-      const newH = Math.floor(totalMins / 60) % 24;
-      const newM = totalMins % 60;
-      return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
-    };
-
-    const printEndTime = setlist.startTime ? addMinsToTime(setlist.startTime, totalSecs / 60) : '';
-    const timeRangeStr = setlist.startTime && printEndTime
-      ? `${formatTime12h(setlist.startTime)} – ${formatTime12h(printEndTime)}`
-      : '';
-
-    // Split items into sets for multi-column layout
-    const sets = [];
-    let currentSet = { breakItem: null, items: [] };
-    for (const item of setlistItems) {
-      if (item.type === 'SET_BREAK') {
-        if (currentSet.items.length > 0 || currentSet.breakItem) {
-          sets.push(currentSet);
-        }
-        currentSet = { breakItem: item, items: [] };
-      } else {
-        currentSet.items.push(item);
-      }
+    let notes = {};
+    try {
+      notes = await api.getMySetlistNotes(setlist.id);
+    } catch (e) {
+      // Non-fatal — export proceeds without notes.
+      console.error('Failed to load setlist notes for export:', e);
     }
-    if (currentSet.items.length > 0 || currentSet.breakItem) {
-      sets.push(currentSet);
-    }
-
-    const numSets = sets.length;
-    const useShort = setlist.useShortNames;
-    const isLandscape = numSets >= 2;
-    const bandName = workspaceName || '';
-
-    // Calculate per-set timings (matching SetlistBuilder logic)
-    const roundUpTo5 = (time24) => {
-      if (!time24) return '';
-      const [rh, rm] = time24.split(':').map(Number);
-      const rounded = Math.ceil(rm / 5) * 5;
-      const nh = (rh + Math.floor(rounded / 60)) % 24;
-      const nm = rounded % 60;
-      return `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`;
+    return {
+      bandName: workspaceName || '',
+      venueLogoUrl,
+      notes: notes || {},
+      transitionPaddingSecs,
+      useShortNames: setlist.useShortNames,
     };
-    const getItemSecs = (item) => {
-      if (item.type === 'SET_BREAK') return item.duration || 0;
-      if (item.type === 'MC') return item.duration || 60;
-      const d = item.song?.duration || 0;
-      return d > 0 ? Math.ceil(d / 60) * 60 : 0;
-    };
-    let setTimings = null;
-    if (setlist.startTime) {
-      setTimings = [];
-      let curTime = setlist.startTime;
-      for (let i = 0; i < sets.length; i++) {
-        const s = sets[i];
-        const allItems = s.breakItem ? [s.breakItem, ...s.items] : s.items;
-        const setStart = curTime;
-        let setDurSecs = 0;
-        for (const it of allItems) {
-          if (it.type === 'SET_BREAK' && i > 0) {
-            curTime = addMinsToTime(curTime, (it.duration || 0) / 60);
-          }
-          if (it.type !== 'SET_BREAK') {
-            setDurSecs += getItemSecs(it);
-          }
-        }
-        const actualStart = i > 0 ? roundUpTo5(curTime) : setStart;
-        const setEnd = addMinsToTime(actualStart, setDurSecs / 60);
-        setTimings.push({ start: actualStart, end: setEnd });
-        curTime = setEnd;
-      }
+  };
+
+  const handlePrintSetlist = async (setlist) => {
+    const opts = await resolveExportOpts(setlist);
+    const result = printSetlist(setlist, opts);
+    if (!result.ok && result.error === 'popup-blocked') {
+      toast.warning('Please allow popups for this site to print the setlist');
     }
+  };
 
-    // Build HTML for each set as a column
-    const columnsHtml = sets.map((set, setIndex) => {
-      const setLabel = set.breakItem
-        ? (escapeHtml(set.breakItem.label) || `Set ${setIndex + 1}`)
-        : (numSets > 1 ? `Set ${setIndex + 1}` : '');
-      const setTimeStr = setTimings?.[setIndex]
-        ? ` <span class="set-time">${formatTime12h(setTimings[setIndex].start)} – ${formatTime12h(setTimings[setIndex].end)}</span>`
-        : '';
-
-      let itemsHtml = '';
-      set.items.forEach(item => {
-        if (item.type === 'MC') {
-          itemsHtml += `<li class="mc-item">&lt;${escapeHtml(item.label) || 'MC'}&gt;</li>`;
-        } else {
-          const song = item.song;
-          const songName = useShort && song?.shortName
-            ? escapeHtml(song.shortName)
-            : (escapeHtml(song?.title) || 'Unknown');
-          itemsHtml += `<li class="song-item">${songName}</li>`;
-        }
-      });
-
-      return `
-        <div class="set-column">
-          ${setLabel ? `<div class="set-header">${setLabel}${setTimeStr}</div>` : ''}
-          <ul class="song-list">${itemsHtml}</ul>
-        </div>
-      `;
-    }).join('');
-
-    const setlistHtml = `<div class="columns columns-${numSets}">${columnsHtml}</div>`;
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>${escapeHtml(setlist.name)} - Setlist</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          @page { ${isLandscape ? 'size: landscape;' : ''} margin: 10mm; }
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            padding: 20px;
-            margin: 0 auto;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-          }
-          .header {
-            text-align: center;
-            margin-bottom: 20px;
-            padding-bottom: 16px;
-            border-bottom: 3px solid #222;
-          }
-          .venue-logo {
-            width: 80px;
-            height: 80px;
-            object-fit: contain;
-            margin: 0 auto 8px;
-            border-radius: 8px;
-          }
-          .band-name {
-            font-size: 36px;
-            font-weight: 800;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            margin-bottom: 2px;
-          }
-          .header-divider {
-            width: 60px;
-            height: 3px;
-            background: #0891b2;
-            margin: 8px auto;
-            border-radius: 2px;
-          }
-          .venue {
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 2px;
-          }
-          .setlist-name {
-            font-size: 16px;
-            color: #666;
-          }
-          .header-details {
-            display: flex;
-            justify-content: center;
-            gap: 18px;
-            margin-top: 6px;
-            font-size: 15px;
-            color: #555;
-          }
-          .header-details span { white-space: nowrap; }
-          .time-range { color: #0891b2; font-weight: 500; }
-          .content { flex: 1; display: flex; align-items: stretch; }
-          .columns { display: flex; gap: 16px; width: 100%; height: 100%; }
-          .columns-1 { max-width: 500px; margin: 0 auto; text-align: center; }
-          .set-column { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-          .set-header {
-            font-size: 20px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin: 0 0 12px 0;
-            padding: 8px 0;
-            border-bottom: 2px solid #333;
-          }
-          .set-time {
-            font-size: 14px;
-            font-weight: normal;
-            color: #0891b2;
-            margin-left: 8px;
-            text-transform: none;
-            letter-spacing: 0;
-          }
-          .song-list { list-style: none; padding: 0; flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; }
-          .columns-1 .song-item {
-            padding: 4px 0;
-            font-size: 24px;
-          }
-          .columns-1 .mc-item {
-            padding: 4px 0;
-            font-style: italic;
-            font-size: 24px;
-          }
-          .song-item {
-            padding: 4px 0;
-            font-size: 20px;
-          }
-          .mc-item {
-            padding: 4px 0;
-            font-style: italic;
-            font-size: 20px;
-          }
-          .footer {
-            margin-top: 14px;
-            padding-top: 10px;
-            border-top: 3px solid #222;
-            text-align: center;
-          }
-          .stats { font-size: 12px; color: #666; }
-          @media print {
-            body { padding: 0; }
-            .set-header { break-inside: avoid; }
-            .song-item { break-inside: avoid; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          ${venueLogoUrl ? `<img src="${escapeHtml(venueLogoUrl)}" class="venue-logo" alt="" />` : ''}
-          ${bandName ? `<div class="band-name">${escapeHtml(bandName)}</div>` : ''}
-          ${bandName && (setlist.venue || setlist.name) ? '<div class="header-divider"></div>' : ''}
-          ${setlist.venue ? `<div class="venue">${escapeHtml(setlist.venue)}</div>` : ''}
-          <div class="setlist-name">${escapeHtml(setlist.name)}</div>
-          <div class="header-details">
-            <span>${dateStr}</span>
-            ${timeRangeStr ? `<span class="time-range">${timeRangeStr}</span>` : ''}
-          </div>
-        </div>
-        <div class="content">${setlistHtml}</div>
-        <div class="footer">
-          <div class="stats">${songCount} songs &bull; ${totalDuration} total</div>
-        </div>
-        <script>window.onload = function() { window.print(); };</script>
-      </body>
-      </html>
-    `;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
+  const handleExportWord = async (setlist) => {
+    const opts = await resolveExportOpts(setlist);
+    exportSetlistAsWord(setlist, opts);
   };
 
   if (loading) {
@@ -1160,9 +924,16 @@ function SetlistList({ workspaceId, workspaceName, workspace }) {
                 <button
                   onClick={() => handlePrintSetlist(viewingSetlist)}
                   className="btn bg-orange-600 hover:bg-orange-500 text-white text-sm"
-                  title="Export as PDF"
+                  title="Export as PDF (includes your personal notes)"
                 >
                   Export PDF
+                </button>
+                <button
+                  onClick={() => handleExportWord(viewingSetlist)}
+                  className="btn bg-indigo-600 hover:bg-indigo-500 text-white text-sm"
+                  title="Download as a Word document (includes your personal notes)"
+                >
+                  Export Word
                 </button>
                 <button
                   onClick={() => openEditDetails(viewingSetlist)}
@@ -1431,6 +1202,14 @@ function SetlistList({ workspaceId, workspaceName, workspace }) {
             onClick: () => {
               const setlist = setlists.find(s => s.id === contextMenu?.setlistId);
               if (setlist) handlePrintSetlist(setlist);
+            }
+          },
+          {
+            label: 'Export Word',
+            icon: '📝',
+            onClick: () => {
+              const setlist = setlists.find(s => s.id === contextMenu?.setlistId);
+              if (setlist) handleExportWord(setlist);
             }
           },
           {

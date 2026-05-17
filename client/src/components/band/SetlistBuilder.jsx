@@ -1,7 +1,7 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useToast } from '../../context/ToastContext';
 import { hapticMedium } from '../../services/haptic';
-import { format } from 'date-fns';
+import { printSetlist, exportSetlistAsWord } from '../../utils/setlistExport';
 import {
   DndContext,
   closestCenter,
@@ -23,7 +23,6 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import api from '../../services/api';
-import { escapeHtml } from '../../utils/escapeHtml';
 import { formatDuration } from '../../utils/formatDuration';
 import { computeSetlistDuration, computeSetDuration, formatSetlistDuration, getItemActualDuration } from '../../utils/setlistDuration';
 import SongForm from './SongForm';
@@ -54,8 +53,63 @@ function splitIntoSets(items) {
   return sets;
 }
 
+// Personal note input — debounced save, private to the current user.
+// Renders inline below a song/MC item in the setlist builder. The actual
+// note storage is per-(user, setlistSong) on the server (SetlistSongNote
+// model). Empty value clears the row.
+function NoteInput({ value, onSave, compact = false }) {
+  const [draft, setDraft] = useState(value || '');
+  const lastSavedRef = useRef(value || '');
+  const timerRef = useRef(null);
+
+  // Reset draft when the prop changes from outside (e.g. notes reloaded).
+  useEffect(() => {
+    if ((value || '') !== lastSavedRef.current) {
+      lastSavedRef.current = value || '';
+      setDraft(value || '');
+    }
+  }, [value]);
+
+  const scheduleSave = (next) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      if (next !== lastSavedRef.current) {
+        lastSavedRef.current = next;
+        onSave(next);
+      }
+    }, 800);
+  };
+
+  const flushSave = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (draft !== lastSavedRef.current) {
+      lastSavedRef.current = draft;
+      onSave(draft);
+    }
+  };
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  return (
+    <input
+      type="text"
+      value={draft}
+      onChange={(e) => { setDraft(e.target.value); scheduleSave(e.target.value); }}
+      onBlur={flushSave}
+      onClick={(e) => e.stopPropagation()}
+      maxLength={500}
+      placeholder="📝 your private note (e.g. drop D tuning) — saved only for you"
+      className={`w-full bg-transparent border-0 border-b border-transparent hover:border-[var(--color-border)] focus:border-blue-500 focus:outline-none italic text-[var(--color-text-muted)] focus:text-[var(--color-text-primary)] ${compact ? 'text-xs py-0.5' : 'text-sm py-1'}`}
+      aria-label="Personal note for this song"
+    />
+  );
+}
+
 // Sortable item component
-function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDisplayName, useShortNames, formatDuration, onBreakDurationChange, onSongClick }) {
+function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDisplayName, useShortNames, formatDuration, onBreakDurationChange, onSongClick, userNote, onSaveNote }) {
   const {
     attributes,
     listeners,
@@ -75,7 +129,7 @@ function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDispla
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-3 p-3 ${
+      className={`flex flex-col ${
         item.type === 'SET_BREAK'
           ? 'bg-blue-900/40 hover:bg-blue-900/60 border-l-4 border-blue-500'
           : item.type === 'MC'
@@ -83,97 +137,105 @@ function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDispla
           : 'bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-secondary)]'
       }`}
     >
-      {/* Drag handle and move buttons */}
-      <div className="flex flex-col gap-1">
-        <button
-          onClick={() => onMove(index, -1)}
-          disabled={index === 0}
-          className="w-8 h-8 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] disabled:opacity-30 rounded touch-manipulation"
-          aria-label="Move up"
-        >
-          ▲
-        </button>
-        <button
-          onClick={() => onMove(index, 1)}
-          disabled={index === totalItems - 1}
-          className="w-8 h-8 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] disabled:opacity-30 rounded touch-manipulation"
-          aria-label="Move down"
-        >
-          ▼
-        </button>
-      </div>
-
-      {/* Drag handle */}
-      <div
-        {...attributes}
-        {...listeners}
-        className="cursor-grab active:cursor-grabbing p-2 -m-2 touch-manipulation"
-        aria-label="Drag to reorder"
-      >
-        <span className="text-[var(--color-text-muted)] select-none">⋮⋮</span>
-      </div>
-
-      <span className="text-[var(--color-text-muted)] w-6 text-right">{index + 1}.</span>
-
-      {item.type === 'SET_BREAK' ? (
-        <div className="flex-1 min-w-0 flex items-center gap-3">
-          <div className="text-blue-400 truncate font-bold text-lg">
-            📋 {item.label || 'Set Break'}
-          </div>
-          <select
-            value={item.duration || 900}
-            onChange={(e) => onBreakDurationChange(item, e.target.value)}
-            onClick={(e) => e.stopPropagation()}
-            className="px-2 py-1 bg-blue-900/50 border border-blue-700/50 rounded text-blue-300 text-sm"
+      <div className="flex items-center gap-3 p-3">
+        {/* Drag handle and move buttons */}
+        <div className="flex flex-col gap-1">
+          <button
+            onClick={() => onMove(index, -1)}
+            disabled={index === 0}
+            className="w-8 h-8 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] disabled:opacity-30 rounded touch-manipulation"
+            aria-label="Move up"
           >
-            {BREAK_DURATION_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            ▲
+          </button>
+          <button
+            onClick={() => onMove(index, 1)}
+            disabled={index === totalItems - 1}
+            className="w-8 h-8 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] disabled:opacity-30 rounded touch-manipulation"
+            aria-label="Move down"
+          >
+            ▼
+          </button>
         </div>
-      ) : item.type === 'MC' ? (
-        <>
-          <div className="flex-1 min-w-0">
-            <div className="text-yellow-400 truncate font-medium">
-              🎤 {item.label || 'MC'}
-            </div>
-            <div className="text-yellow-600 text-sm">Talk / Banter</div>
-          </div>
-          <div className="text-xs text-yellow-400">
-            {formatDuration(item.duration || 60)}
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="flex-1 min-w-0">
-            <div
-              className="text-blue-400 truncate cursor-pointer hover:underline"
-              onClick={(e) => { e.stopPropagation(); onSongClick?.(item); }}
-            >
-              {getSongDisplayName(item.song)}
-            </div>
-            {!useShortNames && item.song?.artist && (
-              <div className="text-[var(--color-text-muted)] text-sm truncate">{item.song.artist}</div>
-            )}
-          </div>
-          <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
-            {item.song?.key && (
-              <span className="px-1.5 py-0.5 bg-purple-900/50 rounded">{item.song.key}</span>
-            )}
-            {item.song?.duration && (
-              <span>{formatDuration(item.song.duration)}</span>
-            )}
-          </div>
-        </>
-      )}
 
-      <button
-        onClick={() => onRemove(item)}
-        className="w-10 h-10 flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-400 hover:bg-[var(--color-bg-tertiary)] rounded touch-manipulation"
-        aria-label="Remove item"
-      >
-        ✕
-      </button>
+        {/* Drag handle */}
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing p-2 -m-2 touch-manipulation"
+          aria-label="Drag to reorder"
+        >
+          <span className="text-[var(--color-text-muted)] select-none">⋮⋮</span>
+        </div>
+
+        <span className="text-[var(--color-text-muted)] w-6 text-right">{index + 1}.</span>
+
+        {item.type === 'SET_BREAK' ? (
+          <div className="flex-1 min-w-0 flex items-center gap-3">
+            <div className="text-blue-400 truncate font-bold text-lg">
+              📋 {item.label || 'Set Break'}
+            </div>
+            <select
+              value={item.duration || 900}
+              onChange={(e) => onBreakDurationChange(item, e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              className="px-2 py-1 bg-blue-900/50 border border-blue-700/50 rounded text-blue-300 text-sm"
+            >
+              {BREAK_DURATION_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+        ) : item.type === 'MC' ? (
+          <>
+            <div className="flex-1 min-w-0">
+              <div className="text-yellow-400 truncate font-medium">
+                🎤 {item.label || 'MC'}
+              </div>
+              <div className="text-yellow-600 text-sm">Talk / Banter</div>
+            </div>
+            <div className="text-xs text-yellow-400">
+              {formatDuration(item.duration || 60)}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex-1 min-w-0">
+              <div
+                className="text-blue-400 truncate cursor-pointer hover:underline"
+                onClick={(e) => { e.stopPropagation(); onSongClick?.(item); }}
+              >
+                {getSongDisplayName(item.song)}
+              </div>
+              {!useShortNames && item.song?.artist && (
+                <div className="text-[var(--color-text-muted)] text-sm truncate">{item.song.artist}</div>
+              )}
+            </div>
+            <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
+              {item.song?.key && (
+                <span className="px-1.5 py-0.5 bg-purple-900/50 rounded">{item.song.key}</span>
+              )}
+              {item.song?.duration && (
+                <span>{formatDuration(item.song.duration)}</span>
+              )}
+            </div>
+          </>
+        )}
+
+        <button
+          onClick={() => onRemove(item)}
+          className="w-10 h-10 flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-400 hover:bg-[var(--color-bg-tertiary)] rounded touch-manipulation"
+          aria-label="Remove item"
+        >
+          ✕
+        </button>
+      </div>
+      {/* Personal note row — only for song/MC items, not set breaks. */}
+      {item.type !== 'SET_BREAK' && onSaveNote && (
+        <div className="px-3 pb-2 -mt-1 pl-[88px]">
+          <NoteInput value={userNote} onSave={(c) => onSaveNote(item.id, c)} />
+        </div>
+      )}
     </div>
   );
 }
@@ -193,7 +255,9 @@ function SetColumn({
   onBreakDurationChange,
   timing,
   nextBreakItem,
-  onSongClick
+  onSongClick,
+  notes,
+  onSaveNote,
 }) {
   // All items in this column including the break
   const allColumnItems = set.breakItem ? [set.breakItem, ...set.items] : set.items;
@@ -268,6 +332,8 @@ function SetColumn({
                     useShortNames={useShortNames}
                     formatDuration={formatDuration}
                     onSongClick={onSongClick}
+                    userNote={notes?.[item.id]?.content || ''}
+                    onSaveNote={onSaveNote}
                   />
                 );
               })}
@@ -305,7 +371,9 @@ function SetColumnItem({
   getSongDisplayName,
   useShortNames,
   formatDuration,
-  onSongClick
+  onSongClick,
+  userNote,
+  onSaveNote,
 }) {
   const {
     attributes,
@@ -326,84 +394,91 @@ function SetColumnItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-2 p-2 ${
+      className={`flex flex-col ${
         item.type === 'MC'
           ? 'bg-yellow-900/30 hover:bg-yellow-900/50'
           : 'bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-secondary)]'
       }`}
     >
-      {/* Move buttons */}
-      <div className="flex flex-col gap-0.5">
-        <button
-          onClick={() => onMoveGlobal(globalIndex, -1)}
-          className="w-6 h-6 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] disabled:opacity-30 rounded text-xs touch-manipulation"
-          aria-label="Move up"
+      <div className="flex items-center gap-2 p-2">
+        {/* Move buttons */}
+        <div className="flex flex-col gap-0.5">
+          <button
+            onClick={() => onMoveGlobal(globalIndex, -1)}
+            className="w-6 h-6 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] disabled:opacity-30 rounded text-xs touch-manipulation"
+            aria-label="Move up"
+          >
+            ▲
+          </button>
+          <button
+            onClick={() => onMoveGlobal(globalIndex, 1)}
+            className="w-6 h-6 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] disabled:opacity-30 rounded text-xs touch-manipulation"
+            aria-label="Move down"
+          >
+            ▼
+          </button>
+        </div>
+
+        {/* Drag handle */}
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing p-1 touch-manipulation"
+          aria-label="Drag to reorder"
         >
-          ▲
-        </button>
+          <span className="text-[var(--color-text-muted)] select-none text-sm">⋮⋮</span>
+        </div>
+
+        <span className="text-[var(--color-text-muted)] w-5 text-right text-sm">{localIndex + 1}.</span>
+
+        {item.type === 'MC' ? (
+          <>
+            <div className="flex-1 min-w-0">
+              <div className="text-yellow-400 truncate text-sm font-medium">
+                🎤 {item.label || 'MC'}
+              </div>
+            </div>
+            <div className="text-xs text-yellow-400">
+              {formatDuration(item.duration || 60)}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex-1 min-w-0">
+              <div
+                className="text-blue-400 truncate text-sm cursor-pointer hover:underline"
+                onClick={(e) => { e.stopPropagation(); onSongClick?.(item); }}
+              >
+                {getSongDisplayName(item.song)}
+              </div>
+              {!useShortNames && item.song?.artist && (
+                <div className="text-[var(--color-text-muted)] text-xs truncate">{item.song.artist}</div>
+              )}
+            </div>
+            <div className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
+              {item.song?.key && (
+                <span className="px-1 py-0.5 bg-purple-900/50 rounded text-xs">{item.song.key}</span>
+              )}
+              {item.song?.duration && (
+                <span className="text-xs">{formatDuration(item.song.duration)}</span>
+              )}
+            </div>
+          </>
+        )}
+
         <button
-          onClick={() => onMoveGlobal(globalIndex, 1)}
-          className="w-6 h-6 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] disabled:opacity-30 rounded text-xs touch-manipulation"
-          aria-label="Move down"
+          onClick={() => onRemove(item)}
+          className="w-8 h-8 flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-400 hover:bg-[var(--color-bg-tertiary)] rounded touch-manipulation"
+          aria-label="Remove item"
         >
-          ▼
+          ✕
         </button>
       </div>
-
-      {/* Drag handle */}
-      <div
-        {...attributes}
-        {...listeners}
-        className="cursor-grab active:cursor-grabbing p-1 touch-manipulation"
-        aria-label="Drag to reorder"
-      >
-        <span className="text-[var(--color-text-muted)] select-none text-sm">⋮⋮</span>
-      </div>
-
-      <span className="text-[var(--color-text-muted)] w-5 text-right text-sm">{localIndex + 1}.</span>
-
-      {item.type === 'MC' ? (
-        <>
-          <div className="flex-1 min-w-0">
-            <div className="text-yellow-400 truncate text-sm font-medium">
-              🎤 {item.label || 'MC'}
-            </div>
-          </div>
-          <div className="text-xs text-yellow-400">
-            {formatDuration(item.duration || 60)}
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="flex-1 min-w-0">
-            <div
-              className="text-blue-400 truncate text-sm cursor-pointer hover:underline"
-              onClick={(e) => { e.stopPropagation(); onSongClick?.(item); }}
-            >
-              {getSongDisplayName(item.song)}
-            </div>
-            {!useShortNames && item.song?.artist && (
-              <div className="text-[var(--color-text-muted)] text-xs truncate">{item.song.artist}</div>
-            )}
-          </div>
-          <div className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
-            {item.song?.key && (
-              <span className="px-1 py-0.5 bg-purple-900/50 rounded text-xs">{item.song.key}</span>
-            )}
-            {item.song?.duration && (
-              <span className="text-xs">{formatDuration(item.song.duration)}</span>
-            )}
-          </div>
-        </>
+      {onSaveNote && (
+        <div className="px-2 pb-1.5 pl-[68px]">
+          <NoteInput value={userNote} onSave={(c) => onSaveNote(item.id, c)} compact />
+        </div>
       )}
-
-      <button
-        onClick={() => onRemove(item)}
-        className="w-8 h-8 flex items-center justify-center text-[var(--color-text-muted)] hover:text-red-400 hover:bg-[var(--color-bg-tertiary)] rounded touch-manipulation"
-        aria-label="Remove item"
-      >
-        ✕
-      </button>
     </div>
   );
 }
@@ -460,8 +535,40 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSec
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(setlist.name);
   const [savingName, setSavingName] = useState(false);
+  // Per-user personal notes, keyed by setlistSongId. Private to current user.
+  const [notes, setNotes] = useState({});
   const containerRef = useRef(null);
   const isResizing = useRef(false);
+
+  // Load this user's notes for the setlist on mount / when setlist changes.
+  useEffect(() => {
+    let cancelled = false;
+    api.getMySetlistNotes(setlist.id)
+      .then(data => { if (!cancelled) setNotes(data || {}); })
+      .catch(err => console.error('Failed to load setlist notes:', err));
+    return () => { cancelled = true; };
+  }, [setlist.id]);
+
+  // Save (or clear) a note for one song. Optimistically updates local state
+  // so the UI feels immediate; server response is the source of truth on
+  // subsequent reloads. Empty content removes the note row server-side.
+  const handleSaveNote = useCallback(async (setlistSongId, content) => {
+    setNotes(prev => {
+      const next = { ...prev };
+      if (content && content.trim()) {
+        next[setlistSongId] = { content, updatedAt: new Date().toISOString() };
+      } else {
+        delete next[setlistSongId];
+      }
+      return next;
+    });
+    try {
+      await api.saveSetlistSongNote(setlistSongId, content || '');
+    } catch (err) {
+      console.error('Failed to save setlist song note:', err);
+      toast.error('Could not save your note');
+    }
+  }, [toast]);
 
   // Resize handler for the divider between setlist and available songs
   const handleResizeStart = useCallback((e) => {
@@ -750,15 +857,10 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSec
     setViewingSong(null);
   };
 
-  // Print/PDF export function
-  const handlePrint = async () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      toast.warning('Please allow popups for this site to print the setlist');
-      return;
-    }
-
-    // Look up venue logo if setlist has a venue name
+  // Resolve venue logo + assemble the shared opts for export.
+  // Both Print and Word use the same helper — the only difference is the
+  // output mechanism (popup+print vs blob download).
+  const resolveExportOpts = async () => {
     let venueLogoUrl = null;
     if (setlist.venue && setlist.workspaceId) {
       try {
@@ -766,189 +868,39 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSec
         const match = venues.find(v => v.name === setlist.venue);
         if (match?.imageUrl) venueLogoUrl = match.imageUrl;
       } catch (e) {
-        console.error('Failed to fetch venue logo for setlist print:', e);
+        console.error('Failed to fetch venue logo for setlist export:', e);
       }
     }
+    return {
+      bandName: workspaceName || '',
+      venueLogoUrl,
+      notes,
+      transitionPaddingSecs,
+      useShortNames,
+    };
+  };
 
-    // Format date if available
-    const dateStr = setlist.performedAt
-      ? format(new Date(setlist.performedAt), 'EEEE, MMMM d, yyyy')
-      : format(new Date(), 'EEEE, MMMM d, yyyy');
+  // Wrap the current state into a setlist-like object since startTime/
+  // useShortNames are tracked locally (the parent's `setlist` prop may be
+  // stale until next refresh).
+  const buildExportSetlist = () => ({
+    ...setlist,
+    songs: setlistItems,
+    useShortNames,
+    startTime,
+  });
 
-    const timeRangeStr = startTime && endTime
-      ? `${formatTime12h(startTime)} – ${formatTime12h(endTime)}`
-      : '';
+  const handlePrint = async () => {
+    const opts = await resolveExportOpts();
+    const result = printSetlist(buildExportSetlist(), opts);
+    if (!result.ok && result.error === 'popup-blocked') {
+      toast.warning('Please allow popups for this site to print the setlist');
+    }
+  };
 
-    // Build the setlist content as columns
-    const numSets = sets.length;
-    const isLandscape = numSets >= 2;
-    const bandName = workspaceName || '';
-
-    const columnsHtml = sets.map((set, setIndex) => {
-      const setLabel = numSets > 1 ? `Set ${setIndex + 1}` : '';
-      const setTimeStr = setTimings?.[setIndex]
-        ? ` <span class="set-time">${formatTime12h(setTimings[setIndex].start)} – ${formatTime12h(setTimings[setIndex].end)}</span>`
-        : '';
-
-      let itemsHtml = '';
-      set.items.forEach(item => {
-        if (item.type === 'MC') {
-          itemsHtml += `<li class="mc-item">&lt;${escapeHtml(item.label) || 'MC'}&gt;</li>`;
-        } else {
-          const songName = escapeHtml(getSongDisplayName(item.song));
-          itemsHtml += `<li class="song-item">${songName}</li>`;
-        }
-      });
-
-      return `
-        <div class="set-column">
-          ${setLabel ? `<div class="set-header">${setLabel}${setTimeStr}</div>` : ''}
-          <ul class="song-list">${itemsHtml}</ul>
-        </div>
-      `;
-    }).join('');
-
-    const setlistHtml = `<div class="columns columns-${numSets}">${columnsHtml}</div>`;
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>${escapeHtml(setlist.name)} - Setlist</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          @page { ${isLandscape ? 'size: landscape;' : ''} margin: 10mm; }
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            padding: 20px;
-            margin: 0 auto;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-          }
-          .header {
-            text-align: center;
-            margin-bottom: 20px;
-            padding-bottom: 16px;
-            border-bottom: 3px solid #222;
-          }
-          .venue-logo {
-            width: 80px;
-            height: 80px;
-            object-fit: contain;
-            margin: 0 auto 8px;
-            border-radius: 8px;
-          }
-          .band-name {
-            font-size: 36px;
-            font-weight: 800;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            margin-bottom: 2px;
-          }
-          .header-divider {
-            width: 60px;
-            height: 3px;
-            background: #0891b2;
-            margin: 8px auto;
-            border-radius: 2px;
-          }
-          .venue {
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 2px;
-          }
-          .setlist-name {
-            font-size: 16px;
-            color: #666;
-          }
-          .header-details {
-            display: flex;
-            justify-content: center;
-            gap: 18px;
-            margin-top: 6px;
-            font-size: 15px;
-            color: #555;
-          }
-          .header-details span { white-space: nowrap; }
-          .time-range { color: #0891b2; font-weight: 500; }
-          .content { flex: 1; display: flex; align-items: stretch; }
-          .columns { display: flex; gap: 16px; width: 100%; height: 100%; }
-          .columns-1 { max-width: 500px; margin: 0 auto; text-align: center; }
-          .set-column { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-          .set-header {
-            font-size: 20px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin: 0 0 12px 0;
-            padding: 8px 0;
-            border-bottom: 2px solid #333;
-          }
-          .set-time {
-            font-size: 14px;
-            font-weight: normal;
-            color: #0891b2;
-            margin-left: 8px;
-            text-transform: none;
-            letter-spacing: 0;
-          }
-          .song-list { list-style: none; padding: 0; flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; }
-          .columns-1 .song-item {
-            padding: 4px 0;
-            font-size: 24px;
-          }
-          .columns-1 .mc-item {
-            padding: 4px 0;
-            font-style: italic;
-            font-size: 24px;
-          }
-          .song-item {
-            padding: 4px 0;
-            font-size: 20px;
-          }
-          .mc-item {
-            padding: 4px 0;
-            font-style: italic;
-            font-size: 20px;
-          }
-          .footer {
-            margin-top: 16px;
-            padding-top: 12px;
-            border-top: 3px solid #222;
-            text-align: center;
-          }
-          .stats { font-size: 13px; color: #666; }
-          @media print {
-            body { padding: 0; }
-            .set-header { break-inside: avoid; }
-            .song-item { break-inside: avoid; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          ${venueLogoUrl ? `<img src="${escapeHtml(venueLogoUrl)}" class="venue-logo" alt="" />` : ''}
-          ${bandName ? `<div class="band-name">${escapeHtml(bandName)}</div>` : ''}
-          ${bandName && (setlist.venue || setlist.name) ? '<div class="header-divider"></div>' : ''}
-          ${setlist.venue ? `<div class="venue">${escapeHtml(setlist.venue)}</div>` : ''}
-          <div class="setlist-name">${escapeHtml(setlist.name)}</div>
-          <div class="header-details">
-            <span>${dateStr}</span>
-            ${timeRangeStr ? `<span class="time-range">${timeRangeStr}</span>` : ''}
-          </div>
-        </div>
-        <div class="content">${setlistHtml}</div>
-        <div class="footer">
-          <div class="stats">${songCount} songs &bull; ${actualLabel} songs only${hasPadding ? ` &bull; ${paddedLabel} with ${paddingSecs}s gaps` : ''}</div>
-        </div>
-        <script>window.onload = function() { window.print(); };</script>
-      </body>
-      </html>
-    `;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
+  const handleExportWord = async () => {
+    const opts = await resolveExportOpts();
+    exportSetlistAsWord(buildExportSetlist(), opts);
   };
 
   // Calculate global start indices for each set
@@ -1013,9 +965,16 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSec
             <button
               onClick={handlePrint}
               className="px-3 py-2 rounded text-sm bg-orange-600 hover:bg-orange-500 text-white touch-manipulation"
-              title="Print or save as PDF"
+              title="Print or save as PDF (includes your personal notes)"
             >
               🖨️ Print
+            </button>
+            <button
+              onClick={handleExportWord}
+              className="px-3 py-2 rounded text-sm bg-indigo-600 hover:bg-indigo-500 text-white touch-manipulation"
+              title="Download as a Word document (includes your personal notes)"
+            >
+              📝 Word
             </button>
             <button
               onClick={toggleShortNames}
@@ -1056,6 +1015,12 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSec
                     className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]"
                   >
                     🖨️ Print
+                  </button>
+                  <button
+                    onClick={() => { setShowMobileMenu(false); handleExportWord(); }}
+                    className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]"
+                  >
+                    📝 Word
                   </button>
                   <button
                     onClick={() => { setShowMobileMenu(false); toggleShortNames(); }}
@@ -1156,6 +1121,8 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSec
                       timing={setTimings?.[setIndex]}
                       nextBreakItem={sets[setIndex + 1]?.breakItem}
                       onSongClick={handleSongClick}
+                      notes={notes}
+                      onSaveNote={handleSaveNote}
                     />
                   ))}
                 </div>
@@ -1185,6 +1152,8 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSec
                         formatDuration={formatDuration}
                         onBreakDurationChange={handleBreakDurationChange}
                         onSongClick={handleSongClick}
+                        userNote={notes[item.id]?.content || ''}
+                        onSaveNote={handleSaveNote}
                       />
                     ))}
                   </div>

@@ -66,6 +66,7 @@ model User {
   AuditLog           AuditLog[]
   mentions           Mention[]
   bookingsResponded  BookingRequest[]             @relation("BookingRequestResponders")
+  setlistSongNotes   SetlistSongNote[]
 
   @@index([isSystemAdmin])
   @@index([authProvider])
@@ -461,6 +462,8 @@ model SetlistSong {
   setlist Setlist @relation(fields: [setlistId], references: [id], onDelete: Cascade)
   song    Song?   @relation(fields: [songId], references: [id], onDelete: Cascade)
 
+  notes SetlistSongNote[] // Per-user personal annotations
+
   @@unique([setlistId, songId])
   @@index([setlistId, position])
 }
@@ -469,6 +472,27 @@ enum SetlistItemType {
   SONG
   MC
   SET_BREAK
+}
+
+// Per-user personal annotation on a song within a setlist. Only the author
+// can read/write their own notes. Surfaces on that user's printed/exported
+// setlists (PDF, Word) so they can carry private reminders ("drop D tuning",
+// "don't forget to retune after this") without affecting the band-wide
+// setlist content.
+model SetlistSongNote {
+  id            String   @id @default(uuid())
+  setlistSongId String
+  userId        String
+  content       String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  setlistSong SetlistSong @relation(fields: [setlistSongId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, setlistSongId])
+  @@index([setlistSongId])
+  @@index([userId])
 }
 
 model Gig {

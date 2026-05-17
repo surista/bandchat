@@ -851,6 +851,20 @@ class ApiService {
     });
   }
 
+  // Per-user personal notes on setlist songs.
+  // Notes are private to the current user and surface on their PDF/Word exports.
+  async getMySetlistNotes(setlistId) {
+    return this.request(`/setlists/${setlistId}/my-notes`);
+  }
+
+  async saveSetlistSongNote(setlistSongId, content) {
+    // Empty content clears the note. The server treats empty-string as delete.
+    return this.request(`/setlists/songs/${setlistSongId}/my-note`, {
+      method: 'PUT',
+      body: JSON.stringify({ content })
+    });
+  }
+
   // Gig setlists (multi-set)
   async addSetlistToGig(gigId, setlistId, setNumber = null) {
     return this.request(`/gigs/${gigId}/setlists`, {
