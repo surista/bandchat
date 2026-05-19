@@ -112,7 +112,7 @@ router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceAdmi
         title: 'Announcement',
         body: announcement.title.length > 100 ? announcement.title.substring(0, 100) + '...' : announcement.title,
         tag: `announcement-${announcement.id}`,
-        url: `/workspace/${req.params.workspaceId}`,
+        url: `/workspace/${req.params.workspaceId}?view=announcements`,
         workspaceId: req.params.workspaceId,
         threadId: req.params.workspaceId
       }, { category: 'announcement', workspaceId: req.params.workspaceId });

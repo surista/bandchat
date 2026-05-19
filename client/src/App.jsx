@@ -54,7 +54,12 @@ function PrivateRoute({ children }) {
     );
   }
 
-  return isAuthenticated ? children : <Navigate to="/login" state={{ from: location.pathname }} />;
+  // Preserve search + hash so push-notification deep links like
+  // /workspace/X?channel=Y&msg=Z survive a redirect through /login. Storing
+  // just pathname (the old behavior) silently dropped query strings — clicking
+  // a notification while signed out would land on the workspace shell with
+  // no channel/msg selected.
+  return isAuthenticated ? children : <Navigate to="/login" state={{ from: location.pathname + location.search + location.hash }} />;
 }
 
 function PublicRoute({ children }) {

@@ -214,7 +214,17 @@ function WorkspaceView() {
   const [searchAuthorFilter, setSearchAuthorFilter] = useState('');
   const [directMessages, setDirectMessages] = useState([]);
   const [allWorkspaces, setAllWorkspaces] = useState([]);
-  const [activeBandView, setActiveBandView] = useState(() => storage.getString(`bandView:${workspaceId}`));
+  // `activeBandView` is normally restored from per-workspace localStorage so
+  // the user returns to whatever band view (Calendar, Songs, etc.) they were
+  // last on. But push notifications include `?view=<name>` to deep-link to a
+  // specific pane (e.g. a gig-comment notification opens Calendar) — that
+  // takes precedence on initial mount and is cleared from the URL by a later
+  // effect to avoid sticking on every soft-navigation.
+  const [activeBandView, setActiveBandView] = useState(() => {
+    const urlView = new URLSearchParams(window.location.search).get('view');
+    if (urlView && BAND_VIEW_COMPONENTS[urlView]) return urlView;
+    return storage.getString(`bandView:${workspaceId}`);
+  });
   const [bandViewKey, setBandViewKey] = useState(0);
   const [pendingChannelId, setPendingChannelId] = useState(() => {
     // Prioritize channel ID from URL query param (from copy-link)
@@ -246,8 +256,28 @@ function WorkspaceView() {
     // Reset channel selection when switching workspaces
     setSelectedChannel(null);
     setSelectedThread(null);
-    setActiveBandView(null);
+    // Honor ?view=<name> on every workspace change so deep links from push
+    // notifications work both on cold mount and on cross-workspace nav.
+    const urlView = new URLSearchParams(window.location.search).get('view');
+    setActiveBandView(urlView && BAND_VIEW_COMPONENTS[urlView] ? urlView : null);
     loadWorkspace();
+  }, [workspaceId]);
+
+  // Strip ?view= from the URL after it's been consumed so a reload (or a
+  // browser back/forward) doesn't keep re-forcing the same band view when
+  // the user has since navigated away from it. Mirrors the ?msg= cleanup
+  // pattern in ChannelView. Done in a separate effect so we don't block
+  // mount; the small delay also lets the BAND view render before we churn
+  // the URL.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('view')) return;
+    const timer = setTimeout(() => {
+      const current = new URL(window.location.href);
+      current.searchParams.delete('view');
+      window.history.replaceState({}, '', current.pathname + (current.search ? current.search : '') + current.hash);
+    }, 1500);
+    return () => clearTimeout(timer);
   }, [workspaceId]);
 
   // Fetch all workspaces for workspace switcher

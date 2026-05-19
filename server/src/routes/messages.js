@@ -394,7 +394,11 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
     const pushBody = content
       ? (content.length > 100 ? content.substring(0, 100) + '...' : content)
       : 'Sent an attachment';
-    const pushUrl = `/workspace/${channel.workspaceId}?channel=${req.params.channelId}`;
+    // Include the message id so the client can scroll to + highlight the
+    // specific message (ChannelView reads `?msg=` on mount). Without it, the
+    // user lands on the channel but has to hunt for the message that was
+    // notified about — which defeats the point of the notification.
+    const pushUrl = `/workspace/${channel.workspaceId}?channel=${req.params.channelId}&msg=${message.id}`;
     const pushBase = { channelId: req.params.channelId, workspaceId: channel.workspaceId, threadId: req.params.channelId };
 
     // 1. DM notifications (to other participants, unless muted)

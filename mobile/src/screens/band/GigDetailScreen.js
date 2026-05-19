@@ -559,19 +559,30 @@ export default function GigDetailScreen({ navigation, route }) {
         return;
       }
 
-      // Get a writable calendar
+      // Pick a writable calendar. On iOS, getDefaultCalendarAsync() returns
+      // whatever the user has marked as default — which for many users is a
+      // subscribed (read-only) calendar like Holidays, Birthdays, or a synced
+      // Google calendar. Writing to those throws cryptically, and the user
+      // reads "Failed to add event" as "BandChat is incompatible." So filter
+      // for `allowsModifications` and fall back to the first writable
+      // calendar if the default isn't usable.
+      const writableCalendars = (await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT))
+        .filter(c => c.allowsModifications && (c.accessLevel === 'owner' || !c.accessLevel));
+      if (writableCalendars.length === 0) {
+        Alert.alert(
+          'No writable calendar',
+          'BandChat couldn\'t find a calendar it can add events to. If you only have subscribed calendars (Google, Holidays, etc.), add a local calendar in your Calendar app first.'
+        );
+        return;
+      }
       let calendarId;
       if (Platform.OS === 'ios') {
-        const defaultCal = await Calendar.getDefaultCalendarAsync();
-        calendarId = defaultCal.id;
+        let defaultCal = null;
+        try { defaultCal = await Calendar.getDefaultCalendarAsync(); } catch { /* unavailable, fall through */ }
+        const defaultIsWritable = defaultCal && writableCalendars.some(c => c.id === defaultCal.id);
+        calendarId = defaultIsWritable ? defaultCal.id : writableCalendars[0].id;
       } else {
-        const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-        const writable = calendars.find(c => c.accessLevel === 'owner' || c.allowsModifications);
-        if (!writable) {
-          Alert.alert('Error', 'No writable calendar found on this device.');
-          return;
-        }
-        calendarId = writable.id;
+        calendarId = writableCalendars[0].id;
       }
 
       // Parse date + time (time is embedded in the datetime fields)
@@ -595,7 +606,9 @@ export default function GigDetailScreen({ navigation, route }) {
       successNotification();
       toast.success(`"${gig.title}" added to your calendar`);
     } catch (err) {
-      Alert.alert('Error', 'Failed to add event to calendar.');
+      // Surface the real error — generic "Failed to add" was unactionable
+      // for users reporting "it's like it's not compatible".
+      Alert.alert('Couldn\'t add event', err?.message || 'Failed to add event to calendar.');
     }
   }, [gig, workspaceName]);
 

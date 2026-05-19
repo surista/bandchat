@@ -767,7 +767,7 @@ router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMemb
         title: 'New Gig',
         body: pushBody,
         tag: `gig-${gig.id}`,
-        url: `/workspace/${req.params.workspaceId}`,
+        url: `/workspace/${req.params.workspaceId}?view=calendar`,
         workspaceId: req.params.workspaceId,
         threadId: req.params.workspaceId
       }, { category: 'gig', workspaceId: req.params.workspaceId });
@@ -1127,7 +1127,7 @@ router.put('/:gigId', authenticate, async (req, res) => {
         title: 'Gig Updated',
         body: pushBody,
         tag: `gig-${gig.id}`,
-        url: `/workspace/${gig.workspaceId}`,
+        url: `/workspace/${gig.workspaceId}?view=calendar`,
         workspaceId: gig.workspaceId,
         threadId: gig.workspaceId
       }, { category: 'gig', workspaceId: gig.workspaceId });
@@ -2381,7 +2381,7 @@ router.post('/:gigId/comments', authenticate, apiLimiter, async (req, res) => {
         title: 'New comment',
         body: pushBody,
         tag: `gig-comment-${gig.id}`,
-        url: `/workspace/${gig.workspaceId}`,
+        url: `/workspace/${gig.workspaceId}?view=calendar`,
         workspaceId: gig.workspaceId,
         threadId: `gig-${gig.id}`,
       }, { category: 'gig', workspaceId: gig.workspaceId })

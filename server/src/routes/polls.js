@@ -155,7 +155,7 @@ router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMemb
         title: `${req.user.displayName} created a poll`,
         body: truncatedQuestion,
         tag: `poll-${poll.id}`,
-        url: `/workspace/${req.params.workspaceId}`,
+        url: `/workspace/${req.params.workspaceId}?view=polls`,
         workspaceId: req.params.workspaceId,
         threadId: req.params.workspaceId
       }, { category: 'announcement', workspaceId: req.params.workspaceId });

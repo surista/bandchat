@@ -2,6 +2,28 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.99] - 2026-05-19
+
+### Fixed
+Two user-reported bugs:
+
+#### Notification deep-linking (Eric)
+Clicking a push notification was dumping users on the workspace shell with nothing selected — sometimes back at the band-spaces list — instead of taking them to the specific message/calendar/announcement the notification was about. Three compounding issues:
+
+1. **Message notifications didn't include the message id.** `server/src/routes/messages.js` built the URL as `/workspace/X?channel=Y` — taking the user to the channel but not scrolling to the actual message. The client (`ChannelView.jsx:58`) already reads `?msg=<id>` for deep-linking; the server just wasn't sending it. Fixed by appending `&msg=${message.id}` to the push URL.
+2. **Gig / poll / announcement / gig-comment notifications had no view hint** — all four pointed at `/workspace/X` with no further direction. Server now sends `?view=calendar` / `?view=polls` / `?view=announcements` so the right pane is selected on arrival. `WorkspaceView.jsx` now reads `?view=<name>` on mount + on workspace change (validated against the `BAND_VIEW_COMPONENTS` registry) and strips the param after 1.5s so reloads don't re-force it.
+3. **Post-login redirect dropped the query string.** `App.jsx:57` stored `from: location.pathname` and the search/hash were lost across `/login` — so a notification tapped while signed out would lose its deep-link hints. Now stores `pathname + search + hash`.
+
+#### "Calendar not compatible" (Daniel)
+Mobile **Add to Calendar** (`mobile/src/screens/band/GigDetailScreen.js`) called `Calendar.getDefaultCalendarAsync()` on iOS and used the result blindly. If the user's default calendar was a subscribed / read-only calendar (Holidays, Birthdays, a Google sync), `createEventAsync` threw and the catch block showed a generic "Failed to add event" — which read as "incompatible" to the user. Two fixes:
+
+- iOS now filters for `allowsModifications` (matching what the Android branch already did) and falls back to the first writable calendar if the default isn't writable. If nothing writable exists, the alert explains *why* and tells the user to add a local calendar.
+- The catch-block alert now surfaces the actual error message instead of a generic string, so the next person reporting it has something specific to act on.
+
+### Notes
+- Web + server changes deploy via the usual Railway/Vercel push.
+- Mobile calendar fix needs a new EAS build to reach users (no over-the-air channel configured). User is doing those locally via `npm run deploy:ios` / `npm run deploy:android`.
+
 ## [1.06.98] - 2026-05-19
 
 ### Changed
