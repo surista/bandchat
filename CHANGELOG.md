@@ -2,6 +2,15 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.06.98] - 2026-05-19
+
+### Changed
+- **Audio file upload limit raised 30MB → 50MB**, matching the video cap. Multer's underlying `fileSize` cap was already 50MB (driven by `MAX_VIDEO_SIZE`), so the audio-specific check was the only thing holding the limit back. Updated:
+  - `server/src/routes/uploads.js` — `MAX_AUDIO_SIZE` constant + the LIMIT_FILE_SIZE error message.
+  - `client/src/utils/fileValidation.js` — `MAX_AUDIO_SIZE` constant + matching test.
+  - `CLAUDE.md` — feature description.
+- Mobile has no client-side audio size cap; it trusts the server, so it picks up the new limit automatically with no app build needed.
+
 ## [1.06.97] - 2026-05-18
 
 ### Added — Personal song notes + Word setlist export (web only)

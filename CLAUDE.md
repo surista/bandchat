@@ -183,7 +183,7 @@ bandchat/
 
 ### Key Features
 - Real-time messaging with channels, DMs, threads, reactions, voice messages, and saved messages (bookmarks)
-- File/image (15MB, iPhone HEIC auto-transcoded to JPEG)/audio (30MB)/video (50MB) sharing with auto-generated thumbnails, link previews (dismissible by author), and photo gallery (up to 5 attachments per message)
+- File/image (15MB, iPhone HEIC auto-transcoded to JPEG)/audio (50MB)/video (50MB) sharing with auto-generated thumbnails, link previews (dismissible by author), and photo gallery (up to 5 attachments per message)
 - Stage plot editor with drag-and-drop equipment icons, text labels, and PDF export (web + mobile)
 - Song repertoire with bulk import, async metadata enrichment (iTunes/Spotify/Deezer/YouTube/SongBPM), and lyrics
 - Drag-and-drop setlist builder with MC sections, medleys, and PDF export

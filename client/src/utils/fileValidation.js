@@ -4,7 +4,7 @@
 
 /** Maximum file size for uploads */
 export const MAX_IMAGE_SIZE = 15 * 1024 * 1024; // 15MB
-export const MAX_AUDIO_SIZE = 30 * 1024 * 1024; // 30MB
+export const MAX_AUDIO_SIZE = 50 * 1024 * 1024; // 50MB
 export const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
 export const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024; // 10MB
 

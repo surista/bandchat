@@ -68,7 +68,7 @@ const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_AUDIO_TYPES, ...ALLOWE
 
 // File size limits
 const MAX_IMAGE_SIZE = 15 * 1024 * 1024; // 15MB
-const MAX_AUDIO_SIZE = 30 * 1024 * 1024; // 30MB
+const MAX_AUDIO_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -411,7 +411,7 @@ router.post('/multiple', authenticate, uploadLimiter, upload.array('files', 5), 
 router.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'File size exceeds limit (15MB images, 10MB documents/ZIP, 30MB audio, 50MB video)' });
+      return res.status(400).json({ error: 'File size exceeds limit (15MB images, 10MB documents/ZIP, 50MB audio, 50MB video)' });
     }
     return res.status(400).json({ error: error.message });
   }
