@@ -1,11 +1,18 @@
-require('dotenv').config();
+// Anchor dotenv to the file's directory rather than process.cwd().
+// `eas build --local` evaluates app.config.js in a context where cwd
+// isn't guaranteed to be the mobile/ directory, so the default lookup
+// can silently miss .env — which manifested as GOOGLE_IOS_CLIENT_ID
+// being undefined and Google Sign-In failing with a cryptic
+// "GoogleService-Info.plist was not found" error (the user-visible
+// symptom in v1.06.99–v1.07.01 production builds).
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
 export default {
   expo: {
     name: 'BandChat',
     slug: 'bandchat',
     scheme: 'bandchat',
-    version: '1.07.01',
+    version: '1.07.02',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
@@ -23,7 +30,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.bandchat.mobile',
-      buildNumber: '10701',
+      buildNumber: '10702',
       associatedDomains: ['applinks:bandchat.vercel.app'],
       entitlements: {
         'com.apple.security.application-groups': ['group.com.bandchat.manager.mobile'],
@@ -50,7 +57,7 @@ export default {
     android: {
       package: 'com.bandchat.mobile',
       softwareKeyboardLayoutMode: 'resize',
-      versionCode: 10701,
+      versionCode: 10702,
       allowBackup: false,
       predictiveBackGestureEnabled: true,
       adaptiveIcon: {

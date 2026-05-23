@@ -2,6 +2,15 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.02] - 2026-05-24
+
+### Fixed
+- **`GOOGLE_IOS_CLIENT_ID` silently undefined in production iOS builds.** Real root cause of the cryptic "GoogleService-Info.plist was not found" error that v1.07.01 added user-facing messaging for. `mobile/app.config.js:1` called `require('dotenv').config()` with no `path` option, which resolves `.env` relative to `process.cwd()`. When `eas build --platform ios --profile production --local` evaluates `app.config.js`, the cwd isn't guaranteed to be `mobile/` — so dotenv silently missed `.env`, `process.env.GOOGLE_IOS_CLIENT_ID` was undefined at config-eval time, `extra.googleIosClientId` was baked into the native bundle as undefined, and `GoogleSignin.configure()` had nothing to use. The `EXPO_PUBLIC_*` vars in the same `.env` were unaffected because Metro / Expo's bundler picks those up via its own mechanism — that's the breadcrumb that made this confusing to diagnose (API URL worked, Google didn't, same `.env` file). Fix: anchor dotenv to `__dirname`:
+  ```js
+  require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+  ```
+  Verified locally: dotenv loads 4 vars (`GOOGLE_IOS_CLIENT_ID`, `GOOGLE_CLIENT_ID`, `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_SOCKET_URL`) regardless of cwd.
+
 ## [1.07.01] - 2026-05-24
 
 ### Fixed
