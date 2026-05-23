@@ -29,6 +29,12 @@ import api from '../../services/api';
 import { errorNotification } from '../../utils/haptics';
 import { useLayout } from '../../hooks/useLayout';
 
+// See LoginScreen — hide the Link Google button when the build wasn't
+// configured with a Google OAuth client ID for this platform.
+const GOOGLE_SIGN_IN_AVAILABLE =
+  (Platform.OS === 'ios' && !!Constants.expoConfig?.extra?.googleIosClientId) ||
+  (Platform.OS === 'android' && !!Constants.expoConfig?.extra?.googleWebClientId);
+
 export default function SecurityScreen() {
   const { user, updateUser, logout, biometricEnabled, setBiometricEnabled } = useAuth()
   const { isTablet, contentMaxWidth } = useLayout();
@@ -70,6 +76,7 @@ export default function SecurityScreen() {
   }, []);
 
   useEffect(() => {
+    if (!GOOGLE_SIGN_IN_AVAILABLE) return;
     GoogleSignin.configure({
       webClientId: Constants.expoConfig?.extra?.googleWebClientId,
       iosClientId: Constants.expoConfig?.extra?.googleIosClientId,
@@ -77,6 +84,10 @@ export default function SecurityScreen() {
   }, []);
 
   const handleLinkGoogle = useCallback(async () => {
+    if (!GOOGLE_SIGN_IN_AVAILABLE) {
+      Alert.alert('Not available', 'Google Sign-In isn\'t configured in this build.');
+      return;
+    }
     setLinkingGoogle(true);
     try {
       if (Platform.OS === 'android') {
@@ -91,11 +102,15 @@ export default function SecurityScreen() {
     } catch (error) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) return;
       if (error.code === statusCodes.IN_PROGRESS) return;
-      Alert.alert('Error', error.message || 'Failed to link Google account');
+      if (error.message?.includes('determine clientID') || error.message?.includes('GoogleService-Info')) {
+        Alert.alert('Not available', 'Google Sign-In isn\'t configured in this build.');
+      } else {
+        Alert.alert('Error', error.message || 'Failed to link Google account');
+      }
     } finally {
       setLinkingGoogle(false);
     }
-  }, [updateUser]);
+  }, [updateUser, toast]);
 
   const handleLinkApple = useCallback(async () => {
     setLinkingApple(true);
@@ -310,25 +325,10 @@ export default function SecurityScreen() {
             <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Sign-in methods</Text>
             <Text style={[styles.infoValue, { color: colors.textPrimary }]}>{getProviderLabel()}</Text>
           </View>
-          {!hasGoogle && (
-            <TouchableOpacity
-              style={[styles.outlineButton, { borderColor: colors.border }]}
-              onPress={handleLinkGoogle}
-              disabled={linkingGoogle}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Link Google account"
-            >
-              {linkingGoogle ? (
-                <ActivityIndicator color={colors.textPrimary} size="small" />
-              ) : (
-                <Text style={[styles.outlineButtonText, { color: colors.textPrimary }]}>Link Google Account</Text>
-              )}
-            </TouchableOpacity>
-          )}
+          {/* Apple first on iOS for App Store consistency with Login/Signup. */}
           {!hasApple && Platform.OS === 'ios' && (
             <TouchableOpacity
-              style={[styles.outlineButton, { borderColor: colors.border, marginTop: 8 }]}
+              style={[styles.outlineButton, { borderColor: colors.border }]}
               onPress={handleLinkApple}
               disabled={linkingApple}
               activeOpacity={0.7}
@@ -339,6 +339,22 @@ export default function SecurityScreen() {
                 <ActivityIndicator color={colors.textPrimary} size="small" />
               ) : (
                 <Text style={[styles.outlineButtonText, { color: colors.textPrimary }]}>Link Apple Account</Text>
+              )}
+            </TouchableOpacity>
+          )}
+          {!hasGoogle && (
+            <TouchableOpacity
+              style={[styles.outlineButton, { borderColor: colors.border, marginTop: (!hasApple && Platform.OS === 'ios') ? 8 : 0 }]}
+              onPress={handleLinkGoogle}
+              disabled={linkingGoogle}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Link Google account"
+            >
+              {linkingGoogle ? (
+                <ActivityIndicator color={colors.textPrimary} size="small" />
+              ) : (
+                <Text style={[styles.outlineButtonText, { color: colors.textPrimary }]}>Link Google Account</Text>
               )}
             </TouchableOpacity>
           )}

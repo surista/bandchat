@@ -22,6 +22,14 @@ import { APP_BASE_URL } from '../../utils/constants';
 import { useLayout } from '../../hooks/useLayout';
 import PressableRow from '../../components/PressableRow';
 
+// See LoginScreen — used to skip configure() and map the SDK's cryptic
+// "GoogleService-Info.plist was not found" error to a clean user-facing
+// message. The button is always shown; the build must set
+// GOOGLE_IOS_CLIENT_ID / GOOGLE_CLIENT_ID for it to actually work.
+const GOOGLE_SIGN_IN_AVAILABLE =
+  (Platform.OS === 'ios' && !!Constants.expoConfig?.extra?.googleIosClientId) ||
+  (Platform.OS === 'android' && !!Constants.expoConfig?.extra?.googleWebClientId);
+
 export default function SignupScreen({ navigation }) {
   const { signup, googleLogin, appleLogin } = useAuth()
   const { isTablet, contentMaxWidth } = useLayout();
@@ -36,6 +44,7 @@ export default function SignupScreen({ navigation }) {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   useEffect(() => {
+    if (!GOOGLE_SIGN_IN_AVAILABLE) return;
     GoogleSignin.configure({
       webClientId: Constants.expoConfig?.extra?.googleWebClientId,
       iosClientId: Constants.expoConfig?.extra?.googleIosClientId,
@@ -43,6 +52,10 @@ export default function SignupScreen({ navigation }) {
   }, []);
 
   const handleGoogleSignIn = async () => {
+    if (!GOOGLE_SIGN_IN_AVAILABLE) {
+      setError('Google Sign-In isn\'t configured in this build. Please use email or Apple, or contact support.');
+      return;
+    }
     try {
       if (Platform.OS === 'android') {
         await GoogleSignin.hasPlayServices();
@@ -56,6 +69,8 @@ export default function SignupScreen({ navigation }) {
       if (error.code === statusCodes.IN_PROGRESS) return;
       if (error.message?.includes('ACCOUNT_EXISTS') || error.response?.data?.code === 'ACCOUNT_EXISTS') {
         setError('This email is already registered. Please sign in with your password.');
+      } else if (error.message?.includes('determine clientID') || error.message?.includes('GoogleService-Info')) {
+        setError('Google Sign-In isn\'t configured in this build. Please use email or Apple.');
       } else {
         setError(error.message || 'Google sign-in failed');
       }
@@ -265,6 +280,19 @@ export default function SignupScreen({ navigation }) {
               <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
             </View>
 
+            {/* Apple first on iOS — App Store Guideline 4.8 wants Sign in
+                with Apple offered with equivalent prominence to any other
+                third-party login; convention is to put it on top. */}
+            {Platform.OS === 'ios' && (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={8}
+                style={styles.appleButton}
+                onPress={handleAppleSignIn}
+              />
+            )}
+
             <TouchableOpacity
               onPress={handleGoogleSignIn}
               style={[styles.socialButton, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
@@ -275,16 +303,6 @@ export default function SignupScreen({ navigation }) {
                 Sign up with Google
               </Text>
             </TouchableOpacity>
-
-            {Platform.OS === 'ios' && (
-              <AppleAuthentication.AppleAuthenticationButton
-                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_UP}
-                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                cornerRadius={8}
-                style={styles.appleButton}
-                onPress={handleAppleSignIn}
-              />
-            )}
           </View>
 
           <View style={styles.footer}>

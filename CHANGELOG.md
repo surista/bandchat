@@ -2,6 +2,16 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.01] - 2026-05-24
+
+### Fixed
+- **Cryptic Google Sign-In error shown on the iOS login screen.** When a build was compiled without `GOOGLE_IOS_CLIENT_ID` set, `GoogleSignin.configure()` threw `"RNGoogleSignin: failed to determine clientID — GoogleService-Info.plist was not found and iosClientId was not provided"` and the raw SDK message landed in the login screen's error banner. Two fixes:
+  1. `LoginScreen.js`, `SignupScreen.js`, `SecurityScreen.js` now skip the `configure()` call when the platform's client ID is missing (no more boot-time warning).
+  2. Tapping the Google button (or the catch block intercepting the raw error) now shows a clear *"Google Sign-In isn't configured in this build. Please use email or Apple."* instead of the SDK's internal message. The Google button stays visible — fix on the build side is to set `GOOGLE_IOS_CLIENT_ID` (and `GOOGLE_CLIENT_ID` for Android) in `mobile/.env` (local) or the EAS env (production) and rebuild.
+
+### Changed
+- **Apple Sign-In moved above Google on iOS** in `LoginScreen`, `SignupScreen`, and `SecurityScreen` (Link Account section). App Store Guideline 4.8 requires Sign in with Apple to be offered with equivalent prominence to any other third-party login when both are present; convention is to place Apple first.
+
 ## [1.07.00] - 2026-05-23
 
 ### Fixed

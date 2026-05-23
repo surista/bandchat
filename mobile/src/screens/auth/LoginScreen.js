@@ -21,6 +21,17 @@ import { APP_BASE_URL } from '../../utils/constants';
 import { useLayout } from '../../hooks/useLayout';
 import PressableRow from '../../components/PressableRow';
 
+// Whether the build was compiled with the right Google OAuth client ID for
+// this platform. Used to skip the configure() call on mount (which would
+// otherwise warn) and to swap the raw SDK error ("GoogleService-Info.plist
+// was not found...") for a clean user-facing message if someone taps Google
+// before the env is set. We deliberately still SHOW the button — Google
+// Sign-In is a required option, and the fix is to set GOOGLE_IOS_CLIENT_ID
+// (or GOOGLE_CLIENT_ID for Android) in mobile/.env / EAS env and rebuild.
+const GOOGLE_SIGN_IN_AVAILABLE =
+  (Platform.OS === 'ios' && !!Constants.expoConfig?.extra?.googleIosClientId) ||
+  (Platform.OS === 'android' && !!Constants.expoConfig?.extra?.googleWebClientId);
+
 export default function LoginScreen({ navigation }) {
   const { login, googleLogin, appleLogin } = useAuth()
   const { isTablet, contentMaxWidth } = useLayout();
@@ -32,6 +43,7 @@ export default function LoginScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
+    if (!GOOGLE_SIGN_IN_AVAILABLE) return;
     GoogleSignin.configure({
       webClientId: Constants.expoConfig?.extra?.googleWebClientId,
       iosClientId: Constants.expoConfig?.extra?.googleIosClientId,
@@ -39,6 +51,10 @@ export default function LoginScreen({ navigation }) {
   }, []);
 
   const handleGoogleSignIn = async () => {
+    if (!GOOGLE_SIGN_IN_AVAILABLE) {
+      setError('Google Sign-In isn\'t configured in this build. Please use email or Apple, or contact support.');
+      return;
+    }
     try {
       if (Platform.OS === 'android') {
         await GoogleSignin.hasPlayServices();
@@ -52,6 +68,10 @@ export default function LoginScreen({ navigation }) {
       if (error.code === statusCodes.IN_PROGRESS) return;
       if (error.message?.includes('ACCOUNT_EXISTS') || error.response?.data?.code === 'ACCOUNT_EXISTS') {
         setError('This email is already registered. Please sign in with your password.');
+      } else if (error.message?.includes('determine clientID') || error.message?.includes('GoogleService-Info')) {
+        // SDK's raw error when the build lacks GOOGLE_IOS_CLIENT_ID; swap
+        // for something a user can actually act on.
+        setError('Google Sign-In isn\'t configured in this build. Please use email or Apple.');
       } else {
         setError(error.message || 'Google sign-in failed');
       }
@@ -205,6 +225,19 @@ export default function LoginScreen({ navigation }) {
               <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
             </View>
 
+            {/* Apple first on iOS — App Store Guideline 4.8 wants Sign in
+                with Apple offered with equivalent prominence to any other
+                third-party login; convention is to put it on top. */}
+            {Platform.OS === 'ios' && (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={8}
+                style={styles.appleButton}
+                onPress={handleAppleSignIn}
+              />
+            )}
+
             <TouchableOpacity
               onPress={handleGoogleSignIn}
               style={[styles.socialButton, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
@@ -215,16 +248,6 @@ export default function LoginScreen({ navigation }) {
                 Sign in with Google
               </Text>
             </TouchableOpacity>
-
-            {Platform.OS === 'ios' && (
-              <AppleAuthentication.AppleAuthenticationButton
-                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                cornerRadius={8}
-                style={styles.appleButton}
-                onPress={handleAppleSignIn}
-              />
-            )}
           </View>
 
           <View style={styles.footer}>
