@@ -2,6 +2,11 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.03] - 2026-05-24
+
+### Fixed
+- **Google Sign-In: actually fixed this time** (the v1.07.02 dotenv-path fix was necessary but not sufficient). Root cause turned out to be more interesting: Expo's bundler auto-loads `EXPO_PUBLIC_*` vars from `.env` via its own mechanism (which is why `EXPO_PUBLIC_API_URL` kept working in production builds despite `.env` being gitignored), but it ignores any non-prefixed vars. `GOOGLE_IOS_CLIENT_ID` / `GOOGLE_CLIENT_ID` therefore only reached `app.config.js` via the explicit `require('dotenv').config()` — and even after anchoring dotenv to `__dirname` in v1.07.02, the file simply wasn't present in EAS's evaluation context (gitignore was excluding it from the tarball). Fix: move the four env vars (Google IDs + the two `EXPO_PUBLIC_*` URLs, for belt-and-suspenders) into `mobile/eas.json` under `build.production.env`. EAS injects these directly into `process.env` at build time, completely bypassing `.env`-file-presence concerns. The iOS OAuth client ID is not a secret — it ships in the IPA and is visible to anyone who unzips it — so committing it to `eas.json` has the same risk profile as shipping the app.
+
 ## [1.07.02] - 2026-05-24
 
 ### Fixed

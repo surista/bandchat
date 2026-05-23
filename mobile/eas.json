@@ -10,7 +10,14 @@
     "preview": {
       "distribution": "internal"
     },
-    "production": {}
+    "production": {
+      "env": {
+        "GOOGLE_IOS_CLIENT_ID": "593748138665-mj9t4cr0ah5uuj1ib2o3lsv1lvmt1s8v.apps.googleusercontent.com",
+        "GOOGLE_CLIENT_ID": "593748138665-kd4ugsbjd6eogsjug268ds6sk6gpsq37.apps.googleusercontent.com",
+        "EXPO_PUBLIC_API_URL": "https://bandchat-production.up.railway.app/api",
+        "EXPO_PUBLIC_SOCKET_URL": "https://bandchat-production.up.railway.app"
+      }
+    }
   },
   "submit": {
     "production": {
