@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 import { useLayout } from '../../hooks/useLayout';
 import { successNotification, selectionFeedback } from '../../utils/haptics';
 import { APP_BASE_URL } from '../../utils/constants';
@@ -40,6 +41,7 @@ const SUGGESTED_CHANNELS = [
 export default function OnboardingWizardScreen({ navigation }) {
   const { colors } = useTheme();
   const toast = useToast();
+  const { logout } = useAuth();
   const { isTablet, contentMaxWidth } = useLayout();
 
   const [step, setStep] = useState('name');
@@ -67,7 +69,32 @@ export default function OnboardingWizardScreen({ navigation }) {
   // --- Close handler ---
   const handleClose = useCallback(() => {
     if (!workspace) {
-      navigation.goBack();
+      // Two ways to land here without a workspace yet:
+      //   (a) user opened the wizard voluntarily from WorkspaceListScreen
+      //       ("Create Workspace") — there's a back stack, just pop.
+      //   (b) brand-new account auto-routed here from WorkspaceListScreen
+      //       via navigation.replace() — there is no back stack and
+      //       goBack() silently does nothing. Common case: user signed in
+      //       with the wrong provider (Apple/Google by mistake) and the
+      //       resulting new account dumped them straight into onboarding
+      //       with no escape. Offer to sign out so they can return to the
+      //       login screen.
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+        return;
+      }
+      Alert.alert(
+        'Cancel setup?',
+        'You\'ll be signed out and returned to the login screen.',
+        [
+          { text: 'Keep going', style: 'cancel' },
+          {
+            text: 'Sign out',
+            style: 'destructive',
+            onPress: () => { logout().catch(() => {}); },
+          },
+        ]
+      );
       return;
     }
     Alert.alert(
@@ -82,7 +109,7 @@ export default function OnboardingWizardScreen({ navigation }) {
         },
       ]
     );
-  }, [workspace, navigation]);
+  }, [workspace, navigation, logout]);
 
   // Android hardware back button
   useEffect(() => {

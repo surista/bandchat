@@ -2,6 +2,11 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.00] - 2026-05-23
+
+### Fixed
+- **Mobile: no escape from the onboarding wizard for first-time accounts.** If a user accidentally signed in with the wrong provider (e.g. tapped Apple instead of Google) a fresh account was created, and `WorkspaceListScreen.js:46` auto-routed them into `OnboardingWizardScreen` via `navigation.replace()`. The wizard's X-button called `navigation.goBack()`, which silently did nothing because there was no back stack — so the user was trapped, unable to return to the login screen without killing the app. Fix: when there's no workspace yet *and* `navigation.canGoBack()` is false, the X-button now prompts "Cancel setup? You'll be signed out and returned to the login screen" with a Sign out option that calls `useAuth().logout()`. The voluntary-entry path (workspace list → Create Workspace, where there *is* a back stack) is unchanged. Web isn't affected — `WorkspaceList.jsx:97` already shows a Sign Out button in the header.
+
 ## [1.06.99] - 2026-05-19
 
 ### Fixed
