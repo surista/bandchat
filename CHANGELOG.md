@@ -2,6 +2,11 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.04] - 2026-05-24
+
+### Fixed
+- **Website settings: "Upgrade Template" falsely offered when the band repo's version was *ahead* of the template repo.** `WebsiteTab.jsx` was comparing template versions with `!==` and treating any difference as an upgrade — so a band repo at `v1.3.1` would see a yellow "→ upgrade available: v1.3.0" prompt against a template repo at `v1.3.0`, and clicking the button would silently downgrade the site. The inline code comment literally said "*When `latest > band`, surface the Upgrade Template button*" but the implementation didn't match the intent. Fix: added a dotted-numeric `compareSemver()` helper, and the three render branches now use proper greater/equal/less comparisons. New "ahead of template (latest published: vX)" informational state when the band is locally ahead.
+
 ## [1.07.03] - 2026-05-24
 
 ### Fixed

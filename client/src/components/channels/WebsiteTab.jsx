@@ -9,6 +9,22 @@ import { useToast } from '../../context/ToastContext';
 import ConfirmDialog from '../common/ConfirmDialog';
 import Modal from '../common/Modal';
 
+// Tiny dotted-numeric version compare ("1.3.10" vs "1.3.2"). Returns positive
+// if a > b, negative if a < b, 0 if equal. Used to decide whether the band's
+// repo is behind, ahead of, or current with the template. The previous
+// implementation just checked `latest !== band` and called any difference an
+// "upgrade" — which falsely flagged template downgrades (e.g. band at
+// v1.3.1 locally, template at v1.3.0) as upgrades.
+function compareSemver(a, b) {
+  const pa = String(a || '').split('.').map(n => parseInt(n, 10) || 0);
+  const pb = String(b || '').split('.').map(n => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const diff = (pa[i] || 0) - (pb[i] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
 const THEMES = [
   { id: 'rock', label: 'Rock', bg: '#0a0a0a', accent: '#e81c2e', accent2: '#ff5722', desc: 'Bold & high energy' },
   { id: 'grunge', label: 'Grunge', bg: '#1a1611', accent: '#a63c2e', accent2: '#bfa84f', desc: 'Raw & textured' },
@@ -442,30 +458,39 @@ export default function WebsiteTab({ workspace }) {
           )}
           {/* Template version + upgrade affordance. Each band's repo is a
               point-in-time clone of the template, so Sync alone doesn't pull
-              new template features. When `latest > band`, surface the
-              Upgrade Template button. */}
-          {templateVersion.band && (
-            <div className="mt-3 pt-3 border-t border-[var(--color-modal-border)] flex items-center gap-3 flex-wrap">
-              <span className="text-xs text-[var(--color-text-muted)]">
-                Template: <code className="text-[var(--color-text-secondary)]">v{templateVersion.band}</code>
-                {templateVersion.latest && templateVersion.latest !== templateVersion.band && (
-                  <span className="text-yellow-400"> → upgrade available: v{templateVersion.latest}</span>
+              new template features. Compare by semver, not equality, so we
+              don't offer a "downgrade" disguised as an upgrade when the band
+              repo's version is locally ahead of the template. */}
+          {templateVersion.band && (() => {
+            const cmp = templateVersion.latest
+              ? compareSemver(templateVersion.latest, templateVersion.band)
+              : null;
+            return (
+              <div className="mt-3 pt-3 border-t border-[var(--color-modal-border)] flex items-center gap-3 flex-wrap">
+                <span className="text-xs text-[var(--color-text-muted)]">
+                  Template: <code className="text-[var(--color-text-secondary)]">v{templateVersion.band}</code>
+                  {cmp !== null && cmp > 0 && (
+                    <span className="text-yellow-400"> → upgrade available: v{templateVersion.latest}</span>
+                  )}
+                  {cmp === 0 && (
+                    <span className="text-green-400"> · up to date</span>
+                  )}
+                  {cmp !== null && cmp < 0 && (
+                    <span className="text-[var(--color-text-muted)]"> · ahead of template (latest published: v{templateVersion.latest})</span>
+                  )}
+                </span>
+                {cmp !== null && cmp > 0 && (
+                  <button
+                    onClick={handleUpgradeTemplate}
+                    disabled={upgrading}
+                    className="text-xs px-3 py-1.5 rounded bg-yellow-600/20 text-yellow-300 hover:bg-yellow-600/30 disabled:opacity-50"
+                  >
+                    {upgrading ? 'Upgrading…' : 'Upgrade Template'}
+                  </button>
                 )}
-                {templateVersion.latest && templateVersion.latest === templateVersion.band && (
-                  <span className="text-green-400"> · up to date</span>
-                )}
-              </span>
-              {templateVersion.latest && templateVersion.latest !== templateVersion.band && (
-                <button
-                  onClick={handleUpgradeTemplate}
-                  disabled={upgrading}
-                  className="text-xs px-3 py-1.5 rounded bg-yellow-600/20 text-yellow-300 hover:bg-yellow-600/30 disabled:opacity-50"
-                >
-                  {upgrading ? 'Upgrading…' : 'Upgrade Template'}
-                </button>
-              )}
-            </div>
-          )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Actions */}
