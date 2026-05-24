@@ -115,7 +115,7 @@ const MessageRow = memo(function MessageRow({
 });
 
 export default function ChannelScreen({ navigation, route }) {
-  const { channel, workspaceId, _splitPane: splitPane = false } = route.params;
+  const { channel, workspaceId, _splitPane: splitPane = false, openThreadId = null } = route.params;
   const { user } = useAuth();
   const { colors } = useTheme();
   const { socket, joinChannel, leaveChannel, startTyping, stopTyping } = useSocket();
@@ -131,6 +131,22 @@ export default function ChannelScreen({ navigation, route }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState(null);
+
+  // Auto-open thread when arriving from a thread-reply notification
+  // (App.js passes openThreadId from the push URL's &thread= param). Waits
+  // for messages to load so we can resolve the parent message object, then
+  // pushes ThreadScreen onto the stack. Guarded by a ref so it only fires
+  // once per mount — otherwise re-renders during message updates would
+  // re-navigate.
+  const threadAutoOpenedRef = useRef(false);
+  useEffect(() => {
+    if (!openThreadId || threadAutoOpenedRef.current) return;
+    if (!messages.length) return;
+    const parent = messages.find(m => m.id === openThreadId);
+    if (!parent) return;
+    threadAutoOpenedRef.current = true;
+    navigation.navigate('Thread', { parentMessage: parent, channelId: channel.id, workspaceId });
+  }, [openThreadId, messages.length, navigation, channel.id, workspaceId]);
   const [typingUsers, setTypingUsers] = useState([]);
   const [pinnedSetlist, setPinnedSetlist] = useState(channel.pinnedSetlist || null);
   const [setlistExpanded, setSetlistExpanded] = useState(false);

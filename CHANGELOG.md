@@ -2,6 +2,15 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.05] - 2026-05-25
+
+### Fixed
+- **Tapping an iOS notification for a thread reply dropped users in the channel without opening the thread.** Reported by Simon. Root cause: the server's thread-reply push URL was `?channel=Y&msg=<replyId>` with no thread context, so the client couldn't tell the difference between a top-level message notification and a thread reply. The reply id lived nested in a thread, not in the channel's top-level messages, so any attempt to highlight it failed silently.
+  - **Server (`messages.js`):** thread-reply push URL now includes `&thread=<parentId>`. Top-level message notifications keep the existing `?channel=Y&msg=<id>` shape.
+  - **Mobile (`App.js`):** parses `thread` from the notification URL and passes it through to `ChannelScreen` as `openThreadId`. **`ChannelScreen.js`:** new effect — once messages load, finds the parent message and pushes `ThreadScreen` onto the navigation stack (guarded by a ref so re-renders don't re-navigate). Back from Thread → Channel → workspace list, as expected.
+  - **Web (`ChannelView.jsx`):** reads `?thread=` symmetric to `?msg=`, calls `onOpenThread(parent)` once messages load (same ref-guard pattern), then strips the param from the URL so a refresh doesn't re-trigger.
+- Note: still pending Simon-side diagnostic on the "1 reply" badge missing under parent messages (Bug 1 from the same report). Asked him to pull-to-refresh next time it happens; will diagnose further once we know if it's a missed real-time event vs. a stale-data issue.
+
 ## [1.07.04] - 2026-05-24
 
 ### Fixed

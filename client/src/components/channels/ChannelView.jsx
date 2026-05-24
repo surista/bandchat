@@ -56,6 +56,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   const isAdmin = useIsAdmin(workspace);
   const [searchParams, setSearchParams] = useSearchParams();
   const highlightMessageId = searchParams.get('msg') || null;
+  const autoOpenThreadId = searchParams.get('thread') || null;
 
   // Clear the msg param after reading so it doesn't persist on navigation
   useEffect(() => {
@@ -71,6 +72,27 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       return () => clearTimeout(timer);
     }
   }, [highlightMessageId, setSearchParams]);
+
+  // Auto-open thread view when arriving from a thread-reply notification
+  // (server includes ?thread=<parentId> in the push URL). Waits for messages
+  // to load so we can resolve the parent message object, then calls
+  // onOpenThread once. Guarded by a ref so message-list re-renders don't
+  // re-trigger the open. The msg= param is preserved so ThreadView can
+  // scroll to/highlight the specific reply within the thread.
+  const threadAutoOpenedRef = useRef(false);
+  useEffect(() => {
+    if (!autoOpenThreadId || threadAutoOpenedRef.current) return;
+    if (!messages.length) return;
+    const parent = messages.find(m => m.id === autoOpenThreadId);
+    if (!parent) return;
+    threadAutoOpenedRef.current = true;
+    onOpenThread?.(parent);
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.delete('thread');
+      return next;
+    }, { replace: true });
+  }, [autoOpenThreadId, messages, onOpenThread, setSearchParams]);
 
   const lastReadAtRef = useRef(null);
   const descriptionSavedRef = useRef(false);

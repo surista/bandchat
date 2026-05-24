@@ -514,6 +514,13 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
         : [];
       const mutedParticipants = new Set(participantMutes.filter(m => m.muted).map(m => m.userId));
 
+      // Thread-reply notifications need to deep-link into the thread view,
+      // not just the channel. Without &thread=<parentId>, tapping the
+      // notification lands the user in the channel and they can't see the
+      // reply (which lives nested in a thread, not in the channel's
+      // top-level messages). The reply's `msg` is preserved for highlight
+      // within the thread view.
+      const threadPushUrl = `${pushUrl}&thread=${parentId}`;
       for (const userId of participantIds) {
         if (notifiedUserIds.has(userId) || mutedParticipants.has(userId)) continue;
         notifiedUserIds.add(userId);
@@ -521,7 +528,7 @@ router.post('/channel/:channelId', authenticate, messageLimiter, isChannelMember
           title: `Thread reply in #${channel.name}`,
           body: `${req.user.displayName}: ${pushBody}`,
           tag: `thread-${parentId}`,
-          url: pushUrl,
+          url: threadPushUrl,
           ...pushBase,
           threadId: parentId, // Group thread replies together on iOS
         }, { category: 'mention', workspaceId: channel.workspaceId });

@@ -153,12 +153,27 @@ function AppContent() {
       if (data?.workspaceId && data?.channelId && navigationRef.current) {
         // Sync badge with server after tapping notification (iOS HIG: badge = actual unread)
         notificationService.syncBadgeWithServer();
+
+        // Thread-reply notifications include &thread=<parentId> in the URL
+        // so we can deep-link the user into the thread view, not just the
+        // channel. Without this, tapping a thread-reply notification lands
+        // the user in the channel and they can't see the reply (which lives
+        // nested in a thread). Parse it out and pass through to ChannelScreen
+        // which auto-opens the thread on mount.
+        let openThreadId = null;
+        if (data.url) {
+          try {
+            const u = new URL(data.url, 'https://placeholder');
+            openThreadId = u.searchParams.get('thread') || null;
+          } catch { /* malformed url, no-op */ }
+        }
+
         navigationRef.current.navigate('Workspace', { id: data.workspaceId, name: data.workspaceName || 'Workspace' });
         try {
           const channel = await api.getChannel(data.channelId);
           const channelData = await prepareChannelForNav(channel);
           setTimeout(() => {
-            navigationRef.current.navigate('Channel', { channel: channelData, workspaceId: data.workspaceId });
+            navigationRef.current.navigate('Channel', { channel: channelData, workspaceId: data.workspaceId, openThreadId });
           }, 300);
         } catch {
           // Fallback: stay on workspace screen
