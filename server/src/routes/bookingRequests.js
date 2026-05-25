@@ -1,32 +1,39 @@
 import express from 'express';
 import prisma from '../lib/prisma.js';
 import { authenticate, isWorkspaceAdmin } from '../middleware/auth.js';
-import { publicFormLimiter } from '../middleware/rateLimit.js';
+import { publicFormLimiter, publicLookupLimiter } from '../middleware/rateLimit.js';
 
 const router = express.Router();
 
 // ─────────────────────────────────────────────────────────────────────────
 // Public endpoints (no auth) — keyed by workspace slug, not UUID, so the
 // public-facing URL stays readable (`/book/the-band-name`).
-// publicFormLimiter caps at 20 submissions per hour per IP.
+//
+// Workspaces must explicitly opt in by setting `bookingEnabled = true`. The
+// slug alone is not enough, because many workspaces have a slug for the
+// public show page feature and shouldn't automatically become bookable.
+// publicLookupLimiter caps the GET at 60/hour/IP and publicFormLimiter caps
+// submissions at 20/hour/IP — together they make slug enumeration both
+// slow and useless without the opt-in flag.
 // ─────────────────────────────────────────────────────────────────────────
 
 /**
  * GET /api/bookings/public/:slug
  *
- * Returns minimal band info so the form can display the band name and a
- * "you're booking <bandName>" header. Returns 404 if the slug doesn't match
- * any workspace — doesn't reveal whether the workspace exists internally
- * vs. has just decided not to accept bookings, to avoid leaking workspace
- * existence by slug enumeration.
+ * Returns minimal band info so the form can display the band name. Returns
+ * the SAME 404 whether the workspace doesn't exist, exists with a different
+ * slug, or exists but hasn't enabled bookings — slug enumeration cannot
+ * distinguish these cases.
  */
-router.get('/public/:slug', async (req, res) => {
+router.get('/public/:slug', publicLookupLimiter, async (req, res) => {
   try {
     const workspace = await prisma.workspace.findUnique({
       where: { slug: req.params.slug },
-      select: { id: true, name: true, avatarUrl: true },
+      select: { id: true, name: true, avatarUrl: true, bookingEnabled: true },
     });
-    if (!workspace) return res.status(404).json({ error: 'Booking page not found' });
+    if (!workspace || !workspace.bookingEnabled) {
+      return res.status(404).json({ error: 'Booking page not found' });
+    }
     res.json({ bandName: workspace.name, avatarUrl: workspace.avatarUrl });
   } catch (error) {
     console.error('Get public booking page error:', error);
@@ -66,9 +73,11 @@ router.post('/public/:slug', publicFormLimiter, async (req, res) => {
 
     const workspace = await prisma.workspace.findUnique({
       where: { slug: req.params.slug },
-      select: { id: true },
+      select: { id: true, bookingEnabled: true },
     });
-    if (!workspace) return res.status(404).json({ error: 'Booking page not found' });
+    if (!workspace || !workspace.bookingEnabled) {
+      return res.status(404).json({ error: 'Booking page not found' });
+    }
 
     let parsedEventDate = null;
     if (eventDate) {
@@ -128,8 +137,61 @@ router.post('/public/:slug', publicFormLimiter, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────
-// Authenticated endpoints — list + update + delete. Admin-only.
+// Authenticated endpoints — list + update + delete + settings. Admin-only.
 // ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/bookings/workspace/:workspaceId/settings
+ * Returns the workspace's booking opt-in state + slug.
+ */
+router.get('/workspace/:workspaceId/settings', authenticate, isWorkspaceAdmin, async (req, res) => {
+  try {
+    const ws = await prisma.workspace.findUnique({
+      where: { id: req.params.workspaceId },
+      select: { slug: true, bookingEnabled: true },
+    });
+    if (!ws) return res.status(404).json({ error: 'Workspace not found' });
+    res.json(ws);
+  } catch (error) {
+    console.error('Get booking settings error:', error);
+    res.status(500).json({ error: 'Failed to load booking settings' });
+  }
+});
+
+/**
+ * PUT /api/bookings/workspace/:workspaceId/settings
+ * Toggle public booking inbox on or off. Enabling without a slug is rejected
+ * since the public URL is keyed by slug.
+ */
+router.put('/workspace/:workspaceId/settings', authenticate, isWorkspaceAdmin, async (req, res) => {
+  try {
+    const { bookingEnabled } = req.body;
+    if (typeof bookingEnabled !== 'boolean') {
+      return res.status(400).json({ error: 'bookingEnabled must be a boolean' });
+    }
+    if (bookingEnabled) {
+      const ws = await prisma.workspace.findUnique({
+        where: { id: req.params.workspaceId },
+        select: { slug: true },
+      });
+      if (!ws?.slug) {
+        return res.status(400).json({
+          error: 'Set a workspace slug before enabling the booking inbox.',
+          code: 'SLUG_REQUIRED',
+        });
+      }
+    }
+    const updated = await prisma.workspace.update({
+      where: { id: req.params.workspaceId },
+      data: { bookingEnabled },
+      select: { slug: true, bookingEnabled: true },
+    });
+    res.json(updated);
+  } catch (error) {
+    console.error('Update booking settings error:', error);
+    res.status(500).json({ error: 'Failed to update booking settings' });
+  }
+});
 
 /**
  * GET /api/bookings/workspace/:workspaceId?status=new&limit=50

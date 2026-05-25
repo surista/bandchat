@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
+import { storage } from '../../services/storage';
 import useIsAdmin from '../../hooks/useIsAdmin';
 import GigForm from './GigForm';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -355,8 +356,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(() => {
-    // Restore from localStorage if available
-    const saved = localStorage.getItem(`calendar-month-${workspaceId}`);
+    const saved = storage.getString(`calendar-month-${workspaceId}`);
     if (saved) {
       const date = new Date(saved);
       if (!isNaN(date.getTime())) return date;
@@ -417,9 +417,9 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
     return () => socket.off('calendar:conflictsChanged', handler);
   }, [socket]);
 
-  // Persist calendar month to localStorage
+  // Persist calendar month so the view restores across reloads
   useEffect(() => {
-    localStorage.setItem(`calendar-month-${workspaceId}`, currentMonth.toISOString());
+    storage.setString(`calendar-month-${workspaceId}`, currentMonth.toISOString());
   }, [currentMonth, workspaceId]);
 
   // Load other workspace gigs when toggle is enabled

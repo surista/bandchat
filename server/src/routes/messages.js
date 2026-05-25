@@ -1300,6 +1300,21 @@ router.post('/:messageId/pin', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a member of this workspace' });
     }
 
+    // For private channels, also require channel membership. Without this,
+    // any workspace member who can guess/discover a messageId can pin a
+    // message in a private channel they don't belong to — and the upsert
+    // response includes the full message body + attachments, leaking it.
+    if (message.channel.isPrivate) {
+      const channelMembership = await prisma.channelMember.findUnique({
+        where: {
+          userId_channelId: { userId: req.user.id, channelId: message.channelId }
+        }
+      });
+      if (!channelMembership) {
+        return res.status(403).json({ error: 'Not a member of this private channel' });
+      }
+    }
+
     // Create pinned message (upsert to avoid duplicates)
     const pinnedMessage = await prisma.pinnedMessage.upsert({
       where: {
@@ -1373,6 +1388,18 @@ router.delete('/:messageId/pin', authenticate, async (req, res) => {
 
     if (!workspaceMember) {
       return res.status(403).json({ error: 'Not a member of this workspace' });
+    }
+
+    // Private channels: also require channel membership (same as pin).
+    if (message.channel.isPrivate) {
+      const channelMembership = await prisma.channelMember.findUnique({
+        where: {
+          userId_channelId: { userId: req.user.id, channelId: message.channelId }
+        }
+      });
+      if (!channelMembership) {
+        return res.status(403).json({ error: 'Not a member of this private channel' });
+      }
     }
 
     const pinnedMessage = await prisma.pinnedMessage.findUnique({
@@ -1505,6 +1532,20 @@ router.get('/:messageId/seen-by', authenticate, async (req, res) => {
 
     if (!workspaceMember) {
       return res.status(403).json({ error: 'Not a member of this workspace' });
+    }
+
+    // Private channels: require channel membership too. Without this, any
+    // workspace member with a messageId could enumerate who in the private
+    // channel has read it.
+    if (message.channel.isPrivate) {
+      const channelMembership = await prisma.channelMember.findUnique({
+        where: {
+          userId_channelId: { userId: req.user.id, channelId: message.channelId }
+        }
+      });
+      if (!channelMembership) {
+        return res.status(403).json({ error: 'Not a member of this private channel' });
+      }
     }
 
     // Find channel members whose lastRead >= message.createdAt

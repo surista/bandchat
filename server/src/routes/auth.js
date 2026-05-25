@@ -616,7 +616,14 @@ router.post('/apple', authLimiter, async (req, res) => {
     }
 
     const payload = await verifyAppleIdentityToken(identityToken);
-    const { sub: appleId, email, email_verified } = payload;
+    const { sub: appleId, email, email_verified, iat } = payload;
+
+    // Apple identity tokens are short-lived (10 min) but `jwt.verify` only
+    // checks `exp`. Belt-and-suspenders: also reject tokens whose `iat` is
+    // more than 5 minutes old, shrinking the replay window if a token leaks.
+    if (typeof iat === 'number' && Date.now() / 1000 - iat > 300) {
+      return res.status(401).json({ error: 'Apple token is too old' });
+    }
 
     let user = await prisma.user.findUnique({
       where: { appleId },
@@ -636,6 +643,17 @@ router.post('/apple', authLimiter, async (req, res) => {
         },
         ...tokens,
         isNewUser: false
+      });
+    }
+
+    // Below this point we're creating a new account, which requires an email.
+    // Apple may omit `email` on replayed tokens (the address is only delivered
+    // on the very first authorization), so guard explicitly instead of letting
+    // `email.toLowerCase()` and `email.split('@')` 500 on undefined.
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({
+        error: 'Apple did not return an email. Please sign up another way or re-authorize Apple sign-in.',
+        code: 'APPLE_EMAIL_MISSING'
       });
     }
 
@@ -952,7 +970,7 @@ router.put('/me/calendar-visibility', authenticate, apiLimiter, async (req, res)
 // Change password
 router.put('/password', authenticate, authLimiter, async (req, res) => {
   try {
-    const { currentPassword, newPassword } = req.body;
+    const { currentPassword, newPassword, refreshToken: bodyRefreshToken } = req.body;
 
     if (!newPassword) {
       return res.status(400).json({ error: 'New password is required' });
@@ -988,19 +1006,29 @@ router.put('/password', authenticate, authLimiter, async (req, res) => {
       }
     });
 
-    // Revoke all other sessions (keep current session active to avoid unexpected logout)
-    const currentTokenHash = req.refreshTokenHash; // set by auth middleware if available
-    if (currentTokenHash) {
+    // Revoke all OTHER refresh tokens (keep the requester's session alive so a
+    // password change doesn't immediately log them out). Web sends the refresh
+    // token via httpOnly cookie; mobile sends it in the request body. The DB
+    // stores SHA-256 hashes (see hashRefreshToken / generateTokens) in the
+    // `token` column — not `tokenHash`.
+    const currentRefreshToken = req.cookies?.refreshToken || bodyRefreshToken;
+    if (currentRefreshToken) {
+      const currentTokenHash = hashRefreshToken(currentRefreshToken);
       await prisma.refreshToken.deleteMany({
-        where: { userId: req.user.id, tokenHash: { not: currentTokenHash } }
+        where: { userId: req.user.id, token: { not: currentTokenHash } }
       });
     } else {
+      // No way to identify the current session — log everything out (safest).
       await prisma.refreshToken.deleteMany({ where: { userId: req.user.id } });
     }
 
     logAudit('user.password_changed', { actorId: req.user.id, targetId: req.user.id });
 
-    res.json({ message: 'Password updated successfully. Other sessions have been logged out.' });
+    res.json({
+      message: currentRefreshToken
+        ? 'Password updated successfully. Other sessions have been logged out.'
+        : 'Password updated successfully. You have been logged out of all sessions.'
+    });
   } catch (error) {
     console.error('Password change error:', error);
     res.status(500).json({ error: 'Failed to change password' });

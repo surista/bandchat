@@ -3,7 +3,7 @@ import { Alert } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as MediaLibrary from 'expo-media-library';
 import { File, Directory, Paths } from 'expo-file-system/next';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUiState, setUiState } from '../services/storage';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { mediumImpact, successNotification, errorNotification, selectionFeedback } from '../utils/haptics';
@@ -31,14 +31,12 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
   const [linkActionUrl, setLinkActionUrl] = useState(null);
   const [reactionUsers, setReactionUsers] = useState({ visible: false, reactions: [], emoji: null });
 
-  // Load blocked preview domains
+  // Load blocked preview domains. getUiState returns null on missing/corrupt;
+  // we guard with Array.isArray so a stray non-array doesn't blow up the Set
+  // constructor later.
   useEffect(() => {
-    AsyncStorage.getItem('bandchat_blocked_preview_domains').then(val => {
-      if (val) {
-        try { setBlockedDomains(new Set(JSON.parse(val))); } catch (e) {
-          console.error('Failed to parse blocked preview domains:', e);
-        }
-      }
+    getUiState('bandchat_blocked_preview_domains').then(val => {
+      if (Array.isArray(val)) setBlockedDomains(new Set(val));
     });
   }, []);
 
@@ -204,7 +202,7 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
     try { domain = new URL(url).hostname; } catch { return; }
     const next = new Set(blockedDomains);
     if (next.has(domain)) { next.delete(domain); } else { next.add(domain); }
-    AsyncStorage.setItem('bandchat_blocked_preview_domains', JSON.stringify([...next]));
+    setUiState('bandchat_blocked_preview_domains', [...next]);
     setBlockedDomains(next);
     setLinkActionUrl(null);
   }, [blockedDomains]);

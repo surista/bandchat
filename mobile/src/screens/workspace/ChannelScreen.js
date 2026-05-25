@@ -15,7 +15,7 @@ import {
   StyleSheet,
   AppState,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUiString, setUiString } from '../../services/storage';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -257,14 +257,14 @@ export default function ChannelScreen({ navigation, route }) {
   useEffect(() => {
     return () => {
       if (scrollOffsetRef.current > 0) {
-        AsyncStorage.setItem(`scrollPos:${channel.id}`, String(scrollOffsetRef.current));
+        setUiString(`scrollPos:${channel.id}`, String(scrollOffsetRef.current));
       }
     };
   }, [channel.id]);
 
   // Restore scroll position on mount
   useEffect(() => {
-    AsyncStorage.getItem(`scrollPos:${channel.id}`).then(pos => {
+    getUiString(`scrollPos:${channel.id}`).then(pos => {
       if (pos && flatListRef.current) {
         setTimeout(() => {
           flatListRef.current.scrollToOffset({ offset: parseFloat(pos), animated: false });
@@ -489,11 +489,24 @@ export default function ChannelScreen({ navigation, route }) {
       const chId = channelIdRef.current;
       joinChannel(chId);
       api.getMessages(chId).then(data => {
-        if (chId === channelIdRef.current) {
-          setMessages(data.messages);
-          setHasMore(data.hasMore);
-          setNextCursor(data.nextCursor);
-        }
+        if (chId !== channelIdRef.current) return;
+        // Merge fresh latest-50 with the existing list instead of replacing.
+        // A bare setMessages(data.messages) would silently wipe any older
+        // messages the user had paged in — after a transient blip they'd be
+        // teleported back to "latest" mid-scroll. Dedupe by id, keep the
+        // freshest copy of any overlap (server has newer reactions/edits).
+        setMessages(prev => {
+          const byId = new Map();
+          for (const m of prev) byId.set(m.id, m);
+          for (const m of data.messages) byId.set(m.id, m);
+          return Array.from(byId.values()).sort(
+            (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+          );
+        });
+        // Only update pagination state if we don't already have older messages
+        // loaded. If we paged back, the existing cursor is still authoritative.
+        setHasMore(prevHasMore => prevHasMore || data.hasMore);
+        setNextCursor(prev => prev || data.nextCursor);
       }).catch(() => {});
       // Mark channel as read after reconnect (was missing — caused stale unread badges)
       api.markChannelRead(chId).catch(() => {

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useColorScheme } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUiString, setUiString, getUiState, setUiState } from '../services/storage';
 
 const themes = {
   default: {
@@ -290,43 +290,34 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     const loadTheme = async () => {
-      try {
-        const savedTheme = await AsyncStorage.getItem('bandchat-theme');
-        const savedMode = await AsyncStorage.getItem('bandchat-mode');
-        const savedDensity = await AsyncStorage.getItem('bandchat-density');
-        const savedWsThemes = await AsyncStorage.getItem('bandchat-workspace-themes');
-        if (savedTheme && themes[savedTheme]) setGlobalTheme(savedTheme);
-        if (savedMode) {
-          setMode(savedMode);
-        }
-        if (savedDensity && DENSITY_VALUES[savedDensity]) {
-          setMessageDensityState(savedDensity);
-        }
-        if (savedWsThemes) {
-          try {
-            const parsed = JSON.parse(savedWsThemes);
-            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-              setWorkspaceThemesState(parsed);
-            }
-          } catch (e) {
-            // Expected: JSON.parse may fail for corrupted workspace themes data
-          }
-        }
-      } catch {
-        // Use defaults
-      } finally {
-        setLoaded(true);
+      // getUi* swallow errors and return safe defaults — a transient storage
+      // failure must never crash the ThemeProvider (it mounts before the
+      // error boundary, so any throw here blanks the app).
+      const [savedTheme, savedMode, savedDensity, savedWsThemes] = await Promise.all([
+        getUiString('bandchat-theme'),
+        getUiString('bandchat-mode'),
+        getUiString('bandchat-density'),
+        getUiState('bandchat-workspace-themes'),
+      ]);
+      if (savedTheme && themes[savedTheme]) setGlobalTheme(savedTheme);
+      if (savedMode) setMode(savedMode);
+      if (savedDensity && DENSITY_VALUES[savedDensity]) {
+        setMessageDensityState(savedDensity);
       }
+      if (savedWsThemes && typeof savedWsThemes === 'object' && !Array.isArray(savedWsThemes)) {
+        setWorkspaceThemesState(savedWsThemes);
+      }
+      setLoaded(true);
     };
     loadTheme();
   }, []);
 
   useEffect(() => {
     if (loaded) {
-      AsyncStorage.setItem('bandchat-theme', globalTheme);
-      AsyncStorage.setItem('bandchat-mode', mode);
-      AsyncStorage.setItem('bandchat-density', messageDensity);
-      AsyncStorage.setItem('bandchat-workspace-themes', JSON.stringify(workspaceThemes));
+      setUiString('bandchat-theme', globalTheme);
+      setUiString('bandchat-mode', mode);
+      setUiString('bandchat-density', messageDensity);
+      setUiState('bandchat-workspace-themes', workspaceThemes);
     }
   }, [globalTheme, mode, messageDensity, workspaceThemes, loaded]);
 

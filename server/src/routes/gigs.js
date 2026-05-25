@@ -674,6 +674,19 @@ router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMemb
       }
     }
 
+    // Verify bandMembers belong to this workspace. Without this, a workspace
+    // member could pass IDs of bandMember rows from OTHER workspaces; the FK
+    // insert succeeds, the attendee list then leaks those foreign rows' names
+    // and avatars via the include below.
+    if (bandMemberIds && bandMemberIds.length > 0) {
+      const validCount = await prisma.bandMember.count({
+        where: { id: { in: bandMemberIds }, workspaceId: req.params.workspaceId }
+      });
+      if (validCount !== bandMemberIds.length) {
+        return res.status(400).json({ error: 'One or more band members not found in this workspace' });
+      }
+    }
+
     // If venueId provided, verify it belongs to this workspace and auto-populate name/address
     let resolvedVenue = venue;
     let resolvedAddress = address;
@@ -1010,6 +1023,17 @@ router.put('/:gigId', authenticate, async (req, res) => {
       });
       if (validSetlists !== setlistIdsToUpdate.length) {
         return res.status(400).json({ error: 'One or more setlists not found in this workspace' });
+      }
+    }
+
+    // Verify bandMembers belong to this workspace (same reason as POST: prevent
+    // cross-workspace attendee insertion that would leak names/photos).
+    if (bandMemberIds && bandMemberIds.length > 0) {
+      const validCount = await prisma.bandMember.count({
+        where: { id: { in: bandMemberIds }, workspaceId: existingGig.workspaceId }
+      });
+      if (validCount !== bandMemberIds.length) {
+        return res.status(400).json({ error: 'One or more band members not found in this workspace' });
       }
     }
 

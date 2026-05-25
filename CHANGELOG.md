@@ -2,6 +2,36 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.07] - 2026-05-26
+
+Full-codebase audit follow-up — 10 critical/high findings fixed plus 3 storage-wrapper hardening passes and the new public-booking opt-in UI.
+
+### Security
+
+- **Private channel invite IDOR (`server/src/routes/channels.js`).** `POST /:channelId/members` was gated on `isChannelMember`, which meant any member of a private channel could add any workspace member to that channel — completely defeating `isPrivate`. Private channels now require workspace-admin role to add members; public channels are unchanged (anyone in the workspace can self-join those anyway).
+- **Pin / unpin / seen-by leaked private-channel content (`server/src/routes/messages.js`).** All three endpoints checked `workspaceMember` but not `channelMember`, and pin's response includes the full message body + attachments. Any workspace member who knew (or could guess) a `messageId` could pin a private-channel message and read its contents. Each endpoint now adds the channel-member check when `channel.isPrivate`, matching the existing pattern at `/channel/:channelId/pins`.
+- **Cross-workspace `bandMember` leak in gigs (`server/src/routes/gigs.js`).** `bandMemberIds` from the request body was inserted into `gigAttendee.create*` with no workspace verification. A workspace member could pass IDs of bandMember rows from other workspaces — the FK insert succeeded, and the attendee list then leaked those foreign rows' names and photos. Both POST and PUT now verify `bandMember.workspaceId === workspaceId` before insert (same shape as the existing setlist-IDs check).
+- **Apple Sign-In hardening (`server/src/routes/auth.js`).** `email.toLowerCase()` and `email.split('@')` on a payload without `email` 500'd; replayed tokens were valid until JWT `exp`. Added an explicit `email` null guard with `APPLE_EMAIL_MISSING` error code, and a 5-minute `iat` freshness check that shrinks the replay window if a token leaks. Apple omits `email` on replayed tokens (it's only delivered on the very first authorization), so the null branch is reachable in production.
+- **Booking endpoint slug enumeration (`server/src/routes/bookingRequests.js` + `schema.prisma`).** `GET /public/:slug` returned the band's display name for *any* valid workspace slug — the slug alone was the opt-in. Combined with `publicFormLimiter`'s 20/hr cap (which applied only to POST), an attacker could enumerate workspace branding by slug at the rate of a normal browser. Added a new `Workspace.bookingEnabled` boolean (default `false`), gated both public endpoints on it, added a new `publicLookupLimiter` (60/hr/IP) on the GET, and exposed admin GET/PUT settings endpoints so admins can flip the switch. Workspaces with a slug for the Public Show Page feature no longer auto-become bookable.
+
+### Fixed
+
+- **TDZ ReferenceError on render in `mobile/src/screens/workspace/ChannelListScreen.js`.** A persist `useEffect` at line ~161 listed `collapsedStarred` in its dep array, but the matching `useState` declaration was 17 lines further down — the dep array evaluates synchronously at render time and threw "Cannot access 'collapsedStarred' before initialization" before the screen could paint. Moved the `useState` up to where the other `collapsed*` state lives. Effect-callback references at line ~145 were safe (callbacks run after render) — only the dep-array reference was load-bearing.
+- **Reconnect wiped paginated history in mobile `ChannelScreen.js:handleReconnect`.** After any socket reconnect, the handler called `setMessages(data.messages)` with only the latest 50 messages from the server, silently discarding any older messages the user had paged in. A user mid-scroll-back through a long thread would be teleported back to "latest" by any blip in network connectivity, with no indicator. Now merges by id (preserving older messages already loaded) and keeps the existing cursor/`hasMore` rather than resetting them.
+- **Password change kicked the user out of their own session.** `server/src/routes/auth.js:/password` read `req.refreshTokenHash` (never set by any middleware) and compared against `tokenHash` (a column that doesn't exist — the schema has `token` and stores SHA-256 hashes there). Both branches collapsed to `deleteMany({ userId: req.user.id })`, logging the requester out alongside every other device. Fixed by reading the refresh token from the cookie (web) or request body (mobile, via the updated `api.changePassword`), hashing it with the existing `hashRefreshToken` helper, and using `{ token: { not: currentHash } }`. Falls back to all-sessions-logout if no refresh token can be identified.
+- **Web `ThemeContext` could crash Safari Private Mode at boot.** Nine raw `localStorage` reads/writes in `client/src/context/ThemeContext.jsx` would throw `QuotaExceededError` on Safari Private Mode and blank the screen before the error boundary mounted. Migrated all of them to the `services/storage` wrapper, which swallows errors and returns safe defaults.
+
+### Changed
+
+- **Web: insert emojis into messages (not just reactions).** Added an emoji-picker button in `client/src/components/messages/MessageInput.jsx` (next to the `@` button), backed by the existing `ReactionPicker` component with a new `actionLabel` prop (so screen-reader labels read "Insert 😀" instead of "React with 😀"). Search, category navigation, frequent emojis, and the custom `:bandchat:` flame all work. Mobile already had this — feature now at parity.
+- **Storage-wrapper migration, round 2 (web).** `ReactionPicker.jsx` (`emojiFrequency`), `MessageList.jsx` (blocked link-preview domains), and `GigCalendar.jsx` (`calendar-month-<workspaceId>`) all moved off raw `localStorage` to the `services/storage` wrapper. Same Safari-private-mode risk as the ThemeContext fix; each is one error away from blanking the screen.
+- **Storage-wrapper migration (mobile).** `AuthContext.js`, `ThemeContext.js`, `ChannelScreen.js`, and `useMessageActions.js` migrated from raw `AsyncStorage`/`SecureStore` calls to the `getUiState`/`setUiState`/`getUiString`/`setUiString` wrappers in `services/storage.js`. AsyncStorage failures (or corrupted JSON from old versions) now return safe defaults instead of crashing the screen. Tokens still use SecureStore via the `storage` default export.
+- **Public booking inbox: opt-in UI.** Admins now see an explicit "Enable public booking" CTA in the web BookingInbox (`client/src/components/band/BookingInbox.jsx`) instead of being shown a public URL that may or may not be live. Mobile gets a "Public Booking Form" section in `WebsiteSettingsScreen.js` with a toggle and the public link — independent of website deploy state, since opt-in to bookings doesn't require deploying a band website.
+
+### Schema
+
+- **`Workspace.bookingEnabled` (Boolean, default `false`).** Added to `server/prisma/schema.prisma`. Applied automatically by the production `npm run start` (which runs `prisma db push`). For staging, run `cd server && npm run db:push`.
+
 ## [1.07.06] - 2026-05-26
 
 ### Fixed

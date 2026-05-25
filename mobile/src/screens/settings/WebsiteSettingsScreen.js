@@ -24,6 +24,7 @@ import { useToast } from '../../context/ToastContext';
 import { useLayout } from '../../hooks/useLayout';
 import { successNotification } from '../../utils/haptics';
 import api from '../../services/api';
+import { APP_BASE_URL } from '../../utils/constants';
 
 const THEMES = [
   { id: 'rock', label: 'Rock', bg: '#0a0a0a', accent: '#e81c2e', accent2: '#ff5722', desc: 'Bold & high energy' },
@@ -88,9 +89,49 @@ export default function WebsiteSettingsScreen({ route }) {
 
   const [savingConfig, setSavingConfig] = useState(false);
 
+  // Public booking inbox is opt-in and lives on the server (not in
+  // websiteConfig) because it works even when the band hasn't deployed a
+  // website. The inbox itself is web-only by design (see CLAUDE.md), but the
+  // toggle has to be reachable from mobile so band leaders can flip it from
+  // their phone.
+  const [bookingSettings, setBookingSettings] = useState(null); // { slug, bookingEnabled }
+  const [savingBooking, setSavingBooking] = useState(false);
+
   useEffect(() => {
     loadWebsite();
+    loadBookingSettings();
   }, [workspaceId]);
+
+  async function loadBookingSettings() {
+    try {
+      const data = await api.request(`/bookings/workspace/${workspaceId}/settings`);
+      setBookingSettings(data);
+    } catch {
+      // Non-fatal — just hide the section if the call fails.
+      setBookingSettings(null);
+    }
+  }
+
+  async function toggleBookingEnabled(next) {
+    if (!bookingSettings?.slug && next) {
+      Alert.alert('Set a workspace slug first', 'Public booking links use your workspace slug. Set one in workspace settings before enabling.');
+      return;
+    }
+    setSavingBooking(true);
+    try {
+      const updated = await api.request(`/bookings/workspace/${workspaceId}/settings`, {
+        method: 'PUT',
+        body: JSON.stringify({ bookingEnabled: next }),
+      });
+      setBookingSettings(updated);
+      successNotification();
+      toast.success(next ? 'Public booking enabled' : 'Public booking disabled');
+    } catch (err) {
+      toast.error(err.message || 'Could not update booking settings');
+    } finally {
+      setSavingBooking(false);
+    }
+  }
 
   async function loadWebsite() {
     setLoading(true);
@@ -295,6 +336,42 @@ export default function WebsiteSettingsScreen({ route }) {
               <Text style={{ color: '#ef4444', fontSize: 14 }}>Deployment failed. Check config and try again.</Text>
             </View>
           )}
+
+          {/* Public Booking Form (independent of website deploy state) */}
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">PUBLIC BOOKING FORM</Text>
+          <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flex: 1, paddingRight: 12 }}>
+                <Text style={[styles.label, { color: colors.textPrimary, marginTop: 0, fontWeight: '600' }]}>
+                  Accept booking requests
+                </Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4 }}>
+                  {bookingSettings?.slug
+                    ? 'When on, anyone with the link can submit a booking request that you can review in the web app.'
+                    : 'Set a workspace slug first to enable public booking.'}
+                </Text>
+              </View>
+              <Switch
+                value={!!bookingSettings?.bookingEnabled}
+                onValueChange={toggleBookingEnabled}
+                disabled={savingBooking || !bookingSettings?.slug}
+                accessibilityLabel="Enable public booking form"
+              />
+            </View>
+            {bookingSettings?.bookingEnabled && bookingSettings?.slug && (
+              <View style={{ marginTop: 12, padding: 10, borderRadius: 8, backgroundColor: colors.bgTertiary }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>
+                  Your public booking link
+                </Text>
+                <Text
+                  selectable
+                  style={{ color: colors.textPrimary, fontSize: 13, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}
+                >
+                  {`${APP_BASE_URL}/book/${bookingSettings.slug}`}
+                </Text>
+              </View>
+            )}
+          </View>
 
           {/* Band Identity */}
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">BAND IDENTITY</Text>

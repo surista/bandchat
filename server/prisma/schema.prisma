@@ -130,6 +130,13 @@ model Workspace {
   websiteStatus     String? // 'deploying' | 'active' | 'error'
   websiteDeployHook String?
 
+  // Public booking inbox — opt-in. Defaults to false so workspaces that set
+  // a `slug` (e.g. for the public show page) don't accidentally become
+  // bookable. Without this gate the public booking endpoint at
+  // GET /api/bookings/public/:slug returned the band name for any valid
+  // slug, leaking workspace existence + branding by slug enumeration.
+  bookingEnabled Boolean @default(false)
+
   members            WorkspaceMember[]
   channels           Channel[]
   channelGroups      ChannelGroup[]
@@ -1138,8 +1145,8 @@ model BookingRequest {
   respondedById  String?
   createdAt      DateTime  @default(now())
 
-  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  respondedBy  User?     @relation("BookingRequestResponders", fields: [respondedById], references: [id], onDelete: SetNull)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  respondedBy User?     @relation("BookingRequestResponders", fields: [respondedById], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, status, createdAt])
 }

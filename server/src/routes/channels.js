@@ -448,6 +448,28 @@ router.post('/:channelId/members', authenticate, isChannelMember, async (req, re
     const { userId } = req.body;
     const channel = req.channel;
 
+    // For private channels, restrict member-adding to workspace admins.
+    // Without this, any private-channel member could add anyone else in the
+    // workspace, defeating the whole point of `isPrivate`. Public channels
+    // stay open — any member can invite, since anyone in the workspace can
+    // join one on their own anyway. (The Channel model has no creator or
+    // per-channel role field, so workspace admin is the available bar.)
+    if (channel.isPrivate) {
+      const callerMembership = await prisma.workspaceMember.findUnique({
+        where: {
+          userId_workspaceId: {
+            userId: req.user.id,
+            workspaceId: channel.workspaceId
+          }
+        }
+      });
+      if (callerMembership?.role !== 'ADMIN') {
+        return res.status(403).json({
+          error: 'Only workspace admins can add members to a private channel'
+        });
+      }
+    }
+
     // Verify user is in the workspace
     const workspaceMember = await prisma.workspaceMember.findUnique({
       where: {

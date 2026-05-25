@@ -1,10 +1,10 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Platform, AppState, Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import Constants from 'expo-constants';
 import Purchases from 'react-native-purchases';
 import api from '../services/api';
+import { getUiString, setUiString } from '../services/storage';
 import { notificationService } from '../services/notifications';
 import { clearLinkPreviewCache } from '../components/LinkPreview';
 import { updateWidgetGigData } from '../services/widgetService';
@@ -60,7 +60,7 @@ export function AuthProvider({ children }) {
         await api.loadTokens();
 
         // Load biometric preference
-        const bioEnabled = await AsyncStorage.getItem(BIOMETRIC_ENABLED_KEY);
+        const bioEnabled = await getUiString(BIOMETRIC_ENABLED_KEY);
         const isBioEnabled = bioEnabled === 'true';
         setBiometricEnabledState(isBioEnabled);
 
@@ -189,7 +189,7 @@ export function AuthProvider({ children }) {
 
   const promptBiometricSetup = useCallback(async () => {
     try {
-      const alreadyAsked = await AsyncStorage.getItem(BIOMETRIC_PROMPT_SHOWN_KEY);
+      const alreadyAsked = await getUiString(BIOMETRIC_PROMPT_SHOWN_KEY);
       if (alreadyAsked === 'true') return;
 
       const available = await checkBiometricAvailable();
@@ -202,7 +202,7 @@ export function AuthProvider({ children }) {
         ? (hasFaceId ? 'Face ID' : 'Touch ID')
         : (hasFaceId ? 'Face Unlock' : 'Fingerprint');
 
-      await AsyncStorage.setItem(BIOMETRIC_PROMPT_SHOWN_KEY, 'true');
+      await setUiString(BIOMETRIC_PROMPT_SHOWN_KEY, 'true');
 
       Alert.alert(
         `Enable ${label}?`,
@@ -219,7 +219,7 @@ export function AuthProvider({ children }) {
                 cancelLabel: 'Cancel',
               });
               if (result.success) {
-                await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, 'true');
+                await setUiString(BIOMETRIC_ENABLED_KEY, 'true');
                 setBiometricEnabledState(true);
               }
             },
@@ -280,7 +280,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const setBiometricEnabled = useCallback(async (enabled) => {
-    await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, enabled ? 'true' : 'false');
+    await setUiString(BIOMETRIC_ENABLED_KEY, enabled ? 'true' : 'false');
     setBiometricEnabledState(enabled);
   }, []);
 

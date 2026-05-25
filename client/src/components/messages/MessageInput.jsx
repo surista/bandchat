@@ -10,6 +10,7 @@ import { formatFileSize } from '../../utils/format';
 import { MAX_IMAGE_SIZE, MAX_AUDIO_SIZE, MAX_VIDEO_SIZE, MAX_DOCUMENT_SIZE, ALLOWED_IMAGE_TYPES, ALLOWED_AUDIO_TYPES, ALLOWED_VIDEO_TYPES, isImageFile, isAudioFile, isVideoFile, isDocumentFile } from '../../utils/fileValidation';
 import { containsGroupMention } from '../../utils/parseMentions';
 import ConfirmDialog from '../common/ConfirmDialog';
+import ReactionPicker from './ReactionPicker';
 
 
 /**
@@ -54,6 +55,7 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
   const [channelStart, setChannelStart] = useState(-1);
   const [channelIndex, setChannelIndex] = useState(0);
   const [showGroupMentionConfirm, setShowGroupMentionConfirm] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
   const onSendRef = useRef(onSend);
@@ -434,6 +436,23 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
       setShowSlashCommands(false);
     }
   };
+
+  // Insert an emoji (or short text token) at the current cursor position.
+  // Closes the picker after insert; cursor lands right after the inserted
+  // glyph so users can keep typing without re-clicking the textarea.
+  const insertEmoji = useCallback((emoji) => {
+    const ta = textareaRef.current;
+    const start = ta?.selectionStart ?? content.length;
+    const end = ta?.selectionEnd ?? content.length;
+    const next = content.slice(0, start) + emoji + content.slice(end);
+    setContent(next);
+    setShowEmojiPicker(false);
+    const pos = start + emoji.length;
+    setTimeout(() => {
+      ta?.focus();
+      ta?.setSelectionRange(pos, pos);
+    }, 0);
+  }, [content]);
 
   // Wrap selected text with markdown markers (or insert markers at cursor)
   const wrapSelection = useCallback((before, after) => {
@@ -891,11 +910,46 @@ function MessageInput({ channelName, onSend, onTyping, members = [], disabled = 
                 setMentionFilter('');
                 textareaRef.current?.focus();
               }}
-              className="p-2 -m-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+              className="p-2 -m-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
               title="Mention someone"
+              aria-label="Mention someone"
             >
               <span className="text-lg font-bold">@</span>
             </button>
+            {/* Emoji insert button + popover. Reuses ReactionPicker (with
+                actionLabel="Insert" so screen-reader labels read "Insert 😀"
+                instead of "React with 😀"). Same component already handles
+                outside-click, ESC, search and grid keyboard nav. */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowEmojiPicker(v => !v)}
+                // Stop mousedown from reaching the document — otherwise the
+                // picker's outside-click handler would close it on the same
+                // gesture that the onClick is trying to toggle it open, and
+                // the close-then-reopen would flash the picker.
+                onMouseDown={(e) => e.stopPropagation()}
+                className={`p-2 -m-1 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center ${showEmojiPicker ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}`}
+                title="Insert emoji"
+                aria-label="Insert emoji"
+                aria-haspopup="dialog"
+                aria-expanded={showEmojiPicker}
+                disabled={sending || isRecording}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
+              {showEmojiPicker && (
+                <div className="absolute bottom-full right-0 mb-2 z-50">
+                  <ReactionPicker
+                    actionLabel="Insert"
+                    onSelect={(emoji) => insertEmoji(emoji)}
+                    onClose={() => setShowEmojiPicker(false)}
+                  />
+                </div>
+              )}
+            </div>
           </div>
           <button
             type="submit"

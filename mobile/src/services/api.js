@@ -489,9 +489,13 @@ class ApiService {
   }
 
   async changePassword(currentPassword, newPassword) {
+    // Sending refreshToken lets the server keep this session alive while
+    // revoking all other devices' sessions. Without it, the server has no
+    // way to distinguish "this device" from "other devices" and logs you
+    // out everywhere.
     return this.request('/auth/password', {
       method: 'PUT',
-      body: JSON.stringify({ currentPassword, newPassword }),
+      body: JSON.stringify({ currentPassword, newPassword, refreshToken: this.refreshToken }),
     });
   }
 

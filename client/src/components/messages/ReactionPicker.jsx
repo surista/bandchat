@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { storage } from '../../services/storage';
 
 // Pre-compiled regex for emoji detection (avoid creating on every render)
 const EMOJI_REGEX = /\p{Emoji}/u;
@@ -59,28 +60,21 @@ const CATEGORY_LABELS = {
 const COLS = 7;
 
 const getFrequentEmojis = () => {
-  try {
-    const freq = JSON.parse(localStorage.getItem('emojiFrequency') || '{}');
-    return Object.entries(freq)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([emoji]) => emoji);
-  } catch {
-    return [];
-  }
+  const freq = storage.getJSON('emojiFrequency', {});
+  if (!freq || typeof freq !== 'object') return [];
+  return Object.entries(freq)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([emoji]) => emoji);
 };
 
 const trackEmojiUsage = (emoji) => {
-  try {
-    const freq = JSON.parse(localStorage.getItem('emojiFrequency') || '{}');
-    freq[emoji] = (freq[emoji] || 0) + 1;
-    localStorage.setItem('emojiFrequency', JSON.stringify(freq));
-  } catch {
-    // Ignore localStorage errors
-  }
+  const freq = storage.getJSON('emojiFrequency', {}) || {};
+  freq[emoji] = (freq[emoji] || 0) + 1;
+  storage.setJSON('emojiFrequency', freq);
 };
 
-export default function ReactionPicker({ onSelect, onClose }) {
+export default function ReactionPicker({ onSelect, onClose, actionLabel = 'React with' }) {
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [frequentEmojis, setFrequentEmojis] = useState([]);
   const [search, setSearch] = useState('');
@@ -188,8 +182,8 @@ export default function ReactionPicker({ onSelect, onClose }) {
         onClick={() => handleSelect(emoji)}
         onKeyDown={handlePickerKeyDown}
         className={`${isText ? 'px-2 min-w-[40px]' : 'w-10'} h-10 sm:h-8 flex items-center justify-center hover:bg-[var(--color-bg-tertiary)] active:bg-[var(--color-bg-primary)] focus:bg-[var(--color-bg-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] rounded transition-colors touch-manipulation ${isText ? 'text-xs font-medium text-[var(--color-text-secondary)]' : 'text-lg'}`}
-        title={`React with ${custom?.alt || emoji}`}
-        aria-label={`React with ${custom?.alt || emoji}`}
+        title={`${actionLabel} ${custom?.alt || emoji}`}
+        aria-label={`${actionLabel} ${custom?.alt || emoji}`}
       >
         {custom ? <img src={custom.src} alt={custom.alt} className="w-5 h-5 rounded-sm" /> : emoji}
       </button>
@@ -227,7 +221,7 @@ export default function ReactionPicker({ onSelect, onClose }) {
         className="bg-[var(--color-bg-secondary)] rounded-lg shadow-lg border border-[var(--color-border)] overflow-hidden"
         style={{ width: 'min(320px, 92vw)' }}
         role="listbox"
-        aria-label="Emoji reactions"
+        aria-label={actionLabel === 'Insert' ? 'Emoji picker' : 'Emoji reactions'}
       >
         {/* Quick reactions row */}
         <div className="flex items-center gap-0.5 p-1.5 border-b border-[var(--color-border)]">

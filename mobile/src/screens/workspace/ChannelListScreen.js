@@ -112,6 +112,10 @@ export default function ChannelListScreen({ navigation, route }) {
   const [collapsedBandCats, setCollapsedBandCats] = useState({});
   const [collapsedDMs, setCollapsedDMs] = useState(false);
   const [collapsedQuickLinks, setCollapsedQuickLinks] = useState(false);
+  // Declared up here (not next to the other channel-action state below) because
+  // the persist-effect at line ~161 reads `collapsedStarred` in its dep array.
+  // Putting the useState below the effect throws a TDZ ReferenceError on render.
+  const [collapsedStarred, setCollapsedStarred] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [nextGig, setNextGig] = useState(null);
   const [allWorkspaces, setAllWorkspaces] = useState([]);
@@ -175,7 +179,6 @@ export default function ChannelListScreen({ navigation, route }) {
 
   const [showChannelActions, setShowChannelActions] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState(null);
-  const [collapsedStarred, setCollapsedStarred] = useState(false);
 
 
   useLayoutEffect(() => {

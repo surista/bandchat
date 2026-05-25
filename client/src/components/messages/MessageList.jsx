@@ -19,18 +19,19 @@ import { handleDownload } from '../../utils/download';
 import { buildMentionRegex, buildChannelRegex, buildGroupMentionRegex } from '../../utils/parseMentions';
 import api from '../../services/api';
 import EmbedCard from './EmbedCard';
+import { storage } from '../../services/storage';
 import '../../../styles/markdown.css';
 
-// ─── Blocked preview domains (localStorage) ───
+// ─── Blocked preview domains (per-device user preference) ───
 const BLOCKED_DOMAINS_KEY = 'bandchat_blocked_preview_domains';
 
 function getBlockedDomains() {
-  try { return new Set(JSON.parse(localStorage.getItem(BLOCKED_DOMAINS_KEY) || '[]')); }
-  catch { return new Set(); }
+  const arr = storage.getJSON(BLOCKED_DOMAINS_KEY, []);
+  return new Set(Array.isArray(arr) ? arr : []);
 }
 
 function persistBlockedDomains(domains) {
-  localStorage.setItem(BLOCKED_DOMAINS_KEY, JSON.stringify([...domains]));
+  storage.setJSON(BLOCKED_DOMAINS_KEY, [...domains]);
 }
 
 function getDomain(url) {

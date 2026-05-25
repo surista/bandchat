@@ -133,3 +133,16 @@ export const publicFormLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false
 });
+
+// Limit for public READ endpoints keyed by workspace slug — keeps slug
+// enumeration expensive (paired with the per-workspace bookingEnabled flag).
+// More generous than form submission because legitimate users may refresh the
+// page, share it, or return from a link in email.
+export const publicLookupLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 60,
+  skip: skipInTest,
+  message: { error: 'Too many lookups, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false
+});

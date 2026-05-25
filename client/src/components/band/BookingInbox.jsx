@@ -19,13 +19,22 @@ function BookingInbox({ workspaceId, workspace }) {
   const [statusFilter, setStatusFilter] = useState('new');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Booking is opt-in: workspaces that haven't enabled it return 404 on the
+  // public endpoint (prevents slug enumeration). Reflect that here so admins
+  // see an explicit enable CTA instead of a misleadingly-live public URL.
+  const [settings, setSettings] = useState(null); // { slug, bookingEnabled }
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.request(`/bookings/workspace/${workspaceId}?status=${statusFilter}&limit=100`);
+      const [data, settingsRes] = await Promise.all([
+        api.request(`/bookings/workspace/${workspaceId}?status=${statusFilter}&limit=100`),
+        api.request(`/bookings/workspace/${workspaceId}/settings`),
+      ]);
       setItems(data.items || []);
+      setSettings(settingsRes);
     } catch (err) {
       setError(err.message || 'Failed to load booking requests');
     } finally {
@@ -34,6 +43,22 @@ function BookingInbox({ workspaceId, workspace }) {
   }, [workspaceId, statusFilter]);
 
   useEffect(() => { load(); }, [load]);
+
+  const toggleBookingEnabled = async (nextValue) => {
+    setSavingSettings(true);
+    try {
+      const updated = await api.request(`/bookings/workspace/${workspaceId}/settings`, {
+        method: 'PUT',
+        body: JSON.stringify({ bookingEnabled: nextValue }),
+      });
+      setSettings(updated);
+      toast.success(nextValue ? 'Public booking enabled' : 'Public booking disabled');
+    } catch (err) {
+      toast.error(err.message || 'Could not update booking settings');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   const setStatus = async (id, status) => {
     try {
@@ -57,7 +82,10 @@ function BookingInbox({ workspaceId, workspace }) {
     }
   };
 
-  const slug = workspace?.slug;
+  // Prefer the freshly-fetched settings slug over the workspace prop — admins
+  // may have just changed it. Fall back to the prop so first paint isn't empty.
+  const slug = settings?.slug ?? workspace?.slug;
+  const isEnabled = !!settings?.bookingEnabled;
   const publicUrl = slug ? `${window.location.origin}/book/${slug}` : null;
 
   return (
@@ -65,10 +93,41 @@ function BookingInbox({ workspaceId, workspace }) {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
         <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-2">Booking Inbox</h2>
 
-        {/* Public URL banner */}
-        {publicUrl ? (
+        {/* Settings + public URL banner */}
+        {!slug ? (
+          <div className="mb-6 p-4 rounded bg-yellow-500/10 border border-yellow-500/30 text-sm text-[var(--color-text-secondary)]">
+            Set a workspace slug in settings to enable your public booking form.
+          </div>
+        ) : !isEnabled ? (
           <div className="mb-6 p-4 rounded bg-[var(--color-bg-secondary)] border border-[var(--color-border)]">
-            <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)] mb-1">Your public booking form</p>
+            <p className="text-sm font-medium text-[var(--color-text-primary)] mb-1">Public booking is off</p>
+            <p className="text-xs text-[var(--color-text-muted)] mb-3">
+              When enabled, anyone with the link below can submit a booking request.
+              The URL stays private until you turn it on.
+            </p>
+            <button
+              type="button"
+              onClick={() => toggleBookingEnabled(true)}
+              disabled={savingSettings}
+              className="text-sm px-3 py-1.5 rounded bg-[var(--color-primary)] text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {savingSettings ? 'Enabling…' : 'Enable public booking'}
+            </button>
+          </div>
+        ) : (
+          <div className="mb-6 p-4 rounded bg-[var(--color-bg-secondary)] border border-[var(--color-border)]">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <p className="text-xs uppercase tracking-wider text-[var(--color-text-muted)]">Your public booking form</p>
+              <button
+                type="button"
+                onClick={() => toggleBookingEnabled(false)}
+                disabled={savingSettings}
+                className="text-xs px-2 py-1 rounded text-[var(--color-text-muted)] hover:text-red-400 hover:bg-[var(--color-bg-tertiary)] disabled:opacity-50"
+                title="Stop accepting public bookings"
+              >
+                {savingSettings ? 'Disabling…' : 'Disable'}
+              </button>
+            </div>
             <div className="flex items-center gap-2 flex-wrap">
               <code className="text-sm px-2 py-1 bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-primary)] break-all flex-1 min-w-0">
                 {publicUrl}
@@ -88,10 +147,6 @@ function BookingInbox({ workspaceId, workspace }) {
                 Preview ↗
               </a>
             </div>
-          </div>
-        ) : (
-          <div className="mb-6 p-4 rounded bg-yellow-500/10 border border-yellow-500/30 text-sm text-[var(--color-text-secondary)]">
-            Set a workspace slug in settings to enable your public booking form.
           </div>
         )}
 

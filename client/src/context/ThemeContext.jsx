@@ -1,4 +1,10 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { storage } from '../services/storage';
+
+// ThemeContext mounts at app boot. Any unwrapped localStorage call would crash
+// Safari private mode (QuotaExceededError on setItem) and blank the screen
+// before the error boundary even has a chance to mount. The `storage` wrapper
+// swallows errors and returns safe defaults.
 
 const themes = {
   default: {
@@ -187,28 +193,24 @@ const structuralColors = {
 const ThemeContext = createContext();
 
 function getWorkspaceThemes() {
-  try {
-    const parsed = JSON.parse(localStorage.getItem('bandchat-workspace-themes') || '{}');
-    return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
-  } catch { return {}; }
+  const parsed = storage.getJSON('bandchat-workspace-themes', {});
+  return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
 }
 
 function saveWorkspaceThemes(map) {
-  localStorage.setItem('bandchat-workspace-themes', JSON.stringify(map));
+  storage.setJSON('bandchat-workspace-themes', map);
 }
 
 export function ThemeProvider({ children }) {
-  const [globalTheme, setGlobalTheme] = useState(() => {
-    return localStorage.getItem('bandchat-theme') || 'default';
-  });
+  const [globalTheme, setGlobalTheme] = useState(() => storage.getString('bandchat-theme', 'default'));
   const [activeWorkspaceId, setActiveWorkspaceId] = useState(null);
   const [workspaceThemes, setWorkspaceThemes] = useState(getWorkspaceThemes);
   const [mode, setMode] = useState(() => {
-    const saved = localStorage.getItem('bandchat-mode');
+    const saved = storage.getString('bandchat-mode');
     if (saved) return saved;
     return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
   });
-  const [isFollowingSystem, setIsFollowingSystem] = useState(() => !localStorage.getItem('bandchat-mode'));
+  const [isFollowingSystem, setIsFollowingSystem] = useState(() => storage.getString('bandchat-mode') === null);
 
   // Resolve which theme to actually use
   const currentTheme = (activeWorkspaceId && workspaceThemes[activeWorkspaceId]) || globalTheme;
@@ -252,16 +254,16 @@ export function ThemeProvider({ children }) {
     // Set data attribute for CSS selectors
     root.dataset.mode = mode;
 
-    localStorage.setItem('bandchat-theme', globalTheme);
+    storage.setString('bandchat-theme', globalTheme);
     if (!isFollowingSystem) {
-      localStorage.setItem('bandchat-mode', mode);
+      storage.setString('bandchat-mode', mode);
     }
   }, [currentTheme, mode, globalTheme, isFollowingSystem]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
     const handleChange = (e) => {
-      if (!localStorage.getItem('bandchat-mode')) {
+      if (storage.getString('bandchat-mode') === null) {
         setMode(e.matches ? 'light' : 'dark');
       }
     };
@@ -305,7 +307,7 @@ export function ThemeProvider({ children }) {
   };
 
   const followSystem = () => {
-    localStorage.removeItem('bandchat-mode');
+    storage.remove('bandchat-mode');
     const isLight = window.matchMedia('(prefers-color-scheme: light)').matches;
     setMode(isLight ? 'light' : 'dark');
     setIsFollowingSystem(true);
