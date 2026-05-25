@@ -25,7 +25,7 @@ import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
 import notificationService from '../../services/notifications';
 import { addToOfflineQueue, getOfflineQueue, removeFromOfflineQueue } from '../../services/storage';
-import { getLocalMessages, upsertMessages, upsertMessage as upsertLocalMessage } from '../../services/database';
+import { getLocalMessages, upsertMessages, upsertMessage as upsertLocalMessage, updateLocalMessage } from '../../services/database';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
 import { enqueue as enqueueSync } from '../../services/syncQueue';
@@ -468,11 +468,21 @@ export default function ChannelScreen({ navigation, route }) {
 
     const handleReply = ({ parentId, message: reply }) => {
       if (reply.channelId !== channelIdRef.current) return;
-      // Update reply count on parent message
+      // Update reply count on parent message AND persist to SQLite so the
+      // badge survives an app restart. Without the SQLite update, the next
+      // session's pre-load shows the parent message with stale `_count`
+      // (replies: 0). If the parent has since rolled off the API's latest
+      // 50 (i.e. user has to scroll up to find it), the stale cache version
+      // is what the user sees and the "N replies" badge is missing.
+      let updatedCount = null;
       setMessages(prev => prev.map(m => {
         if (m.id !== parentId) return m;
-        return { ...m, _count: { ...m._count, replies: (m._count?.replies || 0) + 1 } };
+        updatedCount = { ...m._count, replies: (m._count?.replies || 0) + 1 };
+        return { ...m, _count: updatedCount };
       }));
+      if (updatedCount) {
+        updateLocalMessage(parentId, { _count: updatedCount }).catch(() => {});
+      }
     };
 
     const handleReconnect = async () => {
@@ -586,6 +596,10 @@ export default function ChannelScreen({ navigation, route }) {
       setMessages(prev => [...data.messages, ...prev]);
       setHasMore(data.hasMore);
       setNextCursor(data.nextCursor);
+      // Persist the paginated batch to SQLite so older messages get fresh
+      // _count/reactions/etc. instead of the stale version that may have
+      // been cached when the message was newer (e.g. before replies existed).
+      upsertMessages(data.messages).catch(() => {});
     } catch (err) {
       // silently fail
     } finally {

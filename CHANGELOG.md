@@ -2,6 +2,15 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.06] - 2026-05-26
+
+### Fixed
+- **Mobile: "N replies" badge missing under older parent messages.** Bug 1 from Simon's report. Disambiguated by the data: web showed the badge correctly for the same parent message, today's mobile messages showed the badge correctly, but older parent messages (yesterday or earlier) did not. Root cause: **stale SQLite cache**. The pre-load step in `ChannelScreen.js:init()` reads from local SQLite for instant display. When a thread reply arrived via `message:reply` socket event, `handleReply` was incrementing the parent's `_count.replies` in React state — but not persisting that to SQLite. On the next session, the SQLite-cached version of the parent (with stale `replies: 0`) was loaded; if the parent had since rolled off the API's latest-50 window, the user had to scroll up to find it, and the only version available was either the stale cache or fresh API data via load-more. Two-part fix:
+  - `handleReply` now also calls `updateLocalMessage(parentId, { _count: updatedCount })` so SQLite reflects new replies.
+  - Load-more handler now calls `upsertMessages(data.messages)` so paginated batches refresh SQLite with the freshest `_count`, reactions, etc. — instead of leaving the cache at whatever it was when the messages were originally fetched.
+
+Note: today's specific instance for Simon (Surista's 9:34 PM parent showing no badge) is a sunk-cost stale entry that this fix can't retroactively repair, but going forward all new replies update the cache. Stale entries get fixed the next time the user scrolls past them (load-more upserts fresh data).
+
 ## [1.07.05] - 2026-05-25
 
 ### Fixed
