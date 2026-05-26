@@ -2,6 +2,12 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.08] - 2026-05-26
+
+### Changed
+
+- **Mobile: attach MP3 / audio files in channels and DMs.** The mobile attach sheet now has an "Audio File (MP3, etc.)" option alongside Take Photo / Photo Library / File. The server already accepted MP3/WAV/OGG/AAC/M4A uploads (50MB cap) and the web client has always been able to send them, but the mobile `pickDocument` was restricted to `application/pdf` / `application/zip` only — mobile users could only produce audio via the long-press-mic voice recorder. New `pickAudio` callback in `mobile/src/components/MessageInput.js` uses `DocumentPicker` with `type: 'audio/*'`, sets `isAudio: true` on the attachment so `ChannelScreen.js` routes it through `type: 'AUDIO'` (same path as voice recordings), and the same audio-player UI in `MessageBubble` renders it. 50MB cap matches the server's `ALLOWED_AUDIO` limit.
+
 ## [1.07.07] - 2026-05-26
 
 Full-codebase audit follow-up — 10 critical/high findings fixed plus 3 storage-wrapper hardening passes and the new public-booking opt-in UI.

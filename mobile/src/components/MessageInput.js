@@ -415,6 +415,49 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
     }
   }, [attachments.length]);
 
+  // Audio file picker — separate from pickDocument because the server caps
+  // audio at 50MB (vs 10MB for docs) and uses a different MIME allowlist.
+  // The flagged `isAudio: true` matches the voice-recorder upload shape so
+  // MessageBubble renders the same audio player UI for both.
+  const pickAudio = useCallback(async () => {
+    try {
+      const remaining = 5 - attachments.length;
+      if (remaining <= 0) {
+        Alert.alert('Limit reached', 'Maximum 5 files per message');
+        return;
+      }
+
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'audio/*',
+        multiple: remaining > 1,
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled || !result.assets?.length) return;
+
+      const maxSize = 50 * 1024 * 1024; // 50MB — must match server ALLOWED_AUDIO cap
+      const newAttachments = [];
+      for (const asset of result.assets.slice(0, remaining)) {
+        if (asset.size > maxSize) {
+          Alert.alert('File too large', `"${asset.name}" exceeds the 50MB limit for audio.`);
+          continue;
+        }
+        newAttachments.push({
+          uri: asset.uri,
+          filename: asset.name || `audio-${Date.now()}.mp3`,
+          mimeType: asset.mimeType || 'audio/mpeg',
+          isAudio: true,
+          isVideo: false,
+        });
+      }
+      if (newAttachments.length > 0) {
+        setAttachments(prev => [...prev, ...newAttachments].slice(0, 5));
+      }
+    } catch (err) {
+      console.error('Audio picker error:', err);
+    }
+  }, [attachments.length]);
+
   const showAttachOptions = useCallback(() => {
     setShowAttachSheet(true);
   }, []);
@@ -860,6 +903,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
         actions={[
           { label: 'Take Photo', onPress: () => { setShowAttachSheet(false); takePhoto(); } },
           { label: 'Photo Library', onPress: () => { setShowAttachSheet(false); pickMedia(); } },
+          { label: 'Audio File (MP3, etc.)', onPress: () => { setShowAttachSheet(false); pickAudio(); } },
           { label: 'File (PDF, ZIP)', onPress: () => { setShowAttachSheet(false); pickDocument(); } },
         ]}
         onClose={() => setShowAttachSheet(false)}
