@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import WorkspaceList from './components/workspaces/WorkspaceList';
 import UpdatePrompt from './components/common/UpdatePrompt';
+import WhatsNewModal from './components/common/WhatsNewModal';
 
 // Lazy-loaded pages (only loaded when navigating to their routes)
 function lazyRetry(importFn) {
@@ -96,6 +97,10 @@ function App() {
   return (
     <>
       <UpdatePrompt />
+      {/* Auto-opens after a version bump for already-authenticated users.
+          Component internally guards on isAuthenticated, so it's a no-op
+          while sitting on /login, /landing, etc. */}
+      <WhatsNewModal />
       {/* WCAG 2.4.1: skip link lets keyboard users bypass repetitive navigation.
           Hidden until focused (sr-only -> focus:not-sr-only), then pinned at the
           top-left of the viewport so it's discoverable on first Tab. */}

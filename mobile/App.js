@@ -29,6 +29,7 @@ import { ToastProvider } from './src/context/ToastContext';
 import RootNavigator from './src/navigation/RootNavigator';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import OfflineBanner from './src/components/OfflineBanner';
+import WhatsNewModal from './src/components/WhatsNewModal';
 import notificationService from './src/services/notifications';
 import api from './src/services/api';
 import { updateWidgetGigData } from './src/services/widgetService';
@@ -264,6 +265,9 @@ function AppContent() {
       <ToastProvider>
         <OfflineBanner />
         <RootNavigator />
+        {/* Self-guards on isAuthenticated, so this is a no-op while the user
+            is still on Login / Signup / BiometricLock. */}
+        <WhatsNewModal />
         <StatusBar style={colors.isLightHeader ? 'dark' : 'light'} backgroundColor="transparent" translucent />
       </ToastProvider>
     </NavigationContainer>

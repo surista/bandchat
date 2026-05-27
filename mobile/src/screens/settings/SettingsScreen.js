@@ -31,6 +31,7 @@ import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
 import { APP_BASE_URL } from '../../utils/constants';
 import PressableRow from '../../components/PressableRow';
+import WhatsNewModal from '../../components/WhatsNewModal';
 import { useLayout } from '../../hooks/useLayout';
 
 const CURRENCIES = ['USD', 'GBP', 'EUR', 'JPY', 'AUD', 'CAD', 'NZD', 'CHF', 'ZAR'];
@@ -87,6 +88,7 @@ export default function SettingsScreen({ navigation, route }) {
   const [renaming, setRenaming] = useState(false);
   const [wsAvatarUrl, setWsAvatarUrl] = useState(null);
   const [uploadingWsAvatar, setUploadingWsAvatar] = useState(false);
+  const [showAboutModal, setShowAboutModal] = useState(false);
 
   // Workspace defaults state
   const [showDefaultsModal, setShowDefaultsModal] = useState(false);
@@ -570,6 +572,14 @@ export default function SettingsScreen({ navigation, route }) {
             onPress={() => Linking.openURL('mailto:admin@bandchat.app?subject=BandChat Feedback')}
             colors={colors}
           />
+          <View style={[styles.separator, { backgroundColor: colors.border }]} />
+          <SettingsRow
+            icon="sparkles-outline"
+            label="About BandChat"
+            subtitle="What's new in this version"
+            onPress={() => { selectionFeedback(); setShowAboutModal(true); }}
+            colors={colors}
+          />
         </View>
 
         {/* App */}
@@ -805,6 +815,12 @@ export default function SettingsScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
+
+      <WhatsNewModal
+        mode="manual"
+        visible={showAboutModal}
+        onClose={() => setShowAboutModal(false)}
+      />
     </SafeAreaView>
   );
 }

@@ -2,6 +2,15 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.11] - 2026-05-27
+
+### Added
+
+- **"What's new" dialog on first launch after an update** (requested by Simon). When the bundled app version is newer than the last version this device has seen, a sheet auto-opens summarizing the user-facing fixes and features added in the interim. Stamps the new version on dismiss so it doesn't re-open until the next update. First installs are silently stamped (no dialog stacked on top of onboarding). Also reachable any time from **Settings → About BandChat** ("What's new" link on web, full row with subtitle on mobile).
+  - Shared data file `client/src/data/releaseNotes.js` and `mobile/src/data/releaseNotes.js` (kept in sync by hand on each release — these contain the user-facing summary, not the full CHANGELOG prose). Each entry has `{ version, date, items: [{ kind, text }] }` where `kind` is `added | fixed | changed | security`. Includes a `cmpVersion()` helper that handles the padded 2-digit minor/patch format the bump script produces.
+  - Modal components: `client/src/components/common/WhatsNewModal.jsx` (uses the existing `Modal` base — focus trap, ESC, backdrop click) and `mobile/src/components/WhatsNewModal.js` (native sheet with drag handle, `accessibilityViewIsModal`, safe-area padding). Both share a two-mode API: `auto` (self-triggered, version-bounded) and `manual` (controlled `isOpen`/`visible`, shows ALL notes — for the settings entry).
+  - Last-seen version stored under `bandchat-last-seen-version` via the existing storage wrappers (`services/storage`), so no Safari-private-mode / AsyncStorage-failure crash risk.
+
 ## [1.07.10] - 2026-05-27
 
 Version-only bump. No code changes since v1.07.09 — used to trigger a fresh Vercel + Railway deploy with an updated version label across all three packages and the mobile build number.

@@ -19,6 +19,7 @@ import Skeleton from '../common/Skeleton';
 import ConfirmDialog from '../common/ConfirmDialog';
 import SlackImportWizard from '../workspaces/SlackImportWizard';
 import WebsiteTab from './WebsiteTab';
+import WhatsNewModal from '../common/WhatsNewModal';
 
 // Note: FREE_THEME_IDS is also defined in server/src/lib/planLimits.js.
 // If these values change, update both locations.
@@ -31,6 +32,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
   const toast = useToast();
 
   const [settingsTab, setSettingsTab] = useState('profile');
+  const [showAboutModal, setShowAboutModal] = useState(false);
   const [editDisplayName, setEditDisplayName] = useState('');
   const [editAvatarUrl, setEditAvatarUrl] = useState('');
   const [profileLoading, setProfileLoading] = useState(false);
@@ -1813,6 +1815,17 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                         Email
                       </a>
                     </div>
+                    <div className="border-t border-[var(--color-modal-border)]" />
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-[var(--color-text-secondary)]">About BandChat</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowAboutModal(true)}
+                        className="text-sm text-[var(--color-primary)] hover:underline"
+                      >
+                        What&apos;s new
+                      </button>
+                    </div>
                   </div>
 
                   <div className="bg-[var(--color-modal-card)] rounded-lg p-4">
@@ -2176,6 +2189,12 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
           onClose={() => setShowSlackImport(false)}
         />
       )}
+
+      <WhatsNewModal
+        mode="manual"
+        isOpen={showAboutModal}
+        onClose={() => setShowAboutModal(false)}
+      />
     </>
   );
 }
