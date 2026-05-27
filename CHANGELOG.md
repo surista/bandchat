@@ -2,6 +2,10 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.10] - 2026-05-27
+
+Version-only bump. No code changes since v1.07.09 — used to trigger a fresh Vercel + Railway deploy with an updated version label across all three packages and the mobile build number.
+
 ## [1.07.09] - 2026-05-27
 
 ### Fixed
