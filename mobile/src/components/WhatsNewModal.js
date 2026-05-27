@@ -53,13 +53,22 @@ export default function WhatsNewModal({ mode = 'auto', visible: visibleProp, onC
     (async () => {
       const lastSeen = await getUiString(STORAGE_KEY);
       if (cancelled) return;
+      let effectiveLastSeen = lastSeen;
       if (!lastSeen) {
-        // First install — quietly stamp current. No dialog stacked on top of
-        // onboarding (matches web).
+        // No stamp on this device. Either a genuinely new install (stay
+        // quiet, onboarding is enough) or an existing user upgrading to the
+        // version that introduced this feature (should see release notes).
+        // Heuristic: ThemeContext writes `bandchat-theme` on first effect
+        // run of any session, so any prior launch leaves it behind. There's
+        // a tiny race for true fresh installs where ThemeContext beats this
+        // effect — worst case is one harmless dialog on first launch.
+        const existingThemeMarker = await getUiString('bandchat-theme');
         await setUiString(STORAGE_KEY, CURRENT_VERSION);
-        return;
+        if (cancelled) return;
+        if (!existingThemeMarker) return;
+        effectiveLastSeen = '0.00.00';
       }
-      const unseen = getUnseenNotes(lastSeen, CURRENT_VERSION);
+      const unseen = getUnseenNotes(effectiveLastSeen, CURRENT_VERSION);
       if (!cancelled && unseen.length > 0) {
         setAutoNotes(unseen);
         setAutoVisible(true);

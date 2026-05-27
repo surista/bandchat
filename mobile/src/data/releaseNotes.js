@@ -16,6 +16,13 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.12',
+    date: '2026-05-28',
+    items: [
+      { kind: 'fixed', text: "This dialog now appears for users upgrading from an earlier version (in v1.07.11 it was silently skipping the first run on devices that had never seen the feature before)." },
+    ],
+  },
+  {
     version: '1.07.11',
     date: '2026-05-27',
     items: [

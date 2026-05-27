@@ -1,6 +1,6 @@
 /* global __APP_VERSION__ */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { storage } from '../../services/storage';
 import { RELEASE_NOTES, getUnseenNotes } from '../../data/releaseNotes';
@@ -40,31 +40,38 @@ const KIND_CLASS = {
 export default function WhatsNewModal({ mode = 'auto', isOpen: openProp, onClose: onCloseProp }) {
   const { isAuthenticated, loading } = useAuth();
   const [autoOpen, setAutoOpen] = useState(false);
+  const [autoNotes, setAutoNotes] = useState([]);
 
   useEffect(() => {
     if (mode !== 'auto') return;
     if (loading || !isAuthenticated) return;
     const lastSeen = storage.getString(STORAGE_KEY);
+    let effectiveLastSeen = lastSeen;
     if (!lastSeen) {
-      // First install — stamp current version and stay quiet. The user is
-      // already busy with onboarding; an unsolicited release-notes dialog
-      // would just be noise.
+      // No stamp on this device. Two distinct cases hide behind that:
+      //   (a) brand-new install — onboarding is enough, no dialog
+      //   (b) existing user upgrading to the version that introduced this
+      //       feature — should see release notes
+      // Heuristic: any prior session writes `bandchat-theme` via ThemeContext
+      // (web ThemeContext has done this since before this feature shipped),
+      // so its presence is a reliable "existing user" signal. There's a tiny
+      // race for fresh installs where ThemeContext's effect fires first and
+      // sets the key — worst case is one harmless dialog on first launch.
+      const isExistingUser = !!storage.getString('bandchat-theme');
       storage.setString(STORAGE_KEY, __APP_VERSION__);
-      return;
+      if (!isExistingUser) return;
+      // Show everything we know about by pretending lastSeen is before 1.0.
+      effectiveLastSeen = '0.00.00';
     }
-    const unseen = getUnseenNotes(lastSeen, __APP_VERSION__);
-    if (unseen.length > 0) setAutoOpen(true);
+    const unseen = getUnseenNotes(effectiveLastSeen, __APP_VERSION__);
+    if (unseen.length > 0) {
+      setAutoNotes(unseen);
+      setAutoOpen(true);
+    }
   }, [mode, isAuthenticated, loading]);
 
   const isOpen = mode === 'auto' ? autoOpen : !!openProp;
-
-  const notes = useMemo(() => {
-    if (mode === 'auto') {
-      const lastSeen = storage.getString(STORAGE_KEY) || '';
-      return getUnseenNotes(lastSeen, __APP_VERSION__);
-    }
-    return RELEASE_NOTES;
-  }, [mode, isOpen]);
+  const notes = mode === 'auto' ? autoNotes : RELEASE_NOTES;
 
   const handleClose = () => {
     if (mode === 'auto') {

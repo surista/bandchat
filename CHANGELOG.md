@@ -2,6 +2,12 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.12] - 2026-05-28
+
+### Fixed
+
+- **"What's new" dialog now appears for users upgrading from an earlier version.** v1.07.11's "first install" guard was too aggressive: any device without the new `bandchat-last-seen-version` storage key was treated as a brand-new install and silently stamped, which is the *exact* state of every existing user the first time they ran v1.07.11. Effectively, **no one** would have seen the v1.07.11 dialog they were supposed to see on upgrade. Added an "existing user" heuristic: if no last-seen stamp exists but the device has a `bandchat-theme` key (written by ThemeContext on every prior session since long before this feature shipped), treat it as case (b) — show the dialog with all known release notes, then stamp. Genuinely fresh installs still stay quiet. Caught before any mobile EAS build went out; web v1.07.11 had been live for ~24h but the only people stamped during that window were the dev test sessions, so no real users were affected.
+
 ## [1.07.11] - 2026-05-27
 
 ### Added
