@@ -511,7 +511,13 @@ export default function GigDetailScreen({ navigation, route }) {
     } finally {
       setSaving(false);
     }
-  }, [title, type, status, date, startTime, endTime, venue, address, selectedVenueId, pay, notes, isNew, workspaceId, gigId, navigation, populateForm]);
+    // Stale-closure trap: every state value referenced in the body must be in
+    // this dep array, otherwise editing ONLY that field (without also touching
+    // title/venue/etc.) saves the captured INITIAL value, not what the user
+    // picked. v1.07.06 and earlier shipped without the time/multiDay/lock
+    // fields here, which is why sound check / doors / stage time silently
+    // failed to save when they were the only thing the user changed.
+  }, [title, type, status, date, multiDay, endDate, startTime, endTime, soundCheckTime, eventStartTime, performanceStartTime, venue, address, selectedVenueId, pay, notes, isAdmin, isLocked, isNew, workspaceId, gigId, navigation, populateForm]);
 
   const handleCancel = useCallback(() => {
     if (isNew) {

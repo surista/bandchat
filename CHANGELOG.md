@@ -2,6 +2,12 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.09] - 2026-05-27
+
+### Fixed
+
+- **Mobile: setting sound check / doors / stage time on a gig silently dropped the value on save.** Reported by Simon (Blues Implosion). Classic stale-closure: `handleSave` in `mobile/src/screens/band/GigDetailScreen.js:514` was a `useCallback` whose dependency array did not include `soundCheckTime`, `eventStartTime`, `performanceStartTime` (or `multiDay`, `endDate`, `isAdmin`, `isLocked`). The callback captured the *initial* values of those state vars at first render and kept using them. If the user opened the edit form and changed ONLY a time field — without also touching title / venue / notes / one of the other deps — the save closure still held the empty initial value, sent `null` to the server, and the picker visually reverted on the post-save refresh. Editing a time *and* the title looked fine, which is why this was intermittent. Bug has actually been present since v1.04.63 (when the time fields shipped) — `react-hooks/exhaustive-deps` is on but set to `warn`, so it never blocked CI. Fixed by adding all seven missing deps to the array. Web `GigForm.handleSubmit` is unaffected because it's a plain arrow function in render scope, fresh on every render.
+
 ## [1.07.08] - 2026-05-26
 
 ### Changed
