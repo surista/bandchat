@@ -2,6 +2,12 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.14] - 2026-05-28
+
+### Fixed
+
+- **Web: multi-set setlist print/PDF layout.** With two (or more) sets, each set column ran flush to the page edge, leaving an uneven, edge-hugging look. Now each set's content sits in a max-380px block that's centered within its half of the page (`align-items: center` on `.set-column`), while the song text inside stays left-aligned. The SET header underline now aligns with the song block rather than spanning the full half. Single-set layout is unchanged (still the centered 500px column). Affects both Print and Word export since they share `buildSetlistHtml()` in `client/src/utils/setlistExport.js`. (Mobile setlist print uses a separate expo-print builder and is unaffected.)
+
 ## [1.07.13] - 2026-05-28
 
 ### Changed

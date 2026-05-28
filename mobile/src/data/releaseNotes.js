@@ -16,6 +16,13 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.14',
+    date: '2026-05-28',
+    items: [
+      { kind: 'fixed', text: 'Web: printed/PDF setlists with multiple sets now center each set in its half of the page (songs stay left-aligned) instead of running flush to the page edges.' },
+    ],
+  },
+  {
     version: '1.07.13',
     date: '2026-05-28',
     items: [

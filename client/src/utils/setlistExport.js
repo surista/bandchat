@@ -155,8 +155,10 @@ export function buildSetlistHtml(setlist, opts = {}) {
 
     return `
       <div class="set-column">
-        ${setLabel ? `<div class="set-header">${setLabel}${setTimeStr}</div>` : ''}
-        <ul class="song-list">${itemsHtml}</ul>
+        <div class="set-inner">
+          ${setLabel ? `<div class="set-header">${setLabel}${setTimeStr}</div>` : ''}
+          <ul class="song-list">${itemsHtml}</ul>
+        </div>
       </div>
     `;
   }).join('');
@@ -195,7 +197,17 @@ export function buildSetlistHtml(setlist, opts = {}) {
     .content { flex: 1; display: flex; align-items: stretch; }
     .columns { display: flex; gap: 16px; width: 100%; height: 100%; }
     .columns-1 { max-width: 500px; margin: 0 auto; text-align: center; }
-    .set-column { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .set-column { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+    /* Inner block holds the header + song list. align-items:center on the
+       column centers this block within the column's half of the page; the
+       block keeps its own text left-aligned. */
+    .set-inner { width: 100%; flex: 1; display: flex; flex-direction: column; }
+    /* Multi-set: cap each block's width so it's a clearly-centered column with
+       gutters on both sides, rather than running flush to the page edge. The
+       SET header underline then aligns with the song block, not the half. */
+    .columns-2 .set-inner,
+    .columns-3 .set-inner,
+    .columns-4 .set-inner { max-width: 380px; text-align: left; }
     .set-header {
       font-size: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;
       margin: 0 0 12px 0; padding: 8px 0; border-bottom: 2px solid #333;
