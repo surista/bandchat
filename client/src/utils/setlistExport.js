@@ -202,12 +202,17 @@ export function buildSetlistHtml(setlist, opts = {}) {
        column centers this block within the column's half of the page; the
        block keeps its own text left-aligned. */
     .set-inner { width: 100%; flex: 1; display: flex; flex-direction: column; }
-    /* Multi-set: cap each block's width so it's a clearly-centered column with
-       gutters on both sides, rather than running flush to the page edge. The
-       SET header underline then aligns with the song block, not the half. */
-    .columns-2 .set-inner,
+    /* Two sets: each half is wide (~480px), so cap the block at 380px and let
+       align-items:center put even gutters on both sides. A fixed width keeps
+       the two halves visually symmetric. */
+    .columns-2 .set-inner { max-width: 380px; text-align: left; }
+    /* Three or four sets: each column is narrower (~316px / ~232px), so a fixed
+       380px cap would exceed the column and leave nothing to center. Use
+       fit-content instead — the block shrinks to its widest line (usually the
+       SET header + time range) and centers in its third/quarter, with the song
+       text left-aligned. No magic pixel value, and long titles never wrap. */
     .columns-3 .set-inner,
-    .columns-4 .set-inner { max-width: 380px; text-align: left; }
+    .columns-4 .set-inner { width: fit-content; max-width: 100%; text-align: left; }
     .set-header {
       font-size: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;
       margin: 0 0 12px 0; padding: 8px 0; border-bottom: 2px solid #333;

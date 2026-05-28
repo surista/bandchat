@@ -2,6 +2,12 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.15] - 2026-05-28
+
+### Fixed
+
+- **Web: 3-set (and 4-set) setlist print/PDF centering.** v1.07.14's `max-width: 380px` only worked for 2 sets — in a 3-set landscape layout each column is only ~316px wide, so the 380px cap exceeded the column and the content stayed flush-left. Split the rule: 2 sets keep the fixed 380px cap (symmetric halves), while 3+ sets now use `width: fit-content` so each block shrinks to its widest line (typically the SET header + time range) and centers within its third/quarter via the existing `align-items: center`. No magic pixel value per set count, and long titles like "Don't You Forget About Me" never wrap. `client/src/utils/setlistExport.js`.
+
 ## [1.07.14] - 2026-05-28
 
 ### Fixed
