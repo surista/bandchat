@@ -16,6 +16,13 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.13',
+    date: '2026-05-28',
+    items: [
+      { kind: 'changed', text: 'Tablets and foldables can now rotate freely; phones still stay locked to portrait. Prepares the Android build for Android 16, which forces large screens to ignore portrait locks. iPad has always rotated freely so no change there.' },
+    ],
+  },
+  {
     version: '1.07.12',
     date: '2026-05-28',
     items: [

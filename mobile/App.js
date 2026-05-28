@@ -1,12 +1,38 @@
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useEffect, useRef } from 'react';
-import { AppState, Linking, Text, TextInput, Platform, UIManager } from 'react-native';
+import { AppState, Linking, Text, TextInput, Platform, UIManager, Dimensions } from 'react-native';
+import * as ScreenOrientation from 'expo-screen-orientation';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
+
+// Lock phones to portrait at runtime; let tablets and foldables rotate.
+// We can't do this via app.config.js `orientation` because:
+//   (1) it's not per-device-type, and
+//   (2) Android 16 force-ignores manifest-level screenOrientation on large
+//       screens regardless of what we set, and Google Play flags it as a
+//       recommended action.
+//
+// Heuristic: shortest-side ≥ 600dp (Android's sw600dp convention — the
+// same threshold Google uses to define "large screen") OR Platform.isPad.
+// Shortest side is orientation-invariant, so a phone briefly launched in
+// landscape (Android only — possible if the user rotates before opening
+// the app) isn't mis-classified as a tablet.
+//
+// Fire-and-forget — lockAsync resolves quickly and any failure (e.g. no
+// permission on a managed environment) is logged but never blocks startup.
+(() => {
+  const { width, height } = Dimensions.get('window');
+  const shortestSide = Math.min(width, height);
+  const isLargeScreen = shortestSide >= 600 || Platform.isPad === true;
+  if (isLargeScreen) return;
+  ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch((err) => {
+    if (__DEV__) console.warn('Failed to lock orientation:', err?.message);
+  });
+})();
 
 // Support Dynamic Type / Android font scaling up to 2.0× to cover Android's
 // highest accessibility levels (Pixel/Samsung) and iOS AX3/AX5 sizes.

@@ -2,6 +2,15 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.13] - 2026-05-28
+
+### Changed
+
+- **Android: removed manifest-level portrait lock; tablets and foldables now rotate freely while phones stay locked to portrait at runtime.** Addresses a Google Play Console "recommended" advisory for the v1.07.12 submission. Android 16 (shipping ~Aug 2026) will ignore `screenOrientation="PORTRAIT"` on large screens regardless of what we set; the proactive fix avoids unexpected tablet/foldable rotation behavior when that ships. Specifically:
+  - `mobile/app.config.js`: `orientation: 'portrait'` → `'default'`. Drops `screenOrientation="PORTRAIT"` from the generated AndroidManifest and removes the iPhone-side `UISupportedInterfaceOrientations` lock. iPad already had explicit all-four-orientations via `UISupportedInterfaceOrientations~ipad`, so no change there.
+  - `mobile/App.js`: at module scope (before any screen mounts), call `ScreenOrientation.lockAsync(PORTRAIT_UP)` on phones. Detection: `Math.min(width, height) >= 600 || Platform.isPad` — matches Android's official `sw600dp` "large screen" definition, orientation-invariant so phones launched in landscape (Android only — possible if the user rotates before opening the app) aren't mis-classified.
+  - Added `expo-screen-orientation@~9.0.9` to dependencies. iOS-side behavior unchanged on iPhones (runtime lock still applies); iPad layout work in landscape is already governed by `useLayout().isSplitView`. The pieces flagged by the audit as not-yet-audited-in-landscape (notably `DraggableList` in the setlist editor and the message composer at narrow widths) remain unaudited — file as a follow-up if tablet feedback comes in.
+
 ## [1.07.12] - 2026-05-28
 
 ### Fixed

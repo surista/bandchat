@@ -1,6 +1,6 @@
 {
   "name": "mobile",
-  "version": "1.07.12",
+  "version": "1.07.13",
   "main": "index.js",
   "scripts": {
     "start": "expo start",
@@ -58,6 +58,7 @@
     "expo-notifications": "~0.32.16",
     "expo-print": "~15.0.8",
     "expo-quick-actions": "^6.0.1",
+    "expo-screen-orientation": "~9.0.9",
     "expo-secure-store": "~15.0.8",
     "expo-share-intent": "^5.1.1",
     "expo-sharing": "~14.0.8",

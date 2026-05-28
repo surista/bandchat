@@ -12,8 +12,13 @@ export default {
     name: 'BandChat',
     slug: 'bandchat',
     scheme: 'bandchat',
-    version: '1.07.12',
-    orientation: 'portrait',
+    version: '1.07.13',
+    // 'default' (not 'portrait') so the Android manifest doesn't ship
+    // screenOrientation="PORTRAIT" — Android 16 force-ignores that on
+    // tablets/foldables anyway and Google Play flags it as a recommended
+    // action. Phones are re-locked to portrait at runtime in App.js via
+    // expo-screen-orientation; tablets and foldables are left free.
+    orientation: 'default',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
     description: 'Real-time communication and management app for bands. Channels, messaging, song management, setlists, calendar, and more.',
@@ -30,7 +35,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.bandchat.mobile',
-      buildNumber: '10712',
+      buildNumber: '10713',
       associatedDomains: ['applinks:bandchat.vercel.app'],
       entitlements: {
         'com.apple.security.application-groups': ['group.com.bandchat.manager.mobile'],
@@ -57,7 +62,7 @@ export default {
     android: {
       package: 'com.bandchat.mobile',
       softwareKeyboardLayoutMode: 'resize',
-      versionCode: 10712,
+      versionCode: 10713,
       allowBackup: false,
       predictiveBackGestureEnabled: true,
       adaptiveIcon: {
