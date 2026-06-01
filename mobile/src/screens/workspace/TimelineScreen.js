@@ -125,17 +125,22 @@ export default function TimelineScreen({ navigation, route }) {
   }, [loadingMore, hasMore, nextCursor, loadTimeline]);
 
   const navigateToChannel = useCallback((msg) => {
-    if (msg.channel) {
-      // Navigate to the channel with this message
-      navigation.navigate('Channel', {
-        channel: {
-          id: msg.channel.id,
-          name: msg.channel.name,
-          isDM: msg.channel.isDirect,
-        },
-        workspaceId,
-      });
-    }
+    if (!msg.channel) return;
+    // If this is a thread reply, pass openThreadId so ChannelScreen pushes
+    // ThreadScreen on top once messages load (same plumbing as the v1.07.05
+    // thread-reply push deep-link). Without this, tapping a reply would land
+    // the user on the channel with no way to reach the thread — particularly
+    // bad when the parent's "N replies" badge is stale and the user can't
+    // find the thread entry point.
+    navigation.navigate('Channel', {
+      channel: {
+        id: msg.channel.id,
+        name: msg.channel.name,
+        isDM: msg.channel.isDirect,
+      },
+      workspaceId,
+      ...(msg.parentId && { openThreadId: msg.parentId }),
+    });
   }, [navigation, workspaceId]);
 
   const renderItem = useCallback(({ item: msg }) => {

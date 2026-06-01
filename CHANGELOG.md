@@ -2,6 +2,14 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.16] - 2026-06-02
+
+### Fixed
+
+- **Mobile: tapping a thread reply in All Messages now opens the thread.** Reported by Jeff (rehearsals channel). Previously, `TimelineScreen.navigateToChannel` only passed `channel.id` and `workspaceId` to the Channel screen — no thread context — so tapping a reply just dropped the user in the channel with no way to reach the thread. (Particularly bad when the parent's "N replies" badge is stale from cache and the user can't even see the thread entry point.) Now if the tapped message has a `parentId`, the navigation includes `openThreadId: msg.parentId`, which feeds into ChannelScreen's existing v1.07.05 auto-open-thread effect and pushes ThreadScreen onto the stack once messages load. Same plumbing the push-notification deep-link already uses. Web's `AllMessages.jsx` already passed `threadId` correctly on the same path — this brings mobile to parity.
+  - Known limitation (pre-existing, not introduced here): the auto-open effect requires the parent message to be in the channel's loaded message window (latest 50). If the parent is older and outside that window, the effect silently bails. Robust fix would be to fetch the parent by id (no single-message endpoint exists yet) or to extend `loadMore` to seek backward until it finds the parent. Worth a follow-up if the older-parent case becomes a real complaint.
+  - Also relevant context for Jeff's "stale reply badge" report: the v1.07.06/v1.07.07 SQLite persistence work covers the case where the channel screen is mounted at reply time. When the user makes the reply from another device or screen, mobile's `handleReply` socket handler doesn't fire (the channel room subscription is gated on `ChannelScreen` being mounted), so SQLite stays at the pre-reply `_count`. The next channel mount's API fetch should overwrite with fresh `_count`, but if the API call is slow/fails the stale badge persists. This fix sidesteps that whole class of issue for the All Messages flow by deep-linking past the badge entirely.
+
 ## [1.07.15] - 2026-05-28
 
 ### Fixed

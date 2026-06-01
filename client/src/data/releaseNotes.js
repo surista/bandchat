@@ -16,6 +16,13 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.16',
+    date: '2026-06-02',
+    items: [
+      { kind: 'fixed', text: 'Mobile: tapping a thread reply in All Messages now opens the thread directly, instead of dropping you in the channel with no way to find your reply.' },
+    ],
+  },
+  {
     version: '1.07.14',
     date: '2026-05-28',
     items: [
