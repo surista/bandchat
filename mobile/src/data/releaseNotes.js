@@ -16,6 +16,13 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.17',
+    date: '2026-06-02',
+    items: [
+      { kind: 'changed', text: 'Audio and video attachments can now be up to 500 MB (was 50 MB). Heads-up: FREE workspaces still cap total storage at 500 MB, so a single big file will fill it. PRO workspaces have 10 GB to play with.' },
+    ],
+  },
+  {
     version: '1.07.16',
     date: '2026-06-02',
     items: [

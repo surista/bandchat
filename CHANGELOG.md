@@ -2,6 +2,12 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.17] - 2026-06-02
+
+### Changed
+
+- **Audio and video file size limit raised from 50 MB → 500 MB.** Updated the constants in five places (server `uploads.js` + `messages.js`, web `fileValidation.js`, mobile `MessageInput.js` + `GigDetailScreen.js`) plus the user-facing error strings and the CLAUDE.md feature summary. Image (15 MB) and document (10 MB) caps unchanged. Multer still uses `memoryStorage()`, so each concurrent upload now holds ~500 MB of RAM until R2 finishes — flagged inline in `uploads.js` as a follow-up to switch to `multer.diskStorage()` if Railway memory pressure shows up. Per-workspace storage quotas unchanged (FREE = 500 MB, PRO = 10 GB) — a FREE workspace can now upload exactly one full-size audio/video file before hitting the wall; the user-facing release note calls this out.
+
 ## [1.07.16] - 2026-06-02
 
 ### Fixed

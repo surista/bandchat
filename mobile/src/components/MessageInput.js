@@ -416,7 +416,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
   }, [attachments.length]);
 
   // Audio file picker — separate from pickDocument because the server caps
-  // audio at 50MB (vs 10MB for docs) and uses a different MIME allowlist.
+  // audio at 500MB (vs 10MB for docs) and uses a different MIME allowlist.
   // The flagged `isAudio: true` matches the voice-recorder upload shape so
   // MessageBubble renders the same audio player UI for both.
   const pickAudio = useCallback(async () => {
@@ -435,11 +435,11 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
 
       if (result.canceled || !result.assets?.length) return;
 
-      const maxSize = 50 * 1024 * 1024; // 50MB — must match server ALLOWED_AUDIO cap
+      const maxSize = 500 * 1024 * 1024; // 500MB — must match server MAX_AUDIO_SIZE
       const newAttachments = [];
       for (const asset of result.assets.slice(0, remaining)) {
         if (asset.size > maxSize) {
-          Alert.alert('File too large', `"${asset.name}" exceeds the 50MB limit for audio.`);
+          Alert.alert('File too large', `"${asset.name}" exceeds the 500MB limit for audio.`);
           continue;
         }
         newAttachments.push({

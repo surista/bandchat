@@ -13,7 +13,7 @@ import { isValidUUID } from '../lib/validators.js';
 
 // L7: Allowed attachment types and size limits for validation
 const ALLOWED_ATTACHMENT_TYPES = ['IMAGE', 'AUDIO', 'VIDEO', 'DOCUMENT'];
-const MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024; // 50MB (video max)
+const MAX_ATTACHMENT_SIZE = 500 * 1024 * 1024; // 500MB (video/audio max — keep in sync with uploads.js)
 
 const router = express.Router();
 

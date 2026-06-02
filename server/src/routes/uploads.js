@@ -68,8 +68,8 @@ const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_AUDIO_TYPES, ...ALLOWE
 
 // File size limits
 const MAX_IMAGE_SIZE = 15 * 1024 * 1024; // 15MB
-const MAX_AUDIO_SIZE = 50 * 1024 * 1024; // 50MB
-const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_AUDIO_SIZE = 500 * 1024 * 1024; // 500MB
+const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500MB
 const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024; // 10MB
 
 // Use memory storage
@@ -161,12 +161,17 @@ const validateFileType = async (buffer, originalFilename) => {
   return { valid: isValid, detectedType: detected.mime, fileCategory };
 };
 
-// Configure multer with 50MB limit (will validate per-type in handler)
+// Configure multer with the video/audio max as the hard cap; per-type
+// validation runs in the handler so images/docs still get their tighter caps.
+// NOTE: storage is memoryStorage — at 500MB per file, each concurrent upload
+// holds ~500MB of RAM until R2 finishes. Monitor Railway memory if you see
+// concurrent large uploads; switching to multer.diskStorage() is the
+// follow-up if it becomes a problem.
 const upload = multer({
   storage: memStorage,
   fileFilter,
   limits: {
-    fileSize: MAX_VIDEO_SIZE // 50MB max (video), smaller types validated separately
+    fileSize: MAX_VIDEO_SIZE
   }
 });
 

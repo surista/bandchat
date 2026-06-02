@@ -669,8 +669,8 @@ export default function GigDetailScreen({ navigation, route }) {
       });
       if (result.canceled) return;
       const file = result.assets[0];
-      if (file.size > 50 * 1024 * 1024) {
-        Alert.alert('Too Large', 'Audio file must be under 50MB');
+      if (file.size > 500 * 1024 * 1024) {
+        Alert.alert('Too Large', 'Audio file must be under 500MB');
         return;
       }
       setUploadingMedia(true);

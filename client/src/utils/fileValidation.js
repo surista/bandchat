@@ -2,10 +2,10 @@
  * Shared file type and size validation constants and helpers.
  */
 
-/** Maximum file size for uploads */
+/** Maximum file size for uploads — keep in sync with server/src/routes/uploads.js */
 export const MAX_IMAGE_SIZE = 15 * 1024 * 1024; // 15MB
-export const MAX_AUDIO_SIZE = 50 * 1024 * 1024; // 50MB
-export const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+export const MAX_AUDIO_SIZE = 500 * 1024 * 1024; // 500MB
+export const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500MB
 export const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024; // 10MB
 
 /** Allowed file types */
