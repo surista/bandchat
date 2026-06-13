@@ -131,6 +131,11 @@ export default function ChannelScreen({ navigation, route }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState(null);
+  // IDs of messages this client just sent (API response confirmed). The server
+  // broadcasts message:new to all channel members INCLUDING the sender's
+  // socket, so without this we'd race the API swap against the echo. The Set
+  // is bounded by sendMessage clearing entries 30s after add.
+  const recentSentIdsRef = useRef(new Set());
 
   // Auto-open thread when arriving from a thread-reply notification
   // (App.js passes openThreadId from the push URL's &thread= param). Waits
@@ -393,6 +398,11 @@ export default function ChannelScreen({ navigation, route }) {
 
       setMessages(prev => {
         if (prev.some(m => m.id === message.id)) return prev;
+        // We just sent this — the API response already swapped the optimistic
+        // entry to the real message. The socket echo would otherwise race
+        // ahead of the swap (rare but possible under load) and append a
+        // duplicate.
+        if (recentSentIdsRef.current.has(message.id)) return prev;
 
         const optimisticIdx = prev.findIndex(
           m => m.pending && m.author?.id === message.author?.id && m.content === message.content
@@ -451,6 +461,13 @@ export default function ChannelScreen({ navigation, route }) {
       if (channelId !== channelIdRef.current) return;
       setMessages(prev => prev.map(m => {
         if (m.id !== messageId) return m;
+        // Dedupe by (emoji, userId): the reactor's own client made the HTTP
+        // POST AND receives the socket echo. Without this check both fire and
+        // the reactor sees their reaction with count: 2.
+        const exists = (m.reactions || []).some(
+          r => r.emoji === reaction.emoji && (r.user?.id || r.userId) === (reaction.user?.id || reaction.userId)
+        );
+        if (exists) return m;
         return { ...m, reactions: [...(m.reactions || []), reaction] };
       }));
     };
@@ -668,6 +685,11 @@ export default function ChannelScreen({ navigation, route }) {
         uploadedAttachments = uploads;
       }
       const savedMessage = await api.sendMessage(channel.id, content || '', null, uploadedAttachments);
+      // Register the confirmed id so the socket echo (which fires for the
+      // sender too) doesn't duplicate. 30s is generous — the echo usually
+      // arrives within ~100ms.
+      recentSentIdsRef.current.add(savedMessage.id);
+      setTimeout(() => recentSentIdsRef.current.delete(savedMessage.id), 30000);
       setMessages(prev => prev.map(m =>
         m.id === optimisticMessage.id ? savedMessage : m
       ));
@@ -707,6 +729,8 @@ export default function ChannelScreen({ navigation, route }) {
     try {
       const uploaded = await api.uploadFile(uri, filename, 'audio/mp4', workspaceId);
       const savedMessage = await api.sendMessage(channel.id, '', null, [uploaded]);
+      recentSentIdsRef.current.add(savedMessage.id);
+      setTimeout(() => recentSentIdsRef.current.delete(savedMessage.id), 30000);
       setMessages(prev => prev.map(m =>
         m.id === optimisticMessage.id ? savedMessage : m
       ));

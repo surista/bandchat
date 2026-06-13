@@ -16,6 +16,16 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.18',
+    date: '2026-06-14',
+    items: [
+      { kind: 'fixed', text: 'Mobile: rapid back-to-back messages no longer occasionally appear as duplicates.' },
+      { kind: 'fixed', text: 'Mobile: your own reactions no longer briefly show with count 2.' },
+      { kind: 'fixed', text: 'Mobile: status bar now restores correctly after exiting Live Mode (was staying hidden).' },
+      { kind: 'changed', text: 'Android: cleaned up unused legacy permissions ahead of upcoming Play Store policy enforcement. No user-visible change.' },
+    ],
+  },
+  {
     version: '1.07.17',
     date: '2026-06-02',
     items: [

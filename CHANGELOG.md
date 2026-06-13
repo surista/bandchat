@@ -2,6 +2,26 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.18] - 2026-06-14
+
+Batch 1+2 of the post-v1.07.17 code-review pass. Mobile-only changes; web/server unaffected.
+
+### Security / Play Store compliance
+
+- **Cleaned local `mobile/android/app/src/main/AndroidManifest.xml` of illegal permissions.** `mobile/android/` is gitignored (Expo prebuilds it from `app.config.js` at build time), so this commit only fixes local builds — production EAS builds will get the same fix as soon as a fresh prebuild runs. **ACTION REQUIRED before next mobile build: `cd mobile && rm -rf android && npx expo prebuild --clean`** to regenerate from the current `app.config.js`. The stale local manifest had:
+  - `READ_EXTERNAL_STORAGE` (superseded by `READ_MEDIA_*` already declared in `app.config.js`)
+  - `WRITE_EXTERNAL_STORAGE` (illegal on `targetSdk ≥ 30`; unused — saves go through `MediaLibrary`)
+  - `SYSTEM_ALERT_WINDOW` (leaked from the dev manifest into main; Play Console policy violation — production users would be prompted for "Display over other apps" on install)
+  - `android:requestLegacyExternalStorage="true"` (illegal on Android 11+)
+  - `android:screenOrientation="portrait"` on MainActivity (contradicted v1.07.13's switch to runtime orientation locking; without the prebuild refresh tablets/foldables stay OS-locked to portrait regardless of the JS lock call)
+
+### Fixed
+
+- **`mobile/App.js`: migrated the last 3 raw `AsyncStorage` calls to the storage wrapper.** The v1.07.07 + v1.07.17 wrapper migrations covered AuthContext, ThemeContext, ChannelScreen, useMessageActions but missed App.js. Now uses `getUiString` / `getUiState` from `services/storage`, so Safari-private-mode-equivalent AsyncStorage failures (corrupted JSON from old versions, transient SQLite errors) return safe defaults instead of throwing into the share-intent / quick-actions code paths. `'user'` key reads via `getUiState` (JSON parse); `'lastWorkspaceId'` / `'lastWorkspaceName'` via `getUiString`.
+- **`mobile/src/screens/band/LiveModeScreen.js`: switched from raw `react-native` StatusBar to `expo-status-bar`.** Expo's StatusBar maintains a styling stack so the previous bar state is restored on unmount; the raw RN version mutated the bar globally and left it hidden after exiting Live Mode (most visible on-stage, where a stuck-hidden bar after the show was exactly the wrong default).
+- **Duplicate message bubbles after rapid send under load.** `ChannelScreen.js:387-415` — added a `recentSentIdsRef` Set that tracks API-confirmed message IDs from this client's own sends; `handleNewMessage` checks the Set before treating an incoming socket echo as a new message. Without this, the echo (which the server broadcasts to all channel members INCLUDING the sender's socket) could race ahead of the optimistic→real swap from the API response and append a duplicate. 30s TTL on each Set entry — echoes normally arrive within ~100ms. Applied to both `sendMessage` and `handleSendVoice` flows.
+- **Own reactions appearing with `count: 2`.** `ChannelScreen.js:450-456` — `handleReactionAdded` socket handler appended unconditionally, but the reactor's client also has the HTTP response from `addReaction` which also adds. Dedupe by `(emoji, userId)` before push.
+
 ## [1.07.17] - 2026-06-02
 
 ### Changed

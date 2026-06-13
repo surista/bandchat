@@ -5,11 +5,15 @@ import {
   FlatList,
   TouchableOpacity,
   ScrollView,
-  StatusBar,
   BackHandler,
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
+// expo-status-bar (not react-native's StatusBar) — Expo's version maintains a
+// stack of styles, so when LiveMode unmounts the previous bar styling is
+// restored automatically. The raw RN StatusBar mutates the bar globally and
+// leaves it whatever LiveMode set it to on exit.
+import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -179,7 +183,7 @@ export default function LiveModeScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar hidden animated />
+      <StatusBar hidden />
 
       {/* Close button */}
       <TouchableOpacity

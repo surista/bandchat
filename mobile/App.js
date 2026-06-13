@@ -40,7 +40,7 @@ if (Text.defaultProps == null) Text.defaultProps = {};
 Text.defaultProps.maxFontSizeMultiplier = 2.0;
 if (TextInput.defaultProps == null) TextInput.defaultProps = {};
 TextInput.defaultProps.maxFontSizeMultiplier = 2.0;
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUiString, getUiState } from './src/services/storage';
 import { StatusBar } from 'expo-status-bar';
 import * as NavigationBar from 'expo-navigation-bar';
 import { NavigationContainer } from '@react-navigation/native';
@@ -71,12 +71,11 @@ const isValidInviteCode = (str) => str && INVITE_CODE_REGEX.test(str);
 // Prepare channel data for navigation (resolve DM display names)
 async function prepareChannelForNav(channel) {
   if (!channel.isDirect) return channel;
-  // Get current user ID from stored auth data
-  let userId = null;
-  try {
-    const userData = await AsyncStorage.getItem('user');
-    if (userData) userId = JSON.parse(userData).id;
-  } catch {}
+  // Get current user ID from stored auth data. getUiState parses JSON and
+  // swallows storage errors — falls back to null and the DM-name resolution
+  // below handles that gracefully.
+  const userData = await getUiState('user');
+  const userId = userData?.id || null;
   const otherMembers = (channel.members || [])
     .filter(m => m.user?.id !== userId)
     .map(m => m.user);
@@ -251,8 +250,8 @@ function AppContent() {
     const sub = QuickActions.addListener(async (action) => {
       if (!navigationRef.current) return;
 
-      const wsId = await AsyncStorage.getItem('lastWorkspaceId');
-      const wsName = await AsyncStorage.getItem('lastWorkspaceName');
+      const wsId = await getUiString('lastWorkspaceId');
+      const wsName = await getUiString('lastWorkspaceName');
 
       if (!wsId) {
         navigationRef.current.navigate('WorkspaceList');
