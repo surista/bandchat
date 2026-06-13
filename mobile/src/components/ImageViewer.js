@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native';
 import ImageView from 'react-native-image-viewing';
 import * as MediaLibrary from 'expo-media-library';
@@ -35,7 +36,14 @@ function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
       setSaving(true);
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted' && status !== 'limited') {
-        Alert.alert('Permission needed', 'Allow BandChat to save photos to your library.');
+        Alert.alert(
+          'Permission needed',
+          'Allow BandChat to save photos to your library.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
         return;
       }
       const url = imageList[currentIndex]?.uri;

@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { View, TextInput, TouchableOpacity, Text, Image, StyleSheet, Platform, Animated, PanResponder, Alert, FlatList, ScrollView } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, Image, StyleSheet, Platform, Animated, PanResponder, Alert, FlatList, ScrollView, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { prepareImageForUpload, prepareImagesForUpload } from '../utils/prepareImageUpload';
@@ -13,6 +13,7 @@ import { containsGroupMention } from '../utils/parseMentions';
 import EmojiPicker from './EmojiPicker';
 import ActionSheet from './ActionSheet';
 import PressableRow from './PressableRow';
+import { MIN_TOUCH_TARGET } from '../utils/touchTarget';
 
 const MAX_HEIGHT = 120;
 
@@ -351,7 +352,17 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
   const takePhoto = useCallback(async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission required', 'Camera access is needed to take photos.');
+      // Once the user has declined camera permission once, the OS doesn't
+      // re-prompt — they have to flip it in Settings manually. Offering the
+      // Settings deep-link makes recovery a single tap.
+      Alert.alert(
+        'Permission required',
+        'Camera access is needed to take photos.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ]
+      );
       return;
     }
 
@@ -1084,8 +1095,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   toolbarButton: {
-    minWidth: 44,
-    minHeight: 44,
+    minWidth: MIN_TOUCH_TARGET,
+    minHeight: MIN_TOUCH_TARGET,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 6,

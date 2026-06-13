@@ -7,6 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import { getUiString, setUiString } from '../services/storage';
 import { RELEASE_NOTES, getUnseenNotes } from '../data/releaseNotes';
 import { selectionFeedback } from '../utils/haptics';
+import { MIN_TOUCH_TARGET } from '../utils/touchTarget';
 
 /**
  * Two modes (mirrors WhatsNewModal.jsx on web):
@@ -315,7 +316,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 10,
-    minHeight: 44,
+    minHeight: MIN_TOUCH_TARGET,
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -7,15 +7,30 @@ import api from './api';
 // Track which channel the user is currently viewing (for foreground suppression)
 let activeChannelId = null;
 
-// Configure how notifications appear when the app is in the foreground
+// Configure how notifications appear when the app is in the foreground.
+// expo-notifications v0.30+ split shouldShowAlert into shouldShowBanner
+// (heads-up) and shouldShowList (tray entry); we set both alongside the
+// legacy field so we work across SDK versions until the legacy is removed.
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
     const data = notification.request.content.data;
     // Suppress notification banner if user is viewing the same channel
     if (activeChannelId && data?.channelId === activeChannelId) {
-      return { shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false };
+      return {
+        shouldShowAlert: false,
+        shouldShowBanner: false,
+        shouldShowList: false,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+      };
     }
-    return { shouldShowAlert: true, shouldPlaySound: true, shouldSetBadge: true };
+    return {
+      shouldShowAlert: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    };
   },
 });
 
@@ -90,7 +105,12 @@ class NotificationService {
         });
       }
 
-      // Android notification channels
+      // Android notification channels. Distinct vibration patterns per
+      // channel let users feel which notification type came in without
+      // looking — Material Design pattern. `mentions` is the longest/most
+      // attention-grabbing (max importance), `messages` is the standard
+      // short pulse, `events` is a single buzz so a calendar reminder feels
+      // softer than a chat ping, `announcements` is the same as events.
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
           name: 'BandChat',
@@ -102,26 +122,28 @@ class NotificationService {
           name: 'Messages',
           description: 'New messages in channels and DMs',
           importance: Notifications.AndroidImportance.HIGH,
-          vibrationPattern: [0, 250, 250, 250],
+          vibrationPattern: [0, 250, 150, 250],
           sound: 'default',
         });
         await Notifications.setNotificationChannelAsync('mentions', {
           name: 'Mentions',
           description: 'When someone @mentions you',
           importance: Notifications.AndroidImportance.MAX,
-          vibrationPattern: [0, 250, 250, 250],
+          vibrationPattern: [0, 400, 120, 400],
           sound: 'default',
         });
         await Notifications.setNotificationChannelAsync('events', {
           name: 'Events & Reminders',
           description: 'Gig reminders and calendar updates',
           importance: Notifications.AndroidImportance.DEFAULT,
+          vibrationPattern: [0, 350],
           sound: 'default',
         });
         await Notifications.setNotificationChannelAsync('announcements', {
           name: 'Announcements & Polls',
           description: 'Band announcements and poll notifications',
           importance: Notifications.AndroidImportance.DEFAULT,
+          vibrationPattern: [0, 350],
           sound: 'default',
         });
       }

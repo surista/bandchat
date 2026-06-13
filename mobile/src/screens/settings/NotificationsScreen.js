@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
@@ -154,7 +155,7 @@ export default function NotificationsScreen({ route }) {
                   <Switch
                     value={prefs[cat.key] !== false}
                     onValueChange={(value) => handlePrefToggle(cat.key, value)}
-                    trackColor={{ false: colors.border, true: colors.primary + '80' }}
+                    trackColor={Platform.OS === 'ios' ? undefined : { false: colors.border, true: colors.primary + '80' }}
                     thumbColor={prefs[cat.key] !== false ? colors.primary : '#f4f3f4'}
                     accessibilityLabel={`${cat.label} notifications`}
                   />

@@ -16,6 +16,16 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.20',
+    date: '2026-06-14',
+    items: [
+      { kind: 'changed', text: 'Mobile: only one voice / audio message plays at a time now — starting a second one pauses the first. iMessage-style.' },
+      { kind: 'changed', text: 'Android: notification vibration now feels different per type — mentions pulse longer than regular messages, events feel softer.' },
+      { kind: 'changed', text: 'Mobile: when the OS asks you to allow camera / photo / calendar access and you decline, the error now offers an Open Settings button instead of a dead-end alert.' },
+      { kind: 'changed', text: 'Android: tap targets in chat (reactions, reply badges, link preview close) are now properly sized for the platform — Apple\'s 44pt minimum on iOS, Material\'s 48dp on Android.' },
+    ],
+  },
+  {
     version: '1.07.19',
     date: '2026-06-14',
     items: [

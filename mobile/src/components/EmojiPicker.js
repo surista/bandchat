@@ -15,6 +15,7 @@ import { useTheme } from '../context/ThemeContext';
 import { getRecentEmojis, addRecentEmoji } from '../services/storage';
 import PressableRow from './PressableRow';
 import { selectionFeedback } from '../utils/haptics';
+import { MIN_TOUCH_TARGET } from '../utils/touchTarget';
 
 // Custom emoji rendered as images
 export const CUSTOM_EMOJI = {
@@ -212,8 +213,8 @@ const styles = StyleSheet.create({
   },
   emojiButton: {
     width: '14.28%',
-    minWidth: 44,
-    minHeight: 44,
+    minWidth: MIN_TOUCH_TARGET,
+    minHeight: MIN_TOUCH_TARGET,
     justifyContent: 'center',
     alignItems: 'center',
   },

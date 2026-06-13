@@ -15,6 +15,7 @@ import getAvatarColor from '../utils/getAvatarColor';
 import { CUSTOM_EMOJI, renderCustomEmoji } from './EmojiPicker';
 import { buildMentionRegex, buildChannelRegex, buildGroupMentionRegex } from '../utils/parseMentions';
 import { isSafeUrl } from '../utils/urlSafety';
+import { MIN_TOUCH_TARGET } from '../utils/touchTarget';
 import { useLayout } from '../hooks/useLayout';
 
 const YT_REGEX = /(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/|m\.youtube\.com\/watch\?v=)([\w-]{11})/;
@@ -408,7 +409,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
           <Pressable
             onPress={() => onReplyPress?.(message)}
             style={({ pressed }) => [
-              { minHeight: 44, justifyContent: 'center' },
+              { minHeight: MIN_TOUCH_TARGET, justifyContent: 'center' },
               pressed && Platform.OS === 'ios' && { opacity: 0.6 },
             ]}
             android_ripple={{ color: colors.border, borderless: true }}
@@ -590,6 +591,17 @@ function DocumentAttachment({ url, filename }) {
   );
 }
 
+// Module-level registry so only one AudioAttachment plays at a time.
+// When any player starts, it broadcasts; every other player that's currently
+// playing pauses + sets its own UI state. iOS HIG (and common sense) expects
+// one-at-a-time audio playback when multiple voice messages are on screen.
+const audioPauseListeners = new Set();
+function broadcastAudioPlay(playerId) {
+  for (const fn of audioPauseListeners) {
+    fn(playerId);
+  }
+}
+
 function AudioAttachment({ url, filename }) {
   const { colors } = useTheme();
   const [playing, setPlaying] = useState(false);
@@ -599,9 +611,21 @@ function AudioAttachment({ url, filename }) {
   const [position, setPosition] = useState(0);
   const progressAnim = useRef(new Animated.Value(0)).current;
   const waveformBars = useMemo(() => generateWaveformBars(24), []);
+  // Stable identity used by the pause-others broadcast so a player doesn't
+  // pause itself when it announces its own start.
+  const playerIdRef = useRef({});
 
   useEffect(() => {
+    const listener = (startedBy) => {
+      if (startedBy === playerIdRef.current) return;
+      if (soundRef.current) {
+        soundRef.current.pauseAsync().catch(() => {});
+      }
+      setPlaying(false);
+    };
+    audioPauseListeners.add(listener);
     return () => {
+      audioPauseListeners.delete(listener);
       soundRef.current?.unloadAsync().catch(() => {});
     };
   }, []);
@@ -622,10 +646,12 @@ function AudioAttachment({ url, filename }) {
       await sound.pauseAsync();
       setPlaying(false);
     } else if (sound) {
+      broadcastAudioPlay(playerIdRef.current);
       await sound.playAsync();
       setPlaying(true);
     } else {
       try {
+        broadcastAudioPlay(playerIdRef.current);
         const { sound: newSound } = await Audio.Sound.createAsync(
           { uri: url },
           { shouldPlay: true },
@@ -927,7 +953,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     borderRadius: 12,
-    minHeight: 44,
+    minHeight: MIN_TOUCH_TARGET,
   },
   reactionEmoji: {
     fontSize: 14,

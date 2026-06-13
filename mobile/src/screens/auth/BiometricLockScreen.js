@@ -49,10 +49,18 @@ export default function BiometricLockScreen() {
           style={styles.icon}
           accessibilityLabel="BandChat icon"
         />
-        <Text style={[styles.title, { color: colors.textPrimary }]}>
+        <Text
+          style={[styles.title, { color: colors.textPrimary }]}
+          accessibilityRole="header"
+          maxFontSizeMultiplier={1.5}
+        >
           Unlock BandChat
         </Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+        <Text
+          style={[styles.subtitle, { color: colors.textSecondary }]}
+          accessibilityLiveRegion={failed ? 'assertive' : 'polite'}
+          maxFontSizeMultiplier={1.6}
+        >
           {authenticating ? 'Authenticating...' : failed ? 'Authentication failed' : 'Tap below to unlock'}
         </Text>
 
@@ -68,7 +76,7 @@ export default function BiometricLockScreen() {
             accessibilityRole="button"
             accessibilityLabel="Try again"
           >
-            <Text style={[styles.retryButtonText, { color: colors.primaryText }]}>Try Again</Text>
+            <Text style={[styles.retryButtonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.4}>Try Again</Text>
           </TouchableOpacity>
         )}
 
@@ -79,7 +87,10 @@ export default function BiometricLockScreen() {
           accessibilityRole="button"
           accessibilityLabel="Use password instead"
         >
-          <Text style={[styles.fallbackButtonText, { color: colors.textSecondary }]}>
+          <Text
+            style={[styles.fallbackButtonText, { color: colors.textSecondary }]}
+            maxFontSizeMultiplier={1.4}
+          >
             Use Password
           </Text>
         </TouchableOpacity>

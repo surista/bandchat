@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Linking } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as MediaLibrary from 'expo-media-library';
 import { File, Directory, Paths } from 'expo-file-system/next';
@@ -88,7 +88,14 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
             if (!img?.url) return;
             const { status } = await MediaLibrary.requestPermissionsAsync();
             if (status !== 'granted' && status !== 'limited') {
-              Alert.alert('Permission needed', 'Allow BandChat to save photos to your library.');
+              Alert.alert(
+                'Permission needed',
+                'Allow BandChat to save photos to your library.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Open Settings', onPress: () => Linking.openSettings() },
+                ]
+              );
               return;
             }
             let filename = img.url.split('/').pop()?.split('?')[0] || '';

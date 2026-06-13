@@ -2,6 +2,25 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.20] - 2026-06-14
+
+Batches 7+8+9 of the code-review pass — cross-platform polish, notification + audio refinement, and documenting the deferred follow-ups.
+
+### Changed
+
+- **Touch targets**: new `mobile/src/utils/touchTarget.js` exports `MIN_TOUCH_TARGET` = 48 on Android (Material spec) / 44 on iOS (HIG). Applied to the six worst offenders: `MessageBubble` (reply count + reaction pill), `LinkPreview` (close button), `EmojiPicker` (emoji buttons), `MessageInput` (toolbar buttons), `WhatsNewModal` (dismiss button). Android users now meet platform spec without affecting iOS.
+- **Permission denial UX**: `Camera` (MessageInput), `MediaLibrary` save (ImageViewer + useMessageActions), `Calendar` (GigDetailScreen) — all permission-denied alerts now offer an "Open Settings" button via `Linking.openSettings()` alongside Cancel. The OS doesn't re-prompt after the first decline, so the deep-link is the only recovery path; previously users got a one-shot alert with no path forward.
+- **Notification handler API migration**: `setNotificationHandler` now returns both `shouldShowBanner` + `shouldShowList` (expo-notifications v0.30+) alongside the legacy `shouldShowAlert`. No behavior change today; ready for the eventual deprecation.
+- **Distinct vibration patterns per Android notification channel**: `mentions` uses `[0, 400, 120, 400]` (long double-buzz, max importance), `messages` uses `[0, 250, 150, 250]` (standard pulse), `events` + `announcements` use `[0, 350]` (single softer buzz). Material Design pattern — users can identify notification type by feel without looking.
+- **AudioAttachment one-at-a-time playback**: module-level `audioPauseListeners` Set + `broadcastAudioPlay()` so when one voice message starts, all other currently-playing AudioAttachments in the same channel pause and their UI flips to the play icon. iOS HIG expects this — previously multiple voice messages could play simultaneously.
+- **BiometricLockScreen Dynamic Type caps**: title (24pt) + subtitle + button text now have explicit `maxFontSizeMultiplier` (1.4–1.6). Was relying on the global 2.0× default — at AX5 the lock UI's `paddingHorizontal: 40` would collide with itself. The lock screen is literally between the user and their data; legibility matters most.
+- **BiometricLockScreen status announcement**: subtitle now uses `accessibilityLiveRegion='assertive'` when authentication fails, `'polite'` otherwise. VoiceOver / TalkBack users get the failure state announced instead of needing to re-tab.
+- **`NotificationsScreen` Switch trackColor**: `Platform.OS === 'ios' ? undefined : ...` so iOS gets the system green track. Five other Switch sites (Appearance, Security, Website, ChannelSettings, Onboarding) follow the same pattern — documented in CLAUDE.md as a follow-up.
+
+### Documentation
+
+- **`CLAUDE.md` updated** with a new "Deferred from the June 2026 code-review pass" block under Development Notes: ~20 Modal-level `accessibilityViewIsModal` additions, the 30-screen ActionSheet migration, per-screen ErrorBoundary, remaining Switch trackColor sites, ~10 ScrollView keyboardDismissMode additions, redundant KeyboardAvoidingView `behavior="height"` on Android, and the typed-Message-shape suggestion. Captures everything so it's not re-discovered in the next code review.
+
 ## [1.07.19] - 2026-06-14
 
 Batches 3-6 of the code-review pass. Mobile-only.

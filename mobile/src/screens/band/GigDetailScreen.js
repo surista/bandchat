@@ -561,7 +561,14 @@ export default function GigDetailScreen({ navigation, route }) {
     try {
       const { status } = await Calendar.requestCalendarPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Calendar access is needed to add events.');
+        Alert.alert(
+          'Permission Required',
+          'Calendar access is needed to add events.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
         return;
       }
 

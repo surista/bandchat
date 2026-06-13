@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { MIN_TOUCH_TARGET } from '../utils/touchTarget';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
 
@@ -150,9 +151,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -10,
     right: -6,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: MIN_TOUCH_TARGET,
+    height: MIN_TOUCH_TARGET,
+    borderRadius: MIN_TOUCH_TARGET / 2,
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
