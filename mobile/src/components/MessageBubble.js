@@ -72,11 +72,15 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
   const handleLongPress = () => {
     if (!isPending && onLongPress) onLongPress(message);
   };
+  // Ref tracks the latest handleLongPress closure. The gesture's useMemo
+  // depends on message.id only so the gesture object is stable across
+  // sibling updates (reactions, edits, pins all create a new `message`
+  // reference), but the worklet still reaches the freshest handler. Without
+  // this, every reaction add anywhere in the channel rebuilt every visible
+  // bubble's gesture handler.
+  const handleLongPressRef = useRef(handleLongPress);
+  handleLongPressRef.current = handleLongPress;
 
-  // Use gesture-handler's LongPress instead of Pressable's onLongPress. Pressable
-  // inside ReanimatedSwipeable never reliably fires long-press because the pan
-  // gesture intercepts the first-touch window and cancels the press. A GH gesture
-  // lives in the same gesture tree as the swipeable and cooperates by default.
   const longPressGesture = useMemo(
     () =>
       Gesture.LongPress()
@@ -84,11 +88,11 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
         .maxDistance(10)
         .onStart(() => {
           'worklet';
-          runOnJS(handleLongPress)();
+          runOnJS(() => handleLongPressRef.current?.())();
         }),
-    // handleLongPress closure changes only when onLongPress/isPending/message change
+    // Intentionally narrow deps to message.id — see comment above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [onLongPress, isPending, message]
+    [message.id]
   );
 
   // URL regex to match http/https URLs

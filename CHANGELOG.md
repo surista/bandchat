@@ -2,6 +2,27 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.19] - 2026-06-14
+
+Batches 3-6 of the code-review pass. Mobile-only.
+
+### Added
+
+- **AppearanceScreen: 3-segment Auto / Light / Dark picker** instead of the dark-mode Switch. Default for new installs is Auto (follows iOS / Android system theme live — switching system theme mid-session updates the app within ~16ms instead of requiring a restart). Existing installs keep their explicit Light/Dark choice. ThemeContext exposes `modeSetting` ('auto'|'light'|'dark') and a derived `mode` ('light'|'dark'); `toggleMode` still works for any code that wants a simple flip. Persists the setting, not the resolved mode.
+
+### Accessibility
+
+- **`accessibilityViewIsModal` on the 5 highest-traffic Modals**: `ActionSheet`, `MessageActionSheet`, `EmojiPicker`, `WorkspaceSwitcher`, `ReactionUsersSheet`. VoiceOver / TalkBack no longer slip into the dimmed background while a sheet is open. ~20 less-frequently-shown screen-level modals still need the same one-line addition — tracked as a deferred follow-up.
+- **DraggableList drag handle is now reachable to screen readers.** Was a plain `<View>` with a label only — VoiceOver / TalkBack users couldn't reorder setlists or any draggable list at all. Now `accessibilityRole="adjustable"` with `accessibilityValue` ({min, max, now}) and `accessibilityActions` ({increment: 'Move down', decrement: 'Move up'}). Threading through a new `onMoveByOne` prop reuses the existing `handleDragEnd` reorder logic, so non-visual reorder is a one-tap-up-or-down gesture.
+
+### Changed / Fixed
+
+- **`api.js` LRU cache eviction**: was O(N log N) per write past 200 (sorted ALL keys on every cached fetch). Now O(N) only when over cap by walking `Map.keys()` in insertion order — Map preserves insertion order so the first key is genuinely the oldest. Also bump-to-newest on a re-cached endpoint via delete-then-set.
+- **`api.js` sibling-cache invalidation map**: mutations like sending a message now also bust the channel list cache (which carries `unreadCount` and `lastMessageAt`). Same plumbing for setlists / songs / gigs. Previously the prefix rule only invalidated the same resource path, so the sidebar's unread counts could be stale up to 30s after sending.
+- **`ChannelListScreen` focus debounce**: refetching 5 endpoints on EVERY back-tap into the channel list was wasteful — socket events keep counts accurate in-place. Now only refetches if the last successful load was more than 30s ago (`lastFocusLoadRef`). Pull-to-refresh and AppState foreground unchanged.
+- **`MessageBubble.longPressGesture` deps**: was depending on the whole `message` object, so every reaction / edit / pin update on a sibling rebuilt the gesture handler for every visible bubble. Now depends on `message.id` only; the worklet reaches the latest closure via `handleLongPressRef`.
+- **Voice-message mic teaching toast**: tapping (vs holding) the mic icon used to just fire a warning haptic with no visible affordance — users would tap once, get a vibrate, and give up. Now also shows `toast.info('Hold the mic to record a voice message')`. WhatsApp / iMessage use the same pattern.
+
 ## [1.07.18] - 2026-06-14
 
 Batch 1+2 of the post-v1.07.17 code-review pass. Mobile-only changes; web/server unaffected.

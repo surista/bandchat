@@ -281,9 +281,18 @@ export function ThemeProvider({ children }) {
   const [globalTheme, setGlobalTheme] = useState('default');
   const [activeWorkspaceId, setActiveWorkspaceId] = useState(null);
   const [workspaceThemes, setWorkspaceThemesState] = useState({});
-  const [mode, setMode] = useState(systemColorScheme === 'light' ? 'light' : 'dark');
+  // `modeSetting` is what the user picked: 'auto' | 'light' | 'dark'. The
+  // derived `mode` (below) resolves 'auto' against the live system scheme so
+  // toggling iOS Settings → Display mid-session immediately updates the app.
+  // Default is 'auto' for a new install; existing installs that persisted
+  // explicit 'light'/'dark' before this change keep that explicit choice.
+  const [modeSetting, setModeSettingState] = useState('auto');
   const [messageDensity, setMessageDensityState] = useState('default');
   const [loaded, setLoaded] = useState(false);
+
+  const mode = modeSetting === 'auto'
+    ? (systemColorScheme === 'light' ? 'light' : 'dark')
+    : modeSetting;
 
   // Resolve which theme to actually use
   const currentTheme = (activeWorkspaceId && workspaceThemes[activeWorkspaceId]) || globalTheme;
@@ -300,7 +309,11 @@ export function ThemeProvider({ children }) {
         getUiState('bandchat-workspace-themes'),
       ]);
       if (savedTheme && themes[savedTheme]) setGlobalTheme(savedTheme);
-      if (savedMode) setMode(savedMode);
+      // Backward compat: pre-Auto installs stored 'light' or 'dark' here. Both
+      // are still valid settings. 'auto' is the new value; missing key → 'auto'.
+      if (savedMode === 'auto' || savedMode === 'light' || savedMode === 'dark') {
+        setModeSettingState(savedMode);
+      }
       if (savedDensity && DENSITY_VALUES[savedDensity]) {
         setMessageDensityState(savedDensity);
       }
@@ -315,11 +328,13 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     if (loaded) {
       setUiString('bandchat-theme', globalTheme);
-      setUiString('bandchat-mode', mode);
+      // Persist the SETTING (auto/light/dark), not the resolved mode — so a
+      // user who picked Auto continues to follow the system across sessions.
+      setUiString('bandchat-mode', modeSetting);
       setUiString('bandchat-density', messageDensity);
       setUiState('bandchat-workspace-themes', workspaceThemes);
     }
-  }, [globalTheme, mode, messageDensity, workspaceThemes, loaded]);
+  }, [globalTheme, modeSetting, messageDensity, workspaceThemes, loaded]);
 
   const setMessageDensity = useCallback((density) => {
     if (DENSITY_VALUES[density]) {
@@ -352,8 +367,16 @@ export function ThemeProvider({ children }) {
     return workspaceThemes[workspaceId] || null;
   }, [workspaceThemes]);
 
+  // toggleMode flips to the explicit opposite, leaving 'auto' behind. Use
+  // setModeSetting('auto') to opt back into system tracking.
   const toggleMode = useCallback(() => {
-    setMode(prev => (prev === 'dark' ? 'light' : 'dark'));
+    setModeSettingState(mode === 'dark' ? 'light' : 'dark');
+  }, [mode]);
+
+  const setModeSetting = useCallback((next) => {
+    if (next === 'auto' || next === 'light' || next === 'dark') {
+      setModeSettingState(next);
+    }
   }, []);
 
   const colors = useMemo(() => {
@@ -403,6 +426,8 @@ export function ThemeProvider({ children }) {
     setTheme,
     themes,
     mode,
+    modeSetting,
+    setModeSetting,
     toggleMode,
     colors,
     messageDensity,
@@ -414,7 +439,7 @@ export function ThemeProvider({ children }) {
     setActiveWorkspaceId,
     setWorkspaceTheme,
     getWorkspaceTheme,
-  }), [currentTheme, setTheme, mode, toggleMode, colors, messageDensity, setMessageDensity, density, globalTheme, safeSetGlobalTheme, activeWorkspaceId, setWorkspaceTheme, getWorkspaceTheme]);
+  }), [currentTheme, setTheme, mode, modeSetting, setModeSetting, toggleMode, colors, messageDensity, setMessageDensity, density, globalTheme, safeSetGlobalTheme, activeWorkspaceId, setWorkspaceTheme, getWorkspaceTheme]);
 
   return (
     <ThemeContext.Provider value={contextValue}>

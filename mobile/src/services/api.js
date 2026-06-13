@@ -235,16 +235,45 @@ class ApiService {
       return cached.data;
     }
     const data = await this.request(endpoint);
+    // Bumping an existing key needs a delete-then-set to re-order it as
+    // "newest" (Map preserves insertion order).
+    if (this._cache.has(endpoint)) this._cache.delete(endpoint);
     this._cache.set(endpoint, { data, timestamp: Date.now() });
-    // Evict oldest entries if cache exceeds max size
-    if (this._cache.size > 200) {
-      const keys = [...this._cache.keys()];
-      const oldest = keys.sort((a, b) => this._cache.get(a).timestamp - this._cache.get(b).timestamp);
-      for (let i = 0; i < keys.length - 200; i++) {
-        this._cache.delete(oldest[i]);
-      }
+    // Evict oldest entries — Map iteration is insertion-ordered so the first
+    // key is the oldest. O(N) only when over cap, no per-write sort.
+    while (this._cache.size > 200) {
+      const oldestKey = this._cache.keys().next().value;
+      this._cache.delete(oldestKey);
     }
     return data;
+  }
+
+  /**
+   * Sibling-cache invalidation for mutations. The simple prefix rule (handled
+   * by `request` below) only catches keys under the SAME resource path, but
+   * many mutations also affect derived data elsewhere — sending a message
+   * changes the cached channel list's `unreadCount` and `lastMessageAt`, so
+   * the channels cache needs busting too. Pattern matching is substring-based.
+   */
+  _invalidateSiblings(mutatedEndpoint) {
+    // /messages/* mutations → bust /channels/workspace/* (unread + lastMessageAt)
+    if (mutatedEndpoint.startsWith('/messages')) {
+      this.invalidateCache('/channels/workspace');
+      this.invalidateCache('/channels/');
+    }
+    // /setlists/* mutations → bust the workspace setlist cache
+    if (mutatedEndpoint.startsWith('/setlists')) {
+      this.invalidateCache('/setlists/workspace');
+    }
+    // /songs/* mutations → bust the workspace song list
+    if (mutatedEndpoint.startsWith('/songs')) {
+      this.invalidateCache('/songs/workspace');
+    }
+    // /gigs/* mutations → bust workspace gigs + next-gig
+    if (mutatedEndpoint.startsWith('/gigs')) {
+      this.invalidateCache('/gigs/workspace');
+      this.invalidateCache('/gigs/next');
+    }
   }
 
   /**
@@ -276,6 +305,9 @@ class ApiService {
     if (options.method && options.method !== 'GET') {
       const resourceBase = endpoint.split('/').slice(0, 2).join('/');
       this.invalidateCache(resourceBase);
+      // Also bust sibling caches that depend on this resource (e.g. sending a
+      // message affects the channel list's unread count).
+      this._invalidateSiblings(endpoint);
     }
 
     const url = `${API_URL}${endpoint}`;

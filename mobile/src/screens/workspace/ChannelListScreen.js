@@ -469,12 +469,19 @@ export default function ChannelListScreen({ navigation, route }) {
     navigation.navigate('Channel', { channel: channelData, workspaceId });
   }, [navigation, workspaceId, getDMDisplayName, isSplitView]);
 
+  // Track last successful refetch timestamp to debounce focus refetches —
+  // tapping into a channel and back used to trigger 5 parallel API calls on
+  // EVERY back-tap. Socket events keep unread counts and lastMessageAt
+  // accurate in-place, so the focus refetch is now a safety net that only
+  // runs if the last successful load was more than `FOCUS_REFETCH_MS` ago.
+  const lastFocusLoadRef = useRef(Date.now());
+  const FOCUS_REFETCH_MS = 30_000;
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       activeChannelRef.current = null;
-      // Refresh unread counts when returning from a channel. Without this,
-      // the sidebar badge on a channel the user just read keeps showing the
-      // old unread count until reconnect / 30s app-foreground / pull-to-refresh.
+      const sinceLast = Date.now() - lastFocusLoadRef.current;
+      if (sinceLast < FOCUS_REFETCH_MS) return;
+      lastFocusLoadRef.current = Date.now();
       loadData();
     });
     return unsubscribe;

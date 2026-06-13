@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   Switch,
   StyleSheet,
   LayoutAnimation,
@@ -23,7 +24,7 @@ const FREE_THEME_IDS = ['default', 'midnight', 'ocean'];
 
 export default function AppearanceScreen({ route }) {
   const workspaceId = route?.params?.workspaceId;
-  const { currentTheme, mode, toggleMode, colors, globalTheme, setGlobalTheme, setWorkspaceTheme, getWorkspaceTheme } = useTheme();
+  const { currentTheme, mode, modeSetting, setModeSetting, colors, globalTheme, setGlobalTheme, setWorkspaceTheme, getWorkspaceTheme } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
 
   const [workspaceName, setWorkspaceName] = useState(null);
@@ -72,19 +73,46 @@ export default function AppearanceScreen({ route }) {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
-        {/* Mode Toggle */}
-        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">MODE</Text>
+        {/* Mode setting: Auto follows the system theme live; Light / Dark
+            pin it. `mode` is the resolved effective mode and is used for
+            display. */}
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">APPEARANCE</Text>
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
-          <View style={styles.modeRow}>
-            <Text style={[styles.modeLabel, { color: colors.textPrimary }]}>Dark Mode</Text>
-            <Switch
-              value={mode === 'dark'}
-              onValueChange={() => { selectionFeedback(); toggleMode(); }}
-              trackColor={{ false: colors.bgTertiary, true: colors.primary }}
-              thumbColor="#ffffff"
-              accessibilityLabel={`Dark Mode, ${mode === 'dark' ? 'on' : 'off'}`}
-            />
+          <View style={styles.segmentRow}>
+            {[
+              { value: 'auto', label: 'Auto', hint: 'Follow system' },
+              { value: 'light', label: 'Light', hint: 'Always light' },
+              { value: 'dark', label: 'Dark', hint: 'Always dark' },
+            ].map(opt => {
+              const isActive = modeSetting === opt.value;
+              return (
+                <Pressable
+                  key={opt.value}
+                  onPress={() => { selectionFeedback(); setModeSetting(opt.value); }}
+                  style={[
+                    styles.segment,
+                    { backgroundColor: isActive ? colors.primary : 'transparent', borderColor: colors.border },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isActive }}
+                  accessibilityLabel={opt.label}
+                  accessibilityHint={opt.hint}
+                >
+                  <Text
+                    style={[styles.segmentLabel, { color: isActive ? colors.primaryText : colors.textPrimary }]}
+                    maxFontSizeMultiplier={1.4}
+                  >
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
+          {modeSetting === 'auto' && (
+            <Text style={[styles.segmentSubtitle, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
+              Currently {mode} (follows your device setting)
+            </Text>
+          )}
         </View>
 
         {/* Per-band theme toggle */}
@@ -186,6 +214,23 @@ const styles = StyleSheet.create({
   },
   modeLabel: { fontSize: 16, fontWeight: '500' },
   hint: { fontSize: 13, marginTop: 2 },
+  segmentRow: {
+    flexDirection: 'row',
+    borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  segment: {
+    flex: 1,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRightWidth: StyleSheet.hairlineWidth,
+  },
+  segmentLabel: { fontSize: 15, fontWeight: '600' },
+  segmentSubtitle: { fontSize: 13, marginTop: 8, textAlign: 'center' },
   // Theme grid
   grid: {
     flexDirection: 'row',

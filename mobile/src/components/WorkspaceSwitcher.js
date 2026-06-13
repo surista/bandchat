@@ -42,6 +42,7 @@ function WorkspaceSwitcher({ visible, currentWorkspace, workspaces = [], onSelec
       >
         <Pressable
           onPress={() => {}}
+          accessibilityViewIsModal
           style={[
             styles.sheet,
             {

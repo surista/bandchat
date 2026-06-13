@@ -93,7 +93,7 @@ function EmojiPicker({ visible, onClose, onSelect }) {
       statusBarTranslucent
     >
       <Pressable style={styles.overlay} onPress={onClose} accessibilityRole="button" accessibilityLabel="Dismiss emoji picker">
-        <Pressable style={[styles.container, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <Pressable style={[styles.container, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 16) }]} accessibilityViewIsModal>
           {/* Drag handle */}
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
 

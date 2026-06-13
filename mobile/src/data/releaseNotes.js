@@ -16,6 +16,16 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.19',
+    date: '2026-06-14',
+    items: [
+      { kind: 'added', text: 'Mobile: appearance now has an Auto option that follows your phone\'s system theme live — toggling iOS / Android dark mode mid-session updates the app immediately. Auto / Light / Dark in Settings → Appearance.' },
+      { kind: 'changed', text: 'Mobile: tapping (not holding) the voice-message mic now also shows a hint so it\'s clearer that the gesture is hold-to-record.' },
+      { kind: 'fixed', text: 'Mobile: drag-to-reorder lists (setlist editor etc.) are now usable with VoiceOver / TalkBack — swipe up or down on the drag handle to move an item by one.' },
+      { kind: 'fixed', text: 'Mobile: tapping back into the channel list no longer triggers unnecessary network requests.' },
+    ],
+  },
+  {
     version: '1.07.18',
     date: '2026-06-14',
     items: [

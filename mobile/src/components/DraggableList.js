@@ -58,6 +58,7 @@ export default function DraggableList({ items, renderItem, keyExtractor, onReord
           renderItem={renderItem}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
+          onMoveByOne={handleDragEnd}
           isDragging={draggingIndex === index}
           someoneIsDragging={draggingIndex >= 0}
           colors={colors}
@@ -75,6 +76,7 @@ function DraggableItem({
   renderItem,
   onDragStart,
   onDragEnd,
+  onMoveByOne,
   isDragging,
   someoneIsDragging,
   colors,
@@ -141,7 +143,30 @@ function DraggableItem({
     <GestureDetector gesture={composedGesture}>
       <Animated.View style={[styles.itemContainer, animatedStyle]}>
         <View style={[styles.itemRow, { minHeight: itemHeight }]}>
-          <View style={styles.dragHandle} accessibilityLabel="Drag handle" accessibilityHint="Long press and drag to reorder">
+          {/* accessibilityRole='adjustable' + increment/decrement actions let
+              VoiceOver / TalkBack users swipe up/down on the handle to move
+              the item up or down by one. Without this the entire DraggableList
+              is inaccessible \u2014 the drag gesture is impossible to actuate via
+              screen reader. */}
+          <View
+            style={styles.dragHandle}
+            accessible
+            accessibilityLabel={`Drag handle, position ${index + 1} of ${itemCount}`}
+            accessibilityHint="Long press and drag to reorder, or swipe up or down to move by one"
+            accessibilityRole="adjustable"
+            accessibilityValue={{ min: 1, max: itemCount, now: index + 1 }}
+            accessibilityActions={[
+              { name: 'increment', label: 'Move down' },
+              { name: 'decrement', label: 'Move up' },
+            ]}
+            onAccessibilityAction={(e) => {
+              if (e.nativeEvent.actionName === 'increment' && index < itemCount - 1) {
+                onMoveByOne(index, index + 1);
+              } else if (e.nativeEvent.actionName === 'decrement' && index > 0) {
+                onMoveByOne(index, index - 1);
+              }
+            }}
+          >
             <Text style={[styles.dragIcon, { color: colors.textSecondary }]}>{'\u2261'}</Text>
           </View>
           <View style={styles.itemContent}>

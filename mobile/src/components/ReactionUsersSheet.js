@@ -107,6 +107,7 @@ function ReactionUsersSheet({ visible, reactions, selectedEmoji, onClose }) {
             },
           ]}
           onPress={() => {}}
+          accessibilityViewIsModal
         >
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
           <Text style={[styles.title, { color: colors.textPrimary }]}>Reactions</Text>

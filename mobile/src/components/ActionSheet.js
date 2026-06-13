@@ -48,7 +48,8 @@ function ActionSheet({ visible, title, actions, onClose }) {
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={styles.overlay} onPress={onClose} accessibilityRole="button" accessibilityLabel="Dismiss action sheet">
-        <Pressable style={[styles.sheet, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 16) }]} onPress={() => {}}>
+        <Pressable style={[styles.sheet, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 16) }]} onPress={() => {}} accessibilityViewIsModal>
+
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
           {title ? <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>{title}</Text> : null}
           {actions.map((action, i) => (

@@ -754,11 +754,11 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
                 style={[styles.sendButton, { backgroundColor: colors.bgTertiary }]}
                 onLongPress={startRecording}
                 delayLongPress={200}
-                // No onPress: a tap was previously starting recording, which
-                // is a UX trap (intent ambiguity with the typing input next
-                // to it). WhatsApp/iMessage use long-press only and surface
-                // a tooltip on first tap. We just go long-press only.
-                onPress={() => warningNotification()}
+                // Tap-by-mistake teaching moment: a fire-and-forget toast
+                // tells the user the gesture is hold, not tap. The light
+                // warning haptic backs up the visual hint without being
+                // jarring. WhatsApp / iMessage use the same pattern.
+                onPress={() => { warningNotification(); toast.info('Hold the mic to record a voice message'); }}
                 borderless
                 accessibilityRole="button"
                 accessibilityLabel="Record voice message"

@@ -73,6 +73,7 @@ function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwn
         <Pressable
           style={[styles.sheet, { backgroundColor: colors.modalBg, paddingBottom: Math.max(insets.bottom, 16) }]}
           onPress={() => {}}
+          accessibilityViewIsModal
         >
           {/* Quick Reaction Row */}
           <View style={[styles.quickReactionRow, { borderBottomColor: colors.border }]}>
