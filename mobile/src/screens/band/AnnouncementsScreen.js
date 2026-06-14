@@ -302,6 +302,7 @@ export default function AnnouncementsScreen({ navigation, route }) {
         keyExtractor={(item) => item.id}
         renderItem={renderAnnouncement}
         renderSectionHeader={renderSectionHeader}
+        contentInsetAdjustmentBehavior="automatic"
         stickySectionHeadersEnabled={false}
         contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={

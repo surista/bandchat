@@ -396,6 +396,7 @@ export default function PollsScreen({ navigation, route }) {
       </PressableRow>
 
       <FlatList
+        contentInsetAdjustmentBehavior="automatic"
         data={polls}
         keyExtractor={(item) => item.id}
         renderItem={renderPoll}

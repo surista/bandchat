@@ -338,6 +338,7 @@ export default function ContactsScreen({ navigation, route }) {
         data={contacts}
         keyExtractor={(item) => item.id}
         renderItem={renderContact}
+        contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl

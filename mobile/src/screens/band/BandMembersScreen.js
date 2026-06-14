@@ -391,6 +391,7 @@ export default function BandMembersScreen({ navigation, route }) {
         keyExtractor={(item) => item.id}
         renderItem={renderMember}
         renderSectionHeader={renderSectionHeader}
+        contentInsetAdjustmentBehavior="automatic"
         stickySectionHeadersEnabled={false}
         contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={

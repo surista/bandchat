@@ -7,7 +7,9 @@ import {
   ActivityIndicator,
   StyleSheet,
   Alert,
+  RefreshControl,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
@@ -22,6 +24,7 @@ export default function SavedMessagesScreen({ navigation, route }) {
   const { isTablet, contentMaxWidth } = useLayout();
   const [savedMessages, setSavedMessages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
@@ -36,15 +39,26 @@ export default function SavedMessagesScreen({ navigation, route }) {
     setLoadError(null);
     try {
       const data = await api.getSavedMessages(workspaceId);
-      setSavedMessages(data);
+      setSavedMessages(Array.isArray(data) ? data : []);
     } catch (err) {
       setLoadError('Could not load saved messages');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [workspaceId]);
 
-  useEffect(() => {
+  // Refetch on focus — without this, saving a message in another screen
+  // wouldn't appear here until the screen was unmounted and remounted.
+  // useFocusEffect fires on every navigation back to this screen.
+  useFocusEffect(
+    useCallback(() => {
+      loadSaved();
+    }, [loadSaved])
+  );
+
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
     loadSaved();
   }, [loadSaved]);
 
@@ -138,28 +152,40 @@ export default function SavedMessagesScreen({ navigation, route }) {
     );
   }
 
-  if (savedMessages.length === 0) {
-    return (
-      <View style={[styles.emptyContainer, { backgroundColor: colors.bgPrimary }]}>
-        <Ionicons name="bookmark-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 16 }} />
-        <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No saved messages yet</Text>
-        <Text style={[styles.emptyDescription, { color: colors.textSecondary }]}>
-          Save important messages to find them quickly later. Long-press any message and tap "Save Message".
-        </Text>
-      </View>
-    );
-  }
-
   return (
     <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
-      <Text style={[styles.count, { color: colors.textSecondary }]}>
-        {savedMessages.length} saved message{savedMessages.length !== 1 ? 's' : ''}
-      </Text>
+      {savedMessages.length > 0 && (
+        <Text style={[styles.count, { color: colors.textSecondary }]}>
+          {savedMessages.length} saved message{savedMessages.length !== 1 ? 's' : ''}
+        </Text>
+      )}
       <FlatList
         data={savedMessages}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={savedMessages.length === 0 ? styles.emptyListContent : styles.list}
+        // Always render via FlatList (with ListEmptyComponent for empty
+        // state) so pull-to-refresh works even when the list is empty —
+        // user can manually retry if they just saved something elsewhere.
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Ionicons name="bookmark-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 16 }} />
+            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No saved messages yet</Text>
+            <Text style={[styles.emptyDescription, { color: colors.textSecondary }]}>
+              Save important messages to find them quickly later. Long-press any message and tap &quot;Save Message&quot;.
+            </Text>
+            <Text style={[styles.emptyDescription, { color: colors.textSecondary, marginTop: 8, fontSize: 12 }]}>
+              Pull down to refresh.
+            </Text>
+          </View>
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary}
+          />
+        }
       />
     </View>
   );
@@ -180,6 +206,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
+    paddingVertical: 80,
+  },
+  emptyListContent: {
+    flexGrow: 1,
   },
   emptyIcon: {
     fontSize: 48,

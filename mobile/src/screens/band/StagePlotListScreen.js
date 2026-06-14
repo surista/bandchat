@@ -178,6 +178,7 @@ export default function StagePlotListScreen({ navigation, route }) {
             data={plots}
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
+            contentInsetAdjustmentBehavior="automatic"
             contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
           />
           <TouchableOpacity

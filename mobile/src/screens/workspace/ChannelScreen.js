@@ -36,6 +36,7 @@ import EmojiPicker from '../../components/EmojiPicker';
 import ImageViewer from '../../components/ImageViewer';
 import ActionSheet from '../../components/ActionSheet';
 import ReactionUsersSheet from '../../components/ReactionUsersSheet';
+import { selectionFeedback, successNotification, errorNotification } from '../../utils/haptics';
 import { format, isSameDay } from 'date-fns';
 import { useLayout } from '../../hooks/useLayout';
 import useMessageActions from '../../hooks/useMessageActions';
@@ -220,15 +221,21 @@ export default function ChannelScreen({ navigation, route }) {
     },
     bookmark: (msg) => {
       (async () => {
+        const wasSaved = savedMessageIds.has(msg.id);
         try {
-          if (savedMessageIds.has(msg.id)) {
+          if (wasSaved) {
             await api.unsaveMessage(msg.id);
             setSavedMessageIds(prev => { const next = new Set(prev); next.delete(msg.id); return next; });
+            selectionFeedback();
+            toast.success('Removed from Saved Messages');
           } else {
             await api.saveMessage(msg.id);
             setSavedMessageIds(prev => new Set([...prev, msg.id]));
+            successNotification();
+            toast.success('Saved');
           }
         } catch (err) {
+          errorNotification();
           Alert.alert('Error', err.message || 'Failed to save/unsave message');
         }
       })();

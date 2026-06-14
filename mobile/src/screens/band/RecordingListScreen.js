@@ -373,6 +373,7 @@ export default function RecordingListScreen({ navigation, route }) {
       )}
 
       <FlatList
+        contentInsetAdjustmentBehavior="automatic"
         data={filteredRecordings}
         keyExtractor={(item) => item.id}
         renderItem={renderRecording}

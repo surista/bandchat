@@ -272,6 +272,7 @@ export default function SettingsScreen({ navigation, route }) {
       <ScrollView
         contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        contentInsetAdjustmentBehavior="automatic"
       >
         {/* User Card */}
         <TouchableOpacity

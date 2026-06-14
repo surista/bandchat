@@ -223,6 +223,7 @@ export default function VenuesScreen({ navigation, route }) {
       )}
 
       <FlatList
+        contentInsetAdjustmentBehavior="automatic"
         data={filtered}
         keyExtractor={(item) => item.id}
         renderItem={renderVenue}

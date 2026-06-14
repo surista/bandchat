@@ -546,6 +546,7 @@ export default function KittyScreen({ navigation, route }) {
       </View>
 
       <FlatList
+        contentInsetAdjustmentBehavior="automatic"
         data={groupedData}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}

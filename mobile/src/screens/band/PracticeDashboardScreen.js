@@ -246,6 +246,7 @@ export default function PracticeDashboardScreen({ route }) {
       </View>
 
       <FlatList
+        contentInsetAdjustmentBehavior="automatic"
         data={listData}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}

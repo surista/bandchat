@@ -305,6 +305,7 @@ export default function SetlistListScreen({ navigation, route }) {
         />
       </View>
       <FlatList
+        contentInsetAdjustmentBehavior="automatic"
         data={filteredSetlists}
         keyExtractor={(item) => item.id}
         renderItem={renderSetlist}

@@ -563,6 +563,7 @@ export default function TimelineScreen({ navigation, route }) {
         data={groupedData}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
+        contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl

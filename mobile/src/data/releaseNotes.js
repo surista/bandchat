@@ -16,6 +16,14 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.24',
+    date: '2026-06-14',
+    items: [
+      { kind: 'fixed', text: 'Mobile: Save Message now shows immediate confirmation (toast + haptic). Saved Messages screen now refreshes every time you open it, plus pull-to-refresh.' },
+      { kind: 'fixed', text: 'iOS: top entry in Songs / Setlists / Members / Contacts / Calendar / etc no longer hides behind the large title header.' },
+    ],
+  },
+  {
     version: '1.07.23',
     date: '2026-06-14',
     items: [

@@ -222,6 +222,7 @@ export default function MedleyListScreen({ navigation, route }) {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
       <FlatList
+        contentInsetAdjustmentBehavior="automatic"
         data={medleys}
         keyExtractor={(item) => item.id}
         renderItem={renderMedley}

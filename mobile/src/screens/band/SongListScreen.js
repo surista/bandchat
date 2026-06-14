@@ -513,6 +513,7 @@ export default function SongListScreen({ navigation, route }) {
       </View>
 
       <FlatList
+        contentInsetAdjustmentBehavior="automatic"
         data={filteredSongs}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}

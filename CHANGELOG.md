@@ -2,6 +2,17 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.24] - 2026-06-14
+
+Two bug reports from Simon.
+
+### Fixed
+
+- **"Save Message" appears to do nothing.** Reported by Simon: he tapped Save Message but nothing showed up in the Saved Messages section. The save was actually working — the SavedMessage row was being created on the server — but the action gave zero visual feedback (no toast, no haptic, no visible "saved" state change on the message), and the SavedMessagesScreen had no `useFocusEffect` so reopening it showed the cached "empty" state from the first mount. Two-part fix:
+  - `ChannelScreen.js` bookmark action now fires `successNotification()` haptic + `toast.success('Saved')` on save / `selectionFeedback()` + `toast.success('Removed from Saved Messages')` on unsave / `errorNotification()` + Alert on failure. User now gets immediate confirmation.
+  - `SavedMessagesScreen.js` switched from `useEffect` to `useFocusEffect` so it refetches every time the screen comes into focus (not just on first mount). Also added pull-to-refresh via `RefreshControl` for manual recovery. Empty state now lives inside `ListEmptyComponent` so pull-to-refresh works even when the list is empty — user can manually retry if they just saved something elsewhere.
+- **iOS list screens — top entry hidden under the large title** (reported alongside Simon's saved-messages report). The `headerLargeTitle: true` option in native-stack lets the header collapse into a compact bar as the user scrolls, but it only works if the scroll view declares `contentInsetAdjustmentBehavior="automatic"`. Without that prop, the system doesn't apply the large-title offset and the first row sits behind the header. Added the prop to: `SongListScreen`, `SetlistListScreen`, `BandMembersScreen`, `ContactsScreen`, `VenuesScreen`, `AnnouncementsScreen`, `PollsScreen`, `MedleyListScreen`, `RecordingListScreen`, `TimelineScreen` (band timeline), `AchievementsScreen`, `KittyScreen`, `PracticeDashboardScreen`, `StagePlotListScreen`, `SettingsScreen`. (GigListScreen, GigArchiveScreen, TimelineScreen-workspace already had it.)
+
 ## [1.07.23] - 2026-06-14
 
 ### Accessibility
