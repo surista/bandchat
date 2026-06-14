@@ -254,7 +254,7 @@ export default function MedleyListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Close action sheet"
         >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
+          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
               {selectedMedley?.name}

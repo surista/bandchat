@@ -1035,8 +1035,8 @@ export default function ChannelListScreen({ navigation, route }) {
 
       {/* Create Channel Modal */}
       <Modal visible={showCreateChannel} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowCreateChannel(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>Create Channel</Text>
             <Text style={[styles.modalLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Channel Name</Text>
             <TextInput
@@ -1086,7 +1086,7 @@ export default function ChannelListScreen({ navigation, route }) {
       {/* New DM Modal */}
       <Modal visible={showNewDM} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowNewDM(false)}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>New Message</Text>
             <Text style={[styles.modalLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Select members</Text>
             <FlatList
@@ -1149,7 +1149,7 @@ export default function ChannelListScreen({ navigation, route }) {
           style={styles.modalOverlay}
           onPress={() => setShowChannelActions(false)}
         >
-          <Pressable style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} onPress={() => {}}>
+          <Pressable style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} onPress={() => {}} accessibilityViewIsModal>
             <Text style={[styles.actionSheetTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>
               #{selectedChannel?.name}
             </Text>
@@ -1177,7 +1177,7 @@ export default function ChannelListScreen({ navigation, route }) {
           style={styles.modalOverlay}
           onPress={() => setShowGroupActions(false)}
         >
-          <Pressable style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} onPress={() => {}}>
+          <Pressable style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} onPress={() => {}} accessibilityViewIsModal>
             <Text style={[styles.actionSheetTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>
               {selectedGroup?.name}
             </Text>
@@ -1205,8 +1205,8 @@ export default function ChannelListScreen({ navigation, route }) {
 
       {/* Group Create/Edit Modal */}
       <Modal visible={showGroupModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowGroupModal(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>
               {editingGroup ? 'Rename Section' : 'New Section'}
             </Text>

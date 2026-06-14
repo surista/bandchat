@@ -244,7 +244,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
           activeOpacity={1}
           onPress={() => { setShowActions(false); setSelectedMember(null); }}
         >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
+          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
               {selectedMember?.user?.displayName || 'Member'}
@@ -289,7 +289,7 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
       {/* Remove Confirmation Modal */}
       <Modal visible={showRemoveConfirm} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowRemoveConfirm(false)}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Remove Member</Text>
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
               Remove {selectedMember?.user?.displayName || 'this member'} from the workspace?
@@ -341,8 +341,8 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
 
       {/* Password Reset Modal */}
       <Modal visible={showPasswordReset} transparent animationType="fade" statusBarTranslucent onRequestClose={() => { setShowPasswordReset(false); clearPasswordFields(); }}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Reset Password</Text>
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
               Set a new password for {selectedMember?.user?.displayName || 'this member'}

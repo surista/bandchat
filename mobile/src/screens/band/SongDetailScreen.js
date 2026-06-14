@@ -462,7 +462,7 @@ export default function SongDetailScreen({ navigation, route }) {
     return (
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
       >
         <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
@@ -655,7 +655,7 @@ export default function SongDetailScreen({ navigation, route }) {
         {/* Key Picker Modal */}
         <Modal visible={showKeyPicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowKeyPicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowKeyPicker(false)} accessibilityRole="button" accessibilityLabel="Dismiss key picker">
-            <View style={[styles.keyPickerContent, { backgroundColor: colors.modalBg }]}>
+            <View style={[styles.keyPickerContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
               <Text style={[styles.keyPickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Select Key</Text>
               <PressableRow
                 style={[styles.keyOption, !key && { backgroundColor: colors.bgTertiary }]}
@@ -865,7 +865,7 @@ export default function SongDetailScreen({ navigation, route }) {
       {/* Practice Modal */}
       <Modal visible={showPracticeModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowPracticeModal(false)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowPracticeModal(false)} accessibilityRole="button" accessibilityLabel="Dismiss practice modal">
-          <View style={[styles.practiceModalContent, { backgroundColor: colors.modalBg }]} onStartShouldSetResponder={() => true}>
+          <View style={[styles.practiceModalContent, { backgroundColor: colors.modalBg }]} onStartShouldSetResponder={() => true} accessibilityViewIsModal>
             <Text style={[styles.practiceModalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Log Practice</Text>
             <Text style={[styles.practiceModalSong, { color: colors.textSecondary }]}>
               {song?.title}

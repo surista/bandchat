@@ -748,7 +748,7 @@ export default function GigDetailScreen({ navigation, route }) {
     return (
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
       >
         <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
@@ -1122,7 +1122,7 @@ export default function GigDetailScreen({ navigation, route }) {
         {/* Type Picker */}
         <Modal visible={showTypePicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowTypePicker(false)}>
           <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowTypePicker(false)} accessibilityRole="button" accessibilityLabel="Close type picker">
-            <View style={[styles.pickerModal, { backgroundColor: colors.modalBg }]}>
+            <View style={[styles.pickerModal, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
               <Text style={[styles.pickerModalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Event Type</Text>
               {GIG_TYPES.map(t => (
                 <PressableRow
@@ -1144,7 +1144,7 @@ export default function GigDetailScreen({ navigation, route }) {
         {/* Status Picker */}
         <Modal visible={showStatusPicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowStatusPicker(false)}>
           <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowStatusPicker(false)} accessibilityRole="button" accessibilityLabel="Close status picker">
-            <View style={[styles.pickerModal, { backgroundColor: colors.modalBg }]}>
+            <View style={[styles.pickerModal, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
               <Text style={[styles.pickerModalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Status</Text>
               {GIG_STATUSES.map(s => (
                 <PressableRow
@@ -1205,7 +1205,7 @@ export default function GigDetailScreen({ navigation, route }) {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.bgPrimary }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
     <ScrollView

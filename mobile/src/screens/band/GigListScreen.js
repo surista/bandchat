@@ -643,7 +643,7 @@ export default function GigListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Close calendar subscribe modal"
         >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
+          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>Subscribe to Calendar</Text>
             <Text style={[styles.calendarDesc, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
@@ -700,7 +700,7 @@ export default function GigListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Close action sheet"
         >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
+          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.6}>
               {selectedGig?.isLocked && <><Ionicons name="lock-closed" size={14} color={colors.textSecondary} />{' '}</>}
@@ -775,7 +775,7 @@ export default function GigListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Close availability modal"
         >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
+          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>Set Availability</Text>
             <Text style={[styles.availabilityDateLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>

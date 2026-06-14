@@ -375,7 +375,7 @@ export default function KittyScreen({ navigation, route }) {
     return (
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
       >
         <ScrollView contentContainerStyle={[styles.formContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
@@ -460,7 +460,7 @@ export default function KittyScreen({ navigation, route }) {
         {/* Type Picker */}
         <Modal visible={showTypePicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowTypePicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowTypePicker(false)} accessibilityRole="button" accessibilityLabel="Close type picker">
-            <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
+            <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
               <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Transaction Type</Text>
               {TRANSACTION_TYPES.map(t => (
                 <PressableRow
@@ -482,7 +482,7 @@ export default function KittyScreen({ navigation, route }) {
         {/* Category Picker */}
         <Modal visible={showCategoryPicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowCategoryPicker(false)}>
           <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowCategoryPicker(false)} accessibilityRole="button" accessibilityLabel="Close category picker">
-            <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]}>
+            <View style={[styles.pickerContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
               <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header">Expense Category</Text>
               {EXPENSE_CATEGORIES.map(c => (
                 <PressableRow
@@ -587,7 +587,7 @@ export default function KittyScreen({ navigation, route }) {
       {/* Settings Modal */}
       <Modal visible={showSettings} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowSettings(false)}>
         <View style={styles.settingsOverlay}>
-          <View style={[styles.settingsContent, { backgroundColor: colors.modalBg }]}>
+          <View style={[styles.settingsContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <Text style={[styles.settingsTitle, { color: colors.textPrimary }]}>Kitty Settings</Text>
             <Text style={[styles.label, { color: colors.textSecondary }]}>Currency</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>

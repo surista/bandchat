@@ -9,6 +9,7 @@ import {
   StyleSheet,
   LayoutAnimation,
   AccessibilityInfo,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme, themes } from '../../context/ThemeContext';
@@ -134,7 +135,7 @@ export default function AppearanceScreen({ route }) {
                 <Switch
                   value={hasCustomTheme}
                   onValueChange={handleToggleCustomTheme}
-                  trackColor={{ false: colors.bgTertiary, true: colors.primary }}
+                  trackColor={Platform.OS === 'ios' ? undefined : { false: colors.bgTertiary, true: colors.primary }}
                   thumbColor="#ffffff"
                   accessibilityLabel={`Custom theme for ${workspaceName || 'this band'}, ${hasCustomTheme ? 'on' : 'off'}`}
                 />

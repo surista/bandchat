@@ -561,7 +561,7 @@ export default function SongListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Dismiss sort options"
         >
-          <View style={[styles.sortModalContent, { backgroundColor: colors.modalBg }]}>
+          <View style={[styles.sortModalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <Text style={[styles.sortModalTitle, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>Sort by</Text>
             {SORT_OPTIONS.map(opt => (
               <PressableRow
@@ -597,7 +597,7 @@ export default function SongListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Dismiss menu"
         >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
+          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
             <PressableRow
               style={styles.actionItem}
@@ -638,7 +638,7 @@ export default function SongListScreen({ navigation, route }) {
 
       {/* Bulk Import Modal */}
       <Modal visible={showBulkImport} animationType="slide" onRequestClose={() => setShowBulkImport(false)}>
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} accessibilityViewIsModal>
           <View style={[styles.bulkHeader, { backgroundColor: colors.bgSecondary }]}>
             <Pressable
               onPress={() => setShowBulkImport(false)}
@@ -746,7 +746,7 @@ export default function SongListScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Dismiss action sheet"
         >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]}>
+          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
             <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.6}>
               {selectedSong?.title}

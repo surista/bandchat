@@ -1188,8 +1188,8 @@ export default function ChannelScreen({ navigation, route }) {
         animationType="fade"
         onRequestClose={() => setShowReportModal(false)}
       >
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={[styles.modalContent, { backgroundColor: colors.modalBg || colors.bgSecondary }]}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg || colors.bgSecondary }]} accessibilityViewIsModal>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>Report Message</Text>
             <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.6}>
               Why are you reporting this message?

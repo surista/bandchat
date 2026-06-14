@@ -212,7 +212,7 @@ export default function ChannelSettingsScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardDismissMode="on-drag">
         {/* Channel Info Card */}
         <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
@@ -278,8 +278,7 @@ export default function ChannelSettingsScreen({ navigation, route }) {
             <Switch
               value={isMuted}
               onValueChange={handleMuteToggle}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor="#ffffff"
+              trackColor={Platform.OS === 'ios' ? undefined : { false: colors.border, true: colors.primary }}
             />
           </View>
 
@@ -377,7 +376,7 @@ export default function ChannelSettingsScreen({ navigation, route }) {
       {/* Add Member Modal */}
       <Modal visible={showAddMember} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowAddMember(false)}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Add Member</Text>
             {availableMembers.length === 0 ? (
               <Text style={[styles.modalEmpty, { color: colors.textSecondary }]}>

@@ -288,8 +288,8 @@ export default function WebsiteSettingsScreen({ route }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
           {/* Status card */}
           {isDeployed && (
             <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
@@ -547,7 +547,7 @@ export default function WebsiteSettingsScreen({ route }) {
             ].map(([lbl, val, setter]) => (
               <View key={lbl} style={styles.toggleRow}>
                 <Text style={[styles.toggleLabel, { color: colors.textPrimary }]}>{lbl}</Text>
-                <Switch value={val} onValueChange={setter} trackColor={{ false: colors.bgTertiary, true: colors.primary }} thumbColor="#ffffff" />
+                <Switch value={val} onValueChange={setter} trackColor={Platform.OS === 'ios' ? undefined : { false: colors.bgTertiary, true: colors.primary }} />
               </View>
             ))}
           </View>

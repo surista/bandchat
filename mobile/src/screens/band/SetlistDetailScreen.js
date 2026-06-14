@@ -614,7 +614,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
 
       {/* Song Picker Modal */}
       <Modal visible={showSongPicker} animationType="slide" onRequestClose={() => setShowSongPicker(false)}>
-        <SafeAreaView style={[styles.pickerContainer, { backgroundColor: colors.bgPrimary }]}>
+        <SafeAreaView style={[styles.pickerContainer, { backgroundColor: colors.bgPrimary }]} accessibilityViewIsModal>
           <View style={[styles.pickerHeader, { backgroundColor: colors.bgSecondary }]}>
             <Pressable
               onPress={() => setShowSongPicker(false)}
@@ -689,7 +689,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
       {/* Performer Picker Modal */}
       <Modal visible={showPerformerPicker} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowPerformerPicker(false)}>
         <View style={styles.detailsOverlay}>
-          <View style={[styles.detailsContent, { backgroundColor: colors.modalBg }]}>
+          <View style={[styles.detailsContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <Text style={[styles.detailsTitle, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>Select Performers</Text>
             <ScrollView style={{ maxHeight: 300 }}>
               {bandMembers.map(member => {
@@ -750,8 +750,8 @@ export default function SetlistDetailScreen({ navigation, route }) {
       {/* Edit Details Modal */}
       <Modal visible={showEditDetails} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowEditDetails(false)}>
         <View style={styles.detailsOverlay}>
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-            <View style={[styles.detailsContent, { backgroundColor: colors.modalBg }]}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <View style={[styles.detailsContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
               <Text style={[styles.detailsTitle, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>Edit Details</Text>
               <Text style={[styles.detailsLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Name</Text>
               <TextInput

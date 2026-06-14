@@ -16,6 +16,15 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.21',
+    date: '2026-06-14',
+    items: [
+      { kind: 'fixed', text: 'Mobile: VoiceOver / TalkBack focus no longer slips behind a modal dialog while it\'s open — finishes the accessibility sweep started in v1.07.19 across all 47 modals in the app.' },
+      { kind: 'fixed', text: 'Mobile: a render error in one screen no longer blanks the whole app. You can hit Try Again, or navigate back to other parts of the app.' },
+      { kind: 'changed', text: 'Mobile: keyboard handling and toggle switches now feel more like the platform you\'re on — iOS green switches, Android-native keyboard avoidance.' },
+    ],
+  },
+  {
     version: '1.07.20',
     date: '2026-06-14',
     items: [

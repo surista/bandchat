@@ -2,6 +2,24 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.21] - 2026-06-14
+
+Next batch from the deferred follow-ups: five mechanical sweeps across the mobile codebase.
+
+### Accessibility
+
+- **`accessibilityViewIsModal` on 47 more Modal containers across 23 files** (audit-flagged sweep #2). VoiceOver / TalkBack focus no longer slips into the dimmed background when a Modal is open. Touched: SecurityScreen, SettingsScreen, MedleyListScreen, SetlistDetailScreen, WorkspaceMembersScreen, RecordingDetailScreen, GigDetailScreen, TimelineScreen, AnnouncementsScreen, SetlistListScreen, RecordingListScreen, KittyScreen, GigListScreen, PollsScreen, SongIntelligenceScreen, BandMembersScreen, SongDetailScreen, SongListScreen, ChannelListScreen, StagePlotEditorScreen, ContactsScreen, ChannelSettingsScreen, ChannelScreen. Combined with v1.07.19's 5-component sweep, BandChat's Modal accessibility is now complete.
+
+### Stability
+
+- **Per-screen ErrorBoundary in RootNavigator** via `Stack.Navigator screenOptions.layout`. Was relying solely on the top-level boundary in `App.js`, which meant any render error in any screen blanked the entire app. Now a single broken screen shows the ErrorBoundary's "Try Again" UI while the user can still navigate back via the system back gesture and reach other parts of the app. The App-level boundary continues to handle init / context / navigator errors.
+
+### Cross-platform polish
+
+- **Switch trackColor on 5 remaining sites** (`AppearanceScreen`, `SecurityScreen`, `WebsiteSettingsScreen`, `ChannelSettingsScreen`, `OnboardingWizardScreen`): `Platform.OS === 'ios' ? undefined : { ... }` so iOS shows the system green track instead of whatever theme color is active. NotificationsScreen got the same fix in v1.07.20. All Switches in the app now follow platform conventions.
+- **KeyboardAvoidingView `behavior="height"` → `undefined` on Android** across all ~14 affected screens (single bulk perl replace). With `softwareKeyboardLayoutMode: 'resize'` already set in `app.config.js`, the OS handles keyboard avoidance natively; the JS `behavior="height"` was double-adjusting and causing jumpy layouts on Samsung One UI.
+- **`keyboardDismissMode` on 5 input-heavy ScrollViews** (LoginScreen, SignupScreen, ForgotPasswordScreen, SettingsScreen, WebsiteSettingsScreen). iOS users now get the interactive swipe-down-to-dismiss-keyboard gesture they expect; Android falls back to on-drag.
+
 ## [1.07.20] - 2026-06-14
 
 Batches 7+8+9 of the code-review pass — cross-platform polish, notification + audio refinement, and documenting the deferred follow-ups.

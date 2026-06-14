@@ -1,6 +1,7 @@
 import { View, Text, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import ErrorBoundary from '../components/ErrorBoundary';
 import WorkspaceListScreen from '../screens/workspaces/WorkspaceListScreen';
 import OnboardingWizardScreen from '../screens/workspaces/OnboardingWizardScreen';
 import ChannelListScreen from '../screens/workspace/ChannelListScreen';
@@ -73,6 +74,11 @@ export default function AppStack() {
         headerLargeTitleStyle: { color: colors.headerText, fontWeight: '700' },
         headerBackButtonDisplayMode: 'minimal',
         contentStyle: { backgroundColor: colors.bgPrimary },
+        // Per-screen ErrorBoundary so a render error in one screen doesn't
+        // blank the whole app — the user can hit "Try Again" and either
+        // recover or navigate back. The top-level boundary in App.js still
+        // covers init / context / navigator errors.
+        layout: ({ children }) => <ErrorBoundary>{children}</ErrorBoundary>,
       }}
     >
       <Stack.Screen

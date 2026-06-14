@@ -328,7 +328,7 @@ export default function OnboardingWizardScreen({ navigation }) {
             value={ch.enabled}
             onValueChange={() => handleToggleChannel(index)}
             disabled={ch.isDefault}
-            trackColor={{ false: colors.bgTertiary, true: colors.primary }}
+            trackColor={Platform.OS === 'ios' ? undefined : { false: colors.bgTertiary, true: colors.primary }}
             accessibilityLabel={`${ch.name} channel`}
           />
           <View style={styles.channelInfo}>

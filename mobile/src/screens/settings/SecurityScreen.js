@@ -231,7 +231,7 @@ export default function SecurityScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={[styles.content, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]} keyboardShouldPersistTaps="handled">
         {/* Change Password */}
         {hasPassword && (
@@ -390,7 +390,7 @@ export default function SecurityScreen() {
                   <Switch
                     value={biometricEnabled}
                     onValueChange={handleToggleBiometric}
-                    trackColor={{ false: colors.border, true: colors.primary }}
+                    trackColor={Platform.OS === 'ios' ? undefined : { false: colors.border, true: colors.primary }}
                     accessibilityLabel={`Toggle ${biometricLabel}`}
                   />
                 )}
@@ -455,8 +455,8 @@ export default function SecurityScreen() {
 
       {/* Change Email Modal */}
       <Modal visible={showEmailModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowEmailModal(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Change Email</Text>
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
               A verification link will be sent to your new email address.
@@ -515,8 +515,8 @@ export default function SecurityScreen() {
       </Modal>
       {/* Delete Account Modal */}
       <Modal visible={showDeleteModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => { setShowDeleteModal(false); setDeletePassword(''); }}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <Text style={[styles.modalTitle, { color: '#ef4444' }]} accessibilityRole="header">Delete Account</Text>
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
               This will permanently delete your account. Your messages will show as "Deleted User" and your profile data will be removed. This cannot be undone.
