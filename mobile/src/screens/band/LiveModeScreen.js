@@ -20,6 +20,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { formatDuration } from '../../utils/formatDuration';
 
+// LiveMode is intentionally always-dark — even when the user's overall
+// app theme is light. Stage use almost always wants minimum brightness so
+// the screen doesn't blow out the singer's night vision or photobomb the
+// audience. The styles below hardcode dark colors for that reason; do not
+// "fix" them to read from ThemeContext. The badge colors still read from
+// the theme palette so dark/light keep their visible distinction.
 export default function LiveModeScreen({ navigation, route }) {
   const { width: screenWidth } = useWindowDimensions();
   const { setlistItems, setlistName } = route.params;
@@ -110,14 +116,18 @@ export default function LiveModeScreen({ navigation, route }) {
   const totalSongs = items.filter(i => i.type === 'SONG' || (!i.type && i.song)).length;
 
   const renderPage = useCallback(({ item }) => {
+    // maxFontSizeMultiplier caps below are tuned for stage use: text still
+    // scales for accessibility, but capped so titles + lyrics don't blow out
+    // the layout at AX5. The global App.js default is 2.0× — too aggressive
+    // for a 28pt song title that's already large.
     if (item.type === 'SET_BREAK') {
       return (
         <View style={[styles.page, { width: screenWidth }]}>
           <View style={styles.breakContainer}>
             <Ionicons name="musical-note" size={48} color="rgba(255,255,255,0.3)" style={{ marginBottom: 16 }} />
-            <Text style={styles.breakLabel}>{item.label || 'Break'}</Text>
+            <Text style={styles.breakLabel} maxFontSizeMultiplier={1.4}>{item.label || 'Break'}</Text>
             {item.duration ? (
-              <Text style={styles.breakDuration}>{formatDuration(item.duration)}</Text>
+              <Text style={styles.breakDuration} maxFontSizeMultiplier={1.4}>{formatDuration(item.duration)}</Text>
             ) : null}
           </View>
         </View>
@@ -129,9 +139,9 @@ export default function LiveModeScreen({ navigation, route }) {
         <View style={[styles.page, { width: screenWidth }]}>
           <View style={styles.breakContainer}>
             <Ionicons name="mic" size={48} color="rgba(255,255,255,0.3)" style={{ marginBottom: 16 }} />
-            <Text style={styles.breakLabel}>{item.label || 'MC'}</Text>
+            <Text style={styles.breakLabel} maxFontSizeMultiplier={1.4}>{item.label || 'MC'}</Text>
             {item.duration ? (
-              <Text style={styles.breakDuration}>{formatDuration(item.duration)}</Text>
+              <Text style={styles.breakDuration} maxFontSizeMultiplier={1.4}>{formatDuration(item.duration)}</Text>
             ) : null}
           </View>
         </View>
@@ -143,24 +153,24 @@ export default function LiveModeScreen({ navigation, route }) {
     return (
       <View style={[styles.page, { width: screenWidth }]}>
         <View style={styles.songHeader}>
-          <Text style={styles.songTitle} numberOfLines={2}>{song?.title || 'Unknown'}</Text>
+          <Text style={styles.songTitle} numberOfLines={2} maxFontSizeMultiplier={1.4}>{song?.title || 'Unknown'}</Text>
           {song?.artist ? (
-            <Text style={styles.songArtist} numberOfLines={1}>{song.artist}</Text>
+            <Text style={styles.songArtist} numberOfLines={1} maxFontSizeMultiplier={1.4}>{song.artist}</Text>
           ) : null}
           <View style={styles.badgeRow}>
             {song?.key ? (
               <View style={[styles.badge, { backgroundColor: colors.badgeKeyBg }]}>
-                <Text style={[styles.badgeText, { color: colors.badgeKey }]}>{song.key}</Text>
+                <Text style={[styles.badgeText, { color: colors.badgeKey }]} maxFontSizeMultiplier={1.3}>{song.key}</Text>
               </View>
             ) : null}
             {song?.bpm ? (
               <View style={[styles.badge, { backgroundColor: colors.badgeBpmBg }]}>
-                <Text style={[styles.badgeText, { color: colors.badgeBpm }]}>{song.bpm} BPM</Text>
+                <Text style={[styles.badgeText, { color: colors.badgeBpm }]} maxFontSizeMultiplier={1.3}>{song.bpm} BPM</Text>
               </View>
             ) : null}
             {song?.duration ? (
               <View style={[styles.badge, { backgroundColor: colors.badgeDurationBg }]}>
-                <Text style={[styles.badgeText, { color: colors.badgeDuration }]}>{formatDuration(song.duration)}</Text>
+                <Text style={[styles.badgeText, { color: colors.badgeDuration }]} maxFontSizeMultiplier={1.3}>{formatDuration(song.duration)}</Text>
               </View>
             ) : null}
           </View>
@@ -168,13 +178,16 @@ export default function LiveModeScreen({ navigation, route }) {
 
         {song?.lyrics ? (
           <ScrollView style={styles.lyricsScroll} contentContainerStyle={styles.lyricsContent}>
-            <Text style={styles.lyricsText}>
+            {/* Lyrics get a slightly more generous cap (1.6×) because they're
+                the primary reading surface and large is usually what stage
+                users want. */}
+            <Text style={styles.lyricsText} maxFontSizeMultiplier={1.6}>
               {song.lyrics}
             </Text>
           </ScrollView>
         ) : (
           <View style={styles.noLyricsContainer}>
-            <Text style={styles.noLyricsText}>No lyrics available</Text>
+            <Text style={styles.noLyricsText} maxFontSizeMultiplier={1.4}>No lyrics available</Text>
           </View>
         )}
       </View>
@@ -202,14 +215,17 @@ export default function LiveModeScreen({ navigation, route }) {
         accessibilityRole="button"
         accessibilityLabel={autoAdvance ? 'Disable auto-advance' : 'Enable auto-advance'}
       >
-        <Text style={[styles.autoText, autoAdvance && styles.autoTextActive]}>
+        <Text
+          style={[styles.autoText, autoAdvance && styles.autoTextActive]}
+          maxFontSizeMultiplier={1.3}
+        >
           {autoAdvance ? 'AUTO ON' : 'AUTO'}
         </Text>
       </TouchableOpacity>
 
       {/* Setlist name */}
       <View style={[styles.titleBar, { paddingTop: insets.top + 14 }]}>
-        <Text style={styles.setlistTitle} numberOfLines={1}>{setlistName}</Text>
+        <Text style={styles.setlistTitle} numberOfLines={1} maxFontSizeMultiplier={1.4}>{setlistName}</Text>
       </View>
 
       {/* Pages */}
@@ -232,7 +248,7 @@ export default function LiveModeScreen({ navigation, route }) {
 
       {/* Counter */}
       <View style={styles.counterBar}>
-        <Text style={styles.counterText}>
+        <Text style={styles.counterText} maxFontSizeMultiplier={1.4}>
           {items[currentIndex]?.type === 'SET_BREAK'
             ? 'Break'
             : items[currentIndex]?.type === 'MC'

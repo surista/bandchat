@@ -16,6 +16,14 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.23',
+    date: '2026-06-14',
+    items: [
+      { kind: 'fixed', text: 'Mobile: Live Mode (on-stage setlist viewer) now respects large accessibility text sizes properly — song titles and lyrics scale up without blowing out the layout.' },
+      { kind: 'fixed', text: 'Mobile: gig type and status badges (REHEARSAL / GIG / Done / Cancelled / Locked) are now properly readable in light mode (text was washed out before).' },
+    ],
+  },
+  {
     version: '1.07.22',
     date: '2026-06-14',
     items: [

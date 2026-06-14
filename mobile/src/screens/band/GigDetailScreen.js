@@ -41,6 +41,7 @@ import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeabl
 import Reanimated, { useAnimatedStyle, interpolate, Extrapolate } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 import { TYPE_COLORS, STATUS_COLORS } from '../../utils/constants';
+import { badgeColors } from '../../utils/badgeColors';
 import { updateWidgetGigData } from '../../services/widgetService';
 
 const ATTENDEE_STATUSES = ['ATTENDING', 'MAYBE', 'NOT_ATTENDING'];
@@ -1220,22 +1221,29 @@ export default function GigDetailScreen({ navigation, route }) {
       }}
       scrollEventThrottle={100}
     >
-      {/* Type + Status + Lock badges */}
-      <View style={styles.viewBadgeRow}>
-        <View style={[styles.typeBadge, { backgroundColor: typeColor + '25' }]}>
-          <Text style={[styles.typeBadgeText, { color: typeColor }]}>{gig?.type}</Text>
-        </View>
-        {gig?.status && gig.status !== 'SCHEDULED' && (
-          <View style={[styles.typeBadge, { backgroundColor: statusColor + '25' }]}>
-            <Text style={[styles.typeBadgeText, { color: statusColor }]}>{gig.status}</Text>
+      {/* Type + Status + Lock badges — badgeColors() handles dark/light contrast */}
+      {(() => {
+        const typeBc = badgeColors(typeColor, mode);
+        const statusBc = badgeColors(statusColor, mode);
+        const lockBc = badgeColors('#64748b', mode);
+        return (
+          <View style={styles.viewBadgeRow}>
+            <View style={[styles.typeBadge, { backgroundColor: typeBc.bg }]}>
+              <Text style={[styles.typeBadgeText, { color: typeBc.fg }]}>{gig?.type}</Text>
+            </View>
+            {gig?.status && gig.status !== 'SCHEDULED' && (
+              <View style={[styles.typeBadge, { backgroundColor: statusBc.bg }]}>
+                <Text style={[styles.typeBadgeText, { color: statusBc.fg }]}>{gig.status}</Text>
+              </View>
+            )}
+            {gig?.isLocked && (
+              <View style={[styles.typeBadge, { backgroundColor: lockBc.bg }]}>
+                <Text style={[styles.typeBadgeText, { color: lockBc.fg }]}><Ionicons name="lock-closed" size={12} color={lockBc.fg} /> Locked</Text>
+              </View>
+            )}
           </View>
-        )}
-        {gig?.isLocked && (
-          <View style={[styles.typeBadge, { backgroundColor: '#64748b25' }]}>
-            <Text style={[styles.typeBadgeText, { color: '#64748b' }]}><Ionicons name="lock-closed" size={12} color="#64748b" /> Locked</Text>
-          </View>
-        )}
-      </View>
+        );
+      })()}
 
       {/* Date + Time */}
       <View style={styles.viewSection}>
@@ -1344,9 +1352,14 @@ export default function GigDetailScreen({ navigation, route }) {
                 <Text style={[styles.attendeeName, { color: colors.textPrimary }]} numberOfLines={1}>
                   {a.bandMember?.name || 'Unknown'}
                 </Text>
-                <View style={[styles.attendeeStatusBadge, { backgroundColor: statusColor + '20' }]}>
-                  <Text style={[styles.attendeeStatusText, { color: statusColor }]}>{statusLabel}</Text>
-                </View>
+                {(() => {
+                  const bc = badgeColors(statusColor, mode);
+                  return (
+                    <View style={[styles.attendeeStatusBadge, { backgroundColor: bc.bg }]}>
+                      <Text style={[styles.attendeeStatusText, { color: bc.fg }]}>{statusLabel}</Text>
+                    </View>
+                  );
+                })()}
               </View>
             );
           })}

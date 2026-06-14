@@ -2,6 +2,13 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.23] - 2026-06-14
+
+### Accessibility
+
+- **LiveModeScreen Dynamic Type caps** on every Text element. The screen is on-stage, where AX5 (2.0× the global default) would blow the 28pt song title to 56pt and make it unreadable. Caps: 1.4× for titles/labels, 1.6× for lyrics (the primary reading surface scales most generously), 1.3× for badges. Also added a comment at the top of the file documenting the always-dark choice (the screen intentionally hardcodes dark colors instead of reading from ThemeContext — stage use almost always wants minimum brightness).
+- **Gig badge contrast** in light mode now passes WCAG AA. The legacy pattern was `color text` on a 15% tint of the same color over white — `#3b82f6` (blue-500) text on `#3b82f625` rendered at ~3.5:1, below the 4.5:1 AA bar for 13pt. New `mobile/src/utils/badgeColors.js` helper returns mode-aware `{bg, fg}`: dark mode keeps the legacy bright-on-tinted pattern, light mode bumps to 20% alpha + darkens fg by 40% toward black for AA contrast on white-derived backgrounds. Applied to: `GigListScreen` type badge + status badge (Done / Cancelled), `GigDetailScreen` type badge + status badge + lock badge + attendee status badge.
+
 ## [1.07.22] - 2026-06-14
 
 ### Changed

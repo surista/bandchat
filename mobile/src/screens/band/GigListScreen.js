@@ -29,6 +29,7 @@ import PressableRow from '../../components/PressableRow';
 import { useLayout } from '../../hooks/useLayout';
 import getCurrencySymbol from '../../utils/getCurrencySymbol';
 import { TYPE_COLORS, STATUS_COLORS } from '../../utils/constants';
+import { badgeColors } from '../../utils/badgeColors';
 
 const TYPE_FILTERS = [
   { key: 'all', label: 'All' },
@@ -92,7 +93,7 @@ function formatTimeRange(date, endDate) {
 
 export default function GigListScreen({ navigation, route }) {
   const { workspaceId } = route.params;
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
   const { user } = useAuth();
   const toast = useToast();
@@ -425,9 +426,14 @@ export default function GigListScreen({ navigation, route }) {
               {item.isLocked && <><Ionicons name="lock-closed" size={12} color="#64748b" />{' '}</>}
               {item.title}
             </Text>
-            <View style={[styles.typeBadge, { backgroundColor: typeColor + '25' }]}>
-              <Text style={[styles.typeBadgeText, { color: typeColor }]} maxFontSizeMultiplier={1.2}>{item.type}</Text>
-            </View>
+            {(() => {
+              const bc = badgeColors(typeColor, mode);
+              return (
+                <View style={[styles.typeBadge, { backgroundColor: bc.bg }]}>
+                  <Text style={[styles.typeBadgeText, { color: bc.fg }]} maxFontSizeMultiplier={1.2}>{item.type}</Text>
+                </View>
+              );
+            })()}
           </View>
 
           <View style={styles.dateRow}>
@@ -454,13 +460,16 @@ export default function GigListScreen({ navigation, route }) {
             )}
           </View>
 
-          {(isCompleted || isCancelled) && (
-            <View style={[styles.statusBadge, { backgroundColor: (STATUS_COLORS[item.status] || '#6b7280') + '20' }]}>
-              <Text style={[styles.statusText, { color: STATUS_COLORS[item.status] }]} maxFontSizeMultiplier={1.5}>
-                {isCompleted ? 'Done' : 'Cancelled'}
-              </Text>
-            </View>
-          )}
+          {(isCompleted || isCancelled) && (() => {
+            const bc = badgeColors(STATUS_COLORS[item.status] || '#6b7280', mode);
+            return (
+              <View style={[styles.statusBadge, { backgroundColor: bc.bg }]}>
+                <Text style={[styles.statusText, { color: bc.fg }]} maxFontSizeMultiplier={1.5}>
+                  {isCompleted ? 'Done' : 'Cancelled'}
+                </Text>
+              </View>
+            );
+          })()}
 
           {item.venue ? (
             <Text style={[styles.gigVenue, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={1.5}>
