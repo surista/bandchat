@@ -6,7 +6,6 @@ import {
   FlatList,
   ScrollView,
   TouchableOpacity,
-  Modal,
   Alert,
   ActivityIndicator,
   RefreshControl,
@@ -23,6 +22,7 @@ import api from '../../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
 import PressableRow from '../../components/PressableRow';
+import ActionSheet from '../../components/ActionSheet';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import useDebounce from '../../hooks/useDebounce';
 import { useLayout } from '../../hooks/useLayout';
@@ -401,34 +401,14 @@ export default function RecordingListScreen({ navigation, route }) {
       />
       </KeyboardAvoidingView>
 
-      {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowActions(false)}>
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => { setShowActions(false); setSelectedRecording(null); }}
-          accessibilityRole="button"
-          accessibilityLabel="Close action sheet"
-        >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
-            <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-              {selectedRecording?.title}
-            </Text>
-            <PressableRow style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete recording">
-              <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
-            </PressableRow>
-            <PressableRow
-              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
-              onPress={() => { setShowActions(false); setSelectedRecording(null); }}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel"
-            >
-              <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
-            </PressableRow>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      <ActionSheet
+        visible={showActions}
+        title={selectedRecording?.title}
+        actions={[
+          { label: 'Delete', destructive: true, onPress: handleDelete },
+        ]}
+        onClose={() => { setShowActions(false); setSelectedRecording(null); }}
+      />
     </SafeAreaView>
   );
 }
@@ -488,28 +468,4 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 40, marginBottom: 12 },
   emptyText: { fontSize: 16, fontWeight: '600' },
   emptyHint: { fontSize: 13, textAlign: 'center', opacity: 0.7, maxWidth: 280, marginTop: 6 },
-  // Action sheet
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  actionSheet: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingHorizontal: 16,
-    paddingBottom: 40,
-    paddingTop: 12,
-  },
-  actionHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  actionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 16, textAlign: 'center' },
-  actionItem: { paddingVertical: 16, alignItems: 'center' },
-  actionText: { fontSize: 17 },
-  actionCancel: { marginTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.1)' },
 });

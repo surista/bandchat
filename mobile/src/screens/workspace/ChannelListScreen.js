@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
-  Pressable,
   StyleSheet,
   Alert,
   KeyboardAvoidingView,
@@ -28,6 +27,7 @@ import api from '../../services/api';
 import { getLocalChannels, upsertChannels, upsertMembers } from '../../services/database';
 import ChannelItem from '../../components/ChannelItem';
 import ErrorState from '../../components/ErrorState';
+import ActionSheet from '../../components/ActionSheet';
 import WorkspaceSwitcher from '../../components/WorkspaceSwitcher';
 import SplitLayout from '../../components/split/SplitLayout';
 import ChannelPaneHost from '../../components/split/ChannelPaneHost';
@@ -1143,65 +1143,27 @@ export default function ChannelListScreen({ navigation, route }) {
         </View>
       </Modal>
 
-      {/* Channel Actions Modal (Star/Unstar) */}
-      <Modal visible={showChannelActions} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowChannelActions(false)}>
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowChannelActions(false)}
-        >
-          <Pressable style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} onPress={() => {}} accessibilityViewIsModal>
-            <Text style={[styles.actionSheetTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>
-              #{selectedChannel?.name}
-            </Text>
-            <TouchableOpacity
-              style={styles.actionItem}
-              onPress={handleToggleStar}
-            >
-              <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>
-                {selectedChannel?.starred ? 'Unstar Channel' : 'Star Channel'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionItem, styles.cancelAction, { borderTopColor: colors.border }]}
-              onPress={() => setShowChannelActions(false)}
-            >
-              <Text style={[styles.actionText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <ActionSheet
+        visible={showChannelActions}
+        title={selectedChannel ? `#${selectedChannel.name}` : undefined}
+        actions={[
+          {
+            label: selectedChannel?.starred ? 'Unstar Channel' : 'Star Channel',
+            onPress: handleToggleStar,
+          },
+        ]}
+        onClose={() => { setShowChannelActions(false); setSelectedChannel(null); }}
+      />
 
-      {/* Group Actions Modal (Rename/Delete) */}
-      <Modal visible={showGroupActions} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowGroupActions(false)}>
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowGroupActions(false)}
-        >
-          <Pressable style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} onPress={() => {}} accessibilityViewIsModal>
-            <Text style={[styles.actionSheetTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.6}>
-              {selectedGroup?.name}
-            </Text>
-            <TouchableOpacity
-              style={styles.actionItem}
-              onPress={openGroupRenameModal}
-            >
-              <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Rename Section</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionItem}
-              onPress={handleDeleteGroup}
-            >
-              <Text style={[styles.actionText, { color: colors.error }]} maxFontSizeMultiplier={1.5}>Delete Section</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionItem, styles.cancelAction, { borderTopColor: colors.border }]}
-              onPress={() => setShowGroupActions(false)}
-            >
-              <Text style={[styles.actionText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <ActionSheet
+        visible={showGroupActions}
+        title={selectedGroup?.name}
+        actions={[
+          { label: 'Rename Section', onPress: openGroupRenameModal },
+          { label: 'Delete Section', destructive: true, onPress: handleDeleteGroup },
+        ]}
+        onClose={() => { setShowGroupActions(false); setSelectedGroup(null); }}
+      />
 
       {/* Group Create/Edit Modal */}
       <Modal visible={showGroupModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowGroupModal(false)}>
@@ -1340,32 +1302,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  // Action sheet styles
-  actionSheet: {
-    borderRadius: 12,
-    marginHorizontal: 16,
-    overflow: 'hidden',
-  },
-  actionSheetTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(128,128,128,0.3)',
-  },
-  actionItem: {
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  actionText: {
-    fontSize: 17,
-    fontWeight: '500',
-  },
-  cancelAction: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    marginTop: 8,
   },
   // Modal styles
   modalOverlay: {

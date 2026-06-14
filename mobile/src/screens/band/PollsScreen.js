@@ -23,6 +23,7 @@ import { successNotification } from '../../utils/haptics';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
 import PressableRow from '../../components/PressableRow';
+import ActionSheet from '../../components/ActionSheet';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
 
@@ -527,39 +528,15 @@ export default function PollsScreen({ navigation, route }) {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowActions(false)}>
-        <TouchableOpacity
-          style={styles.actionOverlay}
-          activeOpacity={1}
-          onPress={() => { setShowActions(false); setSelectedPoll(null); }}
-          accessibilityRole="button"
-          accessibilityLabel="Close action sheet"
-        >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
-            <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={2}>
-              {selectedPoll?.question}
-            </Text>
-            {selectedPoll && !selectedPoll.isClosed && (
-              <PressableRow style={styles.actionItem} onPress={handleClosePoll} accessibilityRole="button" accessibilityLabel="Close poll">
-                <Text style={[styles.actionText, { color: colors.textPrimary }]}>Close Poll</Text>
-              </PressableRow>
-            )}
-            <PressableRow style={styles.actionItem} onPress={handleDeletePoll} accessibilityRole="button" accessibilityLabel="Delete poll">
-              <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
-            </PressableRow>
-            <PressableRow
-              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
-              onPress={() => { setShowActions(false); setSelectedPoll(null); }}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel"
-            >
-              <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
-            </PressableRow>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      <ActionSheet
+        visible={showActions}
+        title={selectedPoll?.question}
+        actions={[
+          ...(selectedPoll && !selectedPoll.isClosed ? [{ label: 'Close Poll', onPress: handleClosePoll }] : []),
+          { label: 'Delete', destructive: true, onPress: handleDeletePoll },
+        ]}
+        onClose={() => { setShowActions(false); setSelectedPoll(null); }}
+      />
     </SafeAreaView>
   );
 }
@@ -719,28 +696,4 @@ const styles = StyleSheet.create({
   modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
   modalButtonText: { fontSize: 15, fontWeight: '600' },
   modalButtonTextWhite: { fontSize: 15, fontWeight: '600', color: '#ffffff' },
-  // Action sheet
-  actionOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  actionSheet: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingHorizontal: 16,
-    paddingBottom: 40,
-    paddingTop: 12,
-  },
-  actionHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  actionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 16, textAlign: 'center' },
-  actionItem: { paddingVertical: 16, alignItems: 'center' },
-  actionText: { fontSize: 17 },
-  actionCancel: { marginTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.1)' },
 });

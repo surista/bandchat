@@ -16,6 +16,13 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.22',
+    date: '2026-06-14',
+    items: [
+      { kind: 'changed', text: 'iOS: many bottom action menus (per-song, per-setlist, per-gig, per-member, per-poll, channel + group actions) now use the native iOS action sheet — same one you see in Photos, Mail, Messages — instead of a custom drawer. Cleaner, more familiar, with proper destructive-button red styling.' },
+    ],
+  },
+  {
     version: '1.07.21',
     date: '2026-06-14',
     items: [

@@ -4,7 +4,6 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  Modal,
   Alert,
   ActivityIndicator,
   RefreshControl,
@@ -16,6 +15,7 @@ import Badge from '../../components/Badge';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
 import PressableRow from '../../components/PressableRow';
+import ActionSheet from '../../components/ActionSheet';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
 import { useLayout } from '../../hooks/useLayout';
@@ -245,46 +245,18 @@ export default function MedleyListScreen({ navigation, route }) {
         }
       />
 
-      {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowActions(false)}>
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => { setShowActions(false); setSelectedMedley(null); }}
-          accessibilityRole="button"
-          accessibilityLabel="Close action sheet"
-        >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
-            <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-              {selectedMedley?.name}
-            </Text>
-            <PressableRow
-              style={styles.actionItem}
-              onPress={() => {
-                setShowActions(false);
-                navigation.navigate('MedleyDetail', { medleyId: selectedMedley?.id, workspaceId, editing: true });
-                setSelectedMedley(null);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Edit medley"
-            >
-              <Text style={[styles.actionText, { color: colors.textPrimary }]}>Edit</Text>
-            </PressableRow>
-            <PressableRow style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete medley">
-              <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
-            </PressableRow>
-            <PressableRow
-              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
-              onPress={() => { setShowActions(false); setSelectedMedley(null); }}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel"
-            >
-              <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
-            </PressableRow>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      <ActionSheet
+        visible={showActions}
+        title={selectedMedley?.name}
+        actions={[
+          {
+            label: 'Edit',
+            onPress: () => navigation.navigate('MedleyDetail', { medleyId: selectedMedley?.id, workspaceId, editing: true }),
+          },
+          { label: 'Delete', destructive: true, onPress: handleDelete },
+        ]}
+        onClose={() => { setShowActions(false); setSelectedMedley(null); }}
+      />
     </SafeAreaView>
   );
 }
@@ -323,28 +295,4 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 40, marginBottom: 12 },
   emptyText: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
   emptySubtext: { fontSize: 14 },
-  // Action sheet
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  actionSheet: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingHorizontal: 16,
-    paddingBottom: 40,
-    paddingTop: 12,
-  },
-  actionHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  actionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 16, textAlign: 'center' },
-  actionItem: { paddingVertical: 16, alignItems: 'center' },
-  actionText: { fontSize: 17 },
-  actionCancel: { marginTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.1)' },
 });

@@ -2,6 +2,25 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.22] - 2026-06-14
+
+### Changed
+
+- **Migrated 11 custom bottom sheets to the shared `<ActionSheet>` component** across 9 files. On iOS these now render as a native `ActionSheetIOS.showActionSheetWithOptions` UIAlertController (with proper destructive-button red coloring, native spring animation, Voice Control hooks, dynamic blur, automatic Dynamic Type sizing) instead of the previous custom Modal+JS sheet. Android continues to use the themed bottom sheet for parity with Material conventions. Migrated:
+  - `MedleyListScreen` per-medley actions
+  - `RecordingListScreen` per-recording actions
+  - `BandMembersScreen` per-member actions (admin-only)
+  - `SetlistListScreen` per-setlist actions (Edit / Duplicate / Export PDF / Delete)
+  - `PollsScreen` per-poll actions (Close / Delete)
+  - `SongListScreen` "More" menu (Bulk Import / Fetch Missing / Share as PDF) + per-song actions
+  - `TimelineScreen` per-event actions
+  - `WorkspaceMembersScreen` per-member actions (Promote / Demote / Reset Password / Remove)
+  - `ChannelListScreen` channel-star and group rename/delete actions
+- **Deliberately skipped** ~20 other Modals that didn't fit the criteria (pure label→onPress lists). These remain as custom Modals because they're forms (TextInputs), pickers (visual checkmark on selected state), list selectors (avatars + metadata), or full-screen flows: GigListScreen's calendar subscribe + gig action sheet + availability picker, SongListScreen's sort modal + bulk import, KittyScreen's pickers + settings, TimelineScreen's type picker, all of `SetlistDetailScreen`, `SongDetailScreen`, `SongIntelligenceScreen`, `SecurityScreen`, `SettingsScreen` rename/delete confirmation forms, etc.
+- **Minor UX deltas to know about**:
+  - `SongListScreen` "Share as PDF" used to render greyed out when there were no songs; now it's hidden in that case. Standard iOS pattern (ActionSheet has no per-row disabled state).
+  - `WorkspaceMembersScreen` lost the visual `disabled` state on rows during in-flight requests. The follow-up confirm modal still gates on `updating`, so the user-facing risk is minimal.
+
 ## [1.07.21] - 2026-06-14
 
 Next batch from the deferred follow-ups: five mechanical sweeps across the mobile codebase.

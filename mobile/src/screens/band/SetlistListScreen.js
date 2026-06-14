@@ -20,6 +20,7 @@ import { successNotification } from '../../utils/haptics';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
 import PressableRow from '../../components/PressableRow';
+import ActionSheet from '../../components/ActionSheet';
 import useDebounce from '../../hooks/useDebounce';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
@@ -405,52 +406,20 @@ export default function SetlistListScreen({ navigation, route }) {
         </View>
       </Modal>
 
-      {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowActions(false)}>
-        <TouchableOpacity
-          style={styles.actionOverlay}
-          activeOpacity={1}
-          onPress={() => { setShowActions(false); setSelectedSetlist(null); }}
-          accessibilityRole="button"
-          accessibilityLabel="Dismiss action sheet"
-        >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
-            <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.6}>
-              {selectedSetlist?.name}
-            </Text>
-            <PressableRow
-              style={styles.actionItem}
-              onPress={() => {
-                setShowActions(false);
-                navigation.navigate('SetlistDetail', { setlistId: selectedSetlist?.id, workspaceId, editing: true });
-                setSelectedSetlist(null);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Edit setlist"
-            >
-              <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Edit</Text>
-            </PressableRow>
-            <PressableRow style={styles.actionItem} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate setlist">
-              <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Duplicate</Text>
-            </PressableRow>
-            <PressableRow style={styles.actionItem} onPress={handleExportPDF} accessibilityRole="button" accessibilityLabel="Export setlist as PDF">
-              <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Export PDF</Text>
-            </PressableRow>
-            <PressableRow style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete setlist">
-              <Text style={[styles.actionText, { color: '#ef4444' }]} maxFontSizeMultiplier={1.5}>Delete</Text>
-            </PressableRow>
-            <PressableRow
-              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
-              onPress={() => { setShowActions(false); setSelectedSetlist(null); }}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel"
-            >
-              <Text style={[styles.actionText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
-            </PressableRow>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      <ActionSheet
+        visible={showActions}
+        title={selectedSetlist?.name}
+        actions={[
+          {
+            label: 'Edit',
+            onPress: () => navigation.navigate('SetlistDetail', { setlistId: selectedSetlist?.id, workspaceId, editing: true }),
+          },
+          { label: 'Duplicate', onPress: handleDuplicate },
+          { label: 'Export PDF', onPress: handleExportPDF },
+          { label: 'Delete', destructive: true, onPress: handleDelete },
+        ]}
+        onClose={() => { setShowActions(false); setSelectedSetlist(null); }}
+      />
     </SafeAreaView>
   );
 }
@@ -503,28 +472,4 @@ const styles = StyleSheet.create({
   modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
   modalButtonText: { fontSize: 15, fontWeight: '600' },
   modalButtonTextWhite: { fontSize: 15, fontWeight: '600', color: '#ffffff' },
-  // Action sheet
-  actionOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  actionSheet: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingHorizontal: 16,
-    paddingBottom: 40,
-    paddingTop: 12,
-  },
-  actionHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  actionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 16, textAlign: 'center' },
-  actionItem: { paddingVertical: 16, alignItems: 'center' },
-  actionText: { fontSize: 17 },
-  actionCancel: { marginTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.1)' },
 });

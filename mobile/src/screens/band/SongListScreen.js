@@ -31,6 +31,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { buildSongListHTML } from '../../utils/buildSongListHTML';
 import PressableRow from '../../components/PressableRow';
+import ActionSheet from '../../components/ActionSheet';
 
 const SORT_OPTIONS = [
   { key: 'title', label: 'Title' },
@@ -588,53 +589,22 @@ export default function SongListScreen({ navigation, route }) {
         </View>
       )}
 
-      {/* More Menu */}
-      <Modal visible={showMoreMenu} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowMoreMenu(false)}>
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowMoreMenu(false)}
-          accessibilityRole="button"
-          accessibilityLabel="Dismiss menu"
-        >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
-            <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
-            <PressableRow
-              style={styles.actionItem}
-              onPress={() => {
-                setShowMoreMenu(false);
-                setBulkText('');
-                setImportResult(null);
-                setShowBulkImport(true);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Bulk import songs"
-            >
-              <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Bulk Import</Text>
-            </PressableRow>
-            <PressableRow style={styles.actionItem} onPress={handleEnrich} accessibilityRole="button" accessibilityLabel="Fetch missing metadata">
-              <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Fetch Missing Data</Text>
-            </PressableRow>
-            <PressableRow
-              style={[styles.actionItem, filteredSongs.length === 0 && { opacity: 0.4 }]}
-              onPress={filteredSongs.length > 0 ? handlePrintSongs : undefined}
-              disabled={filteredSongs.length === 0}
-              accessibilityRole="button"
-              accessibilityLabel="Share song list as PDF"
-            >
-              <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Share as PDF</Text>
-            </PressableRow>
-            <PressableRow
-              style={[styles.actionItem, styles.actionCancel]}
-              onPress={() => setShowMoreMenu(false)}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel"
-            >
-              <Text style={[styles.actionText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
-            </PressableRow>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      <ActionSheet
+        visible={showMoreMenu}
+        actions={[
+          {
+            label: 'Bulk Import',
+            onPress: () => {
+              setBulkText('');
+              setImportResult(null);
+              setShowBulkImport(true);
+            },
+          },
+          { label: 'Fetch Missing Data', onPress: handleEnrich },
+          ...(filteredSongs.length > 0 ? [{ label: 'Share as PDF', onPress: handlePrintSongs }] : []),
+        ]}
+        onClose={() => setShowMoreMenu(false)}
+      />
 
       {/* Bulk Import Modal */}
       <Modal visible={showBulkImport} animationType="slide" onRequestClose={() => setShowBulkImport(false)}>
@@ -737,46 +707,18 @@ export default function SongListScreen({ navigation, route }) {
         </SafeAreaView>
       </Modal>
 
-      {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setShowActions(false)}>
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => { setShowActions(false); setSelectedSong(null); }}
-          accessibilityRole="button"
-          accessibilityLabel="Dismiss action sheet"
-        >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
-            <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.6}>
-              {selectedSong?.title}
-            </Text>
-            <PressableRow
-              style={styles.actionItem}
-              onPress={() => {
-                setShowActions(false);
-                navigation.navigate('SongDetail', { songId: selectedSong?.id, workspaceId, editing: true });
-                setSelectedSong(null);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Edit song"
-            >
-              <Text style={[styles.actionText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Edit</Text>
-            </PressableRow>
-            <PressableRow style={styles.actionItem} onPress={handleDelete} accessibilityRole="button" accessibilityLabel="Delete song">
-              <Text style={[styles.actionText, { color: '#ef4444' }]} maxFontSizeMultiplier={1.5}>Delete</Text>
-            </PressableRow>
-            <PressableRow
-              style={[styles.actionItem, styles.actionCancel]}
-              onPress={() => { setShowActions(false); setSelectedSong(null); }}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel"
-            >
-              <Text style={[styles.actionText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
-            </PressableRow>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      <ActionSheet
+        visible={showActions}
+        title={selectedSong?.title}
+        actions={[
+          {
+            label: 'Edit',
+            onPress: () => navigation.navigate('SongDetail', { songId: selectedSong?.id, workspaceId, editing: true }),
+          },
+          { label: 'Delete', destructive: true, onPress: handleDelete },
+        ]}
+        onClose={() => { setShowActions(false); setSelectedSong(null); }}
+      />
     </SafeAreaView>
   );
 }
@@ -889,25 +831,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   sortOptionText: { fontSize: 16 },
-  // Action sheet
-  actionSheet: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingHorizontal: 16,
-    paddingBottom: 40,
-    paddingTop: 12,
-  },
-  actionHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  actionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 16, textAlign: 'center' },
-  actionItem: { paddingVertical: 16, alignItems: 'center' },
-  actionText: { fontSize: 17 },
-  actionCancel: { marginTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(128,128,128,0.3)' },
   // Bulk import
   bulkHeader: {
     flexDirection: 'row',

@@ -22,6 +22,7 @@ import getInitial from '../../utils/getInitial';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
 import PressableRow from '../../components/PressableRow';
+import ActionSheet from '../../components/ActionSheet';
 
 export default function WorkspaceMembersScreen({ route, navigation }) {
   const { workspaceId } = route.params;
@@ -237,54 +238,19 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
         }
       />
 
-      {/* Action Sheet */}
-      <Modal visible={showActions} transparent animationType="slide" statusBarTranslucent onRequestClose={() => { setShowActions(false); setSelectedMember(null); }}>
-        <TouchableOpacity
-          style={styles.actionOverlay}
-          activeOpacity={1}
-          onPress={() => { setShowActions(false); setSelectedMember(null); }}
-        >
-          <View style={[styles.actionSheet, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
-            <View style={[styles.actionHandle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.actionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-              {selectedMember?.user?.displayName || 'Member'}
-            </Text>
-
-            <TouchableOpacity
-              style={styles.actionItem}
-              onPress={handleToggleRole}
-              disabled={updating}
-            >
-              <Text style={[styles.actionText, { color: colors.textPrimary }]}>
-                {selectedMember?.role === 'ADMIN' ? 'Demote to Member' : 'Promote to Admin'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionItem}
-              onPress={openPasswordReset}
-              disabled={updating}
-            >
-              <Text style={[styles.actionText, { color: colors.primary }]}>Reset Password</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionItem}
-              onPress={openRemoveConfirm}
-              disabled={updating}
-            >
-              <Text style={[styles.actionText, { color: '#ef4444' }]}>Remove from Workspace</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.actionItem, styles.actionCancel, { borderTopColor: colors.border }]}
-              onPress={() => { setShowActions(false); setSelectedMember(null); }}
-            >
-              <Text style={[styles.actionText, { color: colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+      <ActionSheet
+        visible={showActions}
+        title={selectedMember?.user?.displayName || 'Member'}
+        actions={[
+          {
+            label: selectedMember?.role === 'ADMIN' ? 'Demote to Member' : 'Promote to Admin',
+            onPress: handleToggleRole,
+          },
+          { label: 'Reset Password', onPress: openPasswordReset },
+          { label: 'Remove from Workspace', destructive: true, onPress: openRemoveConfirm },
+        ]}
+        onClose={() => { setShowActions(false); setSelectedMember(null); }}
+      />
 
       {/* Remove Confirmation Modal */}
       <Modal visible={showRemoveConfirm} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowRemoveConfirm(false)}>
@@ -444,30 +410,6 @@ const styles = StyleSheet.create({
   roleBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   roleText: { fontSize: 12, fontWeight: '600' },
   memberEmail: { fontSize: 13, marginTop: 2 },
-  // Action sheet
-  actionOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  actionSheet: {
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingHorizontal: 16,
-    paddingBottom: 40,
-    paddingTop: 12,
-  },
-  actionHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  actionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 16, textAlign: 'center' },
-  actionItem: { paddingVertical: 16, alignItems: 'center' },
-  actionText: { fontSize: 17 },
-  actionCancel: { marginTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.1)' },
   // Modal
   modalOverlay: {
     flex: 1,
