@@ -73,15 +73,15 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
   const handleLongPress = () => {
     if (!isPending && onLongPress) onLongPress(message);
   };
-  // Ref tracks the latest handleLongPress closure. The gesture's useMemo
-  // depends on message.id only so the gesture object is stable across
-  // sibling updates (reactions, edits, pins all create a new `message`
-  // reference), but the worklet still reaches the freshest handler. Without
-  // this, every reaction add anywhere in the channel rebuilt every visible
-  // bubble's gesture handler.
-  const handleLongPressRef = useRef(handleLongPress);
-  handleLongPressRef.current = handleLongPress;
 
+  // CRITICAL: runOnJS() must receive a STABLE JS-thread function reference,
+  // not an inline arrow defined inside the worklet. v1.07.19's "perf fix"
+  // wrapped it as `runOnJS(() => handleLongPressRef.current?.())()` — that
+  // inline arrow can't be transferred to the JS thread by Reanimated and
+  // crashes at runtime on long-press (shipped in v1.07.19 through v1.07.24).
+  // Keep the deps broad (onLongPress / isPending / message) — the gesture
+  // rebuilds on message reference change, which is a minor perf cost but
+  // the only known-correct pattern.
   const longPressGesture = useMemo(
     () =>
       Gesture.LongPress()
@@ -89,11 +89,10 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
         .maxDistance(10)
         .onStart(() => {
           'worklet';
-          runOnJS(() => handleLongPressRef.current?.())();
+          runOnJS(handleLongPress)();
         }),
-    // Intentionally narrow deps to message.id — see comment above.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [message.id]
+    [onLongPress, isPending, message]
   );
 
   // URL regex to match http/https URLs

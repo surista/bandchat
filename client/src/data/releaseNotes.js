@@ -16,6 +16,13 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.25',
+    date: '2026-06-16',
+    items: [
+      { kind: 'fixed', text: 'Mobile: HOTFIX — app crashed when opening a channel or long-pressing a message. Sorry. Fixed.' },
+    ],
+  },
+  {
     version: '1.07.24',
     date: '2026-06-14',
     items: [

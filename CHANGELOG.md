@@ -2,6 +2,13 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.25] - 2026-06-16
+
+### Fixed — HOTFIX (CRITICAL)
+
+- **Mobile: app crashed on channel open and on message long-press.** Regression introduced in v1.07.19's "MessageBubble gesture deps" change and present through v1.07.24. The change wrapped the Reanimated worklet's `runOnJS()` call with an inline arrow: `runOnJS(() => handleLongPressRef.current?.())()`. That's invalid — `runOnJS` requires a stable JS-thread function reference, not an arrow defined inside the worklet body. Reanimated couldn't transfer the inline arrow to the JS thread, which crashed both at MessageBubble's first render (when the gesture useMemo evaluates and Reanimated validates the worklet) and on long-press (when it tries to invoke). Reverted to the v1.07.18 pattern: pass `handleLongPress` directly to `runOnJS`. Deps are back to `[onLongPress, isPending, message]` — the gesture rebuilds on every message reference change, which is a minor perf cost; the audit's original "fix" wasn't worth the crash risk.
+- **Lesson:** Reanimated worklet patterns are subtle. The "depend on message.id only via ref" optimization needs `useCallback(() => handleLongPressRef.current?.(), [])` outside the worklet, then `runOnJS(theStableCallback)()` inside. NOT an inline arrow. Deferred as a future optimization; not worth re-attempting under time pressure.
+
 ## [1.07.24] - 2026-06-14
 
 Two bug reports from Simon.
