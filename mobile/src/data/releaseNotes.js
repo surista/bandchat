@@ -16,6 +16,13 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.26',
+    date: '2026-06-21',
+    items: [
+      { kind: 'added', text: 'Channel groups (folders) can now be sorted three ways: A→Z, Z→A, or Custom. Tap the small sort indicator next to the group expand arrow to switch. Per-device — set your own preference on each device.' },
+    ],
+  },
+  {
     version: '1.07.25',
     date: '2026-06-16',
     items: [

@@ -2,6 +2,16 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.26] - 2026-06-21
+
+### Added
+
+- **Channel groups (folders) can now be sorted per group.** Requested by Simon. Three modes per group: Alphabetical A→Z (default), Alphabetical Z→A, and Custom (uses the server `position` field; meaningful once drag-to-reorder-within-group ships — currently equivalent to A→Z for most users). A small sort indicator (↑ / ↓ / ⇅) sits next to the expand arrow on each group header. Tap to open a picker.
+  - **Storage**: per-device only (`channelGroupSorts:<workspaceId>` via `services/storage` wrappers). Sort is a personal preference; not persisted to the server, not synced across devices. Easy to switch to server-synced later by extending `WorkspaceMember` with a JSON map if anyone asks.
+  - **Web**: `Sidebar.jsx` — sort button cycles through a dropdown menu next to the existing expand arrow + invisible-overlay outside-click dismissal pattern matching the user menu.
+  - **Mobile**: `ChannelListScreen.js` — sort button on every group section header, tap opens a native `ActionSheet` (UIAlertController on iOS). Current selection marked with a checkmark.
+  - Shared helper: `client/src/utils/channelGroupSort.js` + `mobile/src/utils/channelGroupSort.js` (duplicated; kept in sync by hand — same pattern as `releaseNotes.js`).
+
 ## [1.07.25] - 2026-06-16
 
 ### Fixed — HOTFIX (CRITICAL)

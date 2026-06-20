@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { mediumImpact, successNotification, errorNotification } from '../../utils/haptics';
+import { getAllGroupSorts, setGroupSort, sortChannels, SORT_LABELS } from '../../utils/channelGroupSort';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getUiState, setUiState, setUiString } from '../../services/storage';
@@ -120,6 +121,12 @@ export default function ChannelListScreen({ navigation, route }) {
   const [nextGig, setNextGig] = useState(null);
   const [allWorkspaces, setAllWorkspaces] = useState([]);
   const [showWorkspaceSwitcher, setShowWorkspaceSwitcher] = useState(false);
+
+  // Per-group sort modes (ASC | DESC | CUSTOM). Stored per-device — see
+  // mobile/src/utils/channelGroupSort.js. Loaded async on workspace mount.
+  const [groupSorts, setGroupSorts] = useState({});
+  // Group whose sort-mode picker (ActionSheet) is currently open.
+  const [sortPickerGroup, setSortPickerGroup] = useState(null);
 
   // Channel group management (admin)
   const [showGroupActions, setShowGroupActions] = useState(false);
@@ -240,6 +247,16 @@ export default function ChannelListScreen({ navigation, route }) {
       ),
     });
   }, [navigation, workspaceId, workspaceName, workspace?.avatarUrl, colors]);
+
+  // Hydrate per-group sort modes from storage on workspace change.
+  // Stored per-device — sort is personal and we don't propagate it.
+  useEffect(() => {
+    let cancelled = false;
+    getAllGroupSorts(workspaceId).then((map) => {
+      if (!cancelled) setGroupSorts(map);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [workspaceId]);
 
   // Pre-load channels from SQLite for instant display
   useEffect(() => {
@@ -686,9 +703,10 @@ export default function ChannelListScreen({ navigation, route }) {
     const channelSections = [];
 
     for (const group of sortedGroups) {
-      const groupChannels = channels
-        .filter(c => c.groupId === group.id)
-        .sort((a, b) => a.name.localeCompare(b.name));
+      const groupChannels = sortChannels(
+        channels.filter(c => c.groupId === group.id),
+        groupSorts[group.id] || 'ASC'
+      );
       if (groupChannels.length > 0) {
         channelSections.push({
           title: group.name,
@@ -755,7 +773,7 @@ export default function ChannelListScreen({ navigation, route }) {
     }] : [];
 
     return [...unreadSection, ...starredSection, ...channelSections, dmSection, bandSection];
-  }, [channels, channelGroups, directMessages, collapsedGroups, collapsedBand, collapsedBandCats, collapsedDMs, collapsedStarred]);
+  }, [channels, channelGroups, directMessages, collapsedGroups, collapsedBand, collapsedBandCats, collapsedDMs, collapsedStarred, groupSorts]);
 
   const toggleBandCat = useCallback((catKey) => {
     setCollapsedBandCats(prev => ({ ...prev, [catKey]: !prev[catKey] }));
@@ -830,6 +848,8 @@ export default function ChannelListScreen({ navigation, route }) {
           setShowGroupActions(true);
         }
       : undefined;
+    const groupSortMode = section.isGroup ? (groupSorts[section.groupId] || 'ASC') : null;
+    const sortIcon = groupSortMode === 'DESC' ? '\u2193' : groupSortMode === 'CUSTOM' ? '\u21C5' : '\u2191';
     return (
       <View style={styles.sectionHeaderRow}>
         <TouchableOpacity
@@ -849,6 +869,19 @@ export default function ChannelListScreen({ navigation, route }) {
             {section.title}
           </Text>
         </TouchableOpacity>
+        {section.isGroup && (
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setSortPickerGroup({ id: section.groupId, name: section.title })}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={`Sort ${section.title} channels, currently ${SORT_LABELS[groupSortMode]}`}
+          >
+            <Text style={[styles.addIcon, { color: colors.channelListText }]} maxFontSizeMultiplier={1.2}>
+              {sortIcon}
+            </Text>
+          </TouchableOpacity>
+        )}
         {section.showCreate && (
           <View style={styles.headerButtons}>
             {isAdmin && (
@@ -882,7 +915,7 @@ export default function ChannelListScreen({ navigation, route }) {
         )}
       </View>
     );
-  }, [collapsedGroups, collapsedBand, collapsedDMs, collapsedStarred, toggleGroup, colors, openNewDM, isAdmin, openNewGroupModal]);
+  }, [collapsedGroups, collapsedBand, collapsedDMs, collapsedStarred, toggleGroup, colors, openNewDM, isAdmin, openNewGroupModal, groupSorts]);
 
   if (loading) {
     return (
@@ -1163,6 +1196,25 @@ export default function ChannelListScreen({ navigation, route }) {
           { label: 'Delete Section', destructive: true, onPress: handleDeleteGroup },
         ]}
         onClose={() => { setShowGroupActions(false); setSelectedGroup(null); }}
+      />
+
+      {/* Per-group sort-mode picker */}
+      <ActionSheet
+        visible={!!sortPickerGroup}
+        title={sortPickerGroup ? `Sort ${sortPickerGroup.name}` : ''}
+        actions={['ASC', 'DESC', 'CUSTOM'].map((mode) => {
+          const current = sortPickerGroup ? (groupSorts[sortPickerGroup.id] || 'ASC') : null;
+          const checkmark = current === mode ? '  ✓' : '';
+          return {
+            label: SORT_LABELS[mode] + checkmark,
+            onPress: () => {
+              if (!sortPickerGroup) return;
+              setGroupSort(workspaceId, sortPickerGroup.id, mode);
+              setGroupSorts((prev) => ({ ...prev, [sortPickerGroup.id]: mode }));
+            },
+          };
+        })}
+        onClose={() => setSortPickerGroup(null)}
       />
 
       {/* Group Create/Edit Modal */}

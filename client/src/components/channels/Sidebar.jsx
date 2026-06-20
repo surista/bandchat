@@ -29,6 +29,7 @@ import { pushService } from '../../services/push';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
 import { storage } from '../../services/storage';
+import { getAllGroupSorts, setGroupSort, sortChannels, SORT_LABELS } from '../../utils/channelGroupSort';
 import useIsAdmin from '../../hooks/useIsAdmin';
 import MemberProfile from '../common/MemberProfile';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -213,6 +214,11 @@ function Sidebar({
   const [snoozeMenuOpen, setSnoozeMenuOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState(() => storage.getJSON(`collapsedGroups:${workspace.id}`, {}));
   const [collapsedSections, setCollapsedSections] = useState(() => storage.getJSON(`collapsedSections:${workspace.id}`, {}));
+  // Per-group sort modes (ASC | DESC | CUSTOM). Stored per-device — sort is
+  // a personal preference and we don't want it propagating to other devices.
+  const [groupSorts, setGroupSorts] = useState(() => getAllGroupSorts(workspace.id));
+  // Which group's sort-mode popover is open (groupId | null).
+  const [sortMenuFor, setSortMenuFor] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   // Member profile
   const [showProfileUserId, setShowProfileUserId] = useState(null);
@@ -337,16 +343,17 @@ function Sidebar({
       }
     });
 
-    // Sort channels alphabetically within each group
+    // Sort channels within each group by the per-group mode (default ASC).
     Object.keys(grouped).forEach(groupId => {
-      grouped[groupId].sort((a, b) => a.name.localeCompare(b.name));
+      grouped[groupId] = sortChannels(grouped[groupId], groupSorts[groupId] || 'ASC');
     });
 
-    // Sort ungrouped channels alphabetically
+    // Ungrouped is always alphabetical (no group header to attach a sort
+    // mode to — could be extended later if anyone asks).
     ungrouped.sort((a, b) => a.name.localeCompare(b.name));
 
     return { groupedChannels: grouped, ungroupedChannels: ungrouped };
-  }, [channels, starredChannels, unreadChannels]);
+  }, [channels, starredChannels, unreadChannels, groupSorts]);
 
   const isAdmin = useIsAdmin(workspace);
 
@@ -855,10 +862,56 @@ function Sidebar({
                             <span className="font-medium uppercase tracking-wide truncate">
                               {group.name}
                             </span>
-                            <span className="text-xs text-gray-500 ml-auto">
-                              {groupTotalCounts[group.id] || 0}
-                            </span>
                           </button>
+                          {/* Sort-mode picker. Cycles ASC → DESC → CUSTOM
+                              on click for keyboard accessibility; full menu
+                              on right-click / long-press handled by the
+                              popover below. */}
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setSortMenuFor(sortMenuFor === group.id ? null : group.id); }}
+                              className="p-1 text-gray-500 hover:text-gray-200 transition-colors text-xs"
+                              title={`Sort: ${SORT_LABELS[groupSorts[group.id] || 'ASC']}`}
+                              aria-label={`Sort ${group.name} channels, currently ${SORT_LABELS[groupSorts[group.id] || 'ASC']}`}
+                              aria-haspopup="menu"
+                              aria-expanded={sortMenuFor === group.id}
+                            >
+                              {(groupSorts[group.id] || 'ASC') === 'ASC' && '↑'}
+                              {groupSorts[group.id] === 'DESC' && '↓'}
+                              {groupSorts[group.id] === 'CUSTOM' && '⇅'}
+                            </button>
+                            {sortMenuFor === group.id && (
+                              <div
+                                className="absolute right-0 top-full mt-1 z-50 bg-[var(--color-modal-bg)] border border-[var(--color-modal-border)] rounded-lg shadow-lg py-1 min-w-[180px]"
+                                role="menu"
+                              >
+                                {['ASC', 'DESC', 'CUSTOM'].map((mode) => {
+                                  const isActive = (groupSorts[group.id] || 'ASC') === mode;
+                                  return (
+                                    <button
+                                      key={mode}
+                                      type="button"
+                                      role="menuitemradio"
+                                      aria-checked={isActive}
+                                      onClick={() => {
+                                        setGroupSort(workspace.id, group.id, mode);
+                                        setGroupSorts((prev) => ({ ...prev, [group.id]: mode }));
+                                        setSortMenuFor(null);
+                                      }}
+                                      className={`w-full px-3 py-2 text-left text-sm hover:bg-[var(--color-bg-tertiary)] flex items-center justify-between ${isActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-primary)]'}`}
+                                    >
+                                      <span>{SORT_LABELS[mode]}</span>
+                                      {isActive && <span aria-hidden="true">✓</span>}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-xs text-gray-500 px-1">
+                            {groupTotalCounts[group.id] || 0}
+                          </span>
                         </div>
                         {!collapsedGroups[group.id] && (
                           <div className="space-y-0.5 ml-2" role="list">
@@ -1109,6 +1162,7 @@ function Sidebar({
         </button>
 
         {showUserMenu && <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />}
+        {sortMenuFor && <div className="fixed inset-0 z-40" onClick={() => setSortMenuFor(null)} />}
         {showUserMenu && (
           <div className="absolute bottom-full left-0 right-0 mb-1 mx-2 bg-gray-800 rounded-lg shadow-xl border border-gray-700 overflow-hidden z-50">
             {/* Notifications with snooze options */}
