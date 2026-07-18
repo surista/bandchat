@@ -5,6 +5,7 @@ import Constants from 'expo-constants';
 import Purchases from 'react-native-purchases';
 import api from '../services/api';
 import { getUiString, setUiString } from '../services/storage';
+import userPreferences from '../services/userPreferences';
 import { notificationService } from '../services/notifications';
 import { clearLinkPreviewCache } from '../components/LinkPreview';
 import { updateWidgetGigData } from '../services/widgetService';
@@ -111,51 +112,6 @@ export function AuthProvider({ children }) {
     initAuth();
   }, []);
 
-  // AppState listener for background → foreground: biometric lock + token refresh
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', async (nextAppState) => {
-      if (nextAppState === 'background') {
-        if (!backgroundTimestamp.current) {
-          backgroundTimestamp.current = Date.now();
-        }
-      } else if (nextAppState === 'active' && appState.current === 'background') {
-        // Biometric lock check
-        if (backgroundTimestamp.current && biometricEnabled) {
-          const elapsed = Date.now() - backgroundTimestamp.current;
-          if (elapsed > BACKGROUND_LOCK_DELAY_MS) {
-            const available = await checkBiometricAvailable();
-            if (available) {
-              setIsLocked(true);
-            }
-          }
-        }
-        backgroundTimestamp.current = null;
-
-        // Proactively refresh token when returning from background
-        // This prevents stale-token 401s on the user's first action back
-        if (api.accessToken && api.refreshToken) {
-          try {
-            if (api.isTokenExpiringSoon()) {
-              await api.refreshAccessToken();
-            }
-          } catch {
-            // Non-fatal: the normal request flow will also try to refresh
-          }
-        }
-      }
-      appState.current = nextAppState;
-    });
-
-    return () => subscription.remove();
-  }, [biometricEnabled]);
-
-  // (Removed in v1.06.81: a register-on-user-id-change useEffect added in
-  // v1.06.75 caused severe device-level UI lag — auth, workspace switch, and
-  // channel taps all stalled on spinners. Reverted to v1.06.74's mount-only
-  // registration in App.js. The "sporadic notifications" race condition that
-  // motivated the change still exists; needs a different fix that's verified
-  // on a real device before shipping.)
-
   // Retry auth when coming back online
   const retryAuth = useCallback(async () => {
     if (!api.accessToken) return;
@@ -187,32 +143,54 @@ export function AuthProvider({ children }) {
     return data;
   }, []);
 
+  /**
+   * Show the biometric setup prompt.
+   *
+   * HIG-compliant flow (v1.07.28):
+   * - Suppress only if THIS device's local flag is set — biometric
+   *   enrollment is a per-device decision, so a "Not Now" recorded on
+   *   another device must not silently suppress the prompt here. A new
+   *   device install always gets its own chance.
+   * - The "shown" flag is written ONLY from the button handlers (after the
+   *   user actually answers), not before the Alert. A user who never sees
+   *   or never answers the Alert (app killed mid-prompt) gets a re-prompt.
+   * - Triggered only from the AppState listener below (foreground-after-idle
+   *   detection: user has been backgrounded ≥5 minutes and returns), not
+   *   from the login/signup flow — HIG says alerts should be tied to user
+   *   intent, not app-launch heuristics.
+   */
   const promptBiometricSetup = useCallback(async () => {
     try {
-      const alreadyAsked = await getUiString(BIOMETRIC_PROMPT_SHOWN_KEY);
-      if (alreadyAsked === 'true') return;
+      const localAsked = await getUiString(BIOMETRIC_PROMPT_SHOWN_KEY);
+      if (localAsked === 'true') return;
 
       const available = await checkBiometricAvailable();
       if (!available) return;
 
-      // Determine label (platform-aware)
       const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
       const hasFaceId = types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION);
       const label = Platform.OS === 'ios'
         ? (hasFaceId ? 'Face ID' : 'Touch ID')
         : (hasFaceId ? 'Face Unlock' : 'Fingerprint');
 
-      await setUiString(BIOMETRIC_PROMPT_SHOWN_KEY, 'true');
+      const markShown = async () => {
+        await setUiString(BIOMETRIC_PROMPT_SHOWN_KEY, 'true');
+        userPreferences.set('auth.biometricPromptShown', true);
+      };
 
       Alert.alert(
         `Enable ${label}?`,
         `Use ${label} to quickly unlock BandChat when you return.`,
         [
-          { text: 'Not Now', style: 'cancel' },
+          {
+            text: 'Not Now',
+            style: 'cancel',
+            onPress: () => { markShown(); },
+          },
           {
             text: 'Enable',
             onPress: async () => {
-              // Verify biometric works before enabling
+              await markShown();
               const result = await LocalAuthentication.authenticateAsync({
                 promptMessage: `Confirm ${label}`,
                 disableDeviceFallback: true,
@@ -224,38 +202,95 @@ export function AuthProvider({ children }) {
               }
             },
           },
-        ]
+        ],
+        { cancelable: true, onDismiss: () => { markShown(); } }
       );
     } catch {
       // Silently fail — not critical
     }
   }, []);
 
+  // AppState listener for background → foreground: biometric lock + token
+  // refresh + biometric-setup prompt. Declared after promptBiometricSetup so
+  // it can be referenced in the dependency array below.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async (nextAppState) => {
+      if (nextAppState === 'background') {
+        if (!backgroundTimestamp.current) {
+          backgroundTimestamp.current = Date.now();
+        }
+      } else if (nextAppState === 'active' && appState.current === 'background') {
+        // Biometric lock check
+        if (backgroundTimestamp.current && biometricEnabled) {
+          const elapsed = Date.now() - backgroundTimestamp.current;
+          if (elapsed > BACKGROUND_LOCK_DELAY_MS) {
+            const available = await checkBiometricAvailable();
+            if (available) {
+              setIsLocked(true);
+            }
+          }
+        }
+        // Biometric prompt (suggest setup): HIG says alerts should be tied
+        // to user intent, not app-launch heuristics. Trigger ONLY when the
+        // user has actually felt the friction — i.e. returns after being
+        // backgrounded ≥5 min and biometric is NOT yet enabled.
+        if (
+          user &&
+          !biometricEnabled &&
+          backgroundTimestamp.current &&
+          Date.now() - backgroundTimestamp.current > BACKGROUND_LOCK_DELAY_MS
+        ) {
+          promptBiometricSetup();
+        }
+        backgroundTimestamp.current = null;
+
+        // Proactively refresh token when returning from background
+        // This prevents stale-token 401s on the user's first action back
+        if (api.accessToken && api.refreshToken) {
+          try {
+            if (api.isTokenExpiringSoon()) {
+              await api.refreshAccessToken();
+            }
+          } catch {
+            // Non-fatal: the normal request flow will also try to refresh
+          }
+        }
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => subscription.remove();
+  }, [biometricEnabled, user, promptBiometricSetup]);
+
+  // (Removed in v1.06.81: a register-on-user-id-change useEffect added in
+  // v1.06.75 caused severe device-level UI lag — auth, workspace switch, and
+  // channel taps all stalled on spinners. Reverted to v1.06.74's mount-only
+  // registration in App.js. The "sporadic notifications" race condition that
+  // motivated the change still exists; needs a different fix that's verified
+  // on a real device before shipping.)
+
   const login = useCallback(async (email, password) => {
     const data = await api.login(email, password);
     setUser(data.user);
     await configureRevenueCat(data.user.id);
     updateWidgetGigData();
-    setTimeout(() => promptBiometricSetup(), 1000);
     return data;
-  }, [promptBiometricSetup]);
+  }, []);
 
   const googleLogin = useCallback(async (credential) => {
     const data = await api.googleAuth(credential);
     setUser(data.user);
     await configureRevenueCat(data.user.id);
     updateWidgetGigData();
-    setTimeout(() => promptBiometricSetup(), 1000);
     return data;
-  }, [promptBiometricSetup]);
+  }, []);
 
   const appleLogin = useCallback(async (identityToken, fullName) => {
     const data = await api.appleAuth(identityToken, fullName);
     setUser(data.user);
     await configureRevenueCat(data.user.id);
-    setTimeout(() => promptBiometricSetup(), 1000);
     return data;
-  }, [promptBiometricSetup]);
+  }, []);
 
   const logout = useCallback(async () => {
     try {

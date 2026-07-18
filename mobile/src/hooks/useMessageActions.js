@@ -4,9 +4,10 @@ import * as Clipboard from 'expo-clipboard';
 import * as MediaLibrary from 'expo-media-library';
 import { File, Directory, Paths } from 'expo-file-system/next';
 import { getUiState, setUiState } from '../services/storage';
+import userPreferences from '../services/userPreferences';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { mediumImpact, successNotification, errorNotification, selectionFeedback } from '../utils/haptics';
+import { successNotification, errorNotification, selectionFeedback } from '../utils/haptics';
 import api from '../services/api';
 import { APP_BASE_URL } from '../utils/constants';
 
@@ -31,13 +32,25 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
   const [linkActionUrl, setLinkActionUrl] = useState(null);
   const [reactionUsers, setReactionUsers] = useState({ visible: false, reactions: [], emoji: null });
 
-  // Load blocked preview domains. getUiState returns null on missing/corrupt;
-  // we guard with Array.isArray so a stray non-array doesn't blow up the Set
-  // constructor later.
+  // Load blocked preview domains. Prefer synced preferences; fall back to
+  // legacy per-device storage so existing installs don't lose their list.
+  // Subscribe so remote patches from other devices apply live.
   useEffect(() => {
-    getUiState('bandchat_blocked_preview_domains').then(val => {
-      if (Array.isArray(val)) setBlockedDomains(new Set(val));
-    });
+    const apply = (list) => {
+      if (Array.isArray(list)) setBlockedDomains(new Set(list));
+    };
+    const hydrate = async () => {
+      const fromPrefs = userPreferences.get('messages.blockedPreviewDomains');
+      if (Array.isArray(fromPrefs)) { apply(fromPrefs); return; }
+      const legacy = await getUiState('bandchat_blocked_preview_domains');
+      apply(legacy);
+    };
+    hydrate();
+    const unsub = userPreferences.subscribe(() => {
+      const fromPrefs = userPreferences.get('messages.blockedPreviewDomains');
+      if (Array.isArray(fromPrefs)) apply(fromPrefs);
+    }, 'messages.blockedPreviewDomains');
+    return unsub;
   }, []);
 
   const handleLinkLongPress = useCallback((url) => {
@@ -45,7 +58,9 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
   }, []);
 
   const handleLongPress = useCallback((message) => {
-    mediumImpact();
+    // Selection haptic per HIG: long-press opens a menu (a "this is now
+    // selected" gesture), not a state-changing confirm.
+    selectionFeedback();
     setActionMessage(message);
     setShowActions(true);
   }, []);
@@ -187,7 +202,8 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
   }, []);
 
   const handleReactionLongPress = useCallback((reactions, emoji) => {
-    mediumImpact();
+    // Selection haptic: opens a sheet showing who reacted, no state change.
+    selectionFeedback();
     setReactionUsers({ visible: true, reactions, emoji });
   }, []);
 
@@ -209,7 +225,9 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
     try { domain = new URL(url).hostname; } catch { return; }
     const next = new Set(blockedDomains);
     if (next.has(domain)) { next.delete(domain); } else { next.add(domain); }
-    setUiState('bandchat_blocked_preview_domains', [...next]);
+    const arr = [...next];
+    setUiState('bandchat_blocked_preview_domains', arr);
+    userPreferences.set('messages.blockedPreviewDomains', arr);
     setBlockedDomains(next);
     setLinkActionUrl(null);
   }, [blockedDomains]);

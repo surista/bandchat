@@ -136,7 +136,10 @@ export default function AppearanceScreen({ route }) {
                   value={hasCustomTheme}
                   onValueChange={handleToggleCustomTheme}
                   trackColor={Platform.OS === 'ios' ? undefined : { false: colors.bgTertiary, true: colors.primary }}
-                  thumbColor="#ffffff"
+                  // iOS ignores thumbColor (system always white). Letting
+                  // Android use the platform default keeps Material 3's
+                  // colored thumb-on-track behavior consistent with the
+                  // other settings screens.
                   accessibilityLabel={`Custom theme for ${workspaceName || 'this band'}, ${hasCustomTheme ? 'on' : 'off'}`}
                 />
               </View>

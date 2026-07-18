@@ -15,10 +15,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { APP_BASE_URL } from '../../utils/constants';
 import { useLayout } from '../../hooks/useLayout';
+import { MIN_TOUCH_TARGET } from '../../utils/touchTarget';
 import PressableRow from '../../components/PressableRow';
 
 // Whether the build was compiled with the right Google OAuth client ID for
@@ -174,13 +176,14 @@ export default function LoginScreen({ navigation }) {
               <TouchableOpacity
                 style={styles.showHideButton}
                 onPress={() => setShowPassword(!showPassword)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 accessibilityRole="button"
                 accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
               >
-                <Text style={[styles.showHideText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
-                  {showPassword ? 'Hide' : 'Show'}
-                </Text>
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={22}
+                  color={colors.textSecondary}
+                />
               </TouchableOpacity>
             </View>
 
@@ -352,12 +355,15 @@ const styles = StyleSheet.create({
   passwordInput: { paddingRight: 56 },
   showHideButton: {
     position: 'absolute',
-    right: 14,
+    right: 4,
     top: 0,
     bottom: 16,
+    minWidth: MIN_TOUCH_TARGET,
+    minHeight: MIN_TOUCH_TARGET,
+    alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 8,
   },
-  showHideText: { fontSize: 14, fontWeight: '500' },
   footer: {
     alignItems: 'center',
     marginTop: 24,

@@ -142,6 +142,29 @@ class ApiService {
   }
 
   /**
+   * Fire-and-forget PUT that survives page unload (pagehide/beforeunload).
+   * Uses raw fetch with keepalive — no async token-refresh logic that the
+   * browser would kill mid-unload. If the token happens to be expired the
+   * server returns 401 and the write is silently lost, which is acceptable
+   * (the next session will re-sync from the authoritative server blob).
+   */
+  keepalivePut(endpoint, body) {
+    if (!this.accessToken) return;
+    try {
+      fetch(`${API_URL}${endpoint}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.accessToken}`,
+        },
+        body,
+        credentials: 'include',
+        keepalive: true,
+      }).catch(() => {});
+    } catch {}
+  }
+
+  /**
    * Cached GET request — returns cached data if within TTL, otherwise fetches fresh.
    * @param {string} endpoint - API endpoint
    * @param {number} ttlMs - Cache TTL in milliseconds (default 60s)

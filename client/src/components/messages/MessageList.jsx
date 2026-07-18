@@ -20,18 +20,25 @@ import { buildMentionRegex, buildChannelRegex, buildGroupMentionRegex } from '..
 import api from '../../services/api';
 import EmbedCard from './EmbedCard';
 import { storage } from '../../services/storage';
+import userPreferences from '../../services/userPreferences';
 import '../../../styles/markdown.css';
 
-// ─── Blocked preview domains (per-device user preference) ───
+// ─── Blocked preview domains (synced via userPreferences) ───
+// Legacy local key kept for first-load fallback so existing users don't
+// lose their list until the auto-migration on next login.
 const BLOCKED_DOMAINS_KEY = 'bandchat_blocked_preview_domains';
 
 function getBlockedDomains() {
+  const fromPrefs = userPreferences.get('messages.blockedPreviewDomains');
+  if (Array.isArray(fromPrefs)) return new Set(fromPrefs);
   const arr = storage.getJSON(BLOCKED_DOMAINS_KEY, []);
   return new Set(Array.isArray(arr) ? arr : []);
 }
 
 function persistBlockedDomains(domains) {
-  storage.setJSON(BLOCKED_DOMAINS_KEY, [...domains]);
+  const arr = [...domains];
+  storage.setJSON(BLOCKED_DOMAINS_KEY, arr);
+  userPreferences.set('messages.blockedPreviewDomains', arr);
 }
 
 function getDomain(url) {
@@ -717,6 +724,17 @@ function MessageList({
   const [seenByMessageId, setSeenByMessageId] = useState(null);
   const [blockedDomains, setBlockedDomains] = useState(() => getBlockedDomains());
   const [highlightedId, setHighlightedId] = useState(null);
+
+  // Re-read blocked domains when synced preferences update (server load
+  // complete, or remote patch from another device). Path-prefix filter so
+  // we don't recompute the Set on every unrelated emit.
+  useEffect(() => {
+    const unsub = userPreferences.subscribe(() => {
+      const fromPrefs = userPreferences.get('messages.blockedPreviewDomains');
+      if (Array.isArray(fromPrefs)) setBlockedDomains(new Set(fromPrefs));
+    }, 'messages.blockedPreviewDomains');
+    return unsub;
+  }, []);
 
   // Scroll to and highlight a specific message when highlightMessageId changes
   useEffect(() => {

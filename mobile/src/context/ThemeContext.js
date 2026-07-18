@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useColorScheme } from 'react-native';
 import { getUiString, setUiString, getUiState, setUiState } from '../services/storage';
+import userPreferences from '../services/userPreferences';
 
 const themes = {
   default: {
@@ -297,43 +298,84 @@ export function ThemeProvider({ children }) {
   // Resolve which theme to actually use
   const currentTheme = (activeWorkspaceId && workspaceThemes[activeWorkspaceId]) || globalTheme;
 
-  useEffect(() => {
-    const loadTheme = async () => {
-      // getUi* swallow errors and return safe defaults — a transient storage
-      // failure must never crash the ThemeProvider (it mounts before the
-      // error boundary, so any throw here blanks the app).
-      const [savedTheme, savedMode, savedDensity, savedWsThemes] = await Promise.all([
-        getUiString('bandchat-theme'),
-        getUiString('bandchat-mode'),
-        getUiString('bandchat-density'),
-        getUiState('bandchat-workspace-themes'),
-      ]);
-      if (savedTheme && themes[savedTheme]) setGlobalTheme(savedTheme);
-      // Backward compat: pre-Auto installs stored 'light' or 'dark' here. Both
-      // are still valid settings. 'auto' is the new value; missing key → 'auto'.
-      if (savedMode === 'auto' || savedMode === 'light' || savedMode === 'dark') {
-        setModeSettingState(savedMode);
-      }
-      if (savedDensity && DENSITY_VALUES[savedDensity]) {
-        setMessageDensityState(savedDensity);
-      }
-      if (savedWsThemes && typeof savedWsThemes === 'object' && !Array.isArray(savedWsThemes)) {
-        setWorkspaceThemesState(savedWsThemes);
-      }
-      setLoaded(true);
-    };
-    loadTheme();
+  // Pulls theme state out of the userPreferences cache. Falls back to the
+  // legacy per-device storage keys when prefs don't have the value yet
+  // (e.g. on first launch before the user has logged in, or pre-migration).
+  // Designed to be idempotent — safe to call from initial mount AND from the
+  // userPreferences subscribe callback after server hydration.
+  const hydrateFromPrefsAndLegacy = useCallback(async () => {
+    const themePref = userPreferences.get('theme.global');
+    const modePref = userPreferences.get('theme.mode');
+    const densityPref = userPreferences.get('theme.density');
+    const wsThemesPref = userPreferences.get('theme.workspaceThemes');
+
+    // Legacy local fallback (handles unauth state + pre-migration installs).
+    // Wrap each read so a single AsyncStorage rejection can't prevent the
+    // app from finishing hydration — that would blank the screen.
+    const safe = (p) => p.catch(() => null);
+    const [savedTheme, savedMode, savedDensity, savedWsThemes] = await Promise.all([
+      safe(getUiString('bandchat-theme')),
+      safe(getUiString('bandchat-mode')),
+      safe(getUiString('bandchat-density')),
+      safe(getUiState('bandchat-workspace-themes')),
+    ]);
+
+    const effectiveTheme = themePref || savedTheme;
+    if (effectiveTheme && themes[effectiveTheme]) setGlobalTheme(effectiveTheme);
+
+    const effectiveMode = modePref || savedMode;
+    if (effectiveMode === 'auto' || effectiveMode === 'light' || effectiveMode === 'dark') {
+      setModeSettingState(effectiveMode);
+    }
+
+    const effectiveDensity = densityPref || savedDensity;
+    if (effectiveDensity && DENSITY_VALUES[effectiveDensity]) {
+      setMessageDensityState(effectiveDensity);
+    }
+
+    const effectiveWsThemes = (wsThemesPref && typeof wsThemesPref === 'object' && !Array.isArray(wsThemesPref))
+      ? wsThemesPref
+      : savedWsThemes;
+    if (effectiveWsThemes && typeof effectiveWsThemes === 'object' && !Array.isArray(effectiveWsThemes)) {
+      setWorkspaceThemesState(effectiveWsThemes);
+    }
   }, []);
 
   useEffect(() => {
-    if (loaded) {
-      setUiString('bandchat-theme', globalTheme);
-      // Persist the SETTING (auto/light/dark), not the resolved mode — so a
-      // user who picked Auto continues to follow the system across sessions.
-      setUiString('bandchat-mode', modeSetting);
-      setUiString('bandchat-density', messageDensity);
-      setUiState('bandchat-workspace-themes', workspaceThemes);
-    }
+    let cancelled = false;
+    (async () => {
+      // setLoaded(true) MUST run even if hydration throws — otherwise the
+      // dual-write effect below never fires, and any in-progress theme
+      // change is lost. The hydrate fn already swallows individual storage
+      // errors; this catch is the last line of defense.
+      try {
+        await hydrateFromPrefsAndLegacy();
+      } catch {}
+      if (!cancelled) setLoaded(true);
+    })();
+    // Re-hydrate when userPreferences updates (server load complete, remote
+    // patch from another device). Path-prefix filter so we ignore unrelated
+    // emits (sidebar collapse, blocked domains, biometric flag).
+    const unsub = userPreferences.subscribe(() => {
+      hydrateFromPrefsAndLegacy().catch(() => {});
+    }, 'theme');
+    return () => { cancelled = true; unsub(); };
+  }, [hydrateFromPrefsAndLegacy]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    // Dual-write: legacy storage (pre-auth fallback) + synced preferences.
+    // userPreferences.set is no-op when the value already matches, so this
+    // runs harmlessly on every effect fire. Workspace themes are written
+    // surgically from setWorkspaceTheme (so deletions propagate via `null`)
+    // — but we still mirror the full map to legacy storage here.
+    setUiString('bandchat-theme', globalTheme);
+    setUiString('bandchat-mode', modeSetting);
+    setUiString('bandchat-density', messageDensity);
+    setUiState('bandchat-workspace-themes', workspaceThemes);
+    userPreferences.set('theme.global', globalTheme);
+    userPreferences.set('theme.mode', modeSetting);
+    userPreferences.set('theme.density', messageDensity);
   }, [globalTheme, modeSetting, messageDensity, workspaceThemes, loaded]);
 
   const setMessageDensity = useCallback((density) => {
@@ -361,6 +403,14 @@ export function ThemeProvider({ children }) {
       }
       return updated;
     });
+    // Surgical prefs write: a deletion needs an explicit `null` in the patch
+    // so the server-side deep merge actually removes the key (a whole-object
+    // write would leave stale entries on the server forever).
+    if (themeId) {
+      userPreferences.set(`theme.workspaceThemes.${workspaceId}`, themeId);
+    } else {
+      userPreferences.set(`theme.workspaceThemes.${workspaceId}`, null);
+    }
   }, []);
 
   const getWorkspaceTheme = useCallback((workspaceId) => {

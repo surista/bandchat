@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 BigInt.prototype.toJSON = function () { return Number(this); };
 
 import authRoutes from './routes/auth.js';
+import preferencesRoutes from './routes/preferences.js';
 import workspaceRoutes from './routes/workspaces.js';
 import channelRoutes from './routes/channels.js';
 import channelGroupRoutes from './routes/channelGroups.js';
@@ -147,6 +148,7 @@ export function createApp() {
 
   // Routes
   app.use('/api/auth', authRoutes);
+  app.use('/api/me', preferencesRoutes);
   app.use('/api/workspaces', workspaceRoutes);
   app.use('/api/channels', channelRoutes);
   app.use('/api/channel-groups', channelGroupRoutes);

@@ -1,9 +1,12 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import { useSocket } from './context/SocketContext';
 import WorkspaceList from './components/workspaces/WorkspaceList';
 import UpdatePrompt from './components/common/UpdatePrompt';
 import WhatsNewModal from './components/common/WhatsNewModal';
+import userPreferences from './services/userPreferences';
+import { storage } from './services/storage';
 
 // Lazy-loaded pages (only loaded when navigating to their routes)
 function lazyRetry(importFn) {
@@ -93,10 +96,58 @@ function HomeRoute() {
   return isAuthenticated ? <WorkspaceList /> : <LandingPage />;
 }
 
+/**
+ * Loads server-synced preferences when the user is authenticated; applies
+ * remote patches from other devices via socket. Mirror of the mobile
+ * PreferencesSync component in mobile/App.js. See user-preferences-sync-plan.md.
+ */
+function PreferencesSync() {
+  const { user } = useAuth();
+  const { socket } = useSocket();
+
+  useEffect(() => {
+    if (!user) {
+      userPreferences.clear();
+      return;
+    }
+    const legacyMigrate = async () => {
+      // Legacy storage keys that should sync. Workspace-scoped values
+      // (channel sort, calendar month) migrate lazily in their consumers.
+      const patch = {};
+      const themePatch = {};
+      const mode = storage.getString('bandchat-mode');
+      const theme = storage.getString('bandchat-theme');
+      const workspaceThemes = storage.getJSON('bandchat-workspace-themes');
+      if (mode) themePatch.mode = mode;
+      if (theme) themePatch.global = theme;
+      if (workspaceThemes && typeof workspaceThemes === 'object' && !Array.isArray(workspaceThemes)) {
+        themePatch.workspaceThemes = workspaceThemes;
+      }
+      if (Object.keys(themePatch).length > 0) patch.theme = themePatch;
+      const blockedDomains = storage.getJSON('bandchat_blocked_preview_domains');
+      if (Array.isArray(blockedDomains) && blockedDomains.length > 0) {
+        patch.messages = { blockedPreviewDomains: blockedDomains };
+      }
+      return patch;
+    };
+    userPreferences.load(legacyMigrate);
+  }, [user]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handler = ({ patch }) => userPreferences.applyRemotePatch(patch);
+    socket.on('preferences:updated', handler);
+    return () => socket.off('preferences:updated', handler);
+  }, [socket]);
+
+  return null;
+}
+
 function App() {
   return (
     <>
       <UpdatePrompt />
+      <PreferencesSync />
       {/* Auto-opens after a version bump for already-authenticated users.
           Component internally guards on isAuthenticated, so it's a no-op
           while sitting on /login, /landing, etc. */}

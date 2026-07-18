@@ -2,6 +2,85 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.29] - 2026-07-18
+
+### Fixed — Preferences Sync Review Pass
+
+Second-round review of the v1.07.27/28 preferences sync feature caught a launch-crashing bug and several correctness issues before this shipped. All fixed:
+
+- **Crash on every mobile app launch**: `AuthContext.js`'s AppState effect referenced `promptBiometricSetup` in its dependency array before the `useCallback` that defines it — a temporal-dead-zone `ReferenceError` on every mount. Moved the declaration above the effect that uses it.
+- **Preference deletions silently failed to sync**: `set(path, null)` (used to clear a per-workspace theme override) lost its delete marker when accumulated into the outgoing debounced patch, so the deletion applied locally but never reached the server and reappeared on reload/other devices. Added a dedicated `accumulatePatch()` that preserves `null` as a literal value in the outgoing patch queue, distinct from the `deepMergeInto()` used to apply patches to real state (where `null` correctly means "delete"). Fixed on both platforms.
+- **Mobile auto-migration silently dropped theme/mode/density**: migration read those legacy keys with `getUiState` (JSON-parsing), but they were written with `setUiString` (raw strings) — `JSON.parse('dark')` throws, so 3 of 6 settings never migrated for existing users. Switched those three reads to `getUiString`.
+- **Logout didn't clear the per-device migration flag's risk surface**: on a shared device, a second user logging in after the first logged out could have the first user's local legacy settings auto-migrated into their own account. `clear()` no longer resets the migration flag — it's a per-device fact, not a per-user one.
+- **Biometric prompt logic didn't match its own doc comments**: the `syncedAsked === true` branch silently suppressed the prompt on new devices (removed — biometric setup is a per-device decision, so a dismissal on one device shouldn't suppress it on another); `promptBiometricSetup()` was still called directly from `login`/`googleLogin`/`appleLogin`, contradicting the documented "moved to foreground-after-idle only" design (removed — the AppState-based trigger is now the only trigger).
+- **Server `containsNullByte` had no recursion depth cap**: unlike `deepMerge`, it ran before the depth-capped merge and could stack-overflow on a deeply nested (but small) patch instead of returning the intended clean 400. Added the same depth cap.
+- **Web sidebar collapse state was never wired into sync**: only per-group sort order synced; collapsed channel groups/sections stayed purely per-device. `collapsedGroups` now syncs cross-platform at the same path mobile uses; `collapsedSections` syncs cross-device on web (its shape doesn't map 1:1 to mobile's six separate booleans, so it's web-only for now).
+- **Mobile preferences cache bypassed the mandated storage wrapper**: called `AsyncStorage` directly instead of `getUiState`/`setUiState` from `services/storage.js`. Switched over; synchronous-serialize-before-write behavior is preserved since `setUiState` stringifies synchronously before its internal `await`.
+- **Failed preference PUTs didn't reliably retry**: the debounce timer wasn't re-armed after a failed PUT, so a retry only happened if some unrelated `set()` call happened to fire later. Now restarts the timer on failure.
+
+## [1.07.28] - 2026-06-21
+
+### Security / Correctness — Preferences Sync Hardening
+
+Follow-up to v1.07.27 after a hostile code review. All issues found in security, client correctness, and mobile UI/UX audits are fixed.
+
+#### Server (`server/src/routes/preferences.js`)
+- **Prototype pollution blocked**: `__proto__`, `constructor`, `prototype` keys in incoming patches are skipped during deep-merge. `JSON.parse` can produce `__proto__` as an own property; without the block, an attacker could persist a polluted blob and have every connected client merge it into their local state.
+- **Stored-size cap (512KB)** after merge, in addition to the per-patch cap. Stops unbounded growth via thousands of small non-overlapping keys.
+- **Size checks now in UTF-8 bytes**, not UTF-16 code units. Emoji-heavy patches were ~4× larger than `.length` reported.
+- **Serializable transaction with retry** around the read-modify-write. Two devices PUTing different keys concurrently no longer lose each other's writes.
+- **Recursion depth cap (32)** in `deepMerge`. A `{a:{a:{a:...}}}` ladder no longer blows V8's call stack.
+- **NUL byte rejection**: Postgres `jsonb` rejects U+0000 — we now 400 at the boundary instead of crashing mid-transaction.
+- **ApiError + asyncHandler**: routes use the structured error pattern so logs no longer dump raw user-controlled patch payloads.
+
+#### Client services (`{client,mobile}/src/services/userPreferences.js`)
+- **Value-equality guard in `set()`**: no-op writes now return early. This single change kills two bugs at once — the cross-device ping-pong loop (remote patch → state update → write-effect → PUT → echo → state update again) and the boot-time noise PUT where ThemeContext re-saved values it had just loaded.
+- **Epoch counter on `clear()`**: any in-flight PUT or `load()` started by a previous user is abandoned on completion, so Alice's pending patch can't land on Bob's account if they share a device.
+- **Flush-on-unload**: web attaches `pagehide`/`beforeunload` with `keepalive: true`, mobile attaches an `AppState` listener that flushes on background. Stops the last change before close from being silently dropped.
+- **Mobile cache write is synchronous-serialize**: we `JSON.stringify(_prefs)` synchronously then kick off the async AsyncStorage write, so rapid `set()` calls can't torn-write the local cache.
+- **Path-prefix subscribe filter**: `subscribe(fn, pathPrefix)` lets consumers ignore unrelated emits. ThemeContext, ChannelListScreen, MessageList, and useMessageActions all use it so a theme change doesn't trigger a re-render in Sidebar's sort UI.
+- **`useUserPreference` fallback captured by ref**: callers can pass inline `{}` literals as fallback without tearing down/re-adding the subscriber on every render.
+- **PUT failure retry**: failed PUTs re-merge into `_pendingPatch` so the next `set()` re-attempts. Previously, failures silently dropped state that would then be overwritten by the next `load()`.
+
+#### Theme + workspace-theme deletion
+- **`setWorkspaceTheme(wsId, null)` now sends `{theme:{workspaceThemes:{[wsId]:null}}}`** instead of a whole-object write. The server's deep-merge only adds keys present in the patch — without the explicit `null`, removed workspace themes would persist on the server forever.
+- **ThemeContext hydration wrapped in try/catch** on both platforms so a single AsyncStorage rejection can't prevent `loaded` from flipping (which would have blanked the app).
+- **ThemeContext subscribe filtered to `theme`** path prefix.
+
+#### Mobile UI/UX
+- **Sidebar header buttons (sort, folder, +) now meet 44pt/48dp** via a new `headerButton` style using `MIN_TOUCH_TARGET`. Previously the tap target was a single ~22pt glyph with a hitSlop band-aid.
+- **Replaced text/emoji icons with Ionicons** across the sidebar: collapse triangles → `chevron-forward`/`chevron-down`, sort indicators → `arrow-up`/`arrow-down`/`swap-vertical`, folder icon → `folder-outline`, plus → `add`.
+- **Sort picker** fires a `selectionFeedback()` haptic on selection change and prefixes the current selection with `✓` so it's visible inside the native iOS `UIAlertController`.
+- **Haptic levels corrected**: long-press to open an action sheet (channel, message, reaction, workspace switcher, group menu) now uses `selectionFeedback()` instead of `mediumImpact()`. Apple HIG reserves medium impact for state-changing confirmations like dropping a dragged item.
+- **Biometric prompt** moved out of the 1-second login `setTimeout` (which violated HIG's "alerts only on user intent, not app heuristics" rule). Now triggers only when the user returns to the foreground after being backgrounded ≥5 minutes — exactly when re-auth friction matters. The "shown" flag is also moved out of the pre-Alert write into each button's `onPress` (plus the `onDismiss` callback), so an Alert the user never sees doesn't permanently suppress the prompt.
+- **LoginScreen / SignupScreen "Show / Hide" password text replaced with an eye icon** (`eye-outline` / `eye-off-outline`) sized to `MIN_TOUCH_TARGET`. Matches the iOS Mail / Material Password patterns.
+- **AppearanceScreen Switch `thumbColor` removed** so Android uses Material 3's colored thumb-on-track default, consistent with NotificationsScreen and SecurityScreen.
+- **PreferencesSync moved outside ToastProvider** on mobile — it never raises toasts, so it shouldn't re-mount when toast state changes.
+
+#### Performance
+- **Six per-key collapse `useEffect`s consolidated into one** in ChannelListScreen. The value-equality guard in `set()` makes the merged effect free when nothing changed.
+- **ChannelListScreen subscriber filtered** to `sidebar.<workspaceId>.collapse` so emits for other workspaces or unrelated paths don't trigger re-reads.
+
+#### Schema
+- **Backfill SQL** added at `server/prisma/migrations/custom/backfill_user_preferences.sql` as a belt-and-suspenders safety net (`UPDATE users SET preferences = '{}'::jsonb WHERE preferences IS NULL`). Idempotent; safe to run repeatedly.
+
+## [1.07.27] - 2026-06-21
+
+### Added
+
+- **User preferences now sync across devices and platforms.** Settings live on the user account, not the install. Theme, dark/light/auto mode, per-workspace themes, message density, channel group sort, sidebar collapse state (all six per-workspace toggles), and blocked link-preview domains all follow the user wherever they sign in.
+  - **Server**: new `User.preferences` JSON column. `GET /api/me/preferences` returns the blob; `PUT /api/me/preferences` accepts `{ patch: {...} }` and deep-merges (null deletes a key). A 256KB cap rejects pathological patches. After a successful PUT, the server emits `preferences:updated` to `user:<userId>` so other connected devices apply the patch in real time. Implementation: `server/src/routes/preferences.js`.
+  - **Clients**: new `services/userPreferences.js` on both web (`client/src/services/`) and mobile (`mobile/src/services/`). Singleton with sync `get(path, fallback)`, `set(path, value)` (debounced PUT, 500ms), `applyRemotePatch(patch)`, `subscribe(fn)`, and a `useUserPreference(path, fallback)` React hook. Local cache backs reads so they stay synchronous and offline-tolerant. Self-sent patches are deduped against socket echoes via a 5s rolling window.
+  - **Auto-migrate**: first time a logged-in user hits the API with an empty server blob, the client reads its legacy per-device storage values (theme, mode, workspace themes, blocked domains, biometric prompt flag) into a one-shot patch. Idempotent via `userPreferences:migrated:v1` flag. Existing users see their settings appear on a fresh install/device the first time they sign in.
+  - **PreferencesSync** component mounted at app root on both platforms: watches the auth state, loads/clears preferences accordingly, and registers the socket handler for cross-device updates.
+  - **Migrated callers** (dual-write to legacy storage + synced prefs so a rollback can't lose data):
+    - `client/src/context/ThemeContext.jsx` + `mobile/src/context/ThemeContext.js`
+    - `client/src/components/channels/Sidebar.jsx` + `mobile/src/screens/workspace/ChannelListScreen.js` (sort + collapse)
+    - `client/src/components/messages/MessageList.jsx` + `mobile/src/hooks/useMessageActions.js` (blocked preview domains)
+    - `mobile/src/context/AuthContext.js` (biometric prompt flag)
+  - **Theme tri-state interoperability**: web's `isFollowingSystem` boolean + `mode` ('light' | 'dark') translates to/from a single synced `theme.mode` ('auto' | 'light' | 'dark') so web and mobile interop cleanly.
+  - **Design doc**: `user-preferences-sync-plan.md` at repo root has the full architecture, key inventory, and phasing.
+
 ## [1.07.26] - 2026-06-21
 
 ### Added

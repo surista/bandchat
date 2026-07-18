@@ -26,6 +26,9 @@ model User {
   isSystemAdmin             Boolean   @default(false)
   calendarVisibility        String    @default("BUSY_ONLY") // "BUSY_ONLY" or "DETAILED" — cross-band conflict visibility
   notificationsSnoozedUntil DateTime? // null = active, future date = snoozed until then
+  // Synced user preferences (theme, sidebar collapse state, etc.). Deep-merged
+  // by PUT /api/me/preferences. See user-preferences-sync-plan.md at repo root.
+  preferences               Json      @default("{}")
   deletedAt                 DateTime?
   createdAt                 DateTime  @default(now())
   updatedAt                 DateTime  @updatedAt

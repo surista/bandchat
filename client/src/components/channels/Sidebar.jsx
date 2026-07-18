@@ -30,6 +30,7 @@ import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
 import { storage } from '../../services/storage';
 import { getAllGroupSorts, setGroupSort, sortChannels, SORT_LABELS } from '../../utils/channelGroupSort';
+import userPreferences from '../../services/userPreferences';
 import useIsAdmin from '../../hooks/useIsAdmin';
 import MemberProfile from '../common/MemberProfile';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -212,10 +213,24 @@ function Sidebar({
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [snoozedUntil, setSnoozedUntil] = useState(null);
   const [snoozeMenuOpen, setSnoozeMenuOpen] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState(() => storage.getJSON(`collapsedGroups:${workspace.id}`, {}));
-  const [collapsedSections, setCollapsedSections] = useState(() => storage.getJSON(`collapsedSections:${workspace.id}`, {}));
-  // Per-group sort modes (ASC | DESC | CUSTOM). Stored per-device — sort is
-  // a personal preference and we don't want it propagating to other devices.
+  // `collapse.groups` matches mobile's ChannelListScreen key exactly, so
+  // collapsed channel groups sync cross-platform. `collapse.sectionsWeb` is
+  // web-only (this file's collapsedSections shape — quickLinks/starred/
+  // unread/channels/dms/band/per-category — doesn't match mobile's six
+  // separate booleans), so it syncs across a user's own browsers/devices but
+  // not to mobile.
+  const [collapsedGroups, setCollapsedGroups] = useState(() => {
+    const fromPrefs = userPreferences.get(`sidebar.${workspace.id}.collapse.groups`);
+    if (fromPrefs && typeof fromPrefs === 'object' && !Array.isArray(fromPrefs)) return fromPrefs;
+    return storage.getJSON(`collapsedGroups:${workspace.id}`, {});
+  });
+  const [collapsedSections, setCollapsedSections] = useState(() => {
+    const fromPrefs = userPreferences.get(`sidebar.${workspace.id}.collapse.sectionsWeb`);
+    if (fromPrefs && typeof fromPrefs === 'object' && !Array.isArray(fromPrefs)) return fromPrefs;
+    return storage.getJSON(`collapsedSections:${workspace.id}`, {});
+  });
+  // Per-group sort modes (ASC | DESC | CUSTOM). Synced via userPreferences;
+  // the subscribe in the effect below re-hydrates when a remote patch lands.
   const [groupSorts, setGroupSorts] = useState(() => getAllGroupSorts(workspace.id));
   // Which group's sort-mode popover is open (groupId | null).
   const [sortMenuFor, setSortMenuFor] = useState(null);
@@ -234,12 +249,33 @@ function Sidebar({
 
   useEffect(() => {
     storage.setJSON(`collapsedGroups:${workspace.id}`, collapsedGroups);
+    userPreferences.set(`sidebar.${workspace.id}.collapse.groups`, collapsedGroups);
   }, [collapsedGroups, workspace.id]);
 
   useEffect(() => {
     storage.setJSON(`collapsedSections:${workspace.id}`, collapsedSections);
+    userPreferences.set(`sidebar.${workspace.id}.collapse.sectionsWeb`, collapsedSections);
   }, [collapsedSections, workspace.id]);
 
+  // Re-read sort modes + collapse state when userPreferences updates for
+  // THIS workspace's sidebar branch (server load complete or remote patch
+  // from another device/tab).
+  useEffect(() => {
+    const refresh = () => {
+      setGroupSorts(getAllGroupSorts(workspace.id));
+      const groupsPref = userPreferences.get(`sidebar.${workspace.id}.collapse.groups`);
+      if (groupsPref && typeof groupsPref === 'object' && !Array.isArray(groupsPref)) {
+        setCollapsedGroups(groupsPref);
+      }
+      const sectionsPref = userPreferences.get(`sidebar.${workspace.id}.collapse.sectionsWeb`);
+      if (sectionsPref && typeof sectionsPref === 'object' && !Array.isArray(sectionsPref)) {
+        setCollapsedSections(sectionsPref);
+      }
+    };
+    refresh();
+    const unsub = userPreferences.subscribe(refresh, `sidebar.${workspace.id}`);
+    return unsub;
+  }, [workspace.id]);
 
   // Fetch next upcoming gig
   useEffect(() => {

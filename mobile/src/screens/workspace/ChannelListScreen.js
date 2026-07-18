@@ -16,8 +16,10 @@ import {
   Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { mediumImpact, successNotification, errorNotification } from '../../utils/haptics';
+import { successNotification, errorNotification, selectionFeedback } from '../../utils/haptics';
+import { MIN_TOUCH_TARGET } from '../../utils/touchTarget';
 import { getAllGroupSorts, setGroupSort, sortChannels, SORT_LABELS } from '../../utils/channelGroupSort';
+import userPreferences from '../../services/userPreferences';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getUiState, setUiState, setUiString } from '../../services/storage';
@@ -117,6 +119,11 @@ export default function ChannelListScreen({ navigation, route }) {
   // the persist-effect at line ~161 reads `collapsedStarred` in its dep array.
   // Putting the useState below the effect throws a TDZ ReferenceError on render.
   const [collapsedStarred, setCollapsedStarred] = useState(false);
+  // Becomes true after the first successful hydration. Persist effects check
+  // this so they don't fire with initial-state defaults before the server
+  // values have loaded (which would overwrite remote state with false/{}). Reset
+  // to false on workspaceId change (see hydrate effect below).
+  const collapseHydrated = useRef(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [nextGig, setNextGig] = useState(null);
   const [allWorkspaces, setAllWorkspaces] = useState([]);
@@ -136,26 +143,49 @@ export default function ChannelListScreen({ navigation, route }) {
   const [editingGroup, setEditingGroup] = useState(null);
   const [savingGroup, setSavingGroup] = useState(false);
 
-  // Load persisted collapse state. getUiState falls back to null on missing/
-  // corrupted/storage-error, so we only setState when there's real data.
+  // Load persisted collapse state from synced preferences (with legacy
+  // per-device storage as a fallback for pre-migration installs). Subscribe
+  // only to this workspace's sidebar branch so remote patches from other
+  // devices apply live without re-running on unrelated emits.
   useEffect(() => {
-    const load = async () => {
-      const [savedGroups, savedBand, savedBandCats, savedDMs, savedQuickLinks, savedStarred] = await Promise.all([
-        getUiState(`collapsedGroups:${workspaceId}`),
-        getUiState(`collapsedBand:${workspaceId}`),
-        getUiState(`collapsedBandCats:${workspaceId}`),
-        getUiState(`collapsedDMs:${workspaceId}`),
-        getUiState(`collapsedQuickLinks:${workspaceId}`),
-        getUiState(`collapsedStarred:${workspaceId}`),
-      ]);
-      if (savedGroups) setCollapsedGroups(savedGroups);
-      if (savedBand) setCollapsedBand(savedBand);
-      if (savedBandCats) setCollapsedBandCats(savedBandCats);
-      if (savedDMs) setCollapsedDMs(savedDMs);
-      if (savedQuickLinks) setCollapsedQuickLinks(savedQuickLinks);
-      if (savedStarred) setCollapsedStarred(savedStarred);
+    collapseHydrated.current = false; // Reset on workspace change so persist effects don't fire with stale defaults
+    let cancelled = false;
+    const apply = (collapse) => {
+      if (cancelled) return;
+      if (collapse.groups && typeof collapse.groups === 'object') setCollapsedGroups(collapse.groups);
+      if (typeof collapse.band === 'boolean') setCollapsedBand(collapse.band);
+      if (collapse.bandCats && typeof collapse.bandCats === 'object') setCollapsedBandCats(collapse.bandCats);
+      if (typeof collapse.dms === 'boolean') setCollapsedDMs(collapse.dms);
+      if (typeof collapse.quickLinks === 'boolean') setCollapsedQuickLinks(collapse.quickLinks);
+      if (typeof collapse.starred === 'boolean') setCollapsedStarred(collapse.starred);
+      collapseHydrated.current = true;
     };
-    load();
+    const hydrate = async () => {
+      const fromPrefs = userPreferences.get(`sidebar.${workspaceId}.collapse`) || {};
+      const safe = (p) => p.catch(() => null);
+      const [legGroups, legBand, legBandCats, legDMs, legQuickLinks, legStarred] = await Promise.all([
+        safe(getUiState(`collapsedGroups:${workspaceId}`)),
+        safe(getUiState(`collapsedBand:${workspaceId}`)),
+        safe(getUiState(`collapsedBandCats:${workspaceId}`)),
+        safe(getUiState(`collapsedDMs:${workspaceId}`)),
+        safe(getUiState(`collapsedQuickLinks:${workspaceId}`)),
+        safe(getUiState(`collapsedStarred:${workspaceId}`)),
+      ]);
+      apply({
+        groups: fromPrefs.groups ?? legGroups ?? undefined,
+        band: fromPrefs.band ?? (typeof legBand === 'boolean' ? legBand : undefined),
+        bandCats: fromPrefs.bandCats ?? legBandCats ?? undefined,
+        dms: fromPrefs.dms ?? (typeof legDMs === 'boolean' ? legDMs : undefined),
+        quickLinks: fromPrefs.quickLinks ?? (typeof legQuickLinks === 'boolean' ? legQuickLinks : undefined),
+        starred: fromPrefs.starred ?? (typeof legStarred === 'boolean' ? legStarred : undefined),
+      });
+    };
+    hydrate();
+    const unsub = userPreferences.subscribe(() => {
+      const fromPrefs = userPreferences.get(`sidebar.${workspaceId}.collapse`);
+      if (fromPrefs && typeof fromPrefs === 'object') apply(fromPrefs);
+    }, `sidebar.${workspaceId}.collapse`);
+    return () => { cancelled = true; unsub(); };
   }, [workspaceId]);
 
   // Fetch all workspaces for workspace switcher (refresh when opened)
@@ -163,13 +193,30 @@ export default function ChannelListScreen({ navigation, route }) {
     api.getWorkspaces().then(setAllWorkspaces).catch(console.error);
   }, [showWorkspaceSwitcher]);
 
-  // Persist collapse state on change. setUiState is no-throw.
-  useEffect(() => { setUiState(`collapsedGroups:${workspaceId}`, collapsedGroups); }, [collapsedGroups, workspaceId]);
-  useEffect(() => { setUiState(`collapsedBand:${workspaceId}`, collapsedBand); }, [collapsedBand, workspaceId]);
-  useEffect(() => { setUiState(`collapsedBandCats:${workspaceId}`, collapsedBandCats); }, [collapsedBandCats, workspaceId]);
-  useEffect(() => { setUiState(`collapsedDMs:${workspaceId}`, collapsedDMs); }, [collapsedDMs, workspaceId]);
-  useEffect(() => { setUiState(`collapsedQuickLinks:${workspaceId}`, collapsedQuickLinks); }, [collapsedQuickLinks, workspaceId]);
-  useEffect(() => { setUiState(`collapsedStarred:${workspaceId}`, collapsedStarred); }, [collapsedStarred, workspaceId]);
+  // Persist collapse state on change. Dual-write: legacy AsyncStorage (for
+  // pre-migration installs) + synced prefs (cross-device). The collapseHydrated
+  // guard prevents mount-time default values from being written to the server
+  // before hydration resolves, which would overwrite a remote true with false.
+  //
+  // Legacy writes: one effect per field so only the changed key hits AsyncStorage.
+  // This restores the pre-v1.07.28 behaviour where a single toggle caused 1 write,
+  // not 6. The prefs writes stay consolidated because userPreferences.set has a
+  // value-equality guard that no-ops unchanged fields.
+  useEffect(() => { if (collapseHydrated.current) setUiState(`collapsedGroups:${workspaceId}`, collapsedGroups); }, [collapsedGroups, workspaceId]);
+  useEffect(() => { if (collapseHydrated.current) setUiState(`collapsedBand:${workspaceId}`, collapsedBand); }, [collapsedBand, workspaceId]);
+  useEffect(() => { if (collapseHydrated.current) setUiState(`collapsedBandCats:${workspaceId}`, collapsedBandCats); }, [collapsedBandCats, workspaceId]);
+  useEffect(() => { if (collapseHydrated.current) setUiState(`collapsedDMs:${workspaceId}`, collapsedDMs); }, [collapsedDMs, workspaceId]);
+  useEffect(() => { if (collapseHydrated.current) setUiState(`collapsedQuickLinks:${workspaceId}`, collapsedQuickLinks); }, [collapsedQuickLinks, workspaceId]);
+  useEffect(() => { if (collapseHydrated.current) setUiState(`collapsedStarred:${workspaceId}`, collapsedStarred); }, [collapsedStarred, workspaceId]);
+  useEffect(() => {
+    if (!collapseHydrated.current) return;
+    userPreferences.set(`sidebar.${workspaceId}.collapse.groups`, collapsedGroups);
+    userPreferences.set(`sidebar.${workspaceId}.collapse.band`, collapsedBand);
+    userPreferences.set(`sidebar.${workspaceId}.collapse.bandCats`, collapsedBandCats);
+    userPreferences.set(`sidebar.${workspaceId}.collapse.dms`, collapsedDMs);
+    userPreferences.set(`sidebar.${workspaceId}.collapse.quickLinks`, collapsedQuickLinks);
+    userPreferences.set(`sidebar.${workspaceId}.collapse.starred`, collapsedStarred);
+  }, [collapsedGroups, collapsedBand, collapsedBandCats, collapsedDMs, collapsedQuickLinks, collapsedStarred, workspaceId]);
 
   // Create channel modal
   const [showCreateChannel, setShowCreateChannel] = useState(false);
@@ -193,7 +240,8 @@ export default function ChannelListScreen({ navigation, route }) {
       headerTitle: () => (
         <TouchableOpacity
           onPress={() => {
-            mediumImpact();
+            // Selection haptic: opening a picker, not a state-changing confirm.
+            selectionFeedback();
             setShowWorkspaceSwitcher(true);
           }}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
@@ -248,14 +296,20 @@ export default function ChannelListScreen({ navigation, route }) {
     });
   }, [navigation, workspaceId, workspaceName, workspace?.avatarUrl, colors]);
 
-  // Hydrate per-group sort modes from storage on workspace change.
-  // Stored per-device — sort is personal and we don't propagate it.
+  // Hydrate per-group sort modes on workspace change AND when the synced
+  // preferences cache updates (remote patch from another device, server
+  // load completes). Path-prefix filter so we don't re-render on every
+  // unrelated emit (theme changes, blocked domains, etc.).
   useEffect(() => {
     let cancelled = false;
-    getAllGroupSorts(workspaceId).then((map) => {
-      if (!cancelled) setGroupSorts(map);
-    }).catch(() => {});
-    return () => { cancelled = true; };
+    const refresh = () => {
+      getAllGroupSorts(workspaceId).then((map) => {
+        if (!cancelled) setGroupSorts(map);
+      }).catch(() => {});
+    };
+    refresh();
+    const unsub = userPreferences.subscribe(refresh, `sidebar.${workspaceId}.groupSorts`);
+    return () => { cancelled = true; unsub(); };
   }, [workspaceId]);
 
   // Pre-load channels from SQLite for instant display
@@ -636,9 +690,10 @@ export default function ChannelListScreen({ navigation, route }) {
     setShowGroupModal(true);
   }, []);
 
-  // Channel long-press → show action sheet
+  // Channel long-press → show action sheet. Selection haptic per HIG:
+  // long-press to open a menu is a selection gesture, not a confirm.
   const handleChannelLongPress = useCallback((channel) => {
-    mediumImpact();
+    selectionFeedback();
     setSelectedChannel(channel);
     setShowChannelActions(true);
   }, []);
@@ -843,13 +898,16 @@ export default function ChannelListScreen({ navigation, route }) {
             : undefined;
     const handleLongPress = section.isGroup && isAdmin
       ? () => {
-          mediumImpact();
+          // Light impact: long-press opens an action sheet (a "this is now
+          // selected" gesture). Apple HIG reserves medium for state-changing
+          // confirmations like dropping a dragged item.
+          selectionFeedback();
           setSelectedGroup({ id: section.groupId, name: section.title });
           setShowGroupActions(true);
         }
       : undefined;
     const groupSortMode = section.isGroup ? (groupSorts[section.groupId] || 'ASC') : null;
-    const sortIcon = groupSortMode === 'DESC' ? '\u2193' : groupSortMode === 'CUSTOM' ? '\u21C5' : '\u2191';
+    const sortIconName = groupSortMode === 'DESC' ? 'arrow-down' : groupSortMode === 'CUSTOM' ? 'swap-vertical' : 'arrow-up';
     return (
       <View style={styles.sectionHeaderRow}>
         <TouchableOpacity
@@ -861,9 +919,12 @@ export default function ChannelListScreen({ navigation, route }) {
           disabled={!isCollapsible}
         >
           {isCollapsible && (
-            <Text style={[styles.collapseIcon, { color: colors.channelListText }]} maxFontSizeMultiplier={1.2}>
-              {isCollapsed ? '\u25B6' : '\u25BC'}
-            </Text>
+            <Ionicons
+              name={isCollapsed ? 'chevron-forward' : 'chevron-down'}
+              size={14}
+              color={colors.channelListText}
+              style={styles.collapseIcon}
+            />
           )}
           <Text style={[styles.sectionTitle, { color: colors.channelListText }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>
             {section.title}
@@ -871,46 +932,44 @@ export default function ChannelListScreen({ navigation, route }) {
         </TouchableOpacity>
         {section.isGroup && (
           <TouchableOpacity
-            style={styles.addButton}
+            style={styles.headerButton}
             onPress={() => setSortPickerGroup({ id: section.groupId, name: section.title })}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityRole="button"
             accessibilityLabel={`Sort ${section.title} channels, currently ${SORT_LABELS[groupSortMode]}`}
           >
-            <Text style={[styles.addIcon, { color: colors.channelListText }]} maxFontSizeMultiplier={1.2}>
-              {sortIcon}
-            </Text>
+            <Ionicons name={sortIconName} size={18} color={colors.channelListText} />
           </TouchableOpacity>
         )}
         {section.showCreate && (
           <View style={styles.headerButtons}>
             {isAdmin && (
               <TouchableOpacity
-                style={styles.addButton}
+                style={styles.headerButton}
                 onPress={openNewGroupModal}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessibilityRole="button"
                 accessibilityLabel="Create section"
               >
-                <Text style={[styles.addIcon, { color: colors.channelListText }]} maxFontSizeMultiplier={1.2}>{'\uD83D\uDCC1'}</Text>
+                <Ionicons name="folder-outline" size={20} color={colors.channelListText} />
               </TouchableOpacity>
             )}
             <TouchableOpacity
-              style={styles.addButton}
+              style={styles.headerButton}
               onPress={() => setShowCreateChannel(true)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Create channel"
             >
-              <Text style={[styles.addIcon, { color: colors.channelListText }]} maxFontSizeMultiplier={1.2}>+</Text>
+              <Ionicons name="add" size={22} color={colors.channelListText} />
             </TouchableOpacity>
           </View>
         )}
         {section.showNewDM && !isCollapsed && (
           <TouchableOpacity
-            style={styles.addButton}
+            style={styles.headerButton}
             onPress={openNewDM}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel="New direct message"
           >
-            <Text style={[styles.addIcon, { color: colors.channelListText }]} maxFontSizeMultiplier={1.2}>+</Text>
+            <Ionicons name="add" size={22} color={colors.channelListText} />
           </TouchableOpacity>
         )}
       </View>
@@ -1198,17 +1257,20 @@ export default function ChannelListScreen({ navigation, route }) {
         onClose={() => { setShowGroupActions(false); setSelectedGroup(null); }}
       />
 
-      {/* Per-group sort-mode picker */}
+      {/* Per-group sort-mode picker. Prefixes the current selection with a
+          checkmark (U+2713) so it's visible inside the native iOS UIAlertController
+          where we can't pass icons. Fires a selection haptic on pick. */}
       <ActionSheet
         visible={!!sortPickerGroup}
         title={sortPickerGroup ? `Sort ${sortPickerGroup.name}` : ''}
         actions={['ASC', 'DESC', 'CUSTOM'].map((mode) => {
           const current = sortPickerGroup ? (groupSorts[sortPickerGroup.id] || 'ASC') : null;
-          const checkmark = current === mode ? '  ✓' : '';
+          const isCurrent = current === mode;
           return {
-            label: SORT_LABELS[mode] + checkmark,
+            label: isCurrent ? `✓  ${SORT_LABELS[mode]}` : `   ${SORT_LABELS[mode]}`,
             onPress: () => {
               if (!sortPickerGroup) return;
+              if (!isCurrent) selectionFeedback();
               setGroupSort(workspaceId, sortPickerGroup.id, mode);
               setGroupSorts((prev) => ({ ...prev, [sortPickerGroup.id]: mode }));
             },
@@ -1333,7 +1395,6 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   collapseIcon: {
-    fontSize: 10,
     marginRight: 6,
   },
   sectionTitle: {
@@ -1342,18 +1403,19 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  addButton: {
-    marginTop: 14,
-  },
-  addIcon: {
-    fontSize: 22,
-    fontWeight: '300',
-    lineHeight: 24,
+  // HIG 44pt / Material 48dp minimum. Replaces the old `addButton` which
+  // was a single-glyph touchable with only hitSlop padding (effective
+  // ~22pt tap target — below spec on both platforms).
+  headerButton: {
+    minWidth: MIN_TOUCH_TARGET,
+    minHeight: MIN_TOUCH_TARGET,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
   },
   // Modal styles
   modalOverlay: {

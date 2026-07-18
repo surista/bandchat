@@ -56,6 +56,9 @@ import RootNavigator from './src/navigation/RootNavigator';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import OfflineBanner from './src/components/OfflineBanner';
 import WhatsNewModal from './src/components/WhatsNewModal';
+import userPreferences from './src/services/userPreferences';
+import { useAuth } from './src/context/AuthContext';
+import { useSocket } from './src/context/SocketContext';
 import notificationService from './src/services/notifications';
 import api from './src/services/api';
 import { updateWidgetGigData } from './src/services/widgetService';
@@ -146,6 +149,74 @@ function handleDeepLink(url, navigationRef) {
   } catch (error) {
     console.warn('Failed to parse deep link:', error.message);
   }
+}
+
+/**
+ * Loads user preferences from the server when the user becomes authenticated
+ * and applies remote patches arriving on the socket. Renders nothing —
+ * mounts next to RootNavigator so it sits inside Auth + Socket providers.
+ *
+ * Legacy migration: when the server returns an empty prefs blob (first
+ * launch of the sync feature), this gathers the user's pre-existing local
+ * storage values into a single patch and PUTs them up. Workspace-scoped
+ * legacy values (sidebar collapse, channel sort) are migrated lazily in
+ * their respective consumers — they're keyed by workspaceId and we don't
+ * always know which workspaces the user has at this point.
+ */
+function PreferencesSync() {
+  const { user } = useAuth();
+  const { socket } = useSocket();
+
+  useEffect(() => {
+    if (!user) {
+      userPreferences.clear();
+      return;
+    }
+    const legacyMigrate = async () => {
+      // mode/theme/density/biometricPromptShown were written with setUiString
+      // (raw strings, e.g. "dark") — read them with getUiString. workspaceThemes
+      // and blockedDomains were written with setUiState (JSON-encoded objects/
+      // arrays) — read those with getUiState. Mixing these up means
+      // JSON.parse('dark') throws and the value silently comes back null.
+      const [mode, theme, density, workspaceThemes, blockedDomains, biometricPromptShown] = await Promise.all([
+        getUiString('bandchat-mode').catch(() => null),
+        getUiString('bandchat-theme').catch(() => null),
+        getUiString('bandchat-density').catch(() => null),
+        getUiState('bandchat-workspace-themes').catch(() => null),
+        getUiState('bandchat_blocked_preview_domains').catch(() => null),
+        getUiString('biometricPromptShown').catch(() => null),
+      ]);
+      const patch = {};
+      const themePatch = {};
+      if (typeof mode === 'string') themePatch.mode = mode;
+      if (typeof theme === 'string') themePatch.global = theme;
+      if (typeof density === 'string') themePatch.density = density;
+      if (workspaceThemes && typeof workspaceThemes === 'object' && !Array.isArray(workspaceThemes)) {
+        themePatch.workspaceThemes = workspaceThemes;
+      }
+      if (Object.keys(themePatch).length > 0) patch.theme = themePatch;
+      if (Array.isArray(blockedDomains)) {
+        patch.messages = { blockedPreviewDomains: blockedDomains };
+      }
+      if (biometricPromptShown === 'true') {
+        patch.auth = { biometricPromptShown: true };
+      }
+      return patch;
+    };
+    userPreferences.load(legacyMigrate);
+  }, [user]);
+
+  // Real-time sync: when another device PUTs a patch the server broadcasts
+  // it to all of this user's sockets. We dedupe self-sent patches inside
+  // applyRemotePatch so we don't bounce our own writes.
+  useEffect(() => {
+    if (!socket) return;
+    const handler = ({ patch }) => userPreferences.applyRemotePatch(patch);
+    socket.on('preferences:updated', handler);
+    return () => socket.off('preferences:updated', handler);
+  }, [socket]);
+
+  return null;
 }
 
 function AppContent() {
@@ -287,6 +358,9 @@ function AppContent() {
 
   return (
     <NavigationContainer ref={navigationRef} linking={linking}>
+      {/* PreferencesSync sits outside ToastProvider — it never raises toasts,
+          so re-renders of the toast tree shouldn't cause it to unmount. */}
+      <PreferencesSync />
       <ToastProvider>
         <OfflineBanner />
         <RootNavigator />

@@ -7,12 +7,13 @@
  *            within a group is implemented, CUSTOM effectively matches ASC
  *            because positions are mostly 0.
  *
- * Stored per-device under `channelGroupSorts:<workspaceId>` via
- * services/storage's getUiState/setUiState wrappers. Personal preference,
- * no server sync — keep this in sync with the web copy.
+ * Synced via userPreferences at `sidebar.<workspaceId>.groupSorts`. Legacy
+ * per-device storage at `channelGroupSorts:<workspaceId>` is still read as
+ * a fallback so users don't lose their settings during the migration.
  */
 
 import { getUiState, setUiState } from '../services/storage';
+import userPreferences from '../services/userPreferences';
 
 export const SORT_MODES = ['ASC', 'DESC', 'CUSTOM'];
 
@@ -22,20 +23,27 @@ export const SORT_LABELS = {
   CUSTOM: 'Custom order',
 };
 
-function storageKey(workspaceId) {
+function legacyKey(workspaceId) {
   return `channelGroupSorts:${workspaceId}`;
 }
 
+function prefPath(workspaceId) {
+  return `sidebar.${workspaceId}.groupSorts`;
+}
+
 export async function getAllGroupSorts(workspaceId) {
-  const map = await getUiState(storageKey(workspaceId));
-  return map && typeof map === 'object' ? map : {};
+  const fromPrefs = userPreferences.get(prefPath(workspaceId));
+  if (fromPrefs && typeof fromPrefs === 'object') return fromPrefs;
+  const legacy = await getUiState(legacyKey(workspaceId));
+  return legacy && typeof legacy === 'object' ? legacy : {};
 }
 
 export async function setGroupSort(workspaceId, groupId, mode) {
   if (!SORT_MODES.includes(mode)) return;
-  const map = (await getUiState(storageKey(workspaceId))) || {};
-  map[groupId] = mode;
-  await setUiState(storageKey(workspaceId), map);
+  const current = await getAllGroupSorts(workspaceId);
+  const next = { ...current, [groupId]: mode };
+  await setUiState(legacyKey(workspaceId), next);
+  userPreferences.set(prefPath(workspaceId), next);
 }
 
 export function sortChannels(channels, mode) {

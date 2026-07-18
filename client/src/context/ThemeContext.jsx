@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { storage } from '../services/storage';
+import userPreferences from '../services/userPreferences';
 
 // ThemeContext mounts at app boot. Any unwrapped localStorage call would crash
 // Safari private mode (QuotaExceededError on setItem) and blank the screen
@@ -199,18 +200,80 @@ function getWorkspaceThemes() {
 
 function saveWorkspaceThemes(map) {
   storage.setJSON('bandchat-workspace-themes', map);
+  // Don't sync the whole object — the server's deep-merge can't see removed
+  // keys and would leave stale entries forever. Surgical updates happen in
+  // setTheme / setWorkspaceTheme below via explicit per-key writes
+  // (themeId for add/change, null for delete).
+}
+
+function syncWorkspaceTheme(workspaceId, themeId) {
+  if (themeId) {
+    userPreferences.set(`theme.workspaceThemes.${workspaceId}`, themeId);
+  } else {
+    userPreferences.set(`theme.workspaceThemes.${workspaceId}`, null);
+  }
+}
+
+// Mirror of the mobile theme.mode tri-state ('auto' | 'light' | 'dark'). On
+// web we keep the existing two pieces of state (mode + isFollowingSystem)
+// because the rest of the file already depends on that shape, but we
+// translate to/from the synced 'auto'|'light'|'dark' value at the boundary.
+function readInitialGlobalTheme() {
+  return userPreferences.get('theme.global') || storage.getString('bandchat-theme', 'default');
+}
+function readInitialWorkspaceThemes() {
+  const fromPrefs = userPreferences.get('theme.workspaceThemes');
+  if (fromPrefs && typeof fromPrefs === 'object' && !Array.isArray(fromPrefs)) return fromPrefs;
+  return getWorkspaceThemes();
+}
+function readInitialMode() {
+  const prefMode = userPreferences.get('theme.mode');
+  if (prefMode === 'light' || prefMode === 'dark') return prefMode;
+  if (prefMode === 'auto') {
+    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  }
+  const legacy = storage.getString('bandchat-mode');
+  if (legacy === 'light' || legacy === 'dark') return legacy;
+  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+function readInitialFollowingSystem() {
+  const prefMode = userPreferences.get('theme.mode');
+  if (prefMode === 'auto') return true;
+  if (prefMode === 'light' || prefMode === 'dark') return false;
+  return storage.getString('bandchat-mode') === null;
 }
 
 export function ThemeProvider({ children }) {
-  const [globalTheme, setGlobalTheme] = useState(() => storage.getString('bandchat-theme', 'default'));
+  const [globalTheme, setGlobalTheme] = useState(readInitialGlobalTheme);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState(null);
-  const [workspaceThemes, setWorkspaceThemes] = useState(getWorkspaceThemes);
-  const [mode, setMode] = useState(() => {
-    const saved = storage.getString('bandchat-mode');
-    if (saved) return saved;
-    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-  });
-  const [isFollowingSystem, setIsFollowingSystem] = useState(() => storage.getString('bandchat-mode') === null);
+  const [workspaceThemes, setWorkspaceThemes] = useState(readInitialWorkspaceThemes);
+  const [mode, setMode] = useState(readInitialMode);
+  const [isFollowingSystem, setIsFollowingSystem] = useState(readInitialFollowingSystem);
+
+  // Re-hydrate state when userPreferences updates (server load complete or a
+  // remote patch from another device). Lets a theme change on mobile show up
+  // on web in real time, and vice versa.
+  useEffect(() => {
+    // Path-prefix filter so we only re-render on theme changes, not on every
+    // unrelated emit (sidebar collapse, blocked domains, biometric flag).
+    const unsub = userPreferences.subscribe(() => {
+      const themePref = userPreferences.get('theme.global');
+      const wsThemesPref = userPreferences.get('theme.workspaceThemes');
+      const modePref = userPreferences.get('theme.mode');
+      if (themePref && themes[themePref]) setGlobalTheme(themePref);
+      if (wsThemesPref && typeof wsThemesPref === 'object' && !Array.isArray(wsThemesPref)) {
+        setWorkspaceThemes(wsThemesPref);
+      }
+      if (modePref === 'light' || modePref === 'dark') {
+        setMode(modePref);
+        setIsFollowingSystem(false);
+      } else if (modePref === 'auto') {
+        setIsFollowingSystem(true);
+        setMode(window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+      }
+    }, 'theme');
+    return unsub;
+  }, []);
 
   // Resolve which theme to actually use
   const currentTheme = (activeWorkspaceId && workspaceThemes[activeWorkspaceId]) || globalTheme;
@@ -258,6 +321,10 @@ export function ThemeProvider({ children }) {
     if (!isFollowingSystem) {
       storage.setString('bandchat-mode', mode);
     }
+    // Mirror to synced preferences. theme.mode uses the tri-state
+    // 'auto'|'light'|'dark' so mobile and web can interoperate.
+    userPreferences.set('theme.global', globalTheme);
+    userPreferences.set('theme.mode', isFollowingSystem ? 'auto' : mode);
   }, [currentTheme, mode, globalTheme, isFollowingSystem]);
 
   useEffect(() => {
@@ -279,6 +346,7 @@ export function ThemeProvider({ children }) {
         saveWorkspaceThemes(updated);
         return updated;
       });
+      syncWorkspaceTheme(activeWorkspaceId, themeId);
     } else {
       setGlobalTheme(themeId);
     }
@@ -295,6 +363,7 @@ export function ThemeProvider({ children }) {
       saveWorkspaceThemes(updated);
       return updated;
     });
+    syncWorkspaceTheme(workspaceId, themeId);
   }, []);
 
   const getWorkspaceTheme = useCallback((workspaceId) => {
