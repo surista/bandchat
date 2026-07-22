@@ -95,6 +95,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   }, [autoOpenThreadId, messages, onOpenThread, setSearchParams]);
 
   const lastReadAtRef = useRef(null);
+  const firstUnreadMessageIdRef = useRef(null);
   const descriptionSavedRef = useRef(false);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -135,7 +136,24 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
         setMessages(data.messages);
         setHasMore(data.hasMore);
         setNextCursor(data.nextCursor);
-        setShouldScrollToBottom(true);
+
+        // If there's a legitimate first-unread message (and no explicit deep
+        // link — e.g. a search result or thread-reply notification — is
+        // already directing scroll elsewhere), jump straight there instead
+        // of forcing scroll-to-bottom. That's what clicking a channel with
+        // an unread badge should do. Falls back to bottom when everything's
+        // already read.
+        let unreadTarget = null;
+        if (!highlightMessageId && lastReadAtRef.current) {
+          const lastReadTime = new Date(lastReadAtRef.current).getTime();
+          unreadTarget = data.messages.find(m =>
+            m.author?.id !== user.id && new Date(m.createdAt).getTime() > lastReadTime
+          ) || null;
+        }
+        firstUnreadMessageIdRef.current = unreadTarget?.id || null;
+        if (!firstUnreadMessageIdRef.current) {
+          setShouldScrollToBottom(true);
+        }
 
         // Mark channel as read BEFORE joining socket room so any new messages
         // that arrive after join will correctly be "after" the read timestamp
@@ -155,14 +173,18 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       } finally {
         if (!cancelled) {
           setLoading(false);
-          // Fallback scroll: ensure we reach the bottom after React renders messages
-          requestAnimationFrame(() => {
+          // Fallback scroll: ensure we reach the bottom after React renders
+          // messages — skipped when we're jumping to an unread message
+          // instead (MessageList handles that scroll separately).
+          if (!firstUnreadMessageIdRef.current) {
             requestAnimationFrame(() => {
-              if (!cancelled && messagesContainerRef.current) {
-                messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-              }
+              requestAnimationFrame(() => {
+                if (!cancelled && messagesContainerRef.current) {
+                  messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+                }
+              });
             });
-          });
+          }
         }
       }
     };
@@ -1052,6 +1074,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
               channels={channels}
               onSelectChannel={onSelectChannel}
               highlightMessageId={highlightMessageId}
+              scrollToMessageId={firstUnreadMessageIdRef.current}
             />
             <div ref={messagesEndRef} />
           </>

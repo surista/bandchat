@@ -2,6 +2,14 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.30] - 2026-07-22
+
+### Fixed
+
+- **Clicking a channel with an unread badge now takes you to the new message.** Previously, opening a channel always landed at the bottom of the currently-loaded page (web) or restored your last scroll position from a prior visit (mobile) — neither reliably showed the actual new message.
+  - **Web** (`ChannelView.jsx`, `MessageList.jsx`): computes the first unread message (from someone else, newer than your last-read timestamp) when a channel opens, and smoothly scrolls to + briefly highlights it instead of forcing scroll-to-bottom, unless an explicit deep link (search result, thread-reply notification) is already directing scroll elsewhere.
+  - **Mobile** (`ChannelScreen.js`): the inverted message list already starts at the bottom (newest message) by default; the bug was an unconditional "restore last scroll position" effect overriding that with a stale position from a previous visit. Now skipped whenever the channel has unread messages.
+
 ## [1.07.29] - 2026-07-18
 
 ### Fixed — Preferences Sync Review Pass

@@ -704,7 +704,8 @@ function MessageList({
   workspaceId,
   channels,
   onSelectChannel,
-  highlightMessageId
+  highlightMessageId,
+  scrollToMessageId
 }) {
   const toast = useToast();
   const [editingId, setEditingId] = useState(null);
@@ -736,23 +737,31 @@ function MessageList({
     return unsub;
   }, []);
 
-  // Scroll to and highlight a specific message when highlightMessageId changes
+  // Scroll to and highlight a target message. `highlightMessageId` (an
+  // explicit deep link from search or a thread-reply notification) takes
+  // priority and shows a toast if it's not in the currently loaded page.
+  // `scrollToMessageId` (the channel's first unread message, computed by
+  // ChannelView when a channel with an unread badge is opened) is a silent
+  // fallback — same scroll+highlight, but no toast on a miss, since unlike
+  // an explicit link this isn't something the user asked to jump to.
   useEffect(() => {
-    if (!highlightMessageId || !/^[a-zA-Z0-9_-]+$/.test(highlightMessageId)) return;
+    const targetId = highlightMessageId || scrollToMessageId;
+    if (!targetId || !/^[a-zA-Z0-9_-]+$/.test(targetId)) return;
+    const isExplicitLink = !!highlightMessageId;
     // Wait for DOM to render, then scroll
     const timer = setTimeout(() => {
-      const el = document.querySelector(`[data-message-id="${highlightMessageId}"]`);
+      const el = document.querySelector(`[data-message-id="${targetId}"]`);
       if (el) {
         const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
         el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
-        setHighlightedId(highlightMessageId);
+        setHighlightedId(targetId);
         setTimeout(() => setHighlightedId(null), 2000);
-      } else {
+      } else if (isExplicitLink) {
         toast.info('Linked message is not in the current view');
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [highlightMessageId]);
+  }, [highlightMessageId, scrollToMessageId]);
 
   // Build avatar lookup from workspace members (includes BandMember fallback)
   const memberAvatarMap = useMemo(() => {

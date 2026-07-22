@@ -274,8 +274,17 @@ export default function ChannelScreen({ navigation, route }) {
     };
   }, [channel.id]);
 
-  // Restore scroll position on mount
+  // Restore scroll position on mount — but not when the channel has unread
+  // messages waiting. Jumping back to a stale scroll position instead of
+  // showing the new message is exactly the "tapping the unread badge doesn't
+  // take me to the new message" bug. Skipping the restore leaves the inverted
+  // FlatList at its natural start position (offset 0 = bottom = newest),
+  // which is what the user expects when they opened the channel for new
+  // content. `channel.unreadCount` is the value from the channel list at the
+  // moment the row was tapped, so it reflects "was there unread content when
+  // I opened this."
   useEffect(() => {
+    if (channel.unreadCount > 0) return;
     getUiString(`scrollPos:${channel.id}`).then(pos => {
       if (pos && flatListRef.current) {
         setTimeout(() => {
@@ -283,7 +292,7 @@ export default function ChannelScreen({ navigation, route }) {
         }, 100);
       }
     });
-  }, [channel.id]);
+  }, [channel.id, channel.unreadCount]);
 
   // Header: "..." menu button (hidden for DMs)
   useLayoutEffect(() => {
