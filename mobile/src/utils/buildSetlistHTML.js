@@ -9,12 +9,14 @@ import { computeSetlistDuration, formatSetlistDuration } from './setlistDuration
  * @param {Object} options - Optional configuration
  * @param {string} options.date - Date string for the header
  * @param {string} options.venueLogoUrl - URL for venue logo image
+ * @param {boolean} options.useShortNames - Use each song's shortName when set, falling back to title
  * @returns {string} HTML string
  */
 export function buildSetlistHTML(setlistName, items, options = {}) {
   const date = options.date || format(new Date(), 'EEEE, dd-MMM-yyyy');
   const venueLogoUrl = options.venueLogoUrl || null;
   const paddingSecs = typeof options.transitionPaddingSecs === 'number' ? options.transitionPaddingSecs : 15;
+  const useShortNames = options.useShortNames || false;
 
   const songItems = items.filter(i => i.type === 'SONG' || (!i.type && i.song));
   const totalSongs = songItems.length;
@@ -49,10 +51,11 @@ export function buildSetlistHTML(setlistName, items, options = {}) {
 
     songNumber++;
     const song = item.song || {};
+    const displayName = (useShortNames && song.shortName) ? song.shortName : (song.title || 'Unknown');
     rowsHtml += `
       <tr>
         <td class="num">${songNumber}</td>
-        <td class="title">${escapeHtml(song.title || 'Unknown')}</td>
+        <td class="title">${escapeHtml(displayName)}</td>
         <td class="artist">${escapeHtml(song.artist || '')}</td>
         <td class="key">${escapeHtml(song.key || '')}</td>
         <td class="bpm">${song.bpm || ''}</td>

@@ -985,7 +985,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSec
               }`}
               title="Toggle between full song titles and short names"
             >
-              {useShortNames ? 'Short Names' : 'Full Titles'}
+              {useShortNames ? 'Full' : 'Short'}
             </button>
             <div className="text-right text-sm" title={`Songs-only: ${actualLabel}${hasPadding ? ` · With ${paddingSecs}s gaps: ${paddedLabel}` : ''}`}>
               <div className="text-[var(--color-text-primary)] font-medium">

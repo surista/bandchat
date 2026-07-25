@@ -5,7 +5,7 @@
  * Supports drag-and-drop channel reordering for admins.
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -173,6 +173,49 @@ function ChannelItem({ channel, isSelected, onSelect, onLongPress, onContextMenu
  * @param {number} props.width - Sidebar width in pixels
  * @param {function} props.onResizeStart - Callback when resize handle is dragged
  */
+
+const MAJOR_SECTION_KEYS = ['channels', 'dms', 'band'];
+
+// Guards against a corrupted/partial stored order — e.g. an unknown key, a
+// missing one (a future 4th section shipping before the user's stored order
+// is updated), or a non-array value entirely. Known keys keep their stored
+// relative order; anything missing is appended at the end.
+function normalizeSectionOrder(value) {
+  if (!Array.isArray(value)) return MAJOR_SECTION_KEYS;
+  const filtered = value.filter((k) => MAJOR_SECTION_KEYS.includes(k));
+  const missing = MAJOR_SECTION_KEYS.filter((k) => !filtered.includes(k));
+  return [...filtered, ...missing];
+}
+
+/** Up/down buttons for reordering a major sidebar section (Channels/DMs/Band). */
+function SectionMoveControls({ sectionKey, sectionLabel, order, onMove }) {
+  const idx = order.indexOf(sectionKey);
+  return (
+    <span className="flex items-center">
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onMove(sectionKey, -1); }}
+        disabled={idx <= 0}
+        className="text-gray-500 hover:text-gray-200 disabled:opacity-30 disabled:cursor-default transition-colors text-xs px-1.5 py-1 min-w-[28px] min-h-[28px] flex items-center justify-center"
+        title="Move section up"
+        aria-label={`Move ${sectionLabel} section up`}
+      >
+        ▲
+      </button>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onMove(sectionKey, 1); }}
+        disabled={idx === -1 || idx >= order.length - 1}
+        className="text-gray-500 hover:text-gray-200 disabled:opacity-30 disabled:cursor-default transition-colors text-xs px-1.5 py-1 min-w-[28px] min-h-[28px] flex items-center justify-center"
+        title="Move section down"
+        aria-label={`Move ${sectionLabel} section down`}
+      >
+        ▼
+      </button>
+    </span>
+  );
+}
+
 function Sidebar({
   workspace,
   channels,
@@ -232,6 +275,13 @@ function Sidebar({
   // Per-group sort modes (ASC | DESC | CUSTOM). Synced via userPreferences;
   // the subscribe in the effect below re-hydrates when a remote patch lands.
   const [groupSorts, setGroupSorts] = useState(() => getAllGroupSorts(workspace.id));
+  // Order of the three major sidebar sections (Channels/DMs/Band). Personal
+  // preference — NOT workspace-scoped (unlike collapse/groupSorts state
+  // above), since it's how a user likes their own sidebar laid out, the
+  // same way across every workspace they're in.
+  const [sectionOrder, setSectionOrder] = useState(() =>
+    normalizeSectionOrder(userPreferences.get('sidebar.majorSectionOrder'))
+  );
   // Which group's sort-mode popover is open (groupId | null).
   const [sortMenuFor, setSortMenuFor] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -256,6 +306,31 @@ function Sidebar({
     storage.setJSON(`collapsedSections:${workspace.id}`, collapsedSections);
     userPreferences.set(`sidebar.${workspace.id}.collapse.sectionsWeb`, collapsedSections);
   }, [collapsedSections, workspace.id]);
+
+  useEffect(() => {
+    userPreferences.set('sidebar.majorSectionOrder', sectionOrder);
+  }, [sectionOrder]);
+
+  // Re-read the major section order when userPreferences updates (server
+  // load complete, or a remote patch from another tab/device). Not
+  // workspace-scoped, so this is a separate subscribe from the one below.
+  useEffect(() => {
+    const refresh = () => setSectionOrder(normalizeSectionOrder(userPreferences.get('sidebar.majorSectionOrder')));
+    refresh();
+    const unsub = userPreferences.subscribe(refresh, 'sidebar.majorSectionOrder');
+    return unsub;
+  }, []);
+
+  const moveSectionOrder = useCallback((key, direction) => {
+    setSectionOrder((prev) => {
+      const idx = prev.indexOf(key);
+      const nextIdx = idx + direction;
+      if (idx === -1 || nextIdx < 0 || nextIdx >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[nextIdx]] = [next[nextIdx], next[idx]];
+      return next;
+    });
+  }, []);
 
   // Re-read sort modes + collapse state when userPreferences updates for
   // THIS workspace's sidebar branch (server load complete or remote patch
@@ -821,6 +896,10 @@ function Sidebar({
           </>
         )}
 
+        {(() => {
+        const sectionBlocks = {
+        channels: (
+        <div key="channels">
         <div className="px-4 mb-2 flex items-center justify-between">
           <button
             onClick={() => toggleSectionCollapse('channels')}
@@ -834,28 +913,31 @@ function Sidebar({
               CHANNELS
             </span>
           </button>
-          {!collapsedSections.channels && (
-            <div className="flex gap-1">
-              {isAdmin && (
+          <div className="flex items-center gap-1">
+            <SectionMoveControls sectionKey="channels" sectionLabel="Channels" order={sectionOrder} onMove={moveSectionOrder} />
+            {!collapsedSections.channels && (
+              <div className="flex gap-1">
+                {isAdmin && (
+                  <button
+                    onClick={() => setShowCreateGroup(true)}
+                    className="text-gray-400 hover:text-white transition-colors text-sm px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                    title="Create section"
+                    aria-label="Create section"
+                  >
+                    📁
+                  </button>
+                )}
                 <button
-                  onClick={() => setShowCreateGroup(true)}
-                  className="text-gray-400 hover:text-white transition-colors text-sm px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
-                  title="Create section"
-                  aria-label="Create section"
+                  onClick={() => setShowCreateChannel(true)}
+                  className="text-gray-400 hover:text-white transition-colors text-lg px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                  title="Create channel"
+                  aria-label="Create channel"
                 >
-                  📁
+                  +
                 </button>
-              )}
-              <button
-                onClick={() => setShowCreateChannel(true)}
-                className="text-gray-400 hover:text-white transition-colors text-lg px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
-                title="Create channel"
-                aria-label="Create channel"
-              >
-                +
-              </button>
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Channel Groups */}
@@ -996,8 +1078,11 @@ function Sidebar({
             )}
           </DndContext>
         )}
+        </div>
+        ),
+        dms: (
+        <div key="dms">
 
-        {/* Direct Messages Section */}
         <div className="mt-6 px-4 mb-2 flex items-center justify-between">
           <button
             onClick={() => toggleSectionCollapse('dms')}
@@ -1011,16 +1096,19 @@ function Sidebar({
               DIRECT MESSAGES
             </span>
           </button>
-          {!collapsedSections.dms && (
-            <button
-              onClick={() => setShowNewMessage(true)}
-              className="text-gray-400 hover:text-white transition-colors text-lg px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
-              title="New message"
-              aria-label="New message"
-            >
-              +
-            </button>
-          )}
+          <div className="flex items-center gap-1">
+            <SectionMoveControls sectionKey="dms" sectionLabel="Direct Messages" order={sectionOrder} onMove={moveSectionOrder} />
+            {!collapsedSections.dms && (
+              <button
+                onClick={() => setShowNewMessage(true)}
+                className="text-gray-400 hover:text-white transition-colors text-lg px-2 py-1 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                title="New message"
+                aria-label="New message"
+              >
+                +
+              </button>
+            )}
+          </div>
         </div>
 
         {!collapsedSections.dms && (
@@ -1067,9 +1155,12 @@ function Sidebar({
             )}
           </div>
         )}
+        </div>
+        ),
+        band: (
+        <div key="band">
 
-        {/* Band Section */}
-        <div className="mt-6 px-4 mb-2">
+        <div className="mt-6 px-4 mb-2 flex items-center justify-between">
           <button
             onClick={() => toggleSectionCollapse('band')}
             className="flex items-center gap-1 text-gray-400 hover:text-white transition-colors"
@@ -1082,6 +1173,7 @@ function Sidebar({
               BAND
             </span>
           </button>
+          <SectionMoveControls sectionKey="band" sectionLabel="Band" order={sectionOrder} onMove={moveSectionOrder} />
         </div>
         {!collapsedSections.band && (
           <div className="ml-2">
@@ -1172,6 +1264,11 @@ function Sidebar({
             ))}
           </div>
         )}
+        </div>
+        ),
+        };
+        return sectionOrder.map((key) => sectionBlocks[key]);
+        })()}
 
       </div>
 

@@ -32,8 +32,23 @@ class ApiService {
   constructor() {
     this.accessToken = null;
     // Primary: refresh token in httpOnly cookie (set by server).
-    // Fallback: also keep in memory for cross-origin deployments where cookies may be blocked.
+    // Fallback: refresh token in sessionStorage, sent in the request body.
+    // Needed because client (Vercel) and server (Railway) are on different
+    // top-level domains, making the cookie a cross-site/third-party cookie —
+    // browsers (Safari ITP in particular, increasingly Chrome/Firefox too)
+    // routinely block or purge those even with SameSite=None;Secure set
+    // correctly server-side. sessionStorage (not localStorage) so the token
+    // still doesn't outlive the tab/window — it just needs to survive a
+    // same-tab reload, which is the actual bug this fixes: without it, a
+    // page refresh has nothing to fall back on when the cookie doesn't make
+    // it, forcing a full re-login every time.
     this._refreshToken = null;
+    try {
+      this._refreshToken = sessionStorage.getItem('refreshToken') || null;
+    } catch {
+      // Safari private mode etc. can throw on storage access — fall back to
+      // cookie-only behavior rather than crash.
+    }
     // Clean up legacy tokens from localStorage (one-time migration).
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
@@ -57,7 +72,15 @@ class ApiService {
 
   setTokens(accessToken, refreshToken) {
     this.accessToken = accessToken;
-    if (refreshToken) this._refreshToken = refreshToken;
+    if (refreshToken) {
+      this._refreshToken = refreshToken;
+      try {
+        sessionStorage.setItem('refreshToken', refreshToken);
+      } catch {
+        // Storage access can throw (private mode, quota) — the in-memory
+        // copy still works for the rest of this tab's lifetime.
+      }
+    }
     this._hasSession = true;
   }
 
@@ -66,6 +89,9 @@ class ApiService {
     this._refreshToken = null;
     this._hasSession = false;
     this._cache.clear();
+    try {
+      sessionStorage.removeItem('refreshToken');
+    } catch {}
   }
 
   async request(endpoint, options = {}) {

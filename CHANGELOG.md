@@ -2,6 +2,18 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.31] - 2026-07-25
+
+### Fixed
+
+- **Web session no longer forces a password re-login on every refresh.** Client and server are on different top-level domains, so the httpOnly refresh-token cookie is cross-site and gets blocked/purged by browsers (Safari ITP in particular). The client already had a body-based fallback for exactly this case, but it only ever lived in memory, so a page reload wiped it out before it could help. Now persisted to `sessionStorage` (survives a reload, clears on tab close) so the fallback actually works. `client/src/services/api.js`.
+- **Setlist short/full song name toggle now shows the destination, not the current state.** The web toggle read "Short Names" while already in short mode and "Full Titles" while already in full mode — backwards from what it should say (what pressing it will do). Fixed to read "Full" in short mode and "Short" in full mode. `client/src/components/band/SetlistBuilder.jsx`.
+
+### Added
+
+- **Major sidebar sections (Channels / Direct Messages / Band) can now be reordered.** ▲/▼ controls in each section header, always visible regardless of collapse state. Synced as a personal preference (not workspace-scoped) via the existing user-preferences system, so it's the same across every workspace. Web only for now. `client/src/components/channels/Sidebar.jsx`.
+- **Setlist short/full song name toggle added to the native mobile app.** Previously web-only. Mobile's `SetlistDetailScreen.js` now has the same header toggle, persisted on the Setlist itself (shared across everyone viewing it) so it's consistent with web. Also wired into mobile's PDF export, which previously always used full titles regardless of the on-screen setting — matching web's export behavior.
+
 ## [1.07.30] - 2026-07-22
 
 ### Fixed

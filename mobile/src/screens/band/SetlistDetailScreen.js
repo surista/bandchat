@@ -118,7 +118,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
           console.error('Failed to fetch venue logo for setlist print:', e);
         }
       }
-      const html = buildSetlistHTML(setlist?.name || 'Setlist', setlist?.songs || [], { venueLogoUrl, transitionPaddingSecs });
+      const html = buildSetlistHTML(setlist?.name || 'Setlist', setlist?.songs || [], { venueLogoUrl, transitionPaddingSecs, useShortNames: setlist?.useShortNames || false });
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Export Setlist' });
     } catch (err) {
@@ -127,6 +127,25 @@ export default function SetlistDetailScreen({ navigation, route }) {
       }
     }
   }, [setlist]);
+
+  // Short/full song name toggle. Persisted on the Setlist itself (shared
+  // across everyone viewing it, same as web's SetlistBuilder) rather than as
+  // separate local state, so there's nothing to keep in sync — just derive
+  // from setlist.useShortNames and update it via a normal optimistic write.
+  const toggleShortNames = useCallback(async () => {
+    const newValue = !setlist?.useShortNames;
+    setSetlist(prev => (prev ? { ...prev, useShortNames: newValue } : prev));
+    try {
+      await api.updateSetlist(setlistId, { useShortNames: newValue });
+    } catch (err) {
+      console.error('Failed to save short-names preference:', err);
+    }
+  }, [setlist?.useShortNames, setlistId]);
+
+  const getSongDisplayName = useCallback((song) => {
+    if (setlist?.useShortNames && song?.shortName) return song.shortName;
+    return song?.title || '';
+  }, [setlist?.useShortNames]);
 
   // Header buttons
   useLayoutEffect(() => {
@@ -142,6 +161,16 @@ export default function SetlistDetailScreen({ navigation, route }) {
             <Ionicons name="download-outline" size={22} color={colors.primary} />
           </TouchableOpacity>
           <TouchableOpacity
+            onPress={toggleShortNames}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel={setlist?.useShortNames ? 'Switch to full song titles' : 'Switch to short song names'}
+          >
+            <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }} maxFontSizeMultiplier={1.5}>
+              {setlist?.useShortNames ? 'Full' : 'Short'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={() => setEditing(prev => !prev)}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
@@ -154,7 +183,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
         </View>
       ),
     });
-  }, [navigation, editing, colors.primary, handleExportPDF]);
+  }, [navigation, editing, colors.primary, handleExportPDF, toggleShortNames, setlist?.useShortNames]);
 
   const items = setlist?.songs || [];
   const songItems = items.filter(s => s.type === 'SONG' || (!s.type && s.song));
@@ -407,7 +436,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
         <Text style={[styles.songNumber, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>{songNumber}</Text>
         <View style={styles.itemContent}>
           <Text style={[styles.songTitle, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.6}>
-            {item.song?.title || 'Unknown'}
+            {item.song ? getSongDisplayName(item.song) : 'Unknown'}
           </Text>
           {item.song?.artist ? (
             <Text style={[styles.songArtist, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={1.5}>
@@ -445,7 +474,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
         )}
       </>
     );
-  }, [colors, editing, items, removeItem]);
+  }, [colors, editing, items, removeItem, getSongDisplayName]);
 
   const renderItem = useCallback(({ item, index }) => {
     return renderSetlistItem({ item, index });
