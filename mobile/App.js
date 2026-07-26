@@ -1,8 +1,9 @@
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useEffect, useRef } from 'react';
-import { AppState, Linking, Text, TextInput, Platform, UIManager, Dimensions } from 'react-native';
+import { AppState, Linking, Text, TextInput, Platform, UIManager } from 'react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
+import { isLargeScreenDevice } from './src/utils/isLargeScreenDevice';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -16,19 +17,14 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 //       screens regardless of what we set, and Google Play flags it as a
 //       recommended action.
 //
-// Heuristic: shortest-side ≥ 600dp (Android's sw600dp convention — the
-// same threshold Google uses to define "large screen") OR Platform.isPad.
-// Shortest side is orientation-invariant, so a phone briefly launched in
-// landscape (Android only — possible if the user rotates before opening
-// the app) isn't mis-classified as a tablet.
+// Screens that want rotation on phones too (e.g. the full-screen image
+// viewer, ImageViewer.js) temporarily lift this lock while they're open and
+// restore it on close — see isLargeScreenDevice.js for the shared heuristic.
 //
 // Fire-and-forget — lockAsync resolves quickly and any failure (e.g. no
 // permission on a managed environment) is logged but never blocks startup.
 (() => {
-  const { width, height } = Dimensions.get('window');
-  const shortestSide = Math.min(width, height);
-  const isLargeScreen = shortestSide >= 600 || Platform.isPad === true;
-  if (isLargeScreen) return;
+  if (isLargeScreenDevice()) return;
   ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch((err) => {
     if (__DEV__) console.warn('Failed to lock orientation:', err?.message);
   });

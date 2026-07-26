@@ -1,4 +1,4 @@
-import { memo, useState, useCallback, useMemo } from 'react';
+import { memo, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -7,18 +7,69 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Modal,
+  Image,
+  useWindowDimensions,
 } from 'react-native';
-import ImageView from 'react-native-image-viewing';
+import { Gallery, useImageResolution, fitContainer } from 'react-native-zoom-toolkit';
 import * as MediaLibrary from 'expo-media-library';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { File, Directory, Paths } from 'expo-file-system/next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../context/ToastContext';
+import { isLargeScreenDevice } from '../utils/isLargeScreenDevice';
+
+// All orientations so the Modal itself is allowed to rotate — without this,
+// RN's Modal defaults to whatever orientation it was presented in and won't
+// follow the device (this is on top of, and separate from, the app-wide
+// portrait lock lifted below).
+const SUPPORTED_ORIENTATIONS = ['portrait', 'portrait-upside-down', 'landscape', 'landscape-left', 'landscape-right'];
+
+/**
+ * One gallery slide. Sized reactively via useWindowDimensions (not a
+ * one-time Dimensions.get() snapshot) so it re-fits when the device
+ * rotates — the exact bug we replaced react-native-image-viewing to fix.
+ */
+function GalleryImageItem({ uri }) {
+  const { width, height } = useWindowDimensions();
+  const { resolution } = useImageResolution({ uri });
+
+  const size = useMemo(() => {
+    if (!resolution) return { width, height };
+    return fitContainer(resolution.width / resolution.height, { width, height });
+  }, [resolution, width, height]);
+
+  return (
+    <View style={styles.slide}>
+      {!resolution && (
+        <ActivityIndicator size="small" color="#ffffff" style={StyleSheet.absoluteFill} />
+      )}
+      <Image source={{ uri }} style={size} resizeMode="contain" />
+    </View>
+  );
+}
 
 function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
   const [saving, setSaving] = useState(false);
+  const [currentIdx, setCurrentIdx] = useState(initialIndex);
   const insets = useSafeAreaInsets();
   const toast = useToast();
+  const galleryRef = useRef(null);
+
+  // Phones are locked to portrait app-wide (mobile/App.js) so ordinary
+  // screens don't have to handle rotated layouts. The full-screen image
+  // viewer is the one place that should still rotate — like Photos/
+  // Instagram, so a landscape photo can actually fill the screen. Lift the
+  // lock only while visible, and always restore portrait on close/unmount
+  // (tablets are never locked in the first place, so this is a no-op there).
+  useEffect(() => {
+    if (!visible || isLargeScreenDevice()) return;
+    ScreenOrientation.unlockAsync().catch(() => {});
+    return () => {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+    };
+  }, [visible]);
 
   // Support both single image and gallery mode
   const imageList = useMemo(() => {
@@ -31,7 +82,19 @@ function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
     return [];
   }, [images, imageUrl]);
 
-  const handleSave = useCallback(async (currentIndex) => {
+  // The Gallery component only reads initialIndex on its own first mount —
+  // it doesn't reactively re-scroll on prop changes. Since this component
+  // stays mounted across opens in gallery-mode call sites (GigGalleryScreen,
+  // ThreadScreen) as long as `images` itself doesn't go empty, opening a
+  // different starting photo needs an imperative jump via the ref, not just
+  // a new prop value.
+  useEffect(() => {
+    if (!visible) return;
+    setCurrentIdx(initialIndex);
+    galleryRef.current?.setIndex(initialIndex);
+  }, [initialIndex, visible]);
+
+  const handleSave = useCallback(async (index) => {
     try {
       setSaving(true);
       const { status } = await MediaLibrary.requestPermissionsAsync();
@@ -46,7 +109,7 @@ function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
         );
         return;
       }
-      const url = imageList[currentIndex]?.uri;
+      const url = imageList[index]?.uri;
       if (!url) return;
       let filename = url.split('/').pop()?.split('?')[0] || '';
       filename = filename.replace(/[^a-zA-Z0-9._-]/g, '');
@@ -63,61 +126,83 @@ function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
     }
   }, [imageList, toast]);
 
-  const [currentIdx, setCurrentIdx] = useState(initialIndex);
-
-  const HeaderComponent = useCallback(({ imageIndex }) => (
-    <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-      <TouchableOpacity
-        style={styles.headerButton}
-        onPress={onClose}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityLabel="Close image viewer"
-      >
-        <Ionicons name="close" size={22} color="#ffffff" />
-      </TouchableOpacity>
-      {imageList.length > 1 && (
-        <Text style={styles.counter}>{imageIndex + 1} / {imageList.length}</Text>
-      )}
-      <TouchableOpacity
-        style={styles.headerButton}
-        onPress={() => handleSave(imageIndex)}
-        disabled={saving}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityLabel="Save image to photo library"
-      >
-        {saving ? (
-          <ActivityIndicator size="small" color="#ffffff" />
-        ) : (
-          <Ionicons name="download-outline" size={22} color="#ffffff" />
-        )}
-      </TouchableOpacity>
-    </View>
-  ), [insets.top, saving, imageList.length, handleSave, onClose]);
+  const renderItem = useCallback((item) => <GalleryImageItem uri={item.uri} />, []);
+  const keyExtractor = useCallback((item, index) => `${item.uri}-${index}`, []);
+  const onSwipe = useCallback((direction) => {
+    if (direction === 'down') onClose?.();
+  }, [onClose]);
 
   if (imageList.length === 0) return null;
 
   return (
-    <ImageView
-      images={imageList}
-      imageIndex={initialIndex}
+    <Modal
+      transparent
       visible={visible}
-      onRequestClose={onClose}
-      onImageIndexChange={setCurrentIdx}
-      swipeToCloseEnabled
-      doubleTapToZoomEnabled
       presentationStyle="overFullScreen"
-      HeaderComponent={HeaderComponent}
-      backgroundColor="rgba(0,0,0,0.95)"
-    />
+      animationType="fade"
+      supportedOrientations={SUPPORTED_ORIENTATIONS}
+      onRequestClose={onClose}
+    >
+      <View style={styles.container}>
+        <Gallery
+          ref={galleryRef}
+          data={imageList}
+          initialIndex={initialIndex}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          onIndexChange={setCurrentIdx}
+          onSwipe={onSwipe}
+        />
+        <View style={[styles.header, { paddingTop: insets.top + 8 }]} pointerEvents="box-none">
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={onClose}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Close image viewer"
+          >
+            <Ionicons name="close" size={22} color="#ffffff" />
+          </TouchableOpacity>
+          {imageList.length > 1 && (
+            <Text style={styles.counter}>{currentIdx + 1} / {imageList.length}</Text>
+          )}
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => handleSave(currentIdx)}
+            disabled={saving}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Save image to photo library"
+          >
+            {saving ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <Ionicons name="download-outline" size={22} color="#ffffff" />
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
 export default memo(ImageViewer);
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+  },
+  slide: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

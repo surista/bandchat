@@ -2,6 +2,12 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.32] - 2026-07-26
+
+### Fixed
+
+- **Mobile full-screen image viewer now responds to device rotation.** Two separate bugs were blocking this: (1) the app-wide portrait lock (intentional, for ordinary screens) now lifts specifically while the image viewer is open and restores on close; (2) `react-native-image-viewing` (the previous library) had a long-standing, unfixed upstream bug where it captured screen dimensions once at load and never updated them, so images wouldn't resize even with rotation unlocked. Replaced it with `react-native-zoom-toolkit`, which sizes each image reactively via `useWindowDimensions()`. Kept full feature parity (save-to-library, close button, image counter, gallery mode, pinch/double-tap zoom, swipe-down-to-dismiss) and fixed a related bug where reopening the gallery at a different starting photo wouldn't jump to the right slide. `mobile/src/components/ImageViewer.js`, `mobile/App.js`, new `mobile/src/utils/isLargeScreenDevice.js`.
+
 ## [1.07.31] - 2026-07-25
 
 ### Fixed
