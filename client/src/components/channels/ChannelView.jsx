@@ -151,9 +151,13 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
           ) || null;
         }
         firstUnreadMessageIdRef.current = unreadTarget?.id || null;
-        if (!firstUnreadMessageIdRef.current) {
-          setShouldScrollToBottom(true);
-        }
+        // Always establish "bottom" (most recent) as the baseline position so
+        // the channel can never open stranded at the top. When there's a first
+        // unread message, MessageList scrolls up to it on top of this baseline;
+        // if that scroll can't locate the element for any reason, we're left at
+        // the most recent message — exactly "first unread, otherwise most
+        // recent."
+        setShouldScrollToBottom(true);
 
         // Mark channel as read BEFORE joining socket room so any new messages
         // that arrive after join will correctly be "after" the read timestamp
@@ -173,18 +177,17 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       } finally {
         if (!cancelled) {
           setLoading(false);
-          // Fallback scroll: ensure we reach the bottom after React renders
-          // messages — skipped when we're jumping to an unread message
-          // instead (MessageList handles that scroll separately).
-          if (!firstUnreadMessageIdRef.current) {
+          // Baseline bottom scroll after React paints the messages. When
+          // there's a first-unread target, MessageList's scroll-to effect runs
+          // afterward and moves up to it; if it can't find the element we stay
+          // here at the most recent message.
+          requestAnimationFrame(() => {
             requestAnimationFrame(() => {
-              requestAnimationFrame(() => {
-                if (!cancelled && messagesContainerRef.current) {
-                  messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-                }
-              });
+              if (!cancelled && messagesContainerRef.current) {
+                messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+              }
             });
-          }
+          });
         }
       }
     };

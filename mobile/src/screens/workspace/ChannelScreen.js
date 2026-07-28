@@ -15,7 +15,6 @@ import {
   StyleSheet,
   AppState,
 } from 'react-native';
-import { getUiString, setUiString } from '../../services/storage';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -177,6 +176,10 @@ export default function ChannelScreen({ navigation, route }) {
   const userIdRef = useRef(user?.id);
   const flatListRef = useRef(null);
   const scrollOffsetRef = useRef(0);
+  // Re-armed by the load effect on each channel open; the initial-scroll
+  // effect below flips it true once it has positioned the list, so streaming
+  // socket messages don't re-trigger a jump.
+  const initialUnreadScrollDone = useRef(false);
   const loadingMoreRef = useRef(false);
   const blockedIdsRef = useRef(new Set());
   const messagesRef = useRef(messages);
@@ -265,34 +268,11 @@ export default function ChannelScreen({ navigation, route }) {
     return () => notificationService.clearActiveChannel();
   }, [channel.id]);
 
-  // Save scroll position on unmount
-  useEffect(() => {
-    return () => {
-      if (scrollOffsetRef.current > 0) {
-        setUiString(`scrollPos:${channel.id}`, String(scrollOffsetRef.current));
-      }
-    };
-  }, [channel.id]);
-
-  // Restore scroll position on mount — but not when the channel has unread
-  // messages waiting. Jumping back to a stale scroll position instead of
-  // showing the new message is exactly the "tapping the unread badge doesn't
-  // take me to the new message" bug. Skipping the restore leaves the inverted
-  // FlatList at its natural start position (offset 0 = bottom = newest),
-  // which is what the user expects when they opened the channel for new
-  // content. `channel.unreadCount` is the value from the channel list at the
-  // moment the row was tapped, so it reflects "was there unread content when
-  // I opened this."
-  useEffect(() => {
-    if (channel.unreadCount > 0) return;
-    getUiString(`scrollPos:${channel.id}`).then(pos => {
-      if (pos && flatListRef.current) {
-        setTimeout(() => {
-          flatListRef.current.scrollToOffset({ offset: parseFloat(pos), animated: false });
-        }, 100);
-      }
-    });
-  }, [channel.id, channel.unreadCount]);
+  // NOTE: We intentionally do NOT persist/restore a per-channel scroll
+  // position. Opening a channel should always land on either the first unread
+  // message or the most recent one (see the initial-scroll effect below the
+  // message-derived memos) — never a stale mid-history position from a
+  // previous visit.
 
   // Header: "..." menu button (hidden for DMs)
   useLayoutEffect(() => {
@@ -356,6 +336,9 @@ export default function ChannelScreen({ navigation, route }) {
 
     // Capture lastRead before marking channel as read (for "New messages" divider)
     setLastReadAt(channel.lastRead || null);
+    // Re-arm the one-shot initial scroll so this channel open positions the
+    // list fresh (first unread, else most recent).
+    initialUnreadScrollDone.current = false;
 
     const init = async () => {
       setLoading(true);
@@ -844,6 +827,49 @@ export default function ChannelScreen({ navigation, route }) {
     });
   }, [messages, user?.id, lastOwnMessageId, seenByCount, firstUnreadId]);
 
+  // Initial positioning for a freshly-opened channel: if there are unread
+  // messages, jump to the first one (which carries the "New messages"
+  // divider); otherwise the inverted list already sits at offset 0 = the most
+  // recent message, so we leave it. Runs once per channel open — the ref is
+  // re-armed in the load effect and set here after we position, so socket
+  // messages streaming in afterward don't yank the view.
+  useEffect(() => {
+    if (initialUnreadScrollDone.current) return;
+    if (loading || invertedMessages.length === 0) return;
+    if (!firstUnreadId) {
+      initialUnreadScrollDone.current = true; // caught up — stay at newest
+      return;
+    }
+    const index = invertedMessages.findIndex(m => m.id === firstUnreadId);
+    if (index < 0) {
+      initialUnreadScrollDone.current = true;
+      return;
+    }
+    initialUnreadScrollDone.current = true;
+    // Defer a frame so the list has items laid out before we jump.
+    requestAnimationFrame(() => {
+      try {
+        flatListRef.current?.scrollToIndex({ index, animated: false, viewPosition: 0.5 });
+      } catch {
+        // onScrollToIndexFailed (below) handles the not-yet-measured case.
+      }
+    });
+  }, [loading, invertedMessages, firstUnreadId]);
+
+  // scrollToIndex can fail when the target row hasn't been measured yet
+  // (variable-height rows, no getItemLayout). Approximate with an offset
+  // scroll to bring it into range, then retry precisely. Worst case we're left
+  // near the first unread — never at a stale mid-history position.
+  const onScrollToIndexFailed = useCallback((info) => {
+    const offset = (info.averageItemLength || 80) * info.index;
+    flatListRef.current?.scrollToOffset({ offset, animated: false });
+    setTimeout(() => {
+      try {
+        flatListRef.current?.scrollToIndex({ index: info.index, animated: false, viewPosition: 0.5 });
+      } catch { /* leave at the approximate offset */ }
+    }, 150);
+  }, []);
+
   const renderItem = useCallback(({ item }) => (
     <MessageRow
       item={item}
@@ -1030,6 +1056,7 @@ export default function ChannelScreen({ navigation, route }) {
         inverted
         onEndReached={loadMore}
         onEndReachedThreshold={0.3}
+        onScrollToIndexFailed={onScrollToIndexFailed}
         onScroll={(e) => { scrollOffsetRef.current = e.nativeEvent.contentOffset.y; }}
         scrollEventThrottle={100}
         ListFooterComponent={renderFooter}

@@ -2,6 +2,14 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.33] - 2026-07-28
+
+### Fixed
+
+- **Opening a channel now reliably lands on the first unread message, or the most recent one — never the middle of old history.**
+  - **Mobile** (`ChannelScreen.js`): removed the per-channel scroll-position save/restore, which was dropping you back into a stale mid-history position when a channel had no unreads. Added a one-shot first-unread jump on channel open (falls through to the newest message when caught up), with an `onScrollToIndexFailed` fallback so a not-yet-measured row degrades to an approximate position near the unread rather than a stale one.
+  - **Web** (`ChannelView.jsx`): "most recent" is now the guaranteed baseline position, so a channel can never open stranded at the top. The first-unread scroll runs on top of that baseline; if it can't locate the target element, the view stays at the newest message.
+
 ## [1.07.32] - 2026-07-26
 
 ### Fixed
