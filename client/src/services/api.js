@@ -734,7 +734,13 @@ class ApiService {
     return this.request(`/messages/workspace/${workspaceId}/saved`);
   }
 
-  // File uploads
+  // File uploads.
+  //
+  // The server requires a workspaceId so the upload can be billed to that
+  // workspace's storage quota. Omitting it marks the upload as `scope=avatar`
+  // — the one case with no workspace to bill (a user's own profile picture).
+  // The server restricts that scope to images under 10MB, so it can't be used
+  // as a general-purpose bypass.
   async uploadFile(file, workspaceId) {
     if (this._hasSession && this.isTokenExpiringSoon()) {
       if (!this._refreshPromise) {
@@ -746,6 +752,7 @@ class ApiService {
     const formData = new FormData();
     formData.append('file', file);
     if (workspaceId) formData.append('workspaceId', workspaceId);
+    else formData.append('scope', 'avatar');
 
     const url = `${API_URL}/uploads`;
     const headers = {};

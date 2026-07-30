@@ -2,6 +2,26 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.34] - 2026-07-31
+
+### Security
+
+- **Uploads must now name the workspace they're billed to.** `workspaceId` was optional on `POST /api/uploads` and `/api/uploads/multiple` — omitting it skipped both the workspace-membership check and the storage-quota reservation, so any authenticated user could push unmetered data into R2 (10 uploads/min × 500MB). Both endpoints now require a valid, membership-checked `workspaceId`. The one genuine exception — a user's own profile avatar, which belongs to no workspace — goes through an explicit `scope=avatar` that the server restricts to images under 10MB so it can't serve as a general-purpose bypass. `server/src/routes/uploads.js`, `client/src/services/api.js`, `mobile/src/services/api.js`.
+- **Patched four vulnerable dependencies on attacker-reachable paths.**
+  - `sharp` 0.34.5 → 0.35.3 — inherited libvips CVEs (CVE-2026-33327/33328/35590/35591). Every uploaded image is decoded by `sharp` in `generateThumbnail()`, so this ran on attacker-controlled bytes.
+  - `file-type` 16.5.4 → 22.0.1 — infinite loop in the ASF parser on malformed input (GHSA-5v7r-6r5c-r473). Reachable because magic-byte detection runs over raw bytes *before* the MIME allowlist is applied, so a crafted file could hang the request regardless of its declared type. Migrated the one call site to the v22 named export (`fileTypeFromBuffer`); verified every allowlisted format still resolves to the same MIME string.
+  - `multer` 2.0.2 → 2.2.0 — several upload-path DoS advisories.
+  - `adm-zip` 0.5.18 → 0.6.0 — crafted ZIP triggers a 4GB allocation, reached via the Slack-import ZIP upload.
+
+  This also cleared `engine.io`, `ws`, `socket.io-parser`, `undici`, and `path-to-regexp` from the production tree. Remaining production advisories are transitive under `google-auth-library` (`gaxios`/`glob`/`minimatch`/`rimraf`/`brace-expansion`) and are not reachable from user input.
+
+### Fixed
+
+- **Workspace avatar uploads are now billed to the workspace.** Mobile's workspace-avatar picker had `workspaceId` in scope but never passed it, so those uploads landed unattributed. `mobile/src/screens/settings/SettingsScreen.js`.
+- **A user's profile picture is no longer charged to whichever workspace happens to be open.** Web's profile-avatar upload was passing the current `workspace.id`; it now uses the avatar scope. `client/src/components/channels/SettingsModal.jsx`.
+- **A partly-failed multi-file upload no longer leaves orphans behind.** `Promise.all` meant one rejection credited the full reserved byte count back while the files that *had* uploaded stayed in R2 — drifting the workspace's storage counter below reality. Now uses `Promise.allSettled` and deletes the successful uploads (and their thumbnails) before releasing the reservation. `server/src/routes/uploads.js`.
+- Corrected the multer size-limit error message, which advertised 50MB for audio and video when the actual caps are 500MB.
+
 ## [1.07.33] - 2026-07-28
 
 ### Fixed

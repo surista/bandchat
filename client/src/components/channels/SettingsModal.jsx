@@ -221,7 +221,10 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
     setAvatarUploading(true);
     setSettingsError('');
     try {
-      const result = await api.uploadFile(file, workspace.id);
+      // This is the signed-in user's own profile picture, not a workspace
+      // asset — upload it under the avatar scope so it isn't billed to
+      // whichever workspace happens to be open.
+      const result = await api.uploadFile(file);
       setEditAvatarUrl(result.url);
     } catch (err) {
       setSettingsError(err.message || 'Failed to upload avatar');

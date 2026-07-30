@@ -244,7 +244,9 @@ export default function SettingsScreen({ navigation, route }) {
     try {
       const filename = asset.fileName || 'workspace-avatar.jpg';
       const mimeType = asset.mimeType || 'image/jpeg';
-      const uploaded = await api.uploadFile(asset.uri, filename, mimeType);
+      // A workspace avatar belongs to the workspace — bill its quota rather
+      // than slipping through as an unattributed personal avatar.
+      const uploaded = await api.uploadFile(asset.uri, filename, mimeType, workspaceId);
       await api.updateWorkspace(workspaceId, { avatarUrl: uploaded.url });
       setWsAvatarUrl(uploaded.url);
       successNotification();

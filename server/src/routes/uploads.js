@@ -1,10 +1,10 @@
 import express from 'express';
 import multer from 'multer';
-import fileType from 'file-type';
+import { fileTypeFromBuffer } from 'file-type';
 import sharp from 'sharp';
 import { rateLimit } from 'express-rate-limit';
 import { authenticate } from '../middleware/auth.js';
-import { uploadFile } from '../lib/storage.js';
+import { uploadFile, deleteFile, isR2Url } from '../lib/storage.js';
 import prisma from '../lib/prisma.js';
 import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
 import { isValidUUID } from '../lib/validators.js';
@@ -71,6 +71,10 @@ const MAX_IMAGE_SIZE = 15 * 1024 * 1024; // 15MB
 const MAX_AUDIO_SIZE = 500 * 1024 * 1024; // 500MB
 const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500MB
 const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024; // 10MB
+// Avatar uploads are the one case with no workspace to bill (a user's own
+// profile picture isn't owned by any band), so they get a tighter cap of
+// their own instead of riding the general image limit.
+const MAX_AVATAR_SIZE = 10 * 1024 * 1024; // 10MB
 
 // Use memory storage
 const memStorage = multer.memoryStorage();
@@ -145,7 +149,7 @@ const validateFileType = async (buffer, originalFilename) => {
   }
 
   // Standard file-type detection for other formats
-  const detected = await fileType.fromBuffer(buffer);
+  const detected = await fileTypeFromBuffer(buffer);
 
   if (!detected) {
     return { valid: false, detectedType: null, fileCategory: null };
@@ -174,6 +178,46 @@ const upload = multer({
     fileSize: MAX_VIDEO_SIZE
   }
 });
+
+/**
+ * Resolve which workspace an upload should be billed to, enforcing that the
+ * caller is actually a member of it.
+ *
+ * Every upload must name a workspace. The single exception is a user's own
+ * profile avatar (`scope=avatar`), which belongs to no band and therefore has
+ * nothing to bill — those are capped hard at MAX_AVATAR_SIZE and restricted to
+ * images so the exception can't be used as a general-purpose free upload lane.
+ *
+ * Without this, omitting `workspaceId` skipped the membership check AND the
+ * quota reservation entirely, so any authenticated user could push unmetered
+ * data into R2.
+ *
+ * @returns {{ error: string, status: number } | { scope: 'avatar' } | { scope: 'workspace', workspaceId: string }}
+ */
+const resolveUploadTarget = async (req, { allowAvatar = false } = {}) => {
+  const workspaceId = req.body.workspaceId || req.query.workspaceId;
+
+  if (!workspaceId) {
+    const scope = req.body.scope || req.query.scope;
+    if (allowAvatar && scope === 'avatar') {
+      return { scope: 'avatar' };
+    }
+    return { error: 'workspaceId is required', status: 400 };
+  }
+
+  if (!isValidUUID(workspaceId)) {
+    return { error: 'Invalid workspace ID', status: 400 };
+  }
+
+  const membership = await prisma.workspaceMember.findUnique({
+    where: { userId_workspaceId: { userId: req.user.id, workspaceId } }
+  });
+  if (!membership) {
+    return { error: 'Not a workspace member', status: 403 };
+  }
+
+  return { scope: 'workspace', workspaceId };
+};
 
 /**
  * Atomically check quota and reserve storage space.
@@ -254,27 +298,31 @@ router.post('/', authenticate, uploadLimiter, upload.single('file'), async (req,
       });
     }
 
+    // Resolve + authorize the billing target before doing any work.
+    const target = await resolveUploadTarget(req, { allowAvatar: true });
+    if (target.error) {
+      return res.status(target.status).json({ error: target.error });
+    }
+    const isAvatar = target.scope === 'avatar';
+
+    if (isAvatar && fileCategory !== 'IMAGE') {
+      return res.status(400).json({ error: 'Avatar uploads must be an image.' });
+    }
+
     // Validate file size based on type
-    const maxSize = fileCategory === 'VIDEO' ? MAX_VIDEO_SIZE : fileCategory === 'AUDIO' ? MAX_AUDIO_SIZE : fileCategory === 'DOCUMENT' ? MAX_DOCUMENT_SIZE : MAX_IMAGE_SIZE;
+    const maxSize = isAvatar
+      ? MAX_AVATAR_SIZE
+      : fileCategory === 'VIDEO' ? MAX_VIDEO_SIZE : fileCategory === 'AUDIO' ? MAX_AUDIO_SIZE : fileCategory === 'DOCUMENT' ? MAX_DOCUMENT_SIZE : MAX_IMAGE_SIZE;
     if (req.file.size > maxSize) {
       const limitMB = maxSize / (1024 * 1024);
       return res.status(400).json({
-        error: `File size exceeds ${limitMB}MB limit for ${fileCategory.toLowerCase()} files.`
+        error: `File size exceeds ${limitMB}MB limit for ${isAvatar ? 'avatar' : fileCategory.toLowerCase()} files.`
       });
     }
 
-    // Check workspace storage quota if workspaceId provided
-    const workspaceId = req.body.workspaceId || req.query.workspaceId;
+    // Reserve quota against the workspace (avatars have none to bill).
+    const workspaceId = isAvatar ? null : target.workspaceId;
     if (workspaceId) {
-      if (!isValidUUID(workspaceId)) {
-        return res.status(400).json({ error: 'Invalid workspace ID' });
-      }
-      const membership = await prisma.workspaceMember.findUnique({
-        where: { userId_workspaceId: { userId: req.user.id, workspaceId } }
-      });
-      if (!membership) {
-        return res.status(403).json({ error: 'Not a workspace member' });
-      }
       const quotaError = await reserveStorageQuota(workspaceId, req.file.size);
       if (quotaError) {
         return res.status(413).json(quotaError);
@@ -351,28 +399,25 @@ router.post('/multiple', authenticate, uploadLimiter, upload.array('files', 5), 
       fileValidations.push({ file, detectedType, fileCategory });
     }
 
-    // Check workspace storage quota if workspaceId provided
-    const workspaceId = req.body.workspaceId || req.query.workspaceId;
-    if (workspaceId) {
-      if (!isValidUUID(workspaceId)) {
-        return res.status(400).json({ error: 'Invalid workspace ID' });
-      }
-      const membership = await prisma.workspaceMember.findUnique({
-        where: { userId_workspaceId: { userId: req.user.id, workspaceId } }
-      });
-      if (!membership) {
-        return res.status(403).json({ error: 'Not a workspace member' });
-      }
-      const quotaError = await reserveStorageQuota(workspaceId, totalSize);
-      if (quotaError) {
-        return res.status(413).json(quotaError);
-      }
+    // Multi-upload is only ever used for message attachments, which always
+    // belong to a workspace — no avatar exception here.
+    const target = await resolveUploadTarget(req);
+    if (target.error) {
+      return res.status(target.status).json({ error: target.error });
+    }
+    const workspaceId = target.workspaceId;
+
+    const quotaError = await reserveStorageQuota(workspaceId, totalSize);
+    if (quotaError) {
+      return res.status(413).json(quotaError);
     }
 
-    // Upload all files to R2 (release reservation if any upload fails)
-    let results;
-    try {
-      const uploadPromises = fileValidations.map(async ({ file, detectedType, fileCategory }) => {
+    // Upload all files to R2. On partial failure we delete the files that DID
+    // land before releasing the full reservation — otherwise the survivors
+    // stay in R2 as orphans while their bytes are credited back, drifting the
+    // workspace's counter below reality.
+    const settled = await Promise.allSettled(
+      fileValidations.map(async ({ file, detectedType, fileCategory }) => {
         const folder = fileCategory === 'IMAGE' ? 'images' : fileCategory === 'AUDIO' ? 'audio' : fileCategory === 'VIDEO' ? 'video' : 'documents';
         const result = await uploadFile(file.buffer, file.originalname, detectedType, folder);
         let thumbnailUrl = null;
@@ -388,12 +433,24 @@ router.post('/multiple', authenticate, uploadLimiter, upload.array('files', 5), 
           }
         }
         return { ...result, thumbnailUrl, width, height };
-      });
-      results = await Promise.all(uploadPromises);
-    } catch (uploadError) {
+      })
+    );
+
+    const failure = settled.find(s => s.status === 'rejected');
+    if (failure) {
+      for (const s of settled) {
+        if (s.status !== 'fulfilled') continue;
+        for (const url of [s.value.url, s.value.thumbnailUrl]) {
+          if (url && isR2Url(url)) {
+            try { await deleteFile(url); } catch { /* best effort */ }
+          }
+        }
+      }
       await releaseStorageQuota(workspaceId, totalSize);
-      throw uploadError;
+      throw failure.reason;
     }
+
+    const results = settled.map(s => s.value);
 
     const files = results.map((result, index) => ({
       url: result.url,
@@ -416,7 +473,7 @@ router.post('/multiple', authenticate, uploadLimiter, upload.array('files', 5), 
 router.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'File size exceeds limit (15MB images, 10MB documents/ZIP, 50MB audio, 50MB video)' });
+      return res.status(400).json({ error: 'File size exceeds limit (15MB images, 10MB documents/ZIP, 500MB audio, 500MB video)' });
     }
     return res.status(400).json({ error: error.message });
   }

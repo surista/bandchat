@@ -1749,11 +1749,17 @@ class ApiService {
   }
 
   // File uploads
+  // The server requires a workspaceId so the upload can be billed to that
+  // workspace's storage quota. Omitting it marks the upload as `scope=avatar`
+  // — the one case with no workspace to bill (a user's own profile picture).
+  // The server restricts that scope to images under 10MB, so it can't be used
+  // as a general-purpose bypass.
   async uploadFile(uri, filename, mimeType, workspaceId) {
     await this.ensureFreshToken();
     const formData = new FormData();
     formData.append('file', { uri, name: filename, type: mimeType });
     if (workspaceId) formData.append('workspaceId', workspaceId);
+    else formData.append('scope', 'avatar');
 
     const url = `${API_URL}/uploads`;
     const headers = {};
@@ -1782,6 +1788,7 @@ class ApiService {
       const formData = new FormData();
       formData.append('file', { uri, name: filename, type: mimeType });
       if (workspaceId) formData.append('workspaceId', workspaceId);
+      else formData.append('scope', 'avatar');
 
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable && onProgress) {

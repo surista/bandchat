@@ -1,6 +1,6 @@
 {
   "name": "bandchat-server",
-  "version": "1.07.33",
+  "version": "1.07.34",
   "description": "BandChat backend API",
   "main": "src/index.js",
   "type": "module",
@@ -22,7 +22,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1000.0",
     "@prisma/client": "^5.22.0",
-    "adm-zip": "^0.5.16",
+    "adm-zip": "^0.6.0",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -30,13 +30,13 @@
     "expo-server-sdk": "^6.0.0",
     "express": "^4.21.1",
     "express-rate-limit": "^7.4.1",
-    "file-type": "^16.5.4",
+    "file-type": "^22.0.1",
     "google-auth-library": "^10.5.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^2.0.2",
+    "multer": "^2.2.0",
     "resend": "^4.0.0",
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.3",
     "socket.io": "^4.8.1",
     "web-push": "^3.6.7"
   },
