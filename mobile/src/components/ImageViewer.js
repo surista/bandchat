@@ -14,7 +14,7 @@ import {
 import { Gallery, useImageResolution, fitContainer } from 'react-native-zoom-toolkit';
 import * as MediaLibrary from 'expo-media-library';
 import * as ScreenOrientation from 'expo-screen-orientation';
-import { File, Directory, Paths } from 'expo-file-system/next';
+import { File, Paths } from 'expo-file-system/next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useToast } from '../context/ToastContext';
@@ -88,10 +88,18 @@ function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
   // ThreadScreen) as long as `images` itself doesn't go empty, opening a
   // different starting photo needs an imperative jump via the ref, not just
   // a new prop value.
+  //
+  // The jump has to be deferred a frame: on the tick `visible` flips true the
+  // Modal's children aren't mounted and laid out yet, so galleryRef is still
+  // null and a synchronous setIndex() silently does nothing — which is the
+  // original "reopening at a different photo lands on the wrong slide" bug.
   useEffect(() => {
     if (!visible) return;
     setCurrentIdx(initialIndex);
-    galleryRef.current?.setIndex(initialIndex);
+    const frame = requestAnimationFrame(() => {
+      galleryRef.current?.setIndex(initialIndex);
+    });
+    return () => cancelAnimationFrame(frame);
   }, [initialIndex, visible]);
 
   const handleSave = useCallback(async (index) => {
@@ -111,13 +119,20 @@ function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
       }
       const url = imageList[index]?.uri;
       if (!url) return;
+      // Derive a safe, correctly-extensioned filename. This matters: handing
+      // the download a bare Directory lets the name come from the response
+      // headers, which for an R2 URL can arrive without an image extension —
+      // and saveToLibraryAsync needs one to recognise the file as a photo.
       let filename = url.split('/').pop()?.split('?')[0] || '';
       filename = filename.replace(/[^a-zA-Z0-9._-]/g, '');
       if (!filename || !filename.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
         filename = `image-${Date.now()}.jpg`;
       }
-      const file = await File.downloadFileAsync(url, new Directory(Paths.cache), { idempotent: true });
+      const file = await File.downloadFileAsync(url, new File(Paths.cache, filename), { idempotent: true });
       await MediaLibrary.saveToLibraryAsync(file.uri);
+      // The cache copy has served its purpose once the image is in the photo
+      // library; leaving it behind grows the app's footprint every save.
+      try { file.delete(); } catch { /* best effort */ }
       toast.success('Image saved to your photo library');
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to save image.');
@@ -143,7 +158,7 @@ function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
       supportedOrientations={SUPPORTED_ORIENTATIONS}
       onRequestClose={onClose}
     >
-      <View style={styles.container}>
+      <View style={styles.container} accessibilityViewIsModal>
         <Gallery
           ref={galleryRef}
           data={imageList}

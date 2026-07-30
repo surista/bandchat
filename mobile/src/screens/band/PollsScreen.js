@@ -426,7 +426,7 @@ export default function PollsScreen({ navigation, route }) {
       <Modal visible={showCreate} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowCreate(false)}>
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>Create Poll</Text>
 
               <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Question *</Text>

@@ -578,6 +578,7 @@ export default function OnboardingWizardScreen({ navigation }) {
           style={{ flex: 1 }}
           contentContainerStyle={[styles.body, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         >
           {error && (
             <View style={styles.errorBanner}>

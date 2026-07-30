@@ -2,6 +2,18 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.36] - 2026-07-31
+
+### Fixed
+
+- **Reopening the image gallery at a different photo now lands on the right slide.** v1.07.32 tried to fix this by imperatively calling `setIndex()` when the viewer becomes visible, but that ran on the same tick `visible` flipped true — before the Modal's children were mounted, so the ref was still null and the call silently did nothing. Now deferred a frame (and cancelled on unmount). `mobile/src/components/ImageViewer.js`.
+- **Saving an image to the photo library no longer risks an extension-less file, and cleans up after itself.** The save path computed a sanitized, correctly-extensioned filename and then discarded it, downloading into a bare `Directory` — which lets the name come from the response headers, and an R2 URL can arrive without an image extension that `saveToLibraryAsync` needs. The derived name is now actually used, and the cache copy is deleted once the image is in the library instead of accumulating on every save. `mobile/src/components/ImageViewer.js`.
+
+### Changed
+
+- **Keyboard now dismisses on scroll across 8 more screens** (`interactive` on iOS, `on-drag` on Android, matching the existing convention): Security, Invite, Song bulk-import, Contacts, Polls, Band Members, Kitty, and the Onboarding wizard. Horizontal filter/chip rows were deliberately left alone — dismissing the keyboard when swiping a chip row would be wrong. Screens whose ScrollView holds no text input were also skipped.
+- **The full-screen image viewer now sets `accessibilityViewIsModal`,** so VoiceOver no longer reaches the content behind it.
+
 ## [1.07.35] - 2026-07-31
 
 ### Security

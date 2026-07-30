@@ -363,7 +363,7 @@ export default function ContactsScreen({ navigation, route }) {
       <Modal visible={showModal} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowModal(false)}>
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
                 {editingContact ? 'Edit Contact' : 'New Contact'}
               </Text>

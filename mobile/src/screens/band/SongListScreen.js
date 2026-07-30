@@ -657,7 +657,7 @@ export default function SongListScreen({ navigation, route }) {
               </PressableRow>
             </ScrollView>
           ) : (
-            <ScrollView contentContainerStyle={styles.bulkContent} keyboardShouldPersistTaps="handled">
+            <ScrollView contentContainerStyle={styles.bulkContent} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}>
               <Text style={[styles.bulkHint, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
                 Paste your song list below, one per line.{'\n'}Format: Title - Artist
               </Text>
