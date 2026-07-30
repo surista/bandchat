@@ -40,12 +40,21 @@ async function refreshAccessToken() {
 function fmt(n) { return (n || 0).toLocaleString(); }
 function fmtDate(d) { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); }
 
-// XSS protection
+// XSS protection.
+//
+// Must be safe in BOTH text and attribute contexts, because it's used for
+// things like data-ws-name="${esc(w.name)}". A text node's innerHTML
+// serialization escapes &, < and > but NOT quotes, so on its own it would let
+// a workspace named `" onmouseover="…` break out of the attribute it sits in
+// (workspace names are only length-validated server-side). The explicit quote
+// replacements close that. The page CSP is `script-src 'self'` with no
+// 'unsafe-inline', so injected handlers wouldn't execute today either — this
+// is the layer that shouldn't depend on that.
 function esc(str) {
   if (!str) return '';
   const d = document.createElement('div');
   d.textContent = str;
-  return d.innerHTML;
+  return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 // Format bytes to human-readable
@@ -331,7 +340,7 @@ async function loadWorkspaces(search) {
           <strong>${esc(w.name)}</strong> ${planBadge}
           ${ownerInfo}
           ${slugInfo}
-          <div style="font-size:11px;color:#6b7280;margin-top:1px;cursor:pointer" title="Click to copy full ID" onclick="navigator.clipboard.writeText('${w.id}');this.textContent='Copied!';setTimeout(()=>this.textContent='${shortId}...',1500)">${shortId}...</div>
+          <div style="font-size:11px;color:#6b7280;margin-top:1px;cursor:pointer" title="Click to copy full ID" data-copy-id="${esc(w.id)}">${esc(shortId)}...</div>
         </td>
         <td>${w._count.members}</td>
         <td>${w._count.channels}</td>
@@ -354,6 +363,23 @@ document.getElementById('workspaceSearch').addEventListener('input', (e) => {
 
 // Event delegation for workspace buttons (plan toggle + delete)
 document.getElementById('workspacesTable').addEventListener('click', async (e) => {
+  // Copy-full-ID. This was an inline onclick, which the page CSP
+  // (`script-src 'self'`, no 'unsafe-inline') silently blocked — the control
+  // looked clickable but never fired. Delegated like every other action here.
+  const copyEl = e.target.closest('[data-copy-id]');
+  if (copyEl) {
+    const fullId = copyEl.dataset.copyId;
+    try {
+      await navigator.clipboard.writeText(fullId);
+      const original = copyEl.textContent;
+      copyEl.textContent = 'Copied!';
+      setTimeout(() => { copyEl.textContent = original; }, 1500);
+    } catch {
+      alert(fullId);
+    }
+    return;
+  }
+
   const planBtn = e.target.closest('[data-toggle-plan]');
   if (planBtn) {
     const name = planBtn.dataset.wsName;

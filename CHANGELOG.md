@@ -2,6 +2,18 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.35] - 2026-07-31
+
+### Security
+
+- **Admin dashboard escaping is now safe in attribute contexts.** `esc()` escaped via a text node's `innerHTML` serialization, which handles `&`, `<` and `>` but *not* quotes — yet it was used inside HTML attributes (`data-ws-name="${esc(w.name)}"` and similar). Since workspace names are only length-validated, a name like `" onmouseover="…` broke out of its attribute and injected a new one onto the element. The page CSP (`script-src 'self'`, no `'unsafe-inline'`) meant an injected handler wouldn't actually execute, so this was attribute injection rather than script execution — but the escaping shouldn't depend on that. `server/src/admin/admin.js`.
+- **The band's fee is no longer sent to the public website API.** `GET /api/website/api/:workspaceId/data` selected `pay` on every gig. The endpoint is token-guarded and the token lives in a server-side Vercel env var, so it wasn't publicly readable, but a band's per-gig fee has no business in a payload built for a fan-facing site. `notes` and the call-time fields are left in place (a template may legitimately render them as gig details) with a comment flagging them for review. `server/src/routes/website.js`.
+
+### Fixed
+
+- **"Click to copy full ID" in the admin Workspaces tab now works.** It was an inline `onclick`, which the page's own CSP silently blocked — the control looked clickable but never fired. Converted to the delegated `data-*` handler pattern used by every other action in that table. `server/src/admin/admin.js`.
+- Malformed booking-request IDs now return `400` instead of reaching Prisma and surfacing as a `500`. `server/src/routes/bookingRequests.js`.
+
 ## [1.07.34] - 2026-07-31
 
 ### Security

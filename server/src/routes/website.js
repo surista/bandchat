@@ -511,6 +511,15 @@ router.get('/api/:workspaceId/data', async (req, res) => {
           type: 'GIG',
           status: { not: 'CANCELLED' },
         },
+        // This payload feeds the band's PUBLIC website, so it should carry
+        // only what a fan should see. `pay` (the band's fee for the gig) has
+        // no public use and is deliberately not selected.
+        //
+        // NOTE: `notes` and the soundCheck/eventStart times are still included
+        // because a template may legitimately render them as gig details
+        // ("doors at 8, all ages"), but they're free-text fields bands also
+        // use for internal reminders. Worth revisiting against what the
+        // template actually renders.
         select: {
           id: true,
           title: true,
@@ -524,7 +533,6 @@ router.get('/api/:workspaceId/data', async (req, res) => {
           soundCheckTime: true,
           eventStartTime: true,
           performanceStartTime: true,
-          pay: true,
           media: {
             select: {
               id: true,

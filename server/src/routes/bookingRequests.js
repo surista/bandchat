@@ -2,8 +2,19 @@ import express from 'express';
 import prisma from '../lib/prisma.js';
 import { authenticate, isWorkspaceAdmin } from '../middleware/auth.js';
 import { publicFormLimiter, publicLookupLimiter } from '../middleware/rateLimit.js';
+import { isValidUUID } from '../lib/validators.js';
 
 const router = express.Router();
+
+// The `:id` here is a BookingRequest id, not one of the names app.js registers
+// a global `app.param` validator for — so a malformed id would otherwise reach
+// Prisma and surface as a 500 instead of a 400.
+router.param('id', (req, res, next, value) => {
+  if (!isValidUUID(value)) {
+    return res.status(400).json({ error: 'Invalid booking request ID' });
+  }
+  next();
+});
 
 // ─────────────────────────────────────────────────────────────────────────
 // Public endpoints (no auth) — keyed by workspace slug, not UUID, so the
