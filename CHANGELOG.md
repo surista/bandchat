@@ -2,6 +2,12 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.37] - 2026-07-31
+
+Release rollup for the July 2026 security + UI review (1.07.34–1.07.36). No
+functional change beyond the version bump — cuts a clean release marker and a
+fresh iOS build number / Android versionCode for store submission.
+
 ## [1.07.36] - 2026-07-31
 
 ### Fixed
