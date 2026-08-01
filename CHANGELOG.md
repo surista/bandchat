@@ -2,6 +2,22 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.39] - 2026-08-02
+
+### Fixed
+
+- **Login loop on web: signing in briefly showed the workspace list, then bounced straight back to the login page.** Refresh tokens are single-use — the server deletes the presented token and issues a new one, with no grace period — so two refreshes racing on the same token means the first rotates it and the second gets `401 "Refresh token has been revoked"`. The client treats that as a definitive auth failure: `clearTokens()` then a hard `window.location.href = '/login'`.
+
+  Three callers bypassed the client's single-flight lock (`AuthContext` init ×2, and `SocketContext`'s `connect_error` handler). The socket one is what made it fire reliably: Socket.IO re-emits `connect_error` on *every* reconnect attempt, so a single connection blip launched a burst of unsynchronized refreshes — one won, the rest killed the session.
+
+  Fixed by centralizing deduplication **inside** `refreshAccessToken()` rather than relying on each caller to opt in, so no caller can bypass it and no future one can regress it. This mirrors the fix already present in `mobile/src/services/api.js`, whose comment describes this exact race as "the main cause of users being logged out on app resume" — the web client simply never received the equivalent change. `client/src/services/api.js`, `client/src/context/AuthContext.jsx`, `client/src/context/SocketContext.jsx`.
+
+  Covered by three regression tests in `client/src/services/__tests__/api.test.js`, verified to fail against the pre-fix code.
+
+### Known gap
+
+- The deduplication is per-tab. Two browser tabs (or web plus mobile) refreshing simultaneously still race, because each holds its own client instance. Closing that properly needs a short server-side reuse-grace window on rotation, which requires a schema change and is deliberately not part of this hotfix.
+
 ## [1.07.38] - 2026-08-02
 
 ### Fixed

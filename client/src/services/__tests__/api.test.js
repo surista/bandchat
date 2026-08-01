@@ -289,6 +289,62 @@ describe('Response handling', () => {
 // ───────────────────────────────────────────────────
 
 describe('Token refresh', () => {
+  // Regression: refresh tokens are single-use server-side (the presented token
+  // is deleted and a new one issued, no grace period). Concurrent callers
+  // sending the same token means the first rotates it and the rest get 401
+  // "revoked" → clearTokens() → hard redirect to /login. SocketContext's
+  // connect_error handler re-fires on every reconnect attempt and can call
+  // this in a burst, which is what produced the Google login loop.
+  it('deduplicates concurrent refreshes into a single request', async () => {
+    api.setTokens(makeToken(300), 'refresh-token');
+
+    let resolveRefresh;
+    mockFetch.mockReturnValueOnce(new Promise((r) => { resolveRefresh = r; }));
+
+    // Five callers race, mirroring a socket reconnect burst.
+    const calls = [
+      api.refreshAccessToken(),
+      api.refreshAccessToken(),
+      api.refreshAccessToken(),
+      api.refreshAccessToken(),
+      api.refreshAccessToken(),
+    ];
+
+    resolveRefresh(mockResponse({ accessToken: makeToken(300), refreshToken: 'rotated' }));
+    const results = await Promise.all(calls);
+
+    // Exactly one network call — the other four shared the in-flight promise.
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(results).toEqual([true, true, true, true, true]);
+    expect(api._hasSession).toBe(true);
+    expect(api._refreshToken).toBe('rotated');
+  });
+
+  it('allows a new refresh after the in-flight one settles', async () => {
+    api.setTokens(makeToken(300), 'refresh-token');
+
+    mockFetch.mockResolvedValueOnce(mockResponse({ accessToken: makeToken(300), refreshToken: 'r2' }));
+    await api.refreshAccessToken();
+
+    mockFetch.mockResolvedValueOnce(mockResponse({ accessToken: makeToken(300), refreshToken: 'r3' }));
+    await api.refreshAccessToken();
+
+    // The lock must release, not wedge the client on one stale promise.
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(api._refreshToken).toBe('r3');
+  });
+
+  it('releases the in-flight lock even when the refresh fails', async () => {
+    api.setTokens(makeToken(300), 'refresh-token');
+
+    mockFetch.mockResolvedValueOnce(mockResponse({ error: 'boom' }, 500));
+    expect(await api.refreshAccessToken()).toBe(false);
+
+    mockFetch.mockResolvedValueOnce(mockResponse({ accessToken: makeToken(300), refreshToken: 'r2' }));
+    expect(await api.refreshAccessToken()).toBe(true);
+    expect(api._refreshPromise).toBeNull();
+  });
+
   it('refreshes token on 401 and retries request', async () => {
     api.setTokens(makeToken(300), 'refresh-token');
 

@@ -69,7 +69,14 @@ export function SocketProvider({ children }) {
       newSocket.on('connect_error', async (error) => {
         if (import.meta.env.DEV) console.error('Socket connection error:', error);
         setConnected(false);
-        // If auth failed, try refreshing the token before next reconnect
+        // If auth failed, try refreshing the token before next reconnect.
+        //
+        // Socket.IO re-fires connect_error on every reconnect attempt, so this
+        // can run several times in quick succession. That is safe only because
+        // api.refreshAccessToken() deduplicates internally — before it did,
+        // each call raced the others against a single-use rotating refresh
+        // token, the losers got 401 "revoked", and the client tore down the
+        // session and bounced to /login. That was the login-loop bug.
         if (error.message?.includes('Authentication') || error.message?.includes('token')) {
           try {
             await api.refreshAccessToken();

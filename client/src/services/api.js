@@ -97,12 +97,7 @@ class ApiService {
   async request(endpoint, options = {}) {
     // Proactively refresh token before it expires to avoid 401 errors
     if (this._hasSession && this.isTokenExpiringSoon()) {
-      if (!this._refreshPromise) {
-        this._refreshPromise = this.refreshAccessToken().finally(() => {
-          this._refreshPromise = null;
-        });
-      }
-      await this._refreshPromise;
+      await this.refreshAccessToken();
     }
 
     // Invalidate cache on mutations (POST/PUT/PATCH/DELETE)
@@ -132,12 +127,7 @@ class ApiService {
 
       // Handle token expiration with lock to prevent concurrent refreshes
       if (response.status === 401 && this._hasSession) {
-        if (!this._refreshPromise) {
-          this._refreshPromise = this.refreshAccessToken().finally(() => {
-            this._refreshPromise = null;
-          });
-        }
-        const refreshed = await this._refreshPromise;
+        const refreshed = await this.refreshAccessToken();
         if (refreshed) {
           headers['Authorization'] = `Bearer ${this.accessToken}`;
           const retryResponse = await fetch(url, { ...options, headers, credentials: 'include' });
@@ -218,7 +208,33 @@ class ApiService {
     }
   }
 
+  /**
+   * Refresh the access token using the stored refresh token.
+   *
+   * Deduplication is centralized HERE, not in the callers, so that every
+   * caller (request(), the upload helpers, SocketContext's connect_error
+   * handler, AuthContext's init) shares a single in-flight refresh and no
+   * future caller can accidentally opt out.
+   *
+   * Refresh tokens are single-use: the server deletes the presented token and
+   * issues a new one, with no grace period. Two concurrent callers sending the
+   * same token means the first rotates it and the second gets 401 "Refresh
+   * token has been revoked" → clearTokens() → hard redirect to /login. The
+   * socket's connect_error handler re-fires on every reconnect attempt, so it
+   * could launch a burst of these on its own — that was the login-loop bug.
+   *
+   * Mirrors the same fix already present in mobile/src/services/api.js.
+   */
   async refreshAccessToken() {
+    if (this._refreshPromise) return this._refreshPromise;
+
+    this._refreshPromise = this._doRefresh().finally(() => {
+      this._refreshPromise = null;
+    });
+    return this._refreshPromise;
+  }
+
+  async _doRefresh() {
     try {
       // Send refresh token in body as fallback for cross-origin deployments
       // where httpOnly cookies may be blocked by SameSite policy.
@@ -743,10 +759,7 @@ class ApiService {
   // as a general-purpose bypass.
   async uploadFile(file, workspaceId) {
     if (this._hasSession && this.isTokenExpiringSoon()) {
-      if (!this._refreshPromise) {
-        this._refreshPromise = this.refreshAccessToken().finally(() => { this._refreshPromise = null; });
-      }
-      await this._refreshPromise;
+      await this.refreshAccessToken();
     }
 
     const formData = new FormData();
@@ -778,10 +791,7 @@ class ApiService {
 
   async uploadFiles(files, workspaceId) {
     if (this._hasSession && this.isTokenExpiringSoon()) {
-      if (!this._refreshPromise) {
-        this._refreshPromise = this.refreshAccessToken().finally(() => { this._refreshPromise = null; });
-      }
-      await this._refreshPromise;
+      await this.refreshAccessToken();
     }
 
     const formData = new FormData();
@@ -1666,10 +1676,7 @@ class ApiService {
 
   async updateSlackFiles(workspaceId, file) {
     if (this._hasSession && this.isTokenExpiringSoon()) {
-      if (!this._refreshPromise) {
-        this._refreshPromise = this.refreshAccessToken().finally(() => { this._refreshPromise = null; });
-      }
-      await this._refreshPromise;
+      await this.refreshAccessToken();
     }
 
     const formData = new FormData();
@@ -1699,10 +1706,7 @@ class ApiService {
   // Workspace Import (from BandChat export JSON)
   async parseWorkspaceExport(file) {
     if (this._hasSession && this.isTokenExpiringSoon()) {
-      if (!this._refreshPromise) {
-        this._refreshPromise = this.refreshAccessToken().finally(() => { this._refreshPromise = null; });
-      }
-      await this._refreshPromise;
+      await this.refreshAccessToken();
     }
 
     const formData = new FormData();
