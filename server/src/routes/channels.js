@@ -42,7 +42,10 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
           select: {
             id: true,
             name: true,
-            _count: { select: { songs: true } }
+            // Count actual songs only. `songs` is the SetlistSong relation,
+            // which also holds MC sections and set breaks — an unfiltered
+            // count reports "11 songs" for a setlist of 7 songs and 4 MCs.
+            _count: { select: { songs: { where: { type: 'SONG' } } } }
           }
         }
       },
@@ -983,7 +986,13 @@ router.post('/:channelId/pin-setlist', authenticate, async (req, res) => {
       data: { pinnedSetlistId: setlistId },
       include: {
         pinnedSetlist: {
-          include: { songs: { include: { song: true }, orderBy: { position: 'asc' } } }
+          include: {
+            songs: { include: { song: true }, orderBy: { position: 'asc' } },
+            // Clients render the header from `_count.songs`. Without it here,
+            // a freshly-pinned setlist reads as "0 songs" until the channel
+            // list refetches. Filtered to real songs, same as that query.
+            _count: { select: { songs: { where: { type: 'SONG' } } } }
+          }
         }
       }
     });

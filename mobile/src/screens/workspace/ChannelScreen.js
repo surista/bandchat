@@ -36,6 +36,7 @@ import ImageViewer from '../../components/ImageViewer';
 import ActionSheet from '../../components/ActionSheet';
 import ReactionUsersSheet from '../../components/ReactionUsersSheet';
 import { selectionFeedback, successNotification, errorNotification } from '../../utils/haptics';
+import { isSongItem } from '../../utils/setlistDuration';
 import { format, isSameDay } from 'date-fns';
 import { useLayout } from '../../hooks/useLayout';
 import useMessageActions from '../../hooks/useMessageActions';
@@ -989,7 +990,7 @@ export default function ChannelScreen({ navigation, route }) {
             <Ionicons name={setlistExpanded ? 'chevron-down' : 'chevron-forward'} size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
             <Ionicons name="list-outline" size={14} color={colors.textSecondary} />
             <Text style={[styles.setlistName, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>{pinnedSetlist.name}</Text>
-            <Text style={[styles.setlistCount, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>{pinnedSetlist._count?.songs || 0} songs</Text>
+            <Text style={[styles.setlistCount, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>{pinnedSetlist._count?.songs || 0} {pinnedSetlist._count?.songs === 1 ? 'song' : 'songs'}</Text>
           </TouchableOpacity>
           {setlistExpanded && (
             <ScrollView style={styles.setlistScroll}>
@@ -1196,7 +1197,13 @@ export default function ChannelScreen({ navigation, route }) {
             setShowSetlistPicker(false);
             try {
               await api.pinSetlist(channel.id, s.id);
-              setPinnedSetlist({ id: s.id, name: s.name, _count: { songs: s.songs?.length || s._count?.songs || 0 } });
+              // `songs` is the SetlistSong relation, which also holds MC
+              // sections and set breaks — count only real songs.
+              setPinnedSetlist({
+                id: s.id,
+                name: s.name,
+                _count: { songs: s._count?.songs ?? (s.songs || []).filter(isSongItem).length },
+              });
               setSetlistExpanded(false);
               setSetlistSongs(null);
             } catch (err) {

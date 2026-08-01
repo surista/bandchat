@@ -2,6 +2,14 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.38] - 2026-08-02
+
+### Fixed
+
+- **Pinned setlist header no longer counts MC sections and set breaks as songs.** `SetlistSong` is the relation for every setlist *item*, not just songs — MC sections and set breaks are rows in it too — so the unfiltered `_count.songs` reported a 7-song setlist with 4 MC breaks as "11 songs". The count is now filtered to `type: 'SONG'` at the source in `server/src/routes/channels.js`, so every client gets the right number. The client-side fallbacks that counted `songs.length` were fixed the same way, reusing the existing `isSongItem()` predicate from `utils/setlistDuration` rather than re-deriving it. Affects the channel pinned-setlist header on web and mobile, and the `/setlist` slash-command picker. `server/src/routes/channels.js`, `client/src/components/channels/ChannelView.jsx`, `client/src/components/messages/SlashCommandPicker.jsx`, `mobile/src/screens/workspace/ChannelScreen.js`.
+- **A freshly-pinned setlist no longer reads "0 songs" until refresh.** The pin endpoint returned the full `songs` array but no `_count`, while the clients render the header from `_count.songs` — so the count collapsed to the `|| 0` fallback until the channel list refetched. The endpoint now returns the same filtered `_count`. `server/src/routes/channels.js`.
+- Setlists with exactly one song now read "1 song" instead of "1 songs" on both platforms.
+
 ## [1.07.37] - 2026-07-31
 
 Release rollup for the July 2026 security + UI review (1.07.34–1.07.36). No

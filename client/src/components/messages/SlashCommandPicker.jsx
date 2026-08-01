@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import Modal from '../common/Modal';
+import { isSongItem } from '../../utils/setlistDuration';
 
 /**
  * Modal picker for slash commands. Shows list of setlists/songs/gigs
@@ -17,7 +18,13 @@ export default function SlashCommandPicker({ type, workspaceId, onSelect, onClos
       try {
         if (type === 'setlist') {
           const data = await api.getSetlists(workspaceId);
-          setItems(data.map(s => ({ id: s.id, title: s.name, subtitle: `${s._count?.songs || s.songs?.length || 0} songs` })));
+          // `songs` is the SetlistSong relation, which also holds MC sections
+          // and set breaks — count only real songs so a 7-song setlist with 4
+          // MCs doesn't read as "11 songs".
+          setItems(data.map(s => {
+            const count = s._count?.songs ?? (s.songs || []).filter(isSongItem).length;
+            return { id: s.id, title: s.name, subtitle: `${count} ${count === 1 ? 'song' : 'songs'}` };
+          }));
         } else if (type === 'song') {
           const data = await api.getSongs(workspaceId);
           setItems(data.map(s => ({ id: s.id, title: s.title, subtitle: s.artist || '' })));

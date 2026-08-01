@@ -949,7 +949,8 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
               <span className="text-[var(--color-text-muted)]">📋</span>
               <span className="font-medium text-[var(--color-text-primary)]">{channel.pinnedSetlist.name}</span>
               <span className="text-[var(--color-text-muted)]">
-                {channel.pinnedSetlist._count?.songs || 0} songs
+                {channel.pinnedSetlist._count?.songs || 0}{' '}
+                {channel.pinnedSetlist._count?.songs === 1 ? 'song' : 'songs'}
               </span>
             </button>
             {isAdmin && (
