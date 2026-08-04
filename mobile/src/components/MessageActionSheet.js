@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,8 +12,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { selectionFeedback } from '../utils/haptics';
 import PressableRow from './PressableRow';
+import { getFrequentEmojis, peekFrequentEmojis, trackEmojiUsage } from '../utils/emojiFrequency';
+import { CUSTOM_EMOJI, renderCustomEmoji } from './EmojiPicker';
 
-const QUICK_EMOJIS = ['\uD83D\uDC4D', '\uD83D\uDC4E', '\uD83C\uDFB8', '\uD83D\uDD25', '\u2764\uFE0F'];
+// Quick row shows the user's most-used emojis; the 6th slot is the "+" that
+// opens the full picker.
+const QUICK_COUNT = 5;
 
 const ACTION_HINTS = {
   reply: 'Opens thread view',
@@ -44,6 +48,11 @@ const ACTIONS = [
 function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwnMessage, isPinned, isBookmarked, hideReply, hasImageAttachment }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const [quickEmojis, setQuickEmojis] = useState(() => peekFrequentEmojis(QUICK_COUNT));
+
+  useEffect(() => {
+    if (visible) getFrequentEmojis(QUICK_COUNT).then(setQuickEmojis);
+  }, [visible]);
 
   const filteredActions = ACTIONS.filter(a =>
     (!a.ownOnly || isOwnMessage) && (!a.notOwn || !isOwnMessage) &&
@@ -56,6 +65,7 @@ function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwn
   });
 
   const handleQuickReaction = (emoji) => {
+    trackEmojiUsage(emoji);
     if (onQuickReaction) {
       onQuickReaction(emoji);
     }
@@ -77,7 +87,7 @@ function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwn
         >
           {/* Quick Reaction Row */}
           <View style={[styles.quickReactionRow, { borderBottomColor: colors.border }]}>
-            {QUICK_EMOJIS.map((emoji) => (
+            {quickEmojis.map((emoji) => (
               <Pressable
                 key={emoji}
                 style={({ pressed }) => [
@@ -88,9 +98,13 @@ function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwn
                 onPress={() => handleQuickReaction(emoji)}
                 android_ripple={{ color: colors.border, borderless: false }}
                 accessibilityRole="button"
-                accessibilityLabel={`React with ${emoji}`}
+                accessibilityLabel={`React with ${CUSTOM_EMOJI[emoji]?.alt || emoji}`}
               >
-                <Text style={styles.quickReactionEmoji} maxFontSizeMultiplier={1.2}>{emoji}</Text>
+                {CUSTOM_EMOJI[emoji] ? (
+                  renderCustomEmoji(emoji, 24)
+                ) : (
+                  <Text style={styles.quickReactionEmoji} maxFontSizeMultiplier={1.2}>{emoji}</Text>
+                )}
               </Pressable>
             ))}
             <Pressable

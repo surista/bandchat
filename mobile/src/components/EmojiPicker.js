@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
-import { getRecentEmojis, addRecentEmoji } from '../services/storage';
+import { getFrequentEmojis, peekFrequentEmojis, trackEmojiUsage } from '../utils/emojiFrequency';
 import PressableRow from './PressableRow';
 import { selectionFeedback } from '../utils/haptics';
 import { MIN_TOUCH_TARGET } from '../utils/touchTarget';
@@ -49,13 +49,17 @@ const EMOJI_CATEGORIES = Object.fromEntries(
   Object.entries(rawCategories).map(([k, arr]) => [k, Array.from(new Set(arr))])
 );
 
+// The user's most-used emojis lead the tab bar and are always selected on open.
+const FREQUENT = 'Frequent';
+const FREQUENT_COUNT = 21; // three rows of seven
 const BASE_CATEGORIES = Object.keys(EMOJI_CATEGORIES);
+const CATEGORY_NAMES = [FREQUENT, ...BASE_CATEGORIES];
 
 function EmojiPicker({ visible, onClose, onSelect }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const [recentEmojis, setRecentEmojis] = useState([]);
-  const [activeCategory, setActiveCategory] = useState(BASE_CATEGORIES[0]);
+  const [frequentEmojis, setFrequentEmojis] = useState(() => peekFrequentEmojis(FREQUENT_COUNT));
+  const [activeCategory, setActiveCategory] = useState(FREQUENT);
   const tabScrollRef = useRef(null);
 
   useEffect(() => {
@@ -63,19 +67,17 @@ function EmojiPicker({ visible, onClose, onSelect }) {
       // Dismiss any keyboard that was open before showing the picker,
       // so on Android the 380pt sheet isn't pushed above an open IME.
       Keyboard.dismiss();
-      getRecentEmojis().then(recent => {
-        setRecentEmojis(recent);
-        if (recent.length > 0) setActiveCategory('Recent');
-      });
+      setActiveCategory(FREQUENT);
+      tabScrollRef.current?.scrollTo({ x: 0, animated: false });
+      getFrequentEmojis(FREQUENT_COUNT).then(setFrequentEmojis);
     }
   }, [visible]);
 
-  const categoryNames = recentEmojis.length > 0 ? ['Recent', ...BASE_CATEGORIES] : BASE_CATEGORIES;
-  const currentEmojis = activeCategory === 'Recent' ? recentEmojis : (EMOJI_CATEGORIES[activeCategory] || []);
+  const currentEmojis = activeCategory === FREQUENT ? frequentEmojis : (EMOJI_CATEGORIES[activeCategory] || []);
 
   const handleSelect = (emoji) => {
     selectionFeedback();
-    addRecentEmoji(emoji).then(setRecentEmojis);
+    trackEmojiUsage(emoji, FREQUENT_COUNT).then(setFrequentEmojis);
     onSelect(emoji);
     onClose();
   };
@@ -106,7 +108,7 @@ function EmojiPicker({ visible, onClose, onSelect }) {
             style={[styles.tabBar, { borderBottomColor: colors.border }]}
             contentContainerStyle={styles.tabBarContent}
           >
-            {categoryNames.map(cat => (
+            {CATEGORY_NAMES.map(cat => (
               <PressableRow
                 key={cat}
                 style={[

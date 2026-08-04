@@ -79,7 +79,13 @@ const storage = {
 
 export default storage;
 
-/** Recent emojis (non-sensitive, uses AsyncStorage) */
+/**
+ * Recent emojis (non-sensitive, uses AsyncStorage).
+ *
+ * Legacy MRU list, superseded by the frequency ranking in
+ * utils/emojiFrequency.js — which reads this once to seed itself so existing
+ * users keep their history. Pickers should use `getFrequentEmojis` instead.
+ */
 export async function getRecentEmojis() {
   try {
     const json = await AsyncStorage.getItem(RECENT_EMOJIS_KEY);

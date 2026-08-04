@@ -2,6 +2,20 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.40] - 2026-08-05
+
+### Changed
+
+- **Every emoji picker now leads with the emojis you actually use.** Both platforms already tracked something, but neither surfaced it properly: web counted usage yet only showed it in a 5-slot quick row — its `⭐ Frequent` category label was wired to nothing — while mobile tracked *most recent* rather than most used, and hid the tab entirely until it had data. Ranking now lives in one mirrored module per platform (`client/src/utils/emojiFrequency.js`, `mobile/src/utils/emojiFrequency.js`) sharing a storage key and shape: sorted by count, ties broken by recency, counts halved at 200 so early habits decay, map capped at 60 entries. A thin history is padded with defaults so rows never render short or resize as they load.
+
+  Wired into every selection surface: the web quick row (now 6) plus a real Frequent section that the expand chevron opens onto; the mobile picker's Frequent tab, always present and selected on open; and the mobile long-press quick-reaction row, previously a hardcoded `['👍','👎','🎸','🔥','❤️']`. Swipe-to-react and that quick row now record usage as well — both applied emoji without counting them, which skewed rankings toward picker-only picks. Existing mobile users keep their history: the frequency map seeds itself once from the legacy `recentEmojis` list, and web migrates its old `{ emoji: count }` data in place.
+
+  `client/src/components/messages/ReactionPicker.jsx`, `mobile/src/components/EmojiPicker.js`, `mobile/src/components/MessageActionSheet.js`, `mobile/src/components/MessageBubble.js`. Covered by 15 tests in `mobile/src/utils/__tests__/emojiFrequency.test.js`.
+
+### Notes
+
+- Rankings are per-device. Syncing them across web and mobile via the existing `userPreferences` layer is deliberately not part of this change — it would add a server round-trip to a picker interaction.
+
 ## [1.07.39] - 2026-08-02
 
 ### Fixed

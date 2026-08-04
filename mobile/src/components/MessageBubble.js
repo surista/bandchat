@@ -16,6 +16,7 @@ import { CUSTOM_EMOJI, renderCustomEmoji } from './EmojiPicker';
 import { buildMentionRegex, buildChannelRegex, buildGroupMentionRegex } from '../utils/parseMentions';
 import { isSafeUrl } from '../utils/urlSafety';
 import { MIN_TOUCH_TARGET } from '../utils/touchTarget';
+import { trackEmojiUsage } from '../utils/emojiFrequency';
 import { useLayout } from '../hooks/useLayout';
 
 const YT_REGEX = /(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/|m\.youtube\.com\/watch\?v=)([\w-]{11})/;
@@ -296,6 +297,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
       onSwipeReply(message);
     } else if (direction === 'left' && onSwipeReact && !isPending) {
       lightImpact();
+      trackEmojiUsage(SWIPE_REACT_EMOJI);
       onSwipeReact(message.id, SWIPE_REACT_EMOJI);
     }
     // Small delay before closing so user sees the action panel

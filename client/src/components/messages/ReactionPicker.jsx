@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { storage } from '../../services/storage';
+import { getFrequentEmojis, trackEmojiUsage, DEFAULT_FREQUENT } from '../../utils/emojiFrequency';
 
 // Pre-compiled regex for emoji detection (avoid creating on every render)
 const EMOJI_REGEX = /\p{Emoji}/u;
@@ -59,31 +59,23 @@ const CATEGORY_LABELS = {
 
 const COLS = 7;
 
-const getFrequentEmojis = () => {
-  const freq = storage.getJSON('emojiFrequency', {});
-  if (!freq || typeof freq !== 'object') return [];
-  return Object.entries(freq)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([emoji]) => emoji);
-};
+// Word reactions ('LGTM') render as pill buttons rather than glyphs. The custom
+// :bandchat: emoji has no emoji codepoints but renders as an image, so it isn't text.
+const isTextReaction = (value) => !EMOJI_REGEX.test(value) && !CUSTOM_EMOJI[value];
 
-const trackEmojiUsage = (emoji) => {
-  const freq = storage.getJSON('emojiFrequency', {}) || {};
-  freq[emoji] = (freq[emoji] || 0) + 1;
-  storage.setJSON('emojiFrequency', freq);
-};
+// Quick row sits next to the expand chevron, so it holds one row minus one slot.
+const QUICK_COUNT = COLS - 1;
+// Three full rows in the expanded "Frequent" section.
+const FREQUENT_COUNT = COLS * 3;
 
 export default function ReactionPicker({ onSelect, onClose, actionLabel = 'React with' }) {
+  // null = collapsed to the quick row. Expanding opens 'frequent' first, so the
+  // user's own emojis are what they land on.
   const [expandedCategory, setExpandedCategory] = useState(null);
-  const [frequentEmojis, setFrequentEmojis] = useState([]);
+  const [frequentEmojis, setFrequentEmojis] = useState(() => getFrequentEmojis(FREQUENT_COUNT));
   const [search, setSearch] = useState('');
   const pickerRef = useRef(null);
   const searchInputRef = useRef(null);
-
-  useEffect(() => {
-    setFrequentEmojis(getFrequentEmojis());
-  }, []);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -127,6 +119,7 @@ export default function ReactionPicker({ onSelect, onClose, actionLabel = 'React
 
   const handleSelect = (emoji) => {
     trackEmojiUsage(emoji);
+    setFrequentEmojis(getFrequentEmojis(FREQUENT_COUNT));
     onSelect(emoji);
   };
 
@@ -190,10 +183,18 @@ export default function ReactionPicker({ onSelect, onClose, actionLabel = 'React
     );
   };
 
-  // Quick reactions row (frequent + top reactions)
-  const quickReactions = frequentEmojis.length > 0
-    ? frequentEmojis
-    : EMOJI_CATEGORIES.reactions.slice(0, 5);
+  // Quick reactions row — always the user's most-used emojis. Word reactions
+  // ("LGTM") are skipped here because the row is fixed-width and single-line;
+  // they still show in the expanded Frequent grid. Padded with defaults so the
+  // row is never short.
+  const quickReactions = useMemo(() => {
+    const out = frequentEmojis.filter(e => !isTextReaction(e)).slice(0, QUICK_COUNT);
+    for (const emoji of DEFAULT_FREQUENT) {
+      if (out.length >= QUICK_COUNT) break;
+      if (!out.includes(emoji)) out.push(emoji);
+    }
+    return out;
+  }, [frequentEmojis]);
 
   const searchTerm = search.trim().toLowerCase();
   const searchResults = useMemo(() => {
@@ -225,10 +226,10 @@ export default function ReactionPicker({ onSelect, onClose, actionLabel = 'React
       >
         {/* Quick reactions row */}
         <div className="flex items-center gap-0.5 p-1.5 border-b border-[var(--color-border)]">
-          {quickReactions.map(emoji => renderEmojiButton(emoji, !EMOJI_REGEX.test(emoji)))}
+          {quickReactions.map(emoji => renderEmojiButton(emoji))}
           <div className="flex-1" />
           <button
-            onClick={() => setExpandedCategory(expandedCategory ? null : 'reactions')}
+            onClick={() => setExpandedCategory(expandedCategory ? null : 'frequent')}
             className="w-8 h-8 flex items-center justify-center hover:bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-muted)] text-sm"
             title="More emojis"
             aria-label={expandedCategory ? 'Collapse emoji picker' : 'Expand emoji picker'}
@@ -266,23 +267,41 @@ export default function ReactionPicker({ onSelect, onClose, actionLabel = 'React
                 )}
               </div>
             ) : (
-              Object.entries(EMOJI_CATEGORIES).map(([category, emojis]) => (
-                <div key={category} className="border-b border-[var(--color-border)] last:border-b-0">
+              <>
+                {/* Most-used emojis, ahead of every fixed category */}
+                <div className="border-b border-[var(--color-border)]">
                   <button
-                    onClick={() => toggleCategory(category)}
+                    onClick={() => toggleCategory('frequent')}
                     className="w-full px-2 py-1.5 text-left text-xs font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-bg-tertiary)] flex items-center justify-between"
-                    aria-expanded={expandedCategory === category}
+                    aria-expanded={expandedCategory === 'frequent'}
                   >
-                    <span>{CATEGORY_LABELS[category]}</span>
-                    <span className="text-[var(--color-text-muted)]">{expandedCategory === category ? '−' : '+'}</span>
+                    <span>{CATEGORY_LABELS.frequent}</span>
+                    <span className="text-[var(--color-text-muted)]">{expandedCategory === 'frequent' ? '−' : '+'}</span>
                   </button>
-                  {expandedCategory === category && (
+                  {expandedCategory === 'frequent' && (
                     <div className="grid grid-cols-7 gap-0.5 p-1.5 pt-0">
-                      {emojis.map(emoji => renderEmojiButton(emoji, category === 'text'))}
+                      {frequentEmojis.map(emoji => renderEmojiButton(emoji, isTextReaction(emoji)))}
                     </div>
                   )}
                 </div>
-              ))
+                {Object.entries(EMOJI_CATEGORIES).map(([category, emojis]) => (
+                  <div key={category} className="border-b border-[var(--color-border)] last:border-b-0">
+                    <button
+                      onClick={() => toggleCategory(category)}
+                      className="w-full px-2 py-1.5 text-left text-xs font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-bg-tertiary)] flex items-center justify-between"
+                      aria-expanded={expandedCategory === category}
+                    >
+                      <span>{CATEGORY_LABELS[category]}</span>
+                      <span className="text-[var(--color-text-muted)]">{expandedCategory === category ? '−' : '+'}</span>
+                    </button>
+                    {expandedCategory === category && (
+                      <div className="grid grid-cols-7 gap-0.5 p-1.5 pt-0">
+                        {emojis.map(emoji => renderEmojiButton(emoji, category === 'text'))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </>
             )}
           </div>
         )}
