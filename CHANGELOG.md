@@ -2,6 +2,20 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.41] - 2026-08-06
+
+### Fixed
+
+- **The emoji quick row no longer reorders under your cursor mid-interaction.** v1.07.40 re-read the frequency ranking on every pick. In the reaction flows that's invisible because the picker closes on select — but `MessageInput` deliberately keeps it open for multiple inserts, so the row re-ranked between clicks. With realistic counts a single tap on 🔥 shifted three positions (`👍 ❤️ 😂 🔥 🎉 🎸` → `👍 🔥 ❤️ 😂 🎉 🎸`), meaning a second click aimed at the same emoji landed on a different one. The list is now read once per mount; the picker remounts on every open, so it still refreshes between uses. `client/src/components/messages/ReactionPicker.jsx`.
+- **A reaction of the literal text `constructor` no longer breaks reaction rendering for everyone in the channel.** The reaction endpoint accepts any string up to 32 characters (`server/src/routes/messages.js`), and both clients looked custom emoji up with a bare `CUSTOM_EMOJI[emoji]` on an object literal — so `constructor`, `toString`, `valueOf`, `hasOwnProperty` and `__proto__` all resolved through the prototype chain to a truthy value. Every viewer then took the custom-image branch and rendered `<img src={undefined}>` / `<Image source={undefined}>` instead of the text. Not a script-execution path — React escapes throughout — but any user could corrupt the reaction row for everyone else. Both maps are now null-prototype, which fixes every lookup site at once rather than guarding them individually. `client/src/components/messages/ReactionPicker.jsx`, `mobile/src/components/EmojiPicker.js`; affected render sites were `ReactionDisplay.jsx`, `MessageBubble.js`, `ReactionUsersSheet.js`, `MessageActionSheet.js`.
+
+  Covered by 12 tests in `client/src/components/messages/__tests__/ReactionPicker.test.jsx`, each verified to fail against the pre-fix code.
+
+### Known gaps
+
+- The same unguarded-lookup pattern still exists in `emojiFrequency.js` on both platforms (`map[emoji] || …` returns `Object` for the key `constructor`, producing `NaN` counts). It is not reachable today — every caller passes a hardcoded or self-stored string — but it would become reachable if usage tracking is ever wired to server-supplied reaction strings.
+- The mobile emoji picker still has no search, unlike web.
+
 ## [1.07.40] - 2026-08-05
 
 ### Changed

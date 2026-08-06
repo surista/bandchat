@@ -4,10 +4,16 @@ import { getFrequentEmojis, trackEmojiUsage, DEFAULT_FREQUENT } from '../../util
 // Pre-compiled regex for emoji detection (avoid creating on every render)
 const EMOJI_REGEX = /\p{Emoji}/u;
 
-// Custom emoji that renders as an image
-export const CUSTOM_EMOJI = {
+// Custom emoji that renders as an image.
+//
+// Null-prototype on purpose: reactions are looked up here by key, and the server
+// accepts any string up to 32 chars as a reaction emoji. With a normal object
+// literal, a reaction of the literal text "constructor" (or "toString",
+// "__proto__", …) resolves through the prototype chain to a truthy value, and
+// every viewer renders it as <img src={undefined}> instead of as text.
+export const CUSTOM_EMOJI = Object.assign(Object.create(null), {
   ':bandchat:': { src: '/blue_flame_emoji.png', alt: 'BandChat' },
-};
+});
 
 export function renderEmoji(emoji, size = 18) {
   const custom = CUSTOM_EMOJI[emoji];
@@ -119,7 +125,11 @@ export default function ReactionPicker({ onSelect, onClose, actionLabel = 'React
 
   const handleSelect = (emoji) => {
     trackEmojiUsage(emoji);
-    setFrequentEmojis(getFrequentEmojis(FREQUENT_COUNT));
+    // Deliberately NOT re-reading the frequent list here. MessageInput keeps this
+    // picker open for multiple inserts, so re-ranking on each pick would reorder
+    // the quick row under the user's cursor mid-interaction — one tap can shift
+    // three positions, and the next click lands on a different emoji. The list is
+    // read once per mount, and the picker remounts every time it opens.
     onSelect(emoji);
   };
 

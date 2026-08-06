@@ -17,10 +17,16 @@ import PressableRow from './PressableRow';
 import { selectionFeedback } from '../utils/haptics';
 import { MIN_TOUCH_TARGET } from '../utils/touchTarget';
 
-// Custom emoji rendered as images
-export const CUSTOM_EMOJI = {
+// Custom emoji rendered as images.
+//
+// Null-prototype on purpose: reactions are looked up here by key, and the server
+// accepts any string up to 32 chars as a reaction emoji. With a normal object
+// literal, a reaction of the literal text "constructor" (or "toString",
+// "__proto__", …) resolves through the prototype chain to a truthy value, and
+// every viewer renders it as <Image source={undefined}> instead of as text.
+export const CUSTOM_EMOJI = Object.assign(Object.create(null), {
   ':bandchat:': { source: require('../../assets/blue_flame_emoji.png'), alt: 'BandChat' },
-};
+});
 
 export function renderCustomEmoji(emoji, size = 18) {
   const custom = CUSTOM_EMOJI[emoji];
