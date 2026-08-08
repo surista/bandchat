@@ -2,6 +2,29 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.42] - 2026-08-08
+
+### Fixed
+
+- **Tapping an image on mobile opened a black screen; rotating the phone made the photo appear.** `Gallery.setIndex()` in `react-native-zoom-toolkit@5.1.0` sets its shared `scale` to `0` (its own `reset()` correctly uses `1`), and the active slide applies that straight to `transform: scale()` — collapsing the photo to nothing against the near-black backdrop. Rotating the device changed the gallery's root size, which fires the library's internal `reset(0, 0, minScale, false)` and restored scale to `1`; that is the whole reason the photo "appeared" on rotation.
+
+  Introduced by v1.07.36, not v1.07.32: the earlier commit called `setIndex()` synchronously against a still-null ref, so it silently no-op'd and never reached the library bug. Deferring it a frame to fix reopening at the wrong slide is what made the call land. `setIndex()` is now followed by `reset(false)`, which restores scale with no animation and keeps the reopen fix intact. `mobile/src/components/ImageViewer.js`.
+
+- **Public show pages returned 500 on every request, since the feature shipped in v1.06.85.** `GET /api/public/shows/:gigId` selected `thumbnailUrl` on `gig.media`, but `GigMedia` has no such column — `Attachment` does. Prisma threw a validation error on every call and the route's catch turned it into a blanket `500 "Failed to load show"`, so no show page has ever loaded. The select now matches the model; `ShowPage.jsx` already fell back to the full-size `url`. No test covered this route. `server/src/routes/shows.js`.
+
+- **Admin storage cleanup would have deleted every live image thumbnail.** `findOrphans()` built its known-URL set from `attachment.url` and never `attachment.thumbnailUrl`, so all of `thumbnails/` was classified as orphaned — and `POST /api/admin/storage/cleanup` with `dryRun: false` deletes what it finds. That would have broken images across `MessageList`, `SavedMessages`, `MessageBubble` and `TimelineScreen` with no regeneration path. The same helper also missed soft-deleted users' avatars, because the soft-delete middleware injects `deletedAt: null` into its `user.findMany` — an account purged mid-grace-period would have come back restored with a broken picture. `server/src/routes/admin.js`.
+
+- **Thumbnails leaked in R2 on every delete.** Message deletion, the offline sync delete path, and the 30-day workspace purge all selected and deleted only `url`, leaving the thumbnail behind permanently with no DB row left to find it by. All three now delete both. Storage accounting is unchanged — thumbnail bytes were never added to the workspace counter, so `freedBytes` still tracks the original alone. `server/src/routes/messages.js`, `server/src/routes/sync.js`, `server/src/index.js`.
+
+- **Thumbnails of EXIF-rotated photos rendered sideways.** `generateThumbnail()` resized without `.rotate()`, and sharp strips EXIF on output — so the thumbnail kept the unrotated pixels *and* lost the tag that told viewers to rotate them. An iPhone photo showed rotated 90° in the message list, then opened upright in the lightbox. The reported `width`/`height` were transposed for the same reason, since orientations 5–8 store the image a quarter turn off. Verified across orientations 1/3/6/8 plus the no-EXIF, corrupt-input and below-threshold paths. `server/src/routes/uploads.js`.
+
+### Known gaps
+
+- Gig photos still generate a thumbnail that is discarded on arrival: uploads route through `/api/uploads`, which creates and stores one, but `GigMedia` has no column for it and `POST /:gigId/media` accepts only `type`/`url`/`caption`. Every gig photo permanently orphans a thumbnail, and both galleries render full-size originals. Needs a schema change plus client work on both platforms.
+- Avatars are stored and served full-size (up to 10MB, no resize); the upload response's `thumbnailUrl` is discarded by the client, orphaning it.
+- `Attachment.width`/`height` are populated but read by nothing — web `<img>` tags have no intrinsic size, and mobile forces every image into a fixed box with `contentFit="cover"`.
+- Thumbnail bytes are not billed to workspace storage quota. Self-consistent with the recalculate endpoint, so it under-reports real R2 usage rather than drifting.
+
 ## [1.07.41] - 2026-08-06
 
 ### Fixed

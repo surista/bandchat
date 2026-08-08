@@ -224,12 +224,16 @@ router.post('/:workspaceId/push', authenticate, isWorkspaceMember, async (req, r
             // Clean up R2 files and track storage before cascade delete
             const attachments = await prisma.attachment.findMany({
               where: { messageId: entityId },
-              select: { url: true, size: true },
+              select: { url: true, thumbnailUrl: true, size: true },
             });
             let freedBytes = 0;
             for (const att of attachments) {
-              if (isR2Url(att.url)) {
-                try { await deleteFile(att.url); } catch { /* best effort */ }
+              // Mirrors the online delete path in messages.js — the thumbnail is
+              // a separate R2 object and leaks if only the original is removed.
+              for (const url of [att.url, att.thumbnailUrl]) {
+                if (url && isR2Url(url)) {
+                  try { await deleteFile(url); } catch { /* best effort */ }
+                }
               }
               freedBytes += att.size || 0;
             }

@@ -738,12 +738,17 @@ router.delete('/:messageId', authenticate, async (req, res) => {
     // Clean up R2 files and track storage before cascade delete
     const attachments = await prisma.attachment.findMany({
       where: { messageId: req.params.messageId },
-      select: { url: true, size: true },
+      select: { url: true, thumbnailUrl: true, size: true },
     });
     let freedBytes = 0;
     for (const att of attachments) {
-      if (isR2Url(att.url)) {
-        try { await deleteFile(att.url); } catch { /* best effort */ }
+      // The generated thumbnail is a separate R2 object; deleting only the
+      // original leaks it permanently. Its bytes were never added to the
+      // workspace counter, so freedBytes stays based on the original alone.
+      for (const url of [att.url, att.thumbnailUrl]) {
+        if (url && isR2Url(url)) {
+          try { await deleteFile(url); } catch { /* best effort */ }
+        }
       }
       freedBytes += att.size || 0;
     }

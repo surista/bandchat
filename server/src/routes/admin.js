@@ -350,17 +350,29 @@ async function findOrphans() {
   const r2Objects = await listAllObjects();
 
   const [attachments, songAttachments, recordings, gigMedia, users, bandMembers, timelineEvents] = await Promise.all([
-    prisma.attachment.findMany({ select: { url: true } }),
+    // thumbnailUrl matters as much as url here: every generated thumbnail lives
+    // in R2 under thumbnails/, and leaving it out of knownUrls marks all of them
+    // orphaned — a cleanup run would then delete every live message thumbnail
+    // with no way to regenerate them.
+    prisma.attachment.findMany({ select: { url: true, thumbnailUrl: true } }),
     prisma.songAttachment.findMany({ select: { url: true } }),
     prisma.recording.findMany({ select: { url: true } }),
     prisma.gigMedia.findMany({ select: { url: true } }),
-    prisma.user.findMany({ where: { avatarUrl: { not: null } }, select: { avatarUrl: true } }),
+    // `deletedAt: undefined` is the documented bypass for the soft-delete
+    // middleware (it keys off the property being present, and Prisma ignores an
+    // undefined value). Without it a soft-deleted user's avatar counts as an
+    // orphan and gets purged during the 30-day grace period, so restoring the
+    // account would bring it back with a broken picture.
+    prisma.user.findMany({ where: { avatarUrl: { not: null }, deletedAt: undefined }, select: { avatarUrl: true } }),
     prisma.bandMember.findMany({ where: { imageUrl: { not: null } }, select: { imageUrl: true } }),
     prisma.timelineEvent.findMany({ where: { imageUrl: { not: null } }, select: { imageUrl: true } }),
   ]);
 
   const knownUrls = new Set();
-  for (const a of attachments) knownUrls.add(a.url);
+  for (const a of attachments) {
+    knownUrls.add(a.url);
+    if (a.thumbnailUrl) knownUrls.add(a.thumbnailUrl);
+  }
   for (const a of songAttachments) knownUrls.add(a.url);
   for (const r of recordings) knownUrls.add(r.url);
   for (const g of gigMedia) knownUrls.add(g.url);

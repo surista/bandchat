@@ -21,8 +21,13 @@ async function generateThumbnail(imageBuffer) {
   try {
     const image = sharp(imageBuffer, { limitInputPixels: MAX_INPUT_PIXELS });
     const metadata = await image.metadata();
-    const origWidth = metadata.width || 0;
-    const origHeight = metadata.height || 0;
+    // EXIF orientations 5-8 mean the pixels are stored rotated a quarter turn,
+    // so sharp's reported width/height are transposed relative to what a viewer
+    // actually displays. Report the display dimensions — clients use these for
+    // aspect ratio, and a transposed pair sizes the image sideways.
+    const rotatedQuarterTurn = metadata.orientation >= 5 && metadata.orientation <= 8;
+    const origWidth = (rotatedQuarterTurn ? metadata.height : metadata.width) || 0;
+    const origHeight = (rotatedQuarterTurn ? metadata.width : metadata.height) || 0;
 
     // Only generate thumbnail if image is wider than threshold
     if (origWidth <= THUMBNAIL_MAX_WIDTH) {
@@ -30,6 +35,12 @@ async function generateThumbnail(imageBuffer) {
     }
 
     const thumbBuffer = await image
+      // Bakes the EXIF orientation into the pixels. Required because sharp
+      // strips EXIF on output: without this the thumbnail keeps the unrotated
+      // pixels AND loses the tag that told viewers to rotate them, so an iPhone
+      // photo renders sideways in the message list while the full-size original
+      // opens upright in the lightbox.
+      .rotate()
       .resize(THUMBNAIL_MAX_WIDTH, null, { withoutEnlargement: true })
       .jpeg({ quality: THUMBNAIL_QUALITY })
       .toBuffer();

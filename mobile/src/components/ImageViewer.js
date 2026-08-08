@@ -98,6 +98,16 @@ function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
     setCurrentIdx(initialIndex);
     const frame = requestAnimationFrame(() => {
       galleryRef.current?.setIndex(initialIndex);
+      // setIndex() leaves the gallery's shared `scale` at 0 — a bug in
+      // react-native-zoom-toolkit 5.1.0, whose own reset() correctly uses 1.
+      // The active slide applies that straight to `transform: scale()`, so the
+      // photo collapses to nothing against the near-black backdrop and the
+      // viewer opens as a blank black screen. reset(false) puts scale back to 1
+      // with no animation. Without it the only way out is rotating the device:
+      // that changes the gallery's root size, and the library resets scale to 1
+      // internally whenever that happens — which is exactly why the photo used
+      // to "appear" on rotation.
+      galleryRef.current?.reset(false);
     });
     return () => cancelAnimationFrame(frame);
   }, [initialIndex, visible]);

@@ -170,13 +170,18 @@ httpServer.listen(PORT, async () => {
             const r2Available = await isR2Configured();
             if (r2Available) {
               const [attachments, songAttachments, recordings, gigMedia] = await Promise.all([
-                prisma.attachment.findMany({ where: { message: { channel: { workspaceId: ws.id } } }, select: { url: true } }),
+                prisma.attachment.findMany({ where: { message: { channel: { workspaceId: ws.id } } }, select: { url: true, thumbnailUrl: true } }),
                 prisma.songAttachment.findMany({ where: { song: { workspaceId: ws.id } }, select: { url: true } }),
                 prisma.recording.findMany({ where: { workspaceId: ws.id }, select: { url: true } }),
                 prisma.gigMedia.findMany({ where: { gig: { workspaceId: ws.id } }, select: { url: true } }),
               ]);
               const r2PublicUrl = process.env.R2_PUBLIC_URL || '';
-              const allUrls = [...attachments, ...songAttachments, ...recordings, ...gigMedia].map(r => r.url);
+              // Attachments contribute their thumbnail too — it's a separate R2
+              // object, and a purge that skips it leaves the file behind forever
+              // with no DB row left to find it by.
+              const allUrls = [...attachments, ...songAttachments, ...recordings, ...gigMedia]
+                .flatMap(r => [r.url, r.thumbnailUrl])
+                .filter(Boolean);
               for (const url of allUrls) {
                 if (url.startsWith(r2PublicUrl)) {
                   try { await deleteFile(url.replace(`${r2PublicUrl}/`, '')); } catch { /* best effort */ }

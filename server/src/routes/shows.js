@@ -41,7 +41,12 @@ router.get('/:gigId', async (req, res) => {
         media: {
           where: { type: { in: ['image', 'youtube', 'video'] } },
           orderBy: { createdAt: 'asc' },
-          select: { id: true, type: true, url: true, thumbnailUrl: true, caption: true },
+          // GigMedia has no thumbnailUrl column — selecting one threw a Prisma
+          // validation error that the catch below turned into a blanket 500, so
+          // every show page was unreachable. ShowPage.jsx already falls back to
+          // the full-size url. Add the column here (and to the upload path) if
+          // gig media ever grows thumbnails.
+          select: { id: true, type: true, url: true, caption: true },
         },
       },
     });
