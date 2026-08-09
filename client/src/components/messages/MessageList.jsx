@@ -164,7 +164,7 @@ function renderUrlPart(part, i, message, onOpenLightbox, onAddToLibrary, isOwn, 
   if (part.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
     return (
       <div key={i} className="my-2">
-        <img src={part} alt="Shared image" className="max-w-full md:max-w-md max-h-80 rounded cursor-pointer" loading="lazy" onClick={() => message && onOpenLightbox(message, part)} />
+        <img src={part} alt="Shared image" className="max-w-full md:max-w-md max-h-80 rounded cursor-pointer" loading="lazy" onClick={() => message && onOpenLightbox?.(message, part)} />
       </div>
     );
   }
@@ -311,7 +311,7 @@ function processTextInner(text, segKey, message, onOpenLightbox, members, onAddT
  * Memoized component for rendering message content with markdown formatting,
  * URL detection, embeds (Google Docs, YouTube), images, videos, and @mentions.
  */
-const MessageContent = React.memo(({ content, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview, blockedDomains, channels, onSelectChannel }) => {
+export const MessageContent = React.memo(({ content, message, onOpenLightbox, members, onAddToLibrary, workspaceId, isOwn, onTogglePreview, blockedDomains, channels, onSelectChannel }) => {
   // Step 1: Extract fenced code blocks
   const codeBlockRegex = /```(\w*)\n?([\s\S]*?)```/g;
   const segments = [];
@@ -463,8 +463,20 @@ const MessageRow = memo(function MessageRow({
         data-message-id={message.id}
         className={`group flex gap-3 py-2 hover:bg-[var(--color-bg-tertiary)]/30 rounded px-2 -mx-2 relative ${message.pending ? 'opacity-60' : ''} ${isHighlighted ? 'msg-highlight' : ''}`}
         onContextMenu={(e) => {
-          e.preventDefault();
+          // Stand aside when the user has text selected — right-click on a
+          // selection means "Copy", and the custom menu has no way to offer it.
+          // Same for links, where the native menu owns "Open in new tab" and
+          // "Copy link address". Suppressing it unconditionally was why message
+          // text could not be copied on desktop.
+          const selection = window.getSelection();
+          if (selection && !selection.isCollapsed && selection.toString().trim()) return;
+
           const previewEl = e.target.closest('[data-preview-url]');
+          // Preview cards keep the custom menu — that's where "Block previews
+          // from <domain>" lives, and the card itself is a div, not a link.
+          if (!previewEl && e.target.closest('a[href]')) return;
+
+          e.preventDefault();
           const linkEl = e.target.closest('a[href^="http"]');
           const linkUrl = previewEl?.dataset?.previewUrl || linkEl?.href || null;
           setMsgContextMenu({ messageId: message.id, x: e.clientX, y: e.clientY, linkUrl });

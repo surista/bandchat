@@ -70,28 +70,29 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior: none; /* Prevent pull-to-refresh and rubber-band */
-  -webkit-user-select: none; /* Prevent text selection on UI elements */
-  user-select: none;
 }
 
-/* Allow text selection on actual content */
-.message-content,
-[data-message-id],
-input,
-textarea,
-select,
-[contenteditable],
-pre,
-code,
-.selectable,
-[role="article"],
-.announcement-content,
-.gig-notes,
-.lyrics-content,
-.contact-details,
-.link-preview-text {
-  -webkit-user-select: text;
-  user-select: text;
+/* Text is selectable by default; only chrome opts out.
+ *
+ * This used to be inverted — `user-select: none` on body with an allowlist of
+ * content selectors. That made selection unusable in practice even where the
+ * allowlist hit: a drag starting in a message row's padding began no selection
+ * at all, and dragging across two messages crossed the non-selectable gap
+ * between them. It also silently broke every content surface nobody remembered
+ * to add to the list. Defaulting to selectable and opting out per control is
+ * the safer direction to be wrong in — a stray selection on a button is a
+ * cosmetic annoyance, unselectable message text is a broken app. */
+button,
+[role="button"],
+[role="tab"],
+[role="menuitem"],
+summary,
+label,
+kbd,
+nav,
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #root {

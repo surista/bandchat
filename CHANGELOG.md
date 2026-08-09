@@ -2,6 +2,20 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.43] - 2026-08-10
+
+### Fixed
+
+- **URLs in thread replies were inert plain text.** `ThreadView` rendered message content through a local `renderMentionContent()` helper that handled `@mentions` and nothing else — so replies got no links, no markdown, no code blocks, and no YouTube/image/video embeds, while the same message in the channel got all of them. Thread content now renders through the same exported `<MessageContent>` the channel uses, bringing full parity. The pieces a thread has no source for (channel list, blocked preview domains, add-to-library, preview dismissal) are optional and degrade to the plain-link path. Mobile was never affected — `ThreadScreen` already renders replies through `MessageBubble`. `client/src/components/threads/ThreadView.jsx`, `client/src/components/messages/MessageList.jsx`.
+
+- **Message text could not be selected anywhere in the app.** `body` carried `user-select: none` with an allowlist re-enabling selection on specific content selectors. Even where the allowlist hit, selection was unusable: a drag starting in a message row's padding began no selection at all, and dragging across two messages crossed the non-selectable gap between them. Thread content was not on the list, so it was fully unselectable. Inverted the rule — text is selectable by default and only interactive chrome (`button`, `[role="button"]`, `[role="tab"]`, `[role="menuitem"]`, `summary`, `label`, `kbd`, `nav`, `.no-select`) opts out. A stray selection on a button is cosmetic; unselectable message text is not. `client/styles/main.css`.
+
+- **Right-click on a message suppressed the browser's own menu unconditionally**, so there was no *Copy* for selected text and no *Open link in new tab* / *Copy link address* on a link — the custom menu's "Copy Text" only ever copies the whole message. The handler now stands aside when there is an active text selection, and when the target is a link. Link preview cards still get the custom menu, since that is where "Block previews from &lt;domain&gt;" lives and the card itself is a `div`, not an anchor. `client/src/components/messages/MessageList.jsx`.
+
+### Notes
+
+- Thread replies now render link preview cards, which they did not before. That follows from the parity fix rather than being a separate decision; it adds a `/api/linkPreview` request per distinct URL in an open thread. Say the word if previews should stay channel-only and it's a one-line prop away.
+
 ## [1.07.42] - 2026-08-08
 
 ### Fixed

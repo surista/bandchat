@@ -5,13 +5,13 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import ReactionDisplay from '../messages/ReactionDisplay';
 import ReactionPicker from '../messages/ReactionPicker';
+import { MessageContent } from '../messages/MessageList';
 import ImageLightbox from '../common/ImageLightbox';
 import Skeleton from '../common/Skeleton';
 import useSwipeGesture from '../../hooks/useSwipeGesture';
 import { handleDownload } from '../../utils/download';
 import { formatFileSize } from '../../utils/format';
 import { MAX_IMAGE_SIZE, MAX_AUDIO_SIZE, isImageFile, isAudioFile } from '../../utils/fileValidation';
-import { buildMentionRegex, buildGroupMentionRegex } from '../../utils/parseMentions';
 import MemberProfile from '../common/MemberProfile';
 import ConfirmDialog from '../common/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
@@ -357,50 +357,24 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
 
   const formatTime = (date) => format(new Date(date), 'dd-MMM-yyyy, h:mm a');
 
-  const renderMentionContent = (text) => {
+  // Thread content renders through the same <MessageContent> the channel uses.
+  // It previously had a local mentions-only renderer, which meant replies got
+  // @mentions but no links, markdown, code blocks or embeds — a URL in a reply
+  // was inert plain text. Anything MessageContent needs but a thread doesn't
+  // have (channels, blockedDomains, onAddToLibrary, onTogglePreview) is
+  // optional there and degrades to the plain-link path.
+  const renderThreadContent = (text, msg, isOwn) => {
     if (!text) return null;
-
-    // First: pull out @channel/@here/@everyone group mentions
-    const groupRegex = buildGroupMentionRegex();
-    const groupParts = text.split(groupRegex);
-    const afterGroup = [];
-    for (let g = 0; g < groupParts.length; g += 3) {
-      if (groupParts[g]) afterGroup.push(groupParts[g]);
-      if (g + 2 < groupParts.length) {
-        if (groupParts[g + 1]) afterGroup.push(groupParts[g + 1]);
-        afterGroup.push(
-          <span key={`g${g}`} className="bg-yellow-500/20 text-yellow-400 px-1 rounded font-medium">
-            @{groupParts[g + 2].toLowerCase()}
-          </span>
-        );
-      }
-    }
-
-    // Then: per-user @mentions on remaining text fragments
-    const mentionRegex = buildMentionRegex(members || []);
-    if (!mentionRegex) return afterGroup;
-
-    const result = [];
-    for (let f = 0; f < afterGroup.length; f++) {
-      const frag = afterGroup[f];
-      if (typeof frag !== 'string') {
-        result.push(frag);
-        continue;
-      }
-      const parts = frag.split(mentionRegex);
-      for (let j = 0; j < parts.length; j += 3) {
-        if (parts[j]) result.push(parts[j]);
-        if (j + 2 < parts.length) {
-          if (parts[j + 1]) result.push(parts[j + 1]);
-          result.push(
-            <span key={`m${f}-${j}`} className="bg-blue-900 text-blue-300 px-1 rounded">
-              @{parts[j + 2]}
-            </span>
-          );
-        }
-      }
-    }
-    return result;
+    return (
+      <MessageContent
+        content={text}
+        message={msg}
+        members={members}
+        workspaceId={workspaceId}
+        isOwn={isOwn}
+        onOpenLightbox={(m, src) => setLightboxImage({ src, alt: 'Shared image' })}
+      />
+    );
   };
 
   return (
@@ -468,8 +442,8 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
                 {formatTime(message.createdAt)}
               </span>
             </div>
-            <div className="text-[var(--color-text-secondary)] break-words whitespace-pre-wrap">
-              {renderMentionContent(message.content)}
+            <div className="message-content text-[var(--color-text-secondary)] break-words whitespace-pre-wrap">
+              {renderThreadContent(message.content, message, message.author?.id === user.id)}
             </div>
             <ReactionDisplay
               reactions={parentReactions}
@@ -598,8 +572,8 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
                       </div>
                     </div>
                   ) : (
-                    <div className="text-[var(--color-text-secondary)] text-sm break-words whitespace-pre-wrap">
-                      {renderMentionContent(reply.content)}
+                    <div className="message-content text-[var(--color-text-secondary)] text-sm break-words whitespace-pre-wrap">
+                      {renderThreadContent(reply.content, reply, reply.author?.id === user.id)}
                       {reply.updatedAt && reply.createdAt && new Date(reply.updatedAt).getTime() - new Date(reply.createdAt).getTime() > 1000 && (
                         <span className="text-xs text-[var(--color-text-muted)] ml-1">(edited)</span>
                       )}
