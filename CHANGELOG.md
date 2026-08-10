@@ -2,6 +2,23 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.44] - 2026-08-10
+
+### Changed
+
+- **MC sections now default to 30 seconds instead of 60.** A minute of stage banter is a long time, and the old default inflated every setlist's projected running time. The value was duplicated as a bare `|| 60` across seven call sites plus the server's create handler; it now lives in one exported `MC_DEFAULT_DURATION_SECS` per platform (`client/src/utils/setlistDuration.js`, `mobile/src/utils/setlistDuration.js`) with the server default matched. Existing MC items keep whatever duration is stored against them — this changes new sections and any item whose duration is null, not saved data.
+
+- **Printed setlists are laid out for reading off the floor.** Three changes to `client/src/utils/setlistExport.js`, which backs both Print/PDF and the Word export:
+
+  - The header collapsed from five stacked rows (logo, band name, rule, venue, setlist name, date/time) to a single line — `band • venue • date • time` — reclaiming roughly the top third of the page. The setlist name is no longer printed in the body because the browser already prints it in the page header from `<title>`.
+  - MC rows are now a fraction of a song row's height. They previously rendered at the same size as songs *and* the list used `justify-content: space-evenly`, which handed every `<li>` an equal share of the column regardless of content — so a one-word `<MC>` marker occupied as much page as a song title. Normal flow plus a 0.55em size lets the shorter row actually be shorter.
+  - Song type is now sized to fit rather than fixed at 20–24px. A fixed size can only satisfy one of "bigger, I read it off the floor" and "don't spill onto page 2", so the builder solves for the largest size whose tallest column still fits, capped by the longest title against the column width. Short sets land at the 36px ceiling; the reported two-set, 24-song list renders at 24px and on one page where it previously overflowed at 20px. Personal notes size in em so they track their song row.
+
+### Notes
+
+- Mobile's setlist print (`mobile/src/utils/buildSetlistHTML.js`) is deliberately untouched. It is a different document — a detailed table carrying key, BPM and duration columns at 11–14px — rather than the large floor-read list the web export produces. It picks up the 30s MC default via the shared duration helper.
+- `client/src/utils/__tests__/fileValidation.test.js` has two failures on main, unrelated to this change: it asserts 50MB audio/video caps while the code and CLAUDE.md both specify 500MB. The test is stale, not the code.
+
 ## [1.07.43] - 2026-08-10
 
 ### Fixed

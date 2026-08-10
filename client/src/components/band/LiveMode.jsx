@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { formatDuration } from '../../utils/formatDuration';
+import { MC_DEFAULT_DURATION_SECS } from '../../utils/setlistDuration';
 
 export function LiveMode({ setlistItems, setlistName, onClose }) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -59,7 +60,7 @@ export function LiveMode({ setlistItems, setlistName, onClose }) {
     if (currentItem.type === 'SET_BREAK') {
       durationSecs = currentItem.duration || 15;
     } else if (currentItem.type === 'MC') {
-      durationSecs = currentItem.duration || 60;
+      durationSecs = currentItem.duration || MC_DEFAULT_DURATION_SECS;
     } else if (currentItem.song?.duration) {
       durationSecs = currentItem.song.duration;
     }

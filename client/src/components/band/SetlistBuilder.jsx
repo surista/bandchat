@@ -24,7 +24,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
-import { computeSetlistDuration, computeSetDuration, formatSetlistDuration, getItemActualDuration } from '../../utils/setlistDuration';
+import { computeSetlistDuration, computeSetDuration, formatSetlistDuration, getItemActualDuration, MC_DEFAULT_DURATION_SECS } from '../../utils/setlistDuration';
 import SongForm from './SongForm';
 
 // Helper to split items into sets based on SET_BREAK markers
@@ -195,7 +195,7 @@ function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDispla
               <div className="text-yellow-600 text-sm">Talk / Banter</div>
             </div>
             <div className="text-xs text-yellow-400">
-              {formatDuration(item.duration || 60)}
+              {formatDuration(item.duration || MC_DEFAULT_DURATION_SECS)}
             </div>
           </>
         ) : (
@@ -439,7 +439,7 @@ function SetColumnItem({
               </div>
             </div>
             <div className="text-xs text-yellow-400">
-              {formatDuration(item.duration || 60)}
+              {formatDuration(item.duration || MC_DEFAULT_DURATION_SECS)}
             </div>
           </>
         ) : (
@@ -651,7 +651,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSec
 
   const handleAddMC = async () => {
     try {
-      const result = await api.addMCToSetlist(setlist.id, 60, 'MC');
+      const result = await api.addMCToSetlist(setlist.id, MC_DEFAULT_DURATION_SECS, 'MC');
       setSetlistItems(prev => [...prev, result]);
     } catch (err) {
       toast.error(err.message);

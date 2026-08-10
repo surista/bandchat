@@ -461,7 +461,9 @@ router.post('/:setlistId/mc', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'Not a workspace member' });
     }
 
-    const { duration = 60, label = 'MC' } = req.body;
+    // 30s default: a minute of stage banter is a long time, and the old 60s
+    // default inflated every setlist's projected running time.
+    const { duration = 30, label = 'MC' } = req.body;
 
     // Get current max position
     const maxPosition = await prisma.setlistSong.aggregate({

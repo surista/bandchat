@@ -16,6 +16,13 @@
 
 export const DEFAULT_TRANSITION_PADDING_SECS = 15;
 
+/**
+ * Fallback length for an MC section with no explicit duration. Mirrors
+ * client/src/utils/setlistDuration.js — keep the two in sync. MC items already
+ * saved with an explicit 60 keep it; this only covers new and null-duration items.
+ */
+export const MC_DEFAULT_DURATION_SECS = 30;
+
 export function isSongItem(item) {
   return item?.type === 'SONG' || (!item?.type && item?.song);
 }
@@ -23,7 +30,7 @@ export function isSongItem(item) {
 export function getItemActualDuration(item) {
   if (!item) return 0;
   if (item.type === 'SET_BREAK') return item.duration || 0;
-  if (item.type === 'MC') return item.duration || 60;
+  if (item.type === 'MC') return item.duration || MC_DEFAULT_DURATION_SECS;
   return item.song?.duration || 0;
 }
 

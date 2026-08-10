@@ -14,7 +14,7 @@
 
 import { format } from 'date-fns';
 import { escapeHtml } from './escapeHtml';
-import { computeSetlistDuration, formatSetlistDuration } from './setlistDuration';
+import { computeSetlistDuration, formatSetlistDuration, MC_DEFAULT_DURATION_SECS } from './setlistDuration';
 
 function formatTime12h(time24) {
   if (!time24) return '';
@@ -59,7 +59,7 @@ function splitIntoSets(items) {
 
 function getItemSecs(item) {
   if (item.type === 'SET_BREAK') return item.duration || 0;
-  if (item.type === 'MC') return item.duration || 60;
+  if (item.type === 'MC') return item.duration || MC_DEFAULT_DURATION_SECS;
   const d = item.song?.duration || 0;
   return d > 0 ? Math.ceil(d / 60) * 60 : 0;
 }
@@ -165,6 +165,64 @@ export function buildSetlistHtml(setlist, opts = {}) {
 
   const setlistInner = `<div class="columns columns-${numSets}">${columnsHtml}</div>`;
 
+  // Type size is computed to fill the page rather than fixed, because the two
+  // things asked of this document fight each other: "make it bigger, I read it
+  // off the floor" and "stop wasting space / don't spill onto page 2". A fixed
+  // size can only satisfy one — too small for a short set, or a page break in a
+  // long one. So we solve for the largest size whose tallest column still fits.
+  //
+  // Row model (px, matching the CSS below): a song is 1.25f line-height + 6
+  // padding, an MC is 0.6f (0.55em at 1.1 line-height), a personal note adds
+  // 0.65f. Usable height is the page minus header, footer and margins — A4/Letter
+  // at 10mm margins, landscape once there are two or more sets.
+  const usableHeight = isLandscape ? 620 : 950;
+  const columnFontSize = (set) => {
+    let songRows = 0, mcRows = 0, noteRows = 0;
+    for (const it of set.items) {
+      if (it.type === 'MC') mcRows++; else songRows++;
+      if (notes[it.id]?.content?.trim()) noteRows++;
+    }
+    const perFont = songRows * 1.25 + mcRows * 0.6 + noteRows * 0.65;
+    if (perFont <= 0) return 36;
+    const fixed = songRows * 6 + 50; // song padding + set header block
+    return Math.floor((usableHeight - fixed) / perFont);
+  };
+  // Height is only half the constraint — type that fits vertically can still
+  // run off the side of a narrow column. Cap on the longest title too, using
+  // ~0.52em average character width for this font stack. Without this, a
+  // 3-column landscape sized to 34px would overflow its ~338px column on any
+  // title longer than about 19 characters.
+  const columnWidth = numSets === 1 ? 500
+    : numSets === 2 ? 380
+    : Math.floor((1047 - 16 * (numSets - 1)) / numSets);
+  const longestTitle = Math.max(
+    1,
+    ...sets.flatMap(s => s.items.map(it => (
+      it.type === 'MC' ? 0 : getSongName(it.song, useShortNames).length
+    )))
+  );
+  const widthLimitedFont = Math.floor(columnWidth / (0.52 * longestTitle));
+
+  // One size across every column — differing sizes side by side look like a
+  // mistake. The tallest column and the longest title are both binding.
+  const baseFont = Math.max(13, Math.min(
+    36,
+    Math.min(...sets.map(columnFontSize)),
+    widthLimitedFont
+  ));
+
+  // Header is a single line: band • venue • date • time. It used to be five
+  // stacked rows (logo, band, rule, venue, setlist name, date/time) which ate
+  // the top third of the page — on a floor-read setlist that space belongs to
+  // the songs. The setlist name is dropped here rather than shown twice: the
+  // browser already prints it in the page header, from <title>.
+  const headerParts = [
+    bandName ? `<span class="band-name">${escapeHtml(bandName)}</span>` : '',
+    setlist.venue ? `<span class="venue">${escapeHtml(setlist.venue)}</span>` : '',
+    `<span class="date">${dateStr}</span>`,
+    timeRangeStr ? `<span class="time-range">${timeRangeStr}</span>` : '',
+  ].filter(Boolean);
+
   const statsLine = hasPadding
     ? `${songCount} songs &bull; ${actualLabel} songs only &bull; ${paddedLabel} with ${paddingSecs}s gaps`
     : `${songCount} songs &bull; ${actualLabel} total`;
@@ -185,15 +243,19 @@ export function buildSetlistHtml(setlist, opts = {}) {
       display: flex;
       flex-direction: column;
     }
-    .header { text-align: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 3px solid #222; }
-    .venue-logo { width: 80px; height: 80px; object-fit: contain; margin: 0 auto 8px; border-radius: 8px; }
-    .band-name { font-size: 36px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; }
-    .header-divider { width: 60px; height: 3px; background: #0891b2; margin: 8px auto; border-radius: 2px; }
-    .venue { font-size: 24px; font-weight: 600; margin-bottom: 2px; }
-    .setlist-name { font-size: 16px; color: #666; }
-    .header-details { display: flex; justify-content: center; gap: 18px; margin-top: 6px; font-size: 15px; color: #555; }
-    .header-details span { white-space: nowrap; }
-    .time-range { color: #0891b2; font-weight: 500; }
+    /* Single-line header. flex-wrap is a safety valve: a very long band +
+       venue pair on a narrow portrait page wraps rather than overflowing. */
+    .header {
+      display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center;
+      gap: 0 10px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 3px solid #222;
+    }
+    .header > span { white-space: nowrap; }
+    .venue-logo { width: 28px; height: 28px; object-fit: contain; border-radius: 4px; align-self: center; }
+    .band-name { font-size: 22px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+    .venue { font-size: 19px; font-weight: 600; }
+    .date { font-size: 15px; color: #555; }
+    .sep { color: #bbb; font-size: 15px; }
+    .time-range { color: #0891b2; font-weight: 500; font-size: 15px; }
     .content { flex: 1; display: flex; align-items: stretch; }
     .columns { display: flex; gap: 16px; width: 100%; height: 100%; }
     .columns-1 { max-width: 500px; margin: 0 auto; text-align: center; }
@@ -218,22 +280,29 @@ export function buildSetlistHtml(setlist, opts = {}) {
       margin: 0 0 12px 0; padding: 8px 0; border-bottom: 2px solid #333;
     }
     .set-time { font-size: 14px; font-weight: normal; color: #0891b2; margin-left: 8px; text-transform: none; letter-spacing: 0; }
-    .song-list { list-style: none; padding: 0; flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; }
-    .columns-1 .song-item { padding: 4px 0; font-size: 24px; }
-    .columns-1 .mc-item { padding: 4px 0; font-style: italic; font-size: 24px; }
-    .song-item { padding: 4px 0; font-size: 20px; }
-    .mc-item { padding: 4px 0; font-style: italic; font-size: 20px; }
+    /* Song size is set once per column-count on the list, and the items size
+       themselves in em off it — so the MC ratio holds at every layout.
+       Bigger than before throughout: this gets read off the floor mid-set. */
+    .song-list { list-style: none; padding: 0; flex: 1; font-size: ${baseFont}px; }
+    .song-item { padding: 3px 0; font-size: 1em; line-height: 1.25; }
+    /* MC rows are markers between songs, not entries to read at a glance, so
+       they get a fraction of the height. The list previously used
+       justify-content: space-evenly, which handed every <li> an equal share of
+       the column regardless of its content — a one-word MC line occupied as
+       much page as a song title. Normal flow lets the shorter row be shorter. */
+    .mc-item { padding: 0; font-style: italic; font-size: 0.55em; line-height: 1.1; color: #666; }
+    /* em, so personal notes track whatever size their song row ended up at. */
     .note {
       display: block;
-      font-size: 12px;
+      font-size: 0.5em;
       font-style: italic;
       color: #555;
       margin-top: 2px;
       font-weight: normal;
       text-transform: none;
       letter-spacing: normal;
+      line-height: 1.3;
     }
-    .columns-1 .note { font-size: 14px; }
     .footer { margin-top: 14px; padding-top: 10px; border-top: 3px solid #222; text-align: center; }
     .stats { font-size: 12px; color: #666; }
     @media print {
@@ -246,14 +315,7 @@ export function buildSetlistHtml(setlist, opts = {}) {
 <body>
   <div class="header">
     ${venueLogoUrl ? `<img src="${escapeHtml(venueLogoUrl)}" class="venue-logo" alt="" />` : ''}
-    ${bandName ? `<div class="band-name">${escapeHtml(bandName)}</div>` : ''}
-    ${bandName && (setlist.venue || setlist.name) ? '<div class="header-divider"></div>' : ''}
-    ${setlist.venue ? `<div class="venue">${escapeHtml(setlist.venue)}</div>` : ''}
-    <div class="setlist-name">${escapeHtml(setlist.name)}</div>
-    <div class="header-details">
-      <span>${dateStr}</span>
-      ${timeRangeStr ? `<span class="time-range">${timeRangeStr}</span>` : ''}
-    </div>
+    ${headerParts.join('<span class="sep">&bull;</span>')}
   </div>
   <div class="content">${setlistInner}</div>
   <div class="footer">

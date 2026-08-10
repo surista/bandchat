@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatDuration } from '../../utils/formatDuration';
-import { computeSetlistDuration, formatSetlistDuration } from '../../utils/setlistDuration';
+import { computeSetlistDuration, formatSetlistDuration, MC_DEFAULT_DURATION_SECS } from '../../utils/setlistDuration';
 import { printSetlist, exportSetlistAsWord } from '../../utils/setlistExport';
 import SetlistBuilder from './SetlistBuilder';
 import SongForm from './SongForm';
@@ -1004,7 +1004,7 @@ function SetlistList({ workspaceId, workspaceName, workspace }) {
                           <span className="w-8 text-right text-[var(--color-text-muted)]">•</span>
                           <span>🎤 {item.label || 'MC'}</span>
                           <span className="text-yellow-600 text-sm ml-auto">
-                            {item.duration ? `${Math.floor(item.duration / 60)}:${String(item.duration % 60).padStart(2, '0')}` : '1:00'}
+                            {formatDuration(item.duration || MC_DEFAULT_DURATION_SECS)}
                           </span>
                         </div>
                       );
