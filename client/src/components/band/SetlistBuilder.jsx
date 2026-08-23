@@ -109,7 +109,24 @@ function NoteInput({ value, onSave, compact = false }) {
 }
 
 // Sortable item component
-function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDisplayName, useShortNames, formatDuration, onBreakDurationChange, onSongClick, userNote, onSaveNote }) {
+function McDurationSelect({ item, onChange }) {
+  return (
+    <select
+      value={item.duration || MC_DEFAULT_DURATION_SECS}
+      onChange={(e) => onChange?.(item, e.target.value)}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      aria-label="MC duration"
+      className="px-2 py-1 bg-yellow-900/40 border border-yellow-700/50 rounded text-yellow-300 text-xs"
+    >
+      {MC_DURATION_OPTIONS.map(opt => (
+        <option key={opt.value} value={opt.value}>{opt.label}</option>
+      ))}
+    </select>
+  );
+}
+
+function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDisplayName, useShortNames, formatDuration, onItemDurationChange, onSongClick, userNote, onSaveNote }) {
   const {
     attributes,
     listeners,
@@ -177,7 +194,7 @@ function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDispla
             </div>
             <select
               value={item.duration || 900}
-              onChange={(e) => onBreakDurationChange(item, e.target.value)}
+              onChange={(e) => onItemDurationChange(item, e.target.value)}
               onClick={(e) => e.stopPropagation()}
               className="px-2 py-1 bg-blue-900/50 border border-blue-700/50 rounded text-blue-300 text-sm"
             >
@@ -194,9 +211,7 @@ function SortableItem({ item, index, totalItems, onRemove, onMove, getSongDispla
               </div>
               <div className="text-yellow-600 text-sm">Talk / Banter</div>
             </div>
-            <div className="text-xs text-yellow-400">
-              {formatDuration(item.duration || MC_DEFAULT_DURATION_SECS)}
-            </div>
+            <McDurationSelect item={item} onChange={onItemDurationChange} />
           </>
         ) : (
           <>
@@ -252,7 +267,7 @@ function SetColumn({
   formatDuration,
   isFinalSet,
   paddingSecs,
-  onBreakDurationChange,
+  onItemDurationChange,
   timing,
   nextBreakItem,
   onSongClick,
@@ -331,6 +346,7 @@ function SetColumn({
                     getSongDisplayName={getSongDisplayName}
                     useShortNames={useShortNames}
                     formatDuration={formatDuration}
+                    onItemDurationChange={onItemDurationChange}
                     onSongClick={onSongClick}
                     userNote={notes?.[item.id]?.content || ''}
                     onSaveNote={onSaveNote}
@@ -347,7 +363,7 @@ function SetColumn({
         <div className="p-2 bg-blue-900/20 border-t border-blue-800/50 flex items-center justify-center gap-2">
           <select
             value={nextBreakItem.duration || 900}
-            onChange={(e) => onBreakDurationChange(nextBreakItem, e.target.value)}
+            onChange={(e) => onItemDurationChange(nextBreakItem, e.target.value)}
             className="px-2 py-1 bg-blue-900/50 border border-blue-700/50 rounded text-blue-300 text-xs"
           >
             {BREAK_DURATION_OPTIONS.map(opt => (
@@ -371,6 +387,7 @@ function SetColumnItem({
   getSongDisplayName,
   useShortNames,
   formatDuration,
+  onItemDurationChange,
   onSongClick,
   userNote,
   onSaveNote,
@@ -438,9 +455,7 @@ function SetColumnItem({
                 🎤 {item.label || 'MC'}
               </div>
             </div>
-            <div className="text-xs text-yellow-400">
-              {formatDuration(item.duration || MC_DEFAULT_DURATION_SECS)}
-            </div>
+            <McDurationSelect item={item} onChange={onItemDurationChange} />
           </>
         ) : (
           <>
@@ -509,6 +524,17 @@ const roundUpTo5 = (time24) => {
   const newM = rounded % 60;
   return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
 };
+
+const MC_DURATION_OPTIONS = [
+  { value: 15, label: '15 sec' },
+  { value: 30, label: '30 sec' },
+  { value: 45, label: '45 sec' },
+  { value: 60, label: '1 min' },
+  { value: 90, label: '1.5 min' },
+  { value: 120, label: '2 min' },
+  { value: 180, label: '3 min' },
+  { value: 300, label: '5 min' },
+];
 
 const BREAK_DURATION_OPTIONS = [
   { value: 300, label: '5 min' },
@@ -826,7 +852,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSec
     }
   };
 
-  const handleBreakDurationChange = async (item, newDuration) => {
+  const handleItemDurationChange = async (item, newDuration) => {
     const duration = parseInt(newDuration);
     setSetlistItems(prev => prev.map(i =>
       i.id === item.id ? { ...i, duration } : i
@@ -834,7 +860,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSec
     try {
       await api.updateSetlistItem(setlist.id, item.id, { duration });
     } catch (err) {
-      console.error('Failed to save break duration:', err);
+      console.error('Failed to save item duration:', err);
     }
   };
 
@@ -1117,7 +1143,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSec
                       formatDuration={formatDuration}
                       isFinalSet={setIndex === sets.length - 1}
                       paddingSecs={transitionPaddingSecs}
-                      onBreakDurationChange={handleBreakDurationChange}
+                      onItemDurationChange={handleItemDurationChange}
                       timing={setTimings?.[setIndex]}
                       nextBreakItem={sets[setIndex + 1]?.breakItem}
                       onSongClick={handleSongClick}
@@ -1150,7 +1176,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSec
                         getSongDisplayName={getSongDisplayName}
                         useShortNames={useShortNames}
                         formatDuration={formatDuration}
-                        onBreakDurationChange={handleBreakDurationChange}
+                        onItemDurationChange={handleItemDurationChange}
                         onSongClick={handleSongClick}
                         userNote={notes[item.id]?.content || ''}
                         onSaveNote={handleSaveNote}

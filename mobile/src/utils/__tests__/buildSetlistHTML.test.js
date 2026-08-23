@@ -86,6 +86,37 @@ describe('buildSetlistHTML', () => {
     expect(html).toContain('0 songs');
   });
 
+  // Personal notes are per-user annotations, fetched by the print handler from
+  // api.getMySetlistNotes(). Matches web's export.
+  test('renders a personal note under its song', () => {
+    const html = buildSetlistHTML('Test', [
+      { id: 'a', type: 'SONG', song: { title: 'Opener', duration: 200 } },
+    ], { notes: { a: { content: 'capo 2' } } });
+    expect(html).toContain('<span class="note">capo 2</span>');
+  });
+
+  test('renders a personal note under an MC row', () => {
+    const html = buildSetlistHTML('Test', [
+      { id: 'm', type: 'MC', label: 'Intro' },
+    ], { notes: { m: { content: 'thank the sound guy' } } });
+    expect(html).toContain('thank the sound guy');
+  });
+
+  test('escapes note content', () => {
+    const html = buildSetlistHTML('Test', [
+      { id: 'a', type: 'SONG', song: { title: 'Opener', duration: 200 } },
+    ], { notes: { a: { content: '<img src=x onerror=1>' } } });
+    expect(html).not.toContain('<img src=x');
+    expect(html).toContain('&lt;img src=x');
+  });
+
+  test('omits the note markup entirely when there is no note', () => {
+    const html = buildSetlistHTML('Test', [
+      { id: 'a', type: 'SONG', song: { title: 'Opener', duration: 200 } },
+    ], { notes: { a: { content: '   ' } } });
+    expect(html).not.toContain('class="note"');
+  });
+
   test('numbers songs correctly across set breaks', () => {
     const html = buildSetlistHTML('Test', items);
     // After set break, numbering resets to 1

@@ -44,7 +44,8 @@
       "WebFetch(domain:cs310.hashnode.dev)",
       "WebFetch(domain:gist.github.com)",
       "Bash(npx:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Skill(code-review)"
     ]
   }
 }

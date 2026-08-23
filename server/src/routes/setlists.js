@@ -463,6 +463,12 @@ router.post('/:setlistId/mc', authenticate, async (req, res) => {
 
     // 30s default: a minute of stage banter is a long time, and the old 60s
     // default inflated every setlist's projected running time.
+    //
+    // This is the authoritative default — both clients call addMCToSetlist()
+    // with no duration, so their own MC_DEFAULT_DURATION_SECS never reaches the
+    // wire on create. It only governs how a null duration is *read back*. Keep
+    // all three in sync: client/src/utils/setlistDuration.js and
+    // mobile/src/utils/setlistDuration.js.
     const { duration = 30, label = 'MC' } = req.body;
 
     // Get current max position

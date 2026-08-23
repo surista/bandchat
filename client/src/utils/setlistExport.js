@@ -88,6 +88,7 @@ export function buildSetlistHtml(setlist, opts = {}) {
     notes = {},
     transitionPaddingSecs = 0,
     autoPrint = false,
+    showName = false,
   } = opts;
   const useShortNames = opts.useShortNames ?? setlist.useShortNames ?? false;
 
@@ -128,17 +129,31 @@ export function buildSetlistHtml(setlist, opts = {}) {
     }
   }
 
-  const overallEndTime = setlist.startTime ? addMinsToTime(setlist.startTime, paddedSecs / 60) : '';
+  // When per-set timings are printed, the header range has to agree with them —
+  // the two are computed differently (setTimings round each song up to the next
+  // minute and insert the breaks; paddedSecs uses raw durations plus transition
+  // padding), and a sheet whose header says the night ends at 11:15 while its
+  // last set column says 11:24 just looks broken. The printed set times win.
+  const lastSetEnd = setTimings?.[setTimings.length - 1]?.end;
+  const overallEndTime = setlist.startTime
+    ? (lastSetEnd || addMinsToTime(setlist.startTime, paddedSecs / 60))
+    : '';
   const timeRangeStr = setlist.startTime && overallEndTime
     ? `${formatTime12h(setlist.startTime)} – ${formatTime12h(overallEndTime)}`
     : '';
 
+  const setLabelFor = (set, i) => (set.breakItem
+    ? (set.breakItem.label || `Set ${i + 1}`)
+    : (numSets > 1 ? `Set ${i + 1}` : ''));
+  const setTimeFor = (i) => (setTimings?.[i]
+    ? `${formatTime12h(setTimings[i].start)} – ${formatTime12h(setTimings[i].end)}`
+    : '');
+
   const columnsHtml = sets.map((set, setIndex) => {
-    const setLabel = set.breakItem
-      ? (escapeHtml(set.breakItem.label) || `Set ${setIndex + 1}`)
-      : (numSets > 1 ? `Set ${setIndex + 1}` : '');
-    const setTimeStr = setTimings?.[setIndex]
-      ? ` <span class="set-time">${formatTime12h(setTimings[setIndex].start)} – ${formatTime12h(setTimings[setIndex].end)}</span>`
+    const setLabel = escapeHtml(setLabelFor(set, setIndex));
+    const timeText = setTimeFor(setIndex);
+    const setTimeStr = timeText
+      ? ` <span class="set-time">${timeText}</span>`
       : '';
 
     let itemsHtml = '';
@@ -171,30 +186,41 @@ export function buildSetlistHtml(setlist, opts = {}) {
   // size can only satisfy one — too small for a short set, or a page break in a
   // long one. So we solve for the largest size whose tallest column still fits.
   //
-  // Row model (px, matching the CSS below): a song is 1.25f line-height + 6
-  // padding, an MC is 0.6f (0.55em at 1.1 line-height), a personal note adds
-  // 0.65f. Usable height is the page minus header, footer and margins — A4/Letter
-  // at 10mm margins, landscape once there are two or more sets.
-  const usableHeight = isLandscape ? 620 : 950;
-  const columnFontSize = (set) => {
-    let songRows = 0, mcRows = 0, noteRows = 0;
-    for (const it of set.items) {
-      if (it.type === 'MC') mcRows++; else songRows++;
-      if (notes[it.id]?.content?.trim()) noteRows++;
-    }
-    const perFont = songRows * 1.25 + mcRows * 0.6 + noteRows * 0.65;
-    if (perFont <= 0) return 36;
-    const fixed = songRows * 6 + 50; // song padding + set header block
-    return Math.floor((usableHeight - fixed) / perFont);
-  };
-  // Height is only half the constraint — type that fits vertically can still
-  // run off the side of a narrow column. Cap on the longest title too, using
-  // ~0.52em average character width for this font stack. Without this, a
-  // 3-column landscape sized to 34px would overflow its ~338px column on any
-  // title longer than about 19 characters.
+  // Landscape once there are two or more sets.
+  //
+  // Usable height is the page minus header, footer and margins. `@page` pins
+  // orientation and margin but NOT a paper size, so the same document prints on
+  // A4 in Europe and US Letter in the States — budget for whichever is smaller
+  // in the dimension that binds, or the fit is a lie on half the world's
+  // printers. At 10mm margins: portrait content height is 277mm on A4 vs 259mm
+  // on Letter (Letter binds → 979px, less ~97px of header/footer chrome), while
+  // landscape content height is 190mm on A4 vs 196mm on Letter (A4 binds →
+  // 718px, less ~98px). Landscape is short enough that Letter is the roomier of
+  // the two, which is why only the portrait number moves.
+  const usableHeight = isLandscape ? 620 : 880;
+  // 979 is the landscape content width on US Letter (259mm at 10mm margins),
+  // narrower than A4 landscape's 277mm/1047px — same reasoning as usableHeight
+  // above, and here it is Letter that binds.
   const columnWidth = numSets === 1 ? 500
     : numSets === 2 ? 380
-    : Math.floor((1047 - 16 * (numSets - 1)) / numSets);
+    : Math.floor((979 - 16 * (numSets - 1)) / numSets);
+
+  // How many lines a run of text takes in a column, at a given size. ~0.52em is
+  // the average character width for this font stack; `emScale` is the row's own
+  // font-size multiplier from the CSS below (songs 1em, MC 0.55em, notes 0.5em).
+  const lineCount = (chars, emScale, font) =>
+    Math.max(1, Math.ceil((0.52 * emScale * font * chars) / columnWidth));
+
+  // Only song titles get a hard width cap. Titles are the thing the document
+  // exists to show, and a wrapped title reads as a layout error, so we shrink
+  // rather than wrap them.
+  //
+  // MC labels and personal notes are NOT capped this way, deliberately. They
+  // are secondary text that wraps perfectly acceptably, and folding them into
+  // the width cap makes one long note dictate the size of every title on the
+  // page: at the server's 500-char note limit it drove a roomy 8-song portrait
+  // sheet from 36px down to the 13px floor. They are charged height instead —
+  // see columnHeight below — which costs a couple of px rather than twenty.
   const longestTitle = Math.max(
     1,
     ...sets.flatMap(s => s.items.map(it => (
@@ -203,13 +229,52 @@ export function buildSetlistHtml(setlist, opts = {}) {
   );
   const widthLimitedFont = Math.floor(columnWidth / (0.52 * longestTitle));
 
+  // Height of one column at a candidate size. Row model matches the CSS below:
+  // a song is 1.25f line-height + 6 padding, an MC line is 0.6f (0.55em at 1.1),
+  // a personal note line is 0.65f — each counted per *rendered* line, so text
+  // that wraps is charged for what it actually occupies.
+  const columnHeight = (set, i, font) => {
+    let height = 0;
+    let songRows = 0;
+    for (const it of set.items) {
+      if (it.type === 'MC') {
+        // +2 chars for the angle brackets the MC row renders around its label.
+        height += lineCount((it.label || 'MC').length + 2, 0.55, font) * 0.6 * font;
+      } else {
+        songRows++;
+        height += 1.25 * font;
+      }
+      const note = notes[it.id]?.content?.trim();
+      if (note) height += lineCount(note.length, 0.5, font) * 0.65 * font;
+    }
+    // The set header is fixed at 20px regardless of font, so shrinking the type
+    // cannot rescue it — if its text is wider than the column it wraps and costs
+    // a line the 50px block never budgeted. Measure it: bold uppercase at 20px
+    // with 1px tracking runs ~13px/char, the appended time range is 14px
+    // (~7px/char) plus its 8px margin. A set with no label renders no header
+    // block at all, so it is charged nothing.
+    const label = setLabelFor(set, i);
+    let header = 0;
+    if (label) {
+      const timeText = setTimeFor(i);
+      const headerPx = label.length * 13 + (timeText ? timeText.length * 7 + 8 : 0);
+      header = 50 + (Math.max(1, Math.ceil(headerPx / columnWidth)) - 1) * 24;
+    }
+    return height + songRows * 6 + header;
+  };
+
   // One size across every column — differing sizes side by side look like a
-  // mistake. The tallest column and the longest title are both binding.
-  const baseFont = Math.max(13, Math.min(
-    36,
-    Math.min(...sets.map(columnFontSize)),
-    widthLimitedFont
-  ));
+  // mistake. Wrapping makes height a step function of the size rather than a
+  // linear one (a note can jump from one line to two), so solve by walking down
+  // from the largest allowed size to the first that fits every column, instead
+  // of dividing. At most 24 iterations of cheap arithmetic.
+  let baseFont = 13;
+  for (let f = Math.min(36, widthLimitedFont); f >= 13; f--) {
+    if (sets.every((s, i) => columnHeight(s, i, f) <= usableHeight)) {
+      baseFont = f;
+      break;
+    }
+  }
 
   // Header is a single line: band • venue • date • time. It used to be five
   // stacked rows (logo, band, rule, venue, setlist name, date/time) which ate
@@ -223,9 +288,17 @@ export function buildSetlistHtml(setlist, opts = {}) {
     timeRangeStr ? `<span class="time-range">${timeRangeStr}</span>` : '',
   ].filter(Boolean);
 
+  // The setlist name is deliberately absent from the header — see above — but
+  // the Print rationale (the browser prints <title> in the page header) does
+  // not carry to the Word export, where <title> is document metadata and never
+  // renders in the body. `showName` puts it back for that path only, inline in
+  // the footer so it costs no height the fit model would have to account for.
+  const namePrefix = showName && setlist.name
+    ? `${escapeHtml(setlist.name)} &bull; `
+    : '';
   const statsLine = hasPadding
-    ? `${songCount} songs &bull; ${actualLabel} songs only &bull; ${paddedLabel} with ${paddingSecs}s gaps`
-    : `${songCount} songs &bull; ${actualLabel} total`;
+    ? `${namePrefix}${songCount} songs &bull; ${actualLabel} songs only &bull; ${paddedLabel} with ${paddingSecs}s gaps`
+    : `${namePrefix}${songCount} songs &bull; ${actualLabel} total`;
 
   return `<!DOCTYPE html>
 <html>
@@ -345,7 +418,7 @@ export function printSetlist(setlist, opts = {}) {
  * application/msword content type. No external library required.
  */
 export function exportSetlistAsWord(setlist, opts = {}) {
-  const html = buildSetlistHtml(setlist, { ...opts, autoPrint: false });
+  const html = buildSetlistHtml(setlist, { ...opts, autoPrint: false, showName: true });
   // Leading BOM lets Word interpret the file as UTF-8 HTML.
   const blob = new Blob(['﻿', html], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);

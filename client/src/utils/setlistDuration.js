@@ -24,8 +24,10 @@ export const DEFAULT_TRANSITION_PADDING_SECS = 15;
  */
 export const MC_DEFAULT_DURATION_SECS = 30;
 
+// Boolean, not the truthy `song` object it used to leak — the name reads as a
+// predicate and callers other than .filter() should be able to trust it.
 export function isSongItem(item) {
-  return item?.type === 'SONG' || (!item?.type && item?.song);
+  return Boolean(item?.type === 'SONG' || (!item?.type && item?.song));
 }
 
 /**

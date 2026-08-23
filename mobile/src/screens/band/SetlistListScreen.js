@@ -193,7 +193,15 @@ export default function SetlistListScreen({ navigation, route }) {
           console.error('Failed to fetch venue logo for setlist print:', e);
         }
       }
-      const html = buildSetlistHTML(selectedSetlist.name, items, { venueLogoUrl, transitionPaddingSecs });
+      // Personal notes are per-user and non-essential to the export — a failure
+      // here should never block the print.
+      let notes = {};
+      try {
+        notes = (await api.getMySetlistNotes(selectedSetlist.id)) || {};
+      } catch (e) {
+        console.error('Failed to load setlist notes for export:', e);
+      }
+      const html = buildSetlistHTML(selectedSetlist.name, items, { venueLogoUrl, transitionPaddingSecs, notes });
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Export Setlist' });
     } catch (err) {

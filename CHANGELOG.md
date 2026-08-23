@@ -2,6 +2,41 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.45] - 2026-08-23
+
+### Fixed
+
+- **A single personal note no longer shrinks every song title on a printed setlist.** v1.07.44 folded note length into the width cap in `client/src/utils/setlistExport.js` on the reasoning that a wrapped note costs an unbudgeted row. It does — but a note renders at 0.5em and the server allows 500 characters, so one two-sentence note dictated the type size of the whole page: an 8-song portrait sheet with acres of vertical room fell from 36px to the 13px floor. Titles keep the hard width cap, because a wrapped title reads as a layout error. MC labels and notes are secondary text that wraps acceptably, so they are charged height for the lines they actually occupy instead. Because wrapping makes column height a step function of the type size rather than a linear one, `baseFont` is now solved by walking down from the largest allowed size to the first that fits every column. Measured on a 20-song sheet, a 500-char note now costs 5px rather than 15.
+
+- **A single unnamed set no longer reserves 50px for a set header it never renders.** Worth ~2px of type on a full page.
+
+- **The printed header's time range agrees with the per-set times.** The two were computed differently — per-set timings round each song up to the next minute and insert breaks, while the header used raw durations plus transition padding — so a sheet could claim the night ended at 11:15 while its last column said 11:24. The printed set times now win.
+
+- **MC sections with a null duration show their time again.** Live Mode on both platforms hid the label when `duration` was null while auto-advance silently used the 30s fallback, leaving the performer with no idea the screen was about to flip. Affects legacy and Slack-imported MC items. Mobile's printed setlist had the same gap.
+
+### Changed
+
+- **Live Mode's auto-advance tells you what it is about to do.** The bare `setTimeout` became an absolute deadline polled on an interval and reconciled on `AppState` `active`, so a backgrounded phone catches the setlist up instead of stranding it mid-set. It drives a countdown in the counter bar, a warning haptic at T-5s and a medium impact on the advance itself — the screen used to just change with no signal, which got sharper when the MC default halved to 30s. The AUTO toggle gets selection feedback.
+
+- **Live Mode meets WCAG AA.** `setlistTitle`, `breakDuration`, `noLyricsText` and `counterText` sat at 2.5–3.7:1 on the black stage background, under AA's 4.5:1 for text this size; they are now ~8–11:1. The MC/break duration also grew from 16px to 20px, since it is the "how long have I got" number and gets read at arm's length. The counter bar and page padding respect `insets.bottom` (the counter previously sat inside the home indicator), touch targets derive from `MIN_TOUCH_TARGET` rather than a hardcoded 44, pages are grouped for VoiceOver with composed labels, and the counter is an `accessibilityLiveRegion` so auto-advance is announced.
+
+- **MC duration is editable.** Previously it could not be changed on either platform — a band wanting a 90-second intro had to delete the MC and add it back, which handed them the default again. Web gets a `<select>` on MC rows; mobile taps the duration to open an `<ActionSheet>` (native `UIAlertController` on iOS). Both use a seconds-scale option list rather than reusing the set break's tens-of-minutes scale. Mobile's `api.updateSetlistItem` existed with zero call sites and is now wired up.
+
+- **Mobile's printed setlist includes personal notes**, reversing the v1.07.44 note that it was deliberately untouched. The layout stays a detailed table — that is the right document for mobile — but omitting per-user annotations was a gap, not a design choice. Adds `api.getMySetlistNotes` to the mobile client; a failed fetch logs and prints without notes rather than blocking the export.
+
+- `isSongItem` returns a real boolean instead of leaking the truthy `song` object.
+
+### Added
+
+- Tests for `setlistDuration` on both platforms, pinning the mirrored constants and the padding rules the two files promise to keep in sync, and `client/src/utils/__tests__/setlistExport.test.js` covering the fit model — including an explicit regression test that a 500-char note cannot shrink a sheet with vertical room to spare.
+
+### Notes
+
+- The server's `duration = 30` in `routes/setlists.js` is the authoritative default: both clients call `addMCToSetlist()` with no duration, so their own constant only governs how a null duration is read back. It now carries a comment naming both client mirrors.
+- Live Mode still has no tap-to-advance zones; the lyrics `ScrollView` is full-width, so side zones either block lyric scrolling or never fire. Needs a device to get right.
+- Notes can be read on mobile but not yet authored there — the write endpoint is unwired and there is no editor on `SetlistDetailScreen`.
+- The two stale `fileValidation.test.js` failures noted in 1.07.44 are still present and still unrelated.
+
 ## [1.07.44] - 2026-08-10
 
 ### Changed

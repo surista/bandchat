@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import storage from './storage';
+import { MC_DEFAULT_DURATION_SECS } from '../utils/setlistDuration';
 
 /**
  * @fileoverview API client for BandChat mobile app.
@@ -1089,7 +1090,7 @@ class ApiService {
     });
   }
 
-  async addMCToSetlist(setlistId, duration = 60, label = 'MC') {
+  async addMCToSetlist(setlistId, duration = MC_DEFAULT_DURATION_SECS, label = 'MC') {
     return this.request(`/setlists/${setlistId}/mc`, {
       method: 'POST',
       body: JSON.stringify({ duration, label }),
@@ -1101,6 +1102,12 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ label, duration }),
     });
+  }
+
+  // Per-user personal notes on setlist songs. Private to the current user and
+  // surfaced on their printed/shared setlist, matching web's export.
+  async getMySetlistNotes(setlistId) {
+    return this.request(`/setlists/${setlistId}/my-notes`);
   }
 
   async updateSetlistItem(setlistId, itemId, data) {

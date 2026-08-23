@@ -169,16 +169,19 @@ export function LiveMode({ setlistItems, setlistName, onClose }) {
             <div style={{ fontSize: 48, color: 'rgba(255,255,255,0.3)', marginBottom: 16 }}>&#9835;</div>
             <div style={{ fontSize: 32, fontWeight: 700 }}>{currentItem.label || 'Break'}</div>
             {currentItem.duration ? (
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 18, marginTop: 8 }}>{formatDuration(currentItem.duration)}</div>
+              <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 18, marginTop: 8 }}>{formatDuration(currentItem.duration)}</div>
             ) : null}
           </div>
         ) : isMC ? (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>&#127908;</div>
             <div style={{ fontSize: 32, fontWeight: 700 }}>{currentItem.label || 'MC'}</div>
-            {currentItem.duration ? (
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 18, marginTop: 8 }}>{formatDuration(currentItem.duration)}</div>
-            ) : null}
+            {/* Always show a time — legacy and Slack-imported MC items have a
+                null duration, and auto-advance falls back to the same constant
+                regardless, so hiding it just left the performer guessing. */}
+            <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 18, marginTop: 8 }}>
+              {formatDuration(currentItem.duration || MC_DEFAULT_DURATION_SECS)}
+            </div>
           </div>
         ) : (
           <>

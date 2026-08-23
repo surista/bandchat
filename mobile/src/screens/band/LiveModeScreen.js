@@ -5,6 +5,7 @@ import {
   FlatList,
   TouchableOpacity,
   ScrollView,
+  AppState,
   BackHandler,
   StyleSheet,
   useWindowDimensions,
@@ -19,6 +20,30 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { formatDuration } from '../../utils/formatDuration';
+import { MC_DEFAULT_DURATION_SECS } from '../../utils/setlistDuration';
+import { MIN_TOUCH_TARGET } from '../../utils/touchTarget';
+import { mediumImpact, selectionFeedback, warningNotification } from '../../utils/haptics';
+
+// The two controls here are the only ones on the screen, and they get used
+// mid-song with a guitar in hand, so they are deliberately more generous than
+// the platform minimum rather than exactly at it.
+const STAGE_TOUCH_TARGET = Math.max(MIN_TOUCH_TARGET, 52);
+
+// How long auto-advance holds a page. SET_BREAK/MC fall back to the same
+// defaults the setlist totals use, so the timer and the printed running time
+// never disagree.
+function itemDurationSecs(item) {
+  if (!item) return 0;
+  if (item.type === 'SET_BREAK') return item.duration || 15;
+  if (item.type === 'MC') return item.duration || MC_DEFAULT_DURATION_SECS;
+  return item.song?.duration || 0;
+}
+
+// Countdown label. formatDuration() returns null at 0 (by design, so callers
+// can fall back to a placeholder), which is not what a timer wants.
+function formatRemaining(secs) {
+  return formatDuration(secs) || '0:00';
+}
 
 // LiveMode is intentionally always-dark — even when the user's overall
 // app theme is light. Stage use almost always wants minimum brightness so
@@ -35,8 +60,11 @@ export default function LiveModeScreen({ navigation, route }) {
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [autoAdvance, setAutoAdvance] = useState(false);
+  const [remainingSecs, setRemainingSecs] = useState(null);
   const flatListRef = useRef(null);
-  const timerRef = useRef(null);
+  const deadlineRef = useRef(null);
+  const warnedRef = useRef(false);
+  const advancedRef = useRef(false);
 
   const items = setlistItems || [];
 
@@ -45,43 +73,66 @@ export default function LiveModeScreen({ navigation, route }) {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
-  // Auto-advance timer
+  const goToIndex = useCallback((index) => {
+    if (index < 0 || index >= items.length) return;
+    setCurrentIndex(index);
+    flatListRef.current?.scrollToIndex({ index, animated: true });
+  }, [items.length]);
+
+  // Auto-advance timer.
+  //
+  // Deliberately an absolute deadline polled on an interval, not a setTimeout:
+  // iOS suspends JS timers while the app is backgrounded, so a bare setTimeout
+  // leaves the setlist stranded on whatever page it was showing when the phone
+  // locked. Reconciling against Date.now() on AppState 'active' catches the
+  // position back up instead.
+  //
+  // The interval also drives the on-screen countdown. Without it the page just
+  // flipped out from under the performer with no warning — which got sharper
+  // when the MC default dropped to 30s. Haptics do the same job for anyone
+  // looking at the audience rather than the phone: a warning buzz at T-5s and
+  // a medium impact on the advance itself.
   useEffect(() => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
+    setRemainingSecs(null);
+    deadlineRef.current = null;
+    warnedRef.current = false;
+    advancedRef.current = false;
 
     if (!autoAdvance || currentIndex >= items.length - 1) return;
 
-    const currentItem = items[currentIndex];
-    let durationSecs = 0;
+    const durationSecs = itemDurationSecs(items[currentIndex]);
+    if (durationSecs <= 0) return;
 
-    if (currentItem.type === 'SET_BREAK') {
-      durationSecs = currentItem.duration || 15;
-    } else if (currentItem.type === 'MC') {
-      durationSecs = currentItem.duration || 60;
-    } else if (currentItem.song?.duration) {
-      durationSecs = currentItem.song.duration;
-    }
+    deadlineRef.current = Date.now() + durationSecs * 1000;
+    setRemainingSecs(durationSecs);
 
-    if (durationSecs > 0) {
-      timerRef.current = setTimeout(() => {
-        const nextIndex = currentIndex + 1;
-        if (nextIndex < items.length) {
-          setCurrentIndex(nextIndex);
-          flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
-        }
-      }, durationSecs * 1000);
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
+    const tick = () => {
+      if (advancedRef.current) return;
+      const left = Math.max(0, Math.round((deadlineRef.current - Date.now()) / 1000));
+      setRemainingSecs(left);
+      if (left <= 5 && left > 0 && !warnedRef.current) {
+        warnedRef.current = true;
+        warningNotification();
+      }
+      if (left <= 0) {
+        advancedRef.current = true;
+        mediumImpact();
+        goToIndex(currentIndex + 1);
       }
     };
-  }, [autoAdvance, currentIndex, items]);
+
+    // 250ms so the countdown never visibly sticks on a second and the advance
+    // lands close to the beat, without a per-frame cost.
+    const intervalId = setInterval(tick, 250);
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') tick();
+    });
+
+    return () => {
+      clearInterval(intervalId);
+      sub.remove();
+    };
+  }, [autoAdvance, currentIndex, items, goToIndex]);
 
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
     if (viewableItems.length > 0 && viewableItems[0].index != null) {
@@ -115,6 +166,12 @@ export default function LiveModeScreen({ navigation, route }) {
   })();
   const totalSongs = items.filter(i => i.type === 'SONG' || (!i.type && i.song)).length;
 
+  const counterLabel = items[currentIndex]?.type === 'SET_BREAK'
+    ? 'Break'
+    : items[currentIndex]?.type === 'MC'
+      ? 'MC'
+      : `Song ${songNumber} of ${totalSongs}`;
+
   const renderPage = useCallback(({ item }) => {
     // maxFontSizeMultiplier caps below are tuned for stage use: text still
     // scales for accessibility, but capped so titles + lyrics don't blow out
@@ -122,8 +179,12 @@ export default function LiveModeScreen({ navigation, route }) {
     // for a 28pt song title that's already large.
     if (item.type === 'SET_BREAK') {
       return (
-        <View style={[styles.page, { width: screenWidth }]}>
-          <View style={styles.breakContainer}>
+        <View style={[styles.page, { width: screenWidth, paddingBottom: 60 + insets.bottom }]}>
+          <View
+            style={styles.breakContainer}
+            accessible
+            accessibilityLabel={`Break: ${item.label || 'Break'}${item.duration ? `, ${formatDuration(item.duration)}` : ''}`}
+          >
             <Ionicons name="musical-note" size={48} color="rgba(255,255,255,0.3)" style={{ marginBottom: 16 }} />
             <Text style={styles.breakLabel} maxFontSizeMultiplier={1.4}>{item.label || 'Break'}</Text>
             {item.duration ? (
@@ -136,13 +197,21 @@ export default function LiveModeScreen({ navigation, route }) {
 
     if (item.type === 'MC') {
       return (
-        <View style={[styles.page, { width: screenWidth }]}>
-          <View style={styles.breakContainer}>
+        <View style={[styles.page, { width: screenWidth, paddingBottom: 60 + insets.bottom }]}>
+          <View
+            style={styles.breakContainer}
+            accessible
+            accessibilityLabel={`M C: ${item.label || 'MC'}, ${formatDuration(item.duration || MC_DEFAULT_DURATION_SECS)}`}
+          >
             <Ionicons name="mic" size={48} color="rgba(255,255,255,0.3)" style={{ marginBottom: 16 }} />
             <Text style={styles.breakLabel} maxFontSizeMultiplier={1.4}>{item.label || 'MC'}</Text>
-            {item.duration ? (
-              <Text style={styles.breakDuration} maxFontSizeMultiplier={1.4}>{formatDuration(item.duration)}</Text>
-            ) : null}
+            {/* Always show a time. Legacy and Slack-imported MC items have a
+                null duration, and hiding the label there left the performer
+                with no idea the screen was about to advance — auto-advance
+                falls back to the same constant regardless. */}
+            <Text style={styles.breakDuration} maxFontSizeMultiplier={1.4}>
+              {formatDuration(item.duration || MC_DEFAULT_DURATION_SECS)}
+            </Text>
           </View>
         </View>
       );
@@ -151,8 +220,18 @@ export default function LiveModeScreen({ navigation, route }) {
     // Song page
     const song = item.song;
     return (
-      <View style={[styles.page, { width: screenWidth }]}>
-        <View style={styles.songHeader}>
+      <View style={[styles.page, { width: screenWidth, paddingBottom: 60 + insets.bottom }]}>
+        <View
+          style={styles.songHeader}
+          accessible
+          accessibilityLabel={[
+            song?.title || 'Unknown',
+            song?.artist,
+            song?.key ? `key ${song.key}` : null,
+            song?.bpm ? `${song.bpm} B P M` : null,
+            song?.duration ? formatDuration(song.duration) : null,
+          ].filter(Boolean).join(', ')}
+        >
           <Text style={styles.songTitle} numberOfLines={2} maxFontSizeMultiplier={1.4}>{song?.title || 'Unknown'}</Text>
           {song?.artist ? (
             <Text style={styles.songArtist} numberOfLines={1} maxFontSizeMultiplier={1.4}>{song.artist}</Text>
@@ -192,7 +271,10 @@ export default function LiveModeScreen({ navigation, route }) {
         )}
       </View>
     );
-  }, [screenWidth]);
+    // `colors` is read for the key/BPM/duration badges, so it has to be a
+    // dependency — without it a theme change while Live Mode is open leaves
+    // the badges painted in the old palette.
+  }, [screenWidth, colors, insets.bottom]);
 
   return (
     <View style={styles.container}>
@@ -211,7 +293,10 @@ export default function LiveModeScreen({ navigation, route }) {
       {/* Auto-advance toggle */}
       <TouchableOpacity
         style={[styles.autoButton, { top: insets.top + 10 }, autoAdvance && styles.autoButtonActive]}
-        onPress={() => setAutoAdvance(prev => !prev)}
+        onPress={() => {
+          selectionFeedback();
+          setAutoAdvance(prev => !prev);
+        }}
         accessibilityRole="button"
         accessibilityLabel={autoAdvance ? 'Disable auto-advance' : 'Enable auto-advance'}
       >
@@ -246,14 +331,15 @@ export default function LiveModeScreen({ navigation, route }) {
         })}
       />
 
-      {/* Counter */}
-      <View style={styles.counterBar}>
+      {/* Counter. accessibilityLiveRegion so VoiceOver/TalkBack announce the
+          new position when auto-advance changes the page on its own. */}
+      <View
+        style={[styles.counterBar, { bottom: insets.bottom + 12 }]}
+        accessibilityLiveRegion="polite"
+      >
         <Text style={styles.counterText} maxFontSizeMultiplier={1.4}>
-          {items[currentIndex]?.type === 'SET_BREAK'
-            ? 'Break'
-            : items[currentIndex]?.type === 'MC'
-            ? 'MC'
-            : `Song ${songNumber} of ${totalSongs}`}
+          {counterLabel}
+          {remainingSecs != null ? `  ·  ${formatRemaining(remainingSecs)}` : ''}
         </Text>
       </View>
     </View>
@@ -269,9 +355,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     zIndex: 10,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: STAGE_TOUCH_TARGET,
+    height: STAGE_TOUCH_TARGET,
+    borderRadius: STAGE_TOUCH_TARGET / 2,
     backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -281,8 +367,8 @@ const styles = StyleSheet.create({
     right: 16,
     zIndex: 10,
     paddingHorizontal: 16,
-    minHeight: 44,
-    minWidth: 64,
+    minHeight: STAGE_TOUCH_TARGET,
+    minWidth: 72,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 22,
@@ -306,7 +392,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 60,
   },
   setlistTitle: {
-    color: 'rgba(255,255,255,0.4)',
+    // 0.7 alpha on #000 is ~11:1. The old 0.4 was 3.7:1 — under WCAG AA for
+    // text below 18.66px, and this screen gets read in the dark from a
+    // distance, which is exactly when marginal contrast stops working.
+    color: 'rgba(255,255,255,0.7)',
     fontSize: 13,
     fontWeight: '600',
     textTransform: 'uppercase',
@@ -316,6 +405,8 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 16,
+    // Clears the absolutely-positioned counter bar; insets.bottom is added at
+    // the call site so the home indicator is cleared too.
     paddingBottom: 60,
   },
   songHeader: {
@@ -367,7 +458,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   noLyricsText: {
-    color: 'rgba(255,255,255,0.3)',
+    color: 'rgba(255,255,255,0.65)',
     fontSize: 16,
   },
   breakContainer: {
@@ -382,18 +473,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   breakDuration: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 16,
+    color: 'rgba(255,255,255,0.7)',
+    // 20px, up from 16: this is the "how long have I got" number on the MC and
+    // break pages, and it has to be readable at arm's length.
+    fontSize: 20,
   },
   counterBar: {
     position: 'absolute',
-    bottom: 30,
     left: 0,
     right: 0,
     alignItems: 'center',
   },
   counterText: {
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255,255,255,0.7)',
     fontSize: 14,
     fontWeight: '600',
   },

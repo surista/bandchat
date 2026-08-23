@@ -18,9 +18,10 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
-import { computeSetlistDuration, formatSetlistDuration } from '../../utils/setlistDuration';
+import { computeSetlistDuration, formatSetlistDuration, MC_DEFAULT_DURATION_SECS } from '../../utils/setlistDuration';
 import { buildSetlistHTML } from '../../utils/buildSetlistHTML';
-import { successNotification, mediumImpact } from '../../utils/haptics';
+import ActionSheet from '../../components/ActionSheet';
+import { successNotification, mediumImpact, selectionFeedback } from '../../utils/haptics';
 import DraggableList from '../../components/DraggableList';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -29,6 +30,20 @@ import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
 import PressableRow from '../../components/PressableRow';
 import { SkeletonList } from '../../components/SkeletonLoader';
+
+// Stage banter runs in seconds, not the tens of minutes a set break does, so it
+// gets its own scale. Mirrors MC_DURATION_OPTIONS in
+// client/src/components/band/SetlistBuilder.jsx.
+const MC_DURATION_OPTIONS = [
+  { value: 15, label: '15 sec' },
+  { value: 30, label: '30 sec' },
+  { value: 45, label: '45 sec' },
+  { value: 60, label: '1 min' },
+  { value: 90, label: '1.5 min' },
+  { value: 120, label: '2 min' },
+  { value: 180, label: '3 min' },
+  { value: 300, label: '5 min' },
+];
 
 function Badge({ label, color, bgColor }) {
   return (
@@ -118,7 +133,15 @@ export default function SetlistDetailScreen({ navigation, route }) {
           console.error('Failed to fetch venue logo for setlist print:', e);
         }
       }
-      const html = buildSetlistHTML(setlist?.name || 'Setlist', setlist?.songs || [], { venueLogoUrl, transitionPaddingSecs, useShortNames: setlist?.useShortNames || false });
+      // Personal notes are per-user and non-essential to the export — a failure
+      // here should never block the print.
+      let notes = {};
+      try {
+        notes = (await api.getMySetlistNotes(setlist.id)) || {};
+      } catch (e) {
+        console.error('Failed to load setlist notes for export:', e);
+      }
+      const html = buildSetlistHTML(setlist?.name || 'Setlist', setlist?.songs || [], { venueLogoUrl, transitionPaddingSecs, useShortNames: setlist?.useShortNames || false, notes });
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Export Setlist' });
     } catch (err) {
@@ -224,6 +247,34 @@ export default function SetlistDetailScreen({ navigation, route }) {
       loadSetlist(); // revert on error
     }
   }, [setlistId, loadSetlist]);
+
+  // MC duration is editable now — an intro and a thank-the-venue slot are not
+  // the same length, and the only alternative was to delete the MC and add it
+  // back, which just handed you the default again.
+  const [mcDurationItem, setMcDurationItem] = useState(null);
+
+  const setMcDuration = useCallback(async (item, duration) => {
+    selectionFeedback();
+    setSetlist(prev => ({
+      ...prev,
+      songs: prev.songs.map(s => (s.id === item.id ? { ...s, duration } : s)),
+    }));
+    try {
+      await api.updateSetlistItem(setlistId, item.id, { duration });
+    } catch (err) {
+      Alert.alert('Error', 'Failed to update MC duration');
+      loadSetlist();
+    }
+  }, [setlistId, loadSetlist]);
+
+  const mcDurationActions = useMemo(() => (
+    mcDurationItem
+      ? MC_DURATION_OPTIONS.map(opt => ({
+          label: opt.label,
+          onPress: () => setMcDuration(mcDurationItem, opt.value),
+        }))
+      : []
+  ), [mcDurationItem, setMcDuration]);
 
   const removeItem = useCallback(async (item) => {
     mediumImpact();
@@ -408,11 +459,20 @@ export default function SetlistDetailScreen({ navigation, route }) {
                 {item.label || 'MC'}
               </Text>
             </View>
-            {item.duration ? (
-              <Text style={[styles.itemDuration, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.2}>
-                {formatDuration(item.duration)}
+            {/* Always shows a time: legacy and imported MC items have a null
+                duration but still count as the default everywhere else. */}
+            <TouchableOpacity
+              onPress={() => setMcDurationItem(item)}
+              // The label is ~18pt of text; 14pt of slop on each side brings
+              // the tappable area up to the 44pt minimum.
+              hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+              accessibilityRole="button"
+              accessibilityLabel={`MC duration, ${formatDuration(item.duration || MC_DEFAULT_DURATION_SECS)}. Tap to change.`}
+            >
+              <Text style={[styles.itemDuration, { color: colors.primary }]} maxFontSizeMultiplier={1.2}>
+                {formatDuration(item.duration || MC_DEFAULT_DURATION_SECS)}
               </Text>
-            ) : null}
+            </TouchableOpacity>
             {editing && (
               <TouchableOpacity onPress={() => removeItem(item)} style={styles.removeButton} accessibilityRole="button" accessibilityLabel="Remove MC">
                 <Text style={styles.removeText} maxFontSizeMultiplier={1.5}>{'\u2715'}</Text>
@@ -826,6 +886,14 @@ export default function SetlistDetailScreen({ navigation, route }) {
           </KeyboardAvoidingView>
         </View>
       </Modal>
+
+      {/* MC duration picker — native UIAlertController on iOS via ActionSheet. */}
+      <ActionSheet
+        visible={!!mcDurationItem}
+        title="MC duration"
+        actions={mcDurationActions}
+        onClose={() => setMcDurationItem(null)}
+      />
     </View>
   );
 }

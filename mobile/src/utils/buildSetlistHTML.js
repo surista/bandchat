@@ -1,6 +1,12 @@
 import { format } from 'date-fns';
 import { formatDuration } from './formatDuration';
-import { computeSetlistDuration, formatSetlistDuration } from './setlistDuration';
+import { computeSetlistDuration, formatSetlistDuration, MC_DEFAULT_DURATION_SECS } from './setlistDuration';
+
+// Personal notes render as a small italic line under their row, same as web.
+function noteHtml(note) {
+  const content = note?.content?.trim();
+  return content ? `<span class="note">${escapeHtml(content)}</span>` : '';
+}
 
 /**
  * Builds an HTML string for a setlist PDF/print export.
@@ -10,6 +16,9 @@ import { computeSetlistDuration, formatSetlistDuration } from './setlistDuration
  * @param {string} options.date - Date string for the header
  * @param {string} options.venueLogoUrl - URL for venue logo image
  * @param {boolean} options.useShortNames - Use each song's shortName when set, falling back to title
+ * @param {Object<string,{content:string}>} options.notes - per-user personal
+ *   annotations keyed by setlistSongId, as returned by api.getMySetlistNotes().
+ *   Matches web's export (client/src/utils/setlistExport.js).
  * @returns {string} HTML string
  */
 export function buildSetlistHTML(setlistName, items, options = {}) {
@@ -17,6 +26,7 @@ export function buildSetlistHTML(setlistName, items, options = {}) {
   const venueLogoUrl = options.venueLogoUrl || null;
   const paddingSecs = typeof options.transitionPaddingSecs === 'number' ? options.transitionPaddingSecs : 15;
   const useShortNames = options.useShortNames || false;
+  const notes = options.notes || {};
 
   const songItems = items.filter(i => i.type === 'SONG' || (!i.type && i.song));
   const totalSongs = songItems.length;
@@ -44,7 +54,7 @@ export function buildSetlistHTML(setlistName, items, options = {}) {
       rowsHtml += `
         <tr class="mc-row">
           <td></td>
-          <td colspan="5" class="mc-label">${escapeHtml(item.label || 'MC')}${item.duration ? ' (' + formatDuration(item.duration) + ')' : ''}</td>
+          <td colspan="5" class="mc-label">${escapeHtml(item.label || 'MC')} (${formatDuration(item.duration || MC_DEFAULT_DURATION_SECS)})${noteHtml(notes[item.id])}</td>
         </tr>`;
       continue;
     }
@@ -55,7 +65,7 @@ export function buildSetlistHTML(setlistName, items, options = {}) {
     rowsHtml += `
       <tr>
         <td class="num">${songNumber}</td>
-        <td class="title">${escapeHtml(displayName)}</td>
+        <td class="title">${escapeHtml(displayName)}${noteHtml(notes[item.id])}</td>
         <td class="artist">${escapeHtml(song.artist || '')}</td>
         <td class="key">${escapeHtml(song.key || '')}</td>
         <td class="bpm">${song.bpm || ''}</td>
@@ -138,6 +148,14 @@ export function buildSetlistHTML(setlistName, items, options = {}) {
     .mc-row .mc-label {
       font-style: italic;
       color: #888;
+    }
+    .note {
+      display: block;
+      font-size: 11px;
+      font-style: italic;
+      font-weight: normal;
+      color: #555;
+      margin-top: 3px;
     }
     .footer {
       text-align: center;

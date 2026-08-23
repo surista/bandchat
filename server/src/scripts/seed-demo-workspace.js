@@ -819,7 +819,7 @@ async function main() {
       items: [
         { songIdx: 0, type: 'SONG' }, { songIdx: 4, type: 'SONG' }, { songIdx: 9, type: 'SONG' },
         { songIdx: 5, type: 'SONG' }, { songIdx: 11, type: 'SONG' },
-        { type: 'MC', label: 'Introduce the band', duration: 60 },
+        { type: 'MC', label: 'Introduce the band', duration: 30 },
         { type: 'SET_BREAK', label: 'Set Break', duration: 600 },
         { songIdx: 3, type: 'SONG' }, { songIdx: 10, type: 'SONG' },
         { songIdx: 8, type: 'SONG' }, { songIdx: 14, type: 'SONG' }, { songIdx: 19, type: 'SONG' },

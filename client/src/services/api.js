@@ -22,6 +22,8 @@
  * const song = await api.createSong(workspaceId, { title: 'My Song', artist: 'My Band' });
  */
 
+import { MC_DEFAULT_DURATION_SECS } from '../utils/setlistDuration';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 /**
@@ -972,7 +974,7 @@ class ApiService {
     });
   }
 
-  async addMCToSetlist(setlistId, duration = 60, label = 'MC') {
+  async addMCToSetlist(setlistId, duration = MC_DEFAULT_DURATION_SECS, label = 'MC') {
     return this.request(`/setlists/${setlistId}/mc`, {
       method: 'POST',
       body: JSON.stringify({ duration, label })
