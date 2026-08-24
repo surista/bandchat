@@ -2,6 +2,25 @@
 
 All notable changes to BandChat are documented here.
 
+## [1.07.46] - 2026-08-24
+
+### Fixed
+
+- **The "What's new" dialog had been silent for nineteen releases.** `WhatsNewModal` and its auto-open logic were working the whole time; the data it reads (`client/src/data/releaseNotes.js`, mirrored in `mobile/`) simply stopped being updated after v1.07.26 on 2026-06-21. Every release from v1.07.27 to v1.07.45 shipped without telling users anything — including several they would have cared about (the mobile launch crash, the web login loop, first-unread scroll, public show pages never having loaded).
+
+  Rather than backfilling all nineteen versions — which `getUnseenNotes()` would have handed every existing user as a single wall of text on next launch, for changes they already lived through — this adds two entries: one for v1.07.45, and one consolidated catch-up anchored at v1.07.44 that states up front which range it covers and lists the genuinely user-visible highlights. A user whose last-seen stamp is v1.07.26 now gets two cards. Brand-new installs still get nothing, as designed.
+
+### Added
+
+- **`bump-version.js` now refuses to bump when release notes have drifted.** Nothing connected bumping the version to writing a note, which is the whole reason this went unnoticed for two months. The check runs before any file is written, so a failure leaves the tree untouched, and it also verifies the web and mobile copies are still identical.
+
+  Deliberately *not* "the newest note must equal the new version", which is what a naive guard would do: that file's own documented policy is to omit versions with no user-visible changes, so such a rule would either be wrong or get routinely bypassed with a flag. It fails when notes fall more than three versions behind — drift, rather than deliberate omission — and `--allow-stale-notes` covers a genuine run of no-op releases.
+
+### Notes
+
+- No application code changed in this release. It exists to carry the release-notes data to users, since the dialog reads a bundled file rather than a server endpoint — v1.07.45's own entry could not reach anyone until a subsequent build shipped.
+- Fixed a copy-paste slip in `mobile/src/data/releaseNotes.js`, whose "keep this file in sync with…" comment pointed at itself rather than at the client copy.
+
 ## [1.07.45] - 2026-08-23
 
 ### Fixed

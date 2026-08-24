@@ -16,6 +16,43 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.45',
+    date: '2026-08-23',
+    items: [
+      { kind: 'fixed', text: 'Printed setlists: one long personal note no longer shrinks every song title on the page. A note now costs a little height instead of the whole sheet\u2019s type size, so a short set still prints big.' },
+      { kind: 'fixed', text: 'Printed setlists: the time range in the header now agrees with the per-set times printed in the columns.' },
+      { kind: 'fixed', text: 'Live Mode: MC sections with no set length show their time again instead of a blank \u2014 auto-advance was already using 30 seconds for them.' },
+      { kind: 'changed', text: 'Live Mode: auto-advance now shows a countdown and buzzes 5 seconds before it flips the page, so it no longer changes under you with no warning. It also catches up correctly if your phone locks mid-set.' },
+      { kind: 'changed', text: 'Live Mode: easier to read on a dark stage \u2014 stronger contrast throughout, a bigger MC/break countdown, and the counter no longer sits under the home indicator. Auto-advance is announced to VoiceOver and TalkBack.' },
+      { kind: 'added', text: 'MC section length is now editable. Tap the duration on mobile, or pick it from the dropdown on web \u2014 previously the only way to change it was to delete the section and add it back.' },
+      { kind: 'added', text: 'Mobile: your personal setlist notes now appear on printed and shared setlists, matching the web export.' },
+    ],
+  },
+  {
+    version: '1.07.44',
+    date: '2026-08-10',
+    items: [
+      { kind: 'changed', text: 'Catching up: this entry covers v1.07.27 through v1.07.44, which shipped without release notes. Highlights below.' },
+      { kind: 'added', text: 'Every emoji picker now leads with the emojis you actually use most, on both web and mobile.' },
+      { kind: 'added', text: 'Printed setlists are laid out for reading off the floor: a single-line header instead of five stacked rows, and song type sized to fill the page rather than fixed \u2014 short sets print large, long ones still fit on one page.' },
+      { kind: 'changed', text: 'MC sections now default to 30 seconds instead of 60. Existing sections keep whatever length they were saved with.' },
+      { kind: 'added', text: 'Mobile: setlists gained the short/full song name toggle web already had, and it now applies to the PDF export too.' },
+      { kind: 'added', text: 'Web: the main sidebar sections (Channels / Direct Messages / Band) can be reordered, and the order follows you across workspaces.' },
+      { kind: 'fixed', text: 'Opening a channel with unread messages now takes you to the first unread one, instead of the bottom of the loaded page or a stale position from a previous visit.' },
+      { kind: 'fixed', text: 'Web: signing in no longer bounced you straight back to the login page, and your session survives a page refresh without asking for your password again.' },
+      { kind: 'fixed', text: 'Mobile: fixed a crash on every app launch, and a bug where tapping an image opened a black screen until you rotated the phone.' },
+      { kind: 'fixed', text: 'Mobile: the full-screen image viewer now rotates with your device, and saving a photo to your library works reliably instead of occasionally producing a file your gallery would not open.' },
+      { kind: 'fixed', text: 'Web: message text can be selected again, and right-clicking a link or a selection now gives you the browser\u2019s own menu (Copy, Open in new tab) rather than suppressing it.' },
+      { kind: 'fixed', text: 'Web: links, embeds, formatting and code blocks now render inside thread replies \u2014 they previously showed as plain text while the same message looked right in the channel.' },
+      { kind: 'fixed', text: 'Public show pages now load. They had been failing on every request since the feature launched in v1.06.85.' },
+      { kind: 'fixed', text: 'Setlist song counts no longer include MC sections and set breaks \u2014 a 7-song setlist with 4 MC breaks was reporting 11 songs.' },
+      { kind: 'fixed', text: 'Photos taken in landscape no longer show sideways thumbnails in the message list.' },
+      { kind: 'fixed', text: 'Your settings \u2014 themes, collapsed groups, sidebar preferences \u2014 now sync reliably across your devices, including clearing one.' },
+      { kind: 'security', text: 'Your band\u2019s per-gig fee is no longer included in the data feed sent to public band websites.' },
+      { kind: 'security', text: 'File uploads are now always attributed to a workspace and checked against its storage quota, and several vulnerable dependencies were patched.' },
+    ],
+  },
+  {
     version: '1.07.26',
     date: '2026-06-21',
     items: [
