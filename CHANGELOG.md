@@ -2,7 +2,22 @@
 
 All notable changes to BandChat are documented here.
 
-## [1.07.46] - 2026-08-24
+## [1.07.47] - 2026-08-24
+
+### Fixed
+
+- **HOTFIX — signing in (Google or otherwise) could bounce straight back to the login page in a loop, hammering the server the whole time.** Root-caused from live production logs: a single browser tab issued 1,065 doomed requests to `/api/me/preferences` in 15 minutes, none of which could ever succeed. Two compounding bugs, both structural and both mirrored on mobile:
+
+  - **Stale-refresh clobbering (`api.js`).** A backgrounded socket reconnecting with an already-dead refresh token fires its own token-refresh attempt. If a fresh login completed *while that stale attempt was still in flight*, its late 401 unconditionally called `clearTokens()` — wiping out the brand-new, valid session the user had just established. `_doRefresh()` (web) / `refreshAccessToken()` (mobile) now snapshot the token they're refreshing and no-op if the session has since moved on, rather than trusting a response that may no longer be relevant.
+  - **Unconditional retry storm (`userPreferences.js`).** The debounced preferences-sync PUT re-armed its retry timer on *every* failure with no check on why it failed. Once a session's tokens were genuinely dead, this became an infinite ~1s retry loop that could never succeed (no Authorization header left to send) — for as long as the tab stayed open. Now checks whether the session is still alive before re-queuing; a dead session drops the patch instead of retrying forever.
+
+  Client-only — no server or database changes. Verified with regression tests on both platforms that reproduce each race exactly (fail without the fix, pass with it): `client/src/services/__tests__/api.refresh.test.js`, `client/src/services/__tests__/userPreferences.retry.test.js`, the `Stale-refresh race` block in `mobile/src/services/__tests__/api.test.js`, `mobile/src/services/__tests__/userPreferences.retry.test.js`.
+
+### Notes
+
+- Mobile already has an `api.onSessionExpired` callback that `AuthContext` uses to clear React auth state the moment a session dies server-side; web has no equivalent, so a session that dies internally (as opposed to via an explicit `logout()`) doesn't reliably flip `isAuthenticated` to `false` or tear down the socket that's using it. That gap didn't need fixing to stop this specific incident — the stale-refresh guard above makes it structurally impossible for a zombie refresh to destroy a good session — but it's worth adding for cleanliness and to stop a dead session's socket from retrying forever in the background.
+
+
 
 ### Fixed
 

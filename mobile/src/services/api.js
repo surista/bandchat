@@ -424,12 +424,27 @@ class ApiService {
     this._refreshPromise = (async () => {
       const MAX_RETRIES = 2;
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        // Snapshot per attempt (re-read after a backoff sleep below, so a
+        // token that changed mid-retry is picked up naturally). A NEW session
+        // can be established — a fresh login, or another refresh — while this
+        // specific fetch is in flight: a backgrounded socket reconnecting
+        // with a since-superseded token is exactly this case. Without
+        // comparing on the way back out, this attempt's late 401 would clear
+        // tokens out from under a session it knows nothing about — confirmed
+        // in production as the cause of a "sign in, get bounced right back to
+        // login" loop.
+        const tokenForThisAttempt = this.refreshToken;
         try {
           const response = await fetchWithTimeout(`${API_URL}/auth/refresh`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken: this.refreshToken }),
+            body: JSON.stringify({ refreshToken: tokenForThisAttempt }),
           }, 15000);
+
+          if (this.refreshToken !== tokenForThisAttempt) {
+            // Superseded — whatever replaced this token is authoritative now.
+            return !!this.accessToken;
+          }
 
           if (response.ok) {
             const data = await response.json();

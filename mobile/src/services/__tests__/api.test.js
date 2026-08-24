@@ -441,3 +441,50 @@ describe('Error types', () => {
     }
   });
 });
+
+// ───────────────────────────────────────────────────
+// Stale-refresh race (production incident, 2026-08-24)
+// ───────────────────────────────────────────────────
+//
+// A backgrounded socket reconnecting with an already-superseded refresh token
+// fires its own refreshAccessToken() call. If a fresh login (Google/Apple/
+// password) completes new tokens while that stale call is still in flight,
+// the stale call's late 401 used to call clearTokens() unconditionally —
+// wiping out the newer, valid session. Confirmed in production web logs as
+// the cause of a "sign in with Google, get bounced right back to login" loop.
+// Mirrors client/src/services/__tests__/api.refresh.test.js.
+describe('Stale-refresh race', () => {
+  test('does not clobber a session established while an older refresh was in flight', async () => {
+    api.accessToken = makeToken(300);
+    api.refreshToken = 'old-refresh';
+
+    let resolveFetch;
+    fetch.mockImplementationOnce(() => new Promise((resolve) => { resolveFetch = resolve; }));
+
+    // Zombie refresh starts with the OLD token.
+    const stalePromise = api.refreshAccessToken();
+
+    // A fresh login completes while the zombie request is still in flight.
+    await api.setTokens('new-access', 'new-refresh');
+
+    // The zombie request resolves — 401, because the server already
+    // deleted/rotated the old token out from under it.
+    resolveFetch(mockResponse({ error: 'Refresh token has been revoked' }, 401));
+    await stalePromise;
+
+    expect(api.accessToken).toBe('new-access');
+    expect(api.refreshToken).toBe('new-refresh');
+  });
+
+  test('still clears tokens on a definitive 401 when nothing else has superseded it', async () => {
+    api.accessToken = makeToken(300);
+    api.refreshToken = 'only-refresh';
+    fetch.mockResolvedValueOnce(mockResponse({ error: 'Refresh token has been revoked' }, 401));
+
+    const result = await api.refreshAccessToken();
+
+    expect(result).toBe(false);
+    expect(api.accessToken).toBeNull();
+    expect(api.refreshToken).toBeNull();
+  });
+});

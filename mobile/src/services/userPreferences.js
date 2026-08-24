@@ -168,6 +168,15 @@ function _flushDebounced() {
     body: JSON.stringify({ patch }),
   }).catch((err) => {
     if (startEpoch !== _epoch) return; // logout happened — drop silently
+    // A definitive auth failure (dead/revoked refresh token) already cleared
+    // api's session inside request() — there is no session left to write
+    // against. Without this check the retry below re-arms every DEBOUNCE_MS
+    // forever: confirmed in production hammering the server indefinitely from
+    // a single client with a dead session (every retry throws the same 401,
+    // since accessToken is now null too). Drop the patch instead — nothing to
+    // sync until a real login happens, at which point clear()+load() rebuild
+    // state from the server from scratch anyway.
+    if (!api.accessToken) return;
     // Real network/server failure: keep the patch in _pendingPatch so it
     // retries automatically, and re-arm the debounce so it actually fires
     // again instead of waiting on some unrelated future set() call.

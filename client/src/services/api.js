@@ -237,17 +237,35 @@ class ApiService {
   }
 
   async _doRefresh() {
+    // Snapshot the token this specific call is refreshing. A NEW session can
+    // be established (fresh login, or another refresh) while this fetch is
+    // in flight — a leftover socket reconnecting with a since-revoked token
+    // is exactly this: it fires its own refresh attempt using the OLD token,
+    // and that request is still in flight when a fresh Google/Apple/password
+    // login completes and sets brand-new tokens. Without capturing the token
+    // up front, this call's late 401 would call clearTokens() and wipe out
+    // the newer session it knows nothing about — the confirmed cause of a
+    // "sign in with Google, get bounced right back to login" loop: the old
+    // socket's zombie refresh clobbered the tokens the fresh login had just
+    // set. Guard both outcomes (success and failure) on nothing else having
+    // changed the session in the meantime.
+    const tokenAtStart = this._refreshToken;
     try {
       // Send refresh token in body as fallback for cross-origin deployments
       // where httpOnly cookies may be blocked by SameSite policy.
       // Server checks cookie first, then falls back to body.
-      const body = this._refreshToken ? { refreshToken: this._refreshToken } : {};
+      const body = tokenAtStart ? { refreshToken: tokenAtStart } : {};
       const response = await fetch(`${API_URL}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(body)
       });
+
+      if (this._refreshToken !== tokenAtStart) {
+        // Superseded — whatever replaced this token is authoritative now.
+        return this._hasSession;
+      }
 
       if (response.ok) {
         const data = await response.json();
