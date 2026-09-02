@@ -14,7 +14,7 @@
 
 import { format } from 'date-fns';
 import { escapeHtml } from './escapeHtml';
-import { computeSetlistDuration, formatSetlistDuration, MC_DEFAULT_DURATION_SECS } from './setlistDuration';
+import { computeSetlistDuration, computeSetDuration, formatSetlistDuration } from './setlistDuration';
 
 function formatTime12h(time24) {
   if (!time24) return '';
@@ -57,12 +57,6 @@ function splitIntoSets(items) {
   return sets;
 }
 
-function getItemSecs(item) {
-  if (item.type === 'SET_BREAK') return item.duration || 0;
-  if (item.type === 'MC') return item.duration || MC_DEFAULT_DURATION_SECS;
-  const d = item.song?.duration || 0;
-  return d > 0 ? Math.ceil(d / 60) * 60 : 0;
-}
 
 function getSongName(song, useShortNames) {
   if (useShortNames && song?.shortName) return song.shortName;
@@ -107,33 +101,29 @@ export function buildSetlistHtml(setlist, opts = {}) {
     ? format(new Date(setlist.performedAt), 'EEEE, dd-MMM-yyyy')
     : format(new Date(), 'EEEE, dd-MMM-yyyy');
 
-  // Per-set timings if a start time is provided.
+  // Per-set timings if a start time is provided. Mirrors SetlistBuilder.jsx's
+  // setTimings so the printed sheet agrees with what the band saw in the app:
+  // raw actual durations (no per-song rounding) plus the workspace transition
+  // padding between songs, via the same computeSetDuration() helper.
   let setTimings = null;
   if (setlist.startTime) {
     setTimings = [];
     let curTime = setlist.startTime;
     for (let i = 0; i < sets.length; i++) {
       const s = sets[i];
-      const allItems = s.breakItem ? [s.breakItem, ...s.items] : s.items;
-      let setDurSecs = 0;
-      for (const it of allItems) {
-        if (it.type === 'SET_BREAK' && i > 0) {
-          curTime = addMinsToTime(curTime, (it.duration || 0) / 60);
-        }
-        if (it.type !== 'SET_BREAK') setDurSecs += getItemSecs(it);
+      const isFinalSet = i === sets.length - 1;
+      if (s.breakItem && i > 0) {
+        curTime = addMinsToTime(curTime, (s.breakItem.duration || 0) / 60);
       }
+      const { paddedSecs: setPaddedSecs } = computeSetDuration(s.items, { isFinalSet, paddingSecs: transitionPaddingSecs });
       const actualStart = i > 0 ? roundUpTo5(curTime) : curTime;
-      const setEnd = addMinsToTime(actualStart, setDurSecs / 60);
+      const setEnd = addMinsToTime(actualStart, setPaddedSecs / 60);
       setTimings.push({ start: actualStart, end: setEnd });
       curTime = setEnd;
     }
   }
 
-  // When per-set timings are printed, the header range has to agree with them —
-  // the two are computed differently (setTimings round each song up to the next
-  // minute and insert the breaks; paddedSecs uses raw durations plus transition
-  // padding), and a sheet whose header says the night ends at 11:15 while its
-  // last set column says 11:24 just looks broken. The printed set times win.
+  // When per-set timings are printed, the header range has to agree with them.
   const lastSetEnd = setTimings?.[setTimings.length - 1]?.end;
   const overallEndTime = setlist.startTime
     ? (lastSetEnd || addMinsToTime(setlist.startTime, paddedSecs / 60))
