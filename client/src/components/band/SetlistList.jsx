@@ -4,7 +4,7 @@ import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatDuration } from '../../utils/formatDuration';
 import { computeSetlistDuration, formatSetlistDuration, MC_DEFAULT_DURATION_SECS } from '../../utils/setlistDuration';
-import { printSetlist, exportSetlistAsWord } from '../../utils/setlistExport';
+import SetlistPrintPreviewModal from './SetlistPrintPreviewModal';
 import SetlistBuilder from './SetlistBuilder';
 import SongForm from './SongForm';
 import Modal from '../common/Modal';
@@ -163,6 +163,7 @@ function SetlistList({ workspaceId, workspaceName, workspace }) {
   const [liveModeSetlist, setLiveModeSetlist] = useState(null);
   const [renameSetlistId, setRenameSetlistId] = useState(null);
   const [renameName, setRenameName] = useState('');
+  const [exportPreview, setExportPreview] = useState(null); // { setlist, opts }
 
   useEffect(() => {
     loadData();
@@ -495,17 +496,9 @@ function SetlistList({ workspaceId, workspaceName, workspace }) {
     };
   };
 
-  const handlePrintSetlist = async (setlist) => {
+  const handleOpenExportPreview = async (setlist) => {
     const opts = await resolveExportOpts(setlist);
-    const result = printSetlist(setlist, opts);
-    if (!result.ok && result.error === 'popup-blocked') {
-      toast.warning('Please allow popups for this site to print the setlist');
-    }
-  };
-
-  const handleExportWord = async (setlist) => {
-    const opts = await resolveExportOpts(setlist);
-    exportSetlistAsWord(setlist, opts);
+    setExportPreview({ setlist, opts });
   };
 
   if (loading) {
@@ -922,18 +915,11 @@ function SetlistList({ workspaceId, workspaceName, workspace }) {
                   Live Mode
                 </button>
                 <button
-                  onClick={() => handlePrintSetlist(viewingSetlist)}
+                  onClick={() => handleOpenExportPreview(viewingSetlist)}
                   className="btn bg-orange-600 hover:bg-orange-500 text-white text-sm"
-                  title="Export as PDF (includes your personal notes)"
+                  title="Preview, adjust text size, and print or export (includes your personal notes)"
                 >
-                  Export PDF
-                </button>
-                <button
-                  onClick={() => handleExportWord(viewingSetlist)}
-                  className="btn bg-indigo-600 hover:bg-indigo-500 text-white text-sm"
-                  title="Download as a Word document (includes your personal notes)"
-                >
-                  Export Word
+                  Print / Export
                 </button>
                 <button
                   onClick={() => openEditDetails(viewingSetlist)}
@@ -1197,19 +1183,11 @@ function SetlistList({ workspaceId, workspaceName, workspace }) {
             }
           },
           {
-            label: 'Export PDF',
+            label: 'Print / Export',
             icon: '📄',
             onClick: () => {
               const setlist = setlists.find(s => s.id === contextMenu?.setlistId);
-              if (setlist) handlePrintSetlist(setlist);
-            }
-          },
-          {
-            label: 'Export Word',
-            icon: '📝',
-            onClick: () => {
-              const setlist = setlists.find(s => s.id === contextMenu?.setlistId);
-              if (setlist) handleExportWord(setlist);
+              if (setlist) handleOpenExportPreview(setlist);
             }
           },
           {
@@ -1259,6 +1237,14 @@ function SetlistList({ workspaceId, workspaceName, workspace }) {
             }
           }}
           onClose={() => setViewingSong(null)}
+        />
+      )}
+
+      {exportPreview && (
+        <SetlistPrintPreviewModal
+          setlist={exportPreview.setlist}
+          exportOpts={exportPreview.opts}
+          onClose={() => setExportPreview(null)}
         />
       )}
     </div>

@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useToast } from '../../context/ToastContext';
 import { hapticMedium } from '../../services/haptic';
-import { printSetlist, exportSetlistAsWord } from '../../utils/setlistExport';
+import SetlistPrintPreviewModal from './SetlistPrintPreviewModal';
 import {
   DndContext,
   closestCenter,
@@ -554,6 +554,7 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSec
   const [saving, setSaving] = useState(false);
   const [useShortNames, setUseShortNames] = useState(setlist.useShortNames || false);
   const [startTime, setStartTime] = useState(setlist.startTime || '');
+  const [exportPreview, setExportPreview] = useState(null); // { setlist, opts }
   const [songSortBy, setSongSortBy] = useState('title');
   const [viewingSong, setViewingSong] = useState(null);
   const [setlistPanelWidth, setSetlistPanelWidth] = useState(70); // percentage
@@ -916,17 +917,9 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSec
     startTime,
   });
 
-  const handlePrint = async () => {
+  const handleOpenExportPreview = async () => {
     const opts = await resolveExportOpts();
-    const result = printSetlist(buildExportSetlist(), opts);
-    if (!result.ok && result.error === 'popup-blocked') {
-      toast.warning('Please allow popups for this site to print the setlist');
-    }
-  };
-
-  const handleExportWord = async () => {
-    const opts = await resolveExportOpts();
-    exportSetlistAsWord(buildExportSetlist(), opts);
+    setExportPreview({ setlist: buildExportSetlist(), opts });
   };
 
   // Calculate global start indices for each set
@@ -989,18 +982,11 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSec
           </div>
           <div className="hidden sm:flex items-center gap-4">
             <button
-              onClick={handlePrint}
+              onClick={handleOpenExportPreview}
               className="px-3 py-2 rounded text-sm bg-orange-600 hover:bg-orange-500 text-white touch-manipulation"
-              title="Print or save as PDF (includes your personal notes)"
+              title="Preview, adjust text size, and print or export (includes your personal notes)"
             >
-              🖨️ Print
-            </button>
-            <button
-              onClick={handleExportWord}
-              className="px-3 py-2 rounded text-sm bg-indigo-600 hover:bg-indigo-500 text-white touch-manipulation"
-              title="Download as a Word document (includes your personal notes)"
-            >
-              📝 Word
+              🖨️ Print / Export
             </button>
             <button
               onClick={toggleShortNames}
@@ -1037,16 +1023,10 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSec
                 <div className="fixed inset-0 z-40" onClick={() => setShowMobileMenu(false)} />
                 <div className="absolute right-0 top-full mt-1 bg-[var(--color-bg-secondary)] rounded-lg shadow-xl border border-[var(--color-border)] py-1 z-50 min-w-[180px]">
                   <button
-                    onClick={() => { setShowMobileMenu(false); handlePrint(); }}
+                    onClick={() => { setShowMobileMenu(false); handleOpenExportPreview(); }}
                     className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]"
                   >
-                    🖨️ Print
-                  </button>
-                  <button
-                    onClick={() => { setShowMobileMenu(false); handleExportWord(); }}
-                    className="w-full px-4 py-2 text-left text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]"
-                  >
-                    📝 Word
+                    🖨️ Print / Export
                   </button>
                   <button
                     onClick={() => { setShowMobileMenu(false); toggleShortNames(); }}
@@ -1306,6 +1286,14 @@ function SetlistBuilder({ setlist, allSongs, workspaceName, transitionPaddingSec
           song={viewingSong}
           onSave={handleSongSave}
           onClose={() => setViewingSong(null)}
+        />
+      )}
+
+      {exportPreview && (
+        <SetlistPrintPreviewModal
+          setlist={exportPreview.setlist}
+          exportOpts={exportPreview.opts}
+          onClose={() => setExportPreview(null)}
         />
       )}
     </div>

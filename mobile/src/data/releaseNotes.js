@@ -16,6 +16,27 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.49',
+    date: '2026-09-04',
+    items: [
+      { kind: 'added', text: 'Web: Setlist Print / Export now opens a preview first, with a −/+ button to size the text up or down a point at a time before you print or download — no more squinting at a fixed size.' },
+    ],
+  },
+  {
+    version: '1.07.48',
+    date: '2026-09-02',
+    items: [
+      { kind: 'fixed', text: 'Web: setlist PDF/Word export — the printed set start and end times now match what’s shown in the app. They were computed two different ways and could disagree by several minutes.' },
+    ],
+  },
+  {
+    version: '1.07.47',
+    date: '2026-08-24',
+    items: [
+      { kind: 'fixed', text: 'Login reliability: a stale background token refresh could occasionally sign you right back out immediately after logging in.' },
+    ],
+  },
+  {
     version: '1.07.45',
     date: '2026-08-23',
     items: [

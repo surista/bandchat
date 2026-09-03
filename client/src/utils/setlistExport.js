@@ -16,6 +16,13 @@ import { format } from 'date-fns';
 import { escapeHtml } from './escapeHtml';
 import { computeSetlistDuration, computeSetDuration, formatSetlistDuration } from './setlistDuration';
 
+// Bounds for the print-preview font-size stepper (opts.fontSizeOverride).
+// MIN matches the auto-fit floor below; MAX is a sanity ceiling, not tied to
+// auto-fit's own cap — see the comment at baseFont for why override may
+// deliberately exceed it.
+export const MIN_FONT_SIZE = 13;
+export const MAX_FONT_SIZE = 60;
+
 function formatTime12h(time24) {
   if (!time24) return '';
   const [h, m] = time24.split(':').map(Number);
@@ -74,6 +81,9 @@ function getSongName(song, useShortNames) {
  * @param {number} [opts.transitionPaddingSecs]
  * @param {boolean} [opts.useShortNames] - override setlist.useShortNames
  * @param {boolean} [opts.autoPrint] - inject window.print() (Print mode only)
+ * @param {number} [opts.fontSizeOverride] - replace the auto-fit song size,
+ *   clamped to [MIN_FONT_SIZE, MAX_FONT_SIZE]. Used by the print-preview
+ *   modal's +/- stepper; omit to use the auto-fit size.
  */
 export function buildSetlistHtml(setlist, opts = {}) {
   const {
@@ -83,6 +93,7 @@ export function buildSetlistHtml(setlist, opts = {}) {
     transitionPaddingSecs = 0,
     autoPrint = false,
     showName = false,
+    fontSizeOverride = null,
   } = opts;
   const useShortNames = opts.useShortNames ?? setlist.useShortNames ?? false;
 
@@ -258,13 +269,23 @@ export function buildSetlistHtml(setlist, opts = {}) {
   // linear one (a note can jump from one line to two), so solve by walking down
   // from the largest allowed size to the first that fits every column, instead
   // of dividing. At most 24 iterations of cheap arithmetic.
-  let baseFont = 13;
-  for (let f = Math.min(36, widthLimitedFont); f >= 13; f--) {
+  let autoFont = MIN_FONT_SIZE;
+  for (let f = Math.min(36, widthLimitedFont); f >= MIN_FONT_SIZE; f--) {
     if (sets.every((s, i) => columnHeight(s, i, f) <= usableHeight)) {
-      baseFont = f;
+      autoFont = f;
       break;
     }
   }
+
+  // A caller (the print-preview modal) can override the auto-fit size so the
+  // user can bump it up for readability, or down to reclaim space — clamped
+  // to sane bounds, but deliberately allowed to exceed the auto-fit ceiling:
+  // that ceiling exists to avoid a second page, which is a tradeoff the user
+  // gets to make deliberately once they can see the preview, not one we make
+  // silently for them.
+  const baseFont = fontSizeOverride != null
+    ? Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, Math.round(fontSizeOverride)))
+    : autoFont;
 
   // Header is a single line: band • venue • date • time. It used to be five
   // stacked rows (logo, band, rule, venue, setlist name, date/time) which ate
@@ -375,7 +396,7 @@ export function buildSetlistHtml(setlist, opts = {}) {
     }
   </style>
 </head>
-<body>
+<body data-base-font="${baseFont}" data-auto-font="${autoFont}" data-orientation="${isLandscape ? 'landscape' : 'portrait'}">
   <div class="header">
     ${venueLogoUrl ? `<img src="${escapeHtml(venueLogoUrl)}" class="venue-logo" alt="" />` : ''}
     ${headerParts.join('<span class="sep">&bull;</span>')}
