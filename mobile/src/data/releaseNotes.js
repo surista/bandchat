@@ -16,6 +16,13 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.50',
+    date: '2026-09-04',
+    items: [
+      { kind: 'fixed', text: 'Web: the new Setlist print/export preview (added in the last update) wasn’t actually visible — the page thumbnail could collapse to almost nothing. It now shows properly.' },
+    ],
+  },
+  {
     version: '1.07.49',
     date: '2026-09-04',
     items: [

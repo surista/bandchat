@@ -45,9 +45,18 @@ function SetlistPrintPreviewModal({ setlist, exportOpts, onClose }) {
     onClose();
   };
 
+  // Page aspect ratio (height/width) expressed as a padding-top percentage —
+  // driven entirely by the box's own width, so it renders correctly with no
+  // dependency on an ancestor having a definite height. `.modal-content` only
+  // sets max-height (it shrinks to fit content), so a height-percentage or
+  // CSS `aspect-ratio` on the iframe itself had nothing definite to resolve
+  // against and collapsed to the browser's ~300x150 default iframe box —
+  // that was the "no preview" bug. This technique sidesteps that entirely.
+  const pagePaddingTopPct = orientation === 'landscape' ? (8.5 / 11) * 100 : (11 / 8.5) * 100;
+
   return (
-    <Modal isOpen={true} onClose={onClose} title="Preview & Print" maxWidth="max-w-3xl" className="w-full max-h-[90dvh] flex flex-col">
-      <div className="p-4 flex flex-col gap-4 min-h-0 flex-1">
+    <Modal isOpen={true} onClose={onClose} title="Preview & Print" maxWidth="max-w-3xl" className="w-full max-h-modal overflow-y-auto">
+      <div className="p-4 flex flex-col gap-4">
         <div className="flex items-center justify-center gap-3 flex-wrap">
           <span className="text-sm text-[var(--color-text-muted)]">Text size</span>
           <div className="flex items-center gap-1">
@@ -81,20 +90,20 @@ function SetlistPrintPreviewModal({ setlist, exportOpts, onClose }) {
           )}
         </div>
 
-        <div className="flex-1 min-h-0 overflow-auto flex justify-center bg-[var(--color-bg-tertiary)] rounded-lg p-4">
-          <iframe
-            key={orientation}
-            srcDoc={html}
-            title="Setlist preview"
-            sandbox=""
-            className="bg-white rounded shadow-lg"
-            style={{
-              border: 'none',
-              width: orientation === 'landscape' ? '100%' : 'auto',
-              height: orientation === 'landscape' ? 'auto' : '100%',
-              aspectRatio: orientation === 'landscape' ? '11 / 8.5' : '8.5 / 11',
-            }}
-          />
+        <div className="flex justify-center bg-[var(--color-bg-tertiary)] rounded-lg p-4">
+          <div
+            className="relative w-full bg-white rounded shadow-lg overflow-hidden"
+            style={{ maxWidth: orientation === 'landscape' ? 720 : 480 }}
+          >
+            <div style={{ paddingTop: `${pagePaddingTopPct}%` }} />
+            <iframe
+              key={orientation}
+              srcDoc={html}
+              title="Setlist preview"
+              sandbox=""
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+            />
+          </div>
         </div>
 
         <p className="text-xs text-center text-[var(--color-text-muted)]">
