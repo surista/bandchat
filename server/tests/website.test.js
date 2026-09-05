@@ -4,6 +4,7 @@ import app from './setup/app.js';
 import { createTestUser, cleanupUser } from './helpers/auth.js';
 import { createTestWorkspace, addMemberToWorkspace, cleanupWorkspace } from './helpers/workspace.js';
 import prisma from './helpers/prisma.js';
+import { generateApiToken } from '../src/services/websiteDeployment.js';
 
 describe('Website API', () => {
   let admin, member, outsider;
@@ -77,6 +78,40 @@ describe('Website API', () => {
         .get(`/api/website/api/${workspace.id}/data`);
 
       expect(res.status).toBe(401);
+    });
+
+    describe('setlists — hides anything not yet performed', () => {
+      let apiToken;
+      let pastSetlist, futureSetlist, undatedSetlist;
+
+      beforeAll(async () => {
+        apiToken = await generateApiToken(workspace.id);
+
+        const now = Date.now();
+        [pastSetlist, futureSetlist, undatedSetlist] = await Promise.all([
+          prisma.setlist.create({
+            data: { workspaceId: workspace.id, name: 'Past Show', performedAt: new Date(now - 86400000) },
+          }),
+          prisma.setlist.create({
+            data: { workspaceId: workspace.id, name: 'Upcoming Show', performedAt: new Date(now + 86400000) },
+          }),
+          prisma.setlist.create({
+            data: { workspaceId: workspace.id, name: 'Not Yet Dated' }, // performedAt left null
+          }),
+        ]);
+      });
+
+      it('only returns setlists with performedAt in the past', async () => {
+        const res = await request(app)
+          .get(`/api/website/api/${workspace.id}/data`)
+          .set('Authorization', `Bearer ${apiToken}`);
+
+        expect(res.status).toBe(200);
+        const names = res.body.setlists.map((s) => s.name);
+        expect(names).toContain(pastSetlist.name);
+        expect(names).not.toContain(futureSetlist.name);
+        expect(names).not.toContain(undatedSetlist.name);
+      });
     });
   });
 });

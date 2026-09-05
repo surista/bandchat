@@ -16,6 +16,13 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.51',
+    date: '2026-09-05',
+    items: [
+      { kind: 'fixed', text: 'Setlists for a gig that hasn’t happened yet no longer show up on your band website or on a public show page shared ahead of the gig — the songs now appear once the show is marked completed.' },
+    ],
+  },
+  {
     version: '1.07.50',
     date: '2026-09-04',
     items: [

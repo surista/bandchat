@@ -558,7 +558,12 @@ router.get('/api/:workspaceId/data', async (req, res) => {
         orderBy: { title: 'asc' },
       }),
       prisma.setlist.findMany({
-        where: { workspaceId },
+        // performedAt is only set when the linked gig is marked COMPLETED
+        // (see the "complete gig" flow in gigs.js), or manually by the band —
+        // filtering to <= now excludes both future-dated and not-yet-dated
+        // setlists, so a setlist built ahead of an upcoming show doesn't leak
+        // its songs on the band's public website before it's been played.
+        where: { workspaceId, performedAt: { lte: new Date() } },
         select: {
           id: true,
           name: true,

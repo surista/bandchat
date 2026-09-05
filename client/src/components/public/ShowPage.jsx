@@ -3,11 +3,16 @@ import { useParams } from 'react-router-dom';
 import { format } from 'date-fns';
 
 /**
- * Public-facing show page for a single completed gig the band has explicitly
- * made public (Gig.isPublic). No authentication required. Renders the band
- * name, gig title/date/venue, setlist (titles + artists only — internal
- * fields like key/bpm/notes are stripped server-side), and any photos/videos
- * from the gig gallery.
+ * Public-facing show page for a single gig the band has explicitly made
+ * public (Gig.isPublic) — including an upcoming one, used to promote a show
+ * before it happens. No authentication required. Renders the band name, gig
+ * title/date/venue, setlist (titles + artists only — internal fields like
+ * key/bpm/notes are stripped server-side), and any photos/videos from the
+ * gig gallery.
+ *
+ * The setlist is withheld server-side (`setlistRevealed: false`) until the
+ * gig is marked completed, so an upcoming show's page doesn't spoil what's
+ * about to be played — a "posted after the show" note renders in its place.
  *
  * Fetches from /api/public/shows/:gigId. Returns a 404-style "not found"
  * card if the gig doesn't exist or isn't public. No band-internal data is
@@ -114,7 +119,12 @@ function ShowPage() {
         </header>
 
         {/* Setlist */}
-        {show.setlist.length > 0 && (
+        {show.setlistRevealed === false ? (
+          <section className="mb-10">
+            <h2 className="text-xl font-semibold mb-3">Setlist</h2>
+            <p className="text-[var(--color-text-muted)] italic">Setlist will be posted after the show.</p>
+          </section>
+        ) : show.setlist.length > 0 && (
           <section className="mb-10">
             <h2 className="text-xl font-semibold mb-3">Setlist</h2>
             <ol className="space-y-1">
