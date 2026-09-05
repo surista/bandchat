@@ -3,6 +3,7 @@ import { View, Text, Modal, Pressable, StyleSheet, Platform, ActionSheetIOS } fr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import PressableRow from './PressableRow';
+import { MIN_TOUCH_TARGET } from '../utils/touchTarget';
 
 // iOS renders via native UIAlertController (ActionSheetIOS); Android uses the
 // custom themed bottom sheet below so it can match app theme and Material polish.
@@ -68,6 +69,6 @@ const styles = StyleSheet.create({
   sheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingTop: 8, maxWidth: 500, alignSelf: 'center', width: '100%' },
   handle: { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
   title: { fontSize: 15, fontWeight: '600', paddingHorizontal: 20, paddingBottom: 12, textAlign: 'center' },
-  actionItem: { minHeight: 48, paddingVertical: 16, paddingHorizontal: 20, justifyContent: 'center' },
+  actionItem: { minHeight: MIN_TOUCH_TARGET, paddingVertical: 16, paddingHorizontal: 20, justifyContent: 'center' },
   actionText: { fontSize: 16, textAlign: 'center' },
 });

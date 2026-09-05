@@ -26,6 +26,7 @@ import { useToast } from '../../context/ToastContext';
 import Badge from '../../components/Badge';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
+import { broadcastAudioPlay, subscribeAudioPause } from '../../utils/audioPlaybackCoordinator';
 import { useLayout } from '../../hooks/useLayout';
 import ErrorState from '../../components/ErrorState';
 import PressableRow from '../../components/PressableRow';
@@ -40,9 +41,22 @@ function SongAudioPlayer({ url, filename, colors }) {
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
   const progressBarRef = useRef(null);
+  // Stable identity for the app-wide "only one audio player at a time"
+  // broadcast (see MessageBubble.js's AudioAttachment) — lets this player
+  // ignore its own broadcast while still pausing every other one.
+  const playerIdRef = useRef({});
 
   useEffect(() => {
+    const listener = (startedBy) => {
+      if (startedBy === playerIdRef.current) return;
+      if (soundRef.current) {
+        soundRef.current.pauseAsync().catch(() => {});
+      }
+      setPlaying(false);
+    };
+    const unsubscribe = subscribeAudioPause(listener);
     return () => {
+      unsubscribe();
       if (soundRef.current) {
         soundRef.current.unloadAsync().catch(() => {});
         soundRef.current = null;
@@ -58,10 +72,12 @@ function SongAudioPlayer({ url, filename, colors }) {
         return;
       }
       if (soundRef.current) {
+        broadcastAudioPlay(playerIdRef.current);
         await soundRef.current.playAsync();
         setPlaying(true);
         return;
       }
+      broadcastAudioPlay(playerIdRef.current);
       // Set audio mode so sound plays through speakers (not earpiece)
       setLoading(true);
       await Audio.setAudioModeAsync({
@@ -80,6 +96,7 @@ function SongAudioPlayer({ url, filename, colors }) {
             if (status.didJustFinish) {
               setPlaying(false);
               setPosition(0);
+              newSound.setPositionAsync(0).catch(() => {});
             }
           }
         }

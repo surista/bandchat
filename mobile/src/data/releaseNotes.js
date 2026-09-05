@@ -16,6 +16,21 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.54',
+    date: '2026-09-06',
+    items: [
+      { kind: 'fixed', text: 'Mobile: fixed a crash when tapping a "replied to a thread" notification in Activity.' },
+      { kind: 'fixed', text: 'Mobile: Band Kitty balances now show a minus sign when overdrawn instead of looking positive.' },
+      { kind: 'fixed', text: 'Mobile: tapping a video, audio, or link attachment on a gig now opens it — previously only photos responded.' },
+      { kind: 'fixed', text: 'Mobile: exported stage plot PDFs now match the layout you actually arranged, instead of clustering everything in one corner.' },
+      { kind: 'fixed', text: 'Mobile: Band Members, Announcements, Contacts, Venues, and Timeline no longer show a full error screen after a brief connection hiccup if they already had data loaded.' },
+      { kind: 'fixed', text: 'Mobile: playing a song or recording’s audio now pauses any other audio playing elsewhere in the app, matching voice messages.' },
+      { kind: 'fixed', text: 'Mobile: uploads (photos, videos, audio) no longer fail outright if your session needed a routine refresh mid-upload.' },
+      { kind: 'fixed', text: 'Mobile: closing a poll now asks for confirmation, since it’s permanent and affects everyone in the workspace.' },
+      { kind: 'fixed', text: 'Mobile: a handful of touch targets and missing VoiceOver labels across chat, settings, and band screens.' },
+    ],
+  },
+  {
     version: '1.07.53',
     date: '2026-09-06',
     items: [

@@ -273,7 +273,7 @@ export default function WorkspaceListScreen({ navigation, route }) {
       {/* Join Workspace Modal */}
       <Modal visible={showJoin} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowJoin(false)}>
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header">Join a Workspace</Text>
             <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Invite Code</Text>
             <TextInput

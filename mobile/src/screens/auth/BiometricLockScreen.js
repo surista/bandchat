@@ -8,7 +8,7 @@ import { useLayout } from '../../hooks/useLayout';
 
 export default function BiometricLockScreen() {
   const { unlockApp, logout } = useAuth()
-  const { isTablet, contentMaxWidth } = useLayout();
+  const { isTablet } = useLayout();
   const { colors } = useTheme();
   const [authenticating, setAuthenticating] = useState(false);
   const [failed, setFailed] = useState(false);

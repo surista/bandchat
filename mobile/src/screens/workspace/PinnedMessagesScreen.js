@@ -133,7 +133,7 @@ export default function PinnedMessagesScreen({ navigation, route }) {
               Pinned by {item.pinnedBy.displayName}
             </Text>
           )}
-          <TouchableOpacity onPress={() => handleUnpin(item.messageId)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Unpin message">
+          <TouchableOpacity onPress={() => handleUnpin(item.messageId)} hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }} accessibilityRole="button" accessibilityLabel="Unpin message">
             <Text style={[styles.unpinButton, { color: colors.primary }]}>Unpin</Text>
           </TouchableOpacity>
         </View>

@@ -207,7 +207,12 @@ router.get('/:messageId/replies', authenticate, async (req, res) => {
     const { cursor } = req.query;
     const message = await prisma.message.findUnique({
       where: { id: req.params.messageId },
-      include: { channel: true }
+      include: {
+        channel: true,
+        author: { select: { id: true, displayName: true, avatarUrl: true } },
+        attachments: true,
+        ...reactionsInclude,
+      }
     });
 
     if (!message) {
@@ -280,8 +285,15 @@ router.get('/:messageId/replies', authenticate, async (req, res) => {
     const hasMore = replies.length > take;
     const items = hasMore ? replies.slice(0, take) : replies;
 
+    // Included so a caller that only has a message id (e.g. mobile's Activity
+    // screen navigating to a thread_reply notification) can open the thread
+    // without a full message object in hand — `channel` is dropped since it's
+    // not part of the message shape callers already render elsewhere.
+    const { channel: _channel, ...parent } = message;
+
     res.json({
       replies: items,
+      parent,
       nextCursor: hasMore ? items[items.length - 1].id : null,
       hasMore
     });

@@ -74,6 +74,7 @@ export default function AnnouncementsScreen({ navigation, route }) {
 
   const loadingRef = useRef(loading);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
+  const hasDataRef = useRef(false);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -95,8 +96,13 @@ export default function AnnouncementsScreen({ navigation, route }) {
     try {
       const data = await api.getAnnouncements(workspaceId);
       setAnnouncements(data);
+      hasDataRef.current = data.length > 0;
     } catch (err) {
-      if (!announcements.length) setError(err.message || 'Failed to load announcements');
+      // hasDataRef (not `announcements.length`) so a transient refresh
+      // failure after data is already showing doesn't wipe the populated
+      // list — `announcements` isn't a dep here, so that closure would
+      // otherwise stay bound to whatever it was on first render.
+      if (!hasDataRef.current) setError(err.message || 'Failed to load announcements');
     } finally {
       setLoading(false);
       setRefreshing(false);

@@ -1776,7 +1776,7 @@ class ApiService {
   // — the one case with no workspace to bill (a user's own profile picture).
   // The server restricts that scope to images under 10MB, so it can't be used
   // as a general-purpose bypass.
-  async uploadFile(uri, filename, mimeType, workspaceId) {
+  async uploadFile(uri, filename, mimeType, workspaceId, _isRetry = false) {
     await this.ensureFreshToken();
     const formData = new FormData();
     formData.append('file', { uri, name: filename, type: mimeType });
@@ -1795,6 +1795,17 @@ class ApiService {
       body: formData,
     }, UPLOAD_TIMEOUT);
 
+    // Uploads bypass request() entirely (hand-rolled multipart body), so they
+    // never got its 401 -> refresh -> retry handling. ensureFreshToken() only
+    // catches a token that's already expiring when the upload *starts* — this
+    // app allows files up to 500MB, and one that outlives the access token's
+    // remaining life mid-upload used to fail with a hard, unrecoverable auth
+    // error instead of transparently refreshing like every other endpoint.
+    if (response.status === 401 && !_isRetry) {
+      const refreshed = await this.refreshAccessToken();
+      if (refreshed) return this.uploadFile(uri, filename, mimeType, workspaceId, true);
+    }
+
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
       throw new Error(data.error || 'Upload failed');
@@ -1803,7 +1814,7 @@ class ApiService {
     return response.json();
   }
 
-  async uploadFileWithProgress(uri, filename, mimeType, onProgress, workspaceId) {
+  async uploadFileWithProgress(uri, filename, mimeType, onProgress, workspaceId, _isRetry = false) {
     await this.ensureFreshToken();
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -1819,6 +1830,20 @@ class ApiService {
       };
 
       xhr.onload = () => {
+        // See uploadFile()'s identical guard for why — this hand-rolled XHR
+        // upload bypasses request(), so it never got 401 -> refresh -> retry
+        // handling on its own. Retried at most once (_isRetry).
+        if (xhr.status === 401 && !_isRetry) {
+          this.refreshAccessToken().then((refreshed) => {
+            if (refreshed) {
+              this.uploadFileWithProgress(uri, filename, mimeType, onProgress, workspaceId, true)
+                .then(resolve, reject);
+            } else {
+              reject(new Error('Upload failed'));
+            }
+          });
+          return;
+        }
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
             resolve(JSON.parse(xhr.responseText));
@@ -1847,7 +1872,7 @@ class ApiService {
     });
   }
 
-  async uploadFiles(files, workspaceId) {
+  async uploadFiles(files, workspaceId, _isRetry = false) {
     await this.ensureFreshToken();
     const formData = new FormData();
     files.forEach(file => {
@@ -1866,6 +1891,13 @@ class ApiService {
       headers,
       body: formData,
     }, UPLOAD_TIMEOUT);
+
+    // See uploadFile()'s identical guard for why — bypasses request(), so it
+    // never got 401 -> refresh -> retry handling on its own.
+    if (response.status === 401 && !_isRetry) {
+      const refreshed = await this.refreshAccessToken();
+      if (refreshed) return this.uploadFiles(files, workspaceId, true);
+    }
 
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
@@ -1887,7 +1919,10 @@ class ApiService {
     await this.ensureFreshToken();
     const url = `${API_URL}/auth/export`;
     const headers = { Authorization: `Bearer ${this.accessToken}` };
-    const response = await fetch(url, { headers });
+    // A full data export can be a large payload and is one of the few bare
+    // fetch() calls left in this file — without a timeout, a stalled
+    // connection hangs indefinitely with no way to surface an error.
+    const response = await fetchWithTimeout(url, { headers }, UPLOAD_TIMEOUT);
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
       throw new Error(data.error || 'Export failed');
@@ -1899,7 +1934,7 @@ class ApiService {
     await this.ensureFreshToken();
     const url = `${API_URL}/workspaces/${workspaceId}/export`;
     const headers = { Authorization: `Bearer ${this.accessToken}` };
-    const response = await fetch(url, { headers });
+    const response = await fetchWithTimeout(url, { headers }, UPLOAD_TIMEOUT);
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
       throw new Error(data.error || 'Export failed');

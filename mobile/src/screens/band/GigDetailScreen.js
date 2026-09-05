@@ -646,28 +646,41 @@ export default function GigDetailScreen({ navigation, route }) {
       if (result.canceled || !result.assets?.length) return;
 
       setUploadingMedia(true);
+      let failedCount = 0;
       for (const rawAsset of result.assets) {
-        const asset = await prepareImageForUpload(rawAsset);
-        const filename = asset.fileName || `media_${Date.now()}.jpg`;
-        const mimeType = asset.mimeType || (asset.type === 'video' ? 'video/mp4' : 'image/jpeg');
-        const uploaded = await api.uploadFile(asset.uri, filename, mimeType, workspaceId);
-        const mediaType = asset.type === 'video' ? 'video' : 'image';
-        await api.addGigMedia(gigId, {
-          type: mediaType,
-          url: uploaded.url,
-          caption: filename,
-        });
+        try {
+          const asset = await prepareImageForUpload(rawAsset);
+          const filename = asset.fileName || `media_${Date.now()}.jpg`;
+          const mimeType = asset.mimeType || (asset.type === 'video' ? 'video/mp4' : 'image/jpeg');
+          const uploaded = await api.uploadFile(asset.uri, filename, mimeType, workspaceId);
+          const mediaType = asset.type === 'video' ? 'video' : 'image';
+          await api.addGigMedia(gigId, {
+            type: mediaType,
+            url: uploaded.url,
+            caption: filename,
+          });
+        } catch {
+          // Per-item failure — keep going so one bad file in a multi-select
+          // doesn't discard the ones that already succeeded.
+          failedCount++;
+        }
       }
-      // Reload media
+      // Reload unconditionally: previously this only ran if the whole loop
+      // completed without throwing, so assets that uploaded fine before a
+      // later one failed never appeared until a manual refresh.
       const updatedMedia = await api.getGigMedia(gigId).catch(() => []);
       setGigMedia(updatedMedia);
-      successNotification();
+      if (failedCount > 0) {
+        Alert.alert('Some uploads failed', `${failedCount} of ${result.assets.length} file(s) couldn't be uploaded.`);
+      } else {
+        successNotification();
+      }
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to upload media');
     } finally {
       setUploadingMedia(false);
     }
-  }, [gigId]);
+  }, [gigId, workspaceId]);
 
   const handleAddAudio = useCallback(async () => {
     try {
@@ -1485,10 +1498,21 @@ export default function GigDetailScreen({ navigation, route }) {
                 onPress={() => {
                   if (item.type === 'image') {
                     navigation.navigate('GigGallery', { gigId, gigTitle: gig?.title });
+                  } else if (item.url) {
+                    // video/audio/youtube/link — open externally, same
+                    // fallback GigGalleryScreen uses. Previously only image
+                    // taps did anything here; everything else silently
+                    // swallowed the tap.
+                    Linking.openURL(item.url).catch(() => {});
                   }
                 }}
                 accessibilityRole="button"
-                accessibilityLabel={item.type === 'video' ? 'Video thumbnail' : 'Photo thumbnail'}
+                accessibilityLabel={
+                  item.type === 'video' ? 'Video, opens in player'
+                    : item.type === 'audio' ? 'Audio, opens in player'
+                    : item.type === 'image' ? 'Photo thumbnail'
+                    : 'Link, opens in browser'
+                }
               >
                 {item.type === 'image' ? (
                   <Image source={{ uri: item.url }} style={styles.mediaThumbnailImage} contentFit="cover" accessible={false} />

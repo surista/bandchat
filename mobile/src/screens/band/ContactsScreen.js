@@ -89,6 +89,7 @@ export default function ContactsScreen({ navigation, route }) {
 
   const loadingRef = useRef(loading);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
+  const hasDataRef = useRef(false);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -112,8 +113,11 @@ export default function ContactsScreen({ navigation, route }) {
       const cat = categoryFilter !== 'all' ? categoryFilter : null;
       const data = await api.getContacts(workspaceId, cat);
       setContacts(data);
+      hasDataRef.current = data.length > 0;
     } catch (err) {
-      if (!contacts.length) setError(err.message || 'Failed to load contacts');
+      // hasDataRef (not `contacts`) so a transient refresh failure after
+      // data is already showing doesn't wipe the populated list.
+      if (!hasDataRef.current) setError(err.message || 'Failed to load contacts');
     } finally {
       setLoading(false);
       setRefreshing(false);

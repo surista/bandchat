@@ -26,6 +26,7 @@ import ActionSheet from '../../components/ActionSheet';
 import { SkeletonList } from '../../components/SkeletonLoader';
 import useDebounce from '../../hooks/useDebounce';
 import { useLayout } from '../../hooks/useLayout';
+import { broadcastAudioPlay, subscribeAudioPause } from '../../utils/audioPlaybackCoordinator';
 
 const TYPE_FILTERS = [
   { key: 'all', label: 'All Types' },
@@ -48,6 +49,22 @@ function InlineAudioPlayer({ url, colors }) {
   const [sound, setSound] = useState(null);
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
+  const soundRef = useRef(null);
+  // Stable identity for the app-wide "only one audio player at a time"
+  // broadcast (see MessageBubble.js's AudioAttachment).
+  const playerIdRef = useRef({});
+  useEffect(() => { soundRef.current = sound; }, [sound]);
+
+  useEffect(() => {
+    const listener = (startedBy) => {
+      if (startedBy === playerIdRef.current) return;
+      if (soundRef.current) {
+        soundRef.current.pauseAsync().catch(() => {});
+      }
+      setPlaying(false);
+    };
+    return subscribeAudioPause(listener);
+  }, []);
 
   const toggle = useCallback(async () => {
     if (sound) {
@@ -55,11 +72,13 @@ function InlineAudioPlayer({ url, colors }) {
         await sound.pauseAsync();
         setPlaying(false);
       } else {
+        broadcastAudioPlay(playerIdRef.current);
         await sound.playAsync();
         setPlaying(true);
       }
       return;
     }
+    broadcastAudioPlay(playerIdRef.current);
     setLoading(true);
     try {
       const { sound: newSound } = await Audio.Sound.createAsync(
@@ -68,6 +87,7 @@ function InlineAudioPlayer({ url, colors }) {
         (status) => {
           if (status.didJustFinish) {
             setPlaying(false);
+            newSound.setPositionAsync(0).catch(() => {});
           }
         }
       );

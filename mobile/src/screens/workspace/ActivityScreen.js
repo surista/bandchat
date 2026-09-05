@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
 import ErrorState from '../../components/ErrorState';
@@ -36,11 +37,18 @@ export default function ActivityScreen({ navigation, route }) {
   const { workspaceId } = route.params;
   const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
+  const toast = useToast();
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  // id of the thread_reply item currently being opened — ThreadScreen needs a
+  // full parent message object (every other navigator to it already has one
+  // in memory), but an activity row only carries `parentId`/`parentContent`,
+  // so we fetch the real parent first. Tracked per-row so only the tapped
+  // row shows a spinner while the fetch is in flight.
+  const [openingThreadId, setOpeningThreadId] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -69,25 +77,35 @@ export default function ActivityScreen({ navigation, route }) {
     return '';
   };
 
-  const handlePress = useCallback((item) => {
+  const handlePress = useCallback(async (item) => {
     const channel = {
       id: item.channelId,
       name: item.channelName,
       isDM: item.isDirect || false,
     };
     if (item.type === 'thread_reply' && item.parentId) {
-      navigation.navigate('Thread', {
-        messageId: item.parentId,
-        channelId: item.channelId,
-        workspaceId,
-      });
+      if (openingThreadId) return; // already opening one, ignore extra taps
+      setOpeningThreadId(item.id);
+      try {
+        const data = await api.getReplies(item.parentId);
+        if (!data?.parent) throw new Error('Thread not found');
+        navigation.navigate('Thread', {
+          parentMessage: data.parent,
+          channelId: item.channelId,
+          workspaceId,
+        });
+      } catch (err) {
+        toast.error('Could not open thread — the message may have been deleted.');
+      } finally {
+        setOpeningThreadId(null);
+      }
     } else {
       navigation.navigate('Channel', {
         channel,
         workspaceId,
       });
     }
-  }, [navigation, workspaceId]);
+  }, [navigation, workspaceId, openingThreadId, toast]);
 
   const renderItem = useCallback(({ item }) => (
     <PressableRow
@@ -98,7 +116,11 @@ export default function ActivityScreen({ navigation, route }) {
     >
       <View style={styles.row}>
         <View style={[styles.iconBg, { backgroundColor: colors.bgTertiary }]}>
-          <Ionicons name={ICONS[item.type] || 'notifications-outline'} size={18} color={colors.primary} />
+          {openingThreadId === item.id ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Ionicons name={ICONS[item.type] || 'notifications-outline'} size={18} color={colors.primary} />
+          )}
         </View>
         <View style={styles.content}>
           <View style={styles.headerRow}>
@@ -118,7 +140,7 @@ export default function ActivityScreen({ navigation, route }) {
         </View>
       </View>
     </PressableRow>
-  ), [colors, handlePress]);
+  ), [colors, handlePress, openingThreadId]);
 
   if (loading) {
     return (

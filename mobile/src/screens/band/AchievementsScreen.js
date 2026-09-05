@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useLayoutEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import formatDate from '../../utils/formatDate';
+import getCurrencySymbol from '../../utils/getCurrencySymbol';
 import api from '../../services/api';
 import ErrorState from '../../components/ErrorState';
 import { SkeletonList } from '../../components/SkeletonLoader';
@@ -100,9 +101,23 @@ export default function AchievementsScreen({ navigation, route }) {
     }
   }, [workspaceId]);
 
+  const loadingRef = useRef(loading);
+  useEffect(() => { loadingRef.current = loading; }, [loading]);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Refresh on focus, matching every sibling band screen (BandMembers,
+  // Contacts, Announcements, Polls, Kitty) — otherwise returning to this tab
+  // after earning a badge elsewhere shows stale data until a manual
+  // pull-to-refresh.
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (!loadingRef.current) loadData();
+    });
+    return unsubscribe;
+  }, [navigation, loadData]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -237,7 +252,7 @@ export default function AchievementsScreen({ navigation, route }) {
             <StatCard label="Rehearsals" value={stats.rehearsals || 0} color="#ec4899" bgColor="rgba(236,72,153,0.12)" />
             <StatCard label="Practice" value={`${Math.round((stats.hoursRehearsed || 0))}h`} color="#f97316" bgColor="rgba(249,115,22,0.12)" />
             <StatCard label="Songs" value={stats.songs || 0} color="#a855f7" bgColor="rgba(168,85,247,0.12)" />
-            <StatCard label="Revenue" value={`$${(stats.revenue || 0).toLocaleString()}`} color="#eab308" bgColor="rgba(234,179,8,0.12)" />
+            <StatCard label="Revenue" value={`${getCurrencySymbol(stats.currency)}${(stats.revenue || 0).toLocaleString()}`} color="#eab308" bgColor="rgba(234,179,8,0.12)" />
           </ScrollView>
         )}
 

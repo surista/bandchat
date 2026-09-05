@@ -819,6 +819,7 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
         rehearsals: allRehearsals.length,
         songs: allSongs.length,
         revenue: cumulativeRevenue,
+        currency,
         hoursRehearsed: Math.round(cumulativeRehearsalHours * 10) / 10,
         hoursGigged: Math.round(cumulativeGigHours * 10) / 10
       }

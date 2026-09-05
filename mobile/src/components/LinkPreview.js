@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import {
   View,
   Text,
@@ -32,14 +32,34 @@ function LinkPreview({ content, isOwn, onDismiss, onLongPress, blockedDomains })
   const { colors } = useTheme();
   const [preview, setPreview] = useState(null);
   const [url, setUrl] = useState(null);
+  // Tracks the last URL this effect itself set, purely so a genuine change
+  // can clear the stale preview immediately — kept out of the effect's deps
+  // (a ref, not state) so reacting to it doesn't cause a second, redundant
+  // run of the cache-check/fetch below.
+  const prevUrlRef = useRef(null);
 
   useEffect(() => {
-    if (!content) return;
+    if (!content) {
+      // Content lost its URL entirely (e.g. the message was edited) —
+      // previously this returned without clearing state, so the old
+      // preview card kept rendering forever.
+      prevUrlRef.current = null;
+      setPreview(null);
+      setUrl(null);
+      return;
+    }
 
     const match = content.match(URL_REGEX);
-    if (!match || match.length === 0) return;
+    if (!match || match.length === 0) {
+      prevUrlRef.current = null;
+      setPreview(null);
+      setUrl(null);
+      return;
+    }
 
     const firstUrl = match[0].replace(/[)}\]>,;.!?]+$/, '');
+    if (firstUrl !== prevUrlRef.current) setPreview(null); // clear the old card immediately rather than show it while the new one loads
+    prevUrlRef.current = firstUrl;
     setUrl(firstUrl);
 
     // Check if domain is blocked

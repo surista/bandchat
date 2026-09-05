@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useLayoutEffect } from 'react';
+import { useState, useEffect, useCallback, useLayoutEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ import formatDate from '../../utils/formatDate';
 import PressableRow from '../../components/PressableRow';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
+import { broadcastAudioPlay, subscribeAudioPause } from '../../utils/audioPlaybackCoordinator';
 
 // Wraps expo-video's VideoView so the useVideoPlayer hook is called only when
 // a video URL is actually present (parent renders this conditionally).
@@ -61,6 +62,22 @@ function AudioPlayer({ url, colors }) {
   const [loading, setLoading] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
+  const soundRef = useRef(null);
+  // Stable identity for the app-wide "only one audio player at a time"
+  // broadcast (see MessageBubble.js's AudioAttachment).
+  const playerIdRef = useRef({});
+  useEffect(() => { soundRef.current = sound; }, [sound]);
+
+  useEffect(() => {
+    const listener = (startedBy) => {
+      if (startedBy === playerIdRef.current) return;
+      if (soundRef.current) {
+        soundRef.current.pauseAsync().catch(() => {});
+      }
+      setPlaying(false);
+    };
+    return subscribeAudioPause(listener);
+  }, []);
 
   const toggle = useCallback(async () => {
     if (sound) {
@@ -68,11 +85,13 @@ function AudioPlayer({ url, colors }) {
         await sound.pauseAsync();
         setPlaying(false);
       } else {
+        broadcastAudioPlay(playerIdRef.current);
         await sound.playAsync();
         setPlaying(true);
       }
       return;
     }
+    broadcastAudioPlay(playerIdRef.current);
     setLoading(true);
     try {
       const { sound: newSound } = await Audio.Sound.createAsync(
@@ -86,6 +105,7 @@ function AudioPlayer({ url, colors }) {
           if (status.didJustFinish) {
             setPlaying(false);
             setPosition(0);
+            newSound.setPositionAsync(0).catch(() => {});
           }
         }
       );
@@ -98,22 +118,17 @@ function AudioPlayer({ url, colors }) {
     }
   }, [sound, playing, url]);
 
-  // Unload sound when URL changes or component unmounts
-  useEffect(() => {
-    return () => {
-      if (sound) {
-        sound.unloadAsync();
-        setSound(null);
-        setPlaying(false);
-        setPosition(0);
-        setDuration(0);
-      }
-    };
-  }, [url]);
-
+  // Unload and reset display state whenever the sound instance changes (new
+  // recording selected) or this component unmounts. Previously there were
+  // two overlapping effects here — one keyed on `[url]` whose cleanup closed
+  // over `sound` from the render it was defined in (always null, since that
+  // effect never re-ran when `sound` itself changed) and did nothing useful.
   useEffect(() => {
     return () => {
       if (sound) sound.unloadAsync();
+      setPlaying(false);
+      setPosition(0);
+      setDuration(0);
     };
   }, [sound]);
 

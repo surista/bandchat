@@ -203,16 +203,27 @@ export default function PollsScreen({ navigation, route }) {
     }
   }, [selections, loadPolls]);
 
-  const handleClosePoll = useCallback(async () => {
+  const handleClosePoll = useCallback(() => {
     if (!selectedPoll) return;
-    try {
-      await api.closePoll(selectedPoll.id);
-      loadPolls();
-    } catch (err) {
-      Alert.alert('Error', 'Failed to close poll');
-    }
-    setShowActions(false);
-    setSelectedPoll(null);
+    // Closing is irreversible and workspace-wide (locks results for
+    // everyone), same stakes as delete just below — confirm the same way.
+    Alert.alert('Close Poll', 'Close voting on this poll? This can’t be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Close Poll',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.closePoll(selectedPoll.id);
+            loadPolls();
+          } catch (err) {
+            Alert.alert('Error', 'Failed to close poll');
+          }
+          setShowActions(false);
+          setSelectedPoll(null);
+        },
+      },
+    ]);
   }, [selectedPoll, loadPolls]);
 
   const handleDeletePoll = useCallback(() => {

@@ -347,7 +347,9 @@ export default function ChannelSettingsScreen({ navigation, route }) {
                 {isAdmin && member.userId !== user?.id && (
                   <TouchableOpacity
                     onPress={() => handleRemoveMember(member.userId, displayName)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${displayName}`}
                   >
                     <Text style={[styles.removeText, { color: '#EF4444' }]}>{'\u2715'}</Text>
                   </TouchableOpacity>

@@ -18,6 +18,8 @@ import { isSafeUrl } from '../utils/urlSafety';
 import { MIN_TOUCH_TARGET } from '../utils/touchTarget';
 import { trackEmojiUsage } from '../utils/emojiFrequency';
 import { useLayout } from '../hooks/useLayout';
+import { formatDuration } from '../utils/formatDuration';
+import { broadcastAudioPlay, subscribeAudioPause } from '../utils/audioPlaybackCoordinator';
 
 const YT_REGEX = /(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/|m\.youtube\.com\/watch\?v=)([\w-]{11})/;
 
@@ -31,13 +33,6 @@ function formatTimestamp(dateStr) {
   if (isToday(date)) return format(date, 'h:mm a');
   if (isYesterday(date)) return 'Yesterday ' + format(date, 'h:mm a');
   return format(date, 'dd-MMM-yyyy, h:mm a');
-}
-
-function formatDurationMmSs(ms) {
-  const totalSeconds = Math.floor(ms / 1000);
-  const m = Math.floor(totalSeconds / 60);
-  const s = totalSeconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 const SWIPE_COOLDOWN = 500; // ms between swipe actions
@@ -373,6 +368,10 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
         onPress={() => author.id && onAvatarPress?.(author)}
         android_ripple={author.id && onAvatarPress ? { color: 'rgba(255,255,255,0.2)', borderless: true } : null}
         disabled={!author.id || !onAvatarPress}
+        // The avatar itself is visually 28-40px depending on density setting
+        // — always under the 44/48pt minimum — so pad the actual tappable
+        // area out to the platform minimum without changing how it looks.
+        hitSlop={Math.max(0, (MIN_TOUCH_TARGET - density.avatarSize) / 2)}
         accessibilityRole="button"
         accessibilityLabel={`View ${displayName} profile`}
       >
@@ -604,17 +603,6 @@ function DocumentAttachment({ url, filename }) {
   );
 }
 
-// Module-level registry so only one AudioAttachment plays at a time.
-// When any player starts, it broadcasts; every other player that's currently
-// playing pauses + sets its own UI state. iOS HIG (and common sense) expects
-// one-at-a-time audio playback when multiple voice messages are on screen.
-const audioPauseListeners = new Set();
-function broadcastAudioPlay(playerId) {
-  for (const fn of audioPauseListeners) {
-    fn(playerId);
-  }
-}
-
 function AudioAttachment({ url, filename }) {
   const { colors } = useTheme();
   const [playing, setPlaying] = useState(false);
@@ -636,9 +624,9 @@ function AudioAttachment({ url, filename }) {
       }
       setPlaying(false);
     };
-    audioPauseListeners.add(listener);
+    const unsubscribe = subscribeAudioPause(listener);
     return () => {
-      audioPauseListeners.delete(listener);
+      unsubscribe();
       soundRef.current?.unloadAsync().catch(() => {});
     };
   }, []);
@@ -675,6 +663,12 @@ function AudioAttachment({ url, filename }) {
               if (status.didJustFinish) {
                 setPlaying(false);
                 setPosition(0);
+                // Reset the native player's own position too — otherwise
+                // only the UI shows 0:00 while the underlying Sound is still
+                // parked at the end, and pressing play again re-enters the
+                // `sound` branch above (playAsync with no seek), which can
+                // silently no-op instead of restarting from the top.
+                newSound.setPositionAsync(0).catch(() => {});
               }
             }
           }
@@ -689,8 +683,8 @@ function AudioAttachment({ url, filename }) {
   };
 
   const isVoice = filename?.startsWith('voice-') || filename?.includes('voice');
-  const displayDuration = duration > 0 ? formatDurationMmSs(duration) : '0:00';
-  const displayPosition = position > 0 ? formatDurationMmSs(position) : '0:00';
+  const displayDuration = duration > 0 ? formatDuration(duration / 1000) : '0:00';
+  const displayPosition = position > 0 ? formatDuration(position / 1000) : '0:00';
 
   return (
     <Pressable

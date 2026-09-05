@@ -17,6 +17,7 @@ import ErrorState from '../../components/ErrorState';
 import api from '../../services/api';
 import { format } from 'date-fns';
 import { useLayout } from '../../hooks/useLayout';
+import { MIN_TOUCH_TARGET } from '../../utils/touchTarget';
 
 export default function SavedMessagesScreen({ navigation, route }) {
   const { workspaceId } = route.params;
@@ -99,6 +100,9 @@ export default function SavedMessagesScreen({ navigation, route }) {
           <TouchableOpacity
             onPress={() => handleUnsave(msg.id)}
             style={styles.unsaveButton}
+            // Icon (20) + the button's own 4px padding is ~28px, well under
+            // the 44/48pt minimum, with no hitSlop to compensate.
+            hitSlop={Math.max(0, (MIN_TOUCH_TARGET - 28) / 2)}
             accessibilityRole="button"
             accessibilityLabel="Unsave message"
           >

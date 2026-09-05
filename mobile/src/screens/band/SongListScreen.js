@@ -245,7 +245,13 @@ export default function SongListScreen({ navigation, route }) {
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Song List PDF' });
     } catch (err) {
-      if (err.message !== 'User cancelled') {
+      // Tolerant of whichever phrasing the platform/SDK version actually
+      // throws on a plain user cancel ('User cancelled' vs 'User canceled'
+      // vs iOS's 'User did not share' all show up across this app's PDF
+      // export flows) — an exact-string check silently breaks the moment
+      // the wording doesn't match, surfacing a false "Could not generate
+      // PDF" error for what was just a dismissed share sheet.
+      if (!/cancel|did not share/i.test(err.message || '')) {
         Alert.alert('Error', 'Could not generate PDF');
       }
     }

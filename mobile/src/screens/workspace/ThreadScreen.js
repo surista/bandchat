@@ -142,6 +142,9 @@ export default function ThreadScreen({ navigation, route }) {
         return [...prev, reply];
       });
       api.markThreadRead(parentIdRef.current).catch(() => {});
+      // The reply list isn't inverted, so a new reply lands off-screen with
+      // no indication if the user has scrolled up in a long thread.
+      requestAnimationFrame(() => flatListRef.current?.scrollToEnd({ animated: true }));
     };
 
     const handleUpdatedMessage = (message) => {
@@ -217,6 +220,7 @@ export default function ThreadScreen({ navigation, route }) {
     };
 
     setReplies(prev => [...prev, optimisticReply]);
+    requestAnimationFrame(() => flatListRef.current?.scrollToEnd({ animated: true }));
 
     try {
       let uploadedAttachments = null;
@@ -253,6 +257,7 @@ export default function ThreadScreen({ navigation, route }) {
     };
 
     setReplies(prev => [...prev, optimisticReply]);
+    requestAnimationFrame(() => flatListRef.current?.scrollToEnd({ animated: true }));
 
     try {
       const uploaded = await api.uploadFile(uri, filename, 'audio/mp4', workspaceId);

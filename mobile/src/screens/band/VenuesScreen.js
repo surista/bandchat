@@ -33,6 +33,7 @@ export default function VenuesScreen({ navigation, route }) {
 
   const loadingRef = useRef(loading);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
+  const hasDataRef = useRef(false);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -63,8 +64,12 @@ export default function VenuesScreen({ navigation, route }) {
     try {
       const data = await api.getVenues(workspaceId);
       setVenues(data);
+      hasDataRef.current = data.length > 0;
     } catch (err) {
-      if (!venues.length) setError(err.message || 'Failed to load venues');
+      // hasDataRef (not `venues`) so a transient refresh failure after data
+      // is already showing doesn't wipe the populated list with a full-page
+      // error — this file has no re-check against already-rendered data.
+      if (!hasDataRef.current) setError(err.message || 'Failed to load venues');
     } finally {
       setLoading(false);
       setRefreshing(false);

@@ -225,6 +225,43 @@ export default function WebsiteSettingsScreen({ route }) {
     };
   }
 
+  // Shared by the logo and hero-image upload buttons below, which were two
+  // near-identical copies of this same pick-permission-upload flow — neither
+  // checked photo-library permission first (unlike EditProfileScreen's own
+  // avatar picker), so a denial silently no-op'd with no feedback.
+  const pickAndUploadImage = useCallback(async ({ setUrl, setUploading, filename, errorMessage }) => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission Required',
+        'Please allow access to your photo library to upload an image.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ]
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'images', quality: 0.8 });
+    if (result.canceled) return;
+    setUploading(true);
+    try {
+      const asset = await prepareImageForUpload(result.assets[0]);
+      const uploaded = await api.uploadFile(
+        asset.uri,
+        asset.fileName || filename,
+        asset.mimeType || 'image/jpeg',
+        workspaceId
+      );
+      setUrl(uploaded.url);
+    } catch {
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setUploading(false);
+    }
+  }, [workspaceId]);
+
   const handleSaveConfig = useCallback(async () => {
     if (!bandName.trim()) { Alert.alert('Error', 'Band name is required'); return; }
     setSavingConfig(true);
@@ -457,22 +494,12 @@ export default function WebsiteSettingsScreen({ route }) {
               <TouchableOpacity
                 style={[styles.uploadBtn, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
                 disabled={logoUploading}
-                onPress={async () => {
-                  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'images', quality: 0.8 });
-                  if (result.canceled) return;
-                  setLogoUploading(true);
-                  try {
-                    const asset = await prepareImageForUpload(result.assets[0]);
-                    const uploaded = await api.uploadFile(
-                      asset.uri,
-                      asset.fileName || 'logo.jpg',
-                      asset.mimeType || 'image/jpeg',
-                      workspaceId
-                    );
-                    setLogoUrl(uploaded.url);
-                  } catch { Alert.alert('Error', 'Failed to upload logo'); }
-                  finally { setLogoUploading(false); }
-                }}
+                onPress={() => pickAndUploadImage({
+                  setUrl: setLogoUrl,
+                  setUploading: setLogoUploading,
+                  filename: 'logo.jpg',
+                  errorMessage: 'Failed to upload logo',
+                })}
               >
                 <Text style={[styles.uploadBtnText, { color: colors.textSecondary }]}>{logoUploading ? 'Uploading...' : 'Upload Logo'}</Text>
               </TouchableOpacity>
@@ -491,22 +518,12 @@ export default function WebsiteSettingsScreen({ route }) {
               <TouchableOpacity
                 style={[styles.uploadBtn, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}
                 disabled={heroUploading}
-                onPress={async () => {
-                  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'images', quality: 0.8 });
-                  if (result.canceled) return;
-                  setHeroUploading(true);
-                  try {
-                    const asset = await prepareImageForUpload(result.assets[0]);
-                    const uploaded = await api.uploadFile(
-                      asset.uri,
-                      asset.fileName || 'hero.jpg',
-                      asset.mimeType || 'image/jpeg',
-                      workspaceId
-                    );
-                    setHeroImageUrl(uploaded.url);
-                  } catch { Alert.alert('Error', 'Failed to upload hero image'); }
-                  finally { setHeroUploading(false); }
-                }}
+                onPress={() => pickAndUploadImage({
+                  setUrl: setHeroImageUrl,
+                  setUploading: setHeroUploading,
+                  filename: 'hero.jpg',
+                  errorMessage: 'Failed to upload hero image',
+                })}
               >
                 <Text style={[styles.uploadBtnText, { color: colors.textSecondary }]}>{heroUploading ? 'Uploading...' : 'Upload Hero Image'}</Text>
               </TouchableOpacity>

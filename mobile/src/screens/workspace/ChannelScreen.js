@@ -40,6 +40,7 @@ import { isSongItem } from '../../utils/setlistDuration';
 import { format, isSameDay } from 'date-fns';
 import { useLayout } from '../../hooks/useLayout';
 import useMessageActions from '../../hooks/useMessageActions';
+import { MIN_TOUCH_TARGET } from '../../utils/touchTarget';
 
 const GROUP_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -1300,7 +1301,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    minHeight: 48,
+    minHeight: MIN_TOUCH_TARGET,
   },
   splitHeaderTitleRow: {
     flex: 1,
@@ -1313,8 +1314,8 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   splitHeaderMenuButton: {
-    minWidth: 44,
-    minHeight: 44,
+    minWidth: MIN_TOUCH_TARGET,
+    minHeight: MIN_TOUCH_TARGET,
     justifyContent: 'center',
     alignItems: 'flex-end',
   },

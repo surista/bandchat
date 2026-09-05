@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { useTheme } from '../context/ThemeContext';
+import { MIN_TOUCH_TARGET } from '../utils/touchTarget';
 
 const ITEM_HEIGHT = 56;
 const SPRING_CONFIG = { damping: 20, stiffness: 200 };
@@ -22,15 +23,6 @@ const SPRING_CONFIG = { damping: 20, stiffness: 200 };
 export default function DraggableList({ items, renderItem, keyExtractor, onReorder, itemHeight = ITEM_HEIGHT }) {
   const { colors } = useTheme();
   const [draggingIndex, setDraggingIndex] = useState(-1);
-  const itemsKeyRef = useRef(null);
-  const positionsRef = useRef(items.map((_, i) => i));
-
-  // Update positions when items change externally (length OR identity)
-  const currentKey = items.map(item => keyExtractor(item)).join(',');
-  if (itemsKeyRef.current !== currentKey) {
-    positionsRef.current = items.map((_, i) => i);
-    itemsKeyRef.current = currentKey;
-  }
 
   const handleDragStart = useCallback((index) => {
     setDraggingIndex(index);
@@ -189,8 +181,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dragHandle: {
-    width: 48,
-    minHeight: 48,
+    width: MIN_TOUCH_TARGET,
+    minHeight: MIN_TOUCH_TARGET,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,

@@ -205,7 +205,9 @@ export default function SetlistListScreen({ navigation, route }) {
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Export Setlist' });
     } catch (err) {
-      if (err.message !== 'User canceled') {
+      // Tolerant of whichever cancel phrasing the platform/SDK actually
+      // throws — see SongListScreen.js's identical PDF-export catch for why.
+      if (!/cancel|did not share/i.test(err.message || '')) {
         Alert.alert('Error', 'Failed to export PDF');
       }
     }

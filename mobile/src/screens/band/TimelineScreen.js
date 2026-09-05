@@ -93,6 +93,7 @@ export default function TimelineScreen({ navigation, route }) {
 
   const loadingRef = useRef(loading);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
+  const hasDataRef = useRef(false);
 
   // Header "+" button
   useLayoutEffect(() => {
@@ -121,10 +122,13 @@ export default function TimelineScreen({ navigation, route }) {
         api.getWorkspace(workspaceId),
       ]);
       setEvents(timeline);
+      hasDataRef.current = timeline.length > 0;
       const membership = ws.members?.find(m => m.userId === user?.id);
       setIsAdmin(membership?.role === 'ADMIN');
     } catch (err) {
-      if (events.length === 0) {
+      // hasDataRef (not `events`) so a transient refresh failure after data
+      // is already showing doesn't wipe the populated list.
+      if (!hasDataRef.current) {
         setError(err.message || 'Failed to load timeline');
       }
     } finally {

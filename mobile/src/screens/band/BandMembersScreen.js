@@ -108,6 +108,7 @@ export default function BandMembersScreen({ navigation, route }) {
 
   const loadingRef = useRef(loading);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
+  const hasDataRef = useRef(false);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -137,8 +138,13 @@ export default function BandMembersScreen({ navigation, route }) {
     try {
       const data = await api.getBandMembers(workspaceId);
       setMembers(data);
+      hasDataRef.current = !!(data.current?.length || data.former?.length || data.guests?.length);
     } catch (err) {
-      if (!members.current?.length && !members.former?.length && !members.guests?.length) {
+      // hasDataRef (not `members`) so a transient refresh failure after data
+      // is already showing doesn't wipe the populated list — `members` isn't
+      // a dep here, so that closure would otherwise stay bound to the
+      // initial empty state forever.
+      if (!hasDataRef.current) {
         setError(err.message || 'Failed to load members');
       }
     } finally {

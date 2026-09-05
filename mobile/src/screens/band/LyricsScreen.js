@@ -4,13 +4,16 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  StatusBar,
   BackHandler,
   StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
+// expo-status-bar (not react-native's StatusBar) — see LiveModeScreen.js for
+// why: the raw RN StatusBar mutates the bar globally and leaves it however
+// this screen set it on exit, instead of restoring what it was before.
+import { StatusBar } from 'expo-status-bar';
 
 const MIN_FONT_SIZE = 12;
 const MAX_FONT_SIZE = 32;

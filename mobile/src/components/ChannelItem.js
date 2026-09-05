@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import getAvatarColor from '../utils/getAvatarColor';
 import PressableRow from './PressableRow';
+import { MIN_TOUCH_TARGET } from '../utils/touchTarget';
 
 function ChannelItem({ channel, isDM, dmMembers, onPress, onLongPress, unreadCount, accessibilityHint }) {
   const { colors } = useTheme();
@@ -84,7 +85,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginHorizontal: 8,
     marginVertical: 1,
-    minHeight: 48,
+    minHeight: MIN_TOUCH_TARGET,
   },
   channelIcon: {
     fontSize: 18,

@@ -312,13 +312,18 @@ export default function KittyScreen({ navigation, route }) {
     }
     const info = getTypeInfo(item.type);
     const isExpense = item.type === 'EXPENSE';
+    // Mirrors handleLongPress's own guard — gig-linked transactions and ones
+    // this user didn't create (unless admin) silently no-op on long press,
+    // so don't tell VoiceOver/long-press users an action is available when
+    // it isn't.
+    const canEditTx = !item.gigId && (item.createdById === user?.id || isAdmin);
     return (
       <PressableRow
         style={[styles.txCard, { backgroundColor: colors.bgSecondary }]}
-        onLongPress={() => handleLongPress(item)}
+        onLongPress={canEditTx ? () => handleLongPress(item) : undefined}
         delayLongPress={400}
         accessibilityRole="button"
-        accessibilityLabel={`${item.description}, ${isExpense ? 'expense' : 'income'} ${formatAmount(item.amount, currency)}. Long press for options`}
+        accessibilityLabel={`${item.description}, ${isExpense ? 'expense' : 'income'} ${formatAmount(item.amount, currency)}${runningBalanceMap[item.id] !== undefined ? `, balance ${runningBalanceMap[item.id] < 0 ? '-' : ''}${formatAmount(runningBalanceMap[item.id], currency)}` : ''}${canEditTx ? '. Long press for options' : ''}`}
       >
         <Ionicons name={info.icon} size={22} color={isExpense ? '#ef4444' : '#22c55e'} />
         <View style={styles.txInfo}>
@@ -342,13 +347,13 @@ export default function KittyScreen({ navigation, route }) {
           </Text>
           {runningBalanceMap[item.id] !== undefined && (
             <Text style={[styles.txBalance, { color: runningBalanceMap[item.id] >= 0 ? colors.textSecondary : '#ef4444' }]}>
-              Bal: {formatAmount(runningBalanceMap[item.id], currency)}
+              Bal: {runningBalanceMap[item.id] < 0 ? '-' : ''}{formatAmount(runningBalanceMap[item.id], currency)}
             </Text>
           )}
         </View>
       </PressableRow>
     );
-  }, [colors, currency, handleLongPress, runningBalanceMap]);
+  }, [colors, currency, handleLongPress, runningBalanceMap, user?.id, isAdmin]);
 
   if (loading) {
     return (

@@ -70,9 +70,11 @@ export function useLocalMessages(channelId, limit = 50) {
   const loadFromDb = useCallback(async () => {
     if (!channelId || !getDatabase()) return;
     const msgs = await getLocalMessages(channelId, limit);
-    if (msgs.length > 0) {
-      setMessages(msgs);
-    }
+    // No length guard — a legitimately-empty local table (e.g. after the
+    // last message was deleted via a socket event + upsertMessages) needs to
+    // actually clear the UI, not keep showing stale/deleted messages until
+    // the next full API refresh happens to overwrite it.
+    setMessages(msgs);
     setLoading(false);
   }, [channelId, limit]);
 
@@ -131,7 +133,7 @@ export function useLocalSongs(workspaceId) {
   const loadFromDb = useCallback(async () => {
     if (!workspaceId || !getDatabase()) return;
     const data = await getLocalSongs(workspaceId);
-    if (data.length > 0) setSongs(data);
+    setSongs(data);
     setLoading(false);
   }, [workspaceId]);
 
@@ -170,7 +172,7 @@ export function useLocalGigs(workspaceId) {
   const loadFromDb = useCallback(async () => {
     if (!workspaceId || !getDatabase()) return;
     const data = await getLocalGigs(workspaceId);
-    if (data.length > 0) setGigs(data);
+    setGigs(data);
     setLoading(false);
   }, [workspaceId]);
 
@@ -209,7 +211,7 @@ export function useLocalMembers(workspaceId) {
   const loadFromDb = useCallback(async () => {
     if (!workspaceId || !getDatabase()) return;
     const data = await getLocalMembers(workspaceId);
-    if (data.length > 0) setMembers(data);
+    setMembers(data);
     setLoading(false);
   }, [workspaceId]);
 

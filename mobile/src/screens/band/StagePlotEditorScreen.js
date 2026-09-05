@@ -459,6 +459,14 @@ export default function StagePlotEditorScreen({ navigation, route }) {
   const handlePrintExport = useCallback(async () => {
     const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const sw = 900, sh = 500;
+    // Item x/y are stored in the live editor's on-screen canvas coordinate
+    // space (clamped to `stageLayout`, measured via onLayout — varies per
+    // device, e.g. ~350px wide on a phone), but the print canvas is a fixed
+    // sw x sh. Without scaling, every item lands within the on-screen
+    // canvas's much smaller footprint instead of being spread across the
+    // full printed stage — arranged layouts printed clustered in a corner.
+    const scaleX = stageLayout.width > 0 ? sw / stageLayout.width : 1;
+    const scaleY = stageLayout.height > 0 ? sh / stageLayout.height : 1;
 
     // Simple SVG shapes for print (colored circles with labels, lightweight)
     const printSvg = (type) => {
@@ -476,11 +484,13 @@ export default function StagePlotEditorScreen({ navigation, route }) {
     };
 
     const itemsHtml = items.map(item => {
+      const left = Math.round(item.x * scaleX);
+      const top = Math.round(item.y * scaleY);
       if (item.type === 'text') {
-        return `<div style="position:absolute;left:${item.x}px;top:${item.y}px;font-size:12px;font-weight:500;color:#333;background:rgba(200,200,200,0.3);border:1px dashed #999;border-radius:3px;padding:2px 6px;white-space:nowrap">${esc(item.text || '')}</div>`;
+        return `<div style="position:absolute;left:${left}px;top:${top}px;font-size:12px;font-weight:500;color:#333;background:rgba(200,200,200,0.3);border:1px dashed #999;border-radius:3px;padding:2px 6px;white-space:nowrap">${esc(item.text || '')}</div>`;
       }
       const label = LABEL_MAP[item.type] || item.type;
-      return `<div style="position:absolute;left:${item.x}px;top:${item.y}px;display:flex;flex-direction:column;align-items:center;gap:2px">${printSvg(item.type)}<span style="font-size:8px;text-transform:uppercase;letter-spacing:0.5px;background:rgba(0,0,0,0.6);color:#fff;padding:1px 4px;border-radius:2px;white-space:nowrap">${esc(label)}</span></div>`;
+      return `<div style="position:absolute;left:${left}px;top:${top}px;display:flex;flex-direction:column;align-items:center;gap:2px">${printSvg(item.type)}<span style="font-size:8px;text-transform:uppercase;letter-spacing:0.5px;background:rgba(0,0,0,0.6);color:#fff;padding:1px 4px;border-radius:2px;white-space:nowrap">${esc(label)}</span></div>`;
     }).join('');
 
     const headerParts = [bandName, eventName].filter(Boolean);
@@ -511,11 +521,13 @@ export default function StagePlotEditorScreen({ navigation, route }) {
       const { uri } = await Print.printToFileAsync({ html, width: 842, height: 595 }); // A4 landscape
       await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `Export ${title || 'Stage Plot'}` });
     } catch (err) {
-      if (err.message !== 'User did not share') {
+      // Tolerant of whichever cancel phrasing the platform/SDK actually
+      // throws — see SongListScreen.js's identical PDF-export catch for why.
+      if (!/cancel|did not share/i.test(err.message || '')) {
         Alert.alert('Export Failed', err.message || 'Could not create PDF');
       }
     }
-  }, [items, bandName, eventName, title]);
+  }, [items, bandName, eventName, title, stageLayout]);
 
   // Set header title
   useEffect(() => {

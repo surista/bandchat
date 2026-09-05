@@ -10,6 +10,7 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -36,6 +37,19 @@ export default function EditProfileScreen({ navigation }) {
   const [fieldErrors, setFieldErrors] = useState({});
 
   const handlePickAvatar = useCallback(async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission Required',
+        'Please allow access to your photo library to upload a profile photo.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ]
+      );
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       // allowsEditing triggers a buggy crop UI on Samsung/MIUI galleries — iOS only
@@ -224,7 +238,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  cameraIcon: { fontSize: 16 },
   avatarHint: { fontSize: 13, marginBottom: 24 },
   // Form
   label: { fontSize: 14, fontWeight: '600', alignSelf: 'flex-start', marginBottom: 6 },
