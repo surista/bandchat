@@ -16,6 +16,13 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.53',
+    date: '2026-09-06',
+    items: [
+      { kind: 'fixed', text: 'Mobile: fixed video attachments in chat — the play/pause and scrubber controls appeared but didn’t respond to taps. The swipe-to-reply and long-press-to-react gestures on the message were swallowing the touch before the video’s own controls could see it.' },
+    ],
+  },
+  {
     version: '1.07.52',
     date: '2026-09-05',
     items: [

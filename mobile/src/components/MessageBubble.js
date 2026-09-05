@@ -548,17 +548,29 @@ function VideoAttachment({ url }) {
   const player = useVideoPlayer(url, (p) => {
     p.loop = false;
   });
+  // Every message bubble is wrapped in a swipe-to-reply Swipeable and a
+  // long-press GestureDetector (see MessageBubble's render tree below), both
+  // of which claim touches over their whole subtree. VideoView's play/pause/
+  // scrubber overlay is a genuinely separate native view with its own native
+  // touch handling — without this, those ancestor gesture recognizers won
+  // the touch race and the video's own controls rendered but never received
+  // a single tap. Gesture.Native() marks this subtree as "already handles its
+  // own touches," which RNGH lets run simultaneously with ancestor gestures
+  // instead of claiming it exclusively.
+  const nativeGesture = useMemo(() => Gesture.Native(), []);
   return (
-    <View style={styles.videoContainer}>
-      <VideoView
-        player={player}
-        style={styles.videoPlayer}
-        contentFit="contain"
-        nativeControls
-        allowsFullscreen
-        allowsPictureInPicture
-      />
-    </View>
+    <GestureDetector gesture={nativeGesture}>
+      <View style={styles.videoContainer}>
+        <VideoView
+          player={player}
+          style={styles.videoPlayer}
+          contentFit="contain"
+          nativeControls
+          allowsFullscreen
+          allowsPictureInPicture
+        />
+      </View>
+    </GestureDetector>
   );
 }
 
