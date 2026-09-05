@@ -30,7 +30,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
  * API Service class for making authenticated requests to the backend.
  * Handles token storage, refresh, and request/response processing.
  */
-class ApiService {
+export class ApiService {
   constructor() {
     this.accessToken = null;
     // Primary: refresh token in httpOnly cookie (set by server).
@@ -59,6 +59,55 @@ class ApiService {
     this._refreshPromise = null;
     // In-memory response cache: endpoint -> { data, timestamp }
     this._cache = new Map();
+
+    // Cross-tab sync. Refresh tokens are single-use and rotate with no grace
+    // period (server deletes the old one the moment a new one is issued), but
+    // each tab's sessionStorage copy is independent — so with BandChat open
+    // in two tabs, whichever tab refreshes first invalidates the OTHER tab's
+    // stored token. That other tab then fails its *next* refresh (including a
+    // plain reload) with "revoked" and forces a full re-login, even though
+    // the session is perfectly valid — it just doesn't know about the
+    // rotation that already happened elsewhere. Broadcasting every
+    // setTokens()/clearTokens() to same-origin tabs keeps them all pointed at
+    // the current token, so a tab that never actually made the refresh call
+    // still has what it needs the next time it does.
+    //
+    // Doesn't fully close the gap for a tab that was closed and reopened well
+    // after other tabs rotated the token several times in the meantime —
+    // broadcasts only reach tabs that are open to receive them. That needs a
+    // server-side reuse-grace window on rotation (schema change); this fixes
+    // the common case of just having the app open in more than one tab.
+    this._authChannel = null;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        this._authChannel = new BroadcastChannel('bandchat-auth');
+        this._authChannel.onmessage = (event) => this._applyAuthBroadcast(event.data);
+      }
+    } catch {
+      // Unsupported/unavailable — falls back to today's per-tab-only behavior.
+    }
+  }
+
+  /** Apply a cross-tab auth broadcast. Never re-broadcasts (no update loop —
+   * BroadcastChannel already excludes the sending context from delivery). */
+  _applyAuthBroadcast(msg) {
+    if (!msg) return;
+    if (msg.type === 'tokens') {
+      this.accessToken = msg.accessToken;
+      this._refreshToken = msg.refreshToken;
+      this._hasSession = true;
+      try {
+        sessionStorage.setItem('refreshToken', msg.refreshToken);
+      } catch {}
+    } else if (msg.type === 'clear') {
+      this.accessToken = null;
+      this._refreshToken = null;
+      this._hasSession = false;
+      this._cache.clear();
+      try {
+        sessionStorage.removeItem('refreshToken');
+      } catch {}
+    }
   }
 
   isTokenExpiringSoon() {
@@ -84,6 +133,7 @@ class ApiService {
       }
     }
     this._hasSession = true;
+    this._authChannel?.postMessage({ type: 'tokens', accessToken, refreshToken: this._refreshToken });
   }
 
   clearTokens() {
@@ -94,6 +144,7 @@ class ApiService {
     try {
       sessionStorage.removeItem('refreshToken');
     } catch {}
+    this._authChannel?.postMessage({ type: 'clear' });
   }
 
   async request(endpoint, options = {}) {

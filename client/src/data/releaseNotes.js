@@ -16,6 +16,13 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.52',
+    date: '2026-09-05',
+    items: [
+      { kind: 'fixed', text: 'Web: fixed being forced to log in again after a refresh when BandChat was open in more than one browser tab — refreshing your session in one tab was silently invalidating the others.' },
+    ],
+  },
+  {
     version: '1.07.51',
     date: '2026-09-05',
     items: [
