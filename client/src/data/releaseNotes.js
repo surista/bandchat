@@ -16,6 +16,14 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.55',
+    date: '2026-09-09',
+    items: [
+      { kind: 'fixed', text: 'Mobile: video attachment controls in chat now work reliably every time. The earlier fix helped but didn’t fully close the gap — videos no longer share a touch area with swipe-to-reply/long-press-to-react at all, which is what was causing the inconsistency.' },
+      { kind: 'added', text: 'You can now download a video attached directly to a chat message — long-press it (mobile) or hover it (web) for a Download option, the same way images already worked.' },
+    ],
+  },
+  {
     version: '1.07.54',
     date: '2026-09-06',
     items: [

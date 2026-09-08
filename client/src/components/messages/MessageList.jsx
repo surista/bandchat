@@ -579,7 +579,18 @@ const MessageRow = memo(function MessageRow({
                     </div>
                   )}
                   {att.type === 'VIDEO' && (
-                    <video src={att.url} controls playsInline preload="none" className="max-w-full md:max-w-md rounded" />
+                    <div className="relative inline-block group/video">
+                      <video src={att.url} controls playsInline preload="none" className="max-w-full md:max-w-md rounded" />
+                      {/* Top-right, not bottom — the native <video controls> bar
+                          already occupies the bottom edge (play/seek/volume/
+                          fullscreen); a bottom-right overlay would sit on top of it. */}
+                      <div className="absolute top-2 right-2 opacity-100 sm:opacity-0 sm:group-hover/video:opacity-100 transition-opacity">
+                        <button onClick={(e) => { e.stopPropagation(); handleDownload(att.url, att.filename); }} className="bg-gray-900/80 text-white px-3 py-2 sm:px-2 sm:py-1 rounded text-sm sm:text-xs hover:bg-gray-900 flex items-center gap-1 min-h-[36px] sm:min-h-0" title="Download" aria-label={`Download ${att.filename}`}>
+                          <svg className="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                          Download
+                        </button>
+                      </div>
+                    </div>
                   )}
                   {att.type === 'AUDIO' && (
                     <div className="bg-[var(--color-bg-tertiary)] rounded-lg p-3 max-w-full md:max-w-md">

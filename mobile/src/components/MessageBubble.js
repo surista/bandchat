@@ -303,6 +303,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
 
   if (isGrouped) {
     return (
+    <>
       <ReanimatedSwipeable
         ref={swipeableRef}
         enabled={swipeEnabled}
@@ -337,10 +338,20 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
         </View>
       </GestureDetector>
       </ReanimatedSwipeable>
+      {message.attachments?.some(a => a.type === 'VIDEO' && a.url) && (
+        <View style={[styles.videoRow, isPending && styles.pending]}>
+          <View style={{ width: density.groupedSpacerWidth }} />
+          <View style={styles.contentContainer}>
+            {renderVideoAttachments(message.attachments, handleLongPress)}
+          </View>
+        </View>
+      )}
+    </>
     );
   }
 
   return (
+    <>
     <ReanimatedSwipeable
       ref={swipeableRef}
       enabled={swipeEnabled}
@@ -425,6 +436,15 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
     </View>
     </GestureDetector>
     </ReanimatedSwipeable>
+    {message.attachments?.some(a => a.type === 'VIDEO' && a.url) && (
+      <View style={[styles.videoRow, isPending && styles.pending]}>
+        <View style={styles.groupedSpacer} />
+        <View style={styles.contentContainer}>
+          {renderVideoAttachments(message.attachments, handleLongPress)}
+        </View>
+      </View>
+    )}
+    </>
   );
 });
 
@@ -525,9 +545,9 @@ function renderAttachments(attachments, onImagePress, imgWidth, imgHeight, onLon
             </Pressable>
           );
         }
-        if (att.type === 'VIDEO') {
-          return <VideoAttachment key={att.id} url={att.url} />;
-        }
+        // VIDEO is rendered separately, outside this message's swipe/long-press
+        // gesture wrappers entirely — see renderVideoAttachments below for why.
+        if (att.type === 'VIDEO') return null;
         if (att.type === 'AUDIO') {
           return <AudioAttachment key={att.id} url={att.url} filename={att.filename} />;
         }
@@ -540,36 +560,58 @@ function renderAttachments(attachments, onImagePress, imgWidth, imgHeight, onLon
   );
 }
 
-function VideoAttachment({ url }) {
+// Rendered as a sibling *outside* the message's ReanimatedSwipeable +
+// long-press GestureDetector (see the two return blocks below), unlike every
+// other attachment type. Both of those ancestors are react-native-gesture-
+// handler recognizers that claim touches over their whole subtree; expo-
+// video's native play/pause/scrubber controls are a genuinely separate
+// native view with its own native touch handling underneath. An earlier fix
+// tried Gesture.Native() to declare "let this subtree's native touches
+// through" — RNGH documents that mechanism for its own first-class-supported
+// native components (ScrollView, TextInput), but third-party native views
+// like expo-video's controls aren't guaranteed the same cooperation, and in
+// practice it only worked *sometimes* (reported as "controls work sometimes,
+// don't work other times"). Removing the RNGH ancestors from the video's
+// touch path entirely is the only way to make this unconditionally reliable
+// — the trade-off is that swipe-to-reply and long-press-to-react don't work
+// when the touch starts directly on a video (long-press still works via the
+// plain, non-RNGH Pressable below, which doesn't have this conflict; swipe
+// doesn't, but remains available from anywhere else on the bubble).
+function renderVideoAttachments(attachments, onLongPress) {
+  const videos = (attachments || []).filter(att => att.url && att.type === 'VIDEO');
+  if (videos.length === 0) return null;
+  return videos.map(att => <VideoAttachment key={att.id} url={att.url} onLongPress={onLongPress} />);
+}
+
+function VideoAttachment({ url, onLongPress }) {
   // expo-video replaces deprecated expo-av Video. Native controls (fullscreen,
   // AirPlay/PiP, scrubber) are first-class and reliable; the legacy expo-av
   // Video had broken fullscreen/AirPlay buttons on SDK 54+.
   const player = useVideoPlayer(url, (p) => {
     p.loop = false;
   });
-  // Every message bubble is wrapped in a swipe-to-reply Swipeable and a
-  // long-press GestureDetector (see MessageBubble's render tree below), both
-  // of which claim touches over their whole subtree. VideoView's play/pause/
-  // scrubber overlay is a genuinely separate native view with its own native
-  // touch handling — without this, those ancestor gesture recognizers won
-  // the touch race and the video's own controls rendered but never received
-  // a single tap. Gesture.Native() marks this subtree as "already handles its
-  // own touches," which RNGH lets run simultaneously with ancestor gestures
-  // instead of claiming it exclusively.
-  const nativeGesture = useMemo(() => Gesture.Native(), []);
   return (
-    <GestureDetector gesture={nativeGesture}>
-      <View style={styles.videoContainer}>
-        <VideoView
-          player={player}
-          style={styles.videoPlayer}
-          contentFit="contain"
-          nativeControls
-          allowsFullscreen
-          allowsPictureInPicture
-        />
-      </View>
-    </GestureDetector>
+    // Plain RN Pressable (not react-native-gesture-handler) purely for
+    // long-press-to-react — its classic responder negotiation lets an
+    // embedded native view's own hit-testing win for the actual control taps
+    // in a way RNGH's lower-level gesture recognizers don't reliably do. No
+    // onPress here deliberately, so a short tap never gives this component a
+    // reason to contest it.
+    <Pressable
+      onLongPress={onLongPress}
+      delayLongPress={LONG_PRESS_DELAY}
+      style={styles.videoContainer}
+      accessibilityLabel="Video attachment"
+    >
+      <VideoView
+        player={player}
+        style={styles.videoPlayer}
+        contentFit="contain"
+        nativeControls
+        allowsFullscreen
+        allowsPictureInPicture
+      />
+    </Pressable>
   );
 }
 
@@ -835,6 +877,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 1,
     paddingBottom: 1,
+  },
+  // Video attachments render in their own row, sibling to (not inside) the
+  // swipe/long-press-gesture-wrapped container above — see
+  // renderVideoAttachments' comment for why. No vertical padding of its own:
+  // VideoAttachment's videoContainer already carries marginTop for spacing
+  // from whatever's above it.
+  videoRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingBottom: 4,
   },
   pending: {
     opacity: 0.5,

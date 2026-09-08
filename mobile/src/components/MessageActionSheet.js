@@ -25,6 +25,7 @@ const ACTION_HINTS = {
   pin: 'Pin this message to the channel',
   bookmark: 'Save this message for later',
   save: 'Downloads image to your device',
+  saveVideo: 'Downloads video to your device',
   copy: 'Copies message text to clipboard',
   copyLink: 'Copies a link to this message',
   edit: 'Opens message editor',
@@ -38,6 +39,7 @@ const ACTIONS = [
   { key: 'pin', label: 'Pin Message', icon: 'pin-outline' },
   { key: 'bookmark', label: 'Save Message', icon: 'bookmark-outline' },
   { key: 'save', label: 'Save Image', icon: 'download-outline', imageOnly: true },
+  { key: 'saveVideo', label: 'Save Video', icon: 'download-outline', videoOnly: true },
   { key: 'copy', label: 'Copy Text', icon: 'copy-outline' },
   { key: 'copyLink', label: 'Copy Link', icon: 'link-outline' },
   { key: 'edit', label: 'Edit Message', icon: 'pencil-outline', ownOnly: true },
@@ -45,7 +47,7 @@ const ACTIONS = [
   { key: 'report', label: 'Report Message', icon: 'warning-outline', notOwn: true, destructive: true },
 ];
 
-function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwnMessage, isPinned, isBookmarked, hideReply, hasImageAttachment }) {
+function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwnMessage, isPinned, isBookmarked, hideReply, hasImageAttachment, hasVideoAttachment }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [quickEmojis, setQuickEmojis] = useState(() => peekFrequentEmojis(QUICK_COUNT));
@@ -57,7 +59,8 @@ function MessageActionSheet({ visible, onClose, onAction, onQuickReaction, isOwn
   const filteredActions = ACTIONS.filter(a =>
     (!a.ownOnly || isOwnMessage) && (!a.notOwn || !isOwnMessage) &&
     !(hideReply && a.key === 'reply') &&
-    (!a.imageOnly || hasImageAttachment)
+    (!a.imageOnly || hasImageAttachment) &&
+    (!a.videoOnly || hasVideoAttachment)
   ).map(a => {
     if (a.key === 'pin') return { ...a, label: isPinned ? 'Unpin Message' : 'Pin Message' };
     if (a.key === 'bookmark') return { ...a, label: isBookmarked ? 'Unsave Message' : 'Save Message' };

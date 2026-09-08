@@ -611,7 +611,26 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
                             </div>
                           )}
                           {att.type === 'VIDEO' && (
-                            <video src={att.url} controls className="max-w-sm rounded" />
+                            <div className="relative inline-block group/video">
+                              <video src={att.url} controls className="max-w-sm rounded" />
+                              {/* Top-right, not bottom — the native <video controls>
+                                  bar already occupies the bottom edge. */}
+                              <div className="absolute top-2 right-2 opacity-0 group-hover/video:opacity-100 transition-opacity">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDownload(att.url, att.filename);
+                                  }}
+                                  className="bg-gray-900/80 text-white px-2 py-1 rounded text-xs hover:bg-gray-900 flex items-center gap-1"
+                                  title="Download"
+                                  aria-label={`Download ${att.filename}`}
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
                           )}
                           {att.type === 'AUDIO' && (
                             <div className="bg-[var(--color-bg-tertiary)] rounded-lg p-2 max-w-sm">

@@ -98,6 +98,7 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
         break;
       case 'save':
         (async () => {
+          let file;
           try {
             const img = actionMessage.attachments?.find(a => a.type === 'IMAGE');
             if (!img?.url) return;
@@ -118,11 +119,53 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
             if (!filename || !filename.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
               filename = `image-${Date.now()}.jpg`;
             }
-            const file = await File.downloadFileAsync(img.url, new Directory(Paths.cache), { idempotent: true });
+            file = await File.downloadFileAsync(img.url, new Directory(Paths.cache), { idempotent: true });
             await MediaLibrary.saveToLibraryAsync(file.uri);
             Alert.alert('Saved', 'Image saved to your photo library.');
           } catch (err) {
             Alert.alert('Error', err.message || 'Failed to save image.');
+          } finally {
+            // The cache copy has served its purpose once it's in the photo
+            // library; leaving it behind grows the app's storage footprint
+            // on every save.
+            try { file?.delete(); } catch { /* best effort */ }
+          }
+        })();
+        break;
+      case 'saveVideo':
+        (async () => {
+          let file;
+          try {
+            const video = actionMessage.attachments?.find(a => a.type === 'VIDEO');
+            if (!video?.url) return;
+            const { status } = await MediaLibrary.requestPermissionsAsync();
+            if (status !== 'granted' && status !== 'limited') {
+              Alert.alert(
+                'Permission needed',
+                'Allow BandChat to save videos to your library.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Open Settings', onPress: () => Linking.openSettings() },
+                ]
+              );
+              return;
+            }
+            let filename = video.url.split('/').pop()?.split('?')[0] || '';
+            filename = filename.replace(/[^a-zA-Z0-9._-]/g, '');
+            if (!filename || !filename.match(/\.(mp4|mov|webm|avi|mkv|m4v)$/i)) {
+              filename = `video-${Date.now()}.mp4`;
+            }
+            // Videos can be large (up to 500MB) — this can take a while,
+            // especially on cellular, so let the user know it's in progress
+            // rather than leaving them staring at a dismissed action sheet.
+            toast.info('Downloading video…');
+            file = await File.downloadFileAsync(video.url, new Directory(Paths.cache), { idempotent: true });
+            await MediaLibrary.saveToLibraryAsync(file.uri);
+            Alert.alert('Saved', 'Video saved to your photo library.');
+          } catch (err) {
+            Alert.alert('Error', err.message || 'Failed to save video.');
+          } finally {
+            try { file?.delete(); } catch { /* best effort */ }
           }
         })();
         break;

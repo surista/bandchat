@@ -414,6 +414,7 @@ export default function ThreadScreen({ navigation, route }) {
         isOwnMessage={actionMessage?.author?.id === user?.id}
         hideReply
         hasImageAttachment={actionMessage?.attachments?.some(a => a.type === 'IMAGE')}
+        hasVideoAttachment={actionMessage?.attachments?.some(a => a.type === 'VIDEO')}
       />
 
       {/* Emoji Picker */}

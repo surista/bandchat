@@ -1112,6 +1112,7 @@ export default function ChannelScreen({ navigation, route }) {
         isPinned={actionMessage ? pinnedMessageIds.has(actionMessage.id) : false}
         isBookmarked={actionMessage ? savedMessageIds.has(actionMessage.id) : false}
         hasImageAttachment={actionMessage?.attachments?.some(a => a.type === 'IMAGE')}
+        hasVideoAttachment={actionMessage?.attachments?.some(a => a.type === 'VIDEO')}
       />
 
       {/* Emoji Picker */}
