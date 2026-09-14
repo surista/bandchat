@@ -529,6 +529,17 @@ export default function StagePlotEditorScreen({ navigation, route }) {
     }
   }, [items, bandName, eventName, title, stageLayout]);
 
+  // Auto-trigger export when opened from the stage plot list's "Export PDF"
+  // action, once the stage canvas has measured itself (stageLayout is needed
+  // to scale items for print — see the note above handlePrintExport).
+  const autoExportedRef = useRef(false);
+  useEffect(() => {
+    if (route.params?.autoExport && !loading && stageLayout.width > 0 && !autoExportedRef.current) {
+      autoExportedRef.current = true;
+      handlePrintExport();
+    }
+  }, [route.params?.autoExport, loading, stageLayout, handlePrintExport]);
+
   // Set header title
   useEffect(() => {
     navigation.setOptions({

@@ -464,14 +464,15 @@ export default function StagePlotCreator({ workspaceId }) {
     }
   };
 
-  // Print/PDF export
-  const handlePrint = () => {
-    if (!activePlotData) return;
+  // Print/PDF export — takes an explicit plot + data so it can be invoked
+  // both from the open editor (activePlot/activePlotData) and directly from
+  // a list row (which already has `data` from the list fetch, no need to open it).
+  const handlePrint = (plot, data) => {
+    if (!data) return;
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const data = activePlotData;
-    const plotTitle = plots.find(p => p.id === activePlotId)?.title || 'Stage Plot';
+    const plotTitle = plot?.title || 'Stage Plot';
     const bandName = data.bandName || '';
     const eventName = data.eventName || '';
     const eventDate = data.eventDate || '';
@@ -534,8 +535,12 @@ export default function StagePlotCreator({ workspaceId }) {
     const activePlot = plots.find(p => p.id === activePlotId);
     return (
       <div className="flex flex-col h-full">
-        {/* Toolbar */}
-        <div className="flex items-center gap-3 px-4 py-2 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+        {/* Toolbar. lg:pr-32 reserves room for WorkspaceView's floating
+            "Split right" button (absolute top-2 right-2, lg+ only) — this
+            toolbar spans the full pane width edge-to-edge, so without the
+            clearance its own rightmost button (Print/PDF) sits in the exact
+            same corner and gets visually covered by the floating one. */}
+        <div className="flex items-center gap-3 px-4 py-2 lg:pr-32 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
           <button
             onClick={() => { setActivePlotId(null); setActivePlotData(null); }}
             className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors text-sm"
@@ -554,7 +559,7 @@ export default function StagePlotCreator({ workspaceId }) {
           />
           <span className="text-xs text-[var(--color-text-muted)]">Auto-saved</span>
           <button
-            onClick={handlePrint}
+            onClick={() => handlePrint(activePlot, activePlotData)}
             className="px-3 py-1 rounded text-xs bg-orange-600 hover:bg-orange-500 text-white transition-colors"
             title="Print or save as PDF"
           >
@@ -625,6 +630,13 @@ export default function StagePlotCreator({ workspaceId }) {
                 </div>
               </div>
               <div className="flex items-center gap-1">
+                <button
+                  onClick={(e) => { e.stopPropagation(); handlePrint(plot, plot.data); }}
+                  className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                  title="Print or save as PDF"
+                >
+                  🖨️
+                </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); duplicatePlot(plot.id); }}
                   className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"

@@ -84,8 +84,10 @@ function MedleyList({ workspaceId }) {
 
   return (
     <div className="flex-1 flex flex-col bg-[var(--color-bg-primary)] min-h-0">
-      {/* Header */}
-      <div className="p-4 border-b border-[var(--color-border)]">
+      {/* Header. lg:pr-32 clears WorkspaceView's floating "Split right"
+          button (absolute top-2 right-2, lg+ only) — see StagePlotCreator.jsx
+          for the same fix and why it's needed. */}
+      <div className="p-4 lg:pr-32 border-b border-[var(--color-border)]">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Medleys</h2>

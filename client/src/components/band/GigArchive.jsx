@@ -651,8 +651,10 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
 
   return (
     <div className="h-full flex flex-col bg-[var(--color-bg-secondary)]">
-      {/* Header */}
-      <div className="flex-shrink-0 p-4 border-b border-[var(--color-border)]">
+      {/* Header. lg:pr-32 clears WorkspaceView's floating "Split right"
+          button (absolute top-2 right-2, lg+ only) — see StagePlotCreator.jsx
+          for the same fix and why it's needed. */}
+      <div className="flex-shrink-0 p-4 lg:pr-32 border-b border-[var(--color-border)]">
         <div className="flex items-center justify-between mb-2">
           <div>
             <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Gig Archive</h2>

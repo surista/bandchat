@@ -199,6 +199,15 @@ export default function StagePlotListScreen({ navigation, route }) {
         title={selectedPlot?.title}
         actions={[
           {
+            label: 'Export PDF',
+            onPress: () => {
+              setShowActions(false);
+              if (selectedPlot) {
+                navigation.navigate('StagePlotEditor', { plotId: selectedPlot.id, workspaceId, autoExport: true });
+              }
+            },
+          },
+          {
             label: 'Duplicate',
             onPress: () => {
               setShowActions(false);

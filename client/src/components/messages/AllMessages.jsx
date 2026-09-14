@@ -102,7 +102,10 @@ function AllMessages({ workspaceId, onSelectChannel }) {
 
   return (
     <div className="h-full overflow-y-auto bg-[var(--color-bg-primary)] p-4 space-y-1">
-      <div className="flex items-center justify-between mb-4">
+      {/* lg:pr-32 clears WorkspaceView's floating "Split right" button
+          (absolute top-2 right-2, lg+ only) on first paint before this
+          scrolls away — see StagePlotCreator.jsx for the same fix. */}
+      <div className="flex items-center justify-between mb-4 lg:pr-32">
         <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">All Messages</h2>
         <button
           onClick={loadMessages}
