@@ -7,6 +7,32 @@
 // symptom in v1.06.99–v1.07.01 production builds).
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
+const { withDangerousMod } = require('@expo/config-plugins');
+const fs = require('fs');
+const path = require('path');
+
+// RevenueCat/Google Sign-In pull in AppCheckCore, a Swift pod that depends on
+// GoogleUtilities and RecaptchaInterop — neither defines an Objective-C
+// module, which CocoaPods needs to build a Swift pod without use_frameworks!
+// (this project uses the default static-library linkage). Without this,
+// `pod install` hard-fails with "The following Swift pods cannot yet be
+// integrated as static libraries" (broke the v1.07.57 iOS build).
+// use_modular_headers! is CocoaPods' own suggested fix in that error message.
+function withModularHeaders(config) {
+  return withDangerousMod(config, [
+    'ios',
+    (config) => {
+      const podfilePath = path.join(config.modRequest.platformProjectRoot, 'Podfile');
+      let contents = fs.readFileSync(podfilePath, 'utf8');
+      if (!contents.includes('use_modular_headers!')) {
+        contents = contents.replace(/(platform :ios,[^\n]*\n)/, '$1use_modular_headers!\n');
+        fs.writeFileSync(podfilePath, contents);
+      }
+      return config;
+    },
+  ]);
+}
+
 export default {
   expo: {
     name: 'BandChat',
@@ -191,6 +217,7 @@ export default {
           groupIdentifier: 'group.com.bandchat.manager.mobile',
         },
       ],
+      withModularHeaders,
     ],
   },
 };
