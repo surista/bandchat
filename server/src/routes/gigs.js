@@ -21,6 +21,28 @@ const VALID_GIG_STATUSES = ['SCHEDULED', 'COMPLETED', 'CANCELLED'];
 
 const calendarLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, skip: process.env.NODE_ENV === 'test' ? () => true : undefined, message: { error: 'Too many requests' } });
 
+// Resolve which instrument(s) a member played on a given date, from their
+// InstrumentStint history — NOT just their current stint. This is what lets
+// a one-off guest sub (e.g. a fill-in drummer for a single gig) show
+// correctly on that gig without affecting any other gig's lineup, and keeps
+// historical gigs accurate after a later permanent lineup change.
+function resolveInstrumentsAsOfDate(stints, date) {
+  if (!stints?.length) return [];
+  const target = new Date(date).getTime();
+  const covering = stints.find((s) => {
+    const start = new Date(s.startDate).getTime();
+    const end = s.endDate ? new Date(s.endDate).getTime() : Infinity;
+    return start <= target && target <= end;
+  });
+  if (covering) return covering.instruments;
+  // No stint actually covers the date (e.g. an open-ended stint that started
+  // after this gig) — fall back to the most recent stint that had started by
+  // then, then to the earliest known stint if the gig predates all of them.
+  const sorted = [...stints].sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
+  const mostRecentBefore = sorted.find((s) => new Date(s.startDate).getTime() <= target);
+  return (mostRecentBefore || sorted[sorted.length - 1])?.instruments || [];
+}
+
 // Get all gigs for a workspace
 router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
@@ -85,7 +107,13 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
         attendees: {
           include: {
             bandMember: {
-              select: { id: true, name: true, imageUrl: true }
+              select: {
+                id: true,
+                name: true,
+                imageUrl: true,
+                isGuest: true,
+                stints: { select: { instruments: true, startDate: true, endDate: true } },
+              }
             }
           }
         },
@@ -97,7 +125,18 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
       take: 500
     });
 
-    res.json(gigs);
+    // Resolve each attendee's instrument(s) as of this specific gig's date
+    // (not just "whatever they play now") so a one-off sub or a later
+    // permanent lineup change both display correctly per gig.
+    const gigsWithResolvedAttendees = gigs.map((gig) => ({
+      ...gig,
+      attendees: gig.attendees.map((a) => {
+        const { stints, ...bandMember } = a.bandMember;
+        return { ...a, bandMember: { ...bandMember, instruments: resolveInstrumentsAsOfDate(stints, gig.date) } };
+      }),
+    }));
+
+    res.json(gigsWithResolvedAttendees);
   } catch (error) {
     console.error('Get gigs error:', error);
     res.status(500).json({ error: 'Failed to get gigs' });
