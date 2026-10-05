@@ -25,6 +25,7 @@ import { useLayout } from '../../hooks/useLayout';
 import { successNotification } from '../../utils/haptics';
 import api from '../../services/api';
 import { APP_BASE_URL } from '../../utils/constants';
+import { isSafeUrl } from '../../utils/urlSafety';
 
 const THEMES = [
   { id: 'rock', label: 'Rock', bg: '#0a0a0a', accent: '#e81c2e', accent2: '#ff5722', desc: 'Bold & high energy' },
@@ -334,14 +335,14 @@ export default function WebsiteSettingsScreen({ route }) {
                 <View style={styles.statusDot} />
                 <Text style={[styles.statusText, { color: '#22c55e' }]}>Active</Text>
               </View>
-              <TouchableOpacity onPress={() => Linking.openURL(websiteData.websiteUrl)}>
+              <TouchableOpacity onPress={() => isSafeUrl(websiteData.websiteUrl) && Linking.openURL(websiteData.websiteUrl)}>
                 <Text style={[styles.urlText, { color: colors.primary }]}>{websiteData.websiteUrl}</Text>
               </TouchableOpacity>
               {websiteData.websiteDeployedAt && (
                 <Text style={[styles.deployedAt, { color: colors.textSecondary }]}>Last deployed: {new Date(websiteData.websiteDeployedAt).toLocaleString()}</Text>
               )}
               <View style={styles.actionRow}>
-                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.primary }]} onPress={() => Linking.openURL(websiteData.websiteUrl)} accessibilityLabel="View website">
+                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.primary }]} onPress={() => isSafeUrl(websiteData.websiteUrl) && Linking.openURL(websiteData.websiteUrl)} accessibilityLabel="View website">
                   <Text style={[styles.actionBtnText, { color: colors.primaryText }]}>View Site</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.bgTertiary }]} onPress={handleSync} disabled={syncing} accessibilityLabel="Sync website">

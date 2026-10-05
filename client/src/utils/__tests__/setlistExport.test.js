@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { buildSetlistHtml } from '../setlistExport';
+import { describe, it, expect, vi } from 'vitest';
+import { buildSetlistHtml, printSetlist } from '../setlistExport';
 
 const songs = (n, title = 'Song Title') => Array.from({ length: n }, (_, i) => ({
   id: `s${i}`,
@@ -130,10 +130,21 @@ describe('buildSetlistHtml — content', () => {
     expect(buildSetlistHtml(setlist, { useShortNames: false })).toContain('>The Long Title<');
   });
 
-  it('injects the print script only when asked', () => {
+  it('never inlines a print script — an about:blank popup inherits the opener CSP, which blocks it', () => {
     const setlist = { name: 'S', songs: songs(2) };
-    expect(buildSetlistHtml(setlist, { autoPrint: true })).toContain('window.print()');
-    expect(buildSetlistHtml(setlist, {})).not.toContain('window.print()');
+    expect(buildSetlistHtml(setlist, {})).not.toContain('<script>');
+  });
+
+  it('printSetlist triggers print from the opener context instead', () => {
+    const printWindow = { document: { write: vi.fn(), close: vi.fn() }, print: vi.fn() };
+    vi.stubGlobal('open', vi.fn(() => printWindow));
+    const setlist = { name: 'S', songs: songs(2) };
+    const result = printSetlist(setlist);
+    expect(result).toEqual({ ok: true });
+    expect(printWindow.document.write).toHaveBeenCalled();
+    printWindow.onload();
+    expect(printWindow.print).toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 
   it('survives an empty setlist', () => {

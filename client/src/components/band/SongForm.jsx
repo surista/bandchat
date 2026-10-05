@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { isSafeUrl } from '../../utils/urlSafety';
+import { getMaxSizeForMimeType } from '../../utils/fileValidation';
 import api from '../../services/api';
 import Modal from '../common/Modal';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -81,8 +82,13 @@ function SongForm({ song, workspaceId, onSave, onClose, initialTab }) {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > 25 * 1024 * 1024) {
-      setError('File size must be less than 25MB');
+    // Each category has its own server-side cap (uploads.js) — check against
+    // the right one instead of one flat number. Unrecognized types (e.g.
+    // Guitar Pro files, which browsers often report with an empty MIME type)
+    // skip the pre-check and defer to the server's magic-byte detection.
+    const maxSize = getMaxSizeForMimeType(file.type);
+    if (maxSize && file.size > maxSize) {
+      setError(`File size must be less than ${Math.round(maxSize / (1024 * 1024))}MB`);
       return;
     }
 
@@ -503,7 +509,7 @@ Example:
                 </div>
               )}
               <p className="text-xs text-gray-500 mt-3">
-                Max file size: 25MB. Supported: images, audio, PDFs, documents, Guitar Pro
+                Max file size: 15MB images, 500MB audio, 10MB documents/Guitar Pro
               </p>
             </div>
             )}

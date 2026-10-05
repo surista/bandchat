@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useSocket } from '../../context/SocketContext';
 import { useAuth } from '../../context/AuthContext';
@@ -35,6 +36,15 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
   const [editingReplyId, setEditingReplyId] = useState(null);
   const [editContent, setEditContent] = useState('');
   const [deleteReplyId, setDeleteReplyId] = useState(null);
+  const [searchParams] = useSearchParams();
+  // Captured once at mount rather than read reactively: ChannelView clears
+  // the shared ?msg= param ~2.5s after it first appears, but loadReplies()
+  // below is async and can still be in flight past that point on a slow
+  // connection — reading searchParams live would then see null and silently
+  // drop the highlight. The id itself never needs to change over this
+  // component's lifetime.
+  const [highlightMessageId] = useState(() => searchParams.get('msg') || null);
+  const [highlightedId, setHighlightedId] = useState(null);
   const repliesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const replyTextareaRef = useRef(null);
@@ -113,13 +123,38 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
     try {
       const data = await api.getReplies(message.id);
       setReplies(data.replies || []);
-      scrollToBottom();
+      // Skip the scroll-to-bottom jump when we're about to scroll to a specific
+      // highlighted message instead (e.g. arriving from search or a notification).
+      if (!highlightMessageId) scrollToBottom();
     } catch (err) {
       console.error('Failed to load replies:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  // Scroll to and highlight a specific reply (or the parent message) when
+  // arriving via a search result or thread-reply notification. Mirrors the
+  // equivalent effect in MessageList.jsx. ChannelView owns clearing the
+  // ?msg= param a couple seconds after it first appears.
+  useEffect(() => {
+    if (!highlightMessageId || loading) return;
+    if (!/^[a-zA-Z0-9_-]+$/.test(highlightMessageId)) return;
+    const timer = setTimeout(() => {
+      // Scoped to this panel's own root, not document-wide — the same
+      // message can also be rendered in MessageList behind this panel in
+      // desktop split view, and an unscoped query could match that copy
+      // instead of the row actually inside this thread.
+      const el = swipeRef.current?.querySelector(`[data-message-id="${highlightMessageId}"]`);
+      if (el) {
+        const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
+        setHighlightedId(highlightMessageId);
+        setTimeout(() => setHighlightedId(null), 2000);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [highlightMessageId, loading]);
 
   const handleNewReply = ({ parentId, message: newReply }) => {
     if (parentId === message.id) {
@@ -398,7 +433,7 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
       </div>
 
       {/* Original Message */}
-      <div className="p-4 border-b border-[var(--color-border)] group relative">
+      <div data-message-id={message.id} className={`p-4 border-b border-[var(--color-border)] group relative ${highlightedId === message.id ? 'msg-highlight' : ''}`}>
         <div className="flex gap-3">
           <div
             className={`w-9 h-9 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white font-medium ${message.author?.id ? 'cursor-pointer hover:opacity-80' : ''}`}
@@ -491,7 +526,7 @@ function ThreadView({ message, channelId, workspaceId, onClose, onThreadRead, me
         ) : (
           <div className="p-4 space-y-4">
             {replies.map((reply) => (
-              <div key={reply.id} className="flex gap-3 group relative">
+              <div key={reply.id} data-message-id={reply.id} className={`flex gap-3 group relative px-2 -mx-2 rounded ${highlightedId === reply.id ? 'msg-highlight' : ''}`}>
                 <div
                   className={`w-8 h-8 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white text-sm font-medium ${reply.author?.id ? 'cursor-pointer hover:opacity-80' : ''}`}
                   onClick={() => reply.author?.id && setProfileUserId(reply.author.id)}

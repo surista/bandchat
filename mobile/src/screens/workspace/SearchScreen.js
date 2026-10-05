@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -26,7 +26,7 @@ function formatTimestamp(dateStr) {
 }
 
 export default function SearchScreen({ navigation, route }) {
-  const { workspaceId } = route.params;
+  const { workspaceId, channelId: initialChannelId = null, channelName: initialChannelName = null } = route.params;
   const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
   const headerHeight = useHeaderHeight();
@@ -39,8 +39,17 @@ export default function SearchScreen({ navigation, route }) {
   // Filters
   const [channels, setChannels] = useState([]);
   const [members, setMembers] = useState([]);
-  const [selectedChannelId, setSelectedChannelId] = useState(null);
+  // Pre-scoped to the originating channel when opened via "Search this channel";
+  // still just a filter chip, so the user can broaden back to all channels.
+  const [selectedChannelId, setSelectedChannelId] = useState(initialChannelId);
   const [selectedAuthorId, setSelectedAuthorId] = useState(null);
+
+  // Reflect the channel scope in the header title
+  useLayoutEffect(() => {
+    if (initialChannelName) {
+      navigation.setOptions({ title: `Search #${initialChannelName}` });
+    }
+  }, [navigation, initialChannelName]);
 
   const searchTimeout = useRef(null);
   const inputRef = useRef(null);
@@ -129,7 +138,16 @@ export default function SearchScreen({ navigation, route }) {
     // Find the channel from our loaded channels
     const channel = channels.find(c => c.id === item.channelId);
     if (channel) {
-      navigation.navigate('Channel', { channel, workspaceId });
+      // Jump straight to the matched message. If it's a thread reply
+      // (parentId set), ChannelScreen auto-opens the thread via openThreadId
+      // and forwards highlightMessageId so ThreadScreen can scroll to/highlight
+      // the specific reply within it.
+      navigation.navigate('Channel', {
+        channel,
+        workspaceId,
+        highlightMessageId: item.id,
+        openThreadId: item.parentId || null,
+      });
     }
   }, [channels, navigation, workspaceId]);
 

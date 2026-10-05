@@ -21,3 +21,20 @@ export const isImageFile = (file) => file.type.startsWith('image/') || ALLOWED_I
 export const isAudioFile = (file) => file.type.startsWith('audio/') || ALLOWED_AUDIO_TYPES.includes(file.type);
 export const isVideoFile = (file) => file.type.startsWith('video/') || ALLOWED_VIDEO_TYPES.includes(file.type);
 export const isDocumentFile = (file) => ALLOWED_DOCUMENT_TYPES.includes(file.type) || file.name?.toLowerCase().endsWith('.zip') || file.name?.toLowerCase().endsWith('.pdf');
+
+/**
+ * Mirrors the server's fileCategory detection (uploads.js validateFileType)
+ * closely enough for a client-side pre-check — the server is still the
+ * authoritative gatekeeper since it validates by magic bytes, not MIME type.
+ * Returns null for an unrecognized/missing type (e.g. Guitar Pro files, which
+ * browsers often report as empty or 'application/octet-stream') so callers
+ * can skip the pre-check and let the server's magic-byte detection decide,
+ * rather than guessing wrong and blocking a valid upload.
+ */
+export function getMaxSizeForMimeType(mimeType) {
+  if (mimeType?.startsWith('image/')) return MAX_IMAGE_SIZE;
+  if (mimeType?.startsWith('audio/')) return MAX_AUDIO_SIZE;
+  if (mimeType?.startsWith('video/')) return MAX_VIDEO_SIZE;
+  if (mimeType === 'application/pdf' || mimeType === 'application/zip' || mimeType === 'application/x-zip-compressed') return MAX_DOCUMENT_SIZE;
+  return null;
+}

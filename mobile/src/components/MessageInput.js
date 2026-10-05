@@ -14,6 +14,7 @@ import EmojiPicker from './EmojiPicker';
 import ActionSheet from './ActionSheet';
 import PressableRow from './PressableRow';
 import { MIN_TOUCH_TARGET } from '../utils/touchTarget';
+import { MAX_AUDIO_SIZE, MAX_DOCUMENT_SIZE } from '../utils/fileValidation';
 
 const MAX_HEIGHT = 120;
 
@@ -402,7 +403,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
       });
 
       if (!result.canceled && result.assets?.length > 0) {
-        const maxSize = 10 * 1024 * 1024; // 10MB
+        const maxSize = MAX_DOCUMENT_SIZE;
         const newAttachments = [];
         for (const asset of result.assets.slice(0, remaining)) {
           if (asset.size > maxSize) {
@@ -446,7 +447,7 @@ export default function MessageInput({ onSend, onSendVoice, onTyping, editingMes
 
       if (result.canceled || !result.assets?.length) return;
 
-      const maxSize = 500 * 1024 * 1024; // 500MB — must match server MAX_AUDIO_SIZE
+      const maxSize = MAX_AUDIO_SIZE;
       const newAttachments = [];
       for (const asset of result.assets.slice(0, remaining)) {
         if (asset.size > maxSize) {

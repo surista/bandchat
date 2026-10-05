@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Reanimated, { useAnimatedStyle, interpolate, runOnJS } from 'react-native-reanimated';
+import Reanimated, { useAnimatedStyle, interpolate, runOnJS, useSharedValue, withTiming, withSequence } from 'react-native-reanimated';
 import { Audio } from 'expo-av';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -39,7 +39,7 @@ const SWIPE_COOLDOWN = 500; // ms between swipe actions
 
 const SWIPE_REACT_EMOJI = '\uD83D\uDC4D'; // 👍
 
-const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress, onReactionLongPress, onSwipeReply, onSwipeReact, onAvatarPress, members, isOwn, onTogglePreview, blockedDomains, onLinkLongPress, channels, onChannelPress }, ref) {
+const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, onLongPress, onReplyPress, onImagePress, onReactionPress, onReactionLongPress, onSwipeReply, onSwipeReact, onAvatarPress, members, isOwn, isHighlighted, onTogglePreview, blockedDomains, onLinkLongPress, channels, onChannelPress }, ref) {
   const { colors, density } = useTheme();
   const { attachmentWidth, attachmentHeight } = useLayout();
   const swipeableRef = useRef(null);
@@ -52,6 +52,21 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
 
   useImperativeHandle(ref, () => ({
     close: () => swipeableRef.current?.close(),
+  }));
+
+  // Brief highlight flash when arriving here via a search result or a
+  // thread-reply notification deep link. Mirrors web's .msg-highlight
+  // keyframe animation (client/styles/markdown.css).
+  const highlightProgress = useSharedValue(0);
+  useEffect(() => {
+    if (!isHighlighted) return;
+    highlightProgress.value = withSequence(
+      withTiming(1, { duration: 200 }),
+      withTiming(0, { duration: 2300 })
+    );
+  }, [isHighlighted]);
+  const highlightStyle = useAnimatedStyle(() => ({
+    backgroundColor: `rgba(234, 179, 8, ${highlightProgress.value * 0.35})`,
   }));
 
   // Resolve avatar: author's own avatarUrl, or fallback to workspace member's (includes BandMember)
@@ -317,8 +332,8 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
         rightThreshold={30}
       >
       <GestureDetector gesture={longPressGesture}>
-        <View
-          style={[styles.groupedContainer, { paddingTop: density.groupedPaddingTop, paddingBottom: density.groupedPaddingBottom }, isPending && styles.pending]}
+        <Reanimated.View
+          style={[styles.groupedContainer, { paddingTop: density.groupedPaddingTop, paddingBottom: density.groupedPaddingBottom }, isPending && styles.pending, highlightStyle]}
           accessibilityRole="button"
           accessibilityLabel={`Message: ${message.content || 'attachment'}`}
         >
@@ -335,7 +350,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
             {renderAttachments(message.attachments, onImagePress, attachmentWidth, attachmentHeight, handleLongPress)}
             {renderReactions(message.reactions, colors, message.id, onReactionPress, onReactionLongPress)}
           </View>
-        </View>
+        </Reanimated.View>
       </GestureDetector>
       </ReanimatedSwipeable>
       {message.attachments?.some(a => a.type === 'VIDEO' && a.url) && (
@@ -365,8 +380,8 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
       rightThreshold={30}
     >
     <GestureDetector gesture={longPressGesture}>
-    <View
-      style={[styles.container, { paddingTop: density.containerPaddingTop, paddingBottom: density.containerPaddingBottom }, isPending && styles.pending]}
+    <Reanimated.View
+      style={[styles.container, { paddingTop: density.containerPaddingTop, paddingBottom: density.containerPaddingBottom }, isPending && styles.pending, highlightStyle]}
       accessibilityRole="button"
       accessibilityLabel={`${displayName}: ${message.content || 'attachment'}`}
     >
@@ -433,7 +448,7 @@ const MessageBubble = forwardRef(function MessageBubble({ message, isGrouped, on
           </Pressable>
         )}
       </View>
-    </View>
+    </Reanimated.View>
     </GestureDetector>
     </ReanimatedSwipeable>
     {message.attachments?.some(a => a.type === 'VIDEO' && a.url) && (
@@ -630,7 +645,7 @@ function DocumentAttachment({ url, filename }) {
   const { colors } = useTheme();
   return (
     <Pressable
-      onPress={() => Linking.openURL(url)}
+      onPress={() => isSafeUrl(url) && Linking.openURL(url)}
       style={({ pressed }) => [
         { flexDirection: 'row', alignItems: 'center', padding: 8, marginTop: 4, borderRadius: 8, backgroundColor: colors.bgTertiary },
         pressed && Platform.OS === 'ios' && { opacity: 0.7 },

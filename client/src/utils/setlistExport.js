@@ -80,7 +80,6 @@ function getSongName(song, useShortNames) {
  * @param {Object<string,{content:string}>} [opts.notes] - per-setlistSongId
  * @param {number} [opts.transitionPaddingSecs]
  * @param {boolean} [opts.useShortNames] - override setlist.useShortNames
- * @param {boolean} [opts.autoPrint] - inject window.print() (Print mode only)
  * @param {number} [opts.fontSizeOverride] - replace the auto-fit song size,
  *   clamped to [MIN_FONT_SIZE, MAX_FONT_SIZE]. Used by the print-preview
  *   modal's +/- stepper; omit to use the auto-fit size.
@@ -91,7 +90,6 @@ export function buildSetlistHtml(setlist, opts = {}) {
     venueLogoUrl = null,
     notes = {},
     transitionPaddingSecs = 0,
-    autoPrint = false,
     showName = false,
     fontSizeOverride = null,
   } = opts;
@@ -405,7 +403,6 @@ export function buildSetlistHtml(setlist, opts = {}) {
   <div class="footer">
     <div class="stats">${statsLine}</div>
   </div>
-  ${autoPrint ? '<script>window.onload = function() { window.print(); };</script>' : ''}
 </body>
 </html>`;
 }
@@ -418,9 +415,13 @@ export function buildSetlistHtml(setlist, opts = {}) {
 export function printSetlist(setlist, opts = {}) {
   const printWindow = window.open('', '_blank');
   if (!printWindow) return { ok: false, error: 'popup-blocked' };
-  const html = buildSetlistHtml(setlist, { ...opts, autoPrint: true });
+  const html = buildSetlistHtml(setlist, opts);
   printWindow.document.write(html);
   printWindow.document.close();
+  // Trigger print from the opener's own script context rather than an inline
+  // <script> in the written HTML — an about:blank popup written via
+  // document.write inherits the opener's CSP, which has no 'unsafe-inline'.
+  printWindow.onload = () => printWindow.print();
   return { ok: true };
 }
 
@@ -429,7 +430,7 @@ export function printSetlist(setlist, opts = {}) {
  * application/msword content type. No external library required.
  */
 export function exportSetlistAsWord(setlist, opts = {}) {
-  const html = buildSetlistHtml(setlist, { ...opts, autoPrint: false, showName: true });
+  const html = buildSetlistHtml(setlist, { ...opts, showName: true });
   // Leading BOM lets Word interpret the file as UTF-8 HTML.
   const blob = new Blob(['﻿', html], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);

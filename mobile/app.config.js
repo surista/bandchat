@@ -12,7 +12,7 @@ export default {
     name: 'BandChat',
     slug: 'bandchat',
     scheme: 'bandchat',
-    version: '1.07.56',
+    version: '1.07.57',
     // 'default' (not 'portrait') so the Android manifest doesn't ship
     // screenOrientation="PORTRAIT" — Android 16 force-ignores that on
     // tablets/foldables anyway and Google Play flags it as a recommended
@@ -35,7 +35,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.bandchat.mobile',
-      buildNumber: '10756',
+      buildNumber: '10757',
       associatedDomains: ['applinks:bandchat.vercel.app'],
       entitlements: {
         'com.apple.security.application-groups': ['group.com.bandchat.manager.mobile'],
@@ -62,7 +62,7 @@ export default {
     android: {
       package: 'com.bandchat.mobile',
       softwareKeyboardLayoutMode: 'resize',
-      versionCode: 10756,
+      versionCode: 10757,
       allowBackup: false,
       predictiveBackGestureEnabled: true,
       adaptiveIcon: {
@@ -171,6 +171,15 @@ export default {
         {
           android: {
             kotlinVersion: '2.2.0',
+            // R8 code shrinking/obfuscation was never enabled, which is what
+            // Play Console's "DEX code optimisation is below our threshold"
+            // warning (3% obfuscation, "-" for shrinking/R8 configuration)
+            // is flagging. Needs a test build on the internal track first —
+            // first-time R8 enablement can occasionally need extra keep
+            // rules (extraProguardRules below) if a native module relies on
+            // reflection without shipping its own consumer proguard rules.
+            enableMinifyInReleaseBuilds: true,
+            enableShrinkResourcesInReleaseBuilds: true,
           },
         },
       ],

@@ -523,11 +523,14 @@ export default function StagePlotCreator({ workspaceId }) {
         <div class="front-label">Front of Stage / Audience</div>
         <div class="dimensions">${sw} &times; ${sh}</div>
       </div>
-      <script>window.onload=function(){window.print();}<\/script>
     </body></html>`;
 
     printWindow.document.write(html);
     printWindow.document.close();
+    // Trigger print from the opener's own script context rather than an
+    // inline <script> in the written HTML — an about:blank popup written via
+    // document.write inherits the opener's CSP, which has no 'unsafe-inline'.
+    printWindow.onload = () => printWindow.print();
   };
 
   // ── Editor view ──

@@ -9,6 +9,7 @@ import {
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { MIN_TOUCH_TARGET } from '../utils/touchTarget';
+import { isSafeUrl } from '../utils/urlSafety';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
 
@@ -107,7 +108,7 @@ function LinkPreview({ content, isOwn, onDismiss, onLongPress, blockedDomains })
   }
 
   const handlePress = () => {
-    Linking.openURL(url).catch(() => {});
+    if (isSafeUrl(url)) Linking.openURL(url).catch(() => {});
   };
 
   return (

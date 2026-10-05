@@ -15,7 +15,7 @@ function SetlistPrintPreviewModal({ setlist, exportOpts, onClose }) {
   const [fontSize, setFontSize] = useState(null); // null = use auto-fit
 
   const html = useMemo(
-    () => buildSetlistHtml(setlist, { ...exportOpts, autoPrint: false, fontSizeOverride: fontSize }),
+    () => buildSetlistHtml(setlist, { ...exportOpts, fontSizeOverride: fontSize }),
     [setlist, exportOpts, fontSize]
   );
 

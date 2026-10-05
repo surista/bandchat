@@ -43,6 +43,8 @@ import * as Clipboard from 'expo-clipboard';
 import { TYPE_COLORS, STATUS_COLORS } from '../../utils/constants';
 import { badgeColors } from '../../utils/badgeColors';
 import { updateWidgetGigData } from '../../services/widgetService';
+import { isSafeUrl } from '../../utils/urlSafety';
+import { MAX_AUDIO_SIZE } from '../../utils/fileValidation';
 
 const ATTENDEE_STATUSES = ['ATTENDING', 'MAYBE', 'NOT_ATTENDING'];
 const ATTENDEE_LABELS = { ATTENDING: 'Going', MAYBE: 'Maybe', NOT_ATTENDING: 'Not Going' };
@@ -690,7 +692,7 @@ export default function GigDetailScreen({ navigation, route }) {
       });
       if (result.canceled) return;
       const file = result.assets[0];
-      if (file.size > 500 * 1024 * 1024) {
+      if (file.size > MAX_AUDIO_SIZE) {
         Alert.alert('Too Large', 'Audio file must be under 500MB');
         return;
       }
@@ -1498,7 +1500,7 @@ export default function GigDetailScreen({ navigation, route }) {
                 onPress={() => {
                   if (item.type === 'image') {
                     navigation.navigate('GigGallery', { gigId, gigTitle: gig?.title });
-                  } else if (item.url) {
+                  } else if (item.url && isSafeUrl(item.url)) {
                     // video/audio/youtube/link — open externally, same
                     // fallback GigGalleryScreen uses. Previously only image
                     // taps did anything here; everything else silently

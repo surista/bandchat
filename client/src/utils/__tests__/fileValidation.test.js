@@ -16,12 +16,12 @@ describe('file size constants', () => {
     expect(MAX_IMAGE_SIZE).toBe(15 * 1024 * 1024);
   });
 
-  it('MAX_AUDIO_SIZE is 50MB', () => {
-    expect(MAX_AUDIO_SIZE).toBe(50 * 1024 * 1024);
+  it('MAX_AUDIO_SIZE is 500MB', () => {
+    expect(MAX_AUDIO_SIZE).toBe(500 * 1024 * 1024);
   });
 
-  it('MAX_VIDEO_SIZE is 50MB', () => {
-    expect(MAX_VIDEO_SIZE).toBe(50 * 1024 * 1024);
+  it('MAX_VIDEO_SIZE is 500MB', () => {
+    expect(MAX_VIDEO_SIZE).toBe(500 * 1024 * 1024);
   });
 });
 

@@ -54,6 +54,7 @@ const MessageRow = memo(function MessageRow({
   showUnreadDivider,
   seenByText,
   isOwn,
+  isHighlighted,
   onLongPress,
   onReplyPress,
   onImagePress,
@@ -106,6 +107,7 @@ const MessageRow = memo(function MessageRow({
         onAvatarPress={onAvatarPress}
         members={members}
         isOwn={isOwn}
+        isHighlighted={isHighlighted}
         onTogglePreview={onTogglePreview}
         blockedDomains={blockedDomains}
         onLinkLongPress={onLinkLongPress}
@@ -117,7 +119,7 @@ const MessageRow = memo(function MessageRow({
 });
 
 export default function ChannelScreen({ navigation, route }) {
-  const { channel, workspaceId, _splitPane: splitPane = false, openThreadId = null } = route.params;
+  const { channel, workspaceId, _splitPane: splitPane = false, openThreadId = null, highlightMessageId = null } = route.params;
   const { user } = useAuth();
   const { colors } = useTheme();
   const { socket, joinChannel, leaveChannel, startTyping, stopTyping } = useSocket();
@@ -133,6 +135,8 @@ export default function ChannelScreen({ navigation, route }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState(null);
+  const [highlightedMessageId, setHighlightedMessageId] = useState(null);
+  const [highlightTargetMissing, setHighlightTargetMissing] = useState(false);
   // IDs of messages this client just sent (API response confirmed). The server
   // broadcasts message:new to all channel members INCLUDING the sender's
   // socket, so without this we'd race the API swap against the echo. The Set
@@ -140,20 +144,23 @@ export default function ChannelScreen({ navigation, route }) {
   const recentSentIdsRef = useRef(new Set());
 
   // Auto-open thread when arriving from a thread-reply notification
-  // (App.js passes openThreadId from the push URL's &thread= param). Waits
-  // for messages to load so we can resolve the parent message object, then
-  // pushes ThreadScreen onto the stack. Guarded by a ref so it only fires
-  // once per mount — otherwise re-renders during message updates would
-  // re-navigate.
-  const threadAutoOpenedRef = useRef(false);
+  // (App.js passes openThreadId from the push URL's &thread= param) or a
+  // search result for a reply. Waits for messages to load so we can resolve
+  // the parent message object, then pushes ThreadScreen onto the stack.
+  // Keyed on the specific openThreadId rather than a plain boolean latch:
+  // navigation.navigate('Channel', ...) to a screen already on the stack
+  // reuses this instance and just merges in new params, so a boolean would
+  // silently swallow every search-triggered navigation after the first one
+  // in the same channel.
+  const threadAutoOpenedForRef = useRef(null);
   useEffect(() => {
-    if (!openThreadId || threadAutoOpenedRef.current) return;
+    if (!openThreadId || threadAutoOpenedForRef.current === openThreadId) return;
     if (!messages.length) return;
     const parent = messages.find(m => m.id === openThreadId);
     if (!parent) return;
-    threadAutoOpenedRef.current = true;
-    navigation.navigate('Thread', { parentMessage: parent, channelId: channel.id, workspaceId });
-  }, [openThreadId, messages.length, navigation, channel.id, workspaceId]);
+    threadAutoOpenedForRef.current = openThreadId;
+    navigation.navigate('Thread', { parentMessage: parent, channelId: channel.id, workspaceId, highlightMessageId });
+  }, [openThreadId, messages.length, navigation, channel.id, workspaceId, highlightMessageId]);
   const [typingUsers, setTypingUsers] = useState([]);
   const [pinnedSetlist, setPinnedSetlist] = useState(channel.pinnedSetlist || null);
   const [setlistExpanded, setSetlistExpanded] = useState(false);
@@ -276,28 +283,43 @@ export default function ChannelScreen({ navigation, route }) {
   // message-derived memos) — never a stale mid-history position from a
   // previous visit.
 
-  // Header: "..." menu button (hidden for DMs)
+  const handleOpenChannelSearch = useCallback(() => {
+    navigation.navigate('Search', { workspaceId, channelId: channel.id, channelName: channel.name });
+  }, [navigation, workspaceId, channel.id, channel.name]);
+
+  // Header: search + "..." menu buttons (hidden for DMs)
   useLayoutEffect(() => {
     if (channel.isDM) return;
     // In iPad split mode, the parent ChannelListScreen owns the stack header
-    // and the proxy navigation no-ops setOptions — the ellipsis is rendered
+    // and the proxy navigation no-ops setOptions — these are rendered
     // inline below (`splitPane` branch in the return) instead.
     if (splitPane) return;
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity
-          onPress={() => setShowHeaderMenu(true)}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          accessibilityRole="button"
-          accessibilityLabel="More options"
-          accessibilityHint="Channel options"
-          style={{ paddingHorizontal: 8 }}
-        >
-          <Ionicons name="ellipsis-horizontal" size={22} color="#ffffff" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={handleOpenChannelSearch}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Search this channel"
+            style={{ paddingHorizontal: 8 }}
+          >
+            <Ionicons name="search" size={20} color="#ffffff" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setShowHeaderMenu(true)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="More options"
+            accessibilityHint="Channel options"
+            style={{ paddingHorizontal: 8 }}
+          >
+            <Ionicons name="ellipsis-horizontal" size={22} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
       ),
     });
-  }, [navigation, channel, splitPane]);
+  }, [navigation, channel, splitPane, handleOpenChannelSearch]);
 
   // Load blocked user IDs for socket filtering
   useEffect(() => {
@@ -838,6 +860,12 @@ export default function ChannelScreen({ navigation, route }) {
   useEffect(() => {
     if (initialUnreadScrollDone.current) return;
     if (loading || invertedMessages.length === 0) return;
+    // A deep link to a specific message (search result, thread-reply
+    // notification) takes priority over the unread jump — wait for the
+    // highlightMessageId effect below to resolve first. But if it can't find
+    // the target (e.g. outside the initially-loaded page), fall through here
+    // instead of leaving the user stranded with no scroll at all.
+    if (highlightMessageId && !highlightTargetMissing) return;
     if (!firstUnreadId) {
       initialUnreadScrollDone.current = true; // caught up — stay at newest
       return;
@@ -856,7 +884,46 @@ export default function ChannelScreen({ navigation, route }) {
         // onScrollToIndexFailed (below) handles the not-yet-measured case.
       }
     });
-  }, [loading, invertedMessages, firstUnreadId]);
+  }, [loading, invertedMessages, firstUnreadId, highlightMessageId, highlightTargetMissing]);
+
+  // Scroll to and briefly highlight a specific message when arriving from a
+  // search result. If the match is a thread reply, openThreadId is also set
+  // and the auto-open-thread effect above forwards highlightMessageId to
+  // ThreadScreen instead — the reply never appears in this top-level list,
+  // so we skip straight past it here.
+  //
+  // Keyed on the specific highlightMessageId (not a boolean latch) for the
+  // same reason as threadAutoOpenedForRef above — this screen instance is
+  // reused across repeated "Search this channel" navigations.
+  const highlightResolvedForRef = useRef(null);
+  const highlightClearTimerRef = useRef(null);
+  useEffect(() => {
+    if (!highlightMessageId || openThreadId) return;
+    if (highlightResolvedForRef.current === highlightMessageId) return;
+    if (loading || invertedMessages.length === 0) return;
+    const index = invertedMessages.findIndex(m => m.id === highlightMessageId);
+    highlightResolvedForRef.current = highlightMessageId;
+    if (index < 0) {
+      setHighlightTargetMissing(true);
+      return;
+    }
+    setHighlightTargetMissing(false);
+    requestAnimationFrame(() => {
+      try {
+        flatListRef.current?.scrollToIndex({ index, animated: false, viewPosition: 0.5 });
+      } catch {
+        // onScrollToIndexFailed (below) handles the not-yet-measured case.
+      }
+    });
+    setHighlightedMessageId(highlightMessageId);
+    if (highlightClearTimerRef.current) clearTimeout(highlightClearTimerRef.current);
+    highlightClearTimerRef.current = setTimeout(() => setHighlightedMessageId(null), 2500);
+  }, [highlightMessageId, openThreadId, loading, invertedMessages]);
+
+  // Cancel a pending highlight-clear timer if the screen unmounts first.
+  useEffect(() => () => {
+    if (highlightClearTimerRef.current) clearTimeout(highlightClearTimerRef.current);
+  }, []);
 
   // scrollToIndex can fail when the target row hasn't been measured yet
   // (variable-height rows, no getItemLayout). Approximate with an offset
@@ -881,6 +948,7 @@ export default function ChannelScreen({ navigation, route }) {
       showUnreadDivider={item._showUnreadDivider}
       seenByText={item._seenByText}
       isOwn={item._isOwn}
+      isHighlighted={item.id === highlightedMessageId}
       onLongPress={handleLongPress}
       onReplyPress={handleReplyPress}
       onImagePress={handleImagePress}
@@ -897,7 +965,7 @@ export default function ChannelScreen({ navigation, route }) {
       onChannelPress={handleChannelRefPress}
       colors={colors}
     />
-  ), [colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, handleReactionLongPress, handleAvatarPress, handleTogglePreview, workspaceMembers, blockedDomains, handleLinkLongPress, workspaceChannels, handleChannelRefPress]);
+  ), [colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, handleReactionLongPress, handleAvatarPress, handleTogglePreview, workspaceMembers, blockedDomains, handleLinkLongPress, workspaceChannels, handleChannelRefPress, highlightedMessageId]);
 
   const renderFooter = useCallback(() => {
     if (!loadingMore) return null;
@@ -955,16 +1023,27 @@ export default function ChannelScreen({ navigation, route }) {
             </Text>
           </View>
           {!channel.isDM && (
-            <TouchableOpacity
-              onPress={() => setShowHeaderMenu(true)}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              style={styles.splitHeaderMenuButton}
-              accessibilityRole="button"
-              accessibilityLabel="More options"
-              accessibilityHint="Channel options"
-            >
-              <Ionicons name="ellipsis-horizontal" size={22} color={colors.headerText} />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity
+                onPress={handleOpenChannelSearch}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={styles.splitHeaderMenuButton}
+                accessibilityRole="button"
+                accessibilityLabel="Search this channel"
+              >
+                <Ionicons name="search" size={20} color={colors.headerText} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setShowHeaderMenu(true)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={styles.splitHeaderMenuButton}
+                accessibilityRole="button"
+                accessibilityLabel="More options"
+                accessibilityHint="Channel options"
+              >
+                <Ionicons name="ellipsis-horizontal" size={22} color={colors.headerText} />
+              </TouchableOpacity>
+            </View>
           )}
         </View>
       )}
@@ -1055,6 +1134,7 @@ export default function ChannelScreen({ navigation, route }) {
         data={invertedMessages}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
+        extraData={highlightedMessageId}
         inverted
         onEndReached={loadMore}
         onEndReachedThreshold={0.3}

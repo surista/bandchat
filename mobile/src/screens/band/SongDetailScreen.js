@@ -30,6 +30,7 @@ import { broadcastAudioPlay, subscribeAudioPause } from '../../utils/audioPlayba
 import { useLayout } from '../../hooks/useLayout';
 import ErrorState from '../../components/ErrorState';
 import PressableRow from '../../components/PressableRow';
+import { getMaxSizeForMimeType } from '../../utils/fileValidation';
 
 const KEY_ROOTS = ['C', 'C#/Db', 'D', 'D#/Eb', 'E', 'F', 'F#/Gb', 'G', 'G#/Ab', 'A', 'A#/Bb', 'B'];
 const KEY_SUFFIXES = ['major', 'minor'];
@@ -406,8 +407,15 @@ export default function SongDetailScreen({ navigation, route }) {
       });
       if (result.canceled) return;
       const file = result.assets[0];
-      if (file.size > 25 * 1024 * 1024) {
-        Alert.alert('Too Large', 'File must be under 25MB');
+      // The picker allows audio/image/pdf/octet-stream, each with its own
+      // server-side cap (uploads.js) — check against the right one instead of
+      // one flat number, otherwise a file this accepts as fine can still be
+      // rejected server-side. An unrecognized type (e.g. Guitar Pro files, or
+      // audio some Android providers mis-report as octet-stream) skips the
+      // pre-check and defers to the server's magic-byte detection.
+      const maxSize = getMaxSizeForMimeType(file.mimeType);
+      if (maxSize && file.size > maxSize) {
+        Alert.alert('Too Large', `File must be under ${Math.round(maxSize / (1024 * 1024))}MB`);
         return;
       }
       setUploadingAttachment(true);

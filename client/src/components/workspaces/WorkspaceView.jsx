@@ -1460,11 +1460,21 @@ function WorkspaceView() {
                       const channel = channels.find(c => c.id === result.channelId) || directMessages.find(d => d.id === result.channelId);
                       if (channel) {
                         setSelectedChannel(channel);
+                        setSelectedThread(null);
                         setShowSearch(false);
                         setSearchQuery('');
                         setSearchResults([]);
                         setSearchChannelFilter('');
                         setSearchAuthorFilter('');
+                        // Jump straight to the matched message: ?msg= is picked up by
+                        // ChannelView/MessageList to scroll-to-and-highlight it. If the
+                        // match is a thread reply, ?thread= also auto-opens the thread
+                        // (see ChannelView's autoOpenThreadId effect) and ThreadView
+                        // reads the same ?msg= to highlight the reply within it.
+                        const params = new URLSearchParams();
+                        params.set('msg', result.id);
+                        if (result.parentId) params.set('thread', result.parentId);
+                        navigate({ search: `?${params.toString()}` }, { replace: true });
                       }
                     }}
                     className="w-full text-left bg-gray-800 rounded-lg p-3 hover:bg-gray-700 transition-colors"

@@ -18,6 +18,7 @@ import api from '../../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useLayout } from '../../hooks/useLayout';
 import ErrorState from '../../components/ErrorState';
+import { isSafeUrl } from '../../utils/urlSafety';
 
 const GAP = 2;
 const TABLET_BREAKPOINT = 768;
@@ -73,7 +74,7 @@ export default function GigGalleryScreen({ route }) {
     // photos for a video file URL, etc.). Previously only image taps did
     // anything; everything else looked broken because the gallery cell
     // silently swallowed the tap.
-    if (item.url) {
+    if (item.url && isSafeUrl(item.url)) {
       Linking.openURL(item.url).catch(() => {});
     }
   }, []);

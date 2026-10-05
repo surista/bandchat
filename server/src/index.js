@@ -1,17 +1,31 @@
 import 'dotenv/config';
 
-// Validate JWT secrets at startup (warn, don't crash — secrets may be valid but short)
+// Validate JWT secrets at startup. In production a missing/weak/short secret
+// refuses to boot — issuing tokens with a guessable or empty signing key is
+// worse than the app being down. Dev/test only warn, since local setups and
+// CI may reasonably use shorter placeholder secrets.
 const WEAK_SECRETS = ['secret', 'password', 'jwt_secret', 'changeme', 'test', 'development', '12345678'];
 function validateJwtSecrets() {
+  const isProduction = process.env.NODE_ENV === 'production';
+  let hasIssue = false;
   for (const envVar of ['JWT_SECRET', 'JWT_REFRESH_SECRET']) {
     const value = process.env[envVar];
+    let issue = null;
     if (!value) {
-      console.warn(`WARNING: ${envVar} is not set`);
+      issue = `${envVar} is not set`;
     } else if (value.length < 32) {
-      console.warn(`WARNING: ${envVar} is shorter than 32 characters (${value.length}). Consider using a longer secret.`);
+      issue = `${envVar} is shorter than 32 characters (${value.length}). Consider using a longer secret.`;
     } else if (WEAK_SECRETS.includes(value.toLowerCase())) {
-      console.warn(`WARNING: ${envVar} is set to a common/weak value. Please use a strong secret.`);
+      issue = `${envVar} is set to a common/weak value. Please use a strong secret.`;
     }
+    if (issue) {
+      hasIssue = true;
+      console[isProduction ? 'error' : 'warn'](`${isProduction ? 'FATAL' : 'WARNING'}: ${issue}`);
+    }
+  }
+  if (hasIssue && isProduction) {
+    console.error('Refusing to start in production with a missing/weak JWT secret.');
+    process.exit(1);
   }
 }
 validateJwtSecrets();

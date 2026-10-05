@@ -29,7 +29,7 @@ import useMessageActions from '../../hooks/useMessageActions';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ThreadScreen({ navigation, route }) {
-  const { parentMessage, channelId, workspaceId } = route.params;
+  const { parentMessage, channelId, workspaceId, highlightMessageId = null } = route.params;
   const { user } = useAuth();
   const { colors } = useTheme();
   const { socket, startTyping, stopTyping } = useSocket();
@@ -49,6 +49,7 @@ export default function ThreadScreen({ navigation, route }) {
   const [loadError, setLoadError] = useState(null);
   const [workspaceMembers, setWorkspaceMembers] = useState([]);
   const [workspaceChannels, setWorkspaceChannels] = useState([]);
+  const [highlightedMessageId, setHighlightedMessageId] = useState(null);
 
   const parentIdRef = useRef(parentMessage.id);
 
@@ -326,6 +327,7 @@ export default function ThreadScreen({ navigation, route }) {
         onAvatarPress={handleAvatarPress}
         members={workspaceMembers}
         isOwn={item.author?.id === user?.id}
+        isHighlighted={item.id === highlightedMessageId}
         onTogglePreview={handleTogglePreview}
         blockedDomains={blockedDomains}
         onLinkLongPress={handleLinkLongPress}
@@ -333,7 +335,50 @@ export default function ThreadScreen({ navigation, route }) {
         onChannelPress={handleChannelRefPress}
       />
     );
-  }, [colors, handleLongPress, handleImagePress, handleReactionPress, handleReactionLongPress, handleAvatarPress, handleTogglePreview, workspaceMembers, user?.id, blockedDomains, handleLinkLongPress, workspaceChannels, handleChannelRefPress]);
+  }, [colors, handleLongPress, handleImagePress, handleReactionPress, handleReactionLongPress, handleAvatarPress, handleTogglePreview, workspaceMembers, user?.id, blockedDomains, handleLinkLongPress, workspaceChannels, handleChannelRefPress, highlightedMessageId]);
+
+  // Scroll to and briefly highlight a specific reply (or the parent message)
+  // when arriving from a search result or thread-reply notification. Keyed
+  // on the specific highlightMessageId (not a boolean latch) in case this
+  // screen instance is ever reused across repeated navigations, the same
+  // reasoning as ChannelScreen's equivalent effect.
+  const highlightResolvedForRef = useRef(null);
+  const highlightClearTimerRef = useRef(null);
+  useEffect(() => {
+    if (!highlightMessageId || loading) return;
+    if (highlightResolvedForRef.current === highlightMessageId) return;
+    const index = listData.findIndex(item => item.id === highlightMessageId);
+    if (index < 0) {
+      highlightResolvedForRef.current = highlightMessageId;
+      return;
+    }
+    highlightResolvedForRef.current = highlightMessageId;
+    requestAnimationFrame(() => {
+      try {
+        flatListRef.current?.scrollToIndex({ index, animated: false, viewPosition: 0.5 });
+      } catch {
+        // onScrollToIndexFailed (below) handles the not-yet-measured case.
+      }
+    });
+    setHighlightedMessageId(highlightMessageId);
+    if (highlightClearTimerRef.current) clearTimeout(highlightClearTimerRef.current);
+    highlightClearTimerRef.current = setTimeout(() => setHighlightedMessageId(null), 2500);
+  }, [highlightMessageId, loading, listData]);
+
+  // Cancel a pending highlight-clear timer if the screen unmounts first.
+  useEffect(() => () => {
+    if (highlightClearTimerRef.current) clearTimeout(highlightClearTimerRef.current);
+  }, []);
+
+  const onScrollToIndexFailed = useCallback((info) => {
+    const offset = (info.averageItemLength || 80) * info.index;
+    flatListRef.current?.scrollToOffset({ offset, animated: false });
+    setTimeout(() => {
+      try {
+        flatListRef.current?.scrollToIndex({ index: info.index, animated: false, viewPosition: 0.5 });
+      } catch { /* leave at the approximate offset */ }
+    }, 150);
+  }, []);
 
   const handleRetry = useCallback(() => {
     setLoading(true);
@@ -385,6 +430,8 @@ export default function ThreadScreen({ navigation, route }) {
         data={listData}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
+        extraData={highlightedMessageId}
+        onScrollToIndexFailed={onScrollToIndexFailed}
         contentContainerStyle={styles.listContent}
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         keyboardShouldPersistTaps="handled"

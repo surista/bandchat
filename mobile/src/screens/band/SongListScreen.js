@@ -48,7 +48,11 @@ function Badge({ label, color, bgColor }) {
 }
 
 export default function SongListScreen({ navigation, route }) {
-  const { workspaceId, workspaceName } = route.params;
+  // route.params has been seen missing after an Android low-memory process
+  // kill + state restore (the OS hands back a stale/garbled navigation
+  // state), which previously crashed the whole app on mount via a failed
+  // destructure instead of showing a recoverable error.
+  const { workspaceId, workspaceName } = route.params ?? {};
   const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
   const toast = useToast();
@@ -454,7 +458,7 @@ export default function SongListScreen({ navigation, route }) {
             {SORT_OPTIONS.find(o => o.key === sortBy)?.label}
           </Text>
         </PressableRow>
-        <View style={[styles.segmentedControl, { backgroundColor: colors.bgTertiary }]} accessibilityRole="tabbar">
+        <View style={[styles.segmentedControl, { backgroundColor: colors.bgTertiary }]} accessibilityRole="tablist">
           <Pressable
             style={({ pressed }) => [
               styles.segmentButton,

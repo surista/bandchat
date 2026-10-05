@@ -457,13 +457,20 @@ function SongList({ workspaceId, workspaceName, onSelectSong }) {
   <div class="footer">
     ${songsToExport.length} song${songsToExport.length !== 1 ? 's' : ''}${totalDuration ? ` &bull; ${totalDuration} total` : ''}
   </div>
-  <script>window.onload = function() { window.print(); }; window.onafterprint = function() { window.close(); };</script>
 </body>
 </html>`;
 
     try {
       printWindow.document.write(html);
       printWindow.document.close();
+      // Trigger print from the opener's own script context rather than an
+      // inline <script> in the written HTML — an about:blank popup written
+      // via document.write inherits the opener's CSP, which has no
+      // 'unsafe-inline'.
+      printWindow.onload = () => {
+        printWindow.print();
+        printWindow.onafterprint = () => printWindow.close();
+      };
     } catch (err) {
       printWindow.close();
       toast.warning('Could not generate print preview');
