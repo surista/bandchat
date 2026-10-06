@@ -16,6 +16,13 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.60',
+    date: '2026-10-07',
+    items: [
+      { kind: 'fixed', text: 'Fixed the browser/device back button no longer returning to the workspace list after opening a push notification or a shared channel link — it could silently stop working for the rest of your session.' },
+    ],
+  },
+  {
     version: '1.07.59',
     date: '2026-10-07',
     items: [

@@ -275,10 +275,15 @@ function WorkspaceView() {
     const timer = setTimeout(() => {
       const current = new URL(window.location.href);
       current.searchParams.delete('view');
-      window.history.replaceState({}, '', current.pathname + (current.search ? current.search : '') + current.hash);
+      // Go through react-router's navigate, not the raw history API — a bare
+      // window.history.replaceState({}, ...) wipes the {usr,key,idx} state
+      // react-router's BrowserHistory keeps on the entry to make Back/Forward
+      // work, which silently broke the browser/hardware back button for the
+      // rest of the session after any push-notification deep link.
+      navigate(current.pathname + (current.search ? current.search : '') + current.hash, { replace: true });
     }, 1500);
     return () => clearTimeout(timer);
-  }, [workspaceId]);
+  }, [workspaceId, navigate]);
 
   // Fetch all workspaces for workspace switcher
   useEffect(() => {
@@ -606,13 +611,16 @@ function WorkspaceView() {
         setSelectedChannel(generalChannel || channelsData[0]);
       }
 
-      // Clean up the channel param from URL (keep msg for ChannelView to handle)
+      // Clean up the channel param from URL (keep msg for ChannelView to handle).
+      // Via navigate(), not the raw history API — see the ?view= cleanup
+      // effect above for why a bare replaceState({}, ...) breaks the
+      // browser/hardware back button for the rest of the session.
       if (urlChannelParam) {
         const params = new URLSearchParams(window.location.search);
         params.delete('channel');
         const newSearch = params.toString();
         const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : '');
-        window.history.replaceState({}, '', newUrl);
+        navigate(newUrl, { replace: true });
       }
     } catch (err) {
       console.error('Failed to load workspace:', err);
