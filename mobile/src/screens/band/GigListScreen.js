@@ -150,10 +150,13 @@ export default function GigListScreen({ navigation, route }) {
   const handleSubscribeCalendar = useCallback(async () => {
     setCalendarLoading(true);
     try {
-      let tokenData;
-      try {
-        tokenData = await api.getCalendarToken(workspaceId);
-      } catch {
+      // getCalendarToken returns 200 with { token: null } when the workspace
+      // hasn't generated one yet — not an error, so the catch below never
+      // fires for that case. Check the value explicitly instead of relying
+      // on the request throwing, otherwise the subscribe URL ships with the
+      // literal string "token=null" for every workspace's first use.
+      let tokenData = await api.getCalendarToken(workspaceId);
+      if (!tokenData?.token) {
         tokenData = await api.generateCalendarToken(workspaceId);
       }
       const token = tokenData.token;

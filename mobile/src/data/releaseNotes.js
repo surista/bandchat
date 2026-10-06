@@ -16,6 +16,38 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.59',
+    date: '2026-10-07',
+    items: [
+      { kind: 'fixed', text: 'Fixed the "Subscribe to Calendar" link not working the first time a band set it up — it was generated with an invalid token, so calendar apps couldn’t sync to it.' },
+    ],
+  },
+  {
+    version: '1.07.58',
+    date: '2026-10-05',
+    items: [
+      { kind: 'fixed', text: 'Band website: a gig’s lineup now shows who actually played that show (including a fill-in musician), instead of always showing the band’s current full roster.' },
+    ],
+  },
+  {
+    version: '1.07.57',
+    date: '2026-10-05',
+    items: [
+      { kind: 'fixed', text: 'Mobile: fixed a crash when opening Songs.' },
+      { kind: 'added', text: 'Mobile: added a "Search this channel" button next to a channel’s menu.' },
+      { kind: 'fixed', text: 'Tapping a search result now jumps straight to the actual message and briefly highlights it, instead of just opening the channel.' },
+      { kind: 'fixed', text: 'Fixed song attachments sometimes being rejected on upload even though the app said they were an acceptable size.' },
+    ],
+  },
+  {
+    version: '1.07.56',
+    date: '2026-09-14',
+    items: [
+      { kind: 'added', text: 'Exporting a stage plot to PDF is now available directly from the stage plot list, not just from inside the editor.' },
+      { kind: 'fixed', text: 'Fixed the floating split-view button covering header controls in Band view.' },
+    ],
+  },
+  {
     version: '1.07.55',
     date: '2026-09-09',
     items: [
