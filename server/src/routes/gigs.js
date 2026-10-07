@@ -17,7 +17,7 @@ import { getConflictsForUser, getAffectedWorkspaceIds } from '../services/calend
 const router = express.Router();
 
 const VALID_GIG_TYPES = ['GIG', 'REHEARSAL', 'RECORDING', 'OTHER'];
-const VALID_GIG_STATUSES = ['SCHEDULED', 'COMPLETED', 'CANCELLED'];
+const VALID_GIG_STATUSES = ['PENDING', 'SCHEDULED', 'COMPLETED', 'CANCELLED'];
 
 const calendarLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, skip: process.env.NODE_ENV === 'test' ? () => true : undefined, message: { error: 'Too many requests' } });
 
@@ -41,6 +41,80 @@ function resolveInstrumentsAsOfDate(stints, date) {
   const sorted = [...stints].sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
   const mostRecentBefore = sorted.find((s) => new Date(s.startDate).getTime() <= target);
   return (mostRecentBefore || sorted[sorted.length - 1])?.instruments || [];
+}
+
+// --- Tentative ("PENDING") gig announcements ---
+// Posting a tentative gig into specific channels, then confirming or
+// rejecting it, works by auto-posting a chat message per selected channel
+// and tracking it via GigChannelPost so confirm/reject can find and
+// edit/delete that exact message later ("if confirmed, make it so; if
+// rejected, wipe it from those channels").
+
+const GIG_MESSAGE_INCLUDE = {
+  author: { select: { id: true, displayName: true, avatarUrl: true } },
+  attachments: true,
+  reactions: { include: { user: { select: { id: true, displayName: true } } } },
+  _count: { select: { replies: true } },
+};
+
+function formatGigDate(date) {
+  return new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function formatPendingGigAnnouncement(gig) {
+  const lines = [`📅 **Tentative Gig: ${gig.title}**`, `🗓️ ${formatGigDate(gig.date)}`];
+  if (gig.venue) lines.push(`📍 ${gig.venue}`);
+  lines.push('', '_This gig is pending confirmation — nothing’s locked in yet._');
+  return lines.join('\n');
+}
+
+function formatConfirmedGigAnnouncement(gig) {
+  const lines = [`📅 **${gig.title}** — ✅ CONFIRMED`, `🗓️ ${formatGigDate(gig.date)}`];
+  if (gig.venue) lines.push(`📍 ${gig.venue}`);
+  return lines.join('\n');
+}
+
+// Post the tentative-gig card into each selected channel and record a
+// GigChannelPost row per channel.
+async function postPendingGigToChannels(gig, channelIds, authorId, io) {
+  const content = formatPendingGigAnnouncement(gig);
+  for (const channelId of channelIds) {
+    const message = await prisma.message.create({
+      data: { content, authorId, channelId },
+      include: GIG_MESSAGE_INCLUDE,
+    });
+    await prisma.gigChannelPost.create({
+      data: { gigId: gig.id, channelId, messageId: message.id },
+    });
+    io.to(`channel:${channelId}`).emit('message:new', message);
+  }
+}
+
+// Edit each posted card in place to show the gig as confirmed.
+async function confirmPendingGigPosts(gig, io) {
+  const posts = await prisma.gigChannelPost.findMany({ where: { gigId: gig.id } });
+  const content = formatConfirmedGigAnnouncement(gig);
+  for (const post of posts) {
+    const updated = await prisma.message.update({
+      where: { id: post.messageId },
+      data: { content },
+      include: GIG_MESSAGE_INCLUDE,
+    }).catch(() => null);
+    if (updated) io.to(`channel:${post.channelId}`).emit('message:updated', updated);
+  }
+}
+
+// Wipe each posted card from its channel entirely.
+async function rejectPendingGigPosts(gigId, io) {
+  const posts = await prisma.gigChannelPost.findMany({ where: { gigId } });
+  for (const post of posts) {
+    await prisma.message.delete({ where: { id: post.messageId } }).catch(() => {});
+    io.to(`channel:${post.channelId}`).emit('message:deleted', {
+      messageId: post.messageId,
+      channelId: post.channelId,
+      parentId: null,
+    });
+  }
 }
 
 // Get all gigs for a workspace
@@ -634,7 +708,7 @@ router.get('/workspace/:workspaceId/stats', authenticate, isWorkspaceMember, asy
 // Create a gig
 router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMember, async (req, res) => {
   try {
-    const { title, type, date, endDate, soundCheckTime, eventStartTime, performanceStartTime, venue, address, notes, pay, setlistId, setlistIds, isLocked, isPersonal, bandMemberIds, venueId } = req.body;
+    const { title, type, date, endDate, soundCheckTime, eventStartTime, performanceStartTime, venue, address, notes, pay, setlistId, setlistIds, isLocked, isPersonal, bandMemberIds, venueId, status, channelIds } = req.body;
 
     if (!title || !date) {
       return res.status(400).json({ error: 'Title and date are required' });
@@ -649,6 +723,27 @@ router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMemb
     // Validate enum values
     if (type && !VALID_GIG_TYPES.includes(type)) {
       return res.status(400).json({ error: 'Invalid gig type' });
+    }
+    // A gig can only be created as PENDING (tentative) or the normal default
+    // (SCHEDULED) — COMPLETED/CANCELLED aren't meaningful states to create a
+    // brand-new gig in.
+    if (status && !['PENDING', 'SCHEDULED'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid gig status' });
+    }
+    const isPending = status === 'PENDING';
+
+    // Only meaningful (and only allowed) for a tentative gig — channels it
+    // should be announced into once created.
+    let validChannelIds = [];
+    if (isPending && channelIds?.length > 0) {
+      const validChannels = await prisma.channel.findMany({
+        where: { id: { in: channelIds }, workspaceId: req.params.workspaceId },
+        select: { id: true },
+      });
+      if (validChannels.length !== channelIds.length) {
+        return res.status(400).json({ error: 'One or more channels not found in this workspace' });
+      }
+      validChannelIds = validChannels.map((c) => c.id);
     }
 
     // Only admins can create locked events
@@ -753,6 +848,7 @@ router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMemb
         venueId: venueId || null,
         notes,
         pay,
+        status: isPending ? 'PENDING' : 'SCHEDULED',
         isLocked: canLock ? (isLocked || false) : false,
         isPersonal: isPersonal || false,
         workspaceId: req.params.workspaceId,
@@ -807,25 +903,34 @@ router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMemb
     const io = req.app.get('io');
     io.to(`workspace:${req.params.workspaceId}`).emit('gig:created', gig);
 
-    // Send push notification to workspace members
-    const wsMembers = await prisma.workspaceMember.findMany({
-      where: { workspaceId: req.params.workspaceId, userId: { not: req.user.id } },
-      select: { userId: true }
-    });
-    const gigDateStr = gig.date ? new Date(gig.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
-    const pushBody = [gig.title, gigDateStr, gig.venue].filter(Boolean).join(' · ');
-    wsMembers.forEach(m => {
-      sendPushToUser(m.userId, {
-        title: 'New Gig',
-        body: pushBody,
-        tag: `gig-${gig.id}`,
-        url: `/workspace/${req.params.workspaceId}?view=calendar`,
-        workspaceId: req.params.workspaceId,
-        threadId: req.params.workspaceId
-      }, { category: 'gig', workspaceId: req.params.workspaceId });
-    });
+    // A tentative gig announces itself via the channel cards below instead
+    // of a workspace-wide "New Gig" blast — that's the whole point of
+    // picking specific channels rather than notifying everyone.
+    if (isPending) {
+      if (validChannelIds.length > 0) {
+        await postPendingGigToChannels(gig, validChannelIds, req.user.id, io);
+      }
+    } else {
+      // Send push notification to workspace members
+      const wsMembers = await prisma.workspaceMember.findMany({
+        where: { workspaceId: req.params.workspaceId, userId: { not: req.user.id } },
+        select: { userId: true }
+      });
+      const gigDateStr = gig.date ? new Date(gig.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+      const pushBody = [gig.title, gigDateStr, gig.venue].filter(Boolean).join(' · ');
+      wsMembers.forEach(m => {
+        sendPushToUser(m.userId, {
+          title: 'New Gig',
+          body: pushBody,
+          tag: `gig-${gig.id}`,
+          url: `/workspace/${req.params.workspaceId}?view=calendar`,
+          workspaceId: req.params.workspaceId,
+          threadId: req.params.workspaceId
+        }, { category: 'gig', workspaceId: req.params.workspaceId });
+      });
+    }
 
-    logAudit('gig.created', { actorId: req.user.id, targetId: gig.id, metadata: { title } });
+    logAudit('gig.created', { actorId: req.user.id, targetId: gig.id, metadata: { title, status: gig.status } });
 
     // Notify affected workspaces about potential conflicts
     if (gig.attendees?.length > 0) {
@@ -847,6 +952,81 @@ router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMemb
   } catch (error) {
     console.error('Create gig error:', error);
     res.status(500).json({ error: 'Failed to create gig' });
+  }
+});
+
+// Confirm a tentative gig — admin only. Flips PENDING -> SCHEDULED and edits
+// every channel card this gig was announced into to show it as confirmed.
+router.post('/:gigId/confirm', authenticate, async (req, res) => {
+  try {
+    const existingGig = await prisma.gig.findUnique({
+      where: { id: req.params.gigId },
+      include: { workspace: { include: { members: true } } },
+    });
+    if (!existingGig) return res.status(404).json({ error: 'Gig not found' });
+
+    const membership = existingGig.workspace.members.find((m) => m.userId === req.user.id);
+    if (!membership) return res.status(403).json({ error: 'Not a workspace member' });
+    if (membership.role !== 'ADMIN') return res.status(403).json({ error: 'Only a workspace admin can confirm a gig' });
+    if (existingGig.status !== 'PENDING') return res.status(400).json({ error: 'Only a pending gig can be confirmed' });
+
+    const gig = await prisma.gig.update({
+      where: { id: req.params.gigId },
+      data: { status: 'SCHEDULED' },
+      include: {
+        createdBy: { select: USER_SELECT_BRIEF },
+        venueRecord: { select: { id: true, name: true, address: true, city: true, imageUrl: true, phone: true, email: true, website: true, capacity: true } },
+        setlists: { include: { setlist: { select: { id: true, name: true } } }, orderBy: { setNumber: 'asc' } },
+        attendees: { include: { bandMember: { select: { id: true, name: true, imageUrl: true } } } },
+        media: { orderBy: { createdAt: 'desc' } },
+      },
+    });
+
+    const io = req.app.get('io');
+    io.to(`workspace:${gig.workspaceId}`).emit('gig:updated', gig);
+    await confirmPendingGigPosts(gig, io);
+
+    logAudit('gig.confirmed', { actorId: req.user.id, targetId: gig.id, metadata: { title: gig.title } });
+
+    res.json(gig);
+    triggerWebsiteSync(gig.workspaceId);
+  } catch (error) {
+    console.error('Confirm gig error:', error);
+    res.status(500).json({ error: 'Failed to confirm gig' });
+  }
+});
+
+// Reject a tentative gig — admin only. Flips PENDING -> CANCELLED and wipes
+// every channel card this gig was announced into.
+router.post('/:gigId/reject', authenticate, async (req, res) => {
+  try {
+    const existingGig = await prisma.gig.findUnique({
+      where: { id: req.params.gigId },
+      include: { workspace: { include: { members: true } } },
+    });
+    if (!existingGig) return res.status(404).json({ error: 'Gig not found' });
+
+    const membership = existingGig.workspace.members.find((m) => m.userId === req.user.id);
+    if (!membership) return res.status(403).json({ error: 'Not a workspace member' });
+    if (membership.role !== 'ADMIN') return res.status(403).json({ error: 'Only a workspace admin can reject a gig' });
+    if (existingGig.status !== 'PENDING') return res.status(400).json({ error: 'Only a pending gig can be rejected' });
+
+    const gig = await prisma.gig.update({
+      where: { id: req.params.gigId },
+      data: { status: 'CANCELLED' },
+    });
+
+    const io = req.app.get('io');
+    io.to(`workspace:${gig.workspaceId}`).emit('gig:updated', gig);
+    await rejectPendingGigPosts(gig.id, io);
+
+    logAudit('gig.rejected', { actorId: req.user.id, targetId: gig.id, metadata: { title: gig.title } });
+
+    res.json(gig);
+    triggerWebsiteSync(gig.workspaceId);
+  } catch (error) {
+    console.error('Reject gig error:', error);
+    res.status(500).json({ error: 'Failed to reject gig' });
   }
 });
 
@@ -1177,6 +1357,18 @@ router.put('/:gigId', authenticate, async (req, res) => {
 
     const io = req.app.get('io');
     io.to(`workspace:${gig.workspaceId}`).emit('gig:updated', gig);
+
+    // A pending gig's status can also change here (the generic edit form),
+    // not just via the dedicated /confirm and /reject routes — keep the
+    // channel cards in sync regardless of which path changed it, so they
+    // never go stale.
+    if (existingGig.status === 'PENDING' && gig.status !== 'PENDING') {
+      if (gig.status === 'CANCELLED') {
+        await rejectPendingGigPosts(gig.id, io);
+      } else {
+        await confirmPendingGigPosts(gig, io);
+      }
+    }
 
     // Send push notification for gig update
     const wsMembers = await prisma.workspaceMember.findMany({
@@ -2106,7 +2298,7 @@ router.get('/workspace/:workspaceId/calendar.ics', calendarLimiter, async (req, 
     const gigs = await prisma.gig.findMany({
       where: {
         workspaceId: req.params.workspaceId,
-        status: { not: 'CANCELLED' },
+        status: { notIn: ['CANCELLED', 'PENDING'] },
         isPersonal: false
       },
       orderBy: { date: 'asc' }

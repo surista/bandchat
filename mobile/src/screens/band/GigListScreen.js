@@ -382,6 +382,7 @@ export default function GigListScreen({ navigation, route }) {
     const typeColor = TYPE_COLORS[item.type] || TYPE_COLORS.OTHER;
     const isCancelled = item.status === 'CANCELLED';
     const isCompleted = item.status === 'COMPLETED';
+    const isPending = item.status === 'PENDING';
     // Use dedicated time fields (HH:mm strings) if available
     const displayTime = item.performanceStartTime || item.eventStartTime || formatTimeRange(item.date, item.endDate);
     const setlistNames = (item.setlists || []).map(gs => gs.setlist?.name).filter(Boolean);
@@ -463,12 +464,12 @@ export default function GigListScreen({ navigation, route }) {
             )}
           </View>
 
-          {(isCompleted || isCancelled) && (() => {
+          {(isCompleted || isCancelled || isPending) && (() => {
             const bc = badgeColors(STATUS_COLORS[item.status] || '#6b7280', mode);
             return (
               <View style={[styles.statusBadge, { backgroundColor: bc.bg }]}>
                 <Text style={[styles.statusText, { color: bc.fg }]} maxFontSizeMultiplier={1.5}>
-                  {isCompleted ? 'Done' : 'Cancelled'}
+                  {isCompleted ? 'Done' : isPending ? 'Tentative' : 'Cancelled'}
                 </Text>
               </View>
             );

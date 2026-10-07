@@ -229,7 +229,7 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
         workspaceId,
         type: 'GIG',
         date: { lt: now },
-        status: { not: 'CANCELLED' }
+        status: { notIn: ['CANCELLED', 'PENDING'] }
       },
       orderBy: { date: 'asc' }
     });
@@ -240,7 +240,7 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
         workspaceId,
         type: 'REHEARSAL',
         date: { lt: now },
-        status: { not: 'CANCELLED' }
+        status: { notIn: ['CANCELLED', 'PENDING'] }
       },
       orderBy: { date: 'asc' }
     });
@@ -282,7 +282,7 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
         workspaceId,
         type: 'GIG',
         date: { lt: now },
-        status: { not: 'CANCELLED' }
+        status: { notIn: ['CANCELLED', 'PENDING'] }
       },
       include: {
         setlist: {
@@ -652,7 +652,7 @@ router.post('/workspace/:workspaceId/check', authenticate, isWorkspaceMember, as
             workspaceId,
             type: 'GIG',
             date: { lt: now },
-            status: { not: 'CANCELLED' }
+            status: { notIn: ['CANCELLED', 'PENDING'] }
           }
         },
         include: {

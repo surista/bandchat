@@ -1245,6 +1245,14 @@ class ApiService {
     });
   }
 
+  async confirmGig(gigId) {
+    return this.request(`/gigs/${gigId}/confirm`, { method: 'POST' });
+  }
+
+  async rejectGig(gigId) {
+    return this.request(`/gigs/${gigId}/reject`, { method: 'POST' });
+  }
+
   async getGigStats(workspaceId) {
     return this.request(`/gigs/workspace/${workspaceId}/stats`);
   }

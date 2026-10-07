@@ -8,6 +8,7 @@ export const TYPE_COLORS = {
 };
 
 export const STATUS_COLORS = {
+  PENDING: '#eab308',
   SCHEDULED: '#3b82f6',
   COMPLETED: '#22c55e',
   CANCELLED: '#ef4444',

@@ -264,7 +264,7 @@ async function generateTimelineEvents(workspaceId, createdById, { checkExisting 
       workspaceId,
       type: 'REHEARSAL',
       date: { lt: now },
-      status: { not: 'CANCELLED' }
+      status: { notIn: ['CANCELLED', 'PENDING'] }
     },
     orderBy: { date: 'asc' }
   });
@@ -350,7 +350,7 @@ async function generateTimelineEvents(workspaceId, createdById, { checkExisting 
       workspaceId,
       type: 'GIG',
       date: { lt: now },
-      status: { not: 'CANCELLED' }
+      status: { notIn: ['CANCELLED', 'PENDING'] }
     },
     orderBy: { date: 'asc' }
   });

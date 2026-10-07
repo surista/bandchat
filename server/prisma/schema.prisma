@@ -224,6 +224,7 @@ model Channel {
   members        ChannelMember[]
   messages       Message[]
   polls          Poll[]
+  gigChannelPosts GigChannelPost[]
   pinnedMessages PinnedMessage[]
 
   @@unique([workspaceId, name])
@@ -269,6 +270,7 @@ model Message {
   savedMessages  SavedMessage[]
   reports        Report[]
   mentions       Mention[]
+  gigChannelPost GigChannelPost?
 
   @@index([channelId, createdAt])
   @@index([parentId])
@@ -541,11 +543,31 @@ model Gig {
   kittyTransactions KittyTransaction[]
   stagePlots        StagePlot[]
   comments          GigComment[]
+  channelPosts      GigChannelPost[]
 
   @@index([workspaceId, date])
   @@index([createdById])
   @@index([workspaceId, status])
   @@index([venueId])
+}
+
+// Tracks the chat message auto-posted into a channel when a tentative
+// (PENDING) gig is announced, so confirm/reject can find and edit/delete
+// the exact message later. One row per (gig, channel) the gig was posted to.
+model GigChannelPost {
+  id        String   @id @default(uuid())
+  gigId     String
+  channelId String
+  messageId String   @unique
+  createdAt DateTime @default(now())
+
+  gig     Gig     @relation(fields: [gigId], references: [id], onDelete: Cascade)
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([gigId, channelId])
+  @@index([gigId])
+  @@index([channelId])
 }
 
 model GigComment {
@@ -665,6 +687,7 @@ enum GigType {
 }
 
 enum GigStatus {
+  PENDING
   SCHEDULED
   COMPLETED
   CANCELLED

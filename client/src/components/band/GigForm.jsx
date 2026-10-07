@@ -192,7 +192,7 @@ const MEDIA_TYPE_META = {
   link: { icon: '🔗', label: 'Link', color: 'text-cyan-400' },
 };
 
-function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmin, workspaceId, workspace, workspaceMembers = [], previousEvents = [], onMediaChange }) {
+function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, onConfirm, onReject, isAdmin, workspaceId, workspace, workspaceMembers = [], previousEvents = [], onMediaChange }) {
   const { user } = useAuth();
   const { socket } = useSocket();
   const toast = useToast();
@@ -286,6 +286,21 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Tentative-gig announcement — only relevant when creating a brand-new
+  // gig. Confirming/rejecting an already-tentative gig is a separate action
+  // below (onConfirm/onReject), not part of the normal save flow.
+  const [isTentative, setIsTentative] = useState(false);
+  const [tentativeChannelIds, setTentativeChannelIds] = useState([]);
+  const [tentativeChannels, setTentativeChannels] = useState(null);
+  const [confirmRejectLoading, setConfirmRejectLoading] = useState(false);
+
+  useEffect(() => {
+    if (gig || !isTentative || tentativeChannels !== null) return;
+    api.getChannels(workspaceId)
+      .then(data => setTentativeChannels(data.filter(c => !c.isDirect)))
+      .catch(() => setTentativeChannels([]));
+  }, [gig, isTentative, tentativeChannels, workspaceId]);
   const [availabilitySummary, setAvailabilitySummary] = useState(null);
   const [bandMembers, setBandMembers] = useState({ current: [], former: [], guests: [] });
   const [showMoreAttendees, setShowMoreAttendees] = useState(false);
@@ -604,6 +619,13 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
         isPublic: formData.isPublic,
       };
 
+      // New tentative gig: announce it into the picked channels instead of
+      // creating it as a normal confirmed SCHEDULED gig.
+      if (!gig && isTentative) {
+        saveData.status = 'PENDING';
+        saveData.channelIds = tentativeChannelIds;
+      }
+
       // Handle setlist assignment (always use setlistIds array)
       const filteredSets = selectedSets.filter(id => id);
       if (filteredSets.length > 0) {
@@ -703,7 +725,7 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                   </select>
                 </div>
 
-                {gig && (
+                {gig && gig.status !== 'PENDING' && (
                   <div>
                     <label className="modal-label">Status</label>
                     <select
@@ -718,6 +740,78 @@ function GigForm({ gig, defaultDate, setlists, onSave, onClose, onDelete, isAdmi
                   </div>
                 )}
               </div>
+
+              {gig && gig.status === 'PENDING' && (
+                <div className="bg-yellow-900/30 border border-yellow-600/50 text-yellow-200 px-4 py-3 rounded-lg space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span>🟡</span>
+                    <span className="font-medium">Tentative — pending confirmation</span>
+                  </div>
+                  {isAdmin ? (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={confirmRejectLoading}
+                        onClick={async () => {
+                          setConfirmRejectLoading(true);
+                          try { await onConfirm(gig.id); } finally { setConfirmRejectLoading(false); }
+                        }}
+                        className="btn bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                      >
+                        Confirm Gig
+                      </button>
+                      <button
+                        type="button"
+                        disabled={confirmRejectLoading}
+                        onClick={async () => {
+                          setConfirmRejectLoading(true);
+                          try { await onReject(gig.id); } finally { setConfirmRejectLoading(false); }
+                        }}
+                        className="btn bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                      >
+                        Reject Gig
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-yellow-200/80">An admin needs to confirm or reject this before it’s locked in.</p>
+                  )}
+                </div>
+              )}
+
+              {!gig && (
+                <div>
+                  <label className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isTentative}
+                      onChange={(e) => setIsTentative(e.target.checked)}
+                    />
+                    Tentative — not booked yet, announce it to specific channels for discussion
+                  </label>
+                  {isTentative && (
+                    <div className="mt-2 border border-[var(--color-border)] rounded-lg p-3 max-h-40 overflow-y-auto">
+                      {tentativeChannels === null ? (
+                        <p className="text-sm text-[var(--color-text-muted)]">Loading channels…</p>
+                      ) : tentativeChannels.length === 0 ? (
+                        <p className="text-sm text-[var(--color-text-muted)]">No channels available.</p>
+                      ) : (
+                        tentativeChannels.map(c => (
+                          <label key={c.id} className="flex items-center gap-2 text-sm py-1 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={tentativeChannelIds.includes(c.id)}
+                              onChange={(e) => setTentativeChannelIds(prev =>
+                                e.target.checked ? [...prev, c.id] : prev.filter(id => id !== c.id)
+                              )}
+                            />
+                            # {c.name}
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="relative">
                 <label className="modal-label">

@@ -551,6 +551,30 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
     }
   };
 
+  const handleConfirmGig = async (gigId) => {
+    try {
+      const updated = await api.confirmGig(gigId);
+      setGigs(prev => prev.map(g => g.id === updated.id ? { ...g, ...updated, media: updated.media ?? g.media } : g));
+      setShowForm(false);
+      setEditingGig(null);
+      toast.success('Gig confirmed');
+    } catch (err) {
+      toast.error(err.message || 'Failed to confirm gig');
+    }
+  };
+
+  const handleRejectGig = async (gigId) => {
+    try {
+      const updated = await api.rejectGig(gigId);
+      setGigs(prev => prev.map(g => g.id === updated.id ? { ...g, ...updated } : g));
+      setShowForm(false);
+      setEditingGig(null);
+      toast.success('Gig rejected');
+    } catch (err) {
+      toast.error(err.message || 'Failed to reject gig');
+    }
+  };
+
   const handleCompleteGig = async (gig) => {
     try {
       const updated = await api.completeGig(gig.id, []);
@@ -1059,6 +1083,7 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
     switch (status) {
       case 'COMPLETED': return <span className="text-xs px-1.5 py-0.5 bg-green-900/50 text-green-300 rounded">Done</span>;
       case 'CANCELLED': return <span className="text-xs px-1.5 py-0.5 bg-red-900/50 text-red-300 rounded">Cancelled</span>;
+      case 'PENDING': return <span className="text-xs px-1.5 py-0.5 bg-yellow-900/50 text-yellow-300 rounded">Tentative</span>;
       default: return null;
     }
   };
@@ -1594,6 +1619,8 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
             setEditingGig(null);
             setDeleteGigId(gigId);
           }}
+          onConfirm={handleConfirmGig}
+          onReject={handleRejectGig}
           isAdmin={isAdmin}
           workspaceId={workspaceId}
           workspace={workspace}

@@ -16,6 +16,13 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.61',
+    date: '2026-10-08',
+    items: [
+      { kind: 'added', text: 'Tentative gigs: when creating a new gig, mark it as "Tentative" and pick which channels should hear about it — it posts an announcement card into just those channels instead of the whole calendar. An admin can then Confirm (the card updates to show it’s locked in) or Reject (the card is removed from those channels) right from the gig.' },
+    ],
+  },
+  {
     version: '1.07.60',
     date: '2026-10-07',
     items: [

@@ -509,7 +509,7 @@ router.get('/api/:workspaceId/data', async (req, res) => {
           workspaceId,
           isPersonal: false,
           type: 'GIG',
-          status: { not: 'CANCELLED' },
+          status: { notIn: ['CANCELLED', 'PENDING'] },
         },
         // This payload feeds the band's PUBLIC website, so it should carry
         // only what a fan should see. `pay` (the band's fee for the gig) has

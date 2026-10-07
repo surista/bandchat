@@ -122,6 +122,22 @@ export default function GigDetailScreen({ navigation, route }) {
   const [fieldErrors, setFieldErrors] = useState({});
   const [loadError, setLoadError] = useState(null);
 
+  // Tentative-gig announcement — only relevant when creating a brand-new
+  // gig. Confirming/rejecting an already-tentative gig is a separate action
+  // (handleConfirmGig/handleRejectGig), not part of the normal save flow.
+  const [isTentative, setIsTentative] = useState(false);
+  const [tentativeChannelIds, setTentativeChannelIds] = useState([]);
+  const [tentativeChannels, setTentativeChannels] = useState(null);
+  const [showChannelPicker, setShowChannelPicker] = useState(false);
+  const [confirmRejectLoading, setConfirmRejectLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isNew || !isTentative || tentativeChannels !== null) return;
+    api.getChannels(workspaceId)
+      .then(data => setTentativeChannels(data.filter(c => !c.isDirect)))
+      .catch(() => setTentativeChannels([]));
+  }, [isNew, isTentative, tentativeChannels, workspaceId]);
+
   // Load workspace currency, admin status, and venues
   useEffect(() => {
     api.getWorkspace(workspaceId).then(ws => {
@@ -494,6 +510,9 @@ export default function GigDetailScreen({ navigation, route }) {
       pay: pay ? parseFloat(pay) : null,
       notes: notes.trim() || null,
       ...(isAdmin && { isLocked }),
+      // New tentative gig: announce it into the picked channels instead of
+      // creating it as a normal confirmed SCHEDULED gig.
+      ...(isNew && isTentative && { status: 'PENDING', channelIds: tentativeChannelIds }),
     };
     try {
       if (isNew) {
@@ -520,7 +539,7 @@ export default function GigDetailScreen({ navigation, route }) {
     // picked. v1.07.06 and earlier shipped without the time/multiDay/lock
     // fields here, which is why sound check / doors / stage time silently
     // failed to save when they were the only thing the user changed.
-  }, [title, type, status, date, multiDay, endDate, startTime, endTime, soundCheckTime, eventStartTime, performanceStartTime, venue, address, selectedVenueId, pay, notes, isAdmin, isLocked, isNew, workspaceId, gigId, navigation, populateForm]);
+  }, [title, type, status, date, multiDay, endDate, startTime, endTime, soundCheckTime, eventStartTime, performanceStartTime, venue, address, selectedVenueId, pay, notes, isAdmin, isLocked, isNew, isTentative, tentativeChannelIds, workspaceId, gigId, navigation, populateForm]);
 
   const handleCancel = useCallback(() => {
     if (isNew) {
@@ -530,6 +549,42 @@ export default function GigDetailScreen({ navigation, route }) {
       setEditing(false);
     }
   }, [isNew, gig, navigation, populateForm]);
+
+  const handleConfirmGig = useCallback(async () => {
+    setConfirmRejectLoading(true);
+    try {
+      const updated = await api.confirmGig(gigId);
+      setGig(updated);
+      populateForm(updated);
+      successNotification();
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Failed to confirm gig');
+    } finally {
+      setConfirmRejectLoading(false);
+    }
+  }, [gigId, populateForm]);
+
+  const handleRejectGig = useCallback(() => {
+    Alert.alert('Reject Gig', 'This removes the tentative-gig posts from the channels it was announced to. This can’t be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Reject',
+        style: 'destructive',
+        onPress: async () => {
+          setConfirmRejectLoading(true);
+          try {
+            const updated = await api.rejectGig(gigId);
+            setGig(updated);
+            populateForm(updated);
+          } catch (err) {
+            Alert.alert('Error', err.message || 'Failed to reject gig');
+          } finally {
+            setConfirmRejectLoading(false);
+          }
+        },
+      },
+    ]);
+  }, [gigId, populateForm]);
 
   const handleDelete = useCallback(() => {
     Alert.alert('Delete Event', `Delete "${gig?.title}"?`, [
@@ -796,7 +851,39 @@ export default function GigDetailScreen({ navigation, route }) {
             <Text style={{ color: colors.textPrimary, fontSize: 15 }}>{type}</Text>
           </PressableRow>
 
-          {!isNew && (
+          {!isNew && status === 'PENDING' && (
+            <View style={[styles.pendingBox, { backgroundColor: colors.bgTertiary, borderColor: STATUS_COLORS.PENDING }]}>
+              <Text style={{ color: STATUS_COLORS.PENDING, fontWeight: '600', marginBottom: isAdmin ? 10 : 4 }}>
+                🟡 Tentative — pending confirmation
+              </Text>
+              {isAdmin ? (
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <TouchableOpacity
+                    disabled={confirmRejectLoading}
+                    onPress={handleConfirmGig}
+                    style={[styles.formButton, { backgroundColor: '#16a34a', flex: 1, opacity: confirmRejectLoading ? 0.6 : 1 }]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Confirm gig"
+                  >
+                    <Text style={styles.formButtonTextWhite}>Confirm Gig</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    disabled={confirmRejectLoading}
+                    onPress={handleRejectGig}
+                    style={[styles.formButton, { backgroundColor: '#dc2626', flex: 1, opacity: confirmRejectLoading ? 0.6 : 1 }]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Reject gig"
+                  >
+                    <Text style={styles.formButtonTextWhite}>Reject Gig</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>An admin needs to confirm or reject this before it’s locked in.</Text>
+              )}
+            </View>
+          )}
+
+          {!isNew && status !== 'PENDING' && (
             <>
               <Text style={[styles.label, { color: colors.textSecondary }]}>Status</Text>
               <PressableRow
@@ -808,6 +895,48 @@ export default function GigDetailScreen({ navigation, route }) {
                 <View style={[styles.typeDot, { backgroundColor: STATUS_COLORS[status] }]} />
                 <Text style={{ color: colors.textPrimary, fontSize: 15 }}>{status}</Text>
               </PressableRow>
+            </>
+          )}
+
+          {isNew && (
+            <>
+              <PressableRow
+                style={styles.checkboxRow}
+                onPress={() => setIsTentative(prev => !prev)}
+                accessibilityRole="button"
+                accessibilityLabel={`Tentative, ${isTentative ? 'checked' : 'unchecked'}`}
+              >
+                <View style={[styles.checkbox, { borderColor: colors.border }, isTentative && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+                  {isTentative && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'✓'}</Text>}
+                </View>
+                <Text style={[styles.checkboxLabel, { color: colors.textPrimary }]}>Tentative — not booked yet, announce to specific channels</Text>
+              </PressableRow>
+              {isTentative && (
+                <View style={[styles.pendingBox, { backgroundColor: colors.bgTertiary, borderColor: colors.border }]}>
+                  {tentativeChannels === null ? (
+                    <Text style={{ color: colors.textSecondary }}>Loading channels…</Text>
+                  ) : tentativeChannels.length === 0 ? (
+                    <Text style={{ color: colors.textSecondary }}>No channels available.</Text>
+                  ) : (
+                    tentativeChannels.map(c => (
+                      <PressableRow
+                        key={c.id}
+                        style={[styles.checkboxRow, { marginTop: 0, marginBottom: 8 }]}
+                        onPress={() => setTentativeChannelIds(prev =>
+                          prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id]
+                        )}
+                        accessibilityRole="checkbox"
+                        accessibilityLabel={`# ${c.name}, ${tentativeChannelIds.includes(c.id) ? 'checked' : 'unchecked'}`}
+                      >
+                        <View style={[styles.checkbox, { borderColor: colors.border }, tentativeChannelIds.includes(c.id) && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
+                          {tentativeChannelIds.includes(c.id) && <Text style={[styles.checkmark, { color: colors.primaryText }]}>{'✓'}</Text>}
+                        </View>
+                        <Text style={[styles.checkboxLabel, { color: colors.textPrimary }]}># {c.name}</Text>
+                      </PressableRow>
+                    ))
+                  )}
+                </View>
+              )}
             </>
           )}
 
@@ -2055,6 +2184,7 @@ const styles = StyleSheet.create({
   dateShortcutsContent: { gap: 8 },
   dateChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1 },
   dateChipText: { fontSize: 13, fontWeight: '500' },
+  pendingBox: { borderWidth: 1, borderRadius: 8, padding: 12, marginTop: 8, marginBottom: 8 },
   checkboxRow: { flexDirection: 'row', alignItems: 'center', marginTop: 16, marginBottom: 8 },
   checkbox: {
     width: 22,
