@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
+import userPreferences, { useUserPreference } from '../../services/userPreferences';
 import useIsAdmin from '../../hooks/useIsAdmin';
 import Modal from '../common/Modal';
 import { CURRENCIES } from '../../utils/currencies';
@@ -30,6 +31,7 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
   const { updateUser } = useAuth();
   const { currentTheme, setTheme, themes, mode, toggleMode, globalTheme, setGlobalTheme, setWorkspaceTheme, getWorkspaceTheme } = useTheme();
   const toast = useToast();
+  const showRepliesInline = useUserPreference('messages.showRepliesInline', false);
 
   const [settingsTab, setSettingsTab] = useState('profile');
   const [showAboutModal, setShowAboutModal] = useState(false);
@@ -749,6 +751,28 @@ function SettingsModal({ isOpen, onClose, workspace, user, onLogout, onRefreshWo
                       </button>
                     </div>
                   )}
+
+                  <div className="flex items-center justify-between mb-6 p-3 bg-[var(--color-bg-secondary)] rounded-lg">
+                    <div>
+                      <span className="text-sm font-medium text-[var(--color-text-primary)]">Expand replies inline</span>
+                      <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                        Show thread replies indented under the message, in addition to the thread panel
+                      </p>
+                    </div>
+                    <button
+                      role="switch"
+                      aria-checked={showRepliesInline}
+                      aria-label="Expand replies inline"
+                      onClick={() => userPreferences.set('messages.showRepliesInline', !showRepliesInline)}
+                      className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors flex-shrink-0 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 ${
+                        showRepliesInline ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-bg-tertiary)]'
+                      }`}
+                    >
+                      <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                        showRepliesInline ? 'translate-x-6' : 'translate-x-1'
+                      }`} />
+                    </button>
+                  </div>
 
                   <p className="text-[var(--color-text-muted)] mb-4">
                     {workspace && getWorkspaceTheme(workspace.id)

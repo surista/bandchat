@@ -22,6 +22,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
 import { useToast } from '../../context/ToastContext';
 import api from '../../services/api';
+import userPreferences, { useUserPreference } from '../../services/userPreferences';
+import { Image } from 'expo-image';
 import notificationService from '../../services/notifications';
 import { addToOfflineQueue, getOfflineQueue, removeFromOfflineQueue } from '../../services/storage';
 import { getLocalMessages, upsertMessages, upsertMessage as upsertLocalMessage, updateLocalMessage } from '../../services/database';
@@ -70,6 +72,8 @@ const MessageRow = memo(function MessageRow({
   channels,
   onChannelPress,
   colors,
+  showRepliesInline,
+  inlineReplies,
 }) {
   return (
     <View>
@@ -114,6 +118,43 @@ const MessageRow = memo(function MessageRow({
         channels={channels}
         onChannelPress={onChannelPress}
       />
+      {showRepliesInline && item._count?.replies > 0 && (
+        <View style={[styles.inlineReplies, { borderLeftColor: colors.border }]}>
+          {inlineReplies === undefined ? (
+            <Text style={{ color: colors.textSecondary, fontSize: 12 }} maxFontSizeMultiplier={1.5}>Loading replies…</Text>
+          ) : (
+            inlineReplies.map(reply => (
+              <View key={reply.id} style={styles.inlineReplyRow}>
+                <View style={[styles.inlineReplyAvatar, { backgroundColor: colors.primary }]}>
+                  {reply.author?.avatarUrl ? (
+                    <Image source={{ uri: reply.author.avatarUrl }} style={styles.inlineReplyAvatarImg} />
+                  ) : (
+                    <Text style={styles.inlineReplyAvatarText}>
+                      {(reply.author?.displayName || reply.removedUserName || 'D').charAt(0).toUpperCase()}
+                    </Text>
+                  )}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+                    <Text style={[styles.inlineReplyName, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.4}>
+                      {reply.author?.displayName || reply.removedUserName || 'Deleted User'}
+                    </Text>
+                    <Text style={[styles.inlineReplyTime, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.4}>
+                      {format(new Date(reply.createdAt), 'h:mm a')}
+                    </Text>
+                  </View>
+                  <Text style={[styles.inlineReplyContent, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
+                    {reply.content}
+                  </Text>
+                </View>
+              </View>
+            ))
+          )}
+          <TouchableOpacity onPress={() => onReplyPress?.(item)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} accessibilityRole="button" accessibilityLabel="Reply in thread">
+            <Text style={[styles.inlineReplyMore, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.4}>Reply in thread →</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 });
@@ -137,6 +178,45 @@ export default function ChannelScreen({ navigation, route }) {
   const [nextCursor, setNextCursor] = useState(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState(null);
   const [highlightTargetMissing, setHighlightTargetMissing] = useState(false);
+
+  // "Expand replies inline" — a per-user display preference. When on,
+  // threaded messages also render their replies indented right in the
+  // channel feed (in addition to, not instead of, the thread screen).
+  const showRepliesInline = useUserPreference('messages.showRepliesInline', false);
+  const [repliesByParentId, setRepliesByParentId] = useState({});
+
+  // Lazily fetch replies for every currently-loaded threaded message once
+  // inline expansion is on, and cache them by parent id.
+  useEffect(() => {
+    if (!showRepliesInline) return;
+    const toFetch = messages.filter(m => (m._count?.replies > 0) && !(m.id in repliesByParentId));
+    if (toFetch.length === 0) return;
+    let cancelled = false;
+    toFetch.forEach(m => {
+      api.getReplies(m.id).then(data => {
+        if (cancelled) return;
+        setRepliesByParentId(prev => ({ ...prev, [m.id]: data.replies || [] }));
+      }).catch(() => {
+        if (cancelled) return;
+        setRepliesByParentId(prev => ({ ...prev, [m.id]: [] }));
+      });
+    });
+    return () => { cancelled = true; };
+  }, [showRepliesInline, messages, repliesByParentId]);
+
+  // Keep already-expanded inline threads live.
+  useEffect(() => {
+    if (!socket || !showRepliesInline) return;
+    const handleReply = ({ parentId, message: reply }) => {
+      setRepliesByParentId(prev => {
+        if (!(parentId in prev)) return prev; // not expanded/fetched — the fetch effect picks it up fresh
+        if (prev[parentId].some(r => r.id === reply.id)) return prev;
+        return { ...prev, [parentId]: [...prev[parentId], reply] };
+      });
+    };
+    socket.on('message:reply', handleReply);
+    return () => socket.off('message:reply', handleReply);
+  }, [socket, showRepliesInline]);
   // IDs of messages this client just sent (API response confirmed). The server
   // broadcasts message:new to all channel members INCLUDING the sender's
   // socket, so without this we'd race the API swap against the echo. The Set
@@ -986,8 +1066,10 @@ export default function ChannelScreen({ navigation, route }) {
       channels={workspaceChannels}
       onChannelPress={handleChannelRefPress}
       colors={colors}
+      showRepliesInline={showRepliesInline}
+      inlineReplies={showRepliesInline ? repliesByParentId[item.id] : undefined}
     />
-  ), [colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, handleReactionLongPress, handleAvatarPress, handleTogglePreview, workspaceMembers, blockedDomains, handleLinkLongPress, workspaceChannels, handleChannelRefPress, highlightedMessageId]);
+  ), [colors, handleLongPress, handleReplyPress, handleImagePress, handleReactionPress, handleReactionLongPress, handleAvatarPress, handleTogglePreview, workspaceMembers, blockedDomains, handleLinkLongPress, workspaceChannels, handleChannelRefPress, highlightedMessageId, showRepliesInline, repliesByParentId]);
 
   const renderFooter = useCallback(() => {
     if (!loadingMore) return null;
@@ -1156,7 +1238,7 @@ export default function ChannelScreen({ navigation, route }) {
         data={invertedMessages}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        extraData={highlightedMessageId}
+        extraData={[highlightedMessageId, showRepliesInline, repliesByParentId]}
         inverted
         onEndReached={loadMore}
         onEndReachedThreshold={0.3}
@@ -1429,6 +1511,49 @@ const styles = StyleSheet.create({
   },
   messageList: {
     paddingVertical: 8,
+  },
+  inlineReplies: {
+    marginLeft: 44,
+    marginTop: 4,
+    marginBottom: 6,
+    paddingLeft: 10,
+    borderLeftWidth: 2,
+    gap: 8,
+  },
+  inlineReplyRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  inlineReplyAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  inlineReplyAvatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  inlineReplyAvatarText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  inlineReplyName: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  inlineReplyTime: {
+    fontSize: 11,
+  },
+  inlineReplyContent: {
+    fontSize: 13,
+  },
+  inlineReplyMore: {
+    fontSize: 12,
   },
   loadingMore: {
     paddingVertical: 16,

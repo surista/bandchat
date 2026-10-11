@@ -15,6 +15,7 @@ import useLongPress from '../../hooks/useLongPress';
 import { hapticLight } from '../../services/haptic';
 import LinkPreviewCard from './LinkPreviewCard';
 import { useToast } from '../../context/ToastContext';
+import { useSocket } from '../../context/SocketContext';
 import { handleDownload } from '../../utils/download';
 import { buildMentionRegex, buildChannelRegex, buildGroupMentionRegex } from '../../utils/parseMentions';
 import api from '../../services/api';
@@ -427,10 +428,10 @@ function formatDateHeaderImpl(date) {
 const MessageRow = memo(function MessageRow({
   message, showDateHeader, showUnreadDivider,
   isEditing, isHighlighted, isReactionPickerOpen, isPinned, isSaved,
-  showSeenBy, seenByCount, editContent, ctx,
+  showSeenBy, seenByCount, editContent, inlineReplies, ctx,
 }) {
   const {
-    members, channels, blockedDomains, memberAvatarMap, workspaceId, currentUser,
+    members, channels, blockedDomains, memberAvatarMap, workspaceId, currentUser, showRepliesInline,
     onAvatarClick, onOpenThread, onAddToLibrary, onTogglePreview, onSelectChannel,
     onPinMessage, onUnpinMessage, onSaveMessage, onUnsaveMessage,
     setMsgContextMenu, setDeleteMessageId, setReactionPickerMessageId,
@@ -640,6 +641,46 @@ const MessageRow = memo(function MessageRow({
             </button>
           )}
 
+          {showRepliesInline && message._count?.replies > 0 && (
+            <div className="mt-2 ml-2 pl-3 border-l-2 border-[var(--color-border)] space-y-2">
+              {inlineReplies === undefined ? (
+                <div className="text-xs text-[var(--color-text-muted)]">Loading replies…</div>
+              ) : (
+                inlineReplies.map(reply => (
+                  <div key={reply.id} className="flex gap-2">
+                    <div
+                      className={`w-6 h-6 rounded bg-slack-green flex-shrink-0 flex items-center justify-center text-white text-xs font-medium ${reply.author?.id ? 'cursor-pointer hover:opacity-80' : ''}`}
+                      onClick={() => reply.author?.id && onAvatarClick?.(reply.author.id)}
+                    >
+                      {reply.author?.avatarUrl ? (
+                        <img src={reply.author.avatarUrl} alt={reply.author?.displayName || 'User'} className="w-full h-full rounded object-cover" />
+                      ) : (
+                        (reply.author?.displayName || reply.removedUserName || 'Deleted User').charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-medium text-sm text-[var(--color-text-primary)]">
+                          {reply.author?.displayName || reply.removedUserName || 'Deleted User'}
+                        </span>
+                        <span className="text-xs text-[var(--color-text-muted)]">{formatMessageTimeImpl(reply.createdAt)}</span>
+                      </div>
+                      <div className="text-sm text-[var(--color-text-secondary)] break-words whitespace-pre-wrap">
+                        <MessageContent content={reply.content} message={reply} onOpenLightbox={openLightbox} members={members} onAddToLibrary={onAddToLibrary} workspaceId={workspaceId} isOwn={reply.author?.id === currentUser?.id} onTogglePreview={onTogglePreview} blockedDomains={blockedDomains} channels={channels} onSelectChannel={onSelectChannel} />
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+              <button
+                onClick={() => onOpenThread(message)}
+                className="text-xs text-[var(--color-text-muted)] hover:underline"
+              >
+                Reply in thread →
+              </button>
+            </div>
+          )}
+
           {showSeenBy && (
             <div className="mt-1 text-xs text-[var(--color-text-muted)]">Seen by {seenByCount}</div>
           )}
@@ -731,6 +772,7 @@ function MessageList({
   scrollToMessageId
 }) {
   const toast = useToast();
+  const { socket } = useSocket();
   const [editingId, setEditingId] = useState(null);
   const [editContent, setEditContentState] = useState('');
   const editTextareaRef = useRef(null);
@@ -759,6 +801,55 @@ function MessageList({
     }, 'messages.blockedPreviewDomains');
     return unsub;
   }, []);
+
+  // "Expand replies inline" — a per-user display preference. When on,
+  // threaded messages also render their replies indented right in the
+  // channel feed (in addition to, not instead of, the side thread panel).
+  const [showRepliesInline, setShowRepliesInline] = useState(() => userPreferences.get('messages.showRepliesInline', false));
+  useEffect(() => {
+    const unsub = userPreferences.subscribe(() => {
+      setShowRepliesInline(userPreferences.get('messages.showRepliesInline', false));
+    }, 'messages.showRepliesInline');
+    return unsub;
+  }, []);
+
+  // Lazily fetch replies for every currently-loaded threaded message once
+  // inline expansion is on, and cache them by parent id. Not re-fetched on
+  // every render — only for parents we haven't loaded yet.
+  const [repliesByParentId, setRepliesByParentId] = useState({});
+  useEffect(() => {
+    if (!showRepliesInline) return;
+    const toFetch = messages.filter(m => (m._count?.replies > 0) && !(m.id in repliesByParentId));
+    if (toFetch.length === 0) return;
+    let cancelled = false;
+    toFetch.forEach(m => {
+      api.getReplies(m.id).then(data => {
+        if (cancelled) return;
+        setRepliesByParentId(prev => ({ ...prev, [m.id]: data.replies || [] }));
+      }).catch(() => {
+        if (cancelled) return;
+        setRepliesByParentId(prev => ({ ...prev, [m.id]: [] }));
+      });
+    });
+    return () => { cancelled = true; };
+  }, [showRepliesInline, messages, repliesByParentId]);
+
+  // Keep already-expanded inline threads live. ChannelView's own
+  // message:reply handler bumps the parent's _count.replies (and triggers
+  // the fetch effect above for newly-threaded messages); this appends to a
+  // thread we've already fetched so an open inline view doesn't go stale.
+  useEffect(() => {
+    if (!socket || !showRepliesInline) return;
+    const handleReply = ({ parentId, message: reply }) => {
+      setRepliesByParentId(prev => {
+        if (!(parentId in prev)) return prev; // not expanded/fetched — the fetch effect will pick it up fresh
+        if (prev[parentId].some(r => r.id === reply.id)) return prev;
+        return { ...prev, [parentId]: [...prev[parentId], reply] };
+      });
+    };
+    socket.on('message:reply', handleReply);
+    return () => socket.off('message:reply', handleReply);
+  }, [socket, showRepliesInline]);
 
   // Scroll to and highlight a target message. `highlightMessageId` (an
   // explicit deep link from search or a thread-reply notification) takes
@@ -975,6 +1066,7 @@ function MessageList({
     memberAvatarMap,
     workspaceId,
     currentUser,
+    showRepliesInline,
     onAvatarClick,
     onOpenThread,
     onAddToLibrary,
@@ -998,7 +1090,7 @@ function MessageList({
     wrapEditSelection,
     insertEditLinePrefix,
   }), [
-    members, channels, blockedDomains, memberAvatarMap, workspaceId, currentUser,
+    members, channels, blockedDomains, memberAvatarMap, workspaceId, currentUser, showRepliesInline,
     onAvatarClick, onOpenThread, onAddToLibrary, onTogglePreview, onSelectChannel,
     onPinMessage, onUnpinMessage, onSaveMessage, onUnsaveMessage,
     handleStartEdit, handleToggleReaction, handleReactionSelect, openLightbox,
@@ -1039,6 +1131,7 @@ function MessageList({
           showSeenBy={message.id === seenByMessageId && seenByCount > 0}
           seenByCount={seenByCount}
           editContent={editingId === message.id ? editContent : undefined}
+          inlineReplies={showRepliesInline ? repliesByParentId[message.id] : undefined}
           ctx={ctx}
         />
       ))}

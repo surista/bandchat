@@ -17,6 +17,7 @@ import { useLayout } from '../../hooks/useLayout';
 import { selectionFeedback } from '../../utils/haptics';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
+import userPreferences, { useUserPreference } from '../../services/userPreferences';
 
 const themeKeys = Object.keys(themes);
 
@@ -27,6 +28,7 @@ export default function AppearanceScreen({ route }) {
   const workspaceId = route?.params?.workspaceId;
   const { currentTheme, mode, modeSetting, setModeSetting, colors, globalTheme, setGlobalTheme, setWorkspaceTheme, getWorkspaceTheme } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
+  const showRepliesInline = useUserPreference('messages.showRepliesInline', false);
 
   const [workspaceName, setWorkspaceName] = useState(null);
   const [effectivePlan, setEffectivePlan] = useState(null);
@@ -114,6 +116,27 @@ export default function AppearanceScreen({ route }) {
               Currently {mode} (follows your device setting)
             </Text>
           )}
+        </View>
+
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]} accessibilityRole="header">MESSAGES</Text>
+        <View style={[styles.card, { backgroundColor: colors.bgSecondary }]}>
+          <View style={styles.modeRow}>
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <Text style={[styles.modeLabel, { color: colors.textPrimary }]}>Expand replies inline</Text>
+              <Text style={[styles.hint, { color: colors.textSecondary }]}>
+                Show thread replies indented under the message, in addition to the thread view
+              </Text>
+            </View>
+            <Switch
+              value={showRepliesInline}
+              onValueChange={(next) => {
+                selectionFeedback();
+                userPreferences.set('messages.showRepliesInline', next);
+              }}
+              trackColor={Platform.OS === 'ios' ? undefined : { false: colors.bgTertiary, true: colors.primary }}
+              accessibilityLabel={`Expand replies inline, ${showRepliesInline ? 'on' : 'off'}`}
+            />
+          </View>
         </View>
 
         {/* Per-band theme toggle */}

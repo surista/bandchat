@@ -16,6 +16,13 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.63',
+    date: '2026-10-11',
+    items: [
+      { kind: 'added', text: 'New "Expand replies inline" setting shows thread replies indented right under the message in the channel, in addition to the thread view — off by default.' },
+    ],
+  },
+  {
     version: '1.07.62',
     date: '2026-10-11',
     items: [
