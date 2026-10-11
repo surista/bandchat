@@ -860,6 +860,24 @@ function WorkspaceView() {
 
   const isAdmin = workspace.members?.find(m => m.user.id === user?.id)?.role === 'ADMIN';
 
+  // Shared by Activity/All Messages (both the split-right and full-width
+  // variants): switch to the clicked item's channel and, when it came with a
+  // specific message/thread, jump to and highlight it the same way a search
+  // result does — via the ?msg=/?thread= params ChannelView/ThreadView read.
+  const navigateToChannelMessage = (chId, { threadId, messageId } = {}) => {
+    const ch = channels.find(c => c.id === chId) || directMessages.find(d => d.id === chId);
+    if (!ch) return;
+    setSelectedChannel(ch);
+    setSelectedThread(null);
+    setActiveBandView(null);
+    if (messageId || threadId) {
+      const params = new URLSearchParams();
+      if (messageId) params.set('msg', messageId);
+      if (threadId) params.set('thread', threadId);
+      navigate({ search: `?${params.toString()}` }, { replace: true });
+    }
+  };
+
   // Resolve a stored split-pane selection into { label, render } for the
   // right-pane header + body. Defined inline (not useCallback) because it
   // references handlers declared above this point — putting it earlier in the
@@ -890,10 +908,7 @@ function WorkspaceView() {
           const extraProps = BAND_VIEW_EXTRA_PROPS[view]?.({
             workspace,
             isAdmin,
-            onSelectChannel: (chId) => {
-              const ch = channels.find(c => c.id === chId) || directMessages.find(d => d.id === chId);
-              if (ch) { setSelectedChannel(ch); setActiveBandView(null); }
-            },
+            onSelectChannel: navigateToChannelMessage,
           }) || {};
           return (
             <Suspense fallback={<div className="flex-1 flex items-center justify-center"><Skeleton type="channel" /></div>}>
@@ -1078,7 +1093,7 @@ function WorkspaceView() {
                 {(() => {
                   const BandComponent = BAND_VIEW_COMPONENTS[activeBandView];
                   if (!BandComponent) return null;
-                  const extraProps = BAND_VIEW_EXTRA_PROPS[activeBandView]?.({ workspace, isAdmin, onSelectChannel: (chId) => { const ch = channels.find(c => c.id === chId) || directMessages.find(d => d.id === chId); if (ch) { setSelectedChannel(ch); setActiveBandView(null); } } }) || {};
+                  const extraProps = BAND_VIEW_EXTRA_PROPS[activeBandView]?.({ workspace, isAdmin, onSelectChannel: navigateToChannelMessage }) || {};
                   const keyProp = KEYED_BAND_VIEWS.has(activeBandView) ? bandViewKey : undefined;
                   return <BandComponent key={keyProp} workspaceId={workspaceId} {...extraProps} {...(bandViewProps || {})} />;
                 })()}

@@ -154,13 +154,35 @@ export default function ChannelScreen({ navigation, route }) {
   // in the same channel.
   const threadAutoOpenedForRef = useRef(null);
   useEffect(() => {
-    if (!openThreadId || threadAutoOpenedForRef.current === openThreadId) return;
-    if (!messages.length) return;
-    const parent = messages.find(m => m.id === openThreadId);
-    if (!parent) return;
-    threadAutoOpenedForRef.current = openThreadId;
-    navigation.navigate('Thread', { parentMessage: parent, channelId: channel.id, workspaceId, highlightMessageId });
-  }, [openThreadId, messages.length, navigation, channel.id, workspaceId, highlightMessageId]);
+    if (!openThreadId || threadAutoOpenedForRef.current === openThreadId || loading) return;
+
+    const loadedParent = messages.find(m => m.id === openThreadId);
+    if (loadedParent) {
+      threadAutoOpenedForRef.current = openThreadId;
+      navigation.navigate('Thread', { parentMessage: loadedParent, channelId: channel.id, workspaceId, highlightMessageId });
+      return;
+    }
+
+    // Fallback: an older thread whose parent isn't in the loaded page (the
+    // channel message list only paginates top-level messages, and this used
+    // to just silently give up here). Fetch the parent directly by id.
+    let cancelled = false;
+    api.getReplies(openThreadId).then(data => {
+      if (cancelled || threadAutoOpenedForRef.current === openThreadId) return;
+      if (data?.parent) {
+        threadAutoOpenedForRef.current = openThreadId;
+        navigation.navigate('Thread', { parentMessage: data.parent, channelId: channel.id, workspaceId, highlightMessageId });
+      } else {
+        threadAutoOpenedForRef.current = openThreadId;
+        toast.info('That thread could not be opened — the message may have been deleted.');
+      }
+    }).catch(() => {
+      if (cancelled || threadAutoOpenedForRef.current === openThreadId) return;
+      threadAutoOpenedForRef.current = openThreadId;
+      toast.info('That thread could not be opened — the message may have been deleted.');
+    });
+    return () => { cancelled = true; };
+  }, [openThreadId, messages, loading, navigation, channel.id, workspaceId, highlightMessageId, toast]);
   const [typingUsers, setTypingUsers] = useState([]);
   const [pinnedSetlist, setPinnedSetlist] = useState(channel.pinnedSetlist || null);
   const [setlistExpanded, setSetlistExpanded] = useState(false);

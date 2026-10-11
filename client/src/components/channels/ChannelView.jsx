@@ -73,26 +73,54 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
     }
   }, [highlightMessageId, setSearchParams]);
 
-  // Auto-open thread view when arriving from a thread-reply notification
-  // (server includes ?thread=<parentId> in the push URL). Waits for messages
-  // to load so we can resolve the parent message object, then calls
-  // onOpenThread once. Guarded by a ref so message-list re-renders don't
-  // re-trigger the open. The msg= param is preserved so ThreadView can
-  // scroll to/highlight the specific reply within the thread.
+  // Auto-open thread view when arriving from a thread-reply notification or
+  // an Activity/All Messages click (both set ?thread=<parentId>). Waits for
+  // the initial message page to load, then resolves the parent message
+  // object and calls onOpenThread once. Guarded by a ref so message-list
+  // re-renders don't re-trigger the open. The msg= param is preserved so
+  // ThreadView can scroll to/highlight the specific reply within the thread.
   const threadAutoOpenedRef = useRef(false);
   useEffect(() => {
-    if (!autoOpenThreadId || threadAutoOpenedRef.current) return;
-    if (!messages.length) return;
-    const parent = messages.find(m => m.id === autoOpenThreadId);
-    if (!parent) return;
-    threadAutoOpenedRef.current = true;
-    onOpenThread?.(parent);
-    setSearchParams(prev => {
-      const next = new URLSearchParams(prev);
-      next.delete('thread');
-      return next;
-    }, { replace: true });
-  }, [autoOpenThreadId, messages, onOpenThread, setSearchParams]);
+    if (!autoOpenThreadId || threadAutoOpenedRef.current || loading) return;
+
+    const openParent = (parent) => {
+      threadAutoOpenedRef.current = true;
+      onOpenThread?.(parent);
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev);
+        next.delete('thread');
+        return next;
+      }, { replace: true });
+    };
+
+    // Fast path: the parent is a top-level message and already in the
+    // currently-loaded page.
+    const loadedParent = messages.find(m => m.id === autoOpenThreadId);
+    if (loadedParent) {
+      openParent(loadedParent);
+      return;
+    }
+
+    // Fallback: an older thread whose parent isn't in the loaded page (the
+    // channel message list only paginates top-level messages, and this
+    // effect used to just silently give up here). Fetch the parent directly
+    // by id instead — getReplies() was built for exactly this case.
+    let cancelled = false;
+    api.getReplies(autoOpenThreadId).then(data => {
+      if (cancelled || threadAutoOpenedRef.current) return;
+      if (data?.parent) {
+        openParent(data.parent);
+      } else {
+        threadAutoOpenedRef.current = true;
+        toast.info('That thread could not be opened — the message may have been deleted.');
+      }
+    }).catch(() => {
+      if (cancelled || threadAutoOpenedRef.current) return;
+      threadAutoOpenedRef.current = true;
+      toast.info('That thread could not be opened — the message may have been deleted.');
+    });
+    return () => { cancelled = true; };
+  }, [autoOpenThreadId, messages, loading, onOpenThread, setSearchParams, toast]);
 
   const lastReadAtRef = useRef(null);
   const firstUnreadMessageIdRef = useRef(null);

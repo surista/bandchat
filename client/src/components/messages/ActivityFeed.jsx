@@ -104,7 +104,9 @@ function ActivityFeed({ workspaceId, onSelectChannel }) {
       {items.map(item => (
         <button
           key={item.id}
-          onClick={() => onSelectChannel?.(item.channelId, item.type === 'thread_reply' ? { threadId: item.parentId } : undefined)}
+          onClick={() => onSelectChannel?.(item.channelId, item.type === 'thread_reply'
+            ? { threadId: item.parentId, messageId: item.message.id }
+            : { messageId: item.message?.id })}
           className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-[var(--color-bg-tertiary)] transition-colors"
         >
           <div className="flex items-start gap-3">

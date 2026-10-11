@@ -16,6 +16,14 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.62',
+    date: '2026-10-11',
+    items: [
+      { kind: 'fixed', text: 'Clicking a thread-reply notification in Activity or All Messages now actually opens the thread and jumps to the reply, instead of just switching to the channel.' },
+      { kind: 'fixed', text: 'Opening an older thread from a notification no longer silently fails to open if the original message had scrolled out of the channel’s loaded history.' },
+    ],
+  },
+  {
     version: '1.07.61',
     date: '2026-10-08',
     items: [

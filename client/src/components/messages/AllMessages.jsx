@@ -118,7 +118,7 @@ function AllMessages({ workspaceId, onSelectChannel }) {
       {messages.map(msg => (
         <button
           key={msg.id}
-          onClick={() => onSelectChannel?.(msg.channel?.id, msg.parentId ? { threadId: msg.parentId } : undefined)}
+          onClick={() => onSelectChannel?.(msg.channel?.id, msg.parentId ? { threadId: msg.parentId, messageId: msg.id } : { messageId: msg.id })}
           className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-[var(--color-bg-tertiary)] transition-colors group"
         >
           <div className="flex items-start gap-3">
