@@ -213,7 +213,7 @@ router.get('/workspaces', async (req, res) => {
 
     // Get message counts per workspace via channels (parallel queries)
     const workspaceIds = workspaces.map(w => w.id);
-    const [messageCounts, channels] = await Promise.all([
+    const [messageCounts, channels, memberRows] = await Promise.all([
       prisma.message.groupBy({
         by: ['channelId'],
         where: {
@@ -224,6 +224,10 @@ router.get('/workspaces', async (req, res) => {
       prisma.channel.findMany({
         where: { workspaceId: { in: workspaceIds } },
         select: { id: true, workspaceId: true },
+      }),
+      prisma.workspaceMember.findMany({
+        where: { workspaceId: { in: workspaceIds } },
+        select: { workspaceId: true, userId: true },
       }),
     ]);
     const channelToWorkspace = {};
@@ -239,6 +243,27 @@ router.get('/workspaces', async (req, res) => {
       }
     }
 
+    // Last login per workspace = most recent login among its members.
+    const memberUserIds = [...new Set(memberRows.map(m => m.userId))];
+    const lastLogins = memberUserIds.length
+      ? await prisma.auditLog.groupBy({
+          by: ['actorId'],
+          where: { action: 'user.login', actorId: { in: memberUserIds } },
+          _max: { createdAt: true },
+        })
+      : [];
+    const lastLoginByUser = {};
+    for (const l of lastLogins) {
+      if (l.actorId) lastLoginByUser[l.actorId] = l._max.createdAt;
+    }
+    const lastLoginByWorkspace = {};
+    for (const m of memberRows) {
+      const t = lastLoginByUser[m.userId];
+      if (t && (!lastLoginByWorkspace[m.workspaceId] || t > lastLoginByWorkspace[m.workspaceId])) {
+        lastLoginByWorkspace[m.workspaceId] = t;
+      }
+    }
+
     const items = workspaces.map(w => {
       const admin = w.members?.[0]?.user;
       return {
@@ -246,6 +271,7 @@ router.get('/workspaces', async (req, res) => {
         members: undefined,
         owner: admin ? { displayName: admin.displayName, email: admin.email } : null,
         messageCount: wsMessageCounts[w.id] || 0,
+        lastLogin: lastLoginByWorkspace[w.id] || null,
       };
     });
 

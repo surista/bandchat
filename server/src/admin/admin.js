@@ -66,6 +66,7 @@ async function refreshAccessToken() {
 // Format helpers
 function fmt(n) { return (n || 0).toLocaleString(); }
 function fmtDate(d) { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); }
+function fmtDateTime(d) { return d ? new Date(d).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Never'; }
 
 // XSS protection.
 //
@@ -354,7 +355,7 @@ async function loadWorkspaces(search, page) {
     const tbody = document.getElementById('workspacesTable');
 
     if (workspaces.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No workspaces found</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No workspaces found</td></tr>';
       renderPagination(['workspacesPaginationTop', 'workspacesPagination'], data.page, data.limit, data.total, (p) => loadWorkspaces(undefined, p));
       return;
     }
@@ -383,6 +384,7 @@ async function loadWorkspaces(search, page) {
         <td>${fmt(w.messageCount)}</td>
         <td>${fmtBytes(Number(w.storageUsedBytes || 0))}</td>
         <td>${fmtDate(w.createdAt)}</td>
+        <td>${fmtDateTime(w.lastLogin)}</td>
         <td>${planBtn} <button class="btn btn-danger btn-sm" data-delete-ws="${w.id}" data-ws-name="${esc(w.name)}">Delete</button></td>
       </tr>
     `;
