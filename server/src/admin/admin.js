@@ -13,6 +13,8 @@ let userPage = 1;
 let userSearchValue = '';
 let workspacePage = 1;
 let workspaceSearchValue = '';
+let cachedWorkspaces = [];
+let selectedWorkspaceIds = new Set();
 const ADMIN_PAGE_LIMIT = 50;
 
 // Renders "Showing X-Y of Z" + Prev/Next controls into each given container
@@ -352,11 +354,14 @@ async function loadWorkspaces(search, page) {
     if (workspaceSearchValue) params.set('search', workspaceSearchValue);
     const data = await api(`/admin/workspaces?${params.toString()}`);
     const workspaces = data.workspaces;
+    cachedWorkspaces = workspaces;
     const tbody = document.getElementById('workspacesTable');
 
     if (workspaces.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No workspaces found</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No workspaces found</td></tr>';
       renderPagination(['workspacesPaginationTop', 'workspacesPagination'], data.page, data.limit, data.total, (p) => loadWorkspaces(undefined, p));
+      renderBulkActions();
+      updateSelectAllCheckbox();
       return;
     }
 
@@ -371,8 +376,10 @@ async function loadWorkspaces(search, page) {
       const ownerInfo = w.owner ? `<div style="font-size:12px;color:#9ca3af;margin-top:2px">Admin: ${esc(w.owner.displayName)}${w.owner.email ? ` (${esc(w.owner.email)})` : ''}</div>` : '';
       const slugInfo = w.slug ? `<div style="font-size:11px;color:#6b7280;margin-top:1px">${esc(w.slug)}</div>` : '';
       const shortId = w.id.substring(0, 8);
+      const checked = selectedWorkspaceIds.has(w.id) ? 'checked' : '';
       return `
       <tr>
+        <td><input type="checkbox" class="ws-checkbox" data-ws-id="${esc(w.id)}" ${checked}></td>
         <td>
           <strong>${esc(w.name)}</strong> ${planBadge}
           ${ownerInfo}
@@ -390,8 +397,72 @@ async function loadWorkspaces(search, page) {
     `;
     }).join('');
     renderPagination(['workspacesPaginationTop', 'workspacesPagination'], data.page, data.limit, data.total, (p) => loadWorkspaces(undefined, p));
+    renderBulkActions();
+    updateSelectAllCheckbox();
   } catch (err) {
     console.error('Failed to load workspaces:', err);
+  }
+}
+
+// Bulk selection for workspace soft-delete
+function renderBulkActions() {
+  const bar = document.getElementById('workspacesBulkActions');
+  if (!bar) return;
+  if (selectedWorkspaceIds.size === 0) {
+    bar.style.display = 'none';
+    bar.innerHTML = '';
+    return;
+  }
+  bar.style.display = 'flex';
+  bar.innerHTML = `
+    <span><strong>${selectedWorkspaceIds.size}</strong> selected</span>
+    <button class="btn btn-danger btn-sm" id="bulkDeleteWorkspacesBtn">Delete Selected</button>
+    <button class="link-btn" id="clearWorkspaceSelectionBtn">Clear selection</button>
+  `;
+  document.getElementById('bulkDeleteWorkspacesBtn').addEventListener('click', bulkDeleteWorkspaces);
+  document.getElementById('clearWorkspaceSelectionBtn').addEventListener('click', () => {
+    selectedWorkspaceIds.clear();
+    document.querySelectorAll('.ws-checkbox').forEach(cb => { cb.checked = false; });
+    renderBulkActions();
+    updateSelectAllCheckbox();
+  });
+}
+
+function updateSelectAllCheckbox() {
+  const selectAll = document.getElementById('workspacesSelectAll');
+  if (!selectAll) return;
+  const visibleIds = cachedWorkspaces.map(w => w.id);
+  const allSelected = visibleIds.length > 0 && visibleIds.every(id => selectedWorkspaceIds.has(id));
+  const someSelected = visibleIds.some(id => selectedWorkspaceIds.has(id));
+  selectAll.checked = allSelected;
+  selectAll.indeterminate = someSelected && !allSelected;
+}
+
+document.getElementById('workspacesSelectAll').addEventListener('change', (e) => {
+  const checked = e.target.checked;
+  cachedWorkspaces.forEach(w => {
+    if (checked) selectedWorkspaceIds.add(w.id);
+    else selectedWorkspaceIds.delete(w.id);
+  });
+  document.querySelectorAll('.ws-checkbox').forEach(cb => { cb.checked = checked; });
+  renderBulkActions();
+});
+
+async function bulkDeleteWorkspaces() {
+  const ids = [...selectedWorkspaceIds];
+  if (ids.length === 0) return;
+  const names = cachedWorkspaces.filter(w => ids.includes(w.id)).map(w => w.name);
+  const preview = names.slice(0, 10).join(', ') + (names.length > 10 ? `, +${names.length - 10} more` : '');
+  const previewLabel = names.length ? ` Includes: ${preview}.` : '';
+  if (!confirm(`Soft-delete ${ids.length} workspace${ids.length === 1 ? '' : 's'}?${previewLabel} They will be recoverable for 30 days.`)) return;
+  try {
+    const result = await api('/admin/workspaces/bulk-delete', { method: 'POST', body: JSON.stringify({ workspaceIds: ids }) });
+    alert(`Deleted ${result.deletedCount} workspace${result.deletedCount === 1 ? '' : 's'}.`);
+    selectedWorkspaceIds.clear();
+    loadWorkspaces(undefined, workspacePage);
+    loadDeleted();
+  } catch (err) {
+    alert('Failed to bulk delete: ' + err.message);
   }
 }
 
@@ -402,6 +473,16 @@ document.getElementById('workspaceSearch').addEventListener('input', (e) => {
 
 // Event delegation for workspace buttons (plan toggle + delete)
 document.getElementById('workspacesTable').addEventListener('click', async (e) => {
+  const checkbox = e.target.closest('.ws-checkbox');
+  if (checkbox) {
+    const id = checkbox.dataset.wsId;
+    if (checkbox.checked) selectedWorkspaceIds.add(id);
+    else selectedWorkspaceIds.delete(id);
+    renderBulkActions();
+    updateSelectAllCheckbox();
+    return;
+  }
+
   // Copy-full-ID. This was an inline onclick, which the page CSP
   // (`script-src 'self'`, no 'unsafe-inline') silently blocked — the control
   // looked clickable but never fired. Delegated like every other action here.
@@ -440,6 +521,7 @@ document.getElementById('workspacesTable').addEventListener('click', async (e) =
     try {
       const result = await api(`/admin/workspaces/${deleteBtn.dataset.deleteWs}`, { method: 'DELETE' });
       alert(result.message);
+      selectedWorkspaceIds.delete(deleteBtn.dataset.deleteWs);
       loadWorkspaces(undefined, workspacePage);
       loadDeleted();
     } catch (err) {

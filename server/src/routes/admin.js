@@ -867,6 +867,45 @@ router.post('/users/:userId/restore', async (req, res) => {
   }
 });
 
+// POST /api/admin/workspaces/bulk-delete — Soft-delete multiple workspaces at once (30-day grace period)
+router.post('/workspaces/bulk-delete', async (req, res) => {
+  try {
+    const { workspaceIds } = req.body;
+    if (!Array.isArray(workspaceIds) || workspaceIds.length === 0) {
+      return res.status(400).json({ error: 'workspaceIds must be a non-empty array' });
+    }
+    if (workspaceIds.length > 100) {
+      return res.status(400).json({ error: 'Cannot delete more than 100 workspaces at once' });
+    }
+    if (!workspaceIds.every(id => typeof id === 'string')) {
+      return res.status(400).json({ error: 'workspaceIds must be an array of strings' });
+    }
+
+    const workspaces = await prisma.workspace.findMany({
+      where: { id: { in: workspaceIds }, deletedAt: null },
+      select: { id: true, name: true },
+    });
+    if (workspaces.length === 0) {
+      return res.status(404).json({ error: 'No matching workspaces found' });
+    }
+
+    await prisma.workspace.updateMany({
+      where: { id: { in: workspaces.map(w => w.id) } },
+      data: { deletedAt: new Date() },
+    });
+
+    logAudit('admin.workspace.bulk_deleted', {
+      actorId: req.user.id,
+      metadata: { count: workspaces.length, names: workspaces.map(w => w.name) },
+    });
+
+    res.json({ deletedCount: workspaces.length, deletedNames: workspaces.map(w => w.name) });
+  } catch (error) {
+    console.error('Admin workspace bulk soft-delete error:', error);
+    res.status(500).json({ error: 'Failed to delete workspaces' });
+  }
+});
+
 // DELETE /api/admin/workspaces/:workspaceId — Soft-delete a workspace (30-day grace period)
 router.delete('/workspaces/:workspaceId', async (req, res) => {
   try {
