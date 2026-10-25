@@ -15,23 +15,26 @@ let workspacePage = 1;
 let workspaceSearchValue = '';
 const ADMIN_PAGE_LIMIT = 50;
 
-// Renders "Showing X-Y of Z" + Prev/Next controls into the given container,
-// calling onPageChange(newPage) when a button is clicked.
-function renderPagination(containerId, page, limit, total, onPageChange) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  if (total === 0) { el.innerHTML = ''; return; }
-  const start = (page - 1) * limit + 1;
-  const end = Math.min(page * limit, total);
-  const hasPrev = page > 1;
-  const hasNext = end < total;
-  el.innerHTML = `
-    <span>Showing ${fmt(start)}–${fmt(end)} of ${fmt(total)}</span>
-    <button class="btn btn-sm" id="${containerId}-prev" ${hasPrev ? '' : 'disabled'}>Prev</button>
-    <button class="btn btn-sm" id="${containerId}-next" ${hasNext ? '' : 'disabled'}>Next</button>
-  `;
-  if (hasPrev) document.getElementById(`${containerId}-prev`).addEventListener('click', () => onPageChange(page - 1));
-  if (hasNext) document.getElementById(`${containerId}-next`).addEventListener('click', () => onPageChange(page + 1));
+// Renders "Showing X-Y of Z" + Prev/Next controls into each given container
+// (e.g. one above the table, one below), calling onPageChange(newPage) when
+// a button is clicked.
+function renderPagination(containerIds, page, limit, total, onPageChange) {
+  for (const containerId of containerIds) {
+    const el = document.getElementById(containerId);
+    if (!el) continue;
+    if (total === 0) { el.innerHTML = ''; continue; }
+    const start = (page - 1) * limit + 1;
+    const end = Math.min(page * limit, total);
+    const hasPrev = page > 1;
+    const hasNext = end < total;
+    el.innerHTML = `
+      <span>Showing ${fmt(start)}–${fmt(end)} of ${fmt(total)}</span>
+      <button class="btn btn-sm" id="${containerId}-prev" ${hasPrev ? '' : 'disabled'}>Prev</button>
+      <button class="btn btn-sm" id="${containerId}-next" ${hasNext ? '' : 'disabled'}>Next</button>
+    `;
+    if (hasPrev) document.getElementById(`${containerId}-prev`).addEventListener('click', () => onPageChange(page - 1));
+    if (hasNext) document.getElementById(`${containerId}-next`).addEventListener('click', () => onPageChange(page + 1));
+  }
 }
 
 // API helper
@@ -230,7 +233,7 @@ async function loadUsers(search, page) {
 
     if (cachedUsers.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No users found</td></tr>';
-      renderPagination('usersPagination', data.page, data.limit, data.total, (p) => loadUsers(undefined, p));
+      renderPagination(['usersPaginationTop', 'usersPagination'], data.page, data.limit, data.total, (p) => loadUsers(undefined, p));
       return;
     }
 
@@ -254,7 +257,7 @@ async function loadUsers(search, page) {
         </td>
       </tr>
     `).join('');
-    renderPagination('usersPagination', data.page, data.limit, data.total, (p) => loadUsers(undefined, p));
+    renderPagination(['usersPaginationTop', 'usersPagination'], data.page, data.limit, data.total, (p) => loadUsers(undefined, p));
   } catch (err) {
     console.error('Failed to load users:', err);
   }
@@ -352,7 +355,7 @@ async function loadWorkspaces(search, page) {
 
     if (workspaces.length === 0) {
       tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No workspaces found</td></tr>';
-      renderPagination('workspacesPagination', data.page, data.limit, data.total, (p) => loadWorkspaces(undefined, p));
+      renderPagination(['workspacesPaginationTop', 'workspacesPagination'], data.page, data.limit, data.total, (p) => loadWorkspaces(undefined, p));
       return;
     }
 
@@ -384,7 +387,7 @@ async function loadWorkspaces(search, page) {
       </tr>
     `;
     }).join('');
-    renderPagination('workspacesPagination', data.page, data.limit, data.total, (p) => loadWorkspaces(undefined, p));
+    renderPagination(['workspacesPaginationTop', 'workspacesPagination'], data.page, data.limit, data.total, (p) => loadWorkspaces(undefined, p));
   } catch (err) {
     console.error('Failed to load workspaces:', err);
   }

@@ -103,6 +103,7 @@ a:hover { text-decoration: underline; }
 /* Tables */
 .table-header {
   display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
   margin-bottom: 16px;
 }
 .table-header h2 { font-size: 18px; font-weight: 600; }
@@ -131,6 +132,7 @@ tr:hover td { background: var(--bg-tertiary); }
   gap: 12px; margin-top: 12px; font-size: 13px; color: var(--text-secondary);
 }
 .pagination .btn-sm { padding: 6px 12px; }
+.table-header .pagination { margin-top: 0; margin-left: auto; }
 .badge {
   display: inline-block; padding: 2px 8px; border-radius: 4px;
   font-size: 11px; font-weight: 600;
