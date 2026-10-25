@@ -22,6 +22,7 @@ import { APP_BASE_URL } from '../../utils/constants';
 import { useLayout } from '../../hooks/useLayout';
 import { MIN_TOUCH_TARGET } from '../../utils/touchTarget';
 import PressableRow from '../../components/PressableRow';
+import TurnstileModal, { TURNSTILE_ENABLED } from '../../components/TurnstileModal';
 
 // See LoginScreen — used to skip configure() and map the SDK's cryptic
 // "GoogleService-Info.plist was not found" error to a clean user-facing
@@ -43,6 +44,8 @@ export default function SignupScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState(null);
+  const [showTurnstile, setShowTurnstile] = useState(false);
 
   useEffect(() => {
     if (!GOOGLE_SIGN_IN_AVAILABLE) return;
@@ -100,6 +103,17 @@ export default function SignupScreen({ navigation }) {
     }
   };
 
+  const doSignup = async (token) => {
+    setLoading(true);
+    try {
+      await signup(email.trim(), password, displayName.trim(), token);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!displayName.trim() || !email.trim() || !password) return;
     if (password !== confirmPassword) {
@@ -111,15 +125,18 @@ export default function SignupScreen({ navigation }) {
       return;
     }
     setError('');
-    setLoading(true);
 
-    try {
-      await signup(email.trim(), password, displayName.trim());
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    if (TURNSTILE_ENABLED && !turnstileToken) {
+      setShowTurnstile(true);
+      return;
     }
+    await doSignup(turnstileToken);
+  };
+
+  const handleTurnstileVerify = (token) => {
+    setTurnstileToken(token);
+    setShowTurnstile(false);
+    doSignup(token);
   };
 
   return (
@@ -328,6 +345,11 @@ export default function SignupScreen({ navigation }) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <TurnstileModal
+        visible={showTurnstile}
+        onVerify={handleTurnstileVerify}
+        onClose={() => setShowTurnstile(false)}
+      />
     </SafeAreaView>
   );
 }

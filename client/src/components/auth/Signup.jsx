@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import GoogleSignInButton from './GoogleSignInButton';
+import TurnstileWidget from './TurnstileWidget';
 import Footer from '../common/Footer';
+
+const TURNSTILE_ENABLED = Boolean(import.meta.env.VITE_TURNSTILE_SITE_KEY);
 
 function Signup() {
   const { signup, googleLogin } = useAuth();
@@ -14,6 +17,10 @@ function Signup() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState(null);
+
+  const handleTurnstileVerify = useCallback((token) => setTurnstileToken(token), []);
+  const handleTurnstileExpire = useCallback(() => setTurnstileToken(null), []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,10 +36,15 @@ function Signup() {
       return;
     }
 
+    if (TURNSTILE_ENABLED && !turnstileToken) {
+      setError('Please complete the verification challenge');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await signup(email, password, displayName);
+      await signup(email, password, displayName, turnstileToken);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -189,9 +201,11 @@ function Signup() {
             </span>
           </label>
 
+          <TurnstileWidget onVerify={handleTurnstileVerify} onExpire={handleTurnstileExpire} />
+
           <button
             type="submit"
-            disabled={loading || !agreedToTerms}
+            disabled={loading || !agreedToTerms || (TURNSTILE_ENABLED && !turnstileToken)}
             className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-500 transition-colors disabled:opacity-50 text-base"
           >
             {loading ? 'Creating account...' : 'Create Account'}

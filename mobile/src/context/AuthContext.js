@@ -135,8 +135,8 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const signup = useCallback(async (email, password, displayName) => {
-    const data = await api.signup(email, password, displayName);
+  const signup = useCallback(async (email, password, displayName, turnstileToken) => {
+    const data = await api.signup(email, password, displayName, turnstileToken);
     setUser(data.user);
     await configureRevenueCat(data.user.id);
     updateWidgetGigData();

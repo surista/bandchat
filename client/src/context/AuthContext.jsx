@@ -82,8 +82,8 @@ export function AuthProvider({ children }) {
     initAuth();
   }, []);
 
-  const signup = useCallback(async (email, password, displayName) => {
-    const data = await api.signup(email, password, displayName);
+  const signup = useCallback(async (email, password, displayName, turnstileToken) => {
+    const data = await api.signup(email, password, displayName, turnstileToken);
     setUser(data.user);
     return data;
   }, []);

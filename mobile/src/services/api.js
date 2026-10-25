@@ -484,10 +484,10 @@ class ApiService {
   }
 
   // Auth
-  async signup(email, password, displayName) {
+  async signup(email, password, displayName, turnstileToken) {
     const data = await this.request('/auth/signup', {
       method: 'POST',
-      body: JSON.stringify({ email, password, displayName }),
+      body: JSON.stringify({ email, password, displayName, turnstileToken }),
     });
     await this.setTokens(data.accessToken, data.refreshToken);
     return data;

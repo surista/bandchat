@@ -9,6 +9,7 @@ import { apiLimiter, authLimiter, tokenLimiter, refreshLimiter, exportLimiter } 
 import prisma from '../lib/prisma.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 import { logAudit } from '../lib/audit.js';
+import { verifyTurnstileToken } from '../lib/turnstile.js';
 
 const router = express.Router();
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -219,10 +220,14 @@ const generateTokens = async (userId) => {
 // Sign up
 router.post('/signup', authLimiter, async (req, res) => {
   try {
-    const { email, password, displayName } = req.body;
+    const { email, password, displayName, turnstileToken } = req.body;
 
     if (!email || !password || !displayName) {
       return res.status(400).json({ error: 'Email, password, and display name are required' });
+    }
+
+    if (!(await verifyTurnstileToken(turnstileToken, req.ip))) {
+      return res.status(400).json({ error: 'Verification failed. Please try again.' });
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
