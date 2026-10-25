@@ -9,6 +9,30 @@ let userSearchTimer = null;
 let workspaceSearchTimer = null;
 let cachedUsers = [];
 let restoreKey = null;
+let userPage = 1;
+let userSearchValue = '';
+let workspacePage = 1;
+let workspaceSearchValue = '';
+const ADMIN_PAGE_LIMIT = 50;
+
+// Renders "Showing X-Y of Z" + Prev/Next controls into the given container,
+// calling onPageChange(newPage) when a button is clicked.
+function renderPagination(containerId, page, limit, total, onPageChange) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (total === 0) { el.innerHTML = ''; return; }
+  const start = (page - 1) * limit + 1;
+  const end = Math.min(page * limit, total);
+  const hasPrev = page > 1;
+  const hasNext = end < total;
+  el.innerHTML = `
+    <span>Showing ${fmt(start)}–${fmt(end)} of ${fmt(total)}</span>
+    <button class="btn btn-sm" id="${containerId}-prev" ${hasPrev ? '' : 'disabled'}>Prev</button>
+    <button class="btn btn-sm" id="${containerId}-next" ${hasNext ? '' : 'disabled'}>Next</button>
+  `;
+  if (hasPrev) document.getElementById(`${containerId}-prev`).addEventListener('click', () => onPageChange(page - 1));
+  if (hasNext) document.getElementById(`${containerId}-next`).addEventListener('click', () => onPageChange(page + 1));
+}
 
 // API helper
 async function api(path, opts = {}) {
@@ -194,15 +218,19 @@ async function loadStats() {
 }
 
 // Users — event delegation instead of inline onclick (XSS-safe)
-async function loadUsers(search) {
+async function loadUsers(search, page) {
   try {
-    const q = search ? `?search=${encodeURIComponent(search)}` : '';
-    const data = await api(`/admin/users${q}`);
+    if (search !== undefined) userSearchValue = search;
+    userPage = page || 1;
+    const params = new URLSearchParams({ page: userPage, limit: ADMIN_PAGE_LIMIT });
+    if (userSearchValue) params.set('search', userSearchValue);
+    const data = await api(`/admin/users?${params.toString()}`);
     cachedUsers = data.users;
     const tbody = document.getElementById('usersTable');
 
     if (cachedUsers.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No users found</td></tr>';
+      renderPagination('usersPagination', data.page, data.limit, data.total, (p) => loadUsers(undefined, p));
       return;
     }
 
@@ -226,6 +254,7 @@ async function loadUsers(search) {
         </td>
       </tr>
     `).join('');
+    renderPagination('usersPagination', data.page, data.limit, data.total, (p) => loadUsers(undefined, p));
   } catch (err) {
     console.error('Failed to load users:', err);
   }
@@ -247,7 +276,7 @@ document.getElementById('usersTable').addEventListener('click', (e) => {
 
 document.getElementById('userSearch').addEventListener('input', (e) => {
   clearTimeout(userSearchTimer);
-  userSearchTimer = setTimeout(() => loadUsers(e.target.value), 300);
+  userSearchTimer = setTimeout(() => loadUsers(e.target.value, 1), 300);
 });
 
 // User detail modal
@@ -304,22 +333,26 @@ async function toggleAdmin(userId, displayName, currentStatus) {
 
   try {
     await api(`/admin/users/${userId}/toggle-admin`, { method: 'POST' });
-    loadUsers(document.getElementById('userSearch').value);
+    loadUsers(document.getElementById('userSearch').value, userPage);
   } catch (err) {
     alert(err.message || 'Failed to update admin status');
   }
 }
 
 // Workspaces
-async function loadWorkspaces(search) {
+async function loadWorkspaces(search, page) {
   try {
-    const q = search ? `?search=${encodeURIComponent(search)}` : '';
-    const data = await api(`/admin/workspaces${q}`);
+    if (search !== undefined) workspaceSearchValue = search;
+    workspacePage = page || 1;
+    const params = new URLSearchParams({ page: workspacePage, limit: ADMIN_PAGE_LIMIT });
+    if (workspaceSearchValue) params.set('search', workspaceSearchValue);
+    const data = await api(`/admin/workspaces?${params.toString()}`);
     const workspaces = data.workspaces;
     const tbody = document.getElementById('workspacesTable');
 
     if (workspaces.length === 0) {
       tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No workspaces found</td></tr>';
+      renderPagination('workspacesPagination', data.page, data.limit, data.total, (p) => loadWorkspaces(undefined, p));
       return;
     }
 
@@ -351,6 +384,7 @@ async function loadWorkspaces(search) {
       </tr>
     `;
     }).join('');
+    renderPagination('workspacesPagination', data.page, data.limit, data.total, (p) => loadWorkspaces(undefined, p));
   } catch (err) {
     console.error('Failed to load workspaces:', err);
   }
@@ -358,7 +392,7 @@ async function loadWorkspaces(search) {
 
 document.getElementById('workspaceSearch').addEventListener('input', (e) => {
   clearTimeout(workspaceSearchTimer);
-  workspaceSearchTimer = setTimeout(() => loadWorkspaces(e.target.value), 300);
+  workspaceSearchTimer = setTimeout(() => loadWorkspaces(e.target.value, 1), 300);
 });
 
 // Event delegation for workspace buttons (plan toggle + delete)
@@ -387,7 +421,7 @@ document.getElementById('workspacesTable').addEventListener('click', async (e) =
     if (!confirm(`${action} for "${name}"?`)) return;
     try {
       const result = await api(`/admin/workspaces/${planBtn.dataset.togglePlan}/plan`, { method: 'POST' });
-      loadWorkspaces();
+      loadWorkspaces(undefined, workspacePage);
     } catch (err) {
       alert('Failed to update plan: ' + err.message);
     }
@@ -401,7 +435,7 @@ document.getElementById('workspacesTable').addEventListener('click', async (e) =
     try {
       const result = await api(`/admin/workspaces/${deleteBtn.dataset.deleteWs}`, { method: 'DELETE' });
       alert(result.message);
-      loadWorkspaces();
+      loadWorkspaces(undefined, workspacePage);
       loadDeleted();
     } catch (err) {
       alert('Failed to delete: ' + err.message);
