@@ -6,6 +6,7 @@ const {
   computeSetlistDuration,
   computeSetDuration,
   formatSetlistDuration,
+  getEffectiveSetBreakCount,
 } = require('../setlistDuration');
 
 // This module is mirrored at client/src/utils/setlistDuration.js, and the
@@ -120,5 +121,26 @@ describe('formatSetlistDuration', () => {
   test('clamps negatives and nullish input to 0:00', () => {
     expect(formatSetlistDuration(-5)).toBe('0:00');
     expect(formatSetlistDuration(null)).toBe('0:00');
+  });
+});
+
+describe('getEffectiveSetBreakCount', () => {
+  test('ignores a leading break before any content', () => {
+    const items = [
+      { type: 'SET_BREAK' },
+      { type: 'SONG', song: { duration: 180 } },
+      { type: 'SET_BREAK' },
+      { type: 'SONG', song: { duration: 180 } },
+    ];
+    expect(getEffectiveSetBreakCount(items)).toBe(1);
+  });
+
+  test('returns 0 for a single set with no breaks', () => {
+    expect(getEffectiveSetBreakCount([{ type: 'SONG', song: { duration: 180 } }])).toBe(0);
+  });
+
+  test('returns 0 for an empty or all-breaks list', () => {
+    expect(getEffectiveSetBreakCount([])).toBe(0);
+    expect(getEffectiveSetBreakCount([{ type: 'SET_BREAK' }, { type: 'SET_BREAK' }])).toBe(0);
   });
 });

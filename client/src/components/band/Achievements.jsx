@@ -7,7 +7,6 @@ import Skeleton from '../common/Skeleton';
 export default function Achievements({ workspaceId }) {
   const [activeTab, setActiveTab] = useState('band');
   const [bandAchievements, setBandAchievements] = useState([]);
-  const [memberAchievements, setMemberAchievements] = useState([]);
   const [myAchievements, setMyAchievements] = useState([]);
   const [allDefinitions, setAllDefinitions] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
@@ -31,16 +30,14 @@ export default function Achievements({ workspaceId }) {
 
   async function loadData() {
     try {
-      const [defs, band, members, mine, board] = await Promise.all([
+      const [defs, band, mine, board] = await Promise.all([
         api.getAchievementDefinitions(),
         api.getBandAchievements(workspaceId),
-        api.getMemberAchievements(workspaceId),
         api.getMyAchievements(workspaceId),
         api.getAchievementLeaderboard(workspaceId)
       ]);
       setAllDefinitions(defs);
       setBandAchievements(band);
-      setMemberAchievements(members);
       setMyAchievements(mine);
       setLeaderboard(board);
       setError(null);

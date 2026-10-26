@@ -25,6 +25,7 @@ import { isSafeUrl } from '../../utils/urlSafety';
 import { successNotification, mediumImpact } from '../../utils/haptics';
 import api from '../../services/api';
 import { useLayout } from '../../hooks/useLayout';
+import { MIN_TOUCH_TARGET } from '../../utils/touchTarget';
 import ErrorState from '../../components/ErrorState';
 import PressableRow from '../../components/PressableRow';
 import { SkeletonList } from '../../components/SkeletonLoader';
@@ -182,6 +183,18 @@ export default function VenueDetailScreen({ navigation, route }) {
   }, [isNew, venue, navigation, populateForm]);
 
   const handlePickImage = useCallback(async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Permission Required',
+        'Please allow access to your photo library to upload an image.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ]
+      );
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: Platform.OS === 'ios',
@@ -377,6 +390,12 @@ export default function VenueDetailScreen({ navigation, route }) {
                 <TouchableOpacity
                   onPress={() => setImageUrl('')}
                   style={{ position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: 11, backgroundColor: '#dc2626', alignItems: 'center', justifyContent: 'center' }}
+                  hitSlop={{
+                    top: (MIN_TOUCH_TARGET - 22) / 2,
+                    bottom: (MIN_TOUCH_TARGET - 22) / 2,
+                    left: (MIN_TOUCH_TARGET - 22) / 2,
+                    right: (MIN_TOUCH_TARGET - 22) / 2,
+                  }}
                   accessibilityRole="button"
                   accessibilityLabel="Remove image"
                 >

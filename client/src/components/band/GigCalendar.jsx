@@ -371,7 +371,6 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
   const [listMode, setListMode] = useState('compact'); // 'compact' or 'cards'
   const [filterTypes, setFilterTypes] = useState(new Set()); // empty = all
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
-  const [sortNewest, setSortNewest] = useState(true);
   const [deleteGigId, setDeleteGigId] = useState(null);
   const [gigContextMenu, setGigContextMenu] = useState(null); // { gigId, x, y }
 
@@ -893,9 +892,9 @@ function GigCalendar({ workspaceId, workspace, focusGigId }) {
     if (showOtherWorkspaces) {
       combined.push(...otherWorkspaceGigs);
     }
-    const sorted = combined.sort((a, b) => new Date(a.date) - new Date(b.date));
-    return sortNewest ? sorted.reverse() : sorted;
-  }, [gigs, otherWorkspaceGigs, showOtherWorkspaces, sortNewest]);
+    // Newest-first; there's no UI control to flip this.
+    return combined.sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [gigs, otherWorkspaceGigs, showOtherWorkspaces]);
 
   const gigsByDate = useMemo(() => {
     const map = {};

@@ -62,6 +62,18 @@ export function computeSetDuration(items, { isFinalSet, paddingSecs }) {
   return { actualSecs, paddedSecs, songCount, paddingSecs: pad };
 }
 
+/**
+ * Count SET_BREAK items that actually separate sets, skipping any leading
+ * break before the first real content item. Set count for display is this
+ * plus one.
+ */
+export function getEffectiveSetBreakCount(items) {
+  const list = Array.isArray(items) ? items : [];
+  const firstContentIdx = list.findIndex(s => s.type !== 'SET_BREAK');
+  if (firstContentIdx < 0) return 0;
+  return list.filter((s, i) => s.type === 'SET_BREAK' && i > firstContentIdx).length;
+}
+
 export function formatSetlistDuration(totalSecs) {
   const secs = Math.max(0, Math.round(totalSecs || 0));
   const h = Math.floor(secs / 3600);

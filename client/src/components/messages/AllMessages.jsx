@@ -4,20 +4,7 @@ import api from '../../services/api';
 import ErrorMessage from '../common/ErrorMessage';
 import Skeleton from '../common/Skeleton';
 import { useToast } from '../../context/ToastContext';
-
-// Module scope: stable identity, no per-render allocation. Was inside the
-// component and re-created on every keystroke / state change → re-allocated
-// per item per render in the .map below (50+ items × N renders).
-function formatRelativeDate(dateStr) {
-  const d = new Date(dateStr);
-  const now = new Date();
-  const diff = now - d;
-  if (diff < 60000) return 'just now';
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-  if (diff < 86400000) return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-  if (diff < 604800000) return d.toLocaleDateString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' });
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-}
+import { formatRelativeDate } from '../../utils/format';
 
 function getDmDisplayName(channel, currentUserId) {
   if (!channel?.isDirect || !channel.members) return null;

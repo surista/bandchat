@@ -5,7 +5,7 @@ import prisma, { USER_SELECT_BRIEF } from '../lib/prisma.js';
 import { isAllowedUploadUrl } from '../lib/validateUrl.js';
 import { deleteFile, isR2Url } from '../lib/storage.js';
 import { safeDecrementStorage } from './uploads.js';
-import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
+import { getPlanLimits } from '../lib/planLimits.js';
 import { triggerWebsiteSync } from '../services/websiteDeployment.js';
 import songBPMScraperService from '../services/songbpm-scraper.js';
 import deezerService from '../services/deezer.js';
@@ -461,11 +461,16 @@ router.post('/workspace/:workspaceId/bulk', authenticate, apiLimiter, isWorkspac
       metadataMatches: 0
     };
 
-    // Step 1: Create all songs in DB immediately (without metadata)
-    for (const songData of songs) {
+    // Step 1: Create all songs in DB immediately (without metadata). Each
+    // create() is independent (its own try/catch, no dependency on prior
+    // iterations), so run them concurrently instead of one sequential
+    // awaited insert per song -- createMany() isn't usable here since it
+    // can't return per-row relations (createdBy) or report which specific
+    // rows hit the P2002 unique-constraint skip.
+    await Promise.all(songs.map(async (songData) => {
       if (!songData.title || !songData.title.trim()) {
         results.errors.push({ song: songData, error: 'Title is required' });
-        continue;
+        return;
       }
 
       try {
@@ -502,7 +507,7 @@ router.post('/workspace/:workspaceId/bulk', authenticate, apiLimiter, isWorkspac
           });
         }
       }
-    }
+    }));
 
     // Broadcast all created songs
     const io = req.app.get('io');

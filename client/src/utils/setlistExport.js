@@ -14,7 +14,7 @@
 
 import { format } from 'date-fns';
 import { escapeHtml } from './escapeHtml';
-import { computeSetlistDuration, computeSetDuration, formatSetlistDuration } from './setlistDuration';
+import { computeSetlistDuration, computeSetDuration, formatSetlistDuration, formatTime12h, addMinutesToTime } from './setlistDuration';
 
 // Bounds for the print-preview font-size stepper (opts.fontSizeOverride).
 // MIN matches the auto-fit floor below; MAX is a sanity ceiling, not tied to
@@ -22,23 +22,6 @@ import { computeSetlistDuration, computeSetDuration, formatSetlistDuration } fro
 // deliberately exceed it.
 export const MIN_FONT_SIZE = 13;
 export const MAX_FONT_SIZE = 60;
-
-function formatTime12h(time24) {
-  if (!time24) return '';
-  const [h, m] = time24.split(':').map(Number);
-  const period = h >= 12 ? 'PM' : 'AM';
-  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
-}
-
-function addMinsToTime(time24, minutes) {
-  if (!time24) return '';
-  const [h, m] = time24.split(':').map(Number);
-  const totalMins = Math.round(h * 60 + m + minutes);
-  const newH = Math.floor(totalMins / 60) % 24;
-  const newM = totalMins % 60;
-  return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
-}
 
 function roundUpTo5(time24) {
   if (!time24) return '';
@@ -122,11 +105,11 @@ export function buildSetlistHtml(setlist, opts = {}) {
       const s = sets[i];
       const isFinalSet = i === sets.length - 1;
       if (s.breakItem && i > 0) {
-        curTime = addMinsToTime(curTime, (s.breakItem.duration || 0) / 60);
+        curTime = addMinutesToTime(curTime, (s.breakItem.duration || 0) / 60);
       }
       const { paddedSecs: setPaddedSecs } = computeSetDuration(s.items, { isFinalSet, paddingSecs: transitionPaddingSecs });
       const actualStart = i > 0 ? roundUpTo5(curTime) : curTime;
-      const setEnd = addMinsToTime(actualStart, setPaddedSecs / 60);
+      const setEnd = addMinutesToTime(actualStart, setPaddedSecs / 60);
       setTimings.push({ start: actualStart, end: setEnd });
       curTime = setEnd;
     }
@@ -135,7 +118,7 @@ export function buildSetlistHtml(setlist, opts = {}) {
   // When per-set timings are printed, the header range has to agree with them.
   const lastSetEnd = setTimings?.[setTimings.length - 1]?.end;
   const overallEndTime = setlist.startTime
-    ? (lastSetEnd || addMinsToTime(setlist.startTime, paddedSecs / 60))
+    ? (lastSetEnd || addMinutesToTime(setlist.startTime, paddedSecs / 60))
     : '';
   const timeRangeStr = setlist.startTime && overallEndTime
     ? `${formatTime12h(setlist.startTime)} – ${formatTime12h(overallEndTime)}`

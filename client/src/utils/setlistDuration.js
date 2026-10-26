@@ -76,6 +76,30 @@ export function computeSetDuration(items, { isFinalSet, paddingSecs }) {
 }
 
 /**
+ * Format a "HH:MM" 24-hour clock string as 12-hour with AM/PM.
+ */
+export function formatTime12h(time24) {
+  if (!time24) return '';
+  const [h, m] = time24.split(':').map(Number);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+}
+
+/**
+ * Add (or subtract) minutes to a "HH:MM" 24-hour clock string, wrapping
+ * around midnight.
+ */
+export function addMinutesToTime(time24, minutes) {
+  if (!time24) return '';
+  const [h, m] = time24.split(':').map(Number);
+  const totalMins = Math.round(h * 60 + m + minutes);
+  const newH = Math.floor(totalMins / 60) % 24;
+  const newM = totalMins % 60;
+  return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+}
+
+/**
  * Format a seconds value as "M:SS" (or "H:MM:SS" if >= 1 hour).
  */
 export function formatSetlistDuration(totalSecs) {

@@ -102,7 +102,7 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
           try {
             const img = actionMessage.attachments?.find(a => a.type === 'IMAGE');
             if (!img?.url) return;
-            const { status } = await MediaLibrary.requestPermissionsAsync();
+            const { status } = await MediaLibrary.requestPermissionsAsync(true); // write-only: no on-device photo/video reading, only saving
             if (status !== 'granted' && status !== 'limited') {
               Alert.alert(
                 'Permission needed',
@@ -138,7 +138,7 @@ export default function useMessageActions({ findMessage, extraActions = {}, work
           try {
             const video = actionMessage.attachments?.find(a => a.type === 'VIDEO');
             if (!video?.url) return;
-            const { status } = await MediaLibrary.requestPermissionsAsync();
+            const { status } = await MediaLibrary.requestPermissionsAsync(true); // write-only: no on-device photo/video reading, only saving
             if (status !== 'granted' && status !== 'limited') {
               Alert.alert(
                 'Permission needed',

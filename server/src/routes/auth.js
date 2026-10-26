@@ -343,7 +343,7 @@ router.post('/verify-email', tokenLimiter, async (req, res) => {
 });
 
 // Resend verification email
-router.post('/resend-verification', authLimiter, authenticate, async (req, res) => {
+router.post('/resend-verification', authenticate, authLimiter, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },

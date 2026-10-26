@@ -24,7 +24,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
-import { computeSetlistDuration, computeSetDuration, formatSetlistDuration, getItemActualDuration, MC_DEFAULT_DURATION_SECS } from '../../utils/setlistDuration';
+import { computeSetlistDuration, computeSetDuration, formatSetlistDuration, getItemActualDuration, MC_DEFAULT_DURATION_SECS, formatTime12h, addMinutesToTime } from '../../utils/setlistDuration';
 import SongForm from './SongForm';
 
 // Helper to split items into sets based on SET_BREAK markers
@@ -499,23 +499,6 @@ function SetColumnItem({
 }
 
 // Time helper functions
-const formatTime12h = (time24) => {
-  if (!time24) return '';
-  const [h, m] = time24.split(':').map(Number);
-  const period = h >= 12 ? 'PM' : 'AM';
-  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
-};
-
-const addMinutesToTime = (time24, minutes) => {
-  if (!time24) return '';
-  const [h, m] = time24.split(':').map(Number);
-  const totalMins = Math.round(h * 60 + m + minutes);
-  const newH = Math.floor(totalMins / 60) % 24;
-  const newM = totalMins % 60;
-  return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
-};
-
 const roundUpTo5 = (time24) => {
   if (!time24) return '';
   const [h, m] = time24.split(':').map(Number);

@@ -115,7 +115,7 @@ function ImageViewer({ visible, imageUrl, images, initialIndex = 0, onClose }) {
   const handleSave = useCallback(async (index) => {
     try {
       setSaving(true);
-      const { status } = await MediaLibrary.requestPermissionsAsync();
+      const { status } = await MediaLibrary.requestPermissionsAsync(true); // write-only: no on-device photo reading, only saving
       if (status !== 'granted' && status !== 'limited') {
         Alert.alert(
           'Permission needed',

@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatDuration } from '../../utils/formatDuration';
-import { computeSetlistDuration, formatSetlistDuration, MC_DEFAULT_DURATION_SECS } from '../../utils/setlistDuration';
+import { computeSetlistDuration, formatSetlistDuration, MC_DEFAULT_DURATION_SECS, formatTime12h } from '../../utils/setlistDuration';
 import SetlistPrintPreviewModal from './SetlistPrintPreviewModal';
 import SetlistBuilder from './SetlistBuilder';
 import SongForm from './SongForm';
@@ -430,13 +430,6 @@ function SetlistList({ workspaceId, workspaceName, workspace }) {
     return `${actualLabel} (${paddedLabel} with ${paddingSecs}s gaps)`;
   }, [transitionPaddingSecs]);
 
-  const formatTime12h = useCallback((time24) => {
-    if (!time24) return '';
-    const [h, m] = time24.split(':').map(Number);
-    const period = h >= 12 ? 'PM' : 'AM';
-    const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-    return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
-  }, []);
 
   // Memoized callbacks for SetlistCard to prevent unnecessary re-renders
   const handleViewSetlist = useCallback((setlist) => {

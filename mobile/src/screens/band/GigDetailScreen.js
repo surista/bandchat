@@ -18,7 +18,6 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { prepareImageForUpload } from '../../utils/prepareImageUpload';
 import * as DocumentPicker from 'expo-document-picker';
-import { Audio } from 'expo-av';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Calendar from 'expo-calendar';
 import { format, parseISO, formatDistanceToNow, differenceInHours } from 'date-fns';
@@ -695,6 +694,18 @@ export default function GigDetailScreen({ navigation, route }) {
 
   const handleAddPhotos = useCallback(async () => {
     try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please allow access to your photo library to add photos.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
+        return;
+      }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images', 'videos'],
         allowsMultipleSelection: true,

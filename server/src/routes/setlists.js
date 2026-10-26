@@ -2,7 +2,7 @@ import express from 'express';
 import { authenticate, isWorkspaceMember } from '../middleware/auth.js';
 import { apiLimiter } from '../middleware/rateLimit.js';
 import prisma, { USER_SELECT_BRIEF } from '../lib/prisma.js';
-import { getEffectivePlan, getPlanLimits } from '../lib/planLimits.js';
+import { getPlanLimits } from '../lib/planLimits.js';
 import { triggerWebsiteSync } from '../services/websiteDeployment.js';
 import { logAudit } from '../lib/audit.js';
 import { checkText, TEXT_LIMITS } from '../lib/validators.js';

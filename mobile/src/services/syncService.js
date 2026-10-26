@@ -21,7 +21,7 @@ export async function initialSync(workspaceId) {
     if (data.channels) await upsertChannels(data.channels, workspaceId);
     if (data.messages) {
       await upsertMessages(data.messages);
-      // Emit per-channel events so useLocalMessages hooks re-render
+      // Emit per-channel events so screens subscribed to dbEvents re-render
       const channelIds = [...new Set(data.messages.map(m => m.channelId))];
       channelIds.forEach(cid => dbEvents.emit(`messages:${cid}`));
     }

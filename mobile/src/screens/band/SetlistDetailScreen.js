@@ -18,7 +18,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
-import { computeSetlistDuration, formatSetlistDuration, MC_DEFAULT_DURATION_SECS } from '../../utils/setlistDuration';
+import { computeSetlistDuration, formatSetlistDuration, MC_DEFAULT_DURATION_SECS, getEffectiveSetBreakCount } from '../../utils/setlistDuration';
 import { buildSetlistHTML } from '../../utils/buildSetlistHTML';
 import ActionSheet from '../../components/ActionSheet';
 import { successNotification, mediumImpact, selectionFeedback } from '../../utils/haptics';
@@ -212,33 +212,9 @@ export default function SetlistDetailScreen({ navigation, route }) {
 
   const items = setlist?.songs || [];
   const songItems = items.filter(s => s.type === 'SONG' || (!s.type && s.song));
-  const setBreaks = items.filter(s => s.type === 'SET_BREAK');
-  // Count only breaks that actually separate sets (skip leading breaks before any content)
-  const firstContentIdx = items.findIndex(s => s.type !== 'SET_BREAK');
-  const effectiveBreaks = firstContentIdx >= 0
-    ? items.filter((s, i) => s.type === 'SET_BREAK' && i > firstContentIdx).length
-    : 0;
+  const effectiveBreaks = getEffectiveSetBreakCount(items);
   const { actualSecs: totalActualSecs, paddedSecs: totalPaddedSecs, paddingSecs: totalPaddingSecs } = computeSetlistDuration(items, transitionPaddingSecs);
   const totalHasPadding = totalPaddingSecs > 0 && totalPaddedSecs !== totalActualSecs;
-  // `totalDuration` kept for existing call sites that format a single number.
-  // It uses the padded total (realistic gig length with transitions).
-  const totalDuration = totalPaddedSecs;
-
-  // Reorder (arrow buttons - used in non-drag mode)
-  const moveItem = useCallback(async (index, direction) => {
-    const newIndex = index + direction;
-    if (newIndex < 0 || newIndex >= items.length) return;
-    const newItems = [...items];
-    const temp = newItems[index];
-    newItems[index] = newItems[newIndex];
-    newItems[newIndex] = temp;
-    setSetlist(prev => ({ ...prev, songs: newItems }));
-    try {
-      await api.reorderSetlistItems(setlistId, newItems.map(i => i.id));
-    } catch (err) {
-      loadSetlist(); // revert on error
-    }
-  }, [items, setlistId, loadSetlist]);
 
   // Drag-and-drop reorder
   const handleDragReorder = useCallback(async (newItems) => {

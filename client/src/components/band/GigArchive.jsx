@@ -613,11 +613,6 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
     }
   };
 
-  const getYouTubeEmbedUrl = (url) => {
-    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
-    return match ? `https://www.youtube.com/embed/${match[1]}` : null;
-  };
-
   // Extract YouTube video ID from URL
   const getYouTubeVideoId = (url) => {
     const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);

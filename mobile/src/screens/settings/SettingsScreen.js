@@ -803,6 +803,8 @@ export default function SettingsScreen({ navigation, route }) {
                 style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
                 onPress={() => setShowDefaultsModal(false)}
                 disabled={savingDefaults}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel"
               >
                 <Text style={[styles.modalButtonText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
               </TouchableOpacity>
@@ -810,6 +812,8 @@ export default function SettingsScreen({ navigation, route }) {
                 style={[styles.modalButton, { backgroundColor: colors.primary }]}
                 onPress={handleSaveDefaults}
                 disabled={savingDefaults}
+                accessibilityRole="button"
+                accessibilityLabel="Save"
               >
                 {savingDefaults ? (
                   <ActivityIndicator color={colors.primaryText} size="small" />

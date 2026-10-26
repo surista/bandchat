@@ -38,7 +38,7 @@ export default {
     name: 'BandChat',
     slug: 'bandchat',
     scheme: 'bandchat',
-    version: '1.07.69',
+    version: '1.07.70',
     // 'default' (not 'portrait') so the Android manifest doesn't ship
     // screenOrientation="PORTRAIT" — Android 16 force-ignores that on
     // tablets/foldables anyway and Google Play flags it as a recommended
@@ -61,7 +61,7 @@ export default {
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.bandchat.mobile',
-      buildNumber: '10769',
+      buildNumber: '10770',
       associatedDomains: ['applinks:bandchat.vercel.app'],
       entitlements: {
         'com.apple.security.application-groups': ['group.com.bandchat.manager.mobile'],
@@ -88,7 +88,7 @@ export default {
     android: {
       package: 'com.bandchat.mobile',
       softwareKeyboardLayoutMode: 'resize',
-      versionCode: 10769,
+      versionCode: 10770,
       allowBackup: false,
       predictiveBackGestureEnabled: true,
       adaptiveIcon: {
@@ -120,7 +120,6 @@ export default {
         'CAMERA',
         'READ_MEDIA_IMAGES',
         'READ_MEDIA_VIDEO',
-        'READ_MEDIA_AUDIO',
         'RECORD_AUDIO',
         'READ_CALENDAR',
         'WRITE_CALENDAR',
@@ -203,8 +202,13 @@ export default {
             // warning (3% obfuscation, "-" for shrinking/R8 configuration)
             // is flagging. Needs a test build on the internal track first —
             // first-time R8 enablement can occasionally need extra keep
-            // rules (extraProguardRules below) if a native module relies on
-            // reflection without shipping its own consumer proguard rules.
+            // rules if a native module relies on reflection without shipping
+            // its own consumer proguard rules. If that happens, add a sibling
+            // `extraProguardRules: "-keep class ..."` string property here
+            // (expo-build-properties appends it to android/app/proguard-rules.pro
+            // on prebuild) -- there is no such property in this config yet,
+            // and hand-editing the generated proguard-rules.pro directly
+            // won't survive the next prebuild (android/ is gitignored).
             enableMinifyInReleaseBuilds: true,
             enableShrinkResourcesInReleaseBuilds: true,
           },

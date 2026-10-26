@@ -61,6 +61,21 @@ export default function TurnstileModal({ visible, onVerify, onClose }) {
     }
   };
 
+  // Only the initial inline-HTML load (reported as about:blank/data: by
+  // different WebView engines) and Cloudflare's own challenge origin are
+  // legitimate here -- reject any other top-level navigation. If the
+  // Cloudflare script were ever compromised or MITM'd, this stops it from
+  // redirecting the WebView to an arbitrary attacker URL inside the signup
+  // flow's modal.
+  const handleShouldStartLoad = (request) => {
+    const { url } = request;
+    return (
+      url.startsWith('about:blank') ||
+      url.startsWith('data:') ||
+      url.startsWith('https://challenges.cloudflare.com/')
+    );
+  };
+
   if (!SITE_KEY) return null;
 
   return (
@@ -74,7 +89,8 @@ export default function TurnstileModal({ visible, onVerify, onClose }) {
             startInLoadingState
             renderLoading={() => <ActivityIndicator style={StyleSheet.absoluteFill} color={colors.primary} />}
             scrollEnabled={false}
-            originWhitelist={['*']}
+            originWhitelist={['about:blank', 'https://challenges.cloudflare.com']}
+            onShouldStartLoadWithRequest={handleShouldStartLoad}
           />
         </View>
       </View>

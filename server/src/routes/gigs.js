@@ -1471,8 +1471,17 @@ router.put('/:gigId/complete', authenticate, async (req, res) => {
       data: { status: 'COMPLETED' }
     });
 
-    // Record songs played
+    // Record songs played. Verify each songId belongs to this gig's
+    // workspace -- without this, a client-supplied id from ANOTHER
+    // workspace would be inserted as-is, leaking that workspace's song
+    // title/artist into this gig's "songs played" list and stats.
     if (songIds && songIds.length > 0) {
+      const validSongs = await prisma.song.count({
+        where: { id: { in: songIds }, workspaceId: existingGig.workspaceId }
+      });
+      if (validSongs !== songIds.length) {
+        return res.status(400).json({ error: 'One or more songs not found in this workspace' });
+      }
       await prisma.gigSong.createMany({
         data: songIds.map(songId => ({
           gigId: req.params.gigId,
@@ -2203,8 +2212,13 @@ router.post('/workspace/:workspaceId/auto-link-setlists', authenticate, isWorksp
       s.gigs.length === 0 && s.gigSetlists.length === 0
     );
 
-    let linkedCount = 0;
+    // Matching decisions must stay sequential (removing a matched setlist
+    // from unlinkedSetlists prevents it from being double-booked to a later
+    // gig), but the decisions themselves don't need a DB round-trip -- only
+    // collect the writes here and batch them in one transaction below,
+    // instead of one sequential awaited update per match.
     const links = [];
+    const updates = [];
 
     for (const gig of unlinkedGigs) {
       const gigDate = new Date(gig.date).toDateString();
@@ -2226,11 +2240,10 @@ router.post('/workspace/:workspaceId/auto-link-setlists', authenticate, isWorksp
       });
 
       if (matchingSetlist) {
-        await prisma.gig.update({
+        updates.push(prisma.gig.update({
           where: { id: gig.id },
           data: { setlistId: matchingSetlist.id }
-        });
-        linkedCount++;
+        }));
         links.push({ gig: gig.title, setlist: matchingSetlist.name });
 
         // Remove from unlinkedSetlists so we don't match it again
@@ -2238,6 +2251,11 @@ router.post('/workspace/:workspaceId/auto-link-setlists', authenticate, isWorksp
         if (idx > -1) unlinkedSetlists.splice(idx, 1);
       }
     }
+
+    if (updates.length > 0) {
+      await prisma.$transaction(updates);
+    }
+    const linkedCount = updates.length;
 
     console.log(`Auto-linked ${linkedCount} gigs to setlists:`, links);
     res.json({ linkedCount, links });

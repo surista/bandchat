@@ -24,7 +24,7 @@ import ActionSheet from '../../components/ActionSheet';
 import useDebounce from '../../hooks/useDebounce';
 import api from '../../services/api';
 import { formatDuration } from '../../utils/formatDuration';
-import { computeSetlistDuration, formatSetlistDuration } from '../../utils/setlistDuration';
+import { computeSetlistDuration, formatSetlistDuration, getEffectiveSetBreakCount } from '../../utils/setlistDuration';
 import { buildSetlistHTML } from '../../utils/buildSetlistHTML';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -218,12 +218,7 @@ export default function SetlistListScreen({ navigation, route }) {
   const renderSetlist = useCallback(({ item }) => {
     const songs = (item.songs || []).filter(s => s.type === 'SONG' || (!s.type && s.song));
     const songCount = songs.length;
-    const allItems = item.songs || [];
-    const setBreaks = allItems.filter(s => s.type === 'SET_BREAK');
-    const firstContentIdx = allItems.findIndex(s => s.type !== 'SET_BREAK');
-    const effectiveBreaks = firstContentIdx >= 0
-      ? allItems.filter((s, i) => s.type === 'SET_BREAK' && i > firstContentIdx).length
-      : 0;
+    const effectiveBreaks = getEffectiveSetBreakCount(item.songs || []);
     const setCount = effectiveBreaks + 1;
     const { actualSecs: totalActualSecs, paddedSecs: totalPaddedSecs, paddingSecs: itemPaddingSecs } = computeSetlistDuration(item.songs, transitionPaddingSecs);
     const itemHasPadding = itemPaddingSecs > 0 && totalPaddedSecs !== totalActualSecs;

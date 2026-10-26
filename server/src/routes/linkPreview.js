@@ -18,6 +18,7 @@ function isPrivateIP(ip) {
   if (ip === '0.0.0.0') return true;
   if (ip === '::1') return true;
   if (/^fc00/i.test(ip) || /^fd/i.test(ip)) return true;
+  if (/^fe[89ab][0-9a-f]:/i.test(ip)) return true; // IPv6 link-local fe80::/10
   return false;
 }
 
