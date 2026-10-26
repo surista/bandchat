@@ -1,6 +1,6 @@
 {
   "name": "bandchat-server",
-  "version": "1.07.68",
+  "version": "1.07.69",
   "description": "BandChat backend API",
   "main": "src/index.js",
   "type": "module",
@@ -38,6 +38,7 @@
     "resend": "^4.0.0",
     "sharp": "^0.35.3",
     "socket.io": "^4.8.1",
+    "undici": "^7.29.0",
     "web-push": "^3.6.7"
   },
   "engines": {

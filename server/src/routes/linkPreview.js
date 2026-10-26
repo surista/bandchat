@@ -1,6 +1,7 @@
 import express from 'express';
 import dns from 'node:dns/promises';
 import { rateLimit } from 'express-rate-limit';
+import { fetch as undiciFetch, Agent } from 'undici';
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -63,6 +64,31 @@ async function verifyDnsNotRebound(hostname, originalIP) {
   } catch {
     return false;
   }
+}
+
+/**
+ * Builds an undici Agent whose connections are pinned to a specific IP,
+ * regardless of what the hostname re-resolves to. Without this, validating
+ * an IP via dns.lookup() and then fetching by hostname is cosmetic: fetch()
+ * performs its own independent DNS resolution when it opens the connection,
+ * so a short-TTL DNS record can answer the validation check with a public IP
+ * and the real connection with a private/internal one a moment later
+ * (DNS rebinding). TLS SNI/certificate hostname checks still use the
+ * original hostname — only the socket's destination address is pinned.
+ */
+function pinnedIpAgent(ip) {
+  const family = ip.includes(':') ? 6 : 4;
+  return new Agent({
+    connect: {
+      lookup: (_hostname, options, callback) => {
+        if (options?.all) {
+          callback(null, [{ address: ip, family }]);
+        } else {
+          callback(null, ip, family);
+        }
+      },
+    },
+  });
 }
 
 // In-memory LRU cache with 1h TTL and hard cap of 200 entries
@@ -142,13 +168,16 @@ router.get('/', authenticate, linkPreviewLimiter, async (req, res) => {
     const MAX_REDIRECTS = 3;
 
     for (let i = 0; i <= MAX_REDIRECTS; i++) {
-      response = await fetch(currentUrl, {
+      // Connect to the validated/pinned IP rather than letting fetch()
+      // re-resolve the hostname itself -- see pinnedIpAgent() above.
+      response = await undiciFetch(currentUrl, {
         signal: controller.signal,
         headers: {
           'User-Agent': 'BandChat LinkPreview/1.0',
           'Accept': 'text/html',
         },
         redirect: 'manual',
+        dispatcher: pinnedIpAgent(currentResolvedIP),
       });
 
       // Post-fetch DNS rebinding check: verify the IP hasn't changed to a private address

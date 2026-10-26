@@ -406,6 +406,17 @@ router.post('/:setlistId/songs', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'songId is required' });
     }
 
+    // Verify the song belongs to this workspace. Without this, a workspace
+    // member could pass a song id from ANOTHER workspace; the FK insert
+    // succeeds and that song's title/artist/lyrics then leak into this
+    // workspace's setlist via the song include below.
+    const song = await prisma.song.findFirst({
+      where: { id: songId, workspaceId: setlist.workspaceId }
+    });
+    if (!song) {
+      return res.status(400).json({ error: 'Song not found in this workspace' });
+    }
+
     // Get current max position
     const maxPosition = await prisma.setlistSong.aggregate({
       where: { setlistId: req.params.setlistId },
@@ -930,6 +941,19 @@ router.post('/workspace/:workspaceId/import-multiset', authenticate, isWorkspace
       allResults.sets.push(results);
     }
 
+    // Verify the gig belongs to this workspace before creating anything --
+    // without this, a workspace member could pass a gig id from ANOTHER
+    // workspace and attach this setlist to it, leaking the setlist into that
+    // workspace's gig view.
+    if (gigId) {
+      const gig = await prisma.gig.findFirst({
+        where: { id: gigId, workspaceId: req.params.workspaceId }
+      });
+      if (!gig) {
+        return res.status(400).json({ error: 'Gig not found in this workspace' });
+      }
+    }
+
     // Create the single setlist with all items
     const setlist = await prisma.setlist.create({
       data: {
@@ -949,7 +973,7 @@ router.post('/workspace/:workspaceId/import-multiset', authenticate, isWorkspace
       }
     });
 
-    // If gigId provided, link setlist to gig
+    // If gigId provided, link setlist to gig (already validated above)
     if (gigId) {
       await prisma.gigSetlist.create({
         data: {

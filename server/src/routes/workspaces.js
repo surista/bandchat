@@ -368,7 +368,7 @@ router.put('/:workspaceId', authenticate, isWorkspaceAdmin, async (req, res) => 
       return res.status(400).json({ error: 'Venue must be 200 characters or less' });
     }
 
-    if (avatarUrl !== undefined && avatarUrl && !isAllowedUploadUrl(avatarUrl)) {
+    if (avatarUrl !== undefined && avatarUrl && !isAllowedUploadUrl(avatarUrl).valid) {
       return res.status(400).json({ error: 'Invalid avatar URL' });
     }
 
