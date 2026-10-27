@@ -798,29 +798,56 @@ router.post('/link-apple', authenticate, async (req, res) => {
 // Refresh token (rate limited to prevent token enumeration)
 router.post('/refresh', refreshLimiter, async (req, res) => {
   try {
-    // Check httpOnly cookie first (web clients), then fall back to body (mobile clients)
-    const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
+    // Web clients send both: the httpOnly cookie AND the same token in the
+    // body as a fallback (sessionStorage-backed), specifically because
+    // cross-site SameSite=None cookies get silently dropped or fail to
+    // update on some browsers' ITP/third-party-cookie policies even with
+    // Secure set correctly server-side. A stale cookie is the common case —
+    // when the browser never persists cookie updates past the first one,
+    // the cookie keeps resending an already-rotated (and now-deleted) token
+    // on every request while the body candidate is the genuinely current
+    // one. Previously this route picked the cookie unconditionally whenever
+    // present, so that stale cookie permanently shadowed a valid body
+    // token — every refresh failed with "revoked", forcing a full re-login
+    // on every page reload. Try each present candidate in order (cookie
+    // first, since it's authoritative when it IS being kept in sync) and
+    // only fail if none of them validate.
+    const candidates = [...new Set([req.cookies?.refreshToken, req.body?.refreshToken].filter(Boolean))];
 
-    if (!refreshToken) {
+    if (candidates.length === 0) {
       return res.status(400).json({ error: 'Refresh token required' });
     }
 
-    // Verify JWT signature first
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, { algorithms: ['HS256'] });
+    let refreshToken = null;
+    let decoded = null;
+    let storedToken = null;
+    let lastExpiredJwt = false;
 
-    if (decoded.type !== 'refresh') {
-      return res.status(401).json({ error: 'Invalid refresh token' });
+    for (const candidate of candidates) {
+      let candidateDecoded;
+      try {
+        candidateDecoded = jwt.verify(candidate, process.env.JWT_REFRESH_SECRET, { algorithms: ['HS256'] });
+      } catch (err) {
+        lastExpiredJwt = err.name === 'TokenExpiredError';
+        continue;
+      }
+      if (candidateDecoded.type !== 'refresh') continue;
+
+      const candidateStored = await prisma.refreshToken.findUnique({
+        where: { token: hashRefreshToken(candidate) }
+      });
+      if (!candidateStored) continue;
+
+      refreshToken = candidate;
+      decoded = candidateDecoded;
+      storedToken = candidateStored;
+      break;
     }
 
-    // Hash the token to look it up in database
-    const hashedToken = hashRefreshToken(refreshToken);
-
-    // Check if hashed token exists in database (not revoked)
-    let storedToken = await prisma.refreshToken.findUnique({
-      where: { token: hashedToken }
-    });
-
     if (!storedToken) {
+      if (!decoded && lastExpiredJwt) {
+        return res.status(401).json({ error: 'Invalid or expired refresh token' });
+      }
       return res.status(401).json({ error: 'Refresh token has been revoked' });
     }
 
