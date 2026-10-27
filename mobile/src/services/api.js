@@ -852,6 +852,11 @@ class ApiService {
     return this.request(`/messages/${messageId}/replies`);
   }
 
+  async getMessagesAround(channelId, messageId, limit = 25) {
+    const params = new URLSearchParams({ limit });
+    return this.request(`/messages/channel/${channelId}/around/${messageId}?${params}`);
+  }
+
   async sendMessage(channelId, content, parentId = null, attachments = null) {
     return this.request(`/messages/channel/${channelId}`, {
       method: 'POST',

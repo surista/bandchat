@@ -80,11 +80,18 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   // re-renders don't re-trigger the open. The msg= param is preserved so
   // ThreadView can scroll to/highlight the specific reply within the thread.
   const threadAutoOpenedRef = useRef(false);
+  // The reply a search result/notification pointed at never appears in this
+  // top-level message list (only its parent does) — once the thread panel
+  // has claimed it, suppress MessageList's own highlight-seek for the same
+  // id so it doesn't show a confusing "not in current view" toast right
+  // after successfully opening the thread.
+  const [highlightClaimedByThread, setHighlightClaimedByThread] = useState(null);
   useEffect(() => {
     if (!autoOpenThreadId || threadAutoOpenedRef.current || loading) return;
 
     const openParent = (parent) => {
       threadAutoOpenedRef.current = true;
+      setHighlightClaimedByThread(highlightMessageId);
       onOpenThread?.(parent);
       setSearchParams(prev => {
         const next = new URLSearchParams(prev);
@@ -120,7 +127,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       toast.info('That thread could not be opened — the message may have been deleted.');
     });
     return () => { cancelled = true; };
-  }, [autoOpenThreadId, messages, loading, onOpenThread, setSearchParams, toast]);
+  }, [autoOpenThreadId, messages, loading, onOpenThread, setSearchParams, toast, highlightMessageId]);
 
   const lastReadAtRef = useRef(null);
   const firstUnreadMessageIdRef = useRef(null);
@@ -156,10 +163,28 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
     // Load messages FIRST, then join socket room to prevent race condition.
     // This ensures no gap between the API snapshot and socket subscription
     // where messages could be lost.
+    let usedAround = false;
     const init = async () => {
       setLoading(true);
       try {
-        const data = await api.getMessages(channel.id);
+        // A deep link (search result, thread-reply notification, in-message
+        // link) may point at a message far older than the latest page. Try
+        // to load a window anchored around it first; fall back to the
+        // normal latest-page load if it's not found (e.g. deleted, or the
+        // link is stale) so the channel still opens.
+        let data = null;
+        if (highlightMessageId) {
+          try {
+            const around = await api.getMessagesAround(channel.id, highlightMessageId);
+            data = { messages: around.messages, hasMore: around.hasMoreBefore, nextCursor: around.beforeCursor };
+            usedAround = true;
+          } catch {
+            // Fall through to the normal load below.
+          }
+        }
+        if (!data) {
+          data = await api.getMessages(channel.id);
+        }
         if (cancelled) return;
         setMessages(data.messages);
         setHasMore(data.hasMore);
@@ -179,13 +204,16 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
           ) || null;
         }
         firstUnreadMessageIdRef.current = unreadTarget?.id || null;
-        // Always establish "bottom" (most recent) as the baseline position so
-        // the channel can never open stranded at the top. When there's a first
+        // Establish "bottom" (most recent) as the baseline position so the
+        // channel can never open stranded at the top. When there's a first
         // unread message, MessageList scrolls up to it on top of this baseline;
         // if that scroll can't locate the element for any reason, we're left at
         // the most recent message — exactly "first unread, otherwise most
-        // recent."
-        setShouldScrollToBottom(true);
+        // recent." Skipped when we loaded an anchored window around a deep
+        // link instead of the latest page — MessageList's highlight effect
+        // positions the view there instead, and bottom isn't even in the
+        // loaded window.
+        setShouldScrollToBottom(!usedAround);
 
         // Mark channel as read BEFORE joining socket room so any new messages
         // that arrive after join will correctly be "after" the read timestamp
@@ -208,10 +236,13 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
           // Baseline bottom scroll after React paints the messages. When
           // there's a first-unread target, MessageList's scroll-to effect runs
           // afterward and moves up to it; if it can't find the element we stay
-          // here at the most recent message.
+          // here at the most recent message. Skipped entirely when we loaded
+          // an anchored window (usedAround) — "bottom" of that window isn't a
+          // meaningful position, and it would otherwise flash there briefly
+          // before MessageList's highlight effect corrects it.
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
-              if (!cancelled && messagesContainerRef.current) {
+              if (!cancelled && !usedAround && messagesContainerRef.current) {
                 messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
               }
             });
@@ -1105,7 +1136,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
               workspaceId={workspace?.id}
               channels={channels}
               onSelectChannel={onSelectChannel}
-              highlightMessageId={highlightMessageId}
+              highlightMessageId={highlightMessageId !== highlightClaimedByThread ? highlightMessageId : null}
               scrollToMessageId={firstUnreadMessageIdRef.current}
             />
             <div ref={messagesEndRef} />

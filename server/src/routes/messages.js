@@ -201,6 +201,143 @@ router.get('/channel/:channelId', authenticate, isChannelMember, async (req, res
   }
 });
 
+// Get a page of messages centered on a specific message. Used when a deep
+// link (search result, thread-reply notification, in-message link) points
+// at a message that isn't in the most-recently-loaded page -- without this,
+// the client has no way to reach it and silently falls back to showing the
+// channel's latest messages instead. Independent before/after cursors let
+// the client keep paginating older (same as the regular list endpoint) or
+// newer from this anchor point.
+router.get('/channel/:channelId/around/:messageId', authenticate, isChannelMember, async (req, res) => {
+  try {
+    const { channelId, messageId } = req.params;
+    if (!isValidUUID(messageId)) {
+      return res.status(400).json({ error: 'Invalid message id' });
+    }
+    const limit = Math.min(parseInt(req.query.limit) || 25, 50);
+
+    const target = await prisma.message.findFirst({
+      where: { id: messageId, channelId, parentId: null }
+    });
+    if (!target) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+
+    const channelWorkspaceId = req.channel?.workspaceId;
+    const workspace = await prisma.workspace.findUnique({ where: { id: channelWorkspaceId }, select: { plan: true, planExpiresAt: true } });
+    const limits = getPlanLimits(workspace);
+    const retentionFilter = limits.messageRetentionDays
+      ? { gte: new Date(Date.now() - limits.messageRetentionDays * 86400000) }
+      : undefined;
+
+    const blockedUsers = await prisma.blockedUser.findMany({
+      where: { blockerId: req.user.id },
+      select: { blockedUserId: true }
+    });
+    const blockedIds = blockedUsers.map(b => b.blockedUserId);
+
+    const baseWhere = {
+      channelId,
+      parentId: null,
+      ...(blockedIds.length > 0 && { authorId: { notIn: blockedIds } }),
+      ...(retentionFilter && { createdAt: retentionFilter })
+    };
+    const include = {
+      author: { select: { id: true, displayName: true, avatarUrl: true } },
+      attachments: true,
+      ...reactionsInclude,
+      _count: { select: { replies: true } }
+    };
+
+    const [beforeAndTarget, after] = await Promise.all([
+      prisma.message.findMany({
+        where: { ...baseWhere, createdAt: { lte: target.createdAt } },
+        take: limit + 1,
+        orderBy: { createdAt: 'desc' },
+        include
+      }),
+      prisma.message.findMany({
+        where: { ...baseWhere, createdAt: { gt: target.createdAt } },
+        take: limit + 1,
+        orderBy: { createdAt: 'asc' },
+        include
+      })
+    ]);
+
+    const hasMoreBefore = beforeAndTarget.length > limit;
+    const hasMoreAfter = after.length > limit;
+    const beforeItems = (hasMoreBefore ? beforeAndTarget.slice(0, limit) : beforeAndTarget).reverse();
+    const afterItems = hasMoreAfter ? after.slice(0, limit) : after;
+    const result = [...beforeItems, ...afterItems];
+
+    // Same unreadReplies enrichment as the regular list endpoint.
+    const threadIds = result.filter(m => m._count.replies > 0).map(m => m.id);
+    let unreadMap = {};
+    if (threadIds.length > 0) {
+      const threadReads = await prisma.threadRead.findMany({
+        where: { userId: req.user.id, messageId: { in: threadIds } }
+      });
+      const threadReadMap = Object.fromEntries(threadReads.map(tr => [tr.messageId, tr.lastRead]));
+      const membership = await prisma.channelMember.findUnique({
+        where: { userId_channelId: { userId: req.user.id, channelId } }
+      });
+      const channelLastRead = membership?.lastRead || new Date(0);
+      const threadsWithCustomRead = threadIds.filter(id => threadReadMap[id]);
+      const threadsWithDefaultRead = threadIds.filter(id => !threadReadMap[id]);
+
+      if (threadsWithDefaultRead.length > 0) {
+        const unreadCounts = await prisma.message.groupBy({
+          by: ['parentId'],
+          where: {
+            parentId: { in: threadsWithDefaultRead },
+            authorId: { not: req.user.id },
+            createdAt: { gt: channelLastRead }
+          },
+          _count: { id: true }
+        });
+        unreadCounts.forEach(item => {
+          unreadMap[item.parentId] = item._count.id;
+        });
+      }
+      if (threadsWithCustomRead.length > 0) {
+        const earliestRead = new Date(
+          Math.min(...threadsWithCustomRead.map(id => new Date(threadReadMap[id]).getTime()))
+        );
+        const candidateReplies = await prisma.message.findMany({
+          where: {
+            parentId: { in: threadsWithCustomRead },
+            authorId: { not: req.user.id },
+            createdAt: { gt: earliestRead }
+          },
+          select: { parentId: true, createdAt: true }
+        });
+        const counts = {};
+        for (const r of candidateReplies) {
+          if (new Date(r.createdAt) > new Date(threadReadMap[r.parentId])) {
+            counts[r.parentId] = (counts[r.parentId] || 0) + 1;
+          }
+        }
+        threadsWithCustomRead.forEach(id => {
+          unreadMap[id] = counts[id] || 0;
+        });
+      }
+    }
+
+    const enriched = result.map(m => ({ ...m, unreadReplies: unreadMap[m.id] || 0 }));
+
+    res.json({
+      messages: enriched,
+      hasMoreBefore,
+      hasMoreAfter,
+      beforeCursor: hasMoreBefore ? enriched[0].id : null,
+      afterCursor: hasMoreAfter ? enriched[enriched.length - 1].id : null
+    });
+  } catch (error) {
+    console.error('Get messages around error:', error);
+    res.status(500).json({ error: 'Failed to get messages' });
+  }
+});
+
 // Get thread replies (paginated, max 200 per page)
 router.get('/:messageId/replies', authenticate, async (req, res) => {
   try {

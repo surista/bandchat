@@ -471,19 +471,40 @@ export default function ChannelScreen({ navigation, route }) {
       setMessages([]);
       setTypingUsers([]);
 
-      // Pre-load from SQLite for instant display
-      try {
-        const cached = await getLocalMessages(channel.id, 50);
-        if (!cancelled && cached.length > 0) {
-          setMessages(cached);
-          setLoading(false);
+      // Pre-load from SQLite for instant display. Skipped for a deep link to
+      // a specific message — the cache only ever holds the latest page, so
+      // showing it first would just flash the wrong messages before the
+      // anchored fetch below replaces them.
+      if (!highlightMessageId) {
+        try {
+          const cached = await getLocalMessages(channel.id, 50);
+          if (!cancelled && cached.length > 0) {
+            setMessages(cached);
+            setLoading(false);
+          }
+        } catch (e) {
+          console.error('Failed to load cached messages from SQLite:', e);
         }
-      } catch (e) {
-        console.error('Failed to load cached messages from SQLite:', e);
       }
 
       try {
-        const data = await api.getMessages(channel.id);
+        // A deep link (search result, thread-reply notification, in-message
+        // link) may point at a message far older than the latest page. Try
+        // to load a window anchored around it first; fall back to the
+        // normal latest-page load if it's not found (e.g. deleted, or the
+        // link is stale) so the channel still opens.
+        let data = null;
+        if (highlightMessageId) {
+          try {
+            const around = await api.getMessagesAround(channel.id, highlightMessageId);
+            data = { messages: around.messages, hasMore: around.hasMoreBefore, nextCursor: around.beforeCursor };
+          } catch {
+            // Fall through to the normal load below.
+          }
+        }
+        if (!data) {
+          data = await api.getMessages(channel.id);
+        }
         if (cancelled) return;
         setMessages(data.messages);
         setHasMore(data.hasMore);
@@ -508,7 +529,7 @@ export default function ChannelScreen({ navigation, route }) {
       cancelled = true;
       leaveChannel(channel.id);
     };
-  }, [channel.id, joinChannel, leaveChannel, retryCount]);
+  }, [channel.id, joinChannel, leaveChannel, retryCount, highlightMessageId]);
 
   // Socket event handlers
   useEffect(() => {
