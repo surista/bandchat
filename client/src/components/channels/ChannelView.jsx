@@ -76,10 +76,13 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   // Auto-open thread view when arriving from a thread-reply notification or
   // an Activity/All Messages click (both set ?thread=<parentId>). Waits for
   // the initial message page to load, then resolves the parent message
-  // object and calls onOpenThread once. Guarded by a ref so message-list
-  // re-renders don't re-trigger the open. The msg= param is preserved so
-  // ThreadView can scroll to/highlight the specific reply within the thread.
-  const threadAutoOpenedRef = useRef(false);
+  // object and calls onOpenThread once. Keyed per autoOpenThreadId (not a
+  // plain boolean latch) so a SECOND thread-reply click while staying on the
+  // same channel still opens — a plain latch set true on the first click
+  // would silently block every click after it for the rest of the channel
+  // mount. The msg= param is preserved so ThreadView can scroll to/highlight
+  // the specific reply within the thread.
+  const threadAutoOpenedForRef = useRef(null);
   // The reply a search result/notification pointed at never appears in this
   // top-level message list (only its parent does) — once the thread panel
   // has claimed it, suppress MessageList's own highlight-seek for the same
@@ -87,10 +90,11 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
   // after successfully opening the thread.
   const [highlightClaimedByThread, setHighlightClaimedByThread] = useState(null);
   useEffect(() => {
-    if (!autoOpenThreadId || threadAutoOpenedRef.current || loading) return;
+    if (!autoOpenThreadId || loading) return;
+    if (threadAutoOpenedForRef.current === autoOpenThreadId) return;
+    threadAutoOpenedForRef.current = autoOpenThreadId;
 
     const openParent = (parent) => {
-      threadAutoOpenedRef.current = true;
       setHighlightClaimedByThread(highlightMessageId);
       onOpenThread?.(parent);
       setSearchParams(prev => {
@@ -114,16 +118,14 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
     // by id instead — getReplies() was built for exactly this case.
     let cancelled = false;
     api.getReplies(autoOpenThreadId).then(data => {
-      if (cancelled || threadAutoOpenedRef.current) return;
+      if (cancelled) return;
       if (data?.parent) {
         openParent(data.parent);
       } else {
-        threadAutoOpenedRef.current = true;
         toast.info('That thread could not be opened — the message may have been deleted.');
       }
     }).catch(() => {
-      if (cancelled || threadAutoOpenedRef.current) return;
-      threadAutoOpenedRef.current = true;
+      if (cancelled) return;
       toast.info('That thread could not be opened — the message may have been deleted.');
     });
     return () => { cancelled = true; };
@@ -131,6 +133,12 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
 
   const lastReadAtRef = useRef(null);
   const firstUnreadMessageIdRef = useRef(null);
+  // Tracks which `${channelId}:${highlightMessageId}` pair has already had an
+  // anchored-fetch attempt (successful or not), whether that happened inside
+  // the channel-init effect below or the same-channel re-target effect
+  // further down. Prevents double-fetching and lets the latter effect know
+  // whether init() already handled the current target.
+  const highlightHandledRef = useRef(null);
   const descriptionSavedRef = useRef(false);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -174,6 +182,7 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
         // link is stale) so the channel still opens.
         let data = null;
         if (highlightMessageId) {
+          highlightHandledRef.current = `${channel.id}:${highlightMessageId}`;
           try {
             const around = await api.getMessagesAround(channel.id, highlightMessageId);
             data = { messages: around.messages, hasMore: around.hasMoreBefore, nextCursor: around.beforeCursor };
@@ -263,6 +272,37 @@ function ChannelView({ channel, workspace, onOpenThread, onUpdateUnread, openThr
       }
     };
   }, [channel.id]);
+
+  // Handles a message deep link (search result, Activity/All Messages click)
+  // that points at a channel the user is ALREADY viewing. The init effect
+  // above is keyed only on channel.id, so it never re-runs in that case --
+  // without this, clicking a different message in the same open channel did
+  // nothing, since nothing re-fetched and MessageList's own highlight effect
+  // only ever searches whatever page is already loaded.
+  useEffect(() => {
+    if (!highlightMessageId || loading) return;
+    const key = `${channel.id}:${highlightMessageId}`;
+    if (highlightHandledRef.current === key) return;
+    highlightHandledRef.current = key;
+    if (messages.some(m => m.id === highlightMessageId)) return; // already loaded
+
+    let cancelled = false;
+    api.getMessagesAround(channel.id, highlightMessageId).then(around => {
+      if (cancelled) return;
+      setMessages(around.messages);
+      setHasMore(around.hasMoreBefore);
+      setNextCursor(around.beforeCursor);
+    }).catch(() => {
+      // Leave messages as-is; MessageList's highlight effect shows the
+      // "not in current view" toast for a target it truly can't find.
+    });
+    return () => { cancelled = true; };
+    // `messages` is read above but deliberately not a dependency -- it
+    // changes on every socket event, and the highlightHandledRef guard above
+    // already ensures this effect's actual fetch only ever runs once per
+    // (channel, highlightMessageId) pair.
+    // eslint-disable-next-line
+  }, [highlightMessageId, channel.id, loading]);
 
   // Scroll to bottom after messages are rendered (useLayoutEffect runs
   // synchronously before paint, so the user never sees an unscrolled state)
