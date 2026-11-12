@@ -14,6 +14,7 @@
 
 import { format } from 'date-fns';
 import { escapeHtml } from './escapeHtml';
+import { formatDateOnly } from './formatDate';
 import { computeSetlistDuration, computeSetDuration, formatSetlistDuration, formatTime12h, addMinutesToTime } from './setlistDuration';
 
 // Bounds for the print-preview font-size stepper (opts.fontSizeOverride).
@@ -90,7 +91,7 @@ export function buildSetlistHtml(setlist, opts = {}) {
   const hasPadding = paddingSecs > 0 && paddedSecs !== actualSecs;
 
   const dateStr = setlist.performedAt
-    ? format(new Date(setlist.performedAt), 'EEEE, dd-MMM-yyyy')
+    ? formatDateOnly(setlist.performedAt, 'EEEE, dd-MMM-yyyy')
     : format(new Date(), 'EEEE, dd-MMM-yyyy');
 
   // Per-set timings if a start time is provided. Mirrors SetlistBuilder.jsx's

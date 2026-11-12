@@ -30,3 +30,25 @@ describe('formatDate', () => {
     expect(formatDate('2028-02-29')).toBe('29-Feb-2028');
   });
 });
+
+describe('date-only helpers', async () => {
+  const { parseDateOnly, toDateOnlyString, formatDateOnly } = await import('../formatDate');
+
+  it('keeps the calendar day for a UTC-midnight value in any timezone', () => {
+    expect(formatDateOnly('2026-11-12T00:00:00.000Z')).toBe('12-Nov-2026');
+    expect(formatDateOnly('2026-11-12')).toBe('12-Nov-2026');
+  });
+
+  it('round-trips a local date through the wire format', () => {
+    const local = new Date(2026, 10, 12, 23, 30);
+    expect(toDateOnlyString(local)).toBe('2026-11-12');
+    expect(formatDateOnly(toDateOnlyString(local))).toBe('12-Nov-2026');
+  });
+
+  it('returns empty values for missing or invalid input', () => {
+    expect(parseDateOnly(null)).toBeNull();
+    expect(parseDateOnly('not a date')).toBeNull();
+    expect(formatDateOnly('')).toBe('');
+    expect(toDateOnlyString(null)).toBeNull();
+  });
+});

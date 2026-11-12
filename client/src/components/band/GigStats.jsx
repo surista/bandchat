@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { formatDate } from '../../utils/formatDate';
+import { formatDate, formatDateOnly } from '../../utils/formatDate';
 import { formatTotalDuration } from '../../utils/formatDuration';
 import ErrorMessage from '../common/ErrorMessage';
 import Modal from '../common/Modal';
@@ -371,7 +371,7 @@ function GigStats({ workspaceId }) {
                   >
                     <div className="text-[var(--color-text-primary)] font-medium">{setlist.name}</div>
                     <div className="text-[var(--color-text-muted)] text-sm">
-                      {formatDate(setlist.performedAt)} {setlist.venue && `• ${setlist.venue}`}
+                      {formatDateOnly(setlist.performedAt)} {setlist.venue && `• ${setlist.venue}`}
                     </div>
                   </div>
                 ))}
@@ -393,7 +393,7 @@ function GigStats({ workspaceId }) {
                     onClick={() => handleSetlistClick(setlist)}
                   >
                     <div className="text-[var(--color-text-primary)] font-medium">{setlist.name}</div>
-                    <div className="text-[var(--color-text-muted)] text-sm">{formatDate(setlist.performedAt)}</div>
+                    <div className="text-[var(--color-text-muted)] text-sm">{formatDateOnly(setlist.performedAt)}</div>
                   </div>
                 ))}
               </div>
@@ -422,7 +422,7 @@ function GigStats({ workspaceId }) {
                       <div className="text-cyan-400 font-medium">{setlist.songCount} songs</div>
                     </div>
                     <div className="text-[var(--color-text-muted)] text-sm">
-                      {formatDate(setlist.performedAt)} {setlist.venue && `• ${setlist.venue}`}
+                      {formatDateOnly(setlist.performedAt)} {setlist.venue && `• ${setlist.venue}`}
                     </div>
                   </div>
                 ))}
@@ -434,7 +434,7 @@ function GigStats({ workspaceId }) {
       <Modal isOpen={!!setlistDetail} onClose={() => setSetlistDetail(null)} title={setlistDetail?.name || 'Setlist'} maxWidth="max-w-lg">
             {setlistDetail && (
               <div className="px-4 text-[var(--color-text-muted)] text-sm -mt-2 mb-2">
-                {setlistDetail.performedAt && formatDate(setlistDetail.performedAt)}
+                {setlistDetail.performedAt && formatDateOnly(setlistDetail.performedAt)}
                 {setlistDetail.venue && ` • ${setlistDetail.venue}`}
               </div>
             )}

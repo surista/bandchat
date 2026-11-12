@@ -8,6 +8,7 @@ import ImageLightbox from '../common/ImageLightbox';
 import Modal from '../common/Modal';
 import { formatDuration, formatTotalDuration } from '../../utils/formatDuration';
 import getInitial from '../../utils/getInitial';
+import { parseDateOnly, toDateOnlyString } from '../../utils/formatDate';
 import ErrorMessage from '../common/ErrorMessage';
 
 function GigArchive({ workspaceId, isAdmin, workspace }) {
@@ -151,7 +152,7 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
   const setlistEntries = setlists.map(setlist => {
     // Use setlist's performedAt/venue fields first, then fall back to parsing name
     const parsed = parseSetlistName(setlist.name);
-    const setlistDate = setlist.performedAt ? new Date(setlist.performedAt) : parsed.date;
+    const setlistDate = setlist.performedAt ? parseDateOnly(setlist.performedAt) : parsed.date;
     const setlistVenue = setlist.venue || parsed.venue;
 
     // Find formal gig that uses this setlist (by setlistId link)
@@ -502,7 +503,7 @@ function GigArchive({ workspaceId, isAdmin, workspace }) {
       }
       const newSetlist = await api.createSetlist(workspaceId, {
         name: selectedEntry.title || 'New Setlist',
-        performedAt: selectedEntry.date?.toISOString()
+        performedAt: toDateOnlyString(selectedEntry.date)
       });
       await api.updateGig(gig.id, { setlistId: newSetlist.id });
       await loadData();

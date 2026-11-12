@@ -19,6 +19,7 @@ import ErrorState from '../../components/ErrorState';
 import PressableRow from '../../components/PressableRow';
 import { useLayout } from '../../hooks/useLayout';
 import getInitial from '../../utils/getInitial';
+import { parseDateOnly } from '../../utils/formatDate';
 import getCurrencySymbol from '../../utils/getCurrencySymbol';
 import api from '../../services/api';
 
@@ -116,7 +117,7 @@ export default function GigArchiveScreen({ navigation, route }) {
 
     const setlistEntries = setlists.map((setlist) => {
       const parsed = parseSetlistName(setlist.name);
-      const setlistDate = setlist.performedAt ? new Date(setlist.performedAt) : parsed.date;
+      const setlistDate = setlist.performedAt ? parseDateOnly(setlist.performedAt) : parsed.date;
       const setlistVenue = setlist.venue || parsed.venue;
 
       // Direct link via setlistId

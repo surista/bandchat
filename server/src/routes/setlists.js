@@ -9,6 +9,19 @@ import { checkText, TEXT_LIMITS } from '../lib/validators.js';
 
 const router = express.Router();
 
+// performedAt is a date-only field: clients send "YYYY-MM-DD", stored as
+// midnight UTC. Unparseable input used to reach Prisma as an Invalid Date and
+// come back as a generic 500, and loose strings like "Nov 12" parsed as the
+// year 2001. Require YYYY-MM-DD (a full ISO timestamp is also accepted) and
+// reject anything else up front with a clear message.
+const INVALID_DATE_ERROR = { error: 'Date must be a valid date (YYYY-MM-DD)' };
+const DATE_ONLY_PREFIX = /^\d{4}-\d{2}-\d{2}(T|$)/;
+const isInvalidDate = (value) => !!value && (
+  typeof value !== 'string' ||
+  !DATE_ONLY_PREFIX.test(value) ||
+  Number.isNaN(new Date(value).getTime())
+);
+
 // Get all setlists for a workspace
 router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (req, res) => {
   try {
@@ -59,6 +72,7 @@ router.get('/workspace/:workspaceId', authenticate, isWorkspaceMember, async (re
 router.post('/workspace/:workspaceId', authenticate, apiLimiter, isWorkspaceMember, async (req, res) => {
   try {
     const { name, description, useShortNames, performedAt, venue, startTime } = req.body;
+    if (isInvalidDate(performedAt)) return res.status(400).json(INVALID_DATE_ERROR);
 
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
@@ -186,6 +200,7 @@ router.get('/:setlistId', authenticate, async (req, res) => {
 router.put('/:setlistId', authenticate, async (req, res) => {
   try {
     const { name, description, useShortNames, performedAt, venue, startTime } = req.body;
+    if (isInvalidDate(performedAt)) return res.status(400).json(INVALID_DATE_ERROR);
 
     const existing = await prisma.setlist.findUnique({
       where: { id: req.params.setlistId }
@@ -687,6 +702,7 @@ router.delete('/:setlistId/songs/:songId', authenticate, async (req, res) => {
 router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceMember, async (req, res) => {
   try {
     const { name, songs, useShortNames, performedAt, venue, startTime } = req.body;
+    if (isInvalidDate(performedAt)) return res.status(400).json(INVALID_DATE_ERROR);
 
     if (!name) {
       return res.status(400).json({ error: 'Setlist name is required' });
@@ -827,6 +843,7 @@ router.post('/workspace/:workspaceId/import', authenticate, isWorkspaceMember, a
 router.post('/workspace/:workspaceId/import-multiset', authenticate, isWorkspaceMember, async (req, res) => {
   try {
     const { baseName, sets, gigId, performedAt, venue, startTime } = req.body;
+    if (isInvalidDate(performedAt)) return res.status(400).json(INVALID_DATE_ERROR);
 
     // sets is an array of { setNumber, songs: [{ title, artist }] }
     if (!sets || !Array.isArray(sets) || sets.length === 0) {

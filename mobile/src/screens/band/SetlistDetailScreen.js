@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useLayoutEffect, useMemo } from 'react';
+import { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,10 @@ import DraggableList from '../../components/DraggableList';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useLayout } from '../../hooks/useLayout';
+import { MIN_TOUCH_TARGET } from '../../utils/touchTarget';
+import OptionalDateField from '../../components/OptionalDateField';
+import VenueField from '../../components/VenueField';
+import { formatDateOnly, parseDateOnly, toDateOnlyString } from '../../utils/formatDate';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
 import PressableRow from '../../components/PressableRow';
@@ -54,7 +58,7 @@ function Badge({ label, color, bgColor }) {
 }
 
 export default function SetlistDetailScreen({ navigation, route }) {
-  const { setlistId, workspaceId, editing: startEditing } = route.params;
+  const { setlistId, workspaceId, editing: startEditing, addSongs: startAddingSongs } = route.params;
   const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
   const insets = useSafeAreaInsets();
@@ -80,11 +84,23 @@ export default function SetlistDetailScreen({ navigation, route }) {
   const [allSongs, setAllSongs] = useState([]);
   const [songSearch, setSongSearch] = useState('');
   const [loadingSongs, setLoadingSongs] = useState(false);
+  const [songsLoadError, setSongsLoadError] = useState(null);
+  // The picker stays open while you add several songs. Songs already in the
+  // setlist when it opened are hidden; songs added during this session stay
+  // in place with a checkmark, so rows never shift under a rapid tap.
+  const [pickerHiddenIds, setPickerHiddenIds] = useState(() => new Set());
+  const [sessionAddedIds, setSessionAddedIds] = useState(() => new Set());
+  // Adds run one at a time, in tap order: the server picks the next position
+  // with a non-atomic max() lookup, so parallel adds could collide.
+  const addQueueRef = useRef(Promise.resolve());
+  const pendingAddsRef = useRef(0);
+  const pendingSongIdsRef = useRef(new Set()); // queued but not yet saved
 
   // Edit details modal
   const [showEditDetails, setShowEditDetails] = useState(false);
   const [editName, setEditName] = useState('');
   const [editVenue, setEditVenue] = useState('');
+  const [editDate, setEditDate] = useState(null); // local Date or null
   const [savingDetails, setSavingDetails] = useState(false);
 
   // Performers
@@ -127,7 +143,8 @@ export default function SetlistDetailScreen({ navigation, route }) {
       if (setlist?.venue) {
         try {
           const venues = await api.getVenues(workspaceId);
-          const match = venues.find(v => v.name === setlist.venue);
+          const wanted = setlist.venue.trim().toLowerCase();
+          const match = venues.find(v => v.name?.trim().toLowerCase() === wanted);
           if (match?.imageUrl) venueLogoUrl = match.imageUrl;
         } catch (e) {
           console.error('Failed to fetch venue logo for setlist print:', e);
@@ -141,7 +158,14 @@ export default function SetlistDetailScreen({ navigation, route }) {
       } catch (e) {
         console.error('Failed to load setlist notes for export:', e);
       }
-      const html = buildSetlistHTML(setlist?.name || 'Setlist', setlist?.songs || [], { venueLogoUrl, transitionPaddingSecs, useShortNames: setlist?.useShortNames || false, notes });
+      const html = buildSetlistHTML(setlist?.name || 'Setlist', setlist?.songs || [], {
+        venueLogoUrl,
+        transitionPaddingSecs,
+        useShortNames: setlist?.useShortNames || false,
+        notes,
+        // Header shows the performance date (as the web export does), not today.
+        date: setlist?.performedAt ? formatDateOnly(setlist.performedAt, 'EEEE, dd-MMM-yyyy') : undefined,
+      });
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Export Setlist' });
     } catch (err) {
@@ -151,7 +175,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
         Alert.alert('Error', 'Failed to export PDF');
       }
     }
-  }, [setlist]);
+  }, [setlist, workspaceId, transitionPaddingSecs]);
 
   // Short/full song name toggle. Persisted on the Setlist itself (shared
   // across everyone viewing it, same as web's SetlistBuilder) rather than as
@@ -270,29 +294,67 @@ export default function SetlistDetailScreen({ navigation, route }) {
 
   // Add song
   const openSongPicker = useCallback(async () => {
+    // Also hide adds still in flight from a previous session of the picker.
+    setPickerHiddenIds(new Set([
+      ...songItems.map(s => s.song?.id).filter(Boolean),
+      ...pendingSongIdsRef.current,
+    ]));
+    setSessionAddedIds(new Set());
     setShowSongPicker(true);
     setSongSearch('');
-    setLoadingSongs(true);
+    // Only show the spinner the first time; later opens show the cached list
+    // immediately and refresh it in the background.
+    if (allSongs.length === 0) setLoadingSongs(true);
+    setSongsLoadError(null);
     try {
       const songs = await api.getSongs(workspaceId);
       setAllSongs(songs);
     } catch (err) {
-      // silently fail
+      // Only surface the error when there's no cached list to fall back on.
+      if (allSongs.length === 0) setSongsLoadError(err.message || "Couldn't load songs");
     } finally {
       setLoadingSongs(false);
     }
-  }, [workspaceId]);
+  }, [workspaceId, songItems, allSongs.length]);
 
-  const addSong = useCallback(async (song) => {
-    setShowSongPicker(false);
-    try {
-      await api.addSongToSetlist(setlistId, song.id);
-      mediumImpact();
-      loadSetlist();
-    } catch (err) {
-      Alert.alert('Error', err.message || 'Failed to add song');
+  // Opened straight from "Create": jump into the song picker once the (empty)
+  // setlist has loaded, since adding songs is the only thing to do next.
+  const autoOpenedPickerRef = useRef(false);
+  useEffect(() => {
+    if (startAddingSongs && setlist && !autoOpenedPickerRef.current) {
+      autoOpenedPickerRef.current = true;
+      openSongPicker();
     }
-  }, [setlistId, loadSetlist]);
+  }, [startAddingSongs, setlist, openSongPicker]);
+
+  const goToRepertoire = useCallback(() => {
+    setShowSongPicker(false);
+    navigation.navigate('SongList', { workspaceId });
+  }, [navigation, workspaceId]);
+
+  const closeSongPicker = useCallback(() => setShowSongPicker(false), []);
+
+  const addSong = useCallback((song) => {
+    // The ref also catches a double tap that lands before the re-render.
+    if (sessionAddedIds.has(song.id) || pendingSongIdsRef.current.has(song.id)) return;
+    selectionFeedback();
+    setSessionAddedIds(prev => new Set(prev).add(song.id));
+    pendingAddsRef.current += 1;
+    pendingSongIdsRef.current.add(song.id);
+    addQueueRef.current = addQueueRef.current.then(async () => {
+      try {
+        await api.addSongToSetlist(setlistId, song.id);
+      } catch (err) {
+        setSessionAddedIds(prev => { const next = new Set(prev); next.delete(song.id); return next; });
+        Alert.alert('Error', `Couldn't add "${song.title}". ${err.message || ''}`.trim());
+      } finally {
+        pendingAddsRef.current -= 1;
+        pendingSongIdsRef.current.delete(song.id);
+        // Reload once the queue drains rather than after every single add.
+        if (pendingAddsRef.current === 0) loadSetlist();
+      }
+    });
+  }, [setlistId, loadSetlist, sessionAddedIds]);
 
   const addSetBreak = useCallback(async () => {
     try {
@@ -316,6 +378,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
   const openEditDetails = useCallback(() => {
     setEditName(setlist?.name || '');
     setEditVenue(setlist?.venue || '');
+    setEditDate(parseDateOnly(setlist?.performedAt));
     setShowEditDetails(true);
   }, [setlist]);
 
@@ -329,6 +392,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
       const updated = await api.updateSetlist(setlistId, {
         name: editName.trim(),
         venue: editVenue.trim() || null,
+        performedAt: toDateOnlyString(editDate),
       });
       setSetlist(updated);
       successNotification();
@@ -338,7 +402,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
     } finally {
       setSavingDetails(false);
     }
-  }, [setlistId, editName, editVenue]);
+  }, [setlistId, editName, editVenue, editDate]);
 
   // Performers
   const openPerformerPicker = useCallback(async () => {
@@ -372,17 +436,12 @@ export default function SetlistDetailScreen({ navigation, route }) {
     }
   }, [setlistId, selectedPerformerIds]);
 
-  // Songs already in setlist (for filtering picker)
-  const existingSongIds = useMemo(
-    () => new Set(songItems.map(s => s.song?.id).filter(Boolean)),
-    [songItems]
-  );
   const filteredPickerSongs = useMemo(() => allSongs.filter(s => {
-    if (existingSongIds.has(s.id)) return false;
+    if (pickerHiddenIds.has(s.id)) return false;
     if (!songSearch.trim()) return true;
     const q = songSearch.toLowerCase();
     return s.title?.toLowerCase().includes(q) || s.artist?.toLowerCase().includes(q);
-  }), [allSongs, existingSongIds, songSearch]);
+  }), [allSongs, pickerHiddenIds, songSearch]);
 
   // Render function for standard FlatList (view mode) and draggable (edit mode)
   const renderSetlistItem = useCallback(({ item, index, isDragItem = false }) => {
@@ -512,7 +571,7 @@ export default function SetlistDetailScreen({ navigation, route }) {
         )}
       </>
     );
-  }, [colors, editing, items, removeItem, getSongDisplayName]);
+  }, [colors, editing, items, removeItem, getSongDisplayName, navigation, workspaceId]);
 
   const renderItem = useCallback(({ item, index }) => {
     return renderSetlistItem({ item, index });
@@ -553,6 +612,9 @@ export default function SetlistDetailScreen({ navigation, route }) {
               <Badge label={`${formatSetlistDuration(totalPaddedSecs)} w/ ${totalPaddingSecs}s gaps`} color={colors.badgeDuration} bgColor={colors.badgeDurationBg} />
             )}
           </>
+        )}
+        {setlist?.performedAt && (
+          <Badge label={formatDateOnly(setlist.performedAt)} color={colors.textSecondary} bgColor={colors.bgTertiary} />
         )}
         {setlist?.venue && (
           <Badge label={setlist.venue} color={colors.badgeVenue} bgColor="rgba(251,191,36,0.15)" />
@@ -680,20 +742,28 @@ export default function SetlistDetailScreen({ navigation, route }) {
       )}
 
       {/* Song Picker Modal */}
-      <Modal visible={showSongPicker} animationType="slide" onRequestClose={() => setShowSongPicker(false)}>
+      <Modal visible={showSongPicker} animationType="slide" onRequestClose={closeSongPicker}>
         <SafeAreaView style={[styles.pickerContainer, { backgroundColor: colors.bgPrimary }]} accessibilityViewIsModal>
           <View style={[styles.pickerHeader, { backgroundColor: colors.bgSecondary }]}>
+            <View style={styles.pickerHeaderSide} />
+            <View style={styles.pickerHeaderCenter}>
+              <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>Add Songs</Text>
+              {sessionAddedIds.size > 0 && (
+                <Text style={[styles.pickerSubtitle, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.4} accessibilityLiveRegion="polite">
+                  {sessionAddedIds.size} added
+                </Text>
+              )}
+            </View>
             <Pressable
-              onPress={() => setShowSongPicker(false)}
+              onPress={closeSongPicker}
+              hitSlop={10}
               android_ripple={{ color: 'rgba(128,128,128,0.2)', borderless: true }}
-              style={({ pressed }) => [pressed && Platform.OS === 'ios' && { opacity: 0.7 }]}
+              style={({ pressed }) => [styles.pickerHeaderSide, styles.pickerDone, pressed && Platform.OS === 'ios' && { opacity: 0.7 }]}
               accessibilityRole="button"
-              accessibilityLabel="Cancel adding song"
+              accessibilityLabel="Done adding songs"
             >
-              <Text style={{ color: colors.primary, fontSize: 16 }} maxFontSizeMultiplier={1.5}>Cancel</Text>
+              <Text style={{ color: colors.primary, fontSize: 17, fontWeight: '600' }} maxFontSizeMultiplier={1.5}>Done</Text>
             </Pressable>
-            <Text style={[styles.pickerTitle, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>Add Song</Text>
-            <View style={{ width: 60 }} />
           </View>
           <TextInput
             style={[styles.pickerSearch, { backgroundColor: colors.bgTertiary, color: colors.textPrimary }]}
@@ -706,6 +776,21 @@ export default function SetlistDetailScreen({ navigation, route }) {
           />
           {loadingSongs ? (
             <ActivityIndicator style={{ marginTop: 40 }} size="large" color={colors.primary} />
+          ) : songsLoadError ? (
+            <ErrorState
+              iconName="musical-notes-outline"
+              title="Couldn't load songs"
+              message={songsLoadError}
+              onRetry={openSongPicker}
+            />
+          ) : allSongs.length === 0 ? (
+            <ErrorState
+              iconName="musical-notes-outline"
+              title="No songs in your repertoire"
+              message="Add songs to your band's repertoire first, then come back to build the setlist."
+              retryLabel="Go to Songs"
+              onRetry={goToRepertoire}
+            />
           ) : (
             <FlatList
               data={filteredPickerSongs}
@@ -716,12 +801,17 @@ export default function SetlistDetailScreen({ navigation, route }) {
               maxToRenderPerBatch={15}
               windowSize={10}
               removeClippedSubviews={Platform.OS === 'android'}
-              renderItem={({ item }) => (
+              extraData={sessionAddedIds}
+              renderItem={({ item }) => {
+                const added = sessionAddedIds.has(item.id);
+                return (
                 <PressableRow
                   style={[styles.pickerItem, { borderBottomColor: colors.border }]}
                   onPress={() => addSong(item)}
+                  disabled={added}
                   accessibilityRole="button"
-                  accessibilityLabel={`Add ${item.title}${item.artist ? ` by ${item.artist}` : ''}`}
+                  accessibilityState={{ disabled: added, selected: added }}
+                  accessibilityLabel={`${added ? 'Added' : 'Add'} ${item.title}${item.artist ? ` by ${item.artist}` : ''}`}
                 >
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.pickerSongTitle, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.6}>
@@ -741,11 +831,17 @@ export default function SetlistDetailScreen({ navigation, route }) {
                       {formatDuration(item.duration)}
                     </Text>
                   ) : null}
+                  <Ionicons
+                    name={added ? 'checkmark-circle' : 'add-circle-outline'}
+                    size={24}
+                    color={added ? colors.success : colors.primary}
+                  />
                 </PressableRow>
-              )}
+                );
+              }}
               ListEmptyComponent={
                 <Text style={[styles.emptyText, { color: colors.textSecondary, textAlign: 'center', marginTop: 40 }]} maxFontSizeMultiplier={1.5}>
-                  {songSearch ? 'No matching songs' : 'All songs already added'}
+                  {songSearch ? `No songs match "${songSearch.trim()}"` : 'Every song in your repertoire is already in this setlist'}
                 </Text>
               }
             />
@@ -826,17 +922,21 @@ export default function SetlistDetailScreen({ navigation, route }) {
                 value={editName}
                 onChangeText={setEditName}
                 autoFocus
+                maxLength={200}
+                returnKeyType="done"
                 accessibilityLabel="Setlist name"
               />
               <Text style={[styles.detailsLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Venue</Text>
-              <TextInput
-                style={[styles.detailsInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+              <VenueField
+                workspaceId={workspaceId}
                 value={editVenue}
                 onChangeText={setEditVenue}
-                placeholder="Venue name"
-                placeholderTextColor={colors.textSecondary}
-                accessibilityLabel="Venue name"
+                inputStyle={[styles.detailsInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
               />
+              <Text style={[styles.detailsLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Date</Text>
+              <View style={styles.detailsDateField}>
+                <OptionalDateField value={editDate} onChange={setEditDate} label="Performance date" />
+              </View>
               <View style={styles.detailsActions}>
                 <PressableRow
                   style={[styles.detailsButton, { backgroundColor: colors.bgTertiary }]}
@@ -981,6 +1081,10 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   pickerTitle: { fontSize: 17, fontWeight: '700' },
+  pickerSubtitle: { fontSize: 12, marginTop: 1 },
+  pickerHeaderSide: { minWidth: 60 },
+  pickerHeaderCenter: { flex: 1, alignItems: 'center' },
+  pickerDone: { alignItems: 'flex-end', justifyContent: 'center', minHeight: MIN_TOUCH_TARGET },
   pickerSearch: {
     marginHorizontal: 12,
     marginBottom: 8,
@@ -1021,6 +1125,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 16,
   },
+  detailsDateField: { marginBottom: 16 },
   detailsActions: { flexDirection: 'row', gap: 10, marginTop: 16 },
   detailsButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
   detailsButtonText: { fontSize: 15, fontWeight: '600' },

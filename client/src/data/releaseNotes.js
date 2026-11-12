@@ -16,6 +16,17 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.76',
+    date: '2026-11-13',
+    items: [
+      { kind: 'changed', text: 'Building a setlist on mobile is much faster: the song picker stays open so you can add songs one after another, and a new setlist opens straight into it.' },
+      { kind: 'changed', text: 'New setlists on mobile use a proper date picker, and you can now change a setlist’s date later from Edit Details.' },
+      { kind: 'added', text: 'The venue field suggests your band’s saved venues as you type.' },
+      { kind: 'fixed', text: 'Setlist dates no longer show a day early in some time zones, on web and mobile.' },
+      { kind: 'fixed', text: 'Exported setlist PDFs on mobile now show the setlist’s date instead of today’s.' },
+    ],
+  },
+  {
     version: '1.07.75',
     date: '2026-11-13',
     items: [

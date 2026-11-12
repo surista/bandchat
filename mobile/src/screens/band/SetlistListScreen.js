@@ -10,30 +10,38 @@ import {
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { format } from 'date-fns';
 import { useTheme } from '../../context/ThemeContext';
 import Badge from '../../components/Badge';
 import { SkeletonList } from '../../components/SkeletonLoader';
-import { successNotification } from '../../utils/haptics';
+import { successNotification, selectionFeedback } from '../../utils/haptics';
 import { Ionicons } from '@expo/vector-icons';
 import ErrorState from '../../components/ErrorState';
 import PressableRow from '../../components/PressableRow';
 import ActionSheet from '../../components/ActionSheet';
 import useDebounce from '../../hooks/useDebounce';
 import api from '../../services/api';
-import { formatDuration } from '../../utils/formatDuration';
 import { computeSetlistDuration, formatSetlistDuration, getEffectiveSetBreakCount } from '../../utils/setlistDuration';
 import { buildSetlistHTML } from '../../utils/buildSetlistHTML';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useLayout } from '../../hooks/useLayout';
+import OptionalDateField from '../../components/OptionalDateField';
+import VenueField from '../../components/VenueField';
+import { useToast } from '../../context/ToastContext';
+import { MIN_TOUCH_TARGET } from '../../utils/touchTarget';
+import { formatDateOnly, toDateOnlyString } from '../../utils/formatDate';
 
 export default function SetlistListScreen({ navigation, route }) {
   const { workspaceId } = route.params;
   const { colors } = useTheme();
   const { isTablet, contentMaxWidth } = useLayout();
+  const toast = useToast();
 
   const [setlists, setSetlists] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,7 +72,7 @@ export default function SetlistListScreen({ navigation, route }) {
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
-  const [newDate, setNewDate] = useState('');
+  const [newDate, setNewDate] = useState(null); // local Date or null
   const [newVenue, setNewVenue] = useState('');
   const [creating, setCreating] = useState(false);
 
@@ -74,6 +82,12 @@ export default function SetlistListScreen({ navigation, route }) {
 
   const loadingRef = useRef(loading);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
+
+  // loadSetlists is memoized on workspaceId only, so it can't read `setlists`
+  // directly (it would always see the first render's empty array, and a failed
+  // background refresh would replace a loaded list with the error screen).
+  const hasSetlistsRef = useRef(false);
+  useEffect(() => { hasSetlistsRef.current = setlists.length > 0; }, [setlists]);
 
   // Header "+" button
   useLayoutEffect(() => {
@@ -97,7 +111,7 @@ export default function SetlistListScreen({ navigation, route }) {
       const data = await api.getSetlists(workspaceId);
       setSetlists(data);
     } catch (err) {
-      if (!setlists.length) setError(err.message || 'Failed to load setlists');
+      if (!hasSetlistsRef.current) setError(err.message || 'Failed to load setlists');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -120,6 +134,39 @@ export default function SetlistListScreen({ navigation, route }) {
     loadSetlists();
   }, [loadSetlists]);
 
+  const resetCreateForm = useCallback(() => {
+    setNewName('');
+    setNewDescription('');
+    setNewDate(null);
+    setNewVenue('');
+  }, []);
+
+  // A new setlist opens straight into edit mode with the song picker up. On
+  // iOS that picker is itself a modal, and iOS can't present a modal while the
+  // create sheet is still animating away — so navigate from the sheet's
+  // onDismiss there. Android has no such restriction.
+  const pendingCreatedIdRef = useRef(null);
+  const openCreatedSetlist = useCallback((setlistId) => {
+    if (Platform.OS === 'ios') {
+      pendingCreatedIdRef.current = setlistId;
+      setShowCreate(false);
+    } else {
+      setShowCreate(false);
+      navigation.navigate('SetlistDetail', { setlistId, workspaceId, editing: true, addSongs: true });
+    }
+  }, [navigation, workspaceId]);
+  const handleCreateSheetDismissed = useCallback(() => {
+    const setlistId = pendingCreatedIdRef.current;
+    if (!setlistId) return;
+    pendingCreatedIdRef.current = null;
+    navigation.navigate('SetlistDetail', { setlistId, workspaceId, editing: true, addSongs: true });
+  }, [navigation, workspaceId]);
+
+  const cancelCreate = useCallback(() => {
+    setShowCreate(false);
+    resetCreateForm();
+  }, [resetCreateForm]);
+
   const handleCreate = useCallback(async () => {
     const name = newName.trim();
     if (!name) return;
@@ -128,34 +175,32 @@ export default function SetlistListScreen({ navigation, route }) {
       const created = await api.createSetlist(workspaceId, {
         name,
         description: newDescription.trim() || null,
-        performedAt: newDate.trim() || null,
+        performedAt: toDateOnlyString(newDate),
         venue: newVenue.trim() || null,
       });
       successNotification();
-      setShowCreate(false);
-      setNewName('');
-      setNewDescription('');
-      setNewDate('');
-      setNewVenue('');
-      navigation.navigate('SetlistDetail', { setlistId: created.id, workspaceId });
+      resetCreateForm();
+      openCreatedSetlist(created.id);
     } catch (err) {
       Alert.alert('Error', err.message || 'Failed to create setlist');
     } finally {
       setCreating(false);
     }
-  }, [newName, newDescription, newDate, newVenue, workspaceId, navigation]);
+  }, [newName, newDescription, newDate, newVenue, workspaceId, resetCreateForm, openCreatedSetlist]);
 
   const handleDuplicate = useCallback(async () => {
     if (!selectedSetlist) return;
     try {
-      await api.duplicateSetlist(selectedSetlist.id);
+      const copy = await api.duplicateSetlist(selectedSetlist.id);
+      successNotification();
+      toast.success(`Duplicated as "${copy?.name || `Copy of ${selectedSetlist.name}`}"`);
       loadSetlists();
     } catch (err) {
-      Alert.alert('Error', 'Failed to duplicate setlist');
+      Alert.alert("Couldn't duplicate", err.message || 'Failed to duplicate setlist');
     }
     setShowActions(false);
     setSelectedSetlist(null);
-  }, [selectedSetlist, loadSetlists]);
+  }, [selectedSetlist, loadSetlists, toast]);
 
   const handleDelete = useCallback(() => {
     if (!selectedSetlist) return;
@@ -187,7 +232,8 @@ export default function SetlistListScreen({ navigation, route }) {
       if (selectedSetlist.venue) {
         try {
           const venues = await api.getVenues(workspaceId);
-          const match = venues.find(v => v.name === selectedSetlist.venue);
+          const wanted = selectedSetlist.venue.trim().toLowerCase();
+          const match = venues.find(v => v.name?.trim().toLowerCase() === wanted);
           if (match?.imageUrl) venueLogoUrl = match.imageUrl;
         } catch (e) {
           console.error('Failed to fetch venue logo for setlist print:', e);
@@ -201,7 +247,13 @@ export default function SetlistListScreen({ navigation, route }) {
       } catch (e) {
         console.error('Failed to load setlist notes for export:', e);
       }
-      const html = buildSetlistHTML(selectedSetlist.name, items, { venueLogoUrl, transitionPaddingSecs, notes });
+      const html = buildSetlistHTML(selectedSetlist.name, items, {
+        venueLogoUrl,
+        transitionPaddingSecs,
+        notes,
+        // Header shows the performance date (as the web export does), not today.
+        date: selectedSetlist.performedAt ? formatDateOnly(selectedSetlist.performedAt, 'EEEE, dd-MMM-yyyy') : undefined,
+      });
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Export Setlist' });
     } catch (err) {
@@ -213,7 +265,13 @@ export default function SetlistListScreen({ navigation, route }) {
     }
     setShowActions(false);
     setSelectedSetlist(null);
-  }, [selectedSetlist]);
+  }, [selectedSetlist, workspaceId, transitionPaddingSecs]);
+
+  const openActions = useCallback((item) => {
+    selectionFeedback();
+    setSelectedSetlist(item);
+    setShowActions(true);
+  }, []);
 
   const renderSetlist = useCallback(({ item }) => {
     const songs = (item.songs || []).filter(s => s.type === 'SONG' || (!s.type && s.song));
@@ -229,17 +287,30 @@ export default function SetlistListScreen({ navigation, route }) {
       <PressableRow
         style={[styles.setlistCard, { backgroundColor: colors.bgSecondary }]}
         onPress={() => navigation.navigate('SetlistDetail', { setlistId: item.id, workspaceId })}
-        onLongPress={() => { setSelectedSetlist(item); setShowActions(true); }}
+        onLongPress={() => openActions(item)}
         delayLongPress={400}
         accessibilityRole="button"
-        accessibilityLabel={`${item.name}${songCount > 0 ? `, ${songCount} songs` : ''}. Long press for options`}
+        accessibilityLabel={`${item.name}${songCount > 0 ? `, ${songCount} songs` : ''}`}
+        accessibilityActions={[{ name: 'more', label: 'More options' }]}
+        onAccessibilityAction={(e) => { if (e.nativeEvent.actionName === 'more') openActions(item); }}
       >
-        <Text style={[styles.setlistName, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.5}>
-          {item.name}
-        </Text>
+        <View style={styles.cardHeader}>
+          <Text style={[styles.setlistName, { color: colors.textPrimary }]} numberOfLines={1} maxFontSizeMultiplier={1.5}>
+            {item.name}
+          </Text>
+          <Pressable
+            onPress={() => openActions(item)}
+            hitSlop={6}
+            style={({ pressed }) => [styles.moreButton, pressed && styles.pressed]}
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          >
+            <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
+          </Pressable>
+        </View>
         {(item.performedAt || item.venue) && (
           <Text style={[styles.setlistMeta, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={1.5}>
-            {item.performedAt ? format(new Date(item.performedAt), 'dd-MMM-yyyy') : ''}
+            {item.performedAt ? formatDateOnly(item.performedAt) : ''}
             {item.performedAt && item.venue ? ' \u00B7 ' : ''}
             {item.venue || ''}
           </Text>
@@ -273,7 +344,7 @@ export default function SetlistListScreen({ navigation, route }) {
         )}
       </PressableRow>
     );
-  }, [colors, navigation, workspaceId]);
+  }, [colors, navigation, workspaceId, transitionPaddingSecs, openActions]);
 
   if (loading) {
     return (
@@ -328,88 +399,116 @@ export default function SetlistListScreen({ navigation, route }) {
             <Ionicons name="list-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
             <Text style={[styles.emptyText, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>{search ? 'No matching setlists' : 'No setlists yet'}</Text>
             {!search && (
-              <Text style={[styles.emptyHint, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
-                Tap + to create your first setlist
-              </Text>
+              <>
+                <Text style={[styles.emptyHint, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
+                  Build the running order for a gig or rehearsal, then take it on stage with Live Mode.
+                </Text>
+                <Pressable
+                  onPress={() => setShowCreate(true)}
+                  style={({ pressed }) => [styles.emptyButton, { backgroundColor: colors.primary }, pressed && styles.pressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Create setlist"
+                >
+                  <Text style={[styles.emptyButtonText, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>+ New Setlist</Text>
+                </Pressable>
+              </>
             )}
           </View>
         }
       />
 
-      {/* Create Setlist Modal */}
-      <Modal visible={showCreate} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setShowCreate(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.modalBg }]} accessibilityViewIsModal>
-            <Text style={[styles.modalTitle, { color: colors.textPrimary }]} accessibilityRole="header" maxFontSizeMultiplier={1.6}>New Setlist</Text>
-            <Text style={[styles.modalLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Name *</Text>
+      {/* Create Setlist sheet: a native page sheet on iOS (swipe down to
+          dismiss keeps the draft; Cancel clears it), full-screen on Android. */}
+      <Modal
+        visible={showCreate}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => { if (!creating) setShowCreate(false); }}
+        onDismiss={handleCreateSheetDismissed}
+      >
+        <KeyboardAvoidingView
+          style={[styles.sheet, { backgroundColor: colors.bgPrimary }]}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          accessibilityViewIsModal
+        >
+          <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
+            <Pressable
+              onPress={cancelCreate}
+              disabled={creating}
+              hitSlop={8}
+              style={({ pressed }) => [styles.sheetHeaderButton, pressed && styles.pressed]}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
+            >
+              <Text style={[styles.sheetHeaderText, { color: colors.primary }]} maxFontSizeMultiplier={1.4}>Cancel</Text>
+            </Pressable>
+            <Text style={[styles.sheetTitle, { color: colors.textPrimary }]} accessibilityRole="header" numberOfLines={1} maxFontSizeMultiplier={1.4}>
+              New Setlist
+            </Text>
+            <Pressable
+              onPress={handleCreate}
+              disabled={creating || !newName.trim()}
+              hitSlop={8}
+              style={({ pressed }) => [styles.sheetHeaderButton, styles.sheetHeaderButtonRight, pressed && styles.pressed]}
+              accessibilityRole="button"
+              accessibilityLabel="Create setlist"
+              accessibilityState={{ disabled: creating || !newName.trim(), busy: creating }}
+            >
+              {creating ? (
+                <ActivityIndicator color={colors.primary} size="small" />
+              ) : (
+                <Text
+                  style={[styles.sheetHeaderText, styles.sheetHeaderTextBold, { color: newName.trim() ? colors.primary : colors.textSecondary }]}
+                  maxFontSizeMultiplier={1.4}
+                >
+                  Create
+                </Text>
+              )}
+            </Pressable>
+          </View>
+          <ScrollView
+            contentContainerStyle={styles.sheetBody}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+          >
+            <Text style={[styles.modalLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Name</Text>
             <TextInput
               style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
               value={newName}
               onChangeText={setNewName}
-              placeholder="Setlist name"
+              placeholder="e.g. Friday at The Crown"
               placeholderTextColor={colors.textSecondary}
               autoFocus
-              accessibilityLabel="Setlist name"
+              maxLength={200}
+              returnKeyType="done"
+              enablesReturnKeyAutomatically
+              onSubmitEditing={() => { if (newName.trim() && !creating) handleCreate(); }}
+              accessibilityLabel="Setlist name, required"
+            />
+            <Text style={[styles.modalLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Date</Text>
+            <View style={styles.dateField}>
+              <OptionalDateField value={newDate} onChange={setNewDate} label="Performance date" />
+            </View>
+            <Text style={[styles.modalLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Venue</Text>
+            <VenueField
+              workspaceId={workspaceId}
+              value={newVenue}
+              onChangeText={setNewVenue}
+              inputStyle={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
             />
             <Text style={[styles.modalLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Description</Text>
             <TextInput
-              style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
+              style={[styles.modalInput, styles.multilineInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
               value={newDescription}
               onChangeText={setNewDescription}
-              placeholder="Optional description"
+              placeholder="Optional"
               placeholderTextColor={colors.textSecondary}
+              multiline
+              maxLength={5000}
               accessibilityLabel="Setlist description"
             />
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.modalLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Date</Text>
-                <TextInput
-                  style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-                  value={newDate}
-                  onChangeText={setNewDate}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={colors.textSecondary}
-                  accessibilityLabel="Performance date"
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.modalLabel, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>Venue</Text>
-                <TextInput
-                  style={[styles.modalInput, { backgroundColor: colors.bgTertiary, color: colors.textPrimary, borderColor: colors.border }]}
-                  value={newVenue}
-                  onChangeText={setNewVenue}
-                  placeholder="Venue name"
-                  placeholderTextColor={colors.textSecondary}
-                  accessibilityLabel="Venue"
-                />
-              </View>
-            </View>
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: colors.bgTertiary }]}
-                onPress={() => { setShowCreate(false); setNewName(''); setNewDescription(''); setNewDate(''); setNewVenue(''); }}
-                disabled={creating}
-                accessibilityRole="button"
-                accessibilityLabel="Cancel"
-              >
-                <Text style={[styles.modalButtonText, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: colors.primary }]}
-                onPress={handleCreate}
-                disabled={creating || !newName.trim()}
-                accessibilityRole="button"
-                accessibilityLabel="Create setlist"
-              >
-                {creating ? (
-                  <ActivityIndicator color={colors.primaryText} size="small" />
-                ) : (
-                  <Text style={[styles.modalButtonTextWhite, { color: colors.primaryText }]} maxFontSizeMultiplier={1.5}>Create</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
 
       <ActionSheet
@@ -442,29 +541,36 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 8,
   },
-  setlistName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', marginTop: -10, marginRight: -10 },
+  setlistName: { flex: 1, fontSize: 16, fontWeight: '700', marginTop: 10, marginBottom: 2 },
+  moreButton: { width: MIN_TOUCH_TARGET, height: MIN_TOUCH_TARGET, alignItems: 'center', justifyContent: 'center' },
   setlistMeta: { fontSize: 13, marginBottom: 6 },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 },
   previewList: { marginTop: 4 },
   previewItem: { fontSize: 13, lineHeight: 20 },
   previewMore: { fontSize: 13, fontStyle: 'italic', marginTop: 2 },
-  emptyIcon: { fontSize: 40, marginBottom: 12 },
   emptyText: { fontSize: 15 },
-  emptyHint: { fontSize: 13, marginTop: 6, textAlign: 'center', opacity: 0.7 },
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    padding: 24,
+  emptyHint: { fontSize: 13, marginTop: 6, textAlign: 'center', maxWidth: 280, lineHeight: 18 },
+  emptyButton: { marginTop: 20, paddingHorizontal: 24, minHeight: MIN_TOUCH_TARGET, borderRadius: 10, justifyContent: 'center' },
+  emptyButtonText: { fontSize: 15, fontWeight: '600' },
+  // Create sheet
+  sheet: { flex: 1 },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    minHeight: 56,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  modalContent: {
-    borderRadius: 12,
-    padding: 24,
-    maxWidth: 500,
-    width: '100%',
-  },
-  modalTitle: { fontSize: 20, fontWeight: '700', marginBottom: 20 },
+  sheetHeaderButton: { minWidth: 72, minHeight: MIN_TOUCH_TARGET, justifyContent: 'center', paddingHorizontal: 8 },
+  sheetHeaderButtonRight: { alignItems: 'flex-end' },
+  sheetHeaderText: { fontSize: 17 },
+  sheetHeaderTextBold: { fontWeight: '600' },
+  sheetTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '600' },
+  sheetBody: { padding: 16, paddingBottom: 40 },
+  multilineInput: { minHeight: 88, textAlignVertical: 'top' },
+  pressed: { opacity: 0.6 },
+  dateField: { marginBottom: 16 },
   modalLabel: { fontSize: 14, fontWeight: '500', marginBottom: 6 },
   modalInput: {
     borderWidth: 1,
@@ -474,8 +580,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 16,
   },
-  modalActions: { flexDirection: 'row', gap: 10 },
-  modalButton: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
-  modalButtonText: { fontSize: 15, fontWeight: '600' },
-  modalButtonTextWhite: { fontSize: 15, fontWeight: '600', color: '#ffffff' },
 });

@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, memo } from 'react';
-import { format } from 'date-fns';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatDuration } from '../../utils/formatDuration';
+import { formatDateOnly } from '../../utils/formatDate';
 import { computeSetlistDuration, formatSetlistDuration, MC_DEFAULT_DURATION_SECS, formatTime12h } from '../../utils/setlistDuration';
 import SetlistPrintPreviewModal from './SetlistPrintPreviewModal';
 import SetlistBuilder from './SetlistBuilder';
@@ -32,7 +32,7 @@ const SetlistCard = memo(function SetlistCard({ setlist, onTap, onEdit, onRename
           <h3 className="text-[var(--color-text-primary)] font-medium truncate">{setlist.name}</h3>
           {(setlist.performedAt || setlist.venue) && (
             <p className="text-[var(--color-text-muted)] text-xs truncate">
-              {setlist.performedAt && format(new Date(setlist.performedAt), 'dd-MMM-yyyy')}
+              {setlist.performedAt && formatDateOnly(setlist.performedAt)}
               {setlist.performedAt && setlist.venue && ' · '}
               {setlist.venue}
             </p>
@@ -886,7 +886,7 @@ function SetlistList({ workspaceId, workspaceName, workspace }) {
                 <h3 className="text-xl font-bold text-[var(--color-text-primary)]">{viewingSetlist.name}</h3>
                 {(viewingSetlist.performedAt || viewingSetlist.venue || viewingSetlist.startTime) && (
                   <p className="text-[var(--color-text-muted)] text-sm">
-                    {viewingSetlist.performedAt && format(new Date(viewingSetlist.performedAt), 'dd-MMM-yyyy')}
+                    {viewingSetlist.performedAt && formatDateOnly(viewingSetlist.performedAt)}
                     {viewingSetlist.startTime && (
                       <span className="text-cyan-400"> at {formatTime12h(viewingSetlist.startTime)}</span>
                     )}
