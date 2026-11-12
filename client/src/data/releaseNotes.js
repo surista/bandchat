@@ -16,6 +16,14 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.75',
+    date: '2026-11-13',
+    items: [
+      { kind: 'changed', text: 'If you’re in more than one band, notifications now say which band they’re from (on iPhone, as a subtitle under the sender).' },
+      { kind: 'fixed', text: 'You no longer get notifications from a band you’ve left.' },
+    ],
+  },
+  {
     version: '1.07.63',
     date: '2026-10-11',
     items: [

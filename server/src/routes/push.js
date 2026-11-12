@@ -292,6 +292,10 @@ function sanitizePushUrl(url) {
   return undefined;
 }
 
+// Workspace names are capped when prefixed onto a push title so the actual
+// title (sender/channel) survives lock-screen truncation.
+const WORKSPACE_PREFIX_MAX = 20;
+
 // Helper function to send push notification to a user
 // options: { category: 'mention'|'dm'|'gig'|'announcement'|'channel', workspaceId: string }
 export const sendPushToUser = async (userId, payload, options = {}) => {
@@ -313,18 +317,34 @@ export const sendPushToUser = async (userId, payload, options = {}) => {
       return; // Notifications are snoozed, skip sending
     }
 
-    // Check per-workspace notification preferences
-    if (options.category && options.workspaceId) {
-      const member = await prisma.workspaceMember.findUnique({
-        where: {
-          userId_workspaceId: {
-            userId,
-            workspaceId: options.workspaceId
-          }
-        }
-      });
+    // Set below for multi-workspace users; null means "show the title as-is".
+    let workspaceLabel = null;
+    let prefixedTitle = null;
 
-      if (member) {
+    // Workspace-scoped pushes: fail closed. Recipients are often derived from
+    // ChannelMember rows, so a stale row must never deliver a push for a
+    // workspace the user no longer belongs to.
+    if (options.workspaceId) {
+      const [member, membershipCount] = await Promise.all([
+        prisma.workspaceMember.findUnique({
+          where: {
+            userId_workspaceId: {
+              userId,
+              workspaceId: options.workspaceId
+            }
+          },
+          include: { workspace: { select: { name: true, deletedAt: true } } }
+        }),
+        prisma.workspaceMember.count({ where: { userId, workspace: { deletedAt: null } } })
+      ]);
+
+      if (!member || member.workspace?.deletedAt) {
+        console.debug(`[push] dropped for user ${userId}: not a member of workspace ${options.workspaceId}${member ? ' (workspace deleted)' : ''}`);
+        return; // Not (or no longer) a member of this workspace
+      }
+
+      // Per-workspace notification preferences
+      if (options.category) {
         const categoryMap = {
           mention: 'notifyMentions',
           dm: 'notifyDMs',
@@ -337,6 +357,19 @@ export const sendPushToUser = async (userId, payload, options = {}) => {
         if (prefKey && member[prefKey] === false) {
           return; // User has disabled this notification category
         }
+      }
+
+      // Users in several workspaces get pushes from all of them on the same
+      // device; label the source so they don't read as belonging to whichever
+      // workspace is open. Skipped for single-workspace users (just noise).
+      // iOS gets it as a native subtitle so the title (sender/channel) is never
+      // truncated away; web and Android get a capped prefix on the title.
+      if (membershipCount > 1 && member.workspace?.name && payload.title) {
+        workspaceLabel = member.workspace.name;
+        const cappedName = workspaceLabel.length > WORKSPACE_PREFIX_MAX
+          ? `${workspaceLabel.slice(0, WORKSPACE_PREFIX_MAX - 1).trimEnd()}…`
+          : workspaceLabel;
+        prefixedTitle = `${cappedName} · ${payload.title}`;
       }
     }
 
@@ -355,7 +388,7 @@ export const sendPushToUser = async (userId, payload, options = {}) => {
               auth: sub.auth
             }
           },
-          JSON.stringify(payload)
+          JSON.stringify(prefixedTitle ? { ...payload, title: prefixedTitle } : payload)
         );
       } catch (error) {
         // Remove invalid subscriptions
@@ -393,7 +426,9 @@ export const sendPushToUser = async (userId, payload, options = {}) => {
       .map(t => ({
         to: t.token,
         sound: 'default',
-        title: payload.title,
+        ...(workspaceLabel && t.platform === 'ios'
+          ? { title: payload.title, subtitle: workspaceLabel }
+          : { title: prefixedTitle || payload.title }),
         body: payload.body,
         ...(badgeCount !== null && { badge: badgeCount }),
         channelId: androidChannelId,
