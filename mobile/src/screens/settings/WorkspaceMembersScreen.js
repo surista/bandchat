@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -159,6 +159,11 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
     }
   }, [newPassword, confirmPassword, adminPassword, workspaceId, selectedMember, clearPasswordFields]);
 
+  const visibleMembers = useMemo(
+    () => members.filter(m => !blockedIds.has(m.userId)),
+    [members, blockedIds]
+  );
+
   const renderMember = useCallback(({ item }) => {
     const displayName = item.user?.displayName || 'Unknown';
     const email = item.user?.email || '';
@@ -217,16 +222,20 @@ export default function WorkspaceMembersScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]} edges={['bottom']}>
-      <View style={[styles.countBar, { backgroundColor: colors.bgSecondary }]}>
-        <Text style={[styles.countText, { color: colors.textSecondary }]}>
-          {members.filter(m => !blockedIds.has(m.userId)).length} member{members.filter(m => !blockedIds.has(m.userId)).length !== 1 ? 's' : ''}
-        </Text>
-      </View>
-
       <FlatList
-        data={members.filter(m => !blockedIds.has(m.userId))}
+        data={visibleMembers}
         keyExtractor={(item) => item.userId}
         renderItem={renderMember}
+        // Large-title header is translucent on iOS; inset the list (count bar
+        // included, as the list header) so nothing renders underneath it.
+        contentInsetAdjustmentBehavior="automatic"
+        ListHeaderComponent={
+          <View style={[styles.countBar, { backgroundColor: colors.bgSecondary }]}>
+            <Text style={[styles.countText, { color: colors.textSecondary }]}>
+              {visibleMembers.length} member{visibleMembers.length !== 1 ? 's' : ''}
+            </Text>
+          </View>
+        }
         contentContainerStyle={[styles.listContent, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={
           <RefreshControl
@@ -384,7 +393,9 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  countBar: { paddingHorizontal: 16, paddingVertical: 10 },
+  // Rendered as the FlatList header, so cancel listContent's padding to keep
+  // the bar full-bleed as it was when it sat above the list.
+  countBar: { paddingHorizontal: 16, paddingVertical: 10, marginHorizontal: -12, marginTop: -12, marginBottom: 12 },
   countText: { fontSize: 14, fontWeight: '600' },
   listContent: { padding: 12, paddingBottom: 20 },
   // Member card

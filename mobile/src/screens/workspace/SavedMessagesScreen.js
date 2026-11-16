@@ -158,16 +158,20 @@ export default function SavedMessagesScreen({ navigation, route }) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bgPrimary }, isTablet && styles.tabletContainer]}>
-      {savedMessages.length > 0 && (
-        <Text style={[styles.count, { color: colors.textSecondary }]}>
-          {savedMessages.length} saved message{savedMessages.length !== 1 ? 's' : ''}
-        </Text>
-      )}
       <FlatList
         data={savedMessages}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
+        // The large-title header is translucent on iOS — the list (and the
+        // count, which lives in the list header for the same reason) must
+        // inset itself or the top rows render underneath it.
+        contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={savedMessages.length === 0 ? styles.emptyListContent : styles.list}
+        ListHeaderComponent={savedMessages.length > 0 ? (
+          <Text style={[styles.count, { color: colors.textSecondary }]}>
+            {savedMessages.length} saved message{savedMessages.length !== 1 ? 's' : ''}
+          </Text>
+        ) : null}
         // Always render via FlatList (with ListEmptyComponent for empty
         // state) so pull-to-refresh works even when the list is empty —
         // user can manually retry if they just saved something elsewhere.
@@ -229,11 +233,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
+  // Lives inside the list's 12pt padding now (as ListHeaderComponent).
   count: {
     fontSize: 13,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 4,
+    paddingHorizontal: 4,
+    paddingBottom: 8,
   },
   list: {
     padding: 12,

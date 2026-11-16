@@ -16,6 +16,15 @@
 
 export const RELEASE_NOTES = [
   {
+    version: '1.07.77',
+    date: '2026-11-16',
+    items: [
+      { kind: 'fixed', text: 'iOS: pinned messages now show in the Pinned Messages list (they were hidden behind the header). Same fix for Saved Messages, Activity and Workspace Members.' },
+      { kind: 'added', text: 'Mobile: a pin icon with a count appears in the channel header when a channel has pinned messages — tap it to open them.' },
+      { kind: 'changed', text: 'Mobile: pinning or unpinning a message now confirms with a toast and haptic, and Pinned Messages supports pull-to-refresh.' },
+    ],
+  },
+  {
     version: '1.07.76',
     date: '2026-11-13',
     items: [

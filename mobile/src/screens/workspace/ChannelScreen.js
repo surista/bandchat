@@ -323,12 +323,22 @@ export default function ChannelScreen({ navigation, route }) {
     pin: (msg) => {
       (async () => {
         try {
+          // Update local state from the API result too, not only from the
+          // socket echo — if the socket is mid-reconnect the toggle and the
+          // header pin badge would otherwise stay stale.
           if (pinnedMessageIds.has(msg.id)) {
             await api.unpinMessage(msg.id);
+            setPinnedMessageIds(prev => { const next = new Set(prev); next.delete(msg.id); return next; });
+            selectionFeedback();
+            toast.success('Unpinned');
           } else {
             await api.pinMessage(msg.id);
+            setPinnedMessageIds(prev => new Set([...prev, msg.id]));
+            successNotification();
+            toast.success('Pinned to channel');
           }
         } catch (err) {
+          errorNotification();
           Alert.alert('Error', err.message || 'Failed to pin/unpin message');
         }
       })();
@@ -355,7 +365,7 @@ export default function ChannelScreen({ navigation, route }) {
       })();
     },
     report: () => { setReportReason(''); setShowReportModal(true); },
-  }), [navigation, channel.id, workspaceId, pinnedMessageIds, savedMessageIds]);
+  }), [navigation, channel.id, workspaceId, pinnedMessageIds, savedMessageIds, toast]);
 
   const {
     actionMessage, showActions, showEmojiPicker, editingMessage, viewingImage,
@@ -389,7 +399,35 @@ export default function ChannelScreen({ navigation, route }) {
     navigation.navigate('Search', { workspaceId, channelId: channel.id, channelName: channel.name });
   }, [navigation, workspaceId, channel.id, channel.name]);
 
-  // Header: search + "..." menu buttons (hidden for DMs)
+  const pinnedCount = pinnedMessageIds.size;
+  const handleOpenPinned = useCallback(() => {
+    navigation.navigate('PinnedMessages', { channelId: channel.id });
+  }, [navigation, channel.id]);
+
+  // Header pin indicator: only shown when the channel has pins (parity with
+  // the web header's pin-count badge). Tapping goes straight to the list.
+  const renderPinIndicator = useCallback((color, style) => (pinnedCount > 0 ? (
+    <TouchableOpacity
+      onPress={handleOpenPinned}
+      hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+      accessibilityRole="button"
+      accessibilityLabel={`${pinnedCount} pinned message${pinnedCount !== 1 ? 's' : ''}`}
+      accessibilityHint="Opens pinned messages"
+      style={style}
+    >
+      <View>
+        <Ionicons name="pin" size={20} color={color} />
+        {/* Ring in the header colour so the badge stays legible on themes whose header is the primary colour */}
+        <View style={[styles.pinBadge, { backgroundColor: colors.primary, borderColor: colors.headerBg }]}>
+          <Text style={styles.pinBadgeText} maxFontSizeMultiplier={1.2}>
+            {pinnedCount > 99 ? '99+' : pinnedCount}
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  ) : null), [pinnedCount, handleOpenPinned, colors.primary, colors.headerBg]);
+
+  // Header: pin indicator + search + "..." menu buttons (hidden for DMs)
   useLayoutEffect(() => {
     if (channel.isDM) return;
     // In iPad split mode, the parent ChannelListScreen owns the stack header
@@ -399,6 +437,7 @@ export default function ChannelScreen({ navigation, route }) {
     navigation.setOptions({
       headerRight: () => (
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {renderPinIndicator('#ffffff', { paddingHorizontal: 8 })}
           <TouchableOpacity
             onPress={handleOpenChannelSearch}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -421,7 +460,7 @@ export default function ChannelScreen({ navigation, route }) {
         </View>
       ),
     });
-  }, [navigation, channel, splitPane, handleOpenChannelSearch]);
+  }, [navigation, channel, splitPane, handleOpenChannelSearch, renderPinIndicator]);
 
   // Load blocked user IDs for socket filtering
   useEffect(() => {
@@ -1149,6 +1188,7 @@ export default function ChannelScreen({ navigation, route }) {
           </View>
           {!channel.isDM && (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {renderPinIndicator(colors.headerText, styles.splitHeaderMenuButton)}
               <TouchableOpacity
                 onPress={handleOpenChannelSearch}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -1349,10 +1389,10 @@ export default function ChannelScreen({ navigation, route }) {
         title={channel.name}
         actions={[
           {
-            label: 'Pinned Messages',
+            label: pinnedCount > 0 ? `Pinned Messages (${pinnedCount})` : 'Pinned Messages',
             onPress: () => {
               setShowHeaderMenu(false);
-              navigation.navigate('PinnedMessages', { channelId: channel.id });
+              handleOpenPinned();
             },
           },
           {
@@ -1525,6 +1565,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'flex-end',
   },
+  pinBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -9,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    paddingHorizontal: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pinBadgeText: { color: '#ffffff', fontSize: 10, fontWeight: '700' },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

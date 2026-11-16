@@ -6,8 +6,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  RefreshControl,
   StyleSheet,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,21 +45,32 @@ export default function PinnedMessagesScreen({ navigation, route }) {
 
   const [pins, setPins] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
   const loadPins = useCallback(async () => {
     try {
       setError(null);
       const data = await api.getPinnedMessages(channelId);
-      setPins(data);
+      setPins(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message || 'Failed to load pinned messages');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [channelId]);
 
-  useEffect(() => {
+  // Refetch on every focus, not just first mount, so returning from a thread
+  // or another screen never shows a stale list.
+  useFocusEffect(
+    useCallback(() => {
+      loadPins();
+    }, [loadPins])
+  );
+
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
     loadPins();
   }, [loadPins]);
 
@@ -67,7 +80,8 @@ export default function PinnedMessagesScreen({ navigation, route }) {
 
     const handlePinned = (data) => {
       if (data.channelId === channelId) {
-        setPins(prev => [data, ...prev]);
+        // Pinning is an upsert server-side, so re-pinning re-emits the same row.
+        setPins(prev => (prev.some(p => p.id === data.id) ? prev : [data, ...prev]));
       }
     };
 
@@ -165,12 +179,21 @@ export default function PinnedMessagesScreen({ navigation, route }) {
         data={pins}
         keyExtractor={(item) => item.id || item.messageId}
         renderItem={renderPin}
+        // The large-title header is translucent on iOS; without this the
+        // first pinned cards render underneath it and look missing.
+        contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={pins.length === 0 ? styles.centered : styles.listContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
+        ListHeaderComponent={pins.length > 0 ? (
+          <Text style={[styles.count, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
+            {pins.length} pinned message{pins.length !== 1 ? 's' : ''}
+          </Text>
+        ) : null}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="pin-outline" size={48} color={colors.textSecondary} style={{ marginBottom: 12 }} />
-            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No pinned messages</Text>
-            <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>
+            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]} maxFontSizeMultiplier={1.5}>No pinned messages</Text>
+            <Text style={[styles.emptyHint, { color: colors.textSecondary }]} maxFontSizeMultiplier={1.5}>
               Long press a message and tap Pin to save it here
             </Text>
           </View>
@@ -185,6 +208,7 @@ const styles = StyleSheet.create({
   tabletContainer: { maxWidth: 700, width: '100%', alignSelf: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   listContent: { padding: 12, gap: 10 },
+  count: { fontSize: 13, paddingHorizontal: 4 },
   pinCard: {
     borderRadius: 10,
     padding: 14,

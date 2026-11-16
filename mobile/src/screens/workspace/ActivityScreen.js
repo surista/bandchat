@@ -164,6 +164,7 @@ export default function ActivityScreen({ navigation, route }) {
         data={items}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
+        contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={[styles.list, isTablet && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
         ListEmptyComponent={
